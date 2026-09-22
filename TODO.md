@@ -34,8 +34,8 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ### What stands between here and a production trial
 
-1. **Define the publication model.** The current registry and its meta-schema now identify the
-   rule-language-enabled development shape as `0.3.0` (Part 02 §9.2). The dependent authority
+1. **Define the publication model.** The current core registry and its meta-schema now identify the
+   complete registry-contract development shape as `0.4.0` (Part 02 §9.2). The dependent authority
    work still needs to define the released artifact set, publication state, and identifier
    discipline before a production trial.
 

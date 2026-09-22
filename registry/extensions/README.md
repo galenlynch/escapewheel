@@ -147,11 +147,10 @@ One unit is deliberately absent. `reward_probability` is declared `percentage` o
 *probability*, and which of 0–1 or 0–100 is stored has not been checked against data. A wrong
 `unit` is worse than none, so it carries none until a real session settles it.
 
-## Known gaps
+## Contract checks
 
-`registry/check.py` covers `logical_schemas.json` only, so nothing here is checked by the standing
-registry run — not the naming conventions, not the JSON Schema, not whether a rule's SQL parses.
-Under those conventions `aind_unit_qc` has four columns that would flag today
-(`num_spikes`, `rp_violations`, `num_negative_peaks`, `num_positive_peaks`: "no integer column is
-plural"). All four are the sorter's own names, which is the case the section above argues should
-win, so the fix is four declared exceptions rather than four renames.
+`registry/check.py` applies the same complete Part 02 §9.4 result to each document here as it
+does to the core registry, with core supplied as the extension context. It also applies repository
+authoring conventions. The four inherited sorter names that intentionally depart from the integer
+naming convention (`num_spikes`, `rp_violations`, `num_negative_peaks`, and
+`num_positive_peaks`) are explicit checked exceptions rather than silent omissions.

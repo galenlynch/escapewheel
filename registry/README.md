@@ -1,8 +1,8 @@
 # Schema registry
 
-`logical_schemas.json` is the registry content: the machine-readable statement of what a
-conforming table is, in the format [R2](../revisions/accepted/R2-schema-registry-format.md) defines.
-It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
+`logical_schemas.json` is the incorporated core registry: the machine-readable declaration of
+core and analysis tables under [Part 02](../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md).
+It is the file a packet embeds at `schemas/logical_schemas.json` (Part 02 §9.2).
 
 <!-- BEGIN generated: counts -->
 ```
@@ -10,16 +10,19 @@ It is the file a packet embeds at `schemas/logical_schemas.json` (R2 §8).
 ```
 <!-- END generated: counts -->
 
-`tables.md` is the same content as markdown, rendered by `render.py` at build time. Read it
-to see what a table looks like now; read Part 02 plus the revisions to see why.
+`tables.md` is the same content as Markdown, rendered by `render.py` at build time. Read it to see
+the exact declarations; read Part 02 for their current meaning. Accepted revisions preserve
+history and rationale but are not current normative owners.
 
 | File | Contents |
 |---|---|
 | `logical_schemas.json` | The registry. Embedded in packets at `schemas/logical_schemas.json`. |
-| `registry.schema.json` | Meta-schema; the registry validates against it (R2 §9). |
+| `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
+| `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
+| `registry_contracts/escapewheel-registry-contract-v0.1.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.1.json` | Exact incorporated portable Tier 2 language profile. |
-| `manifest.schema.json` | JSON Schema for `packet.json` (R2 §10). |
+| `manifest.schema.json` | JSON Schema for `packet.json` (Part 04). |
 
 The schemas and language profile are hand-written here and **vendored** by the distributions that use them — a
 wheel cannot read a file from another distribution. Those copies are *build artifacts*, written by
@@ -27,6 +30,8 @@ wheel cannot read a file from another distribution. Those copies are *build arti
 
 ```
 registry.schema.json  ──build.py──>  escapewheel-validator/src/escapewheel_validator/schemas/
+registry_contract.schema.json ─┐
+registry_contracts/*.json ────├─build.py─> escapewheel-validator/src/escapewheel_validator/schemas/
 rule_language.schema.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
 rule_languages/escapewheel-rule-sql-v0.1.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
 manifest.schema.json  ──build.py──>  escapewheel-reader/src/escapewheel_reader/schemas/
@@ -39,28 +44,27 @@ a thing to remember.
 
 ## Provenance of this file
 
-`logical_schemas.json` is **generated. Do not edit it.** It is built from two sources kept
-apart because they are maintained differently:
+`logical_schemas.json` is **generated. Do not edit it.** Its inputs are maintained separately:
 
 ```
-02_core_logical_schemas.md ──parse02.py──┐
-revisions R3-R11 ──────────(build.py)────┼──> logical_schemas.json
-rules.json (hand-authored) ──────────────┘
+nwb_lake_poc_docs/02_*.md ──parse02.py──┐
+registry/build.py (reviewed transformations) ─┼──> logical_schemas.json
+rules.json (hand-authored) ──────────────────┘
 ```
 
-**Structure** — columns, keys, references, ordering — is derived. `build.py` labels every
-transformation with the revision that mandates it, so a column's type or presence traces to
-the decision that set it. Changing structure means changing a revision and rebuilding.
+**Structure** — columns, keys, references, and ordering — is derived. Historical labels in
+`build.py` preserve why a transformation exists; current conformance comes from the incorporated
+registry and its Part 02 meanings. Contract changes use the specification-change lifecycle and
+then rebuild the generated document.
 
 **Tier 2 rules** are hand-authored in `rules.json`, because nothing derives a check the
 structure cannot imply. Keeping them out of the generated file means the registry can be
 rebuilt without losing hand-written work, and a diff shows at a glance whether a change was
 to a schema or to a rule.
 
-```bash
-python3 build.py      # merges both sources, writes logical_schemas.json
-python3 check.py      # structural invariants; exit 1 on any failure
-```
+From the monorepo root, `uv run --project escapewheel-writer python verify.py --quick` rebuilds
+the registry and runs its complete checks. Use the same command without `--quick` for package
+tests as well.
 
 `build.py` rejects a `rules.json` entry naming a table the registry does not define;
 `check.py` verifies the merge round-trips. The rule-language conformance suite statically checks
@@ -73,17 +77,12 @@ demonstrated by claiming 33 tables and 51 rules against a registry holding 34 an
 
 ## What `check.py` verifies
 
-| Invariant | Source |
-|---|---|
-| Table set matches the ledger | R9 §2 |
-| Every table declares a primary key | R7 §2 |
-| Every column type is in the vocabulary | R2 §4 |
-| No required column is `json_string` | R2 §5, R3 §2.1 |
-| No nested type spellings survived | R3 §2.1 |
-| Primary key columns exist and are `required` | R2 §6 |
-| References resolve at both ends, arities match | R2 §6 |
-| `*_label` columns are `string` | R5 §5, R8 §2 |
-| Withdrawn tables absent | R5 §3, R9 §2 |
+`check.py` requires the core registry and every repository extension example to return the one
+complete result defined by Part 02 §9.4. It then checks repository authoring conventions and
+generation invariants that are intentionally not packet-conformance rules, including the table
+ledger, source-rule merge, naming exceptions, generated copies, and current development
+identities. Tier 2 rules also pass the Part 11 static contract and execute against empty typed
+relations; semantic vectors separately test their data behavior.
 
 ## What it produces
 
@@ -114,9 +113,8 @@ it names a resource the packet declares (R55 §2.4).
 ## Tier 2 rules
 
 Authored in `rules.json` and merged inline into each table's `rules` array. The whole registry
-selects `escapewheel-rule-sql-v0.1`; individual rules cannot override it. R2 §13 left
-inline-versus-sibling open, to be decided when the content was generated; inline was chosen, so
-a table's whole contract is readable in one place.
+selects `escapewheel-rule-sql-v0.1`; individual rules cannot override it. Inline rules keep a
+table's whole logical contract readable in one declaration.
 
 <!-- BEGIN generated: rules -->
 76 rules over 27 tables: 67 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
@@ -162,8 +160,8 @@ exact lowercase spelling declared by the registry; delimiters do not create alte
 
 ## Not yet present
 
-- **`sort` on every table.** R10 §2 gives 21 of 34 an ordering, primary-key by default with
-  Part 03's two overrides; the rest are null rather than invented.
+- **`sort` on every table.** Some tables deliberately declare no ordering rather than inventing
+  one; Part 03 owns the physical consequences.
 - **Array and manifest checks** belonging to the shim rather than SQL: Zarr rank against
   `core.array_dimensions`, `channel_index` within its axis extent, checksums,
   `required_codecs` against reader capability.

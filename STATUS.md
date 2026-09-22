@@ -25,14 +25,14 @@ Phases are Part 07's plan of record.
 | Phase | State | Notes |
 |---|---|---|
 | — Specification | **in reconciliation** | The generated v0.2 material is the authoritative specification candidate under [Part 00](escapewheel_poc_docs_v0.2/00_architecture.md#ew-specification-authority). R122 establishes its authority framework; the reconciliation roadmap must close before immutable publication. |
-| — Registry content | **complete** | The counts are in the block above. The registry meta-schema and core registry are `0.3.0`; every shipped registry selects `escapewheel-rule-sql-v0.1`, and extension versions remain independent. |
+| — Registry content | **complete** | The counts are in the block above. The registry meta-schema and core registry are `0.4.0`; every shipped registry selects `escapewheel-rule-sql-v0.1`, and extension versions remain independent. R126 defines and implements one complete registry-document result. |
 | 0 Spec fixtures | **complete** | Single-session packet plus the variant corpus carrying one extension; `fixtures/`. |
-| 1 Manifest and table reader | **complete** | `escapewheel-reader`; 156 tests, mypy strict. Ticks come back on the packet's reference clock by default, and `seconds=True` derives R39 §2.3's seconds from the declared origin or refuses. `TableResource` and `ArrayResource`, each with its heavy dependency behind an extra. |
-| 2 Validator | **complete** | `escapewheel-validator`, its own package since 2026-08-27; 124 tests. Corpus passes through it. R125 statically checks the selected Tier 2 language before execution and reports invalid, unsupported, and incomplete evaluation separately from packet findings. R15 §4 level 2 checks packet-owned arrays against their own Zarr metadata; level 3 runs under `external=True`, reachable as `validate --external` and `--checksums`, and reports the fields it compared rather than asserting a resource was checked. R35 §5 bounds an amendment's rules to what it writes. |
+| 1 Manifest and table reader | **complete** | `escapewheel-reader`; 221 tests in the repository verifier. Ticks come back on the packet's reference clock by default, and `seconds=True` derives R39 §2.3's seconds from the declared origin or refuses. `TableResource` and `ArrayResource`, each with its heavy dependency behind an extra. |
+| 2 Validator | **complete** | `escapewheel-validator`; 168 tests in the repository verifier. Corpus passes through it. R125 statically checks the selected Tier 2 language before execution, and R126 returns the ordered registry-document result separately from packet findings. R15 §4 level 2 checks packet-owned arrays against their own Zarr metadata; level 3 runs under `external=True`, reachable as `validate --external` and `--checksums`, and reports the fields it compared rather than asserting a resource was checked. R35 §5 bounds an amendment's rules to what it writes. |
 | 3 NWB source importer | **complete** | Four adapters: `NWBSource` (the tables the NWB is authority for; the CCF frame and R28's unit coordinates are `AindNWBSource`'s in `escapewheel-aind` since 2026-09-16), `SessionSource` (`tick_zero_utc`, observation intervals; in `escapewheel-aind` since 2026-09-16, reached through the `escapewheel.sources` entry point), `SorterSource` (units, spikes, per-stream clocks), `SyncSource` (anchors), plus `WaveformSource`. The session recipe and `escapewheel inspect` / `init` / `import` replace the ad-hoc scripts: 776259 commits clean from `session.toml` in 2.5 min, and the recipe lands in `core.processing_runs.parameters`, closing Part 05 Stage 3. |
 | 4 Analysis materializations | **complete** | `analysis.spike_events` (R30) materialised and amended into both packets. The success criterion is met — PSTH measured three ways, 2026-09-01, all bin-identical. The other six Part 06 names are **not** oversights: `spikes_by_trial`, `trials_wide` and `unit_condition_rates` were measured and declined by R43; `good_units` was already a view; `binned_spikes` and the spectrogram are Phase 5. |
 | 5 Dense arrays | **complete** | `core.waveform_mean`, a sparse int16 template array, `(6781, 26, 150)` in 26 MB, packet-owned Zarr v3. Layout measured in `conformance/zarr-probe/waveforms.py`: the chunk is the unit of the question, the shard the unit of the object, and the compressor goes *inside* the shard. **LFP is referenced, not copied** (R14 §2.3, R21 §3.2): twelve Zarr v2 arrays, 6.8 GB the packet points at, with R20's regular-tick axis replacing 767 MB of timestamps with three integers per series and `core.array_channels` carrying R19's per-channel `inter_sample_shift`. Both success criteria are met: `pkt.array("core.waveform_mean")` opens it, and the structural agreement is validated — rank against `core.array_dimensions`, codecs against the store, `zarr_format`, transpose ban. Part 07's "dtype/shape" wording is superseded, since R3 §3.3 struck both columns. Media assets are not Phase 5 scope: Part 07 never names them. |
-| 6 Release and version discipline | **partial** | `escapewheel verify` records what is true about external resources (R36 §2.4); `escapewheel prune` removes what a committed packet no longer names (R61 §3). The development registry is `0.3.0`; R122 distinguishes the working candidate from an immutable release, whose exact publication record remains deferred. |
+| 6 Release and version discipline | **partial** | `escapewheel verify` records what is true about external resources (R36 §2.4); `escapewheel prune` removes what a committed packet no longer names (R61 §3). The development core registry is `0.4.0`; R122 distinguishes the working candidate from an immutable release, whose exact publication record remains deferred. |
 | 7 Iceberg experiment | not started | Explicitly last; MUST NOT be required earlier. |
 
 ## What exists
@@ -116,16 +116,15 @@ packet belongs to.
 
 Two other things pass:
 
-- `registry/check.py` — 22 invariants over the registry, including all 61 Tier 2 rules
-  executed as SQL against empty tables built from the registry itself. Empty tables prove a
-  rule binds, not that it can report: a rule projecting a wall-clock column bound cleanly and
-  failed only once it had a finding to return. Fixed 2026-08-28; the corpus is what catches
-  that class, and only if a variant trips the rule.
+- `registry/check.py` — the complete R126 result over the core registry and all four repository
+  extension examples, repository authoring conventions, and all 121 Tier 2 rules statically
+  checked and executed against empty typed tables. Empty tables prove a rule binds, not that it
+  can report; typed semantic vectors and the corpus cover result behavior.
 - `prototype/registry-codegen/` — `packets/valid` exits 0; `packets/broken` reports three
   defects and exits 1.
 
-The real registry yields 225 Tier 1 checks, plus 61 Tier 2 rules carried inline, of which 4
-are advisory; `facts.py` prints the current counts.
+The core registry carries 76 Tier 2 rules, of which 2 are advisory; the four extension examples
+bring the candidate total to 121. `facts.py` prints the current core counts.
 
 ## Verifiable claims
 
@@ -133,16 +132,8 @@ Re-run these after any change to the specification or revisions.
 
 ```bash
 cd fixtures && uv run --no-cache --with ../escapewheel-validator --with duckdb python corpus.py  # the whole corpus
-cd escapewheel-writer && uv run --all-extras pytest   # 323 tests, incl. a synthetic NWB-Zarr
-cd escapewheel-reader && uv run --all-extras pytest   # 156 tests
-cd escapewheel-validator && uv run --all-extras pytest  # 87 tests
-
-python3 conformance/spec-sweep/sweep.py        # 09 vs 02 drift; expects none outstanding
-python3 conformance/spec-sweep/compliance.py   # 02 against R3's rules
-python3 conformance/spec-sweep/tables.py       # table ledger; expects 34
-
-uv run --with duckdb --with jsonschema python registry/check.py   # 25 registry invariants
-uv run --with ./escapewheel-validator python conformance/spec-sweep/rules.py  # revisions vs implementation
+uv run --project escapewheel-writer python verify.py
+uv run --project escapewheel-writer python verify.py --quick
 ```
 
 Library-dependent, re-run when versions change:
