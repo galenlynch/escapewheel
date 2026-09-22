@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative maintenance inventory |
-| **Updated** | 2026-09-21 |
+| **Updated** | 2026-09-22 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 
 This document tracks statements that appear to occupy the wrong specification abstraction or to
@@ -56,6 +56,8 @@ The roadmap owns sequencing among work items; this file owns the observation-lev
 | PD-019 | Part 09 | The core/extension placement boundary repeats Part 00, while adapter and report-delivery behavior belongs with the build interface. | R122 established the architectural owner; P8 reconciles adapter behavior and makes Part 09 reference rather than restate it. | Tracked: P8 |
 | PD-020 | Part 10 §3 | An informative performance part states an uppercase `SHOULD` about time-bucket row groups. | Move the storage obligation to Part 03 and retain its measurement and rationale in Part 10. | Tracked: P9 |
 | PD-021 | Part 00 §§2 and 10 | The complete central bibliography places external authorities used only by one numbered part in the framework rather than beside the subject that invokes them. | R124 retained policy and shared references in Part 00, moved portable-profile references to Part 03 and SHA-256 to Part 04, and established the rule that lets future Part 11 own its SQL and floating-point references. | Resolved: R124 |
+| PD-022 | Part 01 §§3.17–3.18 and the `core.array_assets`, `analysis.array_assets`, and `core.media_assets` declarations | Semantic concept definitions own URI, encoding, and manifest-provenance rules, while logical asset tables duplicate URI and format fields already owned by the packet catalog and physical profile. | The active logical-resource proposal keeps concept meaning in Part 01, gives Part 02 declaration and lineage policy, binds packet locations in Part 04, leaves encodings with Part 03, and removes the duplicated logical columns. | Tracked: logical-resource proposal |
+| PD-023 | Part 01 §3.3 and `core.sessions.reference_clock_id` in Part 02's incorporated registry | The semantic Session requires the clock its times are reported on, but the logical column is nullable and the declared rule rejects a missing reference only when more than one clock exists. A one-clock packet can therefore omit the explicit reference even though the semantic statement is unconditional. | Appraise whether the one-clock implicit default was intentional. If the semantic requirement stands, make the logical declaration and conformance checks require the reference; otherwise narrow the semantic statement. Keep this independent of resource-family requiredness. | Open |
 
 ## Closure record
 
