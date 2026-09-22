@@ -295,8 +295,8 @@ P1 authority framework
 | P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | P0.1 | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) |
 | P1 | Specification authority, abstraction levels, and normative ownership | P0.1, P0.2 | [R122](../accepted/R122-define-specification-artifacts-and-normative-ownership.md) |
 | P2 | Placement cleanup and unit-identity reconciliation | P1 | [R123](../accepted/R123-a-unit-is-identified-by-its-packet-assigned-unit-id.md) |
-| P2.1 | Locate normative references with their subject owners | P1; executed after P2 | [Active proposal](locate-normative-references-with-their-subjects.md) |
-| P3 | Executable declarative-rule language | P2.1 | Active draft, to be rebased after P2.1 |
+| P2.1 | Locate normative references with their subject owners | P1; executed after P2 | Structural revision target |
+| P3 | Executable declarative-rule language | P2.1 | Rule-language revision target |
 | P4 | Registry-document semantics and uniform conformance | P3 | Proposal to be scoped |
 | P5 | Resource/profile declarations and resource classification | P4 | Proposal to be scoped |
 | P6 | Packet manifest, requiredness, and registry binding | P5 | Proposal to be scoped |
