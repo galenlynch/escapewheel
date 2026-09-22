@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative coordination record |
-| **Updated** | 2026-09-21 |
+| **Updated** | 2026-09-22 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 | **Objective** | Reconcile the data-driven contract, then publish one internally consistent and immutable v0.2 specification release |
 
@@ -268,7 +268,10 @@ P1 authority framework
      P3 executable rule language
        |
        v
-     P4 registry conformance
+     P4.1 registry conformance contract
+       |
+       v
+     P4.2 uniform registry-validation boundaries
        |
        v
      P5 resource/profile model
@@ -297,10 +300,11 @@ P1 authority framework
 | P2 | Placement cleanup and unit-identity reconciliation | P1 | [R123](../accepted/R123-a-unit-is-identified-by-its-packet-assigned-unit-id.md) |
 | P2.1 | Locate normative references with their subject owners | P1; executed after P2 | Structural revision target |
 | P3 | Executable declarative-rule language | P2.1 | Rule-language revision target |
-| P4 | Registry-document semantics and uniform conformance | P3 | Proposal to be scoped |
-| P5 | Resource/profile declarations and resource classification | P4 | Proposal to be scoped |
+| P4.1 | Registry-document conformance contract | P3 | [Proposal](define-registry-document-conformance.md) |
+| P4.2 | Uniform registry-validation boundaries | P4.1 | Proposal to be scoped |
+| P5 | Resource/profile declarations and resource classification | P4.2 | Proposal to be scoped |
 | P6 | Packet manifest, requiredness, and registry binding | P5 | Proposal to be scoped |
-| P7 | Core, extension, and packet validity composition | P4, P6 | Proposal to be scoped |
+| P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
 | P8 | Recipe arbitration and adapter contract | P5, P6 | Proposal to be scoped |
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5–P8 as applicable | Proposal family; split before promotion |
 | P10 | Final identifiers, direct registry source, and release integration | P2, P2.1, and P3–P9 | Proposal plus ordinary maintenance |
@@ -560,16 +564,38 @@ empty tables.
 
 **Review coverage:** the executable portion of D1 and the lower-priority SQL-fixture finding.
 
-### P4 — Registry-document semantics and uniform conformance
+### P4.1 — Registry-document conformance contract
 
-Reconcile Part 02 with the meta-schema after P3 supplies a rule language. Specify invariants JSON
-Schema cannot establish: stable and unique identifiers, namespace restrictions, compatible primary
-and foreign keys, roles, presence, vocabulary, rule references, and extension restrictions. Use one
-validation path for the released core registry, extension registries, embedded packet copies,
-writer startup, validator loading, and public constructors. Only then consider the meta-schema and
-released registry ready for incorporation into an immutable bundle.
+Reconcile Part 02 with the meta-schema after P3 supplies a rule language. Define core and extension
+document classes and specify the complete invariants JSON Schema cannot establish: stable and
+unique identifiers, namespace restrictions, compatible primary and foreign keys, roles, presence,
+vocabulary, rule references, and extension restrictions. Separate those invariants from
+repository-only authoring conventions and give independent implementations portable positive and
+negative evidence. Only then consider the meta-schema and released registries coherent enough to
+validate uniformly.
 
-**Review coverage:** D1, D2, I2, I7, I11, and the registry-validation part of I9.
+This is separated from invocation because defining a document contract and deciding how each
+public boundary reacts to its result are independently reviewable decisions. The active
+[proposal](define-registry-document-conformance.md) records the reproduced gaps and the exact
+boundary with the next item.
+
+**Review coverage:** the registry-semantics portion of D1 and I2, plus the registry-fixture portion
+of I9.
+
+### P4.2 — Uniform registry-validation boundaries
+
+Apply P4.1's one registry-document result at every trust boundary: the released core registry,
+released extensions, embedded packet copies, writer startup, validator registry loading, extension
+author tooling, and direct public writer construction. Define phase ordering so malformed shape is
+reported without running unsafe semantic checks, and so an invalid or unsupported registry is not
+used to generate data checks.
+
+Preserve P7's ownership of missing declared registries, extension table physical validation,
+partial reader access, and composition of core, extension, and packet verdicts. P4.2 establishes
+the document result those policies consume; it does not decide the overall packet result.
+
+**Review coverage:** D2, the invocation portions of D1 and I2, I11, and the registry-boundary
+portion of I9. I7's physical extension-table parity remains with P7.
 
 ### P5 — Resource/profile declarations and classification
 
@@ -650,6 +676,11 @@ meta-schema, packet-schema, and rule-language identifiers. Lift the deliberate
 incompatible. Apply the packet registry-binding decision from P6 using the final identifiers and
 digests.
 
+The hold is provisional rather than permission to reuse an identifier for incompatible bytes.
+P4.1 advances the registry meta-schema and core registry when it changes the document contract,
+and advances each affected extension independently. P10 assigns and verifies the final release
+identifiers after the remaining contract work stabilizes.
+
 Replace historical imperative registry replay with one reviewed declarative current state or
 deterministically assembled fragments. Preserve each declaration's provenance and prove byte
 identity or a defined canonical-form equivalence. This migration is ordinary maintenance if it
@@ -701,8 +732,8 @@ This table prevents a finding from disappearing merely because it was split out 
 | S10 codec floor | P5 model, then P9.3 wording and reporting |
 | S11 uniqueness and cross-field invariants | P6 |
 | S12 profile scope | P9.4 |
-| D1 incomplete registry semantics | P3 and P4 |
-| D2 extension registry parity | P4 and P7 |
+| D1 incomplete registry semantics | P3, P4.1, and P4.2 |
+| D2 extension registry parity | P4.1 and P4.2 for registry documents; P7 for declared resources and verdicts |
 | D3 missing whole-packet profile model | P5 |
 | D4 hidden arbitration | P8 |
 | D5 missing session-recipe schema | P8 |
@@ -714,16 +745,16 @@ This table prevents a finding from disappearing merely because it was split out 
 | R5 mutable publication | P11 |
 | R8 historical review labeling | Ordinary documentation maintenance |
 | I1 core-only overall verdict | P7 |
-| I2 embedded registry validation | P4 and P7 |
+| I2 embedded registry validation | P4.1 defines the result, P4.2 invokes it, and P7 composes it |
 | I3 obsolete reader unit contract | P2 |
 | I4 overbroad canonical marking | P5 |
 | I5 missing non-table lineage | P5 |
 | I6 manifest lookup and state validation | P6 |
-| I7 incomplete extension physical checks | P4 and P7 |
+| I7 incomplete extension physical checks | P7, using P4.1-conforming extension declarations |
 | I8 codec capability reporting | P5 and P9.3 |
 | I9 missing cross-package release proof | P2–P10 incrementally; final matrix in P10 |
 | I10 stale public types and docs | P2 |
-| I11 constructor validation bypass | P4 and P8 |
+| I11 constructor validation bypass | P4.2 for registry inputs and P8 for adapter/declaration inputs |
 | `layer` and `canonical` TODO | P5 |
 | packet registry ID/version/digest TODO | shape in P6; final values in P10 |
 | direct declarative registry authoring TODO | P10, ordinarily if contract-preserving |
