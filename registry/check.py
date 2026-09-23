@@ -115,6 +115,32 @@ check(
     ],
 )
 
+# Part 03 incorporates the physical-profile descriptor. Its reusable schema owns local shape;
+# this generic checker owns cross-member, cross-artifact, and anchor invariants without embedding
+# the current descriptor's assignments.
+sys.path.insert(0, str(HERE.parent / "escapewheel-reader/src"))
+from escapewheel_reader.profile import check_physical_profile
+
+_profile_schema = json.loads((HERE / "physical_profile.schema.json").read_text())
+_profile = json.loads(
+    (HERE / "physical_profiles/escapewheel-portable-v0.1.json").read_text()
+)
+_registry_schema = json.loads((HERE / "registry.schema.json").read_text())
+check(
+    "physical profile satisfies its schema and generic invariants",
+    check_physical_profile(
+        _profile,
+        _profile_schema,
+        logical_kinds=_registry_schema["$defs"]["resource"]["properties"]["kind"][
+            "enum"
+        ],
+        logical_standard=REG["logical_standard_version"],
+        part_text=(
+            HERE.parent / "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md"
+        ).read_text(),
+    ),
+)
+
 check(
     "withdrawn tables absent",
     [

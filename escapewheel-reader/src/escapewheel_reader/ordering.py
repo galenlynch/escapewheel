@@ -25,7 +25,7 @@ OVERRIDES: Mapping[str, tuple[str, ...]] = {
 
 
 def stored_order(resource: str, table: Mapping[str, Any]) -> list[str]:
-    """The columns `resource` is stored by, in order.
+    """Return the columns `resource` is stored by, in order.
 
     Empty where the table declares no primary key and no override, which is the one case with no
     order to establish (Part 02 §2 admits a `null` key with a stated reason).

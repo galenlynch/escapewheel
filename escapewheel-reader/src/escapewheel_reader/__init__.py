@@ -54,7 +54,8 @@ from .observation import (
     support_of,
     unit_windows,
 )
-from .packet import BASELINE_CODECS, DECODABLE, STORED, Packet, Predicate, open_packet, resolve_sources
+from .packet import STORED, Packet, Predicate, open_packet, resolve_sources
+from .profile import interface_for, physical_profile
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity, ambiguities, preferred_run
 from .sql import quote, sql_name
@@ -62,9 +63,7 @@ from .sql import quote, sql_name
 __version__ = version("escapewheel-reader")
 
 __all__ = [
-    "BASELINE_CODECS",
     "BOUND",
-    "DECODABLE",
     "PROJECTED",
     "STORED",
     "Ambiguity",
@@ -102,6 +101,7 @@ __all__ = [
     "clock_windows",
     "declared",
     "electrode_at",
+    "interface_for",
     "kept_channels",
     "kinds",
     "observed_seconds",
@@ -110,6 +110,7 @@ __all__ = [
     "open_dataset",
     "open_packet",
     "origin",
+    "physical_profile",
     "preferred_run",
     "quote",
     "rate",

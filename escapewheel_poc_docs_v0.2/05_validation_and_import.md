@@ -211,9 +211,12 @@ binding, populated-reference targets, lineage and producing-run policies, and ca
 provenance before dispatching kind-specific checks. An unknown declaration or one whose instance
 model does not admit the packet resource is an error.
 
-A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and
-checksums outside SQL. A query cannot observe them, so such a check written as SQL fails silently
-rather than loudly. Dense-array checks obtain the axes table from the resolved declaration.
+A validator MUST derive the physical interface from the checked logical kind and the selected
+profile, then check available resource-owned metadata: physical order, file presence, Parquet
+types and footer features, Zarr version, rank and codecs, and checksums outside SQL. A query cannot
+observe them, so such a check written as SQL fails silently rather than loudly. Dense-array checks
+obtain the axes table from the resolved declaration. An unavailable external resource is physically
+unassessed. A valid upstream feature outside a reader-only floor is not by itself a profile error.
 
 A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key.
 

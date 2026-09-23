@@ -6,7 +6,6 @@ from escapewheel_reader import (
     ManifestError,
     ResourceNotFoundError,
     ResourceUnreadableError,
-    UnsupportedCodecError,
     open_packet,
 )
 
@@ -112,79 +111,6 @@ def test_embedded_registry_is_exposed(packet_root):
 def test_registry_is_optional(packet_root):
     (packet_root / "schemas" / "logical_schemas.json").unlink()
     assert open_packet(packet_root).registry is None
-
-
-def _with_array(packet_root, codecs, profile=None):
-    """Add an external array resource declaring `codecs`."""
-    import json
-
-    path = packet_root / "packet.json"
-    entry = json.loads(path.read_text())
-    entry["resources"].append(
-        {
-            "resource_id": "core.probe0_ap",
-            "declaration_id": "core.test_arrays",
-            "uri": "s3://example/probe0.zarr",
-            "external": True,
-            "codecs": codecs,
-            **({"physical_profile": profile} if profile else {}),
-        }
-    )
-    entry["required_codecs"] = codecs
-    path.write_text(json.dumps(entry))
-    registry_path = packet_root / "schemas" / "logical_schemas.json"
-    registry = json.loads(registry_path.read_text())
-    registry["resources"]["core.test_arrays"] = {
-        "content_class": "core",
-        "kind": "dense_array",
-        "instances": {"mode": "family"},
-        "requires": [],
-        "lineage": "optional",
-        "producing_run": "optional",
-        "array": {"axes_resource": "core.intervals"},
-    }
-    registry_path.write_text(json.dumps(registry, indent=2))
-    return open_packet(packet_root)
-
-
-def test_codec_check_passes_on_the_baseline(packet_root):
-    _with_array(packet_root, ["zstd"]).check_codecs("core.probe0_ap")
-
-
-def test_codec_check_names_what_is_missing(packet_root):
-    pkt = _with_array(packet_root, ["wavpack"])
-    with pytest.raises(UnsupportedCodecError, match="wavpack"):
-        pkt.check_codecs("core.probe0_ap")
-
-
-def test_a_missing_codec_disqualifies_only_that_resource(packet_root):
-    """Part 03 §6.4: a reader must not refuse a packet over a codec it will never need."""
-    pkt = _with_array(packet_root, ["wavpack"])
-    assert pkt.unopenable() == {"core.probe0_ap": ("wavpack",)}
-    assert pkt.table("core.intervals").num_rows == 2  # tables stay readable
-    pkt.check_codecs("core.intervals")  # and declare no codecs at all
-
-
-def test_unopenable_is_empty_when_everything_reads(packet_root):
-    assert _with_array(packet_root, ["gzip"]).unopenable() == {}
-
-
-def test_the_floor_is_read_for_the_version_the_resource_declares(packet_root):
-    """Part 03 §6.4 states the floor per Zarr version, and `blosc` is in v2's.
-
-    A single set is the v3 row applied to both, which refuses a conforming v2 array the reader
-    can in fact open -- and Part 03 §6.1 asks for the pair precisely because readability differs
-    between the versions.
-    """
-    pkt = _with_array(packet_root, ["blosc"], profile="zarr_v2")
-    pkt.check_codecs("core.probe0_ap")
-    assert pkt.unopenable() == {}
-
-
-def test_an_unsupported_codec_names_the_version_it_was_judged_against(packet_root):
-    pkt = _with_array(packet_root, ["wavpack"], profile="zarr_v2")
-    with pytest.raises(UnsupportedCodecError, match="zarr_v2 codecs"):
-        pkt.check_codecs("core.probe0_ap")
 
 
 def test_sessions_and_repr(packet_root):

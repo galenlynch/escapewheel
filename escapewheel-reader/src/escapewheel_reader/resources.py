@@ -33,9 +33,6 @@ if TYPE_CHECKING:  # pragma: no cover
 #: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which Part 03 §6.1 permits
 #: an external array to use, names it `.zarray`. Both are JSON.
 #:
-#: `physical_profile` -> Zarr version, for a remote array whose documents cannot be read
-#: without a backend for its scheme (Part 03 §6.1).
-_ZARR_PROFILES: dict[str, Literal[2, 3]] = {"zarr_v2": 2, "zarr_v3": 3}
 _ZARR_METADATA: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
 
 
@@ -116,8 +113,7 @@ def _codec_names(codecs: Iterable[Mapping[str, Any]]) -> list[str]:
 class TableResource:
     """A tabular resource bound to a packet root.
 
-    Handles single-file and partitioned resources identically; which one a packet uses is
-    declared in the manifest and is not the caller's concern.
+    The portable profile represents each table as one Parquet object.
     """
 
     def __init__(self, resource: Resource, root: Location | Path | str) -> None:
@@ -212,8 +208,6 @@ class TableResource:
             into a dictionary and this decodes them, which is what a caller expects and what
             everything downstream handles.
         """
-        if self._resource.is_partitioned:
-            return self.dataset().to_table(columns=columns)
         path, filesystem = self._store()
         return pq.read_table(path, columns=columns, filesystem=filesystem)
 
@@ -239,8 +233,6 @@ class TableResource:
         pyarrow.Schema
             The schema.
         """
-        if self._resource.is_partitioned:
-            return self.dataset().schema
         path, filesystem = self._store()
         return pq.read_schema(path, filesystem=filesystem)
 
@@ -272,8 +264,7 @@ class TableResource:
         # A remote table is handed over as its URI: DuckDB reads an object store through its own
         # client, so resolving to a local path first is the thing that would make it unreadable.
         base = str(self.path) if self.is_local else self.location.uri
-        target = f"{base}/**/*.parquet" if self._resource.is_partitioned else base
-        connection.sql(f"CREATE OR REPLACE VIEW {view} AS SELECT * FROM '{target}'")
+        connection.sql(f"CREATE OR REPLACE VIEW {view} AS SELECT * FROM '{base}'")
         return view
 
     def scan_polars(self) -> pl.LazyFrame:
@@ -296,8 +287,7 @@ class TableResource:
         except ImportError as exc:  # pragma: no cover - exercised only without the extra
             raise ImportError("scan_polars requires polars; install the 'polars' extra") from exc
         base = str(self.path) if self.is_local else self.location.uri
-        target = f"{base}/**/*.parquet" if self._resource.is_partitioned else base
-        frame: pl.LazyFrame = _pl.scan_parquet(target)
+        frame: pl.LazyFrame = _pl.scan_parquet(base)
         return frame
 
 
@@ -380,9 +370,7 @@ class ArrayResource:
     def zarr_format(self) -> Literal[2, 3]:
         """Which Zarr version the store actually uses, 3 or 2.
 
-        Read from the store, never from the manifest's ``physical_profile``: the two agreeing
-        is what Part 04 §5.3's level 2 checks, so taking the manifest's word would make the check
-        compare a value with itself.
+        Read from format-owned metadata rather than a packet claim.
 
         Returns
         -------
@@ -395,17 +383,6 @@ class ArrayResource:
             If neither metadata document is present.
         """
         where = self.location
-        if self._resource.is_external:
-            # The manifest's word, and only here. Part 03 §8 frames an external resource's
-            # declaration as a claim rather than a verified fact, and there is nothing the
-            # packet owns to compare it against.
-            declared = str(self._resource.entry.get("physical_profile", ""))
-            if declared in _ZARR_PROFILES:
-                return _ZARR_PROFILES[declared]
-            raise ResourceUnreadableError(f"{self.resource_id}: {where} is external and declares no Zarr version")
-        # A packet-owned array is read from the store whether that store is a disk or a
-        # bucket: taking the manifest's word would make Part 04 §5.3's level 2 compare a value with
-        # itself, and where the packet sits does not change what the check is for.
         for version, name in _ZARR_METADATA.items():
             if where.join(name).exists():
                 return version
@@ -421,7 +398,7 @@ class ArrayResource:
 
         A remote array is read through Zarr, which needs the ``arrays`` extra and a backend for
         the URI's scheme. A local one is the JSON document itself, so shape, dtype, chunking
-        and codecs cost nothing and need no library at all -- which is the property Part 03 §5.5
+        and codecs cost nothing and need no library at all -- which is the property Part 03 §6.5
         protects and the reason `arrays` is an extra in the first place.
 
         Returns

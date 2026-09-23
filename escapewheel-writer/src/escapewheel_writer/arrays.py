@@ -45,14 +45,6 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:  # pragma: no cover
     from .writer import StagedArray
 
-#: Part 03 §6.4's reader floor: what every conforming reader MUST support. It is a *reader*
-#: obligation and not a writer restriction -- Part 03 §6.4 generalized the declaration to an open
-#: one, so "a writer MAY use any Zarr codec; the manifest MUST name it; a reader MUST check
-#: before opening an array and fail naming what it lacks." Refusing a codec here would enforce
-#: against a writer a floor written for readers, and `escapewheel_reader.Packet.unopenable` is
-#: where the check belongs.
-FLOOR = {"none", "gzip", "zstd"}
-
 #: Array-to-array codecs, which run before the bytes codec rather than after it. Named as the
 #: store names them -- zarr registers numcodecs codecs under a `numcodecs.` prefix, and Part 04 §5.3
 #: compares the manifest against the store, so `delta` and `numcodecs.delta` are not the same
@@ -299,7 +291,6 @@ __all__ = [
     "DEFAULT_BANDWIDTH_BPS",
     "DEFAULT_LATENCY_S",
     "FILTERS",
-    "FLOOR",
     "MINIMUM_OBJECT_BYTES",
     "TRANSFER_SHARE",
     "declared_codecs",

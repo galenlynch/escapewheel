@@ -279,13 +279,12 @@ class Dataset:
             return None
         handle = TableResource(resource, packet.location)
         base = str(handle.path) if handle.is_local else handle.location.uri
-        target = f"{base}/**/*.parquet" if resource.is_partitioned else base
-        source = f"SELECT * FROM '{target}'"
+        source = f"SELECT * FROM '{base}'"
         if resource_id not in self._scoped:
             # Part 05 §13.1: a reader does not carry a discriminator on a table that is not
             # session-scoped.
             return source
-        return f"SELECT *, {self._identity(packet, resource_id)} FROM '{target}'"
+        return f"SELECT *, {self._identity(packet, resource_id)} FROM '{base}'"
 
     def _identity(self, packet: Packet, resource_id: str) -> str:
         """Return the projected `session_key` and `session_name` for one packet's rows.

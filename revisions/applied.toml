@@ -3152,3 +3152,58 @@ where = [
   { part = "02", anchor = "ew-registry-conformance" },
 ]
 note = "incompatible registry, contract, manifest, and delivery identities advance with their checks"
+
+[clause."R129 §3.1"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-profile-scope" }]
+note = "Part 03 incorporates one closed physical-profile descriptor and generic checker"
+
+[clause."R129 §3.2"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
+note = "profile and checked logical kind derive parquet, zarr, or no generic interface"
+
+[clause."R129 §3.3"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-table-encoding" }, { part = "03", anchor = "ew-parquet-reader-floor" }]
+note = "the Parquet interface is one materialized object with a reader-and-writer floor"
+
+[clause."R129 §3.4"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-version" }, { part = "03", anchor = "ew-array-codecs" }]
+note = "Zarr variants and actual codecs derive from format-owned metadata"
+
+[clause."R129 §3.5"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
+note = "floor role distinguishes reader minimums from packet-writer ceilings"
+
+[clause."R129 §3.6"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-identifiers" }, { part = "04", anchor = "ew-packet-resource-entry-fields" }, { part = "04", anchor = "ew-packet-codecs" }]
+note = "packet and delivery documents omit redundant physical selectors and summaries"
+
+[clause."R129 §3.7"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-external-resource-verification" }]
+note = "ordinary packet access is lazy and requires neither validation receipt nor whole-packet inspection"
+
+[clause."R129 §3.8"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-external-resource-verification" }, { part = "05", anchor = "ew-validation-shim" }]
+note = "physical assessment uses available resource metadata and leaves unreachable external state unassessed"
+
+[clause."R129 §3.9"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
+note = "opaque resources have no closed representation vocabulary or generic value interface"
+
+[clause."R129 §3.10"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
+note = "current interfaces are materialized; ownership is not a realization kind"
+
+[clause."R129 §3.11"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-metadata-placement" }, { part = "03", anchor = "ew-referenced-resource-delivery" }]
+note = "logical facts and self-describing physical metadata retain separate owners"

@@ -862,13 +862,13 @@ def build(  # noqa: C901
         # `external_arrays`, and what kind it happens to be is not the question (Part 04 §5.1).
         for resource_id, array in getattr(source, "external_arrays", dict)().items():
             writer.reference_array(resource_id, array)
-            say(f"  referenced {resource_id} ({array.physical_profile}, {', '.join(array.codecs) or 'no codec'})")
+            say(f"  referenced {resource_id}")
         # Any adapter may reference media, not only this kind: a source says so by defining
         # `external_media`, and what kind it happens to be is not the question (Part 04 §5.1).
         for resource_id, media in getattr(source, "external_media", dict)().items():
             writer.reference_media(resource_id, media)
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
-            say(f"  referenced {resource_id} ({media.format}{size})")
+            say(f"  referenced {resource_id}{size}")
 
         drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
         applied.extend(getattr(source, "compensations", []))

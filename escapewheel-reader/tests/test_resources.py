@@ -111,10 +111,8 @@ def _external_entry(uri):
     entry = {
         "resource_id": "core.probe.lfp",
         "declaration_id": "core.test_arrays",
-        "physical_profile": "zarr_v2",
         "uri": uri,
         "external": True,
-        "codecs": ["blosc"],
     }
     declaration = {
         "content_class": "core",
@@ -156,9 +154,12 @@ def test_a_remote_uri_has_no_local_path():
         assert _array_resource("s3://bucket/lfp").path
 
 
-def test_a_remote_array_takes_its_zarr_version_from_the_manifest():
-    """Nothing local exists to read it from, and Part 03 §8 already makes it a claim."""
-    assert _array_resource("s3://bucket/lfp").zarr_format == 2
+def test_an_unreachable_external_array_has_no_inferred_zarr_version():
+    """The packet and URI cannot substitute for unavailable format metadata."""
+    from escapewheel_reader import ResourceUnreadableError
+
+    with pytest.raises(ResourceUnreadableError, match="cannot reach"):
+        _ = _array_resource("example://bucket/lfp").zarr_format
 
 
 def test_a_windows_drive_is_not_a_scheme(tmp_path):
@@ -192,11 +193,8 @@ def array_packet(tmp_path, packet_root):
         {
             "resource_id": "core.lfp",
             "declaration_id": "core.test_arrays",
-            "physical_profile": "zarr_v3",
             "uri": "arrays/lfp.zarr",
             "validation_state": "passed",
-            # Part 03 §6.4: codecs are declared per resource, so a reader can check before opening.
-            "codecs": ["bytes", "zstd"],
         }
     )
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))

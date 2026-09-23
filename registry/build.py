@@ -39,6 +39,10 @@ VENDORED = {
     / "escapewheel-validator/src/escapewheel_validator/schemas/escapewheel-rule-sql-v0.1.json",
     "manifest.schema.json": HERE.parent
     / "escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json",
+    "physical_profile.schema.json": HERE.parent
+    / "escapewheel-reader/src/escapewheel_reader/schemas/physical_profile.schema.json",
+    "physical_profiles/escapewheel-portable-v0.1.json": HERE.parent
+    / "escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json",
     "sources.schema.json": HERE.parent
     / "escapewheel-reader/src/escapewheel_reader/schemas/sources.schema.json",
     # A *build* reads an adapter's declaration (Part 03 §11.5), so this one vendors into the
@@ -49,6 +53,28 @@ VENDORED = {
     / "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json",
 }
 RULES = HERE / "rules.json"
+
+
+def render_physical_profile() -> Path:
+    """Refresh Part 03's informative kind-to-interface projection."""
+    descriptor = json.loads(
+        (HERE / "physical_profiles/escapewheel-portable-v0.1.json").read_text()
+    )
+    path = HERE.parent / "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md"
+    text = path.read_text()
+    begin = "<!-- BEGIN GENERATED PHYSICAL PROFILE -->"
+    end = "<!-- END GENERATED PHYSICAL PROFILE -->"
+    rows = [begin, "| logical kind | generic interface |", "|---|---|"]
+    rows.extend(
+        f"| `{kind}` | {f'`{interface}`' if interface is not None else 'none'} |"
+        for kind, interface in descriptor["kind_interfaces"].items()
+    )
+    projection = "\n".join([*rows, end])
+    before, remainder = text.split(begin, 1)
+    _, after = remainder.split(end, 1)
+    path.write_text(before + projection + after)
+    return path
+
 
 # 02's type spellings -> R2 §4 vocabulary. Nested spellings are removed by R3, not mapped.
 TYPES = {
@@ -3433,6 +3459,7 @@ if __name__ == "__main__":
     import render
 
     print(f"wrote {', '.join(p.name for p in render.main())}")
+    print(f"wrote {render_physical_profile().relative_to(HERE.parent)}")
 
     # The two hand-written schemas are consumed by sibling distributions, which vendor them
     # because a wheel cannot read a file from another repository. A vendored copy is therefore a
@@ -3441,6 +3468,7 @@ if __name__ == "__main__":
     # than one about the copy. Written here so the class of bug cannot recur, and compared by
     # `check.py` so a build nobody ran is still caught.
     for schema, consumer in VENDORED.items():
+        consumer.parent.mkdir(parents=True, exist_ok=True)
         source = HERE / schema
         if not consumer.parent.is_dir():
             if consumer.parent.parent.is_dir():

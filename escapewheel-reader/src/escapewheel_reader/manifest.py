@@ -1,7 +1,7 @@
 """Parsing and validation of ``packet.json``.
 
 The manifest is the packet's entry point: it declares which resources exist, where they
-live, which sessions the packet covers, and which Zarr codecs a reader must support.
+live, and which sessions the packet covers.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ import jsonschema
 
 from .errors import ManifestError
 from .location import Location
+from .profile import interface_for
 
 MANIFEST_FILENAME = "packet.json"
 
@@ -119,17 +120,9 @@ class Resource:
         return self.kind == "table"
 
     @property
-    def is_partitioned(self) -> bool:
-        """Whether this resource is a partitioned dataset rather than a single file."""
-        return self.entry.get("physical_profile") == "parquet_dataset"
-
-    @property
-    def codecs(self) -> tuple[str, ...]:
-        """Zarr codecs this resource's array uses, excluding the mandatory ``bytes`` codec.
-
-        Empty for resources that are not arrays.
-        """
-        return tuple(str(c) for c in self.entry.get("codecs", ()))
+    def interface(self) -> str | None:
+        """Generic physical interface derived from the checked logical kind."""
+        return None if self.kind is None else interface_for(self.kind)
 
     @property
     def source(self) -> str | None:
@@ -167,8 +160,6 @@ class Manifest:
         Version of the schema registry the packet was written against.
     sessions : tuple of str
         Every session the packet contains.
-    required_codecs : tuple of str
-        Zarr codecs a reader must support to open this packet's arrays.
     extensions : Mapping
         Extension registries the packet declares (Part 09 §6, Part 09 §2), by `extension_id`. Empty is
         the common case and is conforming: core is interpretable without any.
@@ -182,7 +173,6 @@ class Manifest:
     profile_id: str
     registry_version: str
     sessions: tuple[str, ...]
-    required_codecs: tuple[str, ...]
     extensions: Mapping[str, Any]
     resources: tuple[Resource, ...]
     entry: Mapping[str, Any]
@@ -250,7 +240,6 @@ class Manifest:
             profile_id=str(entry["profile_id"]),
             registry_version=str(entry.get("registry_version", "")),
             sessions=tuple(str(s) for s in entry.get("sessions", [])),
-            required_codecs=tuple(str(c) for c in entry.get("required_codecs", [])),
             extensions=dict(entry.get("extensions") or {}),
             resources=tuple(
                 Resource(

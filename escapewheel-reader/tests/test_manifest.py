@@ -13,7 +13,6 @@ def test_load_parses_declared_fields(packet_root):
     assert manifest.profile_id == "escapewheel-portable-v0.1"
     assert manifest.registry_version == "0.1.0"
     assert manifest.sessions == (SESSION_NAME,)
-    assert manifest.required_codecs == ()
     assert {r.resource_id for r in manifest.resources} == {
         "core.sessions",
         "core.intervals",
@@ -35,10 +34,10 @@ def test_unparsable_manifest_is_an_error(tmp_path):
         Manifest.load(tmp_path)
 
 
-def test_schema_violation_is_an_error(packet_root):
+def test_retired_physical_field_is_an_error(packet_root):
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())
-    del entry["required_codecs"]
+    entry["resources"][0]["physical_profile"] = "parquet"
     path.write_text(json.dumps(entry))
     with pytest.raises(ManifestError, match="does not conform"):
         Manifest.load(packet_root)
@@ -47,17 +46,12 @@ def test_schema_violation_is_an_error(packet_root):
 def test_validation_can_be_skipped(packet_root):
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())
-    del entry["required_codecs"]
+    entry["resources"][0]["physical_profile"] = "parquet"
     path.write_text(json.dumps(entry))
-    assert open_packet(packet_root, validate_manifest=False).manifest.required_codecs == ()
+    assert open_packet(packet_root, validate_manifest=False).manifest.resources
 
 
-def test_partitioned_resource_is_recognised(packet_root):
-    path = packet_root / "packet.json"
-    entry = json.loads(path.read_text())
-    entry["resources"][1]["physical_profile"] = "parquet_dataset"
-    entry["resources"][1]["partitioning"] = ["session_id"]
-    path.write_text(json.dumps(entry))
+def test_resource_interface_derives_from_logical_kind(packet_root):
     manifest = Manifest.load(packet_root)
-    assert manifest.resources[1].is_partitioned
-    assert not manifest.resources[0].is_partitioned
+    packet = open_packet(packet_root)
+    assert packet.resource(manifest.resources[1].resource_id).interface == "parquet"

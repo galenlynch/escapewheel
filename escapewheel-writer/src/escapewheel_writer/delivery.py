@@ -146,12 +146,12 @@ def referenced(source: Any) -> dict[str, Any] | None:
             entry = {"resource_id": resource_id, "external": True}
             for field in fields(resource):
                 value = getattr(resource, field.name)
-                if value is not None and not field.name.endswith("_asset_id"):
+                if (
+                    value is not None
+                    and not field.name.endswith("_asset_id")
+                    and field.name not in {"physical_profile", "codecs", "format"}
+                ):
                     entry[field.name] = value
-            if kind == "media" and "format" in entry:
-                # Part 04 §5.1's entry names it `physical_profile`; `ExternalMedia` calls the same
-                # thing `format`, which is what a media row carries.
-                entry["physical_profile"] = entry.pop("format")
             entries.append(entry)
     return {"resources": entries} if entries else None
 
@@ -457,10 +457,6 @@ class Delivered:
                 for name, value in entry.items()
                 if name in taken
             }
-            if "format" in taken and "physical_profile" in entry:
-                # `ExternalMedia` calls a container's format what a manifest entry calls its
-                # physical profile, and a media row carries the first name.
-                values["format"] = entry["physical_profile"]
             built[str(entry["resource_id"])] = kind(**{**values, identity: asset})
         return built
 

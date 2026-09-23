@@ -48,12 +48,10 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
   "profile_id": "escapewheel-portable-v0.1",
   "registry_version": "0.5.0",
   "sessions": ["ecephys_786867_2025-09-25"],
-  "required_codecs": ["blosc", "numcodecs.delta", "zstd"],
   "resources": [
     {
       "resource_id": "core.units",
       "declaration_id": "core.units",
-      "physical_profile": "parquet",
       "uri": "tables/core/units.parquet",
       "validation_state": "passed",
       "sha256": "c53fd91e…"
@@ -61,18 +59,15 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
     {
       "resource_id": "core.sniff_detector",
       "declaration_id": "core.array_asset_instances",
-      "physical_profile": "zarr_v3",
       "uri": "arrays/core/sniff_detector.zarr",
       "validation_state": "passed",
-      "codecs": ["numcodecs.delta", "blosc"],
       "size_bytes": 3463092, "sha256": "1dadd742…"
     },
     {
       "resource_id": "core.46101.lfp",
       "declaration_id": "core.array_asset_instances",
-      "physical_profile": "zarr_v2",
       "uri": "file:///…/recording1",
-      "external": true, "codecs": ["blosc"],
+      "external": true,
       "size_bytes": 402053057,
       "verified_at": "2026-09-04T04:22:45Z"
     },

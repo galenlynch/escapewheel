@@ -239,9 +239,10 @@ The **packet catalog** is the dataset-level map. In the portable profile it is `
 specified in Part 04.
 
 It records which resource instances exist, the logical declarations they instantiate, their
-locations and physical encodings, and their instance-level validation and provenance facts. The
-checked registry declaration supplies logical kind, content class, canonicality, presence, and
-provenance policy.
+locations, and their instance-level validation and provenance facts. The checked registry
+declaration supplies logical kind, content class, canonicality, presence, and provenance policy.
+The packet's profile and the declaration's kind derive a generic physical interface under Part
+03; format-owned metadata supplies the representation's version and physical features.
 
 <a id="ew-iceberg-catalog" data-spec-anchor="canonical"></a>
 ### 3.5 Iceberg catalog
@@ -324,8 +325,9 @@ text sidecars. It MUST be readable without a server.
 ### 7.2 Referencing
 
 A packet need not own every byte it describes. Referencing is expected for large resources: a
-resource the packet does not own sets `external: true` with an absolute URI and declares its own
-codecs.
+resource the packet does not own sets `external: true` and supplies a location. Externality changes
+ownership and what can be inspected; it does not move format-owned metadata into the catalog. An
+unreachable external resource's physical state remains unassessed.
 
 Externalizing a table costs more than externalizing an array, because a table's validation rules
 cannot run at all while it is unreachable.

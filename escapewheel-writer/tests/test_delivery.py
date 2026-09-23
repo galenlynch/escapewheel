@@ -456,8 +456,8 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
         for r in json.loads((tmp_path / "packet/packet.json").read_text())["resources"]
         if r["resource_id"] == "core.waveform_mean"
     )
-    assert entry["physical_profile"] == "zarr_v3"
-    assert entry["codecs"] == ["sharding_indexed", "blosc"], "read off the array, descending the shard"
+    assert "physical_profile" not in entry
+    assert "codecs" not in entry
     assert entry["size_bytes"] > 0 and entry["sha256"]
     assert not (delivered / "waveform_mean.zarr").exists(), "staging moved it rather than copying"
 
@@ -691,13 +691,9 @@ def test_what_a_source_references_crosses_with_its_rows(protocol, tmp_path):
     )
     assert delivery.RESOURCES not in got.tables, "the document is not one of the resources asked for"
     (array,) = got.external_arrays().values()
-    assert (array.uri, array.physical_profile, array.codecs) == (
-        "s3://bucket/ElectricalSeries46101-LFP/data",
-        "zarr_v2",
-        ("blosc",),
-    ), "a codec list is a tuple again"
+    assert array.uri == "s3://bucket/ElectricalSeries46101-LFP/data"
     (media,) = got.external_media().values()
-    assert (media.uri, media.format, media.size_bytes) == ("s3://bucket/bottom_camera.mp4", "mp4", 2884901888)
+    assert (media.uri, media.size_bytes) == ("s3://bucket/bottom_camera.mp4", 2884901888)
 
 
 def test_a_malformed_resource_document_is_refused(tmp_path, supplied):

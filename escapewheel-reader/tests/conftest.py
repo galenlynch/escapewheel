@@ -35,7 +35,6 @@ def _resource(resource_id, uri, **extra):
     entry = {
         "resource_id": resource_id,
         "declaration_id": resource_id,
-        "physical_profile": "parquet",
         "uri": uri,
         "validation_state": "passed",
     }
@@ -336,7 +335,6 @@ def packet_root(tmp_path):
                 "registry_version": "0.1.0",
                 "created_at": "2026-08-26T00:00:00Z",
                 "sessions": [SESSION_NAME],
-                "required_codecs": [],
                 "resources": resources,
                 "validation": {
                     "status": "passed",

@@ -6,8 +6,8 @@ Normative.
 ## 1. Scope
 
 This part defines the packet catalog: the document that binds each concrete packet resource to one
-logical declaration in a checked registry context and to its physical encoding. In the portable
-profile it is `packet.json` at the packet root.
+logical declaration in a checked registry context and to its location. In the portable profile it
+is `packet.json` at the packet root.
 
 Its requirements directly invoke the shared JSON and URI authorities identified in
 [Part 00 §10](00_architecture.md#ew-normative-references) and the SHA-256 authority identified in
@@ -21,7 +21,8 @@ The catalog is the packet's map. A reader MUST resolve resources through it and 
 
 The catalog binds every resource instance. Part 02's declaration supplies logical content class,
 kind, canonicality, instance mode, presence, table contract, and provenance policy; the packet
-entry supplies instance and physical facts. An Iceberg catalog manages only tabular resources and
+entry supplies instance and location facts. Part 03 derives a generic interface from the selected
+profile and logical kind, while the resource owns self-describing physical metadata. An Iceberg catalog manages only tabular resources and
 therefore does not replace the packet catalog.
 
 The catalog identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the catalog is read before any table and a number resolves against nothing.
@@ -45,7 +46,6 @@ fields below record those identifiers; they do not redefine their values or mean
 | `sessions` | array of string | MUST |
 | `resources` | array of entry | MUST |
 | `validation` | object | MUST |
-| `required_codecs` | array of string | MUST (§6.2) |
 | `extensions` | object | where extensions are present (§8) |
 | `description` | string | MAY |
 
@@ -58,18 +58,17 @@ fields below record those identifiers; they do not redefine their values or mean
 |---|---|---|
 | `resource_id` | string | MUST, dotted and namespaced |
 | `declaration_id` | string | MUST, names a visible checked logical declaration |
-| `physical_profile` | string | MUST |
 | `uri` | string | MUST |
 | `validation_state` | string | MUST |
 | `sha256` | string | SHOULD for a packet-owned resource |
-| `codecs` | array of string | MUST for an array (§6.2) |
 | `external` | bool | MUST where true (§5) |
 | `source` | string | MAY, on an external entry (§5.5) |
 | `derived_from` | array of string | according to the declaration's `lineage` policy (§7) |
 | `processing_run_id` | string | according to the declaration's `producing_run` policy (§7) |
 
 An entry MUST NOT contain `layer`, `kind`, `canonical`, `schema_id`, `extension_id`,
-`catalog_table_ref`, `array_asset_id`, or `media_asset_id`. The top-level `extensions` map remains
+`catalog_table_ref`, `array_asset_id`, `media_asset_id`, `physical_profile`, `partitioning`, or
+`codecs`. The top-level `extensions` map remains
 the packet's extension-registry selection.
 
 <a id="ew-logical-resource-kinds" data-spec-anchor="canonical"></a>
@@ -119,6 +118,14 @@ Verification of an external resource is layered, and a report MUST state which l
 | 3c | its bytes read and hash to the recorded `sha256` |
 
 Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a requested mode.
+When an external resource is unavailable, its physical version, codec pipeline, compression,
+encoding, dtype, shape, and chunking are unassessed; a validator MUST NOT infer them from its URI,
+the packet, an adapter claim, or a stand-in.
+
+Opening the catalog, resolving declarations, listing resources, and selecting a session MUST NOT
+require a validation receipt or physical inspection of every resource. Before exposing logical
+values, a reader inspects only the metadata needed for the selected resource and fails that
+resource specifically when support is absent.
 
 ### 5.4 Prefix resources
 
@@ -167,19 +174,11 @@ report it against the resource entry, and MUST NOT silently prefer either the re
 the bytes it found.
 
 <a id="ew-packet-codecs" data-spec-anchor="canonical"></a>
-## 6. Codecs
+## 6. Physical metadata is not projected
 
-<a id="ew-resource-codecs" data-spec-anchor="canonical"></a>
-### 6.1 Per resource
-
-Every array resource MUST declare the codecs it uses. A reader checks a resource's own declaration before opening it.
-
-<a id="ew-packet-codec-union" data-spec-anchor="canonical"></a>
-### 6.2 Packet union
-
-`required_codecs` is the union of every resource's codecs, present so a reader can answer whether it can open the packet at all. A reader MUST NOT refuse a packet over a codec used only by resources it does not open.
-
-A codec declared for an external resource is a claim rather than an observation, and a validator reports it as `info` rather than silently accepting it.
+`profile_id` is the catalog's sole physical-profile selector. Generic interfaces derive under Part
+03, and resource-owned metadata supplies actual versions, layouts, compression, encodings, and
+codec pipelines. The catalog carries no replacement capability union or per-resource selector.
 
 <a id="ew-resource-lineage" data-spec-anchor="canonical"></a>
 ## 7. Resource lineage and producing runs

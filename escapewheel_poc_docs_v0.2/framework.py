@@ -58,6 +58,7 @@ REFERENCE_MARKERS = {
     "Zarr CRC32C": "zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/",
     "Zarr transpose": "zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/",
     "Zarr sharding": "zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/",
+    "Zarr Zstandard": "zarr-specs.readthedocs.io/en/latest/v3/codecs/zstd/",
     "Zarr v2": "zarr-specs.readthedocs.io/en/latest/v2/v2.0.html",
     "RFC 8878": "https://www.rfc-editor.org/info/rfc8878",
     "FIPS 180-4": "csrc.nist.gov/pubs/fips/180-4",
@@ -89,6 +90,7 @@ REFERENCE_OWNERS = {
     "Zarr CRC32C": "03",
     "Zarr transpose": "03",
     "Zarr sharding": "03",
+    "Zarr Zstandard": "03",
     "Zarr v2": "03",
     "RFC 8878": "03",
     "FIPS 180-4": "04",
@@ -149,6 +151,11 @@ REFERENCE_ROWS = {
             "Zarr v3 [Bytes](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/bytes/), [Gzip](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/), [Blosc](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/blosc/), [CRC32C](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/), [transpose](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/), and [sharding-indexed](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/) codec specifications",
             "unversioned",
             "permitted Zarr v3 codec pipeline components",
+        ),
+        (
+            "[Zarr v3 Zstandard codec specification](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/zstd/)",
+            "unversioned",
+            "`zstd` codec metadata object and configuration",
         ),
         (
             "[Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html)",

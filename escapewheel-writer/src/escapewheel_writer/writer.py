@@ -34,6 +34,7 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet, open_packet
+from escapewheel_reader.profile import parquet_floor
 from escapewheel_validator import (
     CheckedRegistryContext,
     RegistryRejected,
@@ -123,7 +124,7 @@ def _options(
     produce the declared order: the records path sorts in `arrow.build`, and the streaming path
     is checked by the validator's physical-order shim (R12 §4) before the commit completes.
     """
-    options: dict[str, Any] = {"compression": "zstd"}
+    options: dict[str, Any] = {"compression": "zstd", "data_page_version": "1.0"}
     # A caller may hand over a column as dictionary codes rather than decoding what Parquet is
     # about to re-encode. Parquet has no dictionary type -- the column is BYTE_ARRAY/String
     # either way -- so the only thing that would record the choice is the Arrow schema pyarrow
@@ -140,6 +141,29 @@ def _options(
     if columns := [pq.SortingColumn(out.names.index(k)) for k in keys if k in out.names]:
         options["sorting_columns"] = columns
     return options
+
+
+def _check_parquet_floor(path: Path) -> None:
+    """Refuse a packet-owned table whose footer exceeds the incorporated writer floor."""
+    floor = parquet_floor()
+    metadata = pq.ParquetFile(path).metadata
+    compressions: set[str] = set()
+    encodings: set[str] = set()
+    for row_group in range(metadata.num_row_groups):
+        group = metadata.row_group(row_group)
+        for column in range(group.num_columns):
+            chunk = group.column(column)
+            compressions.add(str(chunk.compression).upper())
+            encodings.update(str(value).upper() for value in chunk.encodings)
+    outside_compression = sorted(compressions - set(floor["compressions"]))
+    outside_encoding = sorted(encodings - set(floor["encodings"]))
+    if outside_compression or outside_encoding:
+        detail = []
+        if outside_compression:
+            detail.append(f"compression {outside_compression}")
+        if outside_encoding:
+            detail.append(f"encoding {outside_encoding}")
+        raise ValueError(f"{path}: Parquet footer exceeds the portable writer floor: {', '.join(detail)}")
 
 
 #: Batches held ahead of the Parquet writer. Building a batch and encoding one cost about the
@@ -392,7 +416,7 @@ class ExternalMedia:
     media_asset_id: str
     declaration_id: str
     uri: str
-    format: str
+    format: str = ""
     #: Part 04 §5.5, as on `ExternalArray`.
     source: str | None = None
     sha256: str | None = None
@@ -945,7 +969,7 @@ class PacketWriter:
         """Write every staged array under `staging` and return its manifest entries."""
         if not self._staged_arrays:
             return []
-        from .arrays import declared_codecs, write_zarr, written_codecs, written_profile
+        from .arrays import write_zarr
 
         entries = []
         for resource_id, spec in self._staged_arrays.items():
@@ -960,18 +984,14 @@ class PacketWriter:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(spec.written), str(path))
                 size = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
-                codecs = list(written_codecs(path))
             else:
                 size = write_zarr(path, spec)
-                codecs = list(declared_codecs(spec))
             entries.append(
                 {
                     "resource_id": resource_id,
                     "declaration_id": declaration_id,
-                    "physical_profile": written_profile(path) if spec.written is not None else "zarr_v3",
                     "uri": relative,
                     "validation_state": "not_run",
-                    "codecs": codecs,
                     "size_bytes": size,
                     "sha256": _digest(path),
                 }
@@ -986,7 +1006,6 @@ class PacketWriter:
             entry = {
                 "resource_id": resource_id,
                 "declaration_id": declaration_id,
-                "physical_profile": media.format,
                 "uri": media.uri,
                 "validation_state": "not_run",
                 "external": True,
@@ -1005,11 +1024,9 @@ class PacketWriter:
             entry = {
                 "resource_id": resource_id,
                 "declaration_id": declaration_id,
-                "physical_profile": array.physical_profile,
                 "uri": array.uri,
                 "validation_state": "not_run",
                 "external": True,
-                "codecs": list(array.codecs),
             }
             for name in ("source", "sha256", "size_bytes", "verified_at"):
                 if (value := getattr(array, name)) is not None:
@@ -1080,10 +1097,10 @@ class PacketWriter:
                         [n for n in table.schema.names if n not in kept and n not in delta],
                     )
                 )
+            _check_parquet_floor(path)
             entry = {
                 "resource_id": resource_id,
                 "declaration_id": resource_id,
-                "physical_profile": "parquet",
                 "uri": relative,
                 "validation_state": "not_run",
             }
@@ -1148,9 +1165,6 @@ class PacketWriter:
             "registry_version": self._registry["registry_version"],
             "created_at": now,
             "sessions": sessions,
-            # Part 03 §6.4 declares codecs per resource; the top-level list is their union, so a
-            # reader can answer "can I open this packet at all" without walking every entry.
-            "required_codecs": sorted({c for e in entries for c in e.get("codecs", [])}),
             "resources": [dict(e) for e in entries],
             # Part 03 §9.3: declared rather than left to a default, because `prune` reads it and a
             # packet that says nothing makes the operator's policy invisible to the operation.

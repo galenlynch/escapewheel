@@ -60,7 +60,8 @@ from escapewheel_writer.writer import ExternalMedia
 BATCH_ROWS = 500_000
 
 #: The container this adapter references. A camera here writes both an AVI and an MP4 of one
-#: capture; the MP4 is what the portable profile names (Part 03 §2) and what a reader will open.
+#: capture; this adapter selects the MP4 for its specialized consumer. The portable profile treats
+#: the payload as opaque and does not enumerate its container (Part 03 §2).
 SUFFIX = ".mp4"
 
 #: What the timing CSV's columns hold, in order. Written by `foraging.bonsai`'s CsvWriter as

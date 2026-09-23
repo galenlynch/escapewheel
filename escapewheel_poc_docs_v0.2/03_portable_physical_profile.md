@@ -7,6 +7,14 @@ Normative. Profile identifier: `escapewheel-portable-v0.1`.
 
 This part defines how the logical resources of Part 02 are stored in the portable profile. A packet under this profile MUST be readable without a server.
 
+This part incorporates `registry/physical_profile.schema.json` and
+`registry/physical_profiles/escapewheel-portable-v0.1.json`. The schema owns the reusable closed
+shape. The descriptor owns the profile's exact identifiers, kind-to-interface mapping, interface
+forms, ownership compatibility, variants, reader floors, floor roles, and anchors. This prose owns
+their meaning and actor obligations. A conforming distributed copy MUST pass the schema and the
+generic cross-member checker at a packaging or equivalent conformance boundary; an implementation
+MAY cache that result and MUST NOT revalidate an unchanged bundled descriptor for each packet.
+
 The portable physical profile defined by this part is identified by
 `escapewheel-portable-v0.1`. Its requirements directly invoke the shared JSON and URI authorities
 identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the portable-profile
@@ -18,15 +26,31 @@ and verify that catalog field rather than invoking FIPS 180-4 independently.
 This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
 <a id="ew-portable-profile-technologies" data-spec-anchor="canonical"></a>
-## 2. Required technologies
+## 2. Descriptor and interfaces
 
-| resource kind | format |
+The packet's `profile_id` and a resource's checked logical kind select its interface. A packet
+entry MUST NOT select or repeat that interface, and a declaration ID, namespace, URI suffix, or
+directory placement MUST NOT act as an alternative selector.
+
+<!-- BEGIN GENERATED PHYSICAL PROFILE -->
+| logical kind | generic interface |
 |---|---|
-| catalog | JSON |
-| tables | Apache Parquet |
-| dense arrays | Zarr, v3 for packet-owned arrays (§6.1) |
-| media | ordinary containers, such as MP4 |
-| documents | Markdown, JSON, text, or PDF |
+| `table` | `parquet` |
+| `dense_array` | `zarr` |
+| `opaque` | none |
+<!-- END GENERATED PHYSICAL PROFILE -->
+
+The descriptor's mapping keys MUST equal the logical standard's complete kind vocabulary. Every
+non-null mapped interface MUST exist exactly once, and every declared interface MUST be mapped.
+An opaque resource has no generic value interface: a generic reader lists its identity and
+location but need not retrieve, parse, decode, or render it. Unknown opaque representations do not
+invalidate a packet. Every current interface is `materialized`; ownership is not a realization
+kind, and a view requires a separately specified language and evaluation contract.
+
+An interface's `reader_floor` states what every conforming reader supports for logical-value
+access. `reader_and_packet_writer` also bounds packet-owned writer output; `reader_only` does not.
+A valid feature outside a reader-only floor is outside the portability guarantee, but that fact
+alone neither makes the upstream representation malformed nor decides packet conformance.
 
 ## 3. Directory layout
 
@@ -80,7 +104,9 @@ relative URI resolves under that prefix
 <a id="ew-table-encoding" data-spec-anchor="canonical"></a>
 ### 5.1 Encoding
 
-A table MUST be a valid Parquet file. Compression SHOULD be Zstandard where available.
+A table MUST be exactly one object containing one valid Parquet file. A directory, prefix, glob,
+explicit member set, or multi-file dataset MUST NOT realize a table in this profile. Compression
+SHOULD be Zstandard where available.
 
 A large table SHOULD use row groups sized for analytical scans. Part 10 carries the sizes measured for one.
 
@@ -89,9 +115,8 @@ An identifier column is `int32`, or `int64` where its range requires it (Part 02
 <a id="ew-table-partitioning" data-spec-anchor="canonical"></a>
 ### 5.2 Partitioning
 
-A large multi-session table SHOULD be partitioned by `session_id`. A table MUST NOT be partitioned by `unit_id`, which produces many small files.
-
-A partitioned table's row order across files is not defined by this profile. A single file is therefore preferred where the table's sort is load-bearing.
+Partitioned tables are not part of this profile. A future interface may define immutable member
+selection and cross-file ordering; the present `parquet` interface is one object.
 
 ### 5.3 Ordering
 
@@ -120,9 +145,17 @@ A writer **SHOULD** start a new row group at each bucket boundary. A group cut a
 <a id="ew-parquet-reader-floor" data-spec-anchor="canonical"></a>
 ### 5.5 The Parquet floor
 
-A reader MUST support the compressions **uncompressed, Snappy, Gzip and Zstd**. A writer MUST use
-one of those four and SHOULD use Zstd. Dictionary, RLE and delta encodings MAY be used and
-MUST be supported by readers.
+A reader MUST support footer-reported compressions `UNCOMPRESSED`, `SNAPPY`, `GZIP`, and `ZSTD`;
+encodings `PLAIN`, `RLE`, `RLE_DICTIONARY`, and `DELTA_BINARY_PACKED`; data-page types `DATA_PAGE`
+and `DATA_PAGE_V2`; and no Parquet modular encryption. A packet writer MUST keep every written
+table within that same floor and SHOULD use Zstd. It MUST configure its page type and absence of
+encryption before writing, inspect the footer afterwards, and refuse an outside-floor compression
+or encoding. `PLAIN_DICTIONARY` is valid upstream but outside this writer floor.
+
+The descriptor is the exact machine-readable owner of these members and declares this interface
+`materialized`, `logical_values`, `single_object`, available for packet and external ownership,
+with floor role `reader_and_packet_writer`. `FileMetaData.version` is not a substitute for checking
+the independent floor features.
 
 A writer SHOULD choose the encoding of each integer, float, string, timestamp and date column from
 the column's declarations and from four counts over the rows it holds when it chooses: the rows,
@@ -177,13 +210,14 @@ A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null
 <a id="ew-array-version" data-spec-anchor="canonical"></a>
 ### 6.1 Version
 
-A packet-owned array MUST be Zarr v3. A referenced array MAY be Zarr v2, because a packet does not control how an external producer wrote it.
+A packet-owned array MUST be Zarr v3. A referenced array MAY be Zarr v2 or v3. A reader or
+validator determines the version from the resource's `zarr_format` metadata when it accesses or
+assesses that resource; a packet entry MUST NOT state it.
 
 An array MUST use a **regular chunk grid**: every chunk the same shape, the last along each axis permitted to be partial. An irregular grid is expressible in Zarr and is not readable by every binding.
 
-Stated as the prohibition a validator can check: `physical_profile: "zarr_v2"` MUST NOT appear on a resource that is not `external: true`.
-
-Each array resource declares its own Zarr version in the catalog. A reader MUST check a resource's `physical_profile` together with its `codecs` before opening it, and MUST fail **for that resource**, naming whichever it lacks. Per-resource degradation applies to the version as much as to the codec, because a reader may support a codec in one Zarr version and not the other.
+No packet-owned resource may have metadata declaring Zarr v2. Lack of implementation support for
+one selected resource MUST fail that resource specifically and MUST NOT reject unopened resources.
 
 ### 6.2 Axis order
 
@@ -210,16 +244,17 @@ Where an array declares both a sampling rate and a regular tick axis, the two de
 <a id="ew-array-codecs" data-spec-anchor="canonical"></a>
 ### 6.4 Codecs
 
-A writer MAY use any Zarr codec. The catalog MUST name every codec a resource uses. A reader MUST check a resource's declared codecs before opening it, and MUST fail naming what it lacks rather than returning partial data.
+A writer MAY use any codec permitted by the applicable Zarr specification, subject to §6.2's
+`transpose` prohibition and the regular-grid rule. The resource's own metadata is the sole owner of
+the actual pipeline; the catalog does not repeat it.
 
-The floor a reader is required to support is stated per Zarr version, because implementations differ between them:
-
-| `physical_profile` | a reader MUST support | a writer MAY also use |
-|---|---|---|
-| `zarr_v3` | `none`, `gzip`, `zstd` | `blosc` (cname=zstd, shuffle=shuffle), `sharding_indexed` |
-| `zarr_v2` | `none`, `zstd`, `blosc` (cname=zstd) | — |
-
-The asymmetry between the versions is measured, not chosen: `gzip` is in the v3 floor and not the v2 one because a v2 array compressed with gzip raises `KeyError: "gzip"` in a reader that reads every other combination. Codecs are declared per resource, not per packet: a reader MUST NOT refuse a packet over a codec used only by resources it does not open. The catalog's packet-level codec list is their union, for a whole-packet capability answer.
+The descriptor's v3 reader floor is exactly the ordered sequences `bytes`, `bytes` then `gzip`,
+and `bytes` then `zstd`. Its v2 reader floor is exactly `filters: null` with compressor null,
+compressor `id: zstd`, or compressor `id: blosc` and `cname: zstd`. In a v2 pattern, JSON null
+matches only null, every stated member compares equal, and unmentioned configuration members do
+not participate. The descriptor declares the Zarr interface `materialized`, `logical_values`, and
+`prefix`, with floor role `reader_only`; v3 permits packet and external ownership, while v2 permits
+external ownership only. It does not enumerate optional codecs.
 
 <a id="ew-array-metadata-placement" data-spec-anchor="canonical"></a>
 ### 6.5 What the array declares, and what the tables declare
@@ -230,7 +265,10 @@ The declaration-selected axes table carries axis names, because a Zarr binding i
 cannot see them. A physical checker resolves that table from the dense-array declaration rather
 than from a fixed namespace or resource ID.
 
-Zarr attributes MAY duplicate helpful metadata. Metadata required for validation MUST also be represented in tables or the catalog, so that it is not reachable only through an array store.
+Zarr attributes MAY duplicate helpful metadata. Logical and scientific facts required for
+validation MUST also be represented in their logical resources or packet fields. Self-describing
+physical facts—version, shape, dtype, chunking, and codec configuration—MUST be obtained from the
+resource and need not be copied into a table or catalog.
 
 ## 7. Metadata placement
 
@@ -410,7 +448,11 @@ An adapter MUST hand over identifiers as the names its source used and never as 
 
 A resource an adapter owns and has no rows for MUST arrive empty rather than not arriving. An empty delivery states that the source had nothing to say; a resource that does not arrive states that the run failed, and a build that cannot tell them apart cannot report either.
 
-An adapter's arrays MUST NOT cross as rows. A dense array crosses as a reference: its `array_asset_id`, the layout the adapter chose — chunking, sharding, codecs, fill value — and a location. Where the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1) and the adapter MUST write the array there and return the reference, so commit moves it by the rename Part 05 §6 already performs. Where the array is external (§8.2), a build supplies no location and the producer returns the URI its source already has.
+An adapter's arrays MUST NOT cross as rows. A dense array crosses by identity and location. Where
+the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1)
+and the adapter MUST write the array there, so commit moves it by the rename Part 05 §6 already
+performs. Where the array is external (§8.2), a build supplies no location and the producer returns
+the URI its source already has.
 
 **A packet-owned array crosses as the bytes themselves.** A build MUST supply `array_location`,
 one directory per source, since two sources may each deliver an asset of one name and a shared
@@ -420,12 +462,17 @@ the unique catalog-family declaration for that table-and-column pair, uses the r
 `resource_id` as packet identity, and MUST NOT substitute an assigned row ID or source label. It
 MUST refuse a delivery where bytes and catalog rows do not bind one-to-one.
 
-Nothing else crosses for such an array, and a build MUST NOT require an adapter to state any of it. Every field of its manifest entry is in the array or in the build: `physical_profile` is the array's `zarr_format`, `codecs` its codec chain outermost first and descending through a shard, `size_bytes` and `sha256` the bytes a build digests for anything the packet owns (Part 03 §8.1), and the rest the build's own. An adapter delivering an array therefore writes bytes where one delivering rows performs no I/O at all, which is the cost of an array not being records.
+Nothing else crosses for such an array, and a build MUST NOT require an adapter to restate a Zarr
+version, codec pipeline, layout, or other self-describing physical fact. A build inspects reachable
+output as needed; `size_bytes` and `sha256` come from the packet-owned bytes it digests (Part 03
+§8.1). An adapter delivering an array therefore writes bytes where one delivering rows performs no
+I/O at all, which is the cost of an array not being records.
 
 **A referenced resource crosses as a resource document.** An adapter that delivers one MUST
 deliver that document with it, under the reserved resource identifier `resources` (§11.4): a JSON
 object carrying `resources`, an array with one entry per such resource, each a manifest resource
-entry as Part 04 §5 declares one. Every entry MUST carry `resource_id`, `declaration_id`, and `uri`.
+entry as Part 04 §5 declares one. Every entry MUST carry `resource_id`, `declaration_id`, and `uri`,
+and MUST NOT carry `physical_profile`, `partitioning`, or `codecs`.
 A build preserves that binding, rejects one that does not resolve or admit the resource ID, and
 merges the entry into the manifest. Its shape is published as
 `registry/resources.schema.json`. A build MUST refuse a document that does not satisfy it before
@@ -478,5 +525,6 @@ The application column states the extent to which this part invokes each externa
 | [Apache Arrow columnar format](https://arrow.apache.org/docs/format/Columnar.html), [IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc), and [Flight](https://arrow.apache.org/docs/format/Flight.html) | unversioned | Arrow data, IPC, and Flight |
 | [Zarr v3 core](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html), [data types](https://zarr-specs.readthedocs.io/en/latest/v3/data-types/index.html), [regular chunk grid](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-grids/regular-grid/index.html), and [default chunk-key encoding](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-key-encodings/default/index.html) | core v3.0; other entries unversioned | Zarr v3 arrays |
 | Zarr v3 [Bytes](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/bytes/), [Gzip](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/), [Blosc](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/blosc/), [CRC32C](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/), [transpose](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/), and [sharding-indexed](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/) codec specifications | unversioned | permitted Zarr v3 codec pipeline components |
+| [Zarr v3 Zstandard codec specification](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/zstd/) | unversioned | `zstd` codec metadata object and configuration |
 | [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html) | 2.0 | permitted external Zarr v2 arrays |
 | [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | exact | Zstandard framing |

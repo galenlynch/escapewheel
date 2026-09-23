@@ -166,4 +166,4 @@ exact lowercase spelling declared by the registry; delimiters do not create alte
   one; Part 03 owns the physical consequences.
 - **Array and manifest checks** belonging to the shim rather than SQL: Zarr rank against
   `core.array_dimensions`, `channel_index` within its axis extent, checksums,
-  `required_codecs` against reader capability.
+  format-owned physical metadata only when a selected resource is accessed or assessed.

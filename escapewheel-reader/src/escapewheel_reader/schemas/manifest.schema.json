@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/manifest/0.2.0",
+  "$id": "https://escapewheel.org/schemas/manifest/0.3.0",
   "title": "Escapewheel packet manifest",
-  "description": "Shape of packet.json. Covers Part 04's fields, including sessions and required_codecs, with the current provenance names.",
+  "description": "Shape of packet.json. Physical interfaces derive from the selected profile and each declaration's logical kind; format-owned metadata remains in the resource.",
   "type": "object",
   "required": [
     "packet_id",
@@ -13,7 +13,6 @@
     "registry_version",
     "created_at",
     "sessions",
-    "required_codecs",
     "resources",
     "validation"
   ],
@@ -105,14 +104,6 @@
     "release_id": {
       "type": "string"
     },
-    "required_codecs": {
-      "description": "The union of every resource's codecs. Answers whether a reader can use the whole packet; it does not gate individual reads.",
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "uniqueItems": true
-    },
     "resources": {
       "type": "array",
       "items": {
@@ -183,6 +174,7 @@
       }
     }
   },
+  "not": {"required": ["required_codecs"]},
   "$defs": {
     "resource": {
       "type": "object",
@@ -202,30 +194,9 @@
         "semantic_type": {
           "type": "string"
         },
-        "physical_profile": {
-          "enum": [
-            "parquet",
-            "parquet_dataset",
-            "zarr_v2",
-            "zarr_v3",
-            "markdown",
-            "json",
-            "text",
-            "pdf",
-            "mp4"
-          ],
-          "description": "Physical encoding of this resource. zarr_v2 is permitted only for an external resource; a packet-owned array MUST be zarr_v3. The version is part of the profile because readability is a property of the (version, codec) pair, not of the codec alone."
-        },
         "uri": {
           "type": "string",
           "minLength": 1
-        },
-        "partitioning": {
-          "description": "Present when physical_profile is parquet_dataset.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
         },
         "validation_state": {
           "enum": [
@@ -311,16 +282,9 @@
             },
             "additionalProperties": false
           }
-        },
-        "codecs": {
-          "description": "Zarr codecs this resource's array uses, excluding the mandatory bytes codec. A reader checks these before opening this resource and must not refuse the packet over a codec used only by resources it does not open.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
         }
       },
+      "additionalProperties": false,
       "allOf": [
         {
           "not": {
@@ -339,55 +303,12 @@
         {
           "if": {
             "properties": {
-              "physical_profile": {
-                "const": "parquet_dataset"
-              }
-            },
-            "required": [
-              "physical_profile"
-            ]
-          },
-          "then": {
-            "required": [
-              "partitioning"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
               "uri": {
                 "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*://"
               }
             },
             "required": [
               "uri"
-            ]
-          },
-          "then": {
-            "properties": {
-              "external": {
-                "const": true
-              }
-            },
-            "required": [
-              "external"
-            ]
-          }
-        },
-        {
-          "if": {
-            "allOf": [
-              {
-                "properties": {
-                  "physical_profile": {
-                    "const": "zarr_v2"
-                  }
-                },
-                "required": [
-                  "physical_profile"
-                ]
-              }
             ]
           },
           "then": {

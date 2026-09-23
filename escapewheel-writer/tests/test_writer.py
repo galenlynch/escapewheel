@@ -613,10 +613,8 @@ def test_an_array_is_written_as_zarr_v3(tmp_path, registry, minimal):
         if r["resource_id"] == "core.waveform_means"
     )
     assert entry["declaration_id"] == "core.array_asset_instances"
-    assert entry["physical_profile"] == "zarr_v3"  # Part 03 §6.1: packet-owned must be v3
-    # Sharding is a codec, and the manifest must say so: a reader without sharding support
-    # would otherwise read `["blosc"]` and discover the shard only on opening the array.
-    assert entry["codecs"] == ["sharding_indexed", "blosc"]
+    assert "physical_profile" not in entry
+    assert "codecs" not in entry
     assert (root / "arrays" / "core" / "waveform_means.zarr").is_dir()
 
 
@@ -674,13 +672,8 @@ def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal
         writer.commit(root)
 
 
-def test_a_codec_outside_the_floor_is_written_and_declared(tmp_path):
-    """Part 03 §6.4: a writer MAY use any Zarr codec so long as the manifest names it.
-
-    The floor is a reader obligation -- `Packet.unopenable` is where a reader finds out it
-    cannot open an array -- so refusing here would enforce against a writer a rule written for
-    readers, and would make R14's own LFP case unwritable.
-    """
+def test_a_codec_outside_the_reader_floor_is_written(tmp_path):
+    """Part 03 §6.4: the Zarr reader floor is not a writer ceiling."""
     from escapewheel_writer.arrays import declared_codecs
     from escapewheel_writer.writer import StagedArray
 
@@ -933,7 +926,8 @@ def test_a_referenced_array_is_declared_external_and_copied_nowhere(tmp_path, re
         r for r in json.loads((root / "packet.json").read_text())["resources"] if r["resource_id"] == "core.probe.lfp"
     )
     assert entry["external"] is True
-    assert entry["physical_profile"] == "zarr_v2"
+    assert "physical_profile" not in entry
+    assert "codecs" not in entry
     assert entry["uri"] == "s3://bucket/lfp"
     assert entry["size_bytes"] == 17
     assert not (root / "arrays").exists(), "nothing was copied"
@@ -957,8 +951,7 @@ def test_a_relative_reference_is_refused(tmp_path, registry):
         )
 
 
-def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
-    """Part 04 §6.2: the top-level list is the union for the whole-packet question."""
+def test_a_referenced_codec_is_not_projected_into_the_manifest(tmp_path, registry, minimal):
     from escapewheel_writer.writer import ExternalArray
 
     root = tmp_path / "s001"
@@ -978,7 +971,10 @@ def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
         ),
     )
     writer.commit(root)
-    assert json.loads((root / "packet.json").read_text())["required_codecs"] == ["blosc"]
+    manifest = json.loads((root / "packet.json").read_text())
+    entry = next(r for r in manifest["resources"] if r["resource_id"] == "core.probe.lfp")
+    assert "required_codecs" not in manifest
+    assert "codecs" not in entry
 
 
 def test_no_catalog_names_a_resource_that_is_not_in_place(tmp_path, registry, minimal):

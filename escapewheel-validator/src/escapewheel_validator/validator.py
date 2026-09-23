@@ -651,17 +651,6 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "Part 03 §6.1 allows v2 only for an array the packet references",
         )
 
-    declared = set(resource.codecs)
-    if declared != actual:
-        detail = []
-        if undeclared := sorted(actual - declared):
-            detail.append(f"the store uses {', '.join(undeclared)}, which the manifest omits")
-        if unused := sorted(declared - actual):
-            detail.append(f"the manifest declares {', '.join(unused)}, which the store does not use")
-        report.add(
-            "error", "array.codecs_disagree_with_store", f"{resource.resource_id}: {'; '.join(detail)} (Part 04 §5.3)"
-        )
-
     if "transpose" in actual:
         report.add(
             "error",
@@ -739,62 +728,19 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         _check_one_array(resource, packet.array_resource(resource.resource_id), extents, report)
 
 
-#: The codec floor, per Zarr version (Part 03 §6.4). A codec's readability is a property of the
-#: pair `(zarr_format, codec)` rather than of the codec: `gzip` is in Part 03 §6.4's baseline and
-#: Zarr.jl reads it in v3 and not in v2, because the two versions name codecs differently and
-#: the library registers only the v3 spelling. A MUST that one of the two target languages
-#: cannot honour is not a floor, so v2's row omits it.
-FLOOR = {
-    "zarr_v3": frozenset({"none", "gzip", "zstd", "blosc", "sharding_indexed"}),
-    "zarr_v2": frozenset({"none", "zstd", "blosc"}),
-}
-
-
 def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = False) -> None:
-    """Layer 1b: manifest-internal codec consistency (Part 04 §5.3, level 1).
-
-    Both sides are manifest fields, so this holds offline. Whether a declared codec matches
-    the array's actual metadata is level 2 for packet-owned arrays and level 3 -- the
-    requested external mode -- for the rest.
+    """Report external physical state as unassessed unless resolution was requested.
 
     Parameters
     ----------
     resolved : bool, default False
         Whether level 3 ran, in which case the external claims are not reported as unchecked.
     """
-    declared: set[str] = set()
-    for resource in packet.resources():
-        declared |= set(resource.codecs)
-        # Part 04 §5.1's "absolute uri implies external" and Part 03 §6.1's "zarr_v2 implies external"
-        # are stated in the manifest JSON Schema, which refuses such a packet at open. Saying
-        # them again here would be a second, weaker copy that never runs. The floor is not
-        # expressible there -- it is a set relation between two fields -- so it lives here.
-        profile = str(resource.entry.get("physical_profile", ""))
-        if profile in FLOOR and (beyond := sorted(set(resource.codecs) - FLOOR[profile])):
-            report.add(
-                "info",
-                "codec.outside_the_floor",
-                f"{resource.resource_id} uses {', '.join(beyond)}, outside the {profile} floor; "
-                "conforming but not portable by default (Part 03 §6.4)",
-            )
-    summary = set(packet.manifest.required_codecs)
-    if declared != summary:
-        detail = []
-        if missing := sorted(declared - summary):
-            detail.append(f"resources use {', '.join(missing)} but required_codecs omits them")
-        if extra := sorted(summary - declared):
-            detail.append(f"required_codecs lists {', '.join(extra)} that no resource uses")
-        report.add("error", "manifest.required_codecs_is_the_union", "; ".join(detail))
-
-    # An external resource's codecs, sha256 and size_bytes are claims the default mode does
-    # not verify (Part 03 §8, Part 04 §5.3). Say so, rather than let "passed" imply otherwise. The
-    # requested mode reports what it resolved instead, so the two never both speak.
     if not resolved and (names := [r.resource_id for r in packet.resources() if r.is_external]):
         report.add(
             "info",
-            "external.unverified",
-            f"{len(names)} external resource(s) not resolved; their codecs, sha256 and "
-            "size_bytes are unverified claims",
+            "external.physical_unassessed",
+            f"{len(names)} external resource(s) not resolved; format-owned physical metadata is unassessed",
             [(name,) for name in names],
         )
 
@@ -1002,15 +948,6 @@ def _compare_external(
             )
     if extents:
         fields.extend(_compare_shape(resource, uri, found, extents, report))
-    if (declared := set(resource.codecs)) and (stored := _stored_codecs(uri, found)) is not None:
-        fields.append("codecs")
-        if stored != declared:
-            report.add(
-                "error",
-                "external.codecs",
-                f"{resource.resource_id}: stores {', '.join(sorted(stored)) or 'no codec'}, "
-                f"manifest declares {', '.join(sorted(declared))}",
-            )
     if checksums and (claimed_sha := entry.get("sha256")) is not None:
         try:
             actual = digest(uri)

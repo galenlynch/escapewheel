@@ -9,8 +9,7 @@ dataset, and transcoding to the portable floor would discard the acquisition's o
 for nothing. The bytes stay where they are and the packet says where that is.
 
 **It is Zarr v2, which only an external resource may be** (Part 03 §6.1). A packet-owned array
-must be v3. The version rides on `physical_profile`, not a new field, because a resource that
-already says which profile it is should not say it twice.
+must be v3. Its own `.zarray` metadata states the version; the packet does not repeat it.
 
 **Its timestamps are unusable and unnecessary.** Every series stores 7,983,750 float64
 timestamps -- 767 MB across twelve -- on a regenerated nominal grid, with the sign of `t0`

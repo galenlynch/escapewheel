@@ -1,0 +1,39 @@
+{
+  "$schema": "https://escapewheel.org/schemas/physical-profile/0.1.0",
+  "id": "escapewheel-portable-v0.1",
+  "logical_standard": "escapewheel-logical-v0.1",
+  "kind_interfaces": {"table": "parquet", "dense_array": "zarr", "opaque": null},
+  "interfaces": {
+    "parquet": {
+      "realization": "materialized", "access": "logical_values", "resource_form": "single_object",
+      "ownership": ["packet", "external"], "floor_role": "reader_and_packet_writer",
+      "reader_floor": {
+        "compressions": ["UNCOMPRESSED", "SNAPPY", "GZIP", "ZSTD"],
+        "encodings": ["PLAIN", "RLE", "RLE_DICTIONARY", "DELTA_BINARY_PACKED"],
+        "data_page_types": ["DATA_PAGE", "DATA_PAGE_V2"], "encryption": "none"
+      },
+      "anchors": ["ew-table-encoding", "ew-parquet-reader-floor"]
+    },
+    "zarr": {
+      "realization": "materialized", "access": "logical_values", "resource_form": "prefix",
+      "floor_role": "reader_only",
+      "variants": {
+        "v3": {
+          "format_version": 3, "ownership": ["packet", "external"],
+          "reader_floor": {"codec_sequences": [["bytes"], ["bytes", "gzip"], ["bytes", "zstd"]]},
+          "anchors": ["ew-array-version", "ew-array-codecs"]
+        },
+        "v2": {
+          "format_version": 2, "ownership": ["external"],
+          "reader_floor": {"metadata_patterns": [
+            {"filters": null, "compressor": null},
+            {"filters": null, "compressor": {"id": "zstd"}},
+            {"filters": null, "compressor": {"id": "blosc", "cname": "zstd"}}
+          ]},
+          "anchors": ["ew-array-version", "ew-array-codecs"]
+        }
+      },
+      "anchors": ["ew-array-version", "ew-array-codecs"]
+    }
+  }
+}

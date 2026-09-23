@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "revision": "R129",
+  "based_on": "a52e4fc56dbbf7dd6be4d7d64145404b1c838b5d",
+  "clauses": {
+    "R129 §3.1": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-portable-profile-scope"},
+        {"path": "registry/physical_profile.schema.json", "pointer": "/$defs"},
+        {"path": "registry/physical_profiles/escapewheel-portable-v0.1.json", "pointer": "/id"}
+      ],
+      "projections": {"paths": ["escapewheel-reader/src/escapewheel_reader/schemas/physical_profile.schema.json", "escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_profile.py::test_generic_checker_rejects_cross_member_drift"}, {"kind": "check", "stage": "registry: structural checks", "id": "physical profile satisfies its schema and generic invariants"}]},
+      "implementations": {"paths": ["escapewheel-reader/src/escapewheel_reader/profile.py", "registry/build.py", "registry/check.py"]},
+      "documentation": {"paths": ["registry/README.md"]}
+    },
+    "R129 §3.2": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-portable-profile-technologies"}, {"path": "registry/physical_profiles/escapewheel-portable-v0.1.json", "pointer": "/kind_interfaces"}],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_profile.py::test_bundled_profile_derives_every_logical_interface"}, {"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_manifest.py::test_resource_interface_derives_from_logical_kind"}]},
+      "implementations": {"paths": ["escapewheel-reader/src/escapewheel_reader/profile.py", "escapewheel-reader/src/escapewheel_reader/manifest.py"]},
+      "documentation": {"paths": ["README.md"]}
+    },
+    "R129 §3.3": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-table-encoding"}, {"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-parquet-reader-floor"}, {"path": "registry/physical_profiles/escapewheel-portable-v0.1.json", "pointer": "/interfaces/parquet"}],
+      "projections": {"paths": ["escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_writer.py::test_commits_a_valid_packet"}]},
+      "implementations": {"paths": ["escapewheel-writer/src/escapewheel_writer/writer.py", "escapewheel-reader/src/escapewheel_reader/resources.py"]},
+      "documentation": {"paths": ["escapewheel_poc_docs_v0.2/08_example_packet.md"]}
+    },
+    "R129 §3.4": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-array-version"}, {"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-array-codecs"}, {"path": "registry/physical_profiles/escapewheel-portable-v0.1.json", "pointer": "/interfaces/zarr"}],
+      "projections": {"paths": ["escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_profile.py::test_bundled_profile_is_checked_once_and_selects_variants"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_a_packet_owned_array_must_be_zarr_v3"}]},
+      "implementations": {"paths": ["escapewheel-reader/src/escapewheel_reader/resources.py", "escapewheel-validator/src/escapewheel_validator/validator.py", "escapewheel-writer/src/escapewheel_writer/arrays.py"]},
+      "documentation": {"paths": ["escapewheel-reader/README.md"]}
+    },
+    "R129 §3.5": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-portable-profile-technologies"}, {"path": "registry/physical_profiles/escapewheel-portable-v0.1.json", "pointer": "/interfaces"}],
+      "projections": {"paths": ["escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_profile.py::test_bundled_profile_derives_every_logical_interface"}]},
+      "implementations": {"paths": ["escapewheel-reader/src/escapewheel_reader/profile.py", "escapewheel-writer/src/escapewheel_writer/writer.py"]},
+      "documentation": {"unchanged": "Part 03 explains both floor roles directly."}
+    },
+    "R129 §3.6": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md", "anchor": "ew-packet-identifiers"}, {"path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md", "anchor": "ew-packet-resource-entry-fields"}, {"path": "registry/manifest.schema.json", "pointer": "/$id"}, {"path": "registry/resources.schema.json", "pointer": "/$id"}],
+      "projections": {"paths": ["escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json", "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_manifest.py::test_retired_physical_field_is_an_error"}, {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_writer.py::test_a_referenced_codec_is_not_projected_into_the_manifest"}]},
+      "implementations": {"paths": ["escapewheel-writer/src/escapewheel_writer/writer.py", "escapewheel-writer/src/escapewheel_writer/delivery.py", "escapewheel-reader/src/escapewheel_reader/manifest.py"]},
+      "documentation": {"paths": ["README.md", "escapewheel_poc_docs_v0.2/08_example_packet.md"]}
+    },
+    "R129 §3.7": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md", "anchor": "ew-external-resource-verification"}],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_packet.py::test_duckdb_skips_unreadable_resources"}]},
+      "implementations": {"paths": ["escapewheel-reader/src/escapewheel_reader/packet.py", "escapewheel-reader/src/escapewheel_reader/resources.py"]},
+      "documentation": {"paths": ["escapewheel-reader/README.md"]}
+    },
+    "R129 §3.8": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md", "anchor": "ew-external-resource-verification"}, {"path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md", "anchor": "ew-validation-shim"}],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_an_external_resource_is_reported_as_unverified_by_default"}, {"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_resources.py::test_an_unreachable_external_array_has_no_inferred_zarr_version"}]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/validator.py", "escapewheel-reader/src/escapewheel_reader/resources.py"]},
+      "documentation": {"paths": ["escapewheel-validator/CONTRIBUTING.md"]}
+    },
+    "R129 §3.9": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-portable-profile-technologies"}, {"path": "registry/physical_profiles/escapewheel-portable-v0.1.json", "pointer": "/kind_interfaces/opaque"}],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_profile.py::test_bundled_profile_derives_every_logical_interface"}]},
+      "implementations": {"paths": ["escapewheel-reader/src/escapewheel_reader/profile.py", "escapewheel-reader/src/escapewheel_reader/manifest.py"]},
+      "documentation": {"paths": ["escapewheel_poc_docs_v0.2/08_example_packet.md"]}
+    },
+    "R129 §3.10": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-portable-profile-technologies"}, {"path": "registry/physical_profiles/escapewheel-portable-v0.1.json", "pointer": "/interfaces"}],
+      "projections": {"paths": ["escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json"]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "registry: structural checks", "id": "physical profile satisfies its schema and generic invariants"}]},
+      "implementations": {"paths": ["escapewheel-reader/src/escapewheel_reader/profile.py"]},
+      "documentation": {"unchanged": "The profile has no view representation or view API."}
+    },
+    "R129 §3.11": {
+      "owners": [{"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-array-metadata-placement"}, {"path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md", "anchor": "ew-referenced-resource-delivery"}],
+      "projections": {"paths": ["escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_delivery.py::test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares"}]},
+      "implementations": {"paths": ["escapewheel-writer/src/escapewheel_writer/delivery.py", "escapewheel-writer/src/escapewheel_writer/writer.py", "escapewheel-reader/src/escapewheel_reader/resources.py"]},
+      "documentation": {"paths": ["escapewheel_poc_docs_v0.2/07_reference_implementation.md"]}
+    }
+  }
+}

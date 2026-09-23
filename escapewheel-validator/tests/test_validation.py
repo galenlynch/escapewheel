@@ -3,7 +3,7 @@ import json
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-from escapewheel_reader import PacketError, open_packet
+from escapewheel_reader import ManifestError, PacketError, open_packet
 
 from escapewheel_validator import validate
 from escapewheel_validator.generate import Check, concerns
@@ -260,7 +260,7 @@ def test_the_position_column_is_checked_against_the_registrys_roles(packet_root)
     assert "'seat_index'" in check.sql and "core.units" in check.sql
 
 
-def test_required_codecs_must_equal_the_union(packet_root):
+def test_retired_codec_summary_is_rejected_by_the_manifest_schema(packet_root):
     _add_family_declaration(packet_root, "core.test_payloads")
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())
@@ -270,14 +270,12 @@ def test_required_codecs_must_equal_the_union(packet_root):
             "declaration_id": "core.test_payloads",
             "uri": "s3://example/p.zarr",
             "external": True,
-            "codecs": ["wavpack"],
         }
     )
-    entry["required_codecs"] = []  # the union says wavpack
+    entry["required_codecs"] = ["wavpack"]
     path.write_text(json.dumps(entry))
-    report = validate(open_packet(packet_root))
-    finding = next(f for f in report.findings if f.check == "manifest.required_codecs_is_the_union")
-    assert "wavpack" in finding.message
+    with pytest.raises(ManifestError, match="does not conform"):
+        open_packet(packet_root)
 
 
 def test_external_resources_are_reported_as_unverified(packet_root):
@@ -291,14 +289,12 @@ def test_external_resources_are_reported_as_unverified(packet_root):
             "declaration_id": "core.test_payloads",
             "uri": "s3://example/p.zarr",
             "external": True,
-            "codecs": ["wavpack"],
         }
     )
-    entry["required_codecs"] = ["wavpack"]
     path.write_text(json.dumps(entry))
     report = validate(open_packet(packet_root))
     assert report.passed  # unreachable externals do not invalidate
-    info = next(f for f in report.findings if f.check == "external.unverified")
+    info = next(f for f in report.findings if f.check == "external.physical_unassessed")
     assert info.level == "info"
     assert info.rows == (("core.probe0",),)
 
@@ -395,7 +391,6 @@ def _declare(root, **overrides):
         {
             "resource_id": "analysis.test_output",
             "declaration_id": "analysis.test_output",
-            "physical_profile": "parquet",
             "uri": "tables/core/trials.parquet",
             "validation_state": "passed",
             "derived_from": ["core.trials"],
@@ -629,7 +624,6 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
         {
             "resource_id": "core.array_assets",
             "declaration_id": "core.array_assets",
-            "physical_profile": "parquet",
             "uri": "tables/core/array_assets.parquet",
             "validation_state": "passed",
         }
@@ -649,7 +643,6 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
             {
                 "resource_id": "core.array_dimensions",
                 "declaration_id": "core.array_dimensions",
-                "physical_profile": "parquet",
                 "uri": "tables/core/array_dimensions.parquet",
                 "validation_state": "passed",
             }
@@ -658,15 +651,12 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
     entry = {
         "resource_id": "core.waveform_mean",
         "declaration_id": "core.array_asset_instances",
-        "physical_profile": "zarr_v3",
         "uri": uri,
         "validation_state": "passed",
-        "codecs": declared,
     }
     if external:
         entry |= {"external": True, "uri": f"file://{store}"}
     manifest["resources"].append(entry)
-    manifest["required_codecs"] = sorted(declared)
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     return root
 
@@ -690,19 +680,6 @@ def test_a_catalog_row_requires_its_declared_resource(packet_root):
     path.write_text(json.dumps(manifest))
     report = validate(open_packet(packet_root))
     assert "packet.resource.catalog_binding" in {finding.check for finding in report.findings}
-
-
-def test_an_omitted_sharding_codec_is_caught(packet_root):
-    """Sharding is a codec. A manifest omitting it understates what a reader needs (Part 03 §6.4)."""
-    _add_array(packet_root, declared=["blosc"])
-    report = validate(open_packet(packet_root))
-    assert "array.codecs_disagree_with_store" in _checks(report)
-    assert any("sharding_indexed" in f.message for f in report.findings)
-
-
-def test_a_declared_codec_the_store_does_not_use_is_caught(packet_root):
-    _add_array(packet_root, declared=["sharding_indexed", "blosc", "gzip"])
-    assert "array.codecs_disagree_with_store" in _checks(validate(open_packet(packet_root)))
 
 
 def test_a_packet_owned_array_must_be_zarr_v3(packet_root):
@@ -961,10 +938,8 @@ def _external(root, **overrides):
     entry = next(resource for resource in manifest["resources"] if resource["resource_id"] == "core.waveform_mean")
     entry.update(
         {
-            "physical_profile": "zarr_v2",
             "uri": array.resolve().as_uri(),
             "external": True,
-            "codecs": ["blosc"],
             "size_bytes": total,
             **overrides,
         }
@@ -972,7 +947,6 @@ def _external(root, **overrides):
     for key, value in tuple(entry.items()):
         if value is None:
             entry.pop(key)
-    manifest["required_codecs"] = sorted({c for r in manifest["resources"] for c in r.get("codecs", [])})
     (root / "packet.json").write_text(json.dumps(manifest))
     return root
 
@@ -981,7 +955,7 @@ def test_an_external_resource_is_reported_as_unverified_by_default(packet_root):
     """Part 04 §5.3: structural validation must not reach for bytes the packet does not own."""
     report = validate(open_packet(_external(packet_root)))
     assert report.passed
-    assert "external.unverified" in [f.check for f in report.findings if f.level == "info"]
+    assert "external.physical_unassessed" in [f.check for f in report.findings if f.level == "info"]
 
 
 def test_the_requested_mode_resolves_it(packet_root):
@@ -989,7 +963,7 @@ def test_the_requested_mode_resolves_it(packet_root):
     assert report.passed
     checks = {f.check for f in report.findings}
     assert "external.verified" in checks
-    assert "external.unverified" not in checks, "the two modes must not both speak"
+    assert "external.physical_unassessed" not in checks, "the two modes must not both speak"
 
 
 def test_size_bytes_counts_the_whole_prefix_including_its_metadata(packet_root):
@@ -1006,31 +980,12 @@ def test_a_size_that_disagrees_is_an_error_only_in_that_mode(packet_root):
     assert "external.size_bytes" in {f.check for f in report.findings}
 
 
-def test_a_codec_that_disagrees_is_caught(packet_root):
-    root = _external(packet_root, codecs=["zstd"])
-    report = validate(open_packet(root), external=True)
-    assert "external.codecs" in {f.check for f in report.findings}
-
-
 def test_an_unreachable_resource_is_a_warning_not_an_error(packet_root):
     """Reachability is a property of the reader's situation, not of the packet."""
     root = _external(packet_root, uri="file:///nowhere/at/all.zarr")
     report = validate(open_packet(root), external=True)
     assert report.passed
     assert "external.unreachable" in {f.check for f in report.findings}
-
-
-def test_a_codec_outside_its_versions_floor_is_reported(packet_root):
-    """Part 03 §6.4: gzip is in Part 03 §6.4's baseline and Zarr.jl reads it in v3 and not in v2."""
-    root = _external(packet_root, codecs=["gzip"])
-    report = validate(open_packet(root))
-    assert report.passed, "outside the floor is conforming, just not portable"
-    assert "codec.outside_the_floor" in {f.check for f in report.findings}
-
-
-def test_the_same_codec_inside_the_v3_floor_is_not_reported(packet_root):
-    root = _external(packet_root, physical_profile="zarr_v3", codecs=["gzip"])
-    assert "codec.outside_the_floor" not in {f.check for f in validate(open_packet(root)).findings}
 
 
 def test_a_requested_digest_with_nothing_recorded_says_so(packet_root):
@@ -1069,7 +1024,7 @@ def test_the_summary_names_what_it_compared(packet_root):
     """ "Resolved and checked" said nothing about which claims were actually tested."""
     report = validate(open_packet(_external(packet_root)), external=True)
     message = next(f for f in report.findings if f.check == "external.verified").message
-    assert "1 codecs" in message and "1 size_bytes" in message
+    assert "1 rank" in message and "1 size_bytes" in message
 
 
 def _with_members(root, *, mutate=None):
@@ -1235,7 +1190,6 @@ def _coordinate_table(root, *, rows, keyed=True):
             {
                 "resource_id": "core.array_channels",
                 "declaration_id": "core.array_channels",
-                "physical_profile": "parquet",
                 "uri": "tables/core/array_channels.parquet",
                 "validation_state": "passed",
             }
@@ -1444,7 +1398,6 @@ def _extension(root, *, tables=None, mutate=None):
         {
             "resource_id": "task.trials",
             "declaration_id": "task.trials",
-            "physical_profile": "parquet",
             "uri": "tables/task/trials.parquet",
             "validation_state": "passed",
         }
@@ -1604,11 +1557,9 @@ def _reference(root, **overrides):
         "uri": "processing/ecephys/LFP/data",
         "external": True,
         "source": "raw_nwb",
-        "codecs": ["zstd"],
     }
     resource.update(overrides)
     entry["resources"].append(resource)
-    entry["required_codecs"] = sorted({*entry.get("required_codecs", []), *resource.get("codecs", [])})
     path.write_text(json.dumps(entry))
     return path
 

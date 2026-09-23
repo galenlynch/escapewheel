@@ -133,7 +133,6 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
             {
                 "resource_id": "core.subjects",
                 "declaration_id": "core.subjects",
-                "physical_profile": "parquet",
                 "uri": "tables/core/subjects.parquet",
                 "validation_state": "passed",
             }
@@ -279,7 +278,6 @@ def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_roo
         {
             "resource_id": "core.clock_anchors",
             "declaration_id": "core.clock_anchors",
-            "physical_profile": "parquet",
             "uri": "tables/core/clock_anchors.parquet",
             "validation_state": "passed",
         }

@@ -33,8 +33,6 @@ def _ls(args: argparse.Namespace) -> int:
     manifest = packet.manifest
     print(f"{manifest.packet_id}  profile={manifest.profile_id}  registry={manifest.registry_version}")
     print(f"sessions: {', '.join(packet.sessions) or 'none'}")
-    if packet.manifest.required_codecs:
-        print(f"required codecs: {', '.join(packet.manifest.required_codecs)}")
     print()
     width = max((len(r.resource_id) for r in packet.resources()), default=0)
     for resource in packet.resources():

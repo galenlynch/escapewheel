@@ -138,7 +138,7 @@
 
 ["03"]
 "1" = "Scope"
-"2" = "Required technologies"
+"2" = "Descriptor and interfaces"
 "3" = "Directory layout"
 "3.1" = "Recommended layout"
 "3.2" = "Files that MUST NOT be written"
@@ -191,9 +191,7 @@
 "5.3" = "Verification levels"
 "5.4" = "Prefix resources"
 "5.5" = "Source resolution"
-"6" = "Codecs"
-"6.1" = "Per resource"
-"6.2" = "Packet union"
+"6" = "Physical metadata is not projected"
 "7" = "Resource lineage and producing runs"
 "8" = "Extensions"
 "9" = "Validation block"
@@ -680,16 +678,10 @@ section = "1"
 title = "Scope"
 aliases = []
 
-[anchor.ew-packet-codec-union]
-part = "04"
-section = "6.2"
-title = "Packet union"
-aliases = []
-
 [anchor.ew-packet-codecs]
 part = "04"
 section = "6"
-title = "Codecs"
+title = "Physical metadata is not projected"
 aliases = []
 
 [anchor.ew-packet-content-classes]
@@ -743,7 +735,7 @@ aliases = []
 [anchor.ew-portable-profile-technologies]
 part = "03"
 section = "2"
-title = "Required technologies"
+title = "Descriptor and interfaces"
 aliases = []
 
 [anchor.ew-reader-declared-types]
@@ -846,12 +838,6 @@ aliases = []
 part = "02"
 section = "2.6"
 title = "Catalog binding"
-aliases = []
-
-[anchor.ew-resource-codecs]
-part = "04"
-section = "6.1"
-title = "Per resource"
 aliases = []
 
 [anchor.ew-resource-common-fields]

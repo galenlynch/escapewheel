@@ -16,7 +16,7 @@ import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
 from .clocks import NotAligned, anchors, on_clock, origin, seconds, stored_span
-from .errors import ResourceNotFoundError, ResourceUnreadableError, UnsupportedCodecError
+from .errors import ResourceNotFoundError, ResourceUnreadableError
 from .location import SOURCES_FILENAME, Location, Rewrite, Sources, read_sources
 from .manifest import Manifest, Resource
 from .observation import VIEWS, attach_support, register_views, unit_windows
@@ -37,26 +37,6 @@ if TYPE_CHECKING:  # pragma: no cover
 Predicate = str | int | float | bool | tuple[Any, Any] | list[Any] | None
 
 REGISTRY_PATH = "schemas/logical_schemas.json"
-
-#: What this reader decodes, per Zarr version. Part 03 §6.4 states the floor per version rather
-#: than per codec, because readability is a property of the pair: `gzip` is in the v3 floor and
-#: not the v2 one, since Zarr.jl registers only the v3 spelling. `blosc` is in v2's floor and in
-#: v3's writer column. This reader goes through zarr-python, which decodes every entry in both
-#: rows, so a resource is checked against the row its own `physical_profile` names (Part 03 §6.1).
-DECODABLE: dict[str, frozenset[str]] = {
-    "zarr_v3": frozenset({"none", "gzip", "zstd", "blosc", "sharding_indexed"}),
-    "zarr_v2": frozenset({"none", "gzip", "zstd", "blosc"}),
-}
-
-#: The row for a resource naming no Zarr version: what both rows agree on, so nothing is claimed
-#: for a version the resource has not declared.
-BASELINE_CODECS = DECODABLE["zarr_v3"] & DECODABLE["zarr_v2"]
-
-
-def _decodable(version: str) -> set[str]:
-    """Give what this reader decodes for a declared Zarr version, or the shared row for none."""
-    return set(DECODABLE.get(version, BASELINE_CODECS))
-
 
 #: Ask for ticks exactly as the file stores them. Spikes are counted on the probe that
 #: recorded them, so stored ticks from two probes are not comparable and neither is a stored
@@ -359,67 +339,6 @@ class Packet:
         rebound._manifest = replace(self._manifest, resources=resolved)
         rebound._by_id = {resource.resource_id: resource for resource in resolved}
         return rebound
-
-    # -- codec capability -------------------------------------------------------------
-
-    def check_codecs(self, resource_id: str, supported: Iterable[str] | None = None) -> None:
-        """Check that this reader can open one resource, before opening it.
-
-        Codecs are a property of a resource, not of a packet (Part 03 §6.4). A packet may
-        reference an array in a codec this reader lacks while its own arrays are readable,
-        so a missing codec disqualifies that resource and nothing else.
-
-        The resource's `physical_profile` is read together with its codecs, because the floor
-        is stated per Zarr version and a reader may decode a codec in one and not the other
-        (Part 03 §6.1). The failure names the version as well as what it lacks.
-
-        Parameters
-        ----------
-        resource_id : str
-            Dotted resource ID.
-        supported : iterable of str, optional
-            Codecs this reader can decode. Defaults to :data:`DECODABLE` for the resource's
-            own Zarr version.
-
-        Raises
-        ------
-        UnsupportedCodecError
-            If the resource uses a codec that is not supported for its version.
-        """
-        resource = self.resource(resource_id)
-        version = str(resource.entry.get("physical_profile", ""))
-        available = _decodable(version) if supported is None else set(supported)
-        if missing := sorted(set(resource.codecs) - available):
-            named = f"{version} " if version else ""
-            raise UnsupportedCodecError(
-                f"{resource_id} uses {named}codecs this reader does not support: {', '.join(missing)}"
-            )
-
-    def unopenable(self, supported: Iterable[str] | None = None) -> dict[str, tuple[str, ...]]:
-        """Report which resources this reader cannot open, and why.
-
-        The packet-level counterpart to :meth:`check_codecs`. It reports rather than raises,
-        because a codec used by one resource says nothing about the rest.
-
-        Parameters
-        ----------
-        supported : iterable of str, optional
-            Codecs this reader can decode. Defaults to :data:`DECODABLE` for each resource's
-            own Zarr version.
-
-        Returns
-        -------
-        dict
-            Resource ID to the codecs it needs that are unsupported. Empty when the whole
-            packet is readable.
-        """
-
-        def short(r: Resource) -> tuple[str, ...]:
-            version = str(r.entry.get("physical_profile", ""))
-            available = _decodable(version) if supported is None else set(supported)
-            return tuple(sorted(set(r.codecs) - available))
-
-        return {r.resource_id: gap for r in self._manifest.resources if (gap := short(r))}
 
     # -- tabular access ---------------------------------------------------------------
 

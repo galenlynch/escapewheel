@@ -696,7 +696,6 @@ def write_packet(
             {
                 "resource_id": resource,
                 "declaration_id": resource,
-                "physical_profile": "parquet",
                 "uri": rel,
                 "validation_state": "not_run",
             }
@@ -724,7 +723,6 @@ def write_packet(
                 "dataset_id": "escapewheel_phase0",
                 "description": "Phase 0 synthetic fixture, single session (R1 §6).",
                 "sessions": sessions,
-                "required_codecs": [],
                 "extensions": {
                     EXTENSION_ID: {
                         "version": str(EXTENSION["registry_version"]),
