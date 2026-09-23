@@ -306,7 +306,7 @@ P1 authority framework
 | P4.1 | Registry-document conformance contract | P3 | [R126](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md) |
 | P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
 | P5.1 | Logical resource declarations and resource classification | P4.2 | [R128](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md) |
-| P5.2 | Portable-profile interfaces and reader floor | P5.1 | Active draft |
+| P5.2 | Portable-profile interfaces and reader floor | P5.1 | [R129](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md) |
 | P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | Proposal to be scoped |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
 | P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | Proposal to be scoped |
