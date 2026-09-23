@@ -10,7 +10,7 @@
 
 ## 1. Problem
 
-The packet catalog is not yet one complete, data-driven contract. Its prose, incorporated JSON
+The packet catalog is not yet one complete, data-driven contract. Its prose, JSON
 Schema, registry declarations, and implementations disagree about three connected subjects.
 
 First, a packet does not identify the exact registry documents that give its resources meaning.
@@ -71,7 +71,7 @@ The observations below were reproduced from the recorded baseline with a clean w
   than compatibility handling, is available because there are no released consumers or remote.
 - The incorporated core registry has 43 singleton table declarations: `core.sessions` is required
   and 42 are optional. Its dense-array and opaque declarations use catalog or family instances.
-  The four incorporated example extension registries contain 11 optional singleton tables and no
+  The four example extension registries in `registry/extensions/` contain 11 optional singleton tables and no
   required singleton. The validator already evaluates required singleton presence, transitive
   singleton dependencies, populated-reference targets, dense-array axes, and catalog-family
   binding from these declarations.
@@ -88,6 +88,14 @@ The observations below were reproduced from the recorded baseline with a clean w
   `created_at`, `validated_at`, and `verified_at` strings can pass despite their `date-time`
   declarations. Registry-document checking already uses a format checker, demonstrating the
   available implementation path.
+- No numbered part expressly incorporates `registry/manifest.schema.json`, so under
+  [Part 00 §2.2](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-authority-by-concern) it
+  owns nothing: Part 04's field tables are the sole owner of catalog shape, and the schema is an
+  unchecked implementation copy of them. Part 03 §11 says the referenced-resource document's shape
+  "is published as" `registry/resources.schema.json` without incorporating it either, and it
+  describes each entry as the one "Part 04 §5 declares", although Part 04 §4.1 declares the entry
+  fields. Part 02 and Part 03 already incorporate their exact JSON Schemas and descriptors while
+  their prose owns meaning, which is the pattern the catalog lacks.
 - Every one of the 29 generated fixture packets carries `core.processing_runs`, and every name its
   catalog entries reference matches exactly one row's non-null `processing_run_name`. Accepted
   revision R128 deferred this identity to the complete manifest reconciliation and forbade making
@@ -111,7 +119,8 @@ properties:
   path, and digest of the exact embedded document bytes;
 - the selected documents identify themselves, and one named semantic phase compares all four
   binding facts before registry-derived packet checks run;
-- the incorporated manifest schema owns complete local JSON shape and format declarations;
+- one authoritative catalog schema owns complete local JSON shape and format declarations, and
+  Part 04 prose owns their meaning and every cross-field or cross-document rule;
 - the registry declarations remain the sole owners of logical resource presence and dependencies;
 - named catalog checks own uniqueness, cross-document resolution, and cross-field relationships
   that JSON Schema cannot express;
@@ -171,7 +180,7 @@ iteration.
 digest-keyed store of released core registries, such as copies vendored in the reader and
 validator packages. This removes the duplicated core bytes but makes the packet unreadable to
 any consumer lacking that exact release. It also depends on work that does not yet exist:
-immutable registry releases (P11), a resolution rule, and a vendoring or retrieval policy for
+immutable registry releases, a resolution rule, and a vendoring or retrieval policy for
 every historical release. Extensions have no publication home, so they would still be embedded,
 reintroducing the core/extension asymmetry this decision otherwise removes.
 
@@ -244,25 +253,45 @@ chose this option. The declaration's `producing_run` policy governs the renamed 
 referenced name must be unambiguous; unreferenced and null names remain unconstrained, so the
 column does not become packet-unique and R128's constraint holds.
 
-### 4.6 Shared resource-entry structure
+### 4.6 Catalog-schema authority
+
+**Keep Part 04's field tables as the owner.** The schema remains an unincorporated implementation
+file. Closure, patterns, formats, and object shape would have to be restated in prose, and nothing
+would prevent the two from drifting again, which is the disagreement this proposal documents.
+
+**Make the schema a generated projection of Part 04.** Prose tables would own every structural fact,
+and a generator would emit the schema. Prose tables cannot express patterns, conditional shapes,
+and closure precisely enough to generate a faithful schema without a second structured source.
+
+**Have Part 04 expressly incorporate `registry/manifest.schema.json`.** The schema owns exact
+local JSON structure: field names, types, required members, closure, patterns, and formats. Part 04
+prose owns field meanings, declaration-selected presence, and the named semantic checks. Part 04's
+field tables become an informative projection generated from and checked against the schema, as
+Part 02's column tables are generated from the registry. This is the recommendation because it
+repeats the ownership split Parts 02 and 03 already use and gives the catalog one editable
+structural source.
+
+Under either of the last two options, the referenced-resource document's entry is the catalog entry.
+
+### 4.7 Shared resource-entry structure
 
 **Use external JSON Schema references at runtime.** Both documents can refer to a standalone
 entry schema, but every consumer must then package and resolve another schema resource.
 
-**Generate the delivery entry from the manifest definition.** The manifest schema remains the
-sole incorporated entry shape. `registry/build.py` copies that exact definition into the
-standalone referenced-resource schema and fails if a hand-edited projection differs. This option is
-selected because both deployed schemas remain self-contained while only one definition
-is edited.
+**Generate the delivery entry from the catalog definition.** The catalog schema remains the sole
+structural owner of a resource entry. `registry/build.py` copies that exact definition into the
+standalone referenced-resource schema and fails if a hand-edited projection differs. Part 03 keeps
+the delivery obligations and cites Part 04 for the entry shape. This option is selected because both
+deployed schemas remain self-contained while only one definition is edited.
 
 ## 5. Impact sketch
 
 | surface | effect |
 |---|---|
 | semantic prose | Unchanged. Registry binding and packet catalog mechanics do not alter scientific meanings. |
-| logical prose, registry meta-schema, registry declarations, and declarative rules | Every registry document gains a stable `registry_id`, equal to `extension_id` for an extension. Part 02 §9.2's version-only self-description and optional embedding become the descriptor comparison and a mandatory embedded copy. Resource presence, dependencies, kinds, tables, and rules remain unchanged. Current registry identities advance mechanically because the root shape changes. |
-| physical profiles | Affected in layout only. Part 03 §3.1's fixed `schemas/logical_schemas.json` and `extensions/<name>.json` entries become gzip members at catalog-recorded paths, and §9.3's superseded-registry retention distinguishes copies by registry ID and version. `profile_id` remains the sole physical-profile selector, and no resource encoding fields return to the catalog. |
-| packet catalog and incorporated JSON Schemas | Affected directly: registry bindings, object closure, required fields, stale-field removal, format enforcement, semantic-check inventory, and generated delivery-entry projection. |
+| logical prose, registry meta-schema, registry declarations, and declarative rules | Every registry document gains a stable `registry_id`, equal to `extension_id` for an extension. Part 02 §9.2's version-only self-description and optional embedding become the descriptor comparison and a mandatory embedded copy. The registry-contract descriptor gains a semantic invariant that an extension registry's `registry_id` equals its `extension_id`, which JSON Schema cannot compare. Resource presence, dependencies, kinds, tables, and rules remain unchanged. Current registry identities advance mechanically because the root shape changes. |
+| physical profiles | Affected in layout only. Part 03 §3.1's fixed `schemas/logical_schemas.json` and `extensions/<name>.json` entries become gzip members at catalog-recorded paths, and §9.3's superseded-registry retention distinguishes copies by registry ID and version. `profile_id` remains the sole physical-profile selector, and no resource encoding fields return to the catalog. Part 03 §11's delivery entry cites Part 04 §4.1 instead of §5. |
+| packet catalog and incorporated JSON Schemas | Affected directly: Part 04 incorporation of the catalog schema and generated field tables, registry bindings, object closure, required fields, stale-field removal, format enforcement, semantic-check inventory, and generated delivery-entry projection. |
 | validation and import | The writer emits and hashes all embedded registries before the final catalog; validation compares binding identity, role, version, path, and exact bytes before declaration-derived checks. Existing declaration-presence checks become named catalog checks rather than local policy. |
 | extension registries | The same binding and identity contract applies without naming any particular extension in a numbered part. Example registries and extension fixtures migrate and advance independently. |
 | reader | Catalog loading rejects duplicate resource IDs before map construction and enables JSON Schema format checking. Registry loading follows declared paths rather than constants. Ordinary access remains lazy and does not run whole-packet conformance. |
@@ -274,9 +303,9 @@ is edited.
 | revision lifecycle, ledger, evidence, and process tooling | Unchanged except for the ordinary revision and evidence records. |
 | generated publications and developer documentation | Part 04, relevant Part 02/03/05/08/09 passages, examples, schemas, vendored copies, public reader/writer types, and manifest examples regenerate together. |
 
-## 6. Resolved decisions
+## 6. Open questions
 
-The user approved these resolutions on 2026-09-23:
+The user approved these resolutions of the earlier questions on 2026-09-23:
 
 1. One closed `registries` map, keyed by registry ID, replaces `registry_version` and
    `extensions`; each descriptor carries `role`, `version`, packet-relative `path`, and `sha256`,
@@ -294,6 +323,12 @@ The user approved these resolutions on 2026-09-23:
 6. Catalog loading rejects duplicate resource IDs before building its lookup map; the remaining
    named catalog checks run for explicit validation and writer publication.
 
+One question remains:
+
+7. Should Part 04 expressly incorporate `registry/manifest.schema.json` as the exact owner of
+   local catalog structure, with Part 04's field tables regenerated from it as an informative
+   projection and `registry/resources.schema.json` generated from its resource entry?
+
 ## 7. Promotion criteria
 
 - [x] The baseline commit is recorded and the problem is demonstrated against its generated v0.2 specification.
@@ -302,7 +337,7 @@ The user approved these resolutions on 2026-09-23:
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
