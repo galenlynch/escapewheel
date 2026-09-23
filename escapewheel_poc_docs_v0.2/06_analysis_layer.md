@@ -2,10 +2,12 @@
 
 Informative, except §2 and §5, which are normative.
 
+<a id="ew-analysis-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part describes the optional `analysis` layer: derived products computed from core, kept because a query cannot answer the same question at acceptable cost.
 
+<a id="ew-analysis-rules" data-spec-anchor="canonical"></a>
 ## 2. Rules
 
 Normative.
@@ -55,6 +57,7 @@ A row group lies inside one time bucket, so a window filter prunes at the row-gr
 
 Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
 
+<a id="ew-analysis-materialization-provenance" data-spec-anchor="canonical"></a>
 ## 5. Provenance of a materialization
 
 Normative.
@@ -74,10 +77,12 @@ Four resources proposed in v0.1 are withdrawn. They were specified before anythi
 
 The columns those tables carried — `condition_id`, `stimulus_id`, `block_id` — describe a particular task rather than the format, and belong in an extension (Part 09).
 
+<a id="ew-analysis-views-and-materializations" data-spec-anchor="canonical"></a>
 ## 7. Views versus materialized products
 
 Prefer a view where the query prunes and the result is small. Prefer a materialized product where the physical layout of core cannot serve the access pattern at all, which in practice means a different sort order or a different clock.
 
+<a id="ew-analysis-promotion" data-spec-anchor="canonical"></a>
 ## 8. Promotion into core
 
 An analysis resource becomes canonical only through an explicit revision of this specification. Promotion is a schema decision, not an operational one.

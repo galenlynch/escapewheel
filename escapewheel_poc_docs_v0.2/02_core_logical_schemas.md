@@ -618,6 +618,7 @@ not say which mode produced it cannot be compared with the other.
 
 A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
 
+<a id="ew-core-resource-index" data-spec-anchor="canonical"></a>
 ## 11. Core resource index
 
 The core layer comprises the following resources. Column definitions are in the registry.
@@ -675,6 +676,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | `core.unit_coordinate_values` | one row per axis of that position |
 | `core.unit_observation_intervals` | a unit's refinement of its clock's window |
 
+<a id="ew-core-array-media-resource-index" data-spec-anchor="canonical"></a>
 ### 11.6 Arrays and media
 
 | resource | contents |
@@ -694,6 +696,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | `core.processing_run_inputs` | which files fed which run |
 | `core.preferred_runs` | which of several coexisting results to use |
 
+<a id="ew-analysis-resource-index" data-spec-anchor="canonical"></a>
 ### 11.8 Analysis
 
 | resource | contents |

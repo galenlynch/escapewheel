@@ -259,6 +259,7 @@ An assessment of a unit by one scorer. A unit has many, not one.
 
 Sampled extracellular voltage over time and channels, represented as a dense array asset with a declared time axis and channel mapping.
 
+<a id="ew-array-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.17 Array asset
 
 A dense array stored outside the table layer, with declared axes. An axis declares its coordinates; a regularly sampled axis declares them as an origin, a step, and a length rather than as stored values.
@@ -275,6 +276,7 @@ An array asset SHOULD name the device that produced it, where the writer knows w
 
 An array a processing run produced MUST name that run; an acquired array names none. The manifest records a run per resource as well, and that entry keeps its meaning for resources that are not rows of a table — but it is not per row and no rule can join it, so currency is unreachable for an array without the column. A produced array without a declared run is an error.
 
+<a id="ew-media-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.18 Media asset
 
 An image or video stored in an ordinary container, with frame timing carried in tables.

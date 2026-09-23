@@ -73,6 +73,7 @@ An extension's `registry_version` is that extension registry's own version. It a
 independently of the core registry's `registry_version`; the core specification neither selects
 nor assigns it.
 
+<a id="ew-code-free-extension-handling" data-spec-anchor="canonical"></a>
 ### 5.6 A writer requires no code of an extension
 
 A writer MUST be able to build a packet carrying an extension's tables given only the extension's registry document and its rows as files. A writer MUST NOT require an extension to be installed, importable, or resolvable in the writer's own environment.

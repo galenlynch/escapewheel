@@ -186,6 +186,7 @@ Array axes are stored order, slowest-varying first. An array's codec chain MUST 
 
 A column-major binding enumerates axes in reverse. The client adapts; the format does not.
 
+<a id="ew-array-axis-coordinates" data-spec-anchor="canonical"></a>
 ### 6.3 Axis coordinates
 
 Every axis MUST declare its coordinates in `core.array_dimensions`, in one of its declared coordinate forms. A regularly sampled axis declares an origin tick, a step, and a length rather than storing per-sample values.
@@ -212,6 +213,7 @@ The floor a reader is required to support is stated per Zarr version, because im
 
 The asymmetry between the versions is measured, not chosen: `gzip` is in the v3 floor and not the v2 one because a v2 array compressed with gzip raises `KeyError: "gzip"` in a reader that reads every other combination. Codecs are declared per resource, not per packet: a reader MUST NOT refuse a packet over a codec used only by resources it does not open. The catalog's packet-level codec list is their union, for a whole-packet capability answer.
 
+<a id="ew-array-metadata-placement" data-spec-anchor="canonical"></a>
 ### 6.5 What the array declares, and what the tables declare
 
 `core.array_assets` MUST NOT carry dtype or shape. The Zarr array declares them, and restating them buys no otherwise-unavailable access.
@@ -389,6 +391,7 @@ An argument list is not the channel because it has a size no profile can raise �
 
 The wanted set is a term a build supplies and an adapter MAY act on. A build settles ownership before any source is opened (Part 05 §3.4), so an adapter told what is wanted may extract no more; acting on it is permitted rather than required, because for some sources producing three resources costs what producing all of them costs, and a build cannot tell an adapter that extracted three from one that extracted everything and discarded the rest.
 
+<a id="ew-referenced-resource-delivery" data-spec-anchor="canonical"></a>
 ### 11.3 What a delivery states
 
 A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is Part 02 §5's presence and nothing else. A build MUST NOT read an absent column as saying anything more.

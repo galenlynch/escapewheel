@@ -14,6 +14,7 @@ Its requirements directly invoke the shared JSON and URI authorities identified 
 [Part 04 §10](#ew-packet-catalog-normative-references). The application columns in those sections
 state their extent.
 
+<a id="ew-packet-catalog-principles" data-spec-anchor="canonical"></a>
 ## 2. Principles
 
 The catalog is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
@@ -47,6 +48,7 @@ fields below record those identifiers; they do not redefine their values or mean
 
 ## 4. Resource entries
 
+<a id="ew-packet-resource-entry-fields" data-spec-anchor="canonical"></a>
 ### 4.1 Common fields
 
 | field | type | requirement |
@@ -66,6 +68,7 @@ fields below record those identifiers; they do not redefine their values or mean
 | `derived_from` | array of string | MUST for a derived resource (§7) |
 | `processing_run_id` | string | MUST for an analysis resource; SHOULD for any other derived resource |
 
+<a id="ew-logical-resource-kinds" data-spec-anchor="canonical"></a>
 ### 4.2 Kinds
 
 | kind | contents |
@@ -167,6 +170,7 @@ Every array resource MUST declare the codecs it uses. A reader checks a resource
 
 A codec declared for an external resource is a claim rather than an observation, and a validator reports it as `info` rather than silently accepting it.
 
+<a id="ew-resource-lineage" data-spec-anchor="canonical"></a>
 ## 7. Derived resources
 
 A derived resource MUST declare `derived_from`, naming the resources it was computed from.
@@ -185,6 +189,7 @@ Where a packet carries extension resources, the catalog MUST declare each extens
 
 A validator MUST check that a declared extension registry exists. It MUST NOT require an extension's schema in order to validate core.
 
+<a id="ew-packet-validation-block" data-spec-anchor="canonical"></a>
 ## 9. Validation block
 
 | field | requirement |

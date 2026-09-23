@@ -294,6 +294,7 @@ from.
 Analysis resources are disposable. A writer MAY delete and recompute any of them. An analysis
 resource becomes canonical only through an explicit revision of this specification.
 
+<a id="ew-analysis-materialization-criterion" data-spec-anchor="canonical"></a>
 ### 5.2 Materialization is justified by layout, not by arithmetic
 
 A derived product is materialized only where a query cannot answer the same question at acceptable

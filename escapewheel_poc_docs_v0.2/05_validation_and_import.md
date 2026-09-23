@@ -2,6 +2,7 @@
 
 Normative.
 
+<a id="ew-import-validation-principle" data-spec-anchor="canonical"></a>
 ## 1. Core principle
 
 **Validation is importation.** Copying bytes into a packet directory is staging, not import.
