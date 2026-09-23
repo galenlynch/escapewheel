@@ -52,6 +52,7 @@ Every declaration identifier in an extension registry MUST begin with the namesp
 `extension_id`. The extension owns only that namespace. An extension namespace MUST NOT be `core`,
 `analysis`, or `nwb`.
 
+<a id="ew-extension-registration" data-spec-anchor="canonical"></a>
 ### 5.3 Registration
 
 A packet carrying extension resources MUST declare each namespace in the catalog with its version and the path to its registry document (04 §8).

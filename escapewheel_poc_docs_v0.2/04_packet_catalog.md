@@ -84,6 +84,7 @@ catalog row's `resource_id` under Part 02 §2.6. A family entry uses a packet-un
 ID in a namespace its declaration's registry owns. An unknown declaration or inadmissible instance
 binding makes a conformance claim invalid.
 
+<a id="ew-withdrawn-catalog-blocks" data-spec-anchor="canonical"></a>
 ### 4.3 Withdrawn blocks
 
 The `canonical_representations` block is withdrawn: spikes have one canonical representation, so there is nothing to arbitrate.
@@ -194,6 +195,7 @@ than an assigned table number. Complete row-to-entry reconciliation of that valu
 validator MUST NOT make the nullable source bridge
 `core.processing_runs.processing_run_name` packet-unique merely to create a join.
 
+<a id="ew-packet-registry-bindings" data-spec-anchor="canonical"></a>
 ## 8. Extensions
 
 Where a packet carries extension resources, the catalog MUST declare each extension namespace, its version, and the path to its registry document:

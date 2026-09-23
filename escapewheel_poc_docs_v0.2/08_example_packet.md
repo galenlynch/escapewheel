@@ -17,6 +17,7 @@ One ecephys session with behaviour, ten probes, and two extensions.
 
 Two files are 99.3% of what the packet owns: `core.spike_events` at 232 MB and `analysis.spike_events` at 247 MB, which is 1.76 bytes per spike while carrying four identifiers, a tick, and a clock per row.
 
+<a id="ew-example-packet-layout" data-spec-anchor="canonical"></a>
 ## 2. Layout
 
 ```text
@@ -39,6 +40,7 @@ packet_root/
 The LFP is referenced rather than copied: ten entries instantiating the dense-array family, with
 `external: true` and absolute URIs.
 
+<a id="ew-example-packet-catalog" data-spec-anchor="canonical"></a>
 ## 3. Catalog excerpt
 
 ```json

@@ -54,6 +54,7 @@ alone neither makes the upstream representation malformed nor decides packet con
 
 ## 3. Directory layout
 
+<a id="ew-portable-packet-layout" data-spec-anchor="canonical"></a>
 ### 3.1 Recommended layout
 
 ```text
@@ -317,6 +318,7 @@ The asymmetry is the design: an amendment **extends** what a packet says and doe
 
 Provenance tables are the exception because they are append-only by nature — a row records that something ran, and a later run does not change what an earlier one did.
 
+<a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
 ### 9.3 The manifest
 
 Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
