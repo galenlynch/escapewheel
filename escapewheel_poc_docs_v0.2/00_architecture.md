@@ -320,6 +320,7 @@ renaming.
 The portable profile is a JSON manifest, Parquet tables, Zarr arrays, ordinary media files, and
 text sidecars. It MUST be readable without a server.
 
+<a id="ew-external-resource-referencing" data-spec-anchor="canonical"></a>
 ### 7.2 Referencing
 
 A packet need not own every byte it describes. Referencing is expected for large resources: a

@@ -105,6 +105,7 @@ Referencing is expected for large resources. Externalizing a table costs more th
 
 A writer that cannot reach a URI MUST record nothing rather than copying a value from a local stand-in.
 
+<a id="ew-external-resource-verification" data-spec-anchor="canonical"></a>
 ### 5.3 Verification levels
 
 Verification of an external resource is layered, and a report MUST state which level it reached.
@@ -165,12 +166,15 @@ A consumer MUST NOT read resolution through a different document as invalidating
 report it against the resource entry, and MUST NOT silently prefer either the recorded digest or
 the bytes it found.
 
+<a id="ew-packet-codecs" data-spec-anchor="canonical"></a>
 ## 6. Codecs
 
+<a id="ew-resource-codecs" data-spec-anchor="canonical"></a>
 ### 6.1 Per resource
 
 Every array resource MUST declare the codecs it uses. A reader checks a resource's own declaration before opening it.
 
+<a id="ew-packet-codec-union" data-spec-anchor="canonical"></a>
 ### 6.2 Packet union
 
 `required_codecs` is the union of every resource's codecs, present so a reader can answer whether it can open the packet at all. A reader MUST NOT refuse a packet over a codec used only by resources it does not open.
