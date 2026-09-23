@@ -632,6 +632,14 @@ capabilities from recognized optional ones, and represent materialized or view r
 changing logical kind. The descriptor must remain a physical-layer authority consumed by packet
 binding and validation, not a second logical registry.
 
+The selected profile and resolved logical kind choose the current generic interface; the current
+profile fixes each table as one Parquet object, while array metadata identifies Zarr format version,
+codecs, and other self-describing physical features. Packet entries do not duplicate those facts as
+selectors, layout declarations, codec declarations, or capability summaries.
+The current Parquet interface is single-file only. Partitioned tables remain future-profile work
+until demonstrated need justifies explicit immutable membership, row-order, partition-value, and
+schema semantics.
+
 This stage determines the physical-profile model needed by P6. Exact codec-floor wording and
 portability reporting remain independently reviewable in P9.3 after the capability vocabulary
 exists.
