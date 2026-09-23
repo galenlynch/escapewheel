@@ -277,7 +277,7 @@ P1 authority framework
      P5.1 logical resource declarations
        |
        v
-     P5.2 physical profile capabilities
+     P5.2 physical profile and reader floor
        |
        v
      P6 packet manifest contract
@@ -306,7 +306,7 @@ P1 authority framework
 | P4.1 | Registry-document conformance contract | P3 | [R126](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md) |
 | P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
 | P5.1 | Logical resource declarations and resource classification | P4.2 | [R128](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md) |
-| P5.2 | Portable-profile encodings and capability declarations | P5.1 | Proposal to be scoped |
+| P5.2 | Portable-profile interfaces and reader floor | P5.1 | Active proposal |
 | P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | Proposal to be scoped |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
 | P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | Proposal to be scoped |
@@ -611,7 +611,7 @@ packet resource to one declaration and remove packet classification fields that 
 declaration.
 
 Keep the decision storage-agnostic. It may define the logical field through which a later physical
-encoding is selected, but it does not declare formats, codecs, portability capabilities, or the
+encoding is selected, but it does not declare formats, codecs, a portable reader floor, or the
 Part 03 descriptor that owns them.
 
 **Review coverage:** S3, S6, D3's logical half, D8, I4, I5, and the first live TODO.
@@ -621,16 +621,17 @@ instance policy for 43 singleton tables and the three incorporated catalog famil
 entries bind `declaration_id` without repeating logical facts; catalog rows carry packet resource
 identity; and the registry, reader, writer, validator, adapters, extensions, fixtures, and schemas
 use the incompatible 0.5/0.2 shapes. The closed logical-kind vocabulary is `table`, `dense_array`,
-and `opaque`; physical encodings and capabilities remain with the next work item.
+and `opaque`; physical interfaces and the reader floor remain with the next work item.
 
-### P5.2 — Portable-profile encodings and capability declarations
+### P5.2 — Portable-profile interfaces and reader floor
 
-Give Part 03 a machine-readable descriptor for generic physical encodings and portability
-capabilities. Define the relationship between each modeled logical resource kind and its permitted
-encodings, leave opaque representations open and unenumerated, separate mandatory portability
-capabilities from recognized optional ones, and represent materialized or view realization without
-changing logical kind. The descriptor must remain a physical-layer authority consumed by packet
-binding and validation, not a second logical registry.
+Give Part 03 a machine-readable descriptor for generic physical interfaces and the portable reader
+floor. Define the relationship between each modeled logical resource kind and its permitted
+interface, leave opaque representations open and unenumerated, declare the minimum features every
+conforming reader supports directly for each interface or variant, and represent materialized or
+view realization without changing logical kind. The descriptor does not create general capability
+IDs or enumerate optional implementation support. It remains a physical-layer authority consumed
+by packet binding and validation, not a second logical registry.
 
 The selected profile and resolved logical kind choose the current generic interface; the current
 profile fixes each table as one Parquet object, while array metadata identifies Zarr format version,
@@ -641,7 +642,7 @@ until demonstrated need justifies explicit immutable membership, row-order, part
 schema semantics.
 
 This stage determines the physical-profile model needed by P6. Exact codec-floor wording and
-portability reporting remain independently reviewable in P9.3 after the capability vocabulary
+portability reporting remain independently reviewable in P9.3 after the reader-floor structure
 exists.
 
 **Review coverage:** S10 in model form, D3's physical half, and I8's capability-model portion.
@@ -649,7 +650,7 @@ exists.
 ### P6 — Packet manifest, requiredness, and registry binding
 
 Reconcile Part 04 with `manifest.schema.json` and the resource schema using P5.1's logical
-declarations and P5.2's physical-capability model.
+declarations and P5.2's physical-profile model.
 Generate shared structural definitions where possible and add named semantic checks for uniqueness,
 format, state, and cross-field invariants. Decide how a packet identifies each core and extension
 registry by stable identifier, version, and digest; whether it embeds a copy; what validators
@@ -695,8 +696,8 @@ Split this family wherever the decisions can stand independently:
    Part 05 lifecycle and the writer's commit gate (S4).
 2. **External and prefix integrity** — define checksum behavior for prefix resources consistently
    across the physical and packet contracts (S7).
-3. **Codec capability and portability** — distinguish the mandatory codec floor, recognized
-   optional capabilities, validity, and portability reporting (the remaining part of S10/I8).
+3. **Codec capability and portability** — settle exact reader-floor membership and distinguish
+   features outside the floor, validity, and portability reporting (the remaining part of S10/I8).
 4. **Profile scope and document organization** — state the present electrophysiology/profile scope
    accurately and consider moving the adapter/build interface out of the physical-storage part in
    the next version (S12 and documentation organization).
@@ -775,7 +776,7 @@ This table prevents a finding from disappearing merely because it was split out 
 | S12 profile scope | P9.4 |
 | D1 incomplete registry semantics | P3, P4.1, and P4.2 |
 | D2 extension registry parity | P4.1 and P4.2 for registry documents; P7 for declared resources and verdicts |
-| D3 missing whole-packet profile model | P5.1 logical declarations and P5.2 physical capabilities |
+| D3 missing whole-packet profile model | P5.1 logical declarations and P5.2 physical profile |
 | D4 hidden arbitration | P8 |
 | D5 missing session-recipe schema | P8 |
 | D6 underspecified adapter declarations | P8 |
