@@ -42,7 +42,7 @@ capability, release binding, and verdict composition rather than logical resourc
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
-| [Part 00 §3.1.2](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-logical-standard), logical-kind examples that mix form and realization | revise in place | same anchor, with exact vocabulary in Part 02 | retains the storage-agnostic logical level while separating table/array/media/document form from view/materialization realization | §3.3 |
+| [Part 00 §3.1.2](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-logical-standard), logical-kind examples that mix form and realization | revise in place | same anchor, with exact vocabulary in Part 02 | retains the storage-agnostic logical level while separating table, dense-array, and opaque form from view/materialization realization | §3.3 |
 | [Part 00 §3.2](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-packet-content-classes), four content classes and independent canonicality prose | revise in place | same anchor | adds documentation, makes canonicality a consequence of content class, and leaves exact serialized values to Part 02 | §3.2 |
 | [Part 00 §3.4](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-packet-catalog), catalog classification summary | revise in place | same anchor | says the catalog binds an instance to declarations rather than independently recording logical facts | §3.8 |
 | [Part 00 §4.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-core-content-requirements), “core is what every packet has” | clarify in place | same anchor | makes the registry's presence policies, not every core declaration, define the minimum | §3.5 |
@@ -66,7 +66,7 @@ capability, release binding, and verdict composition rather than logical resourc
 | [Part 04 §9](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-validation-block), failed validation forbids presenting resources as canonical | replace in place | same section, with final verdict composition deferred | validation state does not alter declaration-derived canonicality; a failed packet cannot support a conformance claim | §§3.2, 3.8 |
 | [Part 05 §1](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-import-validation-principle), staged resources and canonical commitment | clarify in place | same section | a staged resource is not published before validation; no mutable canonical Boolean represents that state | §§3.2, 3.8 |
 | [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), cross-document shim | revise in place | same anchor | adds declaration resolution, presence, dependency, catalog binding, and catalog-row provenance checks | §§3.4–3.8 |
-| [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes), undefined-resource allowance | replace in place | same anchor | every catalogued resource must resolve a declaration; an unrecognized declaration is no longer an allowed opaque resource | §3.8 |
+| [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes), undefined-resource allowance | replace in place | same anchor | every catalogued resource must resolve a declaration; an undeclared resource is no longer permitted merely because its payload is opaque | §3.8 |
 | [Part 06 §1](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-scope) and [Part 06 §2](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-rules), analysis scope and rules | revise in place | same sections | uses the analysis content class, canonical sources, and declaration policy rather than the `analysis` layer string | §§3.2, 3.7 |
 | [Part 06 §5](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-materialization-provenance), provenance of a materialization | revise in place | same section | makes resource-level producing-run binding independent of kind and distinguishes aggregate catalog provenance from catalogued-instance provenance | §§3.6–3.7 |
 | [Part 06 §7](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-views-and-materializations) and [Part 06 §8](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-promotion), view/materialization and promotion | revise in place | same sections | separates logical kind from realization and makes promotion change content class | §§3.2–3.3 |
@@ -103,7 +103,7 @@ are regenerated rather than edited.
 ### 2.1 Current disagreement
 
 At the baseline, the incorporated registry contains 43 table declarations under `tables` and no
-declaration for arrays, media, or documents. Four repository extension registries use the same
+declaration for arrays or opaque resources. Four repository extension registries use the same
 table-only shape. The valid generated packet uses 30 of the 43 incorporated tables and no
 non-table resource, so the existing corpus does not establish either a minimum table set or an
 extension non-table path.
@@ -128,6 +128,9 @@ kind, instance mode, presence, explicit dependencies, and resource-level provena
 table declaration embeds the current table contract as its kind-specific payload. A dense-array
 declaration identifies the table that carries its logical axes. A packet entry names the
 declaration it instantiates and carries only packet-instance and physical-binding facts.
+An opaque declaration says that Escapewheel's generic resource machinery does not interpret the
+payload's internal representation; declarations and related tables may still describe its
+scientific meaning or entities within it.
 
 The model deliberately has no general presence-expression language. Required and optional
 singletons, optional unbound families, exact catalog-row families, explicit declaration
@@ -181,7 +184,7 @@ Every resource declaration MUST contain exactly these common fields, plus the ki
 permitted by §3.3:
 
 - `content_class`, a string governed by §3.2;
-- `kind`, one of `table`, `dense_array`, `media`, and `document`;
+- `kind`, one of `table`, `dense_array`, and `opaque`;
 - `instances`, a closed object governed by §3.4;
 - `requires`, an array of distinct declaration IDs, empty where the declaration has no explicit
   dependency;
@@ -224,34 +227,42 @@ namespace, but MUST NOT declare `core`. Namespace and content class otherwise re
 
 The incorporated registry MUST migrate its current declarations with these exact common fields:
 
-| declaration set | content class | instances | lineage | producing run | requires |
-|---|---|---|---|---|---|
-| `core.sessions` | `core` | required singleton | `optional` | `optional` | empty |
-| every other current `core.*` table | `core` | optional singleton | `optional` | `optional` | empty |
-| every current `analysis.*` table | `analysis` | optional singleton | `required` | `required` | empty |
-| `core.array_asset_instances` | `core` | catalog over `core.array_assets.resource_id` | `optional` | `optional` | empty |
-| `analysis.array_asset_instances` | `analysis` | catalog over `analysis.array_assets.resource_id` | `required` | `required` | empty |
-| `core.media_asset_instances` | `core` | catalog over `core.media_assets.resource_id` | `optional` | `optional` | empty |
+| declaration set | content class | kind | instances | lineage | producing run | requires |
+|---|---|---|---|---|---|---|
+| `core.sessions` | `core` | `table` | required singleton | `optional` | `optional` | empty |
+| every other current `core.*` table | `core` | `table` | optional singleton | `optional` | `optional` | empty |
+| every current `analysis.*` table | `analysis` | `table` | optional singleton | `required` | `required` | empty |
+| `core.array_asset_instances` | `core` | `dense_array` | catalog over `core.array_assets.resource_id` | `optional` | `optional` | empty |
+| `analysis.array_asset_instances` | `analysis` | `dense_array` | catalog over `analysis.array_assets.resource_id` | `required` | `required` | empty |
+| `core.media_asset_instances` | `core` | `opaque` | catalog over `core.media_assets.resource_id` | `optional` | `optional` | empty |
 
-An extension registry migrating an existing table MUST declare it as an optional singleton with
-content class `extension`, optional lineage, optional producing run, and an empty `requires` array
-unless the extension's own reviewed contract selects stricter values.
+An extension registry migrating an existing table MUST declare it with kind `table` as an optional
+singleton with content class `extension`, optional lineage, optional producing run, and an empty
+`requires` array unless the extension's own reviewed contract selects stricter values.
 
-### 3.3 Kind describes logical form
+### 3.3 Kind selects the generic payload model
 
-The four logical kinds have these meanings:
+The logical kind states which generic payload structure, if any, Escapewheel itself interprets.
+The closed vocabulary has these meanings:
 
-| kind | logical form | kind-specific declaration |
+| kind | generic payload contract | kind-specific declaration |
 |---|---|---|
 | `table` | rows and declared columns | required `table` object containing the existing columns, primary key, references, and rules contract |
 | `dense_array` | an n-dimensional dense array with declared logical axes | required closed `array` object containing `axes_resource` |
-| `media` | an image or time-ordered audiovisual resource | none |
-| `document` | a document or sidecar | none |
+| `opaque` | a payload whose internal representation has no generic Escapewheel logical model | none |
 
 A table declaration MUST contain `table`, MUST NOT contain `array`, and MUST use singleton
 instances. A dense-array declaration MUST contain `array`, MUST NOT contain `table`, and MUST use
-catalog instances. A media or document declaration MUST contain neither kind-specific object and
-MAY use any instance mode permitted by §3.4.
+catalog instances. An opaque declaration MUST contain neither kind-specific object and MAY use any
+instance mode permitted by §3.4.
+
+Opaque qualifies the payload model, not the common resource contract or the resource's scientific
+meaning. Escapewheel still identifies, locates, integrity-checks, and records provenance for an
+opaque resource. Its declaration and related tables MAY describe the payload or address entities
+within it. Such statements do not require generic Escapewheel reader, writer, or validator code to
+parse, decode, or render the payload, and they do not create a kind-specific payload model. A
+format-aware implementation MAY interpret or verify the payload when a separate physical-profile
+contract gives it that capability.
 
 A dense-array declaration's `axes_resource` MUST name a visible singleton table declaration. Its
 axes table MUST have exactly one **binding reference** to the declaration's catalog table: the
@@ -445,7 +456,7 @@ producing-run rule fails.
 
 This unknown-declaration rule supersedes Part 05's current permission to carry a resource the
 specification does not define. An extension registry is the data-driven route for such a resource;
-an opaque, undeclared resource is not a conforming packet resource.
+a resource with an opaque payload still requires a declaration to be a conforming packet resource.
 
 ### 3.9 Artifacts, conformance, and incompatible identities advance together
 
@@ -526,11 +537,11 @@ operation.
 | physical profiles | Part 03 remains the physical-encoding owner, follows the declaration-selected axes table for dense arrays, and adds declaration binding to its resource-delivery boundary; no capability descriptor is added by this revision. | Owner/citation check showing no format or codec field entered the logical registry; core, analysis, and extension axes cases; resource-document vectors require `declaration_id`. |
 | packet catalog and JSON Schemas | Part 04 adds `declaration_id` and removes `layer`, `kind`, `canonical`, `schema_id`, resource-entry `extension_id`, `catalog_table_ref`, `array_asset_id`, and `media_asset_id`; its still-unincorporated manifest-schema projection and the delivery schema advance with the same binding, while complete schema reconciliation remains deferred. The top-level extension map and registry-document identity remain. | Schema vectors and manifest semantic cases for singleton, catalog, family, unknown declaration, forbidden duplicate fields, delivered references, and missing required instances. |
 | validation and import | Part 05's shim resolves declarations before kind dispatch; presence, catalog binding, dependency closure, canonicality, lineage, and producing runs are declaration-driven, and unknown declarations fail conformance. | Stable finding IDs with positive and negative core and extension packets; phase-order tests prevent unsafe access after a non-valid registry. |
-| extensions | Each repository extension migrates to resources and independently advances; extension-owned catalog and axes declarations use the same logical checks as core declarations. | All four extension registries pass shared logical checks; fixture-only extension array and document declarations pass without a registry-specific logical checker; invalid namespace, dependency, catalog, and axes cases fail. |
-| reader, writer, validator, adapters | Shared helpers project tables and resolve declarations; writer staging covers declared kinds; reader APIs expose resolved facts; validator removes serialized-layer dispatch; adapters keep their existing source role. Static adapter capability and full extension physical parity remain deferred. | Focused package tests plus writer-to-reader-to-validator integration for core, extension, analysis, array, media, and documentation resources, without treating adapter capability or the future physical descriptor as evidence for this revision. |
+| extensions | Each repository extension migrates to resources and independently advances; extension-owned catalog and axes declarations use the same logical checks as core declarations. | All four extension registries pass shared logical checks; fixture-only extension dense-array and opaque declarations pass without a registry-specific logical checker; invalid namespace, dependency, catalog, and axes cases fail. |
+| reader, writer, validator, adapters | Shared helpers project tables and resolve declarations; writer staging covers declared kinds; reader APIs expose resolved facts; validator removes serialized-layer dispatch; adapters keep their existing source role. Static adapter capability and full extension physical parity remain deferred. | Focused package tests plus writer-to-reader-to-validator integration for core, extension, analysis, dense-array, opaque media, and documentation resources, without treating adapter capability or the future physical descriptor as evidence for this revision. |
 | conformance fixtures and tests | Packets and fixtures are regenerated in the incompatible shape; add absent singleton, bad dependency, catalog mismatch, duplicate row binding, wrong provenance policy, and analysis-canonicality cases. | Quick and full verifier pass; corpus expected outcomes name every new finding; old-shape rejection is explicit. |
 | revision process and tooling | Lifecycle rules are unchanged; structural incorporation needs the listed anchor bootstrap and current citation repointing. | Anchor-only bootstrap check, structural crosswalk, ledger dispositions, evidence manifest, stages, citations, and repoint checks. |
-| generated publications and developer documentation | Resource index, table projections, README facts, combined specification, registry-author guidance, and extension-author examples regenerate from `resources`. | Candidate-state preservation checks and examples for all three instance modes and all four kinds. |
+| generated publications and developer documentation | Resource index, table projections, README facts, combined specification, registry-author guidance, and extension-author examples regenerate from `resources`. | Candidate-state preservation checks and examples for all three instance modes and all three kinds. |
 
 Existing packets, registries, and implementation fixtures are not shape-compatible. They are
 development artifacts and will be regenerated rather than silently upgraded in place. Public
@@ -554,12 +565,12 @@ The incorporation evidence needs at least these positive cases:
 - a packet containing only the required singleton plus targets made necessary by its populated
   references;
 - an optional singleton present as an empty typed table and absent entirely in another packet;
-- one core array and one medium bound one-to-one to catalog rows;
+- one core dense array and one opaque media resource bound one-to-one to catalog rows;
 - core and analysis arrays whose physical checks resolve their distinct declaration-selected axes
   tables;
 - one extension-owned array with its own catalog and axes table, accepted by the shared logical
   declaration path without extension-specific checker code;
-- one optional documentation family with two differently named instances;
+- one optional opaque documentation family with two differently named instances;
 - analysis table and array resources with canonical core or extension lineage and one producing
   run;
 - a two-stage acyclic analysis chain whose terminal sources are canonical resources; and
