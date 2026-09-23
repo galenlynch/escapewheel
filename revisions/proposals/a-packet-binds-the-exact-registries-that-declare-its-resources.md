@@ -10,8 +10,8 @@
 
 ## 1. Problem
 
-The packet catalog is not yet one complete, data-driven contract. Its prose, JSON
-Schema, registry declarations, and implementations disagree about three connected subjects.
+The packet catalog is described by Part 04's prose, `registry/manifest.schema.json`, the registry
+declarations, and the reference implementations, and they disagree about three connected subjects.
 
 First, a packet does not identify the exact registry documents that give its resources meaning.
 The catalog records a bare core `registry_version` and assumes the fixed path
@@ -36,7 +36,7 @@ the manifest loader does not enable JSON Schema format checking. The current pro
 packet-level `processing_run_id` as a string name while the table with that field name owns an
 assigned integer identifier.
 
-These are not independent cleanup tasks. Requiredness can be evaluated only after the catalog has
+The three subjects form one decision. Requiredness can be evaluated only after the catalog has
 selected exact checked registries, and a registry binding is useful only if every resource entry
 resolves through it under one catalog contract.
 
@@ -131,7 +131,7 @@ properties:
 - ordinary access does not become whole-packet validation and does not require a validation
   receipt; and
 - packet validity composition, unavailable-extension verdicts, final release identifiers, and the
-  immutable specification release remain available to their separate decisions.
+  immutable specification release are left to separate decisions.
 
 The current project has no compatibility obligation to the superseded development manifest shape.
 Generated packets and fixtures can be regenerated atomically with the owning schemas and
@@ -151,58 +151,55 @@ identity, and leaves core and extension binding as two unrelated contracts.
 closed `registries` object keyed by stable registry ID. Each value contains `role` (`core` or
 `extension`), `version`, packet-relative `path`, and `sha256`. Exactly one entry has the core role.
 Every registry document gains the same stable `registry_id`; an extension's `registry_id` equals
-its namespace-owning `extension_id`. The user chose this option because one descriptor and
-one comparison algorithm cover every registry, while the role keeps core discoverable without a
-reserved filename.
+its namespace-owning `extension_id`. This proposal prefers this option: one descriptor and one
+comparison algorithm cover every registry, and the role keeps core discoverable without a reserved
+filename.
 
-**Use an array of descriptors.** This resembles general artifact manifests, but identifier
-uniqueness becomes another semantic check and lookup requires a scan. A JSON object already gives
-unique keys and direct lookup, so an array adds no useful ordering semantics here.
+**Use an array of descriptors.** An array makes identifier uniqueness another semantic check and
+lookup a scan, and its order would mean nothing; a JSON object gives unique keys and direct lookup.
 
-Each descriptor's `sha256` covers the exact file bytes, avoiding a new canonical-JSON algorithm.
-Final registry IDs, versions, and digest values can be assigned after the remaining contract
+Each descriptor's `sha256` covers the exact document bytes, so no canonical-JSON algorithm is
+needed. Final registry IDs, versions, and digest values can be assigned after the remaining contract
 changes; this decision defines their shape and comparison semantics.
 
 ### 4.2 Embedding or referencing the core registry
 
-The core registry is 182,460 bytes (18,253 gzipped); the four example extensions total 72,498 bytes
-(10,359 gzipped). The two real packets built from it are 749 MB and 1.2 GB, so embedding the core
-and every example extension adds about 0.03% to the smaller one. In a synthetic fixture of 285 KB
-the same registry is most of the packet, but fixtures are not a storage workload. Across a
-collection the cost is linear: 10,000 packets would carry about 1.8 GB of identical core copies.
+The core registry is 182,460 bytes and the four example extensions total 72,498 bytes. The four
+local development packets measure 52 MB, 479 MB, 578 MB, and 1.2 GB on
+disk, so the core registry and every example extension together add 0.05% to the 479 MB packet.
+They make up most of the 285 KB `valid` fixture, which is a conformance case rather than a storage
+workload. Across a collection the cost is linear: 10,000 packets would carry 1.8 GB of identical
+core copies.
 
-**Embed every bound registry.** The packet remains self-describing and readable offline, for as
-long as its files survive, without any registry distribution service. The reader already uses the
-embedded copy for declaration resolution and session scope, and the one amended real packet
-continued to work when the reference registry's version moved backwards during pre-release
-iteration.
+**Embed every bound registry.** The packet stays self-describing and readable offline, for as long
+as its files survive, without a registry distribution service. The reader already resolves
+declarations and session scope from the embedded copy.
 
 **Reference the core registry and embed extensions.** The core descriptor keeps `registry_id`,
-`version`, and `sha256` but has no `path`; a reader or validator resolves those bytes from a
+`version`, and `sha256` but has no `path`, and a reader or validator resolves those bytes from a
 digest-keyed store of released core registries, such as copies vendored in the reader and
-validator packages. This removes the duplicated core bytes but makes the packet unreadable to
-any consumer lacking that exact release. It also depends on work that does not yet exist:
-immutable registry releases, a resolution rule, and a vendoring or retrieval policy for
-every historical release. Extensions have no publication home, so they would still be embedded,
-reintroducing the core/extension asymmetry this decision otherwise removes.
+validator packages. The packet sheds the duplicated core bytes and becomes unreadable to any
+consumer lacking that exact release. The option also needs immutable registry releases, a
+resolution rule, and a policy for vendoring or retrieving every historical release, none of which
+exists. Extensions have no publication home and would still be embedded, restoring the
+core/extension asymmetry the binding map removes.
 
-**Require the digest and make embedding optional.** A packet may carry a copy or omit it. This
-defers the choice to writers but doubles the reader and validator acquisition paths and their
-negative tests, and a consumer cannot know in advance whether a packet is self-contained.
+**Require the digest and make embedding optional.** A writer chooses whether to carry a copy.
+Reader and validator acquisition paths and their negative tests double, and a consumer cannot tell
+in advance whether a packet is self-contained.
 
-The user chose embedding every bound registry because the measured cost is
-negligible against real packets and referencing needs a release and resolution infrastructure
-that v0.2 does not otherwise require. Referencing remains a compatible later addition: a future
-revision could make `path` optional for a core role whose digest names a released registry.
+This proposal prefers embedding every bound registry, compressed. Its cost is small against the
+measured packets, and referencing needs release and resolution infrastructure that v0.2 does not
+otherwise require. A later revision could still make `path` optional for a core registry whose
+digest names a released document.
 
-**Store embedded registries gzip-compressed.** The user conditioned embedding on compression. Compression reduces the embedded core from 182 KB
-to 18 KB and the four example extensions from 72 KB to 10 KB, removing about 89% of the collection
-cost. Gzip rather than Zstandard, because Zstandard (15 KB for the core) enters the Python
-standard library only in 3.14 while the implementations support 3.12, and gzip is available in
-every mainstream language runtime. The encoding is fixed rather than a writer option, so a reader
-has one acquisition path. The descriptor's `sha256` covers the decompressed document bytes, not
-the gzip stream: gzip output varies with header fields, compression level, and implementation,
-and a digest of the document itself stays comparable with a registry's published bytes.
+Gzip reduces the core registry to 18,253 bytes and the four extensions to 10,359, removing 89% of
+the embedded bytes. Zstandard would reach 14,770 bytes for the core but enters the Python standard
+library only in 3.14, while the implementations support 3.12; gzip is available in every
+mainstream language runtime. One fixed encoding gives a reader one acquisition path. The
+descriptor's `sha256` covers the decompressed document, because gzip output varies with header
+fields, compression level, and implementation, while the document bytes also match the registry
+as published.
 
 ### 4.3 Manifest closure and dormant fields
 
@@ -213,14 +210,13 @@ misspellings valid and gives dormant fields apparent authority without defining 
 bindings, validation summary, resource entries, member entries, store digests, retention object,
 and all other locally defined objects. Retain the Part 04 fields and Part 03's `retention` object.
 Remove the withdrawn `provenance` block and the currently unowned `creators`, `dataset_id`,
-`keywords`, `license`, `release_id`, `source_summary`, and resource-level `semantic_type`. The user
-chose this option. A future proposal can add a field with a precise meaning; arbitrary
-typed scientific facts continue to belong in registry-declared resources rather than catalog
-extensions.
+`keywords`, `license`, `release_id`, `source_summary`, and resource-level `semantic_type`. This
+proposal prefers this option. A future proposal can add a field with a precise meaning, and typed
+scientific facts continue to belong in registry-declared resources.
 
-**Add a generic annotations object.** This catches root misspellings while permitting arbitrary
-metadata. It also creates an attractive place for untyped scientific or conformance facts and
-would require rules defining what consumers may ignore. No demonstrated packet need justifies it.
+**Add a generic annotations object.** An annotations object catches root misspellings but invites
+untyped scientific or conformance facts and needs rules saying what consumers may ignore. No
+measured packet needs one.
 
 ### 4.4 Cross-document and cross-field checks
 
@@ -231,14 +227,14 @@ implementations which conditions decide catalog conformance or how findings corr
 conditions for registry bindings, unique resource IDs, declaration resolution, instance binding,
 presence and dependency closure, catalog rows, lineage, processing-run resolution, external/source
 relationships, and member/digest consistency. JSON Schema remains the local-shape phase; checked
-registry contexts precede declaration-derived checks. The user chose this option. It makes
-the existing data-driven checks explicit without inventing a second SQL-like language for JSON
+registry contexts precede declaration-derived checks. This proposal prefers this option: it names the
+validator's existing data-driven checks without inventing a second query language for JSON
 cross-document relationships.
 
-The semantic checks would run for a conformance claim or writer publication. An ordinary reader
-would still parse the catalog and resolve only what an operation needs. Duplicate resource IDs are
-different: because silently selecting one entry changes ordinary lookup meaning, the catalog
-loader would reject them before constructing its lookup map.
+The semantic checks would run for a conformance claim or writer publication, while an ordinary
+reader parses the catalog and resolves only what an operation needs. Duplicate resource IDs are
+the exception: a lookup map silently keeps one of the duplicates, so the catalog loader would reject
+them before building it.
 
 ### 4.5 Processing-run binding
 
@@ -250,10 +246,10 @@ assigned number in the catalog and requires the writer to serialize a different 
 
 **Rename it `processing_run_name` and resolve it only through that column.** This matches current
 writer values, preserves name-based catalog identity, and makes the join explicit. A present value
-would require `core.processing_runs` and exactly one row with the same non-null name. The user
-chose this option. The declaration's `producing_run` policy governs the renamed field. Only a
-referenced name must be unambiguous; unreferenced and null names remain unconstrained, so the
-column does not become packet-unique and R128's constraint holds.
+would require `core.processing_runs` and exactly one row with the same non-null name, and the
+declaration's `producing_run` policy would govern the renamed field. This proposal prefers this
+option. Only a referenced name must be unambiguous; unreferenced and null names stay
+unconstrained, so the column does not become packet-unique and R128's constraint holds.
 
 ### 4.6 Catalog-schema authority
 
@@ -269,8 +265,8 @@ and closure precisely enough to generate a faithful schema without a second stru
 local JSON structure: field names, types, required members, closure, patterns, and formats. Part 04
 prose owns field meanings, declaration-selected presence, and the named semantic checks. Part 04's
 field tables become an informative projection generated from and checked against the schema, as
-Part 02's column tables are generated from the registry. The user chose this option because it
-repeats the ownership split Parts 02 and 03 already use and gives the catalog one editable
+Part 02's column tables are generated from the registry. This proposal prefers this option because
+it repeats the ownership split Parts 02 and 03 already use and gives the catalog one editable
 structural source.
 
 Under either of the last two options, the referenced-resource document's entry is the catalog entry.
@@ -283,8 +279,8 @@ entry schema, but every consumer must then package and resolve another schema re
 **Generate the delivery entry from the catalog definition.** The catalog schema remains the sole
 structural owner of a resource entry. `registry/build.py` copies that exact definition into the
 standalone referenced-resource schema and fails if a hand-edited projection differs. Part 03 keeps
-the delivery obligations and cites Part 04 for the entry shape. This option is selected because both
-deployed schemas remain self-contained while only one definition is edited.
+the delivery obligations and cites Part 04 for the entry shape. This proposal prefers this option
+because both deployed schemas stay self-contained while only one definition is edited.
 
 ## 5. Impact sketch
 
@@ -305,9 +301,7 @@ deployed schemas remain self-contained while only one definition is edited.
 | revision lifecycle, ledger, evidence, and process tooling | Unchanged except for the ordinary revision and evidence records. |
 | generated publications and developer documentation | Part 04, relevant Part 02/03/05/08/09 passages, examples, schemas, vendored copies, public reader/writer types, and manifest examples regenerate together. |
 
-## 6. Open questions
-
-The user approved these resolutions on 2026-09-23:
+## 6. Resolved direction
 
 1. One closed `registries` map, keyed by registry ID, replaces `registry_version` and
    `extensions`; each descriptor carries `role`, `version`, packet-relative `path`, and `sha256`,
@@ -324,12 +318,9 @@ The user approved these resolutions on 2026-09-23:
    `core.processing_runs` row with that non-null name.
 6. Catalog loading rejects duplicate resource IDs before building its lookup map; the remaining
    named catalog checks run for explicit validation and writer publication.
-
 7. Part 04 expressly incorporates `registry/manifest.schema.json` as the exact owner of local
    catalog structure. Part 04's field tables become an informative projection generated from it,
    and `registry/resources.schema.json` is generated from its resource entry.
-
-No question remains open.
 
 ## 7. Promotion criteria
 
