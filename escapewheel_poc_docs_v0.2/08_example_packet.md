@@ -36,7 +36,8 @@ packet_root/
     core/            waveform_mean.zarr/  sniff_detector.zarr/
 ```
 
-The LFP is referenced rather than copied: ten `dense_array_asset` entries with `external: true` and absolute URIs.
+The LFP is referenced rather than copied: ten entries instantiating the dense-array family, with
+`external: true` and absolute URIs.
 
 ## 3. Catalog excerpt
 
@@ -45,32 +46,30 @@ The LFP is referenced rather than copied: ten `dense_array_asset` entries with `
   "packet_id": "ecephys_786867_2025-09-25",
   "packet_version": "0.1.0",
   "profile_id": "escapewheel-portable-v0.1",
-  "registry_version": "0.4.0",
+  "registry_version": "0.5.0",
   "sessions": ["ecephys_786867_2025-09-25"],
   "required_codecs": ["blosc", "numcodecs.delta", "zstd"],
   "resources": [
     {
       "resource_id": "core.units",
-      "layer": "core", "kind": "table",
-      "schema_id": "core.units.v0.1",
+      "declaration_id": "core.units",
       "physical_profile": "parquet",
       "uri": "tables/core/units.parquet",
-      "canonical": true, "validation_state": "passed",
+      "validation_state": "passed",
       "sha256": "c53fd91e…"
     },
     {
       "resource_id": "core.sniff_detector",
-      "layer": "core", "kind": "dense_array_asset",
+      "declaration_id": "core.array_asset_instances",
       "physical_profile": "zarr_v3",
       "uri": "arrays/core/sniff_detector.zarr",
-      "array_asset_id": "sniff_detector",
-      "canonical": true, "validation_state": "passed",
+      "validation_state": "passed",
       "codecs": ["numcodecs.delta", "blosc"],
       "size_bytes": 3463092, "sha256": "1dadd742…"
     },
     {
       "resource_id": "core.46101.lfp",
-      "layer": "core", "kind": "dense_array_asset",
+      "declaration_id": "core.array_asset_instances",
       "physical_profile": "zarr_v2",
       "uri": "file:///…/recording1",
       "external": true, "codecs": ["blosc"],
@@ -79,7 +78,7 @@ The LFP is referenced rather than copied: ten `dense_array_asset` entries with `
     },
     {
       "resource_id": "analysis.spike_events",
-      "layer": "analysis", "kind": "table",
+      "declaration_id": "analysis.spike_events",
       "uri": "tables/analysis/spike_events.parquet",
       "derived_from": ["core.spike_events", "core.clock_anchors", "core.clocks"],
       "processing_run_id": "materialize.analysis.spike_events"

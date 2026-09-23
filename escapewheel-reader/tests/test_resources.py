@@ -110,14 +110,18 @@ def _external_entry(uri):
 
     entry = {
         "resource_id": "core.probe.lfp",
-        "layer": "core",
-        "kind": "dense_array_asset",
+        "declaration_id": "core.test_arrays",
         "physical_profile": "zarr_v2",
         "uri": uri,
         "external": True,
         "codecs": ["blosc"],
     }
-    return Resource("core.probe.lfp", "core", "dense_array_asset", uri, entry)
+    declaration = {
+        "content_class": "core",
+        "kind": "dense_array",
+        "instances": {"mode": "family"},
+    }
+    return Resource("core.probe.lfp", "core.test_arrays", uri, entry, declaration)
 
 
 def _array_resource(uri, root=None):
@@ -187,18 +191,27 @@ def array_packet(tmp_path, packet_root):
     manifest["resources"].append(
         {
             "resource_id": "core.lfp",
-            "layer": "core",
-            "kind": "dense_array_asset",
-            "schema_id": "core.lfp.v0.1",
+            "declaration_id": "core.test_arrays",
             "physical_profile": "zarr_v3",
             "uri": "arrays/lfp.zarr",
-            "canonical": True,
             "validation_state": "passed",
             # Part 03 §6.4: codecs are declared per resource, so a reader can check before opening.
             "codecs": ["bytes", "zstd"],
         }
     )
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
+    registry_path = root / "schemas" / "logical_schemas.json"
+    registry = json.loads(registry_path.read_text())
+    registry["resources"]["core.test_arrays"] = {
+        "content_class": "core",
+        "kind": "dense_array",
+        "instances": {"mode": "family"},
+        "requires": [],
+        "lineage": "optional",
+        "producing_run": "optional",
+        "array": {"axes_resource": "core.intervals"},
+    }
+    registry_path.write_text(json.dumps(registry, indent=2))
     return root
 
 
@@ -232,7 +245,7 @@ def test_a_store_uri_pyarrow_cannot_open_is_reported(packet_root):
     from escapewheel_reader.errors import ResourceUnreadableError
 
     manifest = json.loads((packet_root / "packet.json").read_text())
-    entry = next(r for r in manifest["resources"] if r["kind"] == "table")
+    entry = next(r for r in manifest["resources"] if r["declaration_id"] == "core.units")
     entry["uri"] = "wat://nowhere/units.parquet"
     entry["external"] = True
     (packet_root / "packet.json").write_text(json.dumps(manifest))

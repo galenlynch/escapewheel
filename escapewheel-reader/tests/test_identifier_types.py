@@ -30,7 +30,7 @@ from escapewheel_reader import (
 
 def _column_type(registry: dict[str, Any], resource: str, column: str) -> type[Any]:
     """Map the logical scalar named by a checked symbol to its public host scalar."""
-    declaration = next(c for c in registry["tables"][resource]["columns"] if c["name"] == column)
+    declaration = next(c for c in registry["resources"][resource]["table"]["columns"] if c["name"] == column)
     return {"int32": int, "int64": int, "string": str}[declaration["type"]]
 
 

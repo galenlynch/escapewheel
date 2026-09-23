@@ -849,9 +849,19 @@ class Recipe:
             Empty when the recipe is sound. Errors first, then warnings, each sorted, so two
             runs of the same recipe report identically.
         """
-        tables = dict(registry["tables"])
+        tables = {
+            name: declaration["table"]
+            for name, declaration in registry["resources"].items()
+            if declaration["kind"] == "table"
+        }
         for document in extensions or ():
-            tables.update(document["tables"])
+            tables.update(
+                {
+                    name: declaration["table"]
+                    for name, declaration in document["resources"].items()
+                    if declaration["kind"] == "table"
+                }
+            )
         owners, claimants = self.owners, self.claimants
         errors: list[str] = []
         warnings: list[str] = []

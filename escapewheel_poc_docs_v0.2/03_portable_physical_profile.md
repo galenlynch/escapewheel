@@ -189,7 +189,9 @@ A column-major binding enumerates axes in reverse. The client adapts; the format
 <a id="ew-array-axis-coordinates" data-spec-anchor="canonical"></a>
 ### 6.3 Axis coordinates
 
-Every axis MUST declare its coordinates in `core.array_dimensions`, in one of its declared coordinate forms. A regularly sampled axis declares an origin tick, a step, and a length rather than storing per-sample values.
+Every axis MUST declare its coordinates in the dense-array declaration's `array.axes_resource`, in
+one of its declared coordinate forms. A regularly sampled axis declares an origin tick, a step,
+and a length rather than storing per-sample values.
 
 A step MAY be rational, declared as a numerator and denominator: a 30 ms bin at 31,250 Hz is 937.5 ticks.
 
@@ -218,7 +220,9 @@ The asymmetry between the versions is measured, not chosen: `gzip` is in the v3 
 
 `core.array_assets` MUST NOT carry dtype or shape. The Zarr array declares them, and restating them buys no otherwise-unavailable access.
 
-`core.array_dimensions` carries axis names, because a Zarr binding in another language cannot see them.
+The declaration-selected axes table carries axis names, because a Zarr binding in another language
+cannot see them. A physical checker resolves that table from the dense-array declaration rather
+than from a fixed namespace or resource ID.
 
 Zarr attributes MAY duplicate helpful metadata. Metadata required for validation MUST also be represented in tables or the catalog, so that it is not reachable only through an array store.
 
@@ -402,11 +406,24 @@ A resource an adapter owns and has no rows for MUST arrive empty rather than not
 
 An adapter's arrays MUST NOT cross as rows. A dense array crosses as a reference: its `array_asset_id`, the layout the adapter chose — chunking, sharding, codecs, fill value — and a location. Where the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1) and the adapter MUST write the array there and return the reference, so commit moves it by the rename Part 05 §6 already performs. Where the array is external (§8.2), a build supplies no location and the producer returns the URI its source already has.
 
-**A packet-owned array crosses as the bytes themselves.** A build MUST supply `array_location`, one directory per source, since two sources may each deliver an asset of one name and a shared directory would make them one array; the adapter MUST write each array into it as Zarr v3 (§6.1), in a directory named by the array's `array_asset_id` with the suffix `.zarr`. A build MUST take that name as the asset's identifier and MUST refuse a delivery where an array arrives that the source's `core.array_assets` rows do not declare, or where a row declares a packet-owned array that did not: an asset whose bytes and whose row disagree about which asset they are is one a build cannot describe.
+**A packet-owned array crosses as the bytes themselves.** A build MUST supply `array_location`,
+one directory per source, since two sources may each deliver an asset of one name and a shared
+directory would make them one array. The adapter MUST write each array into it as Zarr v3 (§6.1),
+in a directory named by the catalog row's `resource_id` with the suffix `.zarr`. The build resolves
+the unique catalog-family declaration for that table-and-column pair, uses the row's
+`resource_id` as packet identity, and MUST NOT substitute an assigned row ID or source label. It
+MUST refuse a delivery where bytes and catalog rows do not bind one-to-one.
 
 Nothing else crosses for such an array, and a build MUST NOT require an adapter to state any of it. Every field of its manifest entry is in the array or in the build: `physical_profile` is the array's `zarr_format`, `codecs` its codec chain outermost first and descending through a shard, `size_bytes` and `sha256` the bytes a build digests for anything the packet owns (Part 03 §8.1), and the rest the build's own. An adapter delivering an array therefore writes bytes where one delivering rows performs no I/O at all, which is the cost of an array not being records.
 
-**A referenced resource crosses as a resource document.** An adapter that delivers one MUST deliver that document with it, under the reserved resource identifier `resources` (§11.4): a JSON object carrying `resources`, an array with one entry per such resource, each a manifest resource entry as Part 04 §5 declares one. A build MUST merge each entry into the manifest it writes and MUST NOT require any field but `resource_id` and `uri`, since a writer that cannot reach a URI records nothing (Part 04 §5.2) and `external` is a field a build fills rather than reads. Its shape is published as `registry/resources.schema.json`, and a build MUST refuse a document that does not satisfy it, naming what is wrong, before it writes a manifest: this is the catalog's own content arriving from elsewhere, and a malformed entry merged into a manifest is a packet that misdescribes its own resources.
+**A referenced resource crosses as a resource document.** An adapter that delivers one MUST
+deliver that document with it, under the reserved resource identifier `resources` (§11.4): a JSON
+object carrying `resources`, an array with one entry per such resource, each a manifest resource
+entry as Part 04 §5 declares one. Every entry MUST carry `resource_id`, `declaration_id`, and `uri`.
+A build preserves that binding, rejects one that does not resolve or admit the resource ID, and
+merges the entry into the manifest. Its shape is published as
+`registry/resources.schema.json`. A build MUST refuse a document that does not satisfy it before
+writing a manifest, naming what is wrong.
 
 The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a catalog cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
 

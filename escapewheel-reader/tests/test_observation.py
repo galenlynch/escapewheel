@@ -37,8 +37,24 @@ LICKS, CUES = 30, 31
 
 def _extend(root, manifest, **tables):
     """Write extra core tables into a copied packet and declare them."""
+    registry_path = root / "schemas" / "logical_schemas.json"
+    registry = json.loads(registry_path.read_text())
     for name, table in tables.items():
-        manifest["resources"].append(_resource(f"core.{name}", _write(root, name, table)))
+        resource_id = f"core.{name}"
+        manifest["resources"].append(_resource(resource_id, _write(root, name, table)))
+        registry["resources"].setdefault(
+            resource_id,
+            {
+                "content_class": "core",
+                "kind": "table",
+                "instances": {"mode": "singleton", "presence": "optional"},
+                "requires": [],
+                "lineage": "optional",
+                "producing_run": "optional",
+                "table": {"columns": [], "primary_key": [], "references": [], "rules": []},
+            },
+        )
+    registry_path.write_text(json.dumps(registry, indent=2))
     return manifest
 
 

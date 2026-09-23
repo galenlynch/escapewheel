@@ -1,650 +1,683 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
-  "registry_version": "0.5.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
+  "registry_version": "0.6.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "dynamic_foraging",
-  "tables": {
-    "dynamic_foraging.trials": {
-      "columns": [
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
-        },
-        {
-          "name": "interval_kind",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "description": "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know.",
-          "vocabulary": "open"
-        },
-        {
-          "name": "trial_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "The trial, and the interval it occupies in core.",
-          "identity": "carried"
-        },
-        {
-          "name": "block_id",
-          "type": "int32",
-          "presence": "nullable",
-          "role": "identifier",
-          "description": "The block this trial falls in. Blocks are derived from where the reward probabilities change, since the source records no boundary.",
-          "identity": "assigned"
-        },
-        {
-          "name": "animal_response",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Which way the animal responded. The source emits 0, 1 and 2; the writer decodes them, because a code whose key is not in the packet leaves no rule, query or reader able to tell one response from another.",
-          "vocabulary": "closed",
-          "enum": [
-            "left",
-            "no_response",
-            "right"
-          ]
-        },
-        {
-          "name": "rewarded_history_left",
-          "type": "bool",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether the left port paid out."
-        },
-        {
-          "name": "rewarded_history_right",
-          "type": "bool",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether the right port paid out."
-        },
-        {
-          "name": "bait_left",
-          "type": "bool",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether reward was baited on the left."
-        },
-        {
-          "name": "bait_right",
-          "type": "bool",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether reward was baited on the right."
-        },
-        {
-          "name": "reward_probability_left",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Left reward probability in force. Constant within a block, which is what blocks are derived from.",
-          "unit": "1"
-        },
-        {
-          "name": "reward_probability_right",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Right reward probability in force.",
-          "unit": "1"
-        },
-        {
-          "name": "reward_random_number_left",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "The draw the left outcome was decided by, so a reanalysis can reproduce it.",
-          "unit": "1"
-        },
-        {
-          "name": "reward_random_number_right",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "The draw the right outcome was decided by.",
-          "unit": "1"
-        },
-        {
-          "name": "delay_start_tick",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "coordinate",
-          "description": "When the delay began.",
-          "clock_from": "core.intervals.clock_id"
-        },
-        {
-          "name": "go_cue_start_tick",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "coordinate",
-          "description": "When the go cue played.",
-          "clock_from": "core.intervals.clock_id"
-        },
-        {
-          "name": "reward_outcome_tick",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "coordinate",
-          "description": "When the outcome was delivered or withheld.",
-          "clock_from": "core.intervals.clock_id"
-        },
-        {
-          "name": "delay_duration",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "The delay this trial drew. Constant where the session's delay_beta is zero.",
-          "unit": "s"
-        },
-        {
-          "name": "iti_duration",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "The inter-trial interval this trial drew.",
-          "unit": "s"
-        },
-        {
-          "name": "auto_water_left",
-          "type": "bool",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether the left port delivered unearned water."
-        },
-        {
-          "name": "auto_water_right",
-          "type": "bool",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether the right port delivered unearned water."
-        },
-        {
-          "name": "lickspout_position_x",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Lickspout position.",
-          "unit": "um"
-        },
-        {
-          "name": "lickspout_position_y",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Lickspout position.",
-          "unit": "um"
-        },
-        {
-          "name": "lickspout_position_z",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Lickspout position.",
-          "unit": "um"
-        }
-      ],
-      "primary_key": [
-        "session_id",
-        "trial_id"
-      ],
-      "references": [
-        {
-          "columns": [
-            "session_id",
-            "interval_kind",
-            "trial_id"
-          ],
-          "resource": "core.intervals",
-          "resource_columns": [
-            "session_id",
-            "interval_kind",
-            "interval_id"
-          ]
-        },
-        {
-          "columns": [
-            "session_id",
-            "block_id"
-          ],
-          "resource": "dynamic_foraging.blocks",
-          "resource_columns": [
-            "session_id",
-            "block_id"
-          ]
-        }
-      ],
-      "rules": [
-        {
-          "id": "dynamic_foraging.trials.the_cue_follows_the_delay",
-          "level": "error",
-          "message": "the go cue precedes the delay it is supposed to follow",
-          "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE delay_start_tick IS NOT NULL AND go_cue_start_tick IS NOT NULL AND go_cue_start_tick < delay_start_tick"
-        },
-        {
-          "id": "dynamic_foraging.trials.the_outcome_follows_the_cue",
-          "level": "error",
-          "message": "the outcome is recorded before the go cue",
-          "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE reward_outcome_tick IS NOT NULL AND go_cue_start_tick IS NOT NULL AND reward_outcome_tick < go_cue_start_tick"
-        },
-        {
-          "id": "dynamic_foraging.trials.a_probability_is_a_probability",
-          "level": "error",
-          "message": "a reward probability falls outside 0-1",
-          "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE NOT reward_probability_left BETWEEN 0 AND 1 OR NOT reward_probability_right BETWEEN 0 AND 1"
-        },
-        {
-          "id": "dynamic_foraging.trials.a_draw_is_a_draw",
-          "level": "error",
-          "message": "a reward random number falls outside 0-1, so the outcome cannot be reproduced",
-          "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE NOT reward_random_number_left BETWEEN 0 AND 1 OR NOT reward_random_number_right BETWEEN 0 AND 1"
-        },
-        {
-          "id": "dynamic_foraging.trials.a_reward_needs_a_bait",
-          "level": "error",
-          "message": "a port paid out where nothing was baited",
-          "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE (rewarded_history_left AND NOT bait_left) OR (rewarded_history_right AND NOT bait_right)"
-        },
-        {
-          "id": "dynamic_foraging.trials.a_block_holds_one_probability_pair",
-          "level": "error",
-          "message": "a block's trials disagree about the reward probabilities, so the block is not one",
-          "sql": "SELECT session_id, block_id FROM (SELECT session_id, block_id, COUNT(DISTINCT reward_probability_left) AS l, COUNT(DISTINCT reward_probability_right) AS r FROM dynamic_foraging.trials WHERE block_id IS NOT NULL GROUP BY session_id, block_id) AS derived_1 WHERE l > 1 OR r > 1"
-        }
-      ]
-    },
+  "resources": {
     "dynamic_foraging.blocks": {
-      "columns": [
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
-        },
-        {
-          "name": "block_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "The block.",
-          "identity": "assigned"
-        },
-        {
-          "name": "block_name",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "The block's own name, where the source has one.",
-          "vocabulary": "free"
-        },
-        {
-          "name": "clock_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "The clock the interval's ticks are on.",
-          "identity": "assigned"
-        },
-        {
-          "name": "start_tick",
-          "type": "int64",
-          "presence": "required",
-          "role": "coordinate",
-          "description": "First tick of the block.",
-          "clock_from": "clock_id"
-        },
-        {
-          "name": "stop_tick",
-          "type": "int64",
-          "presence": "required",
-          "role": "coordinate",
-          "description": "Last tick of the block, inclusive.",
-          "clock_from": "clock_id"
-        },
-        {
-          "name": "reward_probability_left",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Left reward probability across the block.",
-          "unit": "1"
-        },
-        {
-          "name": "reward_probability_right",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Right reward probability across the block.",
-          "unit": "1"
-        },
-        {
-          "name": "metadata",
-          "type": "json_string",
-          "presence": "optional",
-          "role": "data",
-          "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
-        }
-      ],
-      "primary_key": [
-        "session_id",
-        "block_id"
-      ],
-      "references": [
-        {
-          "columns": [
-            "session_id"
-          ],
-          "resource": "core.sessions",
-          "resource_columns": [
-            "session_id"
-          ]
-        },
-        {
-          "columns": [
-            "clock_id"
-          ],
-          "resource": "core.clocks",
-          "resource_columns": [
-            "clock_id"
-          ]
-        }
-      ],
-      "rules": [
-        {
-          "id": "dynamic_foraging.blocks.interval_valid",
-          "level": "error",
-          "message": "stop_tick precedes start_tick",
-          "sql": "SELECT session_id, block_id FROM dynamic_foraging.blocks WHERE stop_tick < start_tick"
-        },
-        {
-          "id": "dynamic_foraging.blocks.blocks_do_not_overlap",
-          "level": "error",
-          "message": "two blocks of one session overlap, so a trial falls in both",
-          "sql": "SELECT a.session_id, a.block_id, b.block_id AS other FROM dynamic_foraging.blocks AS a JOIN dynamic_foraging.blocks AS b ON a.session_id = b.session_id AND a.block_id < b.block_id WHERE a.start_tick <= b.stop_tick AND b.start_tick <= a.stop_tick"
-        },
-        {
-          "id": "dynamic_foraging.blocks.contains_its_trials",
-          "level": "error",
-          "message": "a trial names a block whose interval does not contain it",
-          "sql": "SELECT t.session_id, t.trial_id FROM dynamic_foraging.trials AS t JOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id AND b.block_id = t.block_id JOIN core.intervals AS c ON c.session_id = t.session_id AND c.interval_kind = t.interval_kind AND c.interval_id = t.trial_id WHERE c.start_tick < b.start_tick OR c.stop_tick > b.stop_tick"
-        }
-      ]
+      "content_class": "extension",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "description": "Session ID.",
+            "identity": "assigned"
+          },
+          {
+            "name": "block_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "description": "The block.",
+            "identity": "assigned"
+          },
+          {
+            "name": "block_name",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The block's own name, where the source has one.",
+            "vocabulary": "free"
+          },
+          {
+            "name": "clock_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "description": "The clock the interval's ticks are on.",
+            "identity": "assigned"
+          },
+          {
+            "name": "start_tick",
+            "type": "int64",
+            "presence": "required",
+            "role": "coordinate",
+            "description": "First tick of the block.",
+            "clock_from": "clock_id"
+          },
+          {
+            "name": "stop_tick",
+            "type": "int64",
+            "presence": "required",
+            "role": "coordinate",
+            "description": "Last tick of the block, inclusive.",
+            "clock_from": "clock_id"
+          },
+          {
+            "name": "reward_probability_left",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Left reward probability across the block.",
+            "unit": "1"
+          },
+          {
+            "name": "reward_probability_right",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Right reward probability across the block.",
+            "unit": "1"
+          },
+          {
+            "name": "metadata",
+            "type": "json_string",
+            "presence": "optional",
+            "role": "data",
+            "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+          }
+        ],
+        "primary_key": [
+          "session_id",
+          "block_id"
+        ],
+        "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "clock_id"
+            ],
+            "resource": "core.clocks",
+            "resource_columns": [
+              "clock_id"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "dynamic_foraging.blocks.interval_valid",
+            "level": "error",
+            "message": "stop_tick precedes start_tick",
+            "sql": "SELECT session_id, block_id FROM dynamic_foraging.blocks WHERE stop_tick < start_tick"
+          },
+          {
+            "id": "dynamic_foraging.blocks.blocks_do_not_overlap",
+            "level": "error",
+            "message": "two blocks of one session overlap, so a trial falls in both",
+            "sql": "SELECT a.session_id, a.block_id, b.block_id AS other FROM dynamic_foraging.blocks AS a JOIN dynamic_foraging.blocks AS b ON a.session_id = b.session_id AND a.block_id < b.block_id WHERE a.start_tick <= b.stop_tick AND b.start_tick <= a.stop_tick"
+          },
+          {
+            "id": "dynamic_foraging.blocks.contains_its_trials",
+            "level": "error",
+            "message": "a trial names a block whose interval does not contain it",
+            "sql": "SELECT t.session_id, t.trial_id FROM dynamic_foraging.trials AS t JOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id AND b.block_id = t.block_id JOIN core.intervals AS c ON c.session_id = t.session_id AND c.interval_kind = t.interval_kind AND c.interval_id = t.trial_id WHERE c.start_tick < b.start_tick OR c.stop_tick > b.stop_tick"
+          }
+        ]
+      }
     },
     "dynamic_foraging.sessions": {
-      "columns": [
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "description": "Session ID.",
-          "identity": "assigned"
-        },
-        {
-          "name": "base_reward_probability_sum",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "The two ports' probabilities sum to this.",
-          "unit": "1"
-        },
-        {
-          "name": "block_beta",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Exponential parameter the block length is drawn from.",
-          "unit": "1"
-        },
-        {
-          "name": "block_min",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Shortest block, in trials."
-        },
-        {
-          "name": "block_max",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Longest block, in trials."
-        },
-        {
-          "name": "min_reward_each_block",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Rewards a block must deliver before it may end."
-        },
-        {
-          "name": "delay_beta",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Exponential parameter the delay is drawn from. Zero fixes it.",
-          "unit": "1"
-        },
-        {
-          "name": "delay_min",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Shortest delay.",
-          "unit": "s"
-        },
-        {
-          "name": "delay_max",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Longest delay.",
-          "unit": "s"
-        },
-        {
-          "name": "iti_beta",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Exponential parameter the inter-trial interval is drawn from.",
-          "unit": "1"
-        },
-        {
-          "name": "iti_min",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Shortest inter-trial interval.",
-          "unit": "s"
-        },
-        {
-          "name": "iti_max",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Longest inter-trial interval.",
-          "unit": "s"
-        },
-        {
-          "name": "response_duration",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "How long a response is accepted for.",
-          "unit": "s"
-        },
-        {
-          "name": "reward_consumption_duration",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "How long the animal is given to drink.",
-          "unit": "s"
-        },
-        {
-          "name": "reward_delay",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Delay between a correct response and delivery.",
-          "unit": "s"
-        },
-        {
-          "name": "left_valve_open_time",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Calibrated open time for the left valve.",
-          "unit": "s"
-        },
-        {
-          "name": "right_valve_open_time",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Calibrated open time for the right valve.",
-          "unit": "s"
-        },
-        {
-          "name": "reward_size_left",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Volume one left reward delivers.",
-          "unit": "uL"
-        },
-        {
-          "name": "reward_size_right",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Volume one right reward delivers.",
-          "unit": "uL"
-        },
-        {
-          "name": "minimum_opto_interval",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Shortest gap between optogenetic trials.",
-          "unit": "s"
-        },
-        {
-          "name": "fraction_of_session",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Fraction of the session the schedule applies to.",
-          "unit": "1"
-        },
-        {
-          "name": "session_wide_control",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether a session-wide control condition was in force.",
-          "vocabulary": "open"
-        },
-        {
-          "name": "session_start_with",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Which condition the session opened on.",
-          "vocabulary": "open"
-        },
-        {
-          "name": "session_alternation",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether conditions alternated.",
-          "vocabulary": "open"
-        },
-        {
-          "name": "auto_train_curriculum_name",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Curriculum the trainer was running.",
-          "vocabulary": "open"
-        },
-        {
-          "name": "auto_train_curriculum_version",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "That curriculum's version.",
-          "vocabulary": "free"
-        },
-        {
-          "name": "auto_train_curriculum_schema_version",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "The schema version that curriculum was written to.",
-          "vocabulary": "free"
-        },
-        {
-          "name": "auto_train_stage",
-          "type": "string",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Stage within the curriculum.",
-          "vocabulary": "open"
-        },
-        {
-          "name": "auto_train_engaged",
-          "type": "bool",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether the trainer was driving the task."
-        },
-        {
-          "name": "auto_train_stage_overridden",
-          "type": "bool",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Whether an experimenter overrode the stage the trainer chose."
-        }
-      ],
-      "primary_key": [
-        "session_id"
-      ],
-      "references": [
-        {
-          "columns": [
-            "session_id"
-          ],
-          "resource": "core.sessions",
-          "resource_columns": [
-            "session_id"
-          ]
-        }
-      ],
-      "rules": [
-        {
-          "id": "dynamic_foraging.sessions.a_range_is_ordered",
-          "level": "error",
-          "message": "a minimum exceeds its maximum, so nothing can be drawn from the range",
-          "sql": "SELECT session_id FROM dynamic_foraging.sessions WHERE block_min > block_max OR delay_min > delay_max OR iti_min > iti_max"
-        },
-        {
-          "id": "dynamic_foraging.sessions.a_stage_needs_a_curriculum",
-          "level": "error",
-          "message": "a curriculum stage is named with no curriculum to place it in",
-          "sql": "SELECT session_id FROM dynamic_foraging.sessions WHERE auto_train_stage IS NOT NULL AND auto_train_curriculum_name IS NULL"
-        }
-      ]
+      "content_class": "extension",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "description": "Session ID.",
+            "identity": "assigned"
+          },
+          {
+            "name": "base_reward_probability_sum",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The two ports' probabilities sum to this.",
+            "unit": "1"
+          },
+          {
+            "name": "block_beta",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Exponential parameter the block length is drawn from.",
+            "unit": "1"
+          },
+          {
+            "name": "block_min",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Shortest block, in trials."
+          },
+          {
+            "name": "block_max",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Longest block, in trials."
+          },
+          {
+            "name": "min_reward_each_block",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Rewards a block must deliver before it may end."
+          },
+          {
+            "name": "delay_beta",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Exponential parameter the delay is drawn from. Zero fixes it.",
+            "unit": "1"
+          },
+          {
+            "name": "delay_min",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Shortest delay.",
+            "unit": "s"
+          },
+          {
+            "name": "delay_max",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Longest delay.",
+            "unit": "s"
+          },
+          {
+            "name": "iti_beta",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Exponential parameter the inter-trial interval is drawn from.",
+            "unit": "1"
+          },
+          {
+            "name": "iti_min",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Shortest inter-trial interval.",
+            "unit": "s"
+          },
+          {
+            "name": "iti_max",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Longest inter-trial interval.",
+            "unit": "s"
+          },
+          {
+            "name": "response_duration",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "How long a response is accepted for.",
+            "unit": "s"
+          },
+          {
+            "name": "reward_consumption_duration",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "How long the animal is given to drink.",
+            "unit": "s"
+          },
+          {
+            "name": "reward_delay",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Delay between a correct response and delivery.",
+            "unit": "s"
+          },
+          {
+            "name": "left_valve_open_time",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Calibrated open time for the left valve.",
+            "unit": "s"
+          },
+          {
+            "name": "right_valve_open_time",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Calibrated open time for the right valve.",
+            "unit": "s"
+          },
+          {
+            "name": "reward_size_left",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Volume one left reward delivers.",
+            "unit": "uL"
+          },
+          {
+            "name": "reward_size_right",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Volume one right reward delivers.",
+            "unit": "uL"
+          },
+          {
+            "name": "minimum_opto_interval",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Shortest gap between optogenetic trials.",
+            "unit": "s"
+          },
+          {
+            "name": "fraction_of_session",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Fraction of the session the schedule applies to.",
+            "unit": "1"
+          },
+          {
+            "name": "session_wide_control",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether a session-wide control condition was in force.",
+            "vocabulary": "open"
+          },
+          {
+            "name": "session_start_with",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Which condition the session opened on.",
+            "vocabulary": "open"
+          },
+          {
+            "name": "session_alternation",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether conditions alternated.",
+            "vocabulary": "open"
+          },
+          {
+            "name": "auto_train_curriculum_name",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Curriculum the trainer was running.",
+            "vocabulary": "open"
+          },
+          {
+            "name": "auto_train_curriculum_version",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "That curriculum's version.",
+            "vocabulary": "free"
+          },
+          {
+            "name": "auto_train_curriculum_schema_version",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The schema version that curriculum was written to.",
+            "vocabulary": "free"
+          },
+          {
+            "name": "auto_train_stage",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Stage within the curriculum.",
+            "vocabulary": "open"
+          },
+          {
+            "name": "auto_train_engaged",
+            "type": "bool",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether the trainer was driving the task."
+          },
+          {
+            "name": "auto_train_stage_overridden",
+            "type": "bool",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether an experimenter overrode the stage the trainer chose."
+          }
+        ],
+        "primary_key": [
+          "session_id"
+        ],
+        "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "dynamic_foraging.sessions.a_range_is_ordered",
+            "level": "error",
+            "message": "a minimum exceeds its maximum, so nothing can be drawn from the range",
+            "sql": "SELECT session_id FROM dynamic_foraging.sessions WHERE block_min > block_max OR delay_min > delay_max OR iti_min > iti_max"
+          },
+          {
+            "id": "dynamic_foraging.sessions.a_stage_needs_a_curriculum",
+            "level": "error",
+            "message": "a curriculum stage is named with no curriculum to place it in",
+            "sql": "SELECT session_id FROM dynamic_foraging.sessions WHERE auto_train_stage IS NOT NULL AND auto_train_curriculum_name IS NULL"
+          }
+        ]
+      }
+    },
+    "dynamic_foraging.trials": {
+      "content_class": "extension",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "description": "Session ID.",
+            "identity": "assigned"
+          },
+          {
+            "name": "interval_kind",
+            "type": "string",
+            "presence": "required",
+            "role": "data",
+            "description": "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know.",
+            "vocabulary": "open"
+          },
+          {
+            "name": "trial_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "description": "The trial, and the interval it occupies in core.",
+            "identity": "carried"
+          },
+          {
+            "name": "block_id",
+            "type": "int32",
+            "presence": "nullable",
+            "role": "identifier",
+            "description": "The block this trial falls in. Blocks are derived from where the reward probabilities change, since the source records no boundary.",
+            "identity": "assigned"
+          },
+          {
+            "name": "animal_response",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Which way the animal responded. The source emits 0, 1 and 2; the writer decodes them, because a code whose key is not in the packet leaves no rule, query or reader able to tell one response from another.",
+            "vocabulary": "closed",
+            "enum": [
+              "left",
+              "no_response",
+              "right"
+            ]
+          },
+          {
+            "name": "rewarded_history_left",
+            "type": "bool",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether the left port paid out."
+          },
+          {
+            "name": "rewarded_history_right",
+            "type": "bool",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether the right port paid out."
+          },
+          {
+            "name": "bait_left",
+            "type": "bool",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether reward was baited on the left."
+          },
+          {
+            "name": "bait_right",
+            "type": "bool",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether reward was baited on the right."
+          },
+          {
+            "name": "reward_probability_left",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Left reward probability in force. Constant within a block, which is what blocks are derived from.",
+            "unit": "1"
+          },
+          {
+            "name": "reward_probability_right",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Right reward probability in force.",
+            "unit": "1"
+          },
+          {
+            "name": "reward_random_number_left",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The draw the left outcome was decided by, so a reanalysis can reproduce it.",
+            "unit": "1"
+          },
+          {
+            "name": "reward_random_number_right",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The draw the right outcome was decided by.",
+            "unit": "1"
+          },
+          {
+            "name": "delay_start_tick",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "coordinate",
+            "description": "When the delay began.",
+            "clock_from": "core.intervals.clock_id"
+          },
+          {
+            "name": "go_cue_start_tick",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "coordinate",
+            "description": "When the go cue played.",
+            "clock_from": "core.intervals.clock_id"
+          },
+          {
+            "name": "reward_outcome_tick",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "coordinate",
+            "description": "When the outcome was delivered or withheld.",
+            "clock_from": "core.intervals.clock_id"
+          },
+          {
+            "name": "delay_duration",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The delay this trial drew. Constant where the session's delay_beta is zero.",
+            "unit": "s"
+          },
+          {
+            "name": "iti_duration",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The inter-trial interval this trial drew.",
+            "unit": "s"
+          },
+          {
+            "name": "auto_water_left",
+            "type": "bool",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether the left port delivered unearned water."
+          },
+          {
+            "name": "auto_water_right",
+            "type": "bool",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Whether the right port delivered unearned water."
+          },
+          {
+            "name": "lickspout_position_x",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Lickspout position.",
+            "unit": "um"
+          },
+          {
+            "name": "lickspout_position_y",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Lickspout position.",
+            "unit": "um"
+          },
+          {
+            "name": "lickspout_position_z",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Lickspout position.",
+            "unit": "um"
+          }
+        ],
+        "primary_key": [
+          "session_id",
+          "trial_id"
+        ],
+        "references": [
+          {
+            "columns": [
+              "session_id",
+              "interval_kind",
+              "trial_id"
+            ],
+            "resource": "core.intervals",
+            "resource_columns": [
+              "session_id",
+              "interval_kind",
+              "interval_id"
+            ]
+          },
+          {
+            "columns": [
+              "session_id",
+              "block_id"
+            ],
+            "resource": "dynamic_foraging.blocks",
+            "resource_columns": [
+              "session_id",
+              "block_id"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "dynamic_foraging.trials.the_cue_follows_the_delay",
+            "level": "error",
+            "message": "the go cue precedes the delay it is supposed to follow",
+            "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE delay_start_tick IS NOT NULL AND go_cue_start_tick IS NOT NULL AND go_cue_start_tick < delay_start_tick"
+          },
+          {
+            "id": "dynamic_foraging.trials.the_outcome_follows_the_cue",
+            "level": "error",
+            "message": "the outcome is recorded before the go cue",
+            "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE reward_outcome_tick IS NOT NULL AND go_cue_start_tick IS NOT NULL AND reward_outcome_tick < go_cue_start_tick"
+          },
+          {
+            "id": "dynamic_foraging.trials.a_probability_is_a_probability",
+            "level": "error",
+            "message": "a reward probability falls outside 0-1",
+            "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE NOT reward_probability_left BETWEEN 0 AND 1 OR NOT reward_probability_right BETWEEN 0 AND 1"
+          },
+          {
+            "id": "dynamic_foraging.trials.a_draw_is_a_draw",
+            "level": "error",
+            "message": "a reward random number falls outside 0-1, so the outcome cannot be reproduced",
+            "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE NOT reward_random_number_left BETWEEN 0 AND 1 OR NOT reward_random_number_right BETWEEN 0 AND 1"
+          },
+          {
+            "id": "dynamic_foraging.trials.a_reward_needs_a_bait",
+            "level": "error",
+            "message": "a port paid out where nothing was baited",
+            "sql": "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE (rewarded_history_left AND NOT bait_left) OR (rewarded_history_right AND NOT bait_right)"
+          },
+          {
+            "id": "dynamic_foraging.trials.a_block_holds_one_probability_pair",
+            "level": "error",
+            "message": "a block's trials disagree about the reward probabilities, so the block is not one",
+            "sql": "SELECT session_id, block_id FROM (SELECT session_id, block_id, COUNT(DISTINCT reward_probability_left) AS l, COUNT(DISTINCT reward_probability_right) AS r FROM dynamic_foraging.trials WHERE block_id IS NOT NULL GROUP BY session_id, block_id) AS derived_1 WHERE l > 1 OR r > 1"
+          }
+        ]
+      }
     }
   }
 }

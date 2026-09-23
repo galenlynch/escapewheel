@@ -914,6 +914,8 @@ class NWBSource(Compensates):
             staged.append(
                 StagedArray(
                     values=values,
+                    resource_id=f"core.{self.prefix}{name}",
+                    declaration_id="core.array_asset_instances",
                     array_asset_id=f"{self.prefix}{name}",
                     chunks=(min(len(values), 1 << 20),),
                     codecs=("numcodecs.delta", "blosc"),

@@ -361,7 +361,7 @@ def _extension(args: argparse.Namespace) -> int:
 
     drafted = draft(args.extension_id, tables)
     written = drafted.write(args.out or Path(f"{args.extension_id}.json"))
-    print(f"drafted {written} — {len(drafted.document['tables'])} table(s)")
+    print(f"drafted {written} — {len(drafted.document['resources'])} table resource(s)")
     print(f"\n{len(drafted.decisions)} decision(s) this cannot make for you:")
     for decision in drafted.decisions:
         print(f"  {decision}")
@@ -406,7 +406,11 @@ def _extension_check(args: argparse.Namespace) -> int:
         for outcome in phase.outcomes:
             print(f"{outcome.state.upper():11s} {phase.phase}: {outcome.id} at {outcome.instance or '<root>'}")
     document = context.document
-    tables = len(document.get("tables", {})) if isinstance(document, dict) else 0
+    tables = (
+        sum(1 for declaration in document.get("resources", {}).values() if declaration.get("kind") == "table")
+        if isinstance(document, dict)
+        else 0
+    )
     if context.result.state != "valid":
         print(f"\n{args.document}: {context.result.state} over {tables} table(s)", file=sys.stderr)
         return 1

@@ -78,7 +78,7 @@ def test_a_shipped_adapter_needs_no_declaration_and_a_registered_one_does(tmp_pa
     """Part 03 §11.1's test is the release boundary. A built-in ships with this package and is
     upgraded with it, so in process is its only route and there is nothing to declare; a kind
     another distribution registers moves on its own schedule and must say how it can be reached."""
-    registry = {"tables": {"core.units": {"columns": [], "rules": []}}}
+    registry = {"resources": {"core.units": {"kind": "table", "table": {"columns": [], "rules": []}}}}
 
     built_in = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\n'))
     assert not [p for p in built_in.check(registry) if "reach" in p.message]
@@ -225,7 +225,16 @@ def test_a_required_option_is_reported_not_crashed_on(tmp_path):
         '[packet]\nid = "s"\n\n[session]\nsession_id = "s"\n\n'
         '[[source]]\nkind = "nwb"\nroot = "."\nowns = ["core.trials"]\n'
     )
-    problems = Recipe.load(path).check({"tables": {"core.trials": {"columns": [], "references": []}}})
+    problems = Recipe.load(path).check(
+        {
+            "resources": {
+                "core.trials": {
+                    "kind": "table",
+                    "table": {"columns": [], "references": []},
+                }
+            }
+        }
+    )
     assert "zone" in needs("nwb")
     assert any("requires 'zone'" in str(p) for p in problems)
 
@@ -238,7 +247,16 @@ def test_an_option_that_is_set_is_not_reported(tmp_path):
         '[packet]\nid = "s"\n\n[session]\nsession_id = "s"\n\n'
         '[[source]]\nkind = "nwb"\nroot = "."\nzone = "UTC"\nowns = ["core.trials"]\n'
     )
-    problems = Recipe.load(path).check({"tables": {"core.trials": {"columns": [], "references": []}}})
+    problems = Recipe.load(path).check(
+        {
+            "resources": {
+                "core.trials": {
+                    "kind": "table",
+                    "table": {"columns": [], "references": []},
+                }
+            }
+        }
+    )
     assert not [p for p in problems if "zone" in str(p)]
 
 
@@ -351,7 +369,8 @@ class _Registry:
         self._registry = registry
 
     def spec(self, resource_id):
-        return self._registry["tables"].get(resource_id)
+        declaration = self._registry["resources"].get(resource_id)
+        return None if declaration is None or declaration["kind"] != "table" else declaration["table"]
 
 
 def _contest(tmp_path):

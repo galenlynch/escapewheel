@@ -25,12 +25,9 @@ def _write(root, name, table):
 def _resource(resource_id, uri, **extra):
     entry = {
         "resource_id": resource_id,
-        "layer": "core",
-        "kind": "table",
-        "schema_id": f"{resource_id}.v0.1",
+        "declaration_id": resource_id,
         "physical_profile": "parquet",
         "uri": uri,
-        "canonical": True,
         "validation_state": "passed",
     }
     entry.update(extra)
@@ -58,8 +55,8 @@ def _col(name, type_, presence, **extra):
 
 def _registry():
     """A registry describing exactly the tables the fixture writes."""
-    return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
+    document = {
+        "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -173,6 +170,23 @@ def _registry():
             },
         },
     }
+    tables = document.pop("tables")
+    document["resources"] = {
+        name: {
+            "content_class": "core",
+            "kind": "table",
+            "instances": {
+                "mode": "singleton",
+                "presence": "required" if name == "core.sessions" else "optional",
+            },
+            "requires": [],
+            "lineage": "optional",
+            "producing_run": "optional",
+            "table": table,
+        }
+        for name, table in tables.items()
+    }
+    return document
 
 
 @pytest.fixture
@@ -224,12 +238,20 @@ def packet_root(tmp_path):
             "t_tick": pa.array([30000, 39000, 48000, 45000, 66000], type=pa.int64()),
         }
     )
+    clocks = pa.table(
+        {
+            "clock_id": pa.array([1, 2], type=pa.int32()),
+            "clock_name": pa.array(["behavior", "probe"]),
+            "metadata": pa.array([None, None], type=pa.string()),
+        }
+    )
     resources = [
         _resource("core.sessions", _write(root, "sessions", sessions)),
         _resource("core.trials", _write(root, "trials", trials)),
         _resource("core.units", _write(root, "units", units)),
         _resource("core.events", _write(root, "events", events)),
         _resource("core.spike_events", _write(root, "spike_events", spike_events)),
+        _resource("core.clocks", _write(root, "clocks", clocks)),
     ]
 
     (root / "schemas").mkdir()

@@ -146,7 +146,18 @@ def draft(
             "logical_standard_version": logical_standard_version,
             "rule_language": "escapewheel-rule-sql-v0.1",
             "extension_id": extension_id,
-            "tables": drafted,
+            "resources": {
+                resource_id: {
+                    "content_class": "extension",
+                    "kind": "table",
+                    "instances": {"mode": "singleton", "presence": "optional"},
+                    "requires": [],
+                    "lineage": "optional",
+                    "producing_run": "optional",
+                    "table": table,
+                }
+                for resource_id, table in drafted.items()
+            },
         },
         decisions,
     )

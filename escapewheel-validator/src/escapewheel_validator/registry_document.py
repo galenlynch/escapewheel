@@ -23,7 +23,7 @@ from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, ch
 SCHEMAS = Path(__file__).resolve().parent / "schemas"
 SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
-CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.1.json"
+CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.2.json"
 RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
 METADATA_DESCRIPTION = (
@@ -208,14 +208,26 @@ class _Object(dict[str, Any]):
 
 
 def _pointer(parts: Iterable[Any]) -> str:
+    parts = tuple(parts)
+    if len(parts) >= 2 and parts[0] == "tables":
+        parts = ("resources", parts[1], "table", *parts[2:])
     return "".join(f"/{str(part).replace('~', '~0').replace('/', '~1')}" for part in parts)
 
 
 def _owner(pointer: str) -> str | None:
     parts = pointer.split("/")
-    if len(parts) >= 3 and parts[1] == "tables":
+    if len(parts) >= 3 and parts[1] == "resources":
         return parts[2].replace("~1", "/").replace("~0", "~")
     return None
+
+
+def _tables(document: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    """Project table-kind payloads from the sole serialized resource authority."""
+    return {
+        str(resource_id): declaration["table"]
+        for resource_id, declaration in document.get("resources", {}).items()
+        if declaration.get("kind") == "table" and "table" in declaration
+    }
 
 
 def _ordered(outcomes: Iterable[Outcome]) -> tuple[Outcome, ...]:
@@ -471,11 +483,20 @@ def _check_mapping(
         phases.extend(_skipped(name, "registry.phase.prerequisite_unsupported") for name in PHASES[4:])
         return _complete(phases, None)
 
-    universe = dict(document["tables"])
+    universe = dict(_tables(document))
+    declaration_universe = dict(document["resources"])
     if class_name == "extension" and core_usable and core is not None:
-        universe = dict(core["tables"]) | universe
+        universe = dict(_tables(core)) | universe
+        declaration_universe = dict(core["resources"]) | declaration_universe
     assert descriptor is not None
-    semantic = _semantic_outcomes(document, universe, class_name, core_usable, descriptor)
+    semantic = _semantic_outcomes(
+        document,
+        universe,
+        class_name,
+        core_usable,
+        descriptor,
+        declaration_universe,
+    )
     phases.append(_phase("semantic", semantic))
     rules = _rule_outcomes(document, core if core_usable and class_name == "extension" else None)
     phases.append(_phase("rule_static", rules))
@@ -510,6 +531,7 @@ def _semantic_outcomes(
     class_name: str,
     core_usable: bool,
     descriptor: Mapping[str, Any] | None = None,
+    declaration_universe: Mapping[str, Any] | None = None,
 ) -> list[Outcome]:
     checks = _semantic_checks()
     if descriptor is None:
@@ -521,13 +543,21 @@ def _semantic_outcomes(
         "registry.reference.compatible",
         "registry.session_scope.path",
         "registry.context_source.resolves",
+        "registry.resource.catalog",
+        "registry.resource.array_axes",
+        "registry.resource.dependency",
     }
     for entry in descriptor["invariants"]:
         invariant = str(entry["id"])
         if entry["phase"] != "semantic" or class_name not in entry["classes"]:
             continue
         check = checks[invariant]
-        outcomes.extend(check(document, universe, class_name, core_usable))
+        selected_universe = (
+            declaration_universe
+            if invariant.startswith("registry.resource.") and declaration_universe is not None
+            else universe
+        )
+        outcomes.extend(check(document, selected_universe, class_name, core_usable))
         if class_name == "extension" and not core_usable and invariant in core_dependent:
             outcomes.append(
                 Outcome(
@@ -561,7 +591,229 @@ def _semantic_checks() -> dict[str, Any]:
         "registry.rule.id_unique": _rule_ids_unique,
         "registry.rule.id_owner": _rule_ids_owned,
         "registry.core.device_detail": _core_device_detail,
+        "registry.resource.classification": _resource_classification,
+        "registry.resource.instance": _resource_instance,
+        "registry.resource.catalog": _resource_catalog,
+        "registry.resource.array_axes": _resource_array_axes,
+        "registry.resource.dependency": _resource_dependency,
     }
+
+
+def _resource_classification(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+) -> list[Outcome]:
+    del universe, core_usable
+    permitted = (
+        {"core", "analysis", "compatibility_projection", "documentation"}
+        if class_name == "core"
+        else {"extension", "analysis", "compatibility_projection", "documentation"}
+    )
+    outcomes: list[Outcome] = []
+    for resource, declaration in document["resources"].items():
+        content_class = str(declaration["content_class"])
+        if content_class not in permitted:
+            outcomes.append(
+                _invalid(
+                    "registry.resource.classification",
+                    _pointer(("resources", resource, "content_class")),
+                    resource,
+                    f"content class {content_class!r} is not permitted in a {class_name} registry",
+                )
+            )
+    return outcomes
+
+
+def _resource_instance(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+) -> list[Outcome]:
+    del universe, class_name, core_usable
+    outcomes: list[Outcome] = []
+    for resource, declaration in document["resources"].items():
+        instances = declaration["instances"]
+        if (
+            declaration["content_class"] in {"analysis", "compatibility_projection", "documentation"}
+            and instances["mode"] == "singleton"
+            and instances["presence"] != "optional"
+        ):
+            outcomes.append(
+                _invalid(
+                    "registry.resource.instance",
+                    _pointer(("resources", resource, "instances", "presence")),
+                    resource,
+                    f"{declaration['content_class']} declarations must be optional",
+                )
+            )
+        if declaration["content_class"] in {"analysis", "compatibility_projection"}:
+            for field in ("lineage", "producing_run"):
+                if declaration[field] != "required":
+                    outcomes.append(
+                        _invalid(
+                            "registry.resource.instance",
+                            _pointer(("resources", resource, field)),
+                            resource,
+                            f"{declaration['content_class']} declarations require {field}",
+                        )
+                    )
+        if declaration["content_class"] == "documentation" and declaration["lineage"] != "forbidden":
+            outcomes.append(
+                _invalid(
+                    "registry.resource.instance",
+                    _pointer(("resources", resource, "lineage")),
+                    resource,
+                    "documentation declarations forbid lineage",
+                )
+            )
+    return outcomes
+
+
+def _resource_direction(target: str, document: Mapping[str, Any], class_name: str) -> bool:
+    if class_name == "core":
+        return target in document["resources"]
+    return target.split(".", 1)[0] in {
+        "core",
+        "analysis",
+        str(document["extension_id"]),
+    }
+
+
+def _resource_catalog(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+) -> list[Outcome]:
+    outcomes: list[Outcome] = []
+    pairs: dict[tuple[str, str], str] = {}
+    for resource, declaration in document["resources"].items():
+        instances = declaration["instances"]
+        if instances["mode"] != "catalog":
+            continue
+        target_name = str(instances["catalog_resource"])
+        column_name = str(instances["resource_id_column"])
+        target = universe.get(target_name)
+        unavailable_core = (
+            class_name == "extension" and not core_usable and target_name.split(".", 1)[0] in {"core", "analysis"}
+        )
+        eligible = target is not None and target["kind"] == "table"
+        eligible = eligible and target["instances"]["mode"] == "singleton" if target else False
+        column = None if not eligible else _one_column(target["table"], column_name)
+        eligible = eligible and column is not None
+        if column is not None:
+            eligible = eligible and all(
+                (
+                    column["type"] == "string",
+                    column["presence"] == "required",
+                    column["role"] == "identifier",
+                    column.get("identity") == "carried",
+                    column.get("vocabulary") == "free",
+                )
+            )
+        eligible = eligible and _resource_direction(target_name, document, class_name)
+        if not eligible and not unavailable_core:
+            outcomes.append(
+                _invalid(
+                    "registry.resource.catalog",
+                    _pointer(("resources", resource, "instances")),
+                    resource,
+                    f"catalog binding {target_name}.{column_name} is not one eligible visible singleton table column",
+                )
+            )
+        pair = (target_name, column_name)
+        if pair in pairs:
+            outcomes.append(
+                _invalid(
+                    "registry.resource.catalog",
+                    _pointer(("resources", resource, "instances")),
+                    resource,
+                    f"catalog pair {target_name}.{column_name} is already owned by {pairs[pair]}",
+                )
+            )
+        else:
+            pairs[pair] = resource
+    return outcomes
+
+
+def _resource_array_axes(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+) -> list[Outcome]:
+    outcomes: list[Outcome] = []
+    for resource, declaration in document["resources"].items():
+        if declaration["kind"] != "dense_array":
+            continue
+        axes_name = str(declaration["array"]["axes_resource"])
+        catalog_name = str(declaration["instances"]["catalog_resource"])
+        axes = universe.get(axes_name)
+        unavailable_core = (
+            class_name == "extension" and not core_usable and axes_name.split(".", 1)[0] in {"core", "analysis"}
+        )
+        eligible = axes is not None and axes["kind"] == "table"
+        eligible = eligible and axes["instances"]["mode"] == "singleton" if axes else False
+        bindings: list[Mapping[str, Any]] = []
+        if eligible and axes is not None:
+            table = axes["table"]
+            catalog = universe.get(catalog_name)
+            catalog_key = None if catalog is None or catalog["kind"] != "table" else catalog["table"]["primary_key"]
+            bindings = [
+                reference
+                for reference in table["references"]
+                if reference["resource"] == catalog_name
+                and catalog_key is not None
+                and reference["resource_columns"] == catalog_key
+                and table["primary_key"] is not None
+                and table["primary_key"][: len(reference["columns"])] == reference["columns"]
+                and len(table["primary_key"]) == len(reference["columns"]) + 1
+                and (index_column := _one_column(table, table["primary_key"][-1])) is not None
+                and index_column["presence"] == "required"
+                and index_column["role"] == "structural_index"
+            ]
+            eligible = len(bindings) == 1
+        eligible = eligible and _resource_direction(axes_name, document, class_name)
+        if not eligible and not unavailable_core:
+            outcomes.append(
+                _invalid(
+                    "registry.resource.array_axes",
+                    _pointer(("resources", resource, "array", "axes_resource")),
+                    resource,
+                    f"axes resource {axes_name!r} does not provide exactly one eligible catalog binding",
+                )
+            )
+    return outcomes
+
+
+def _resource_dependency(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+) -> list[Outcome]:
+    outcomes: list[Outcome] = []
+    for resource, declaration in document["resources"].items():
+        for index, target_name in enumerate(declaration["requires"]):
+            target = universe.get(target_name)
+            unavailable_core = (
+                class_name == "extension" and not core_usable and target_name.split(".", 1)[0] in {"core", "analysis"}
+            )
+            eligible = target is not None and target["instances"]["mode"] == "singleton"
+            eligible = eligible and _resource_direction(target_name, document, class_name)
+            if not eligible and not unavailable_core:
+                outcomes.append(
+                    _invalid(
+                        "registry.resource.dependency",
+                        _pointer(("resources", resource, "requires", index)),
+                        resource,
+                        f"dependency {target_name!r} is not one visible singleton declaration",
+                    )
+                )
+    return outcomes
 
 
 def _namespace_owned(
@@ -576,7 +828,7 @@ def _namespace_owned(
             resource,
             f"namespace {resource.split('.', 1)[0]!r} is not owned by this {class_name} registry",
         )
-        for resource in document["tables"]
+        for resource in document["resources"]
         if resource.split(".", 1)[0] not in allowed
     ]
 
@@ -585,10 +837,10 @@ def _reference_direction(
     document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
 ) -> list[Outcome]:
     del universe, core_usable
-    own = set(document["tables"])
+    own = set(_tables(document))
     extension_id = document.get("extension_id")
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         for index, reference in enumerate(table["references"]):
             target = str(reference["resource"])
             namespace = target.split(".", 1)[0]
@@ -610,7 +862,7 @@ def _column_names(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         seen: set[str] = set()
         for index, column in enumerate(table["columns"]):
             name = str(column["name"])
@@ -632,7 +884,7 @@ def _primary_keys(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         columns = _columns(table)
         for index, name in enumerate(table["primary_key"] or []):
             resolved = columns.get(name, [])
@@ -661,7 +913,7 @@ def _references_resolve(
     document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
 ) -> list[Outcome]:
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         source_columns = _columns(table)
         for r_index, reference in enumerate(table["references"]):
             base = ("tables", resource, "references", r_index)
@@ -714,7 +966,7 @@ def _reference_targets_key(
 ) -> list[Outcome]:
     del class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         for index, reference in enumerate(table["references"]):
             target = universe.get(reference["resource"])
             if target is not None and (
@@ -736,7 +988,7 @@ def _references_compatible(
 ) -> list[Outcome]:
     del class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         sources = _columns(table)
         for r_index, reference in enumerate(table["references"]):
             target = universe.get(reference["resource"])
@@ -816,7 +1068,7 @@ def _session_scope(
                 scoped.add(resource)
                 changed = True
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         matches = _columns(table).get("session_id", [])
         correct = (
             len(matches) == 1
@@ -842,7 +1094,7 @@ def _identity_names(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         columns = _columns(table)
         referenced = {name for reference in table["references"] for name in reference["columns"]}
         owned = {
@@ -896,7 +1148,7 @@ def _metadata(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         columns = _columns(table)
         metadata = columns.get("metadata", [])
         for index, column in metadata:
@@ -949,7 +1201,7 @@ def _determined_by(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         columns = _columns(table)
         for c_index, column in enumerate(table["columns"]):
             for d_index, name in enumerate(column.get("determined_by", [])):
@@ -970,7 +1222,7 @@ def _discriminator_declarations(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         columns = _columns(table)
         for index, column in enumerate(table["columns"]):
             if column["role"] != "discriminator":
@@ -1015,7 +1267,7 @@ def _discriminator_paths(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    tables = document["tables"]
+    tables = _tables(document)
     for target_resource, target in tables.items():
         for c_index, column in enumerate(target["columns"]):
             via = column.get("discriminates_via")
@@ -1065,7 +1317,7 @@ def _context_sources(
     document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
 ) -> list[Outcome]:
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         for index, column in enumerate(table["columns"]):
             for field in ("unit_from", "clock_from"):
                 if field not in column:
@@ -1145,7 +1397,7 @@ def _authority_uris(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         for c_index, column in enumerate(table["columns"]):
             authorities = column.get("authority", [])
             if authorities and not (
@@ -1186,7 +1438,7 @@ def _rule_ids_unique(
     del universe, class_name, core_usable
     seen: set[str] = set()
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         for index, rule in enumerate(table["rules"]):
             rule_id = str(rule["id"])
             if rule_id in seen:
@@ -1207,7 +1459,7 @@ def _rule_ids_owned(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         for index, rule in enumerate(table["rules"]):
             rule_id = str(rule["id"])
             suffix = rule_id.removeprefix(f"{resource}.")
@@ -1238,17 +1490,17 @@ def _core_device_detail(
             resource,
             "a core table other than core.devices is shaped as a device-detail table",
         )
-        for resource, table in document["tables"].items()
+        for resource, table in _tables(document).items()
         if resource != "core.devices" and table["primary_key"] and table["primary_key"][0] == "device_id"
     ]
 
 
 def _rule_outcomes(document: Mapping[str, Any], core: Mapping[str, Any] | None) -> list[Outcome]:
     outcomes: list[Outcome] = []
-    visible = dict(document["tables"])
+    visible = dict(_tables(document))
     if core is not None:
-        visible = dict(core["tables"]) | visible
-    for resource, table in document["tables"].items():
+        visible = dict(_tables(core)) | visible
+    for resource, table in _tables(document).items():
         for index, rule in enumerate(table["rules"]):
             pointer = _pointer(("tables", resource, "rules", index))
             rule_id = str(rule["id"])
@@ -1320,7 +1572,7 @@ def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
     from ucumvert import InvalidUcumError, parse_ucum  # type: ignore[import-untyped]
 
     outcomes: list[Outcome] = []
-    for resource, table in document["tables"].items():
+    for resource, table in _tables(document).items():
         for index, column in enumerate(table["columns"]):
             if "unit" not in column:
                 continue
@@ -1347,13 +1599,22 @@ def against_schema(document: Any) -> list[Finding]:
     return [Finding("shape", tuple(item.detail or item.id for item in shape.outcomes))]
 
 
-def structural(tables: Mapping[str, Any], universe: Mapping[str, Any], *, is_core: bool = False) -> list[Finding]:
+def structural(resources: Mapping[str, Any], universe: Mapping[str, Any], *, is_core: bool = False) -> list[Finding]:
     """Return semantic invariants for callers that already selected and shaped a document."""
-    document: dict[str, Any] = {"tables": tables}
+    document: dict[str, Any] = {"resources": resources}
     if not is_core:
-        namespace = next(iter(tables)).split(".", 1)[0] if tables else "extension"
+        namespace = next(iter(resources)).split(".", 1)[0] if resources else "extension"
         document["extension_id"] = namespace
-    outcomes = _semantic_outcomes(document, universe, "core" if is_core else "extension", True)
+    table_universe = {
+        name: declaration["table"] for name, declaration in universe.items() if declaration.get("kind") == "table"
+    }
+    outcomes = _semantic_outcomes(
+        document,
+        table_universe,
+        "core" if is_core else "extension",
+        True,
+        declaration_universe=universe,
+    )
     labels = [entry["id"] for entry in json.loads(CONTRACT.read_text())["invariants"] if entry["phase"] == "semantic"]
     return [
         Finding(
@@ -1368,9 +1629,9 @@ def structural(tables: Mapping[str, Any], universe: Mapping[str, Any], *, is_cor
 def declarations(document: Any, name: str | None = None) -> list[Finding]:
     """Return document-class and namespace findings through the compatibility interface."""
     del name
-    if not isinstance(document, Mapping) or "tables" not in document:
-        return [Finding("registry document shape", ("document has no tables mapping",))]
-    universe = document["tables"]
+    if not isinstance(document, Mapping) or "resources" not in document:
+        return [Finding("registry document shape", ("document has no resources mapping",))]
+    universe = document["resources"]
     outcomes = _namespace_owned(document, universe, "extension", True) + _reference_direction(
         document, universe, "extension", True
     )

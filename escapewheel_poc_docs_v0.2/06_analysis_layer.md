@@ -5,15 +5,18 @@ Informative, except §2 and §5, which are normative.
 <a id="ew-analysis-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
-This part describes the optional `analysis` layer: derived products computed from core, kept because a query cannot answer the same question at acceptable cost.
+This part describes resources whose Part 02 declaration has content class `analysis`: derived
+products computed from canonical core or extension resources and kept because a query cannot
+answer the same question at acceptable cost.
 
 <a id="ew-analysis-rules" data-spec-anchor="canonical"></a>
 ## 2. Rules
 
 Normative.
 
-An analysis resource MUST declare lineage naming each canonical resource it derives from — core
-or extension (Part 04 §7).
+An analysis resource MUST satisfy Part 02 §2.7's required lineage and producing-run policies. Its
+lineage may name the canonical core or extension resources it consumed or an intermediate analysis
+resource; the acyclic chain MUST terminate in canonical resources.
 
 An analysis resource is disposable. A writer MAY delete and recompute any of them without loss.
 
@@ -62,7 +65,11 @@ Measured on one session, a ten-second population window costs 0.025 s here again
 
 Normative.
 
-A materialization MUST record a `core.processing_runs` row and MUST name it from the resource's catalog entry. The run's parameters MUST carry any transform parameter that cannot be recovered from the output.
+A materialized analysis resource MUST record a `core.processing_runs` row and MUST name its run
+from the resource entry. A singleton analysis catalog table and each analysis instance it catalogs
+are distinct packet resources: the table entry records aggregate materialization provenance, and
+each catalogued instance records its own declaration-selected provenance. The run's parameters
+MUST carry any transform parameter that cannot be recovered from the output.
 
 ## 6. Withdrawn resources
 
@@ -80,9 +87,14 @@ The columns those tables carried — `condition_id`, `stimulus_id`, `block_id` �
 <a id="ew-analysis-views-and-materializations" data-spec-anchor="canonical"></a>
 ## 7. Views versus materialized products
 
-Prefer a view where the query prunes and the result is small. Prefer a materialized product where the physical layout of core cannot serve the access pattern at all, which in practice means a different sort order or a different clock.
+Prefer a view where the query prunes and the result is small. Prefer a materialized product where
+the physical layout of core cannot serve the access pattern at all, which in practice means a
+different sort order or a different clock. View and materialization are realizations of a logical
+kind, not kinds themselves.
 
 <a id="ew-analysis-promotion" data-spec-anchor="canonical"></a>
 ## 8. Promotion into core
 
-An analysis resource becomes canonical only through an explicit revision of this specification. Promotion is a schema decision, not an operational one.
+Promotion changes the resource declaration's content class through an explicit revision of this
+specification or its owning extension registry. It is a schema decision, not an operational
+Boolean or a validation-state transition.

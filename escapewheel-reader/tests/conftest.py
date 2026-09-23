@@ -34,12 +34,9 @@ def _write(root, name, table):
 def _resource(resource_id, uri, **extra):
     entry = {
         "resource_id": resource_id,
-        "layer": "core",
-        "kind": "table",
-        "schema_id": f"{resource_id}.v0.1",
+        "declaration_id": resource_id,
         "physical_profile": "parquet",
         "uri": uri,
-        "canonical": True,
         "validation_state": "passed",
     }
     entry.update(extra)
@@ -65,7 +62,7 @@ def _col(name, type_, presence, **extra):
 
 def _registry():
     """A registry describing exactly the tables the fixture writes."""
-    return {
+    document = {
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -230,6 +227,32 @@ def _registry():
             },
         },
     }
+    tables = document.pop("tables")
+    document["resources"] = {
+        name: {
+            "content_class": "core",
+            "kind": "table",
+            "instances": {
+                "mode": "singleton",
+                "presence": "required" if name == "core.sessions" else "optional",
+            },
+            "requires": [],
+            "lineage": "optional",
+            "producing_run": "optional",
+            "table": table,
+        }
+        for name, table in tables.items()
+    }
+    document["resources"]["analysis.spike_events"] = {
+        "content_class": "analysis",
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "requires": [],
+        "lineage": "required",
+        "producing_run": "required",
+        "table": tables["core.spike_events"],
+    }
+    return document
 
 
 @pytest.fixture

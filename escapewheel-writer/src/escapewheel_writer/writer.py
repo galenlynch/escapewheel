@@ -329,6 +329,8 @@ class StagedArray:
     """
 
     values: Any
+    resource_id: str
+    declaration_id: str
     array_asset_id: str
     chunks: tuple[int, ...] = ()
     shard: tuple[int, ...] | None = None
@@ -359,6 +361,7 @@ class ExternalArray:
     """
 
     array_asset_id: str
+    declaration_id: str
     uri: str
     #: Part 04 §5.5: the body of data these bytes belong to. Where set, `uri` is a path relative to
     #: wherever that source turns out to be rather than a location, and a resolution document
@@ -387,6 +390,7 @@ class ExternalMedia:
     """
 
     media_asset_id: str
+    declaration_id: str
     uri: str
     format: str
     #: Part 04 §5.5, as on `ExternalArray`.
@@ -514,14 +518,14 @@ class PacketWriter:
             document = extension_context.document
             assert isinstance(document, Mapping)
             extension_id = str(document["extension_id"])
-            for resource_id in document["tables"]:
+            for resource_id in document["resources"]:
                 if not resource_id.startswith(f"{extension_id}."):
                     raise ValueError(
                         f"{resource_id} is not namespaced by {extension_id!r}; Part 09 §2 requires it, "
                         "and an extension MUST NOT define a table in core or analysis"
                     )
-                if resource_id in checked_registry["tables"]:
-                    raise ValueError(f"{resource_id} redefines a core table, which Part 09 §2 forbids")
+                if resource_id in checked_registry["resources"]:
+                    raise ValueError(f"{resource_id} redefines a core resource, which Part 09 forbids")
             self._extensions[extension_id] = document
         #: Assigns the integer every identifier holds (Part 05 §8). One per packet, shared by every
         #: adapter, because two sources numbering the same probe differently is a defect no
@@ -551,27 +555,71 @@ class PacketWriter:
         self._referenced_arrays: dict[str, ExternalArray] = {}
         self._referenced_media: dict[str, ExternalMedia] = {}
 
+    def declaration(self, declaration_id: str) -> Mapping[str, Any] | None:
+        """Return one logical declaration from core or the owning extension."""
+        if declaration_id in self._registry["resources"]:
+            declaration: Mapping[str, Any] = self._registry["resources"][declaration_id]
+            return declaration
+        for document in self._extensions.values():
+            if declaration_id in document["resources"]:
+                declaration = document["resources"][declaration_id]
+                return declaration
+        return None
+
     def spec(self, resource_id: str) -> Mapping[str, Any] | None:
         """Return the registry entry for one resource, core or extension, or None if undefined.
 
         One lookup for both, because R17 §3's claim is that an extension needs no second code
         path: it is a registry document in R2's format, so a table of one is a table of the other.
         """
-        if resource_id in self._registry["tables"]:
-            core: Mapping[str, Any] = self._registry["tables"][resource_id]
-            return core
-        for document in self._extensions.values():
-            if resource_id in document["tables"]:
-                spec: Mapping[str, Any] = document["tables"][resource_id]
-                return spec
-        return None
+        declaration = self.declaration(resource_id)
+        if declaration is None or declaration.get("kind") != "table":
+            return None
+        spec: Mapping[str, Any] = declaration["table"]
+        return spec
 
     def extension_of(self, resource_id: str) -> str | None:
         """Return which extension defines this resource, or None where core does."""
         for extension_id, document in self._extensions.items():
-            if resource_id in document["tables"]:
+            if resource_id in document["resources"]:
                 return extension_id
         return None
+
+    def _family_declaration(self, declaration_id: str, resource_id: str, kind: str) -> Mapping[str, Any]:
+        """Resolve an explicit family declaration and check that it admits this instance."""
+        declaration = self.declaration(declaration_id)
+        if declaration is None:
+            raise ValueError(f"{resource_id}: unknown declaration {declaration_id!r}")
+        if declaration["kind"] != kind:
+            raise ValueError(f"{resource_id}: {declaration_id} has kind {declaration['kind']!r}, not {kind!r}")
+        if declaration["instances"]["mode"] not in {"catalog", "family"}:
+            raise ValueError(f"{resource_id}: {declaration_id} does not admit family instances")
+        owner = declaration_id.split(".", 1)[0]
+        if not resource_id.startswith(f"{owner}."):
+            raise ValueError(f"{resource_id}: namespace is not owned by declaration {declaration_id!r}")
+        return declaration
+
+    def _bind_catalog_row(
+        self,
+        declaration: Mapping[str, Any],
+        resource_id: str,
+        source_column: str,
+        source_value: str,
+    ) -> None:
+        """Put packet identity on the one catalog row delivered for a payload."""
+        instances = declaration["instances"]
+        catalog = str(instances["catalog_resource"])
+        resource_column = str(instances["resource_id_column"])
+        rows = self._tables.get(catalog, [])
+        matching = [row for row in rows if str(row.get(source_column)) == source_value]
+        if len(matching) != 1:
+            raise ValueError(
+                f"{resource_id}: {catalog}.{source_column}={source_value!r} resolves {len(matching)} catalog rows"
+            )
+        current = matching[0].get(resource_column)
+        if current is not None and current != resource_id:
+            raise ValueError(f"{catalog}.{resource_column} is {current!r}, not delivered resource {resource_id!r}")
+        matching[0][resource_column] = resource_id
 
     def add(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> None:
         """Add records for one table.
@@ -802,6 +850,10 @@ class PacketWriter:
         """
         if resource_id in self._staged_arrays:
             raise ValueError(f"{resource_id} already has an array staged")
+        if array.resource_id != resource_id:
+            raise ValueError(f"{resource_id}: staged array declares resource_id {array.resource_id!r}")
+        declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
+        self._bind_catalog_row(declaration, resource_id, "array_asset_id", array.array_asset_id)
         self._staged_arrays[resource_id] = array
 
     def reference_array(self, resource_id: str, array: ExternalArray) -> None:
@@ -827,6 +879,8 @@ class PacketWriter:
         if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
             raise ValueError(f"{resource_id} already has an array")
         _check_reference(resource_id, array.uri, array.source)
+        declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
+        self._bind_catalog_row(declaration, resource_id, "array_asset_id", array.array_asset_id)
         self._referenced_arrays[resource_id] = array
 
     def reference_media(self, resource_id: str, media: ExternalMedia) -> None:
@@ -851,6 +905,8 @@ class PacketWriter:
         if resource_id in self._referenced_media:
             raise ValueError(f"{resource_id} already has media")
         _check_reference(resource_id, media.uri, media.source)
+        declaration = self._family_declaration(media.declaration_id, resource_id, "opaque")
+        self._bind_catalog_row(declaration, resource_id, "media_asset_id", media.media_asset_id)
         self._referenced_media[resource_id] = media
 
     def produced_by(self, resource_id: str, processing_run_id: str) -> None:
@@ -894,6 +950,7 @@ class PacketWriter:
         entries = []
         for resource_id, spec in self._staged_arrays.items():
             namespace, name = resource_id.split(".", 1)
+            declaration_id = spec.declaration_id
             relative = f"arrays/{namespace}/{name}.zarr"
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -910,12 +967,9 @@ class PacketWriter:
             entries.append(
                 {
                     "resource_id": resource_id,
-                    "layer": namespace,
-                    "kind": "dense_array_asset",
+                    "declaration_id": declaration_id,
                     "physical_profile": written_profile(path) if spec.written is not None else "zarr_v3",
                     "uri": relative,
-                    "array_asset_id": spec.array_asset_id,
-                    "canonical": True,
                     "validation_state": "not_run",
                     "codecs": codecs,
                     "size_bytes": size,
@@ -928,14 +982,12 @@ class PacketWriter:
         """Return a manifest entry per referenced media asset. Copies nothing and reads nothing."""
         entries = []
         for resource_id, media in self._referenced_media.items():
+            declaration_id = media.declaration_id
             entry = {
                 "resource_id": resource_id,
-                "layer": resource_id.split(".", 1)[0],
-                "kind": "media_asset",
+                "declaration_id": declaration_id,
                 "physical_profile": media.format,
                 "uri": media.uri,
-                "media_asset_id": media.media_asset_id,
-                "canonical": True,
                 "validation_state": "not_run",
                 "external": True,
             }
@@ -949,14 +1001,12 @@ class PacketWriter:
         """Return a manifest entry per referenced array. Copies nothing and reads nothing."""
         entries = []
         for resource_id, array in self._referenced_arrays.items():
+            declaration_id = array.declaration_id
             entry = {
                 "resource_id": resource_id,
-                "layer": resource_id.split(".", 1)[0],
-                "kind": "dense_array_asset",
+                "declaration_id": declaration_id,
                 "physical_profile": array.physical_profile,
                 "uri": array.uri,
-                "array_asset_id": array.array_asset_id,
-                "canonical": True,
                 "validation_state": "not_run",
                 "external": True,
                 "codecs": list(array.codecs),
@@ -1030,18 +1080,11 @@ class PacketWriter:
                         [n for n in table.schema.names if n not in kept and n not in delta],
                     )
                 )
-            extension_id = self.extension_of(resource_id)
             entry = {
                 "resource_id": resource_id,
-                # Part 05 §5.4: an extension table's entry says so and names its owner, so a reader
-                # knows what it holds without parsing the extension's registry.
-                "layer": "extension" if extension_id else namespace,
-                **({"extension_id": extension_id} if extension_id else {}),
-                "kind": "table",
-                "schema_id": f"{resource_id}.v{_standard_version(self._registry)}",
+                "declaration_id": resource_id,
                 "physical_profile": "parquet",
                 "uri": relative,
-                "canonical": True,
                 "validation_state": "not_run",
             }
             entry["sha256"] = _digest(path)

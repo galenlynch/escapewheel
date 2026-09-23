@@ -28,9 +28,14 @@ import nwbfixture
 import serve_nwb
 from escapewheel_writer.sources import ADAPTERS
 
-REGISTRY = json.loads(
+REGISTRY_DOCUMENT = json.loads(
     (HERE.parent.parent / "registry" / "logical_schemas.json").read_text()
-)["tables"]
+)
+REGISTRY = {
+    name: declaration["table"]
+    for name, declaration in REGISTRY_DOCUMENT["resources"].items()
+    if declaration["kind"] == "table"
+}
 
 #: Which core table each recipe block supplies, so a `states` entry resolves to a column and a
 #: build can refuse one that names no field the recipe has.

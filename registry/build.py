@@ -31,8 +31,8 @@ VENDORED = {
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
     "registry_contract.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json",
-    "registry_contracts/escapewheel-registry-contract-v0.1.json": HERE.parent
-    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.1.json",
+    "registry_contracts/escapewheel-registry-contract-v0.2.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.2.json",
     "rule_language.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/rule_language.schema.json",
     "rule_languages/escapewheel-rule-sql-v0.1.json": HERE.parent
@@ -352,7 +352,7 @@ IDENTITY: dict[str, str] = {
     "entity_id": "assigned",
     "source_entity_id": "assigned",
     "target_entity_id": "assigned",
-    "resource_id": "assigned",
+    "resource_id": "carried",
 }
 
 
@@ -495,6 +495,7 @@ for _vocab, _names in {
         "probe_name",
         "processing_run_name",
         "reason",
+        "resource_id",
         "scope",
         "serial_number",
         "session_description",
@@ -713,7 +714,13 @@ def col(name, typ, pres, desc, determined_by=None):
     if role == "identifier":
         # R53 §2.1. Declared at one point rather than at 110 call sites, so a new identifier
         # cannot be added as a string by forgetting.
-        typ = "int64" if typ == "int64" else "int32"
+        typ = (
+            "string"
+            if name == "resource_id"
+            else "int64"
+            if typ == "int64"
+            else "int32"
+        )
     entry = {
         "name": name,
         "type": typ,
@@ -3131,6 +3138,23 @@ def build() -> dict:
         "only a coordinate frame does (Part 01 §3.24).",
     )
 
+    # ---- R128 §3.6 : catalog rows carry packet resource identity ----------------------------
+    for _t, _assigned_id in (
+        ("core.array_assets", "array_asset_id"),
+        ("analysis.array_assets", "array_asset_id"),
+        ("core.media_assets", "media_asset_id"),
+    ):
+        add_col(
+            _t,
+            col(
+                "resource_id",
+                "string",
+                "required",
+                "The packet resource ID of the catalogued payload.",
+            ),
+            after=_assigned_id,
+        )
+
     # ---- R101 §3.1 and §3.6, run after every block so a later table's columns are classified too ----
     for _spec in tables.values():
         for _c in _spec["columns"]:
@@ -3263,6 +3287,15 @@ def build() -> dict:
     }.items():
         amend(_resource, _name, description=_text)
 
+    # R128 §3.6: location and encoding are packet and physical-profile facts, not catalog facts.
+    for _resource in (
+        "core.array_assets",
+        "analysis.array_assets",
+        "core.media_assets",
+    ):
+        drop_col(_resource, "uri")
+        drop_col(_resource, "format")
+
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column
     # by name and no clause of Part 02 or Part 03 states an order, so no revision mandates this and the
@@ -3311,13 +3344,75 @@ def build() -> dict:
 
     # Part 02 §9.2: first, so what governs the document is visible without reading it. Read from
     # the meta-schema rather than repeated, since a copy is what goes stale.
+    resources = {}
+    for resource_id, table in sorted(tables.items()):
+        content_class = "analysis" if resource_id.startswith("analysis.") else "core"
+        analysis = content_class == "analysis"
+        resources[resource_id] = {
+            "content_class": content_class,
+            "kind": "table",
+            "instances": {
+                "mode": "singleton",
+                "presence": "required"
+                if resource_id == "core.sessions"
+                else "optional",
+            },
+            "requires": [],
+            "lineage": "required" if analysis else "optional",
+            "producing_run": "required" if analysis else "optional",
+            "table": table,
+        }
+
+    resources.update(
+        {
+            "analysis.array_asset_instances": {
+                "content_class": "analysis",
+                "kind": "dense_array",
+                "instances": {
+                    "mode": "catalog",
+                    "catalog_resource": "analysis.array_assets",
+                    "resource_id_column": "resource_id",
+                },
+                "requires": [],
+                "lineage": "required",
+                "producing_run": "required",
+                "array": {"axes_resource": "analysis.array_dimensions"},
+            },
+            "core.array_asset_instances": {
+                "content_class": "core",
+                "kind": "dense_array",
+                "instances": {
+                    "mode": "catalog",
+                    "catalog_resource": "core.array_assets",
+                    "resource_id_column": "resource_id",
+                },
+                "requires": [],
+                "lineage": "optional",
+                "producing_run": "optional",
+                "array": {"axes_resource": "core.array_dimensions"},
+            },
+            "core.media_asset_instances": {
+                "content_class": "core",
+                "kind": "opaque",
+                "instances": {
+                    "mode": "catalog",
+                    "catalog_resource": "core.media_assets",
+                    "resource_id_column": "resource_id",
+                },
+                "requires": [],
+                "lineage": "optional",
+                "producing_run": "optional",
+            },
+        }
+    )
+
     return {
         "$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
-        "registry_version": "0.4.0",
+        "registry_version": "0.5.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
-        "tables": dict(sorted(tables.items())),
+        "resources": dict(sorted(resources.items())),
     }
 
 
@@ -3325,9 +3420,11 @@ if __name__ == "__main__":
     reg = build()
     OUT.write_text(json.dumps(reg, indent=2) + "\n")
     print(
-        f"wrote {OUT.name}: {len(reg['tables'])} tables, "
-        f"{sum(len(t['columns']) for t in reg['tables'].values())} columns, "
-        f"{sum(len(t['rules']) for t in reg['tables'].values())} rules merged from {RULES.name}"
+        f"wrote {OUT.name}: {len(reg['resources'])} resources, "
+        f"{sum(1 for r in reg['resources'].values() if r['kind'] == 'table')} tables, "
+        f"{sum(len(r['table']['columns']) for r in reg['resources'].values() if r['kind'] == 'table')} columns, "
+        f"{sum(len(r['table']['rules']) for r in reg['resources'].values() if r['kind'] == 'table')} "
+        f"rules merged from {RULES.name}"
     )
 
     # Rendered here rather than by hand, so the readable form cannot drift from the content.

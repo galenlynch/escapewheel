@@ -477,6 +477,8 @@ class WaveformSource:
             staged.append(
                 StagedArray(
                     values=values,
+                    resource_id=f"core.{asset_id}",
+                    declaration_id="core.array_asset_instances",
                     array_asset_id=asset_id,
                     chunks=chunks,
                     shard=shard_for(values.shape, chunks, self.compressed_per_chunk),

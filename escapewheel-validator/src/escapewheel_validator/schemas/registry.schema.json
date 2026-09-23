@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/registry/0.4.0",
+  "$id": "https://escapewheel.org/schemas/registry/0.5.0",
   "title": "Escapewheel schema registry",
   "description": "Local shape of an Escapewheel core or extension registry document.",
   "type": "object",
-  "required": ["$schema", "registry_version", "logical_standard_version", "rule_language", "tables"],
+  "required": ["$schema", "registry_version", "logical_standard_version", "rule_language", "resources"],
   "additionalProperties": false,
   "properties": {
     "$schema": {"type": "string", "format": "uri"},
@@ -17,11 +17,11 @@
       "pattern": "^[a-z][a-z0-9_]*$",
       "not": {"enum": ["core", "analysis", "nwb"]}
     },
-    "tables": {
+    "resources": {
       "type": "object",
       "minProperties": 1,
       "propertyNames": {"pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"},
-      "additionalProperties": {"$ref": "#/$defs/table"}
+      "additionalProperties": {"$ref": "#/$defs/resource"}
     }
   },
   "oneOf": [
@@ -34,6 +34,88 @@
       "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-v[0-9]+(?:\\.[0-9]+)*$"
     },
     "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "declaration_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"
+    },
+    "resource": {
+      "type": "object",
+      "required": ["content_class", "kind", "instances", "requires", "lineage", "producing_run"],
+      "additionalProperties": false,
+      "properties": {
+        "content_class": {
+          "enum": ["core", "extension", "analysis", "compatibility_projection", "documentation"]
+        },
+        "kind": {"enum": ["table", "dense_array", "opaque"]},
+        "instances": {"$ref": "#/$defs/instances"},
+        "requires": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/declaration_id"}
+        },
+        "lineage": {"enum": ["forbidden", "optional", "required"]},
+        "producing_run": {"enum": ["forbidden", "optional", "required"]},
+        "table": {"$ref": "#/$defs/table"},
+        "array": {"$ref": "#/$defs/array"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "table"}}, "required": ["kind"]},
+          "then": {
+            "required": ["table"],
+            "properties": {"instances": {"properties": {"mode": {"const": "singleton"}}}},
+            "not": {"required": ["array"]}
+          }
+        },
+        {
+          "if": {"properties": {"kind": {"const": "dense_array"}}, "required": ["kind"]},
+          "then": {
+            "required": ["array"],
+            "properties": {"instances": {"properties": {"mode": {"const": "catalog"}}}},
+            "not": {"required": ["table"]}
+          }
+        },
+        {
+          "if": {"properties": {"kind": {"const": "opaque"}}, "required": ["kind"]},
+          "then": {"not": {"anyOf": [{"required": ["table"]}, {"required": ["array"]}]}}
+        }
+      ]
+    },
+    "instances": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["mode", "presence"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {"const": "singleton"},
+            "presence": {"enum": ["required", "optional"]}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["mode", "catalog_resource", "resource_id_column"],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {"const": "catalog"},
+            "catalog_resource": {"$ref": "#/$defs/declaration_id"},
+            "resource_id_column": {"$ref": "#/$defs/name"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["mode"],
+          "additionalProperties": false,
+          "properties": {"mode": {"const": "family"}}
+        }
+      ]
+    },
+    "array": {
+      "type": "object",
+      "required": ["axes_resource"],
+      "additionalProperties": false,
+      "properties": {"axes_resource": {"$ref": "#/$defs/declaration_id"}}
+    },
     "table": {
       "type": "object",
       "required": ["columns", "primary_key", "references", "rules"],
@@ -146,12 +228,30 @@
           "then": {"properties": {"type": {"const": "json_string"}, "presence": {"const": "optional"}, "role": {"const": "data"}}}
         },
         {
-          "if": {"properties": {"role": {"const": "identifier"}}, "required": ["role"]},
+          "if": {
+            "properties": {"role": {"const": "identifier"}, "name": {"not": {"const": "resource_id"}}},
+            "required": ["role", "name"]
+          },
           "then": {"properties": {"name": {"pattern": "_id$"}}}
         },
         {
-          "if": {"properties": {"name": {"pattern": "_id$"}}, "required": ["name"]},
+          "if": {
+            "properties": {"name": {"pattern": "_id$", "not": {"const": "resource_id"}}},
+            "required": ["name"]
+          },
           "then": {"properties": {"type": {"enum": ["int32", "int64"]}, "role": {"const": "identifier"}}}
+        },
+        {
+          "if": {"properties": {"name": {"const": "resource_id"}}, "required": ["name"]},
+          "then": {
+            "properties": {
+              "type": {"const": "string"},
+              "presence": {"const": "required"},
+              "role": {"const": "identifier"},
+              "identity": {"const": "carried"},
+              "vocabulary": {"const": "free"}
+            }
+          }
         },
         {
           "if": {"properties": {"role": {"const": "coordinate"}}, "required": ["role"]},

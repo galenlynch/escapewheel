@@ -38,31 +38,53 @@ def col(name, type_, presence, role, **extra):
 def base_registry():
     """Part 01 §3.10: one `core.intervals`, keyed by (session, kind, id)."""
     registry = json.loads(json.dumps(REGISTRY))
-    registry["tables"]["core.intervals"] = {
-        "columns": [
-            col("session_id", "int32", "required", "identifier"),
-            # R55 would make this `discriminator`; that role does not exist yet, so `data`.
-            col("interval_kind", "string", "required", "data"),
-            col("interval_id", "int32", "required", "identifier", identity="carried"),
-            col("clock_id", "int32", "required", "identifier"),
-            col("start_tick", "int64", "required", "coordinate", clock_from="clock_id"),
-            col("stop_tick", "int64", "required", "coordinate", clock_from="clock_id"),
-        ],
-        "primary_key": ["session_id", "interval_kind", "interval_id"],
-        "references": [
-            {
-                "columns": ["session_id"],
-                "resource": "core.sessions",
-                "resource_columns": ["session_id"],
-            },
-            {
-                "columns": ["clock_id"],
-                "resource": "core.clocks",
-                "resource_columns": ["clock_id"],
-            },
-        ],
-        "sort": ["session_id", "interval_kind", "interval_id"],
-        "rules": [],
+    registry["resources"]["core.intervals"] = {
+        "content_class": "core",
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "requires": [],
+        "lineage": "optional",
+        "producing_run": "optional",
+        "table": {
+            "columns": [
+                col("session_id", "int32", "required", "identifier"),
+                # R55 would make this `discriminator`; that role does not exist yet, so `data`.
+                col("interval_kind", "string", "required", "data"),
+                col(
+                    "interval_id", "int32", "required", "identifier", identity="carried"
+                ),
+                col("clock_id", "int32", "required", "identifier"),
+                col(
+                    "start_tick",
+                    "int64",
+                    "required",
+                    "coordinate",
+                    clock_from="clock_id",
+                ),
+                col(
+                    "stop_tick",
+                    "int64",
+                    "required",
+                    "coordinate",
+                    clock_from="clock_id",
+                ),
+            ],
+            "primary_key": ["session_id", "interval_kind", "interval_id"],
+            "references": [
+                {
+                    "columns": ["session_id"],
+                    "resource": "core.sessions",
+                    "resource_columns": ["session_id"],
+                },
+                {
+                    "columns": ["clock_id"],
+                    "resource": "core.clocks",
+                    "resource_columns": ["clock_id"],
+                },
+            ],
+            "sort": ["session_id", "interval_kind", "interval_id"],
+            "rules": [],
+        },
     }
     return registry
 
@@ -106,18 +128,26 @@ def detail(extension_id, table, extra, *, based):
             }
         )
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
         "extension_id": extension_id,
-        "tables": {
+        "resources": {
             f"{extension_id}.{table}": {
-                "columns": columns + extra,
-                "primary_key": key,
-                "references": references,
-                "sort": key,
-                "rules": [],
+                "content_class": "extension",
+                "kind": "table",
+                "instances": {"mode": "singleton", "presence": "optional"},
+                "requires": [],
+                "lineage": "optional",
+                "producing_run": "optional",
+                "table": {
+                    "columns": columns + extra,
+                    "primary_key": key,
+                    "references": references,
+                    "sort": key,
+                    "rules": [],
+                },
             }
         },
     }
@@ -267,11 +297,19 @@ def ask(root, *, based):
         # interval table in core, which R54 §3 says is a different thing entirely.
         found, wrong = [], []
         for document in packet.extensions().values():
-            for resource, spec in document["tables"].items():
+            for resource, declaration in document["resources"].items():
+                if declaration["kind"] != "table":
+                    continue
+                spec = declaration["table"]
                 names = {c["name"] for c in spec["columns"]}
                 if {"start_tick", "stop_tick"} <= names:
                     found.append(resource)
-        for resource, spec in (packet.registry or {}).get("tables", {}).items():
+        for resource, declaration in (
+            (packet.registry or {}).get("resources", {}).items()
+        ):
+            if declaration["kind"] != "table":
+                continue
+            spec = declaration["table"]
             names = {c["name"] for c in spec["columns"]}
             if {"start_tick", "stop_tick"} <= names:
                 wrong.append(resource)
@@ -298,7 +336,7 @@ def ask(root, *, based):
         registry = packet.extensions()[kind.split(".")[0]]
         reference = next(
             r
-            for r in registry["tables"][kind]["references"]
+            for r in registry["resources"][kind]["table"]["references"]
             if r["resource"] == "core.intervals"
         )
         detail_table = packet.table(kind)

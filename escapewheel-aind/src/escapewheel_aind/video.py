@@ -151,6 +151,7 @@ class VideoSource(Compensates):
             local = self.uri_base is None
             found[f"core.{name}"] = ExternalMedia(
                 media_asset_id=name,
+                declaration_id="core.media_asset_instances",
                 uri=self._uri(video),
                 format=SUFFIX.lstrip("."),
                 # Part 04 §5.2: a writer records only what it looked at. A local path can be sized;
@@ -179,8 +180,7 @@ class VideoSource(Compensates):
                     "session_id": self.session_id,
                     "semantic_type": "behavior_video",
                     "media_asset_name": video.stem,
-                    "uri": self._uri(video),
-                    "format": SUFFIX.lstrip("."),
+                    "resource_id": f"core.{video.stem}",
                     **(self._pts_rate(video) if timing else {}),
                     "clock_id": self.clock_id if timing else None,
                 }

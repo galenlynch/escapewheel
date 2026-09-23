@@ -97,6 +97,15 @@ _STRUCTURAL_FUNCTION_NODES = tuple(
 )
 
 
+def _tables(registry: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    """Return the table-only view derived from logical resource declarations."""
+    return {
+        str(name): declaration["table"]
+        for name, declaration in registry.get("resources", {}).items()
+        if declaration.get("kind") == "table" and "table" in declaration
+    }
+
+
 def _identifier(value: str, subject: str) -> None:
     if not IDENTIFIER.fullmatch(value):
         raise RuleProfileError(f"{subject} {value!r} is not exact lowercase snake case")
@@ -320,15 +329,16 @@ def check_rule(
     if not isinstance(parsed, exp.Query):
         raise RuleProfileError("a rule must be a query expression")
     expression: Any = parsed
-    own = set(registry.get("tables", {}))
+    own_tables = _tables(registry)
+    own = set(own_tables)
     extension = registry.get("extension_id")
-    core_tables = dict(core_resources.get("tables", {})) if isinstance(core_resources, Mapping) else {}
+    core_tables = _tables(core_resources) if isinstance(core_resources, Mapping) else {}
     core_names = set(core_tables) if core_tables else set(core_resources or ())
     visible = own if extension is None else own | core_names
     _check_surface(expression, sql)
     _check_identifiers(expression)
     resources = _base_tables(expression, visible)
-    tables = core_tables | dict(registry.get("tables", {}))
+    tables = core_tables | own_tables
     qualified = _check_binding(expression, tables)
     _check_window_keys(expression, resources, tables)
     _check_exact_overflow(expression)

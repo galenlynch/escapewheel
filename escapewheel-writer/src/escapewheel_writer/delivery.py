@@ -114,6 +114,20 @@ def written_arrays(source: Any, location: str | None) -> int:
     root.mkdir(parents=True, exist_ok=True)
     for array in staged:
         write_zarr(root / f"{array.array_asset_id}.zarr", array)
+    (root / "_resources.json").write_text(
+        json.dumps(
+            [
+                {
+                    "array_asset_id": array.array_asset_id,
+                    "resource_id": array.resource_id,
+                    "declaration_id": array.declaration_id,
+                }
+                for array in staged
+            ],
+            indent=2,
+        )
+        + "\n"
+    )
     return len(staged)
 
 
@@ -392,9 +406,19 @@ class Delivered:
 
         if self.arrays is None or not self.arrays.is_dir():
             return []
+        metadata = self.arrays / "_resources.json"
+        if not metadata.is_file():
+            raise SourceDefect("delivered arrays have no explicit resource/declaration binding")
+        entries = json.loads(metadata.read_text())
         return [
-            StagedArray(values=None, array_asset_id=path.name.removesuffix(".zarr"), written=path)
-            for path in sorted(self.arrays.glob("*.zarr"))
+            StagedArray(
+                values=None,
+                resource_id=str(entry["resource_id"]),
+                declaration_id=str(entry["declaration_id"]),
+                array_asset_id=str(entry["array_asset_id"]),
+                written=self.arrays / f"{entry['array_asset_id']}.zarr",
+            )
+            for entry in entries
         ]
 
     def external_arrays(self) -> dict[str, Any]:

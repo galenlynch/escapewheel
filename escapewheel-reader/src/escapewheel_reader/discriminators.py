@@ -92,7 +92,11 @@ class Unresolved:
 
 def _tables(document: Mapping[str, Any] | None) -> dict[str, Any]:
     """Take the tables a registry document declares, or nothing where there is no document."""
-    return dict((document or {}).get("tables", {}))
+    return {
+        str(name): declaration["table"]
+        for name, declaration in (document or {}).get("resources", {}).items()
+        if declaration.get("kind") == "table" and "table" in declaration
+    }
 
 
 def registries(packet: Any) -> dict[str, Any]:

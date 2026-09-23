@@ -353,10 +353,11 @@ def spike_events(
     registry = packet.registry
     if registry is None:
         raise NotAligned("the packet embeds no registry, so the derived table has no declared types")
-    out = arrow_schema(registry["tables"]["analysis.spike_events"], {*columns, "clock_id", "time_bucket_tick"})
+    spike_spec = registry["resources"]["analysis.spike_events"]["table"]
+    out = arrow_schema(spike_spec, {*columns, "clock_id", "time_bucket_tick"})
 
     root = Path(scratch) if scratch else Path(tempfile.mkdtemp(prefix=".materialize-", dir=packet.root.parent))
-    buckets = _Buckets(root, out, _bytes(memory_budget), registry["tables"][RESOURCE])
+    buckets = _Buckets(root, out, _bytes(memory_budget), spike_spec)
     try:
         reader = pq.ParquetFile(handle.path)
         carry: tuple[int, int] | None = None

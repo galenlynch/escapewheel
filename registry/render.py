@@ -95,7 +95,12 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
 
 def render(registry: dict[str, Any]) -> str:
     """Build the whole document."""
-    tables = registry["tables"]
+    resources = registry["resources"]
+    tables = {
+        name: declaration["table"]
+        for name, declaration in resources.items()
+        if declaration["kind"] == "table"
+    }
     columns = sum(len(t["columns"]) for t in tables.values())
     references = sum(len(t.get("references") or []) for t in tables.values())
     rules = sum(len(t.get("rules") or []) for t in tables.values())
@@ -109,7 +114,10 @@ def render(registry: dict[str, Any]) -> str:
         "[authority model](../README.md#authority) for the sources that bind.",
         "",
         "```text",
-        f"{len(tables)} tables, {columns} columns, {references} references, {rules} Tier 2 rules",
+        (
+            f"{len(resources)} resources, {len(tables)} tables, {columns} columns, "
+            f"{references} references, {rules} Tier 2 rules"
+        ),
         (
             f"registry {registry.get('registry_version')}   "
             f"logical standard {registry.get('logical_standard_version')}"
@@ -151,7 +159,12 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
     here: it turns on which tables the shim's ordering scan settles uniqueness for, which is the
     validator's judgement, and a second implementation of it would drift.
     """
-    tables = registry["tables"]
+    resources = registry["resources"]
+    tables = {
+        name: declaration["table"]
+        for name, declaration in resources.items()
+        if declaration["kind"] == "table"
+    }
     columns = [c for t in tables.values() for c in t["columns"]]
     rules = [r for t in tables.values() for r in t["rules"]]
     levels = Counter(r["level"] for r in rules)
@@ -174,7 +187,7 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
     )
     return {
         "counts": (
-            f"```\n{len(tables)} tables, {len(columns)} columns, "
+            f"```\n{len(resources)} resources, {len(tables)} tables, {len(columns)} columns, "
             f"{sum(len(t['references']) for t in tables.values())} references, "
             f"{len(rules)} Tier 2 rules\n```"
         ),

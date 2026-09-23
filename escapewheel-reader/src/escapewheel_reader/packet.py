@@ -7,6 +7,7 @@ import json
 import re
 import warnings
 from collections.abc import Collection, Iterable, Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -88,8 +89,17 @@ class Packet:
             The parsed manifest.
         """
         self._root = Location.of(root)
-        self._manifest = manifest
-        self._by_id = {r.resource_id: r for r in manifest.resources}
+        self._registry = self._load_json(REGISTRY_PATH)
+        self._extensions = self._load_extensions(manifest)
+        declarations: dict[str, Mapping[str, Any]] = {}
+        for document in (self._registry, *self._extensions.values()):
+            if isinstance(document, Mapping) and isinstance(document.get("resources"), Mapping):
+                declarations.update(document["resources"])
+        resolved = tuple(
+            replace(resource, declaration=declarations.get(resource.declaration_id)) for resource in manifest.resources
+        )
+        self._manifest = replace(manifest, resources=resolved)
+        self._by_id = {r.resource_id: r for r in resolved}
         self._anchor_cache: dict[str, Any] | None = None
         self._reference_cache: int | None = None
         self._origin_cache: dict[int | None, tuple[int, int, int]] = {}
@@ -129,7 +139,13 @@ class Packet:
 
     # -- resources ------------------------------------------------------------------
 
-    def resources(self, *, layer: str | None = None, kind: str | None = None) -> tuple[Resource, ...]:
+    def resources(
+        self,
+        *,
+        content_class: str | None = None,
+        layer: str | None = None,
+        kind: str | None = None,
+    ) -> tuple[Resource, ...]:
         """List declared resources, optionally filtered.
 
         Parameters
@@ -144,10 +160,11 @@ class Packet:
         tuple of Resource
             Matching resources, in manifest order.
         """
+        selected_class = content_class if content_class is not None else layer
         return tuple(
             r
             for r in self._manifest.resources
-            if (layer is None or r.layer == layer) and (kind is None or r.kind == kind)
+            if (selected_class is None or r.content_class == selected_class) and (kind is None or r.kind == kind)
         )
 
     def resource(self, resource_id: str) -> Resource:
@@ -266,7 +283,7 @@ class Packet:
         tuple of ArrayResource
             One handle per `dense_array_asset` resource.
         """
-        return tuple(ArrayResource(resource, self._root) for resource in self.resources(kind="dense_array_asset"))
+        return tuple(ArrayResource(resource, self._root) for resource in self.resources(kind="dense_array"))
 
     # -- the registry the packet carries --------------------------------------------
 
@@ -282,11 +299,24 @@ class Packet:
         dict or None
             The parsed registry, or None if the packet does not embed one.
         """
+        return self._registry
+
+    def _load_json(self, path: str) -> dict[str, Any] | None:
+        """Read one optional JSON object without making a validation claim."""
         try:
-            parsed: dict[str, Any] = json.loads(self._root.join(REGISTRY_PATH).read_bytes())
-        except Exception:  # noqa: BLE001 - a packet without an embedded registry is conforming
+            parsed = json.loads(self._root.join(path).read_bytes())
+        except Exception:  # noqa: BLE001 - ordinary access tolerates unavailable declarations
             return None
-        return parsed
+        return parsed if isinstance(parsed, dict) else None
+
+    def _load_extensions(self, manifest: Manifest) -> dict[str, dict[str, Any]]:
+        """Load the extension registries available for declaration resolution."""
+        loaded: dict[str, dict[str, Any]] = {}
+        for extension_id, entry in (manifest.extensions or {}).items():
+            location = entry.get("registry") if isinstance(entry, Mapping) else None
+            if location and (document := self._load_json(str(location))) is not None:
+                loaded[str(extension_id)] = document
+        return loaded
 
     def extensions(self) -> dict[str, dict[str, Any]]:
         """Extension registries this packet declares and carries (Part 09 §5.1, Part 09 §5.3).
@@ -304,16 +334,31 @@ class Packet:
         dict
             `extension_id` to parsed registry, for every one that loaded.
         """
-        loaded: dict[str, dict[str, Any]] = {}
-        for extension_id, entry in (self.manifest.extensions or {}).items():
-            location = entry.get("registry") if isinstance(entry, Mapping) else None
-            if not location:
-                continue
-            # Part 09 §5.3 makes verifying that a declared registry exists the validator's job, so an
-            # unreadable one is left out rather than raised.
-            with contextlib.suppress(Exception):
-                loaded[extension_id] = json.loads(self._root.join(str(location)).read_bytes())
-        return loaded
+        return dict(self._extensions)
+
+    def with_declarations(self, *documents: Mapping[str, Any]) -> Packet:
+        """Return this packet with manifest resources resolved against supplied registries.
+
+        This is the validator's supplied-registry path. Ordinary reads resolve against embedded
+        registries during construction; an explicit validation registry may be the only available
+        authority and must drive the same resource-kind and policy lookups without changing the
+        packet on disk.
+        """
+        from copy import copy
+
+        declarations: dict[str, Mapping[str, Any]] = {}
+        for document in documents:
+            resources = document.get("resources")
+            if isinstance(resources, Mapping):
+                declarations.update(resources)
+        resolved = tuple(
+            replace(resource, declaration=declarations.get(resource.declaration_id))
+            for resource in self._manifest.resources
+        )
+        rebound = copy(self)
+        rebound._manifest = replace(self._manifest, resources=resolved)
+        rebound._by_id = {resource.resource_id: resource for resource in resolved}
+        return rebound
 
     # -- codec capability -------------------------------------------------------------
 
@@ -501,7 +546,7 @@ class Packet:
 
     def _table_resources(self) -> tuple[Resource, ...]:
         """Every resource a SQL engine can be given, tabular or materialized."""
-        return self.resources(kind="table") + self.resources(kind="materialized_table")
+        return self.resources(kind="table")
 
     def _register(self, connection: DuckDBPyConnection, wanted: Collection[str]) -> None:
         """Register the named tables that are not on this connection already, then the views.
@@ -982,7 +1027,8 @@ class Packet:
         declaration instead of restating a relationship that can change independently.
         """
         registry = self.registry
-        table = (registry or {}).get("tables", {}).get(resource_id, {})
+        declaration = (registry or {}).get("resources", {}).get(resource_id, {})
+        table = declaration.get("table", {}) if declaration.get("kind") == "table" else {}
         for reference in table.get("references", []):
             if reference["resource"] == parent:
                 return list(reference["columns"])
@@ -1010,7 +1056,8 @@ class Packet:
             The distinct values, unordered.
         """
         registry = self.registry
-        table = (registry or {}).get("tables", {}).get(resource_id, {})
+        declaration = (registry or {}).get("resources", {}).get(resource_id, {})
+        table = declaration.get("table", {}) if declaration.get("kind") == "table" else {}
         for reference in table.get("references", []):
             if column not in reference["columns"]:
                 continue

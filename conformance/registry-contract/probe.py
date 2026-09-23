@@ -57,9 +57,20 @@ def _document(path: str, revision: str | None) -> Any:
     return json.loads(text)
 
 
+def _tables(document: dict[str, Any]) -> dict[str, Any]:
+    """Project table contracts from either side of the R128 shape transition."""
+    if "tables" in document:
+        return document["tables"]
+    return {
+        name: declaration["table"]
+        for name, declaration in document["resources"].items()
+        if declaration["kind"] == "table"
+    }
+
+
 def _declarations(document: dict[str, Any]) -> dict[str, Any]:
     """Remove the one reviewed declaration-local spelling transition."""
-    tables = json.loads(json.dumps(document["tables"]))
+    tables = json.loads(json.dumps(_tables(document)))
     for table in tables.values():
         for column in table["columns"]:
             for authority in column.get("authority", []):
@@ -72,7 +83,7 @@ def _rules(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         rule
         for document in documents
-        for table in document["tables"].values()
+        for table in _tables(document).values()
         for rule in table["rules"]
     ]
 
@@ -81,7 +92,7 @@ def _references(documents: list[dict[str, Any]]) -> list[tuple[str, dict[str, An
     return [
         (resource, reference)
         for document in documents
-        for resource, table in document["tables"].items()
+        for resource, table in _tables(document).items()
         for reference in table["references"]
     ]
 
@@ -140,8 +151,8 @@ def _assert_migration(
     before: list[dict[str, Any]], after: list[dict[str, Any]]
 ) -> None:
     """Check declaration preservation and the exact measured populations."""
-    assert sum(len(document["tables"]) for document in before) == 54
-    assert sum(len(document["tables"]) for document in after) == 54
+    assert sum(len(_tables(document)) for document in before) == 54
+    assert sum(len(_tables(document)) for document in after) == 54
     assert all(
         _declarations(old) == _declarations(new)
         for old, new in zip(before, after, strict=True)
@@ -157,13 +168,13 @@ def _assert_migration(
     assert all(
         rule["id"].startswith(f"{resource}.")
         for document in after
-        for resource, table in document["tables"].items()
+        for resource, table in _tables(document).items()
         for rule in table["rules"]
     )
     tables = {
         resource: table
         for document in after
-        for resource, table in document["tables"].items()
+        for resource, table in _tables(document).items()
     }
     assert all(
         reference["resource_columns"] == tables[reference["resource"]]["primary_key"]
@@ -194,7 +205,7 @@ def _assert_ucum(documents: list[dict[str, Any]]) -> None:
     units = [
         column["unit"]
         for document in documents
-        for table in document["tables"].values()
+        for table in _tables(document).values()
         for column in table["columns"]
         if "unit" in column
     ]
@@ -225,12 +236,13 @@ def main() -> int:
     before = [_document(path, BASELINE) for path in (CORE, *EXTENSIONS)]
     after = [_document(path, incorporated) for path in (CORE, *EXTENSIONS)]
     _assert_migration(before, after)
-    core = after[0]
+    current = [_document(path, None) for path in (CORE, *EXTENSIONS)]
+    core = current[0]
     assert check_registry(core).state == "valid"
     assert all(
-        check_registry(extension, core).state == "valid" for extension in after[1:]
+        check_registry(extension, core).state == "valid" for extension in current[1:]
     )
-    _assert_ucum(after)
+    _assert_ucum(current)
     return 0
 
 

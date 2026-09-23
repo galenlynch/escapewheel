@@ -9,6 +9,15 @@ import json
 from pathlib import Path
 
 
+def tables(registry: dict) -> dict:
+    """Project table payloads from the registry's logical resources."""
+    return {
+        name: declaration["table"]
+        for name, declaration in registry["resources"].items()
+        if declaration["kind"] == "table"
+    }
+
+
 def q(column: str) -> str:
     """Quote a column identifier. `offset` is reserved in DuckDB, and every engine
     reserves a different set, so emitted SQL quotes unconditionally."""
@@ -21,7 +30,7 @@ def generate(registry: dict) -> list[dict]:
     def add(cid, level, message, sql):
         checks.append({"id": cid, "level": level, "message": message, "sql": sql})
 
-    for resource, table in registry["tables"].items():
+    for resource, table in tables(registry).items():
         t = resource
         presence = {c["name"]: c["presence"] for c in table["columns"]}
 
@@ -92,9 +101,9 @@ def load(path="registry.json") -> dict:
 if __name__ == "__main__":
     registry = load(Path(__file__).parent / "registry.json")
     checks = generate(registry)
-    tier2 = sum(len(t.get("rules", [])) for t in registry["tables"].values())
+    tier2 = sum(len(t.get("rules", [])) for t in tables(registry).values())
     print(
-        f"{len(checks)} checks from {len(registry['tables'])} tables "
+        f"{len(checks)} checks from {len(tables(registry))} tables "
         f"({len(checks) - tier2} generated, {tier2} hand-written)\n"
     )
     for c in checks:

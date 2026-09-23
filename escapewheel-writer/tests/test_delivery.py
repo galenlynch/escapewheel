@@ -128,7 +128,11 @@ def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected,
     sound = declaration.of(ADAPTERS["nwb"], "nwb", "stream-v0.1")
     found = declaration.refusals(
         {**sound, **broken},
-        tables=registry["tables"],
+        tables={
+            name: declaration["table"]
+            for name, declaration in registry["resources"].items()
+            if declaration["kind"] == "table"
+        },
         options={"zone", "interval_kind"},
         terms=TERMS,
     )
@@ -137,7 +141,10 @@ def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected,
 
 def test_a_sound_declaration_is_refused_for_nothing(registry):
     sound = declaration.of(ADAPTERS["nwb"], "nwb", "stream-v0.1")
-    assert declaration.refusals(sound, tables=registry["tables"], options={"zone", "interval_kind"}, terms=TERMS) == []
+    tables = {
+        name: resource["table"] for name, resource in registry["resources"].items() if resource["kind"] == "table"
+    }
+    assert declaration.refusals(sound, tables=tables, options={"zone", "interval_kind"}, terms=TERMS) == []
 
 
 # -- what crosses -------------------------------------------------------------------------
@@ -369,6 +376,8 @@ def test_an_array_crosses_as_the_bytes_the_adapter_wrote(tmp_path):
             return [
                 StagedArray(
                     values=np.arange(24, dtype="int16").reshape(2, 3, 4),
+                    resource_id="core.waveform_mean",
+                    declaration_id="core.array_asset_instances",
                     array_asset_id="waveform_mean",
                     chunks=(1, 3, 4),
                 )
@@ -399,6 +408,8 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
         delivered / "waveform_mean.zarr",
         StagedArray(
             values=np.arange(24, dtype="int16").reshape(2, 3, 4),
+            resource_id="core.waveform_mean",
+            declaration_id="core.array_asset_instances",
             array_asset_id="waveform_mean",
             chunks=(1, 3, 4),
             shard=(2, 3, 4),
@@ -417,8 +428,6 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
                 "session_id": "s001",
                 "array_asset_id": "waveform_mean",
                 "array_asset_name": "waveform_mean",
-                "uri": "arrays/core/waveform_mean.zarr",
-                "format": "zarr_v3",
             }
         ],
     )
@@ -431,7 +440,13 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
     )
     writer.add_array(
         "core.waveform_mean",
-        StagedArray(values=None, array_asset_id="waveform_mean", written=delivered / "waveform_mean.zarr"),
+        StagedArray(
+            values=None,
+            resource_id="core.waveform_mean",
+            declaration_id="core.array_asset_instances",
+            array_asset_id="waveform_mean",
+            written=delivered / "waveform_mean.zarr",
+        ),
     )
     report = writer.commit(tmp_path / "packet")
     assert report.errors == 0
@@ -633,6 +648,7 @@ class Referencing:
         return {
             "core.46101.lfp": ExternalArray(
                 array_asset_id="46101.lfp",
+                declaration_id="core.array_asset_instances",
                 uri="s3://bucket/ElectricalSeries46101-LFP/data",
                 physical_profile="zarr_v2",
                 codecs=("blosc",),
@@ -645,7 +661,11 @@ class Referencing:
 
         return {
             "core.bottom_camera": ExternalMedia(
-                media_asset_id="bottom_camera", uri="s3://bucket/bottom_camera.mp4", format="mp4", size_bytes=2884901888
+                media_asset_id="bottom_camera",
+                declaration_id="core.media_asset_instances",
+                uri="s3://bucket/bottom_camera.mp4",
+                format="mp4",
+                size_bytes=2884901888,
             )
         }
 

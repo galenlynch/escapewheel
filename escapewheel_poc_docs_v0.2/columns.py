@@ -66,7 +66,12 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    tables = json.loads(REGISTRY.read_text())["tables"]
+    registry = json.loads(REGISTRY.read_text())
+    tables = {
+        name: declaration["table"]
+        for name, declaration in registry["resources"].items()
+        if declaration["kind"] == "table"
+    }
     stale, written = [], 0
     for path in sorted(HERE.glob("[0-9][0-9]_*.md")):
         old = path.read_text()

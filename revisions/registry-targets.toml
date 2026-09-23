@@ -4,44 +4,44 @@
 # A pointer traversing an array carries `equals`, so reordering cannot silently retarget it.
 
 [target."R5 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.spike_events" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.spike_events/table" }]
 
 [target."R19 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_assets" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_channels" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table" },
   { path = "registry/rules.json", pointer = "/rules/core.array_assets/0/id", equals = "core.array_assets.one_scaling_level" },
 ]
 
 [target."R20 §2.3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
 [target."R20 §2.4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
 [target."R33 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
 [target."R44 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" }]
 
 [target."R46 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.curation_versions" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.devices" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_assets" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.media_assets" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.media_frames" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/analysis.array_assets" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.curation_versions/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.devices/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.media_assets/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.media_frames/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_assets/table" },
 ]
 
 [target."R46 §2.3"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_runs" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_runs/table" },
 ]
 
 [target."R48 §2.1"]
@@ -55,32 +55,32 @@ locations = [{ path = "registry/registry.schema.json", pointer = "/$defs/column/
 
 [target."R49 §2.2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.preferred_runs" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.preferred_runs/table" },
 ]
 
 [target."R53 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources" }]
 
 [target."R53 §2.3.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources" }]
 
 [target."R59 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.electrode_coordinates" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_coordinates" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.electrode_coordinates/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_coordinates/table" },
 ]
 
 [target."R59 §2.2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.electrode_coordinates" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_coordinates" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.electrode_coordinates/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_coordinates/table" },
 ]
 
 [target."R60 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.electrode_coordinates" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_coordinates" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.electrode_coordinates/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_coordinates/table" },
 ]
 
 [target."R69 §2.3"]
@@ -90,52 +90,52 @@ locations = [{ path = "registry/rules.json", pointer = "/rules/core.media_frames
 locations = [{ path = "registry/registry.schema.json", pointer = "/$defs/column/properties/identity" }]
 
 [target."R13 §3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.clock_anchors" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.clock_anchors/table" }]
 
 [target."R16 §2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_quality_labels" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.units" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_quality_labels/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" },
 ]
 
 [target."R18 §2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.unit_observation_intervals" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.unit_observation_intervals/table" }]
 
 [target."R23 §2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.event_streams" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.event_streams/table" }]
 
 [target."R23 §3"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.event_streams" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.events" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.event_streams/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.events/table" },
 ]
 
 [target."R25 §5"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.sessions" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.sessions/table" }]
 
 [target."R27 §2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.clocks" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sessions" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clocks/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sessions/table" },
 ]
 
 [target."R28 §2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.unit_electrodes" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.unit_electrodes/table" }]
 
 [target."R3 §3.3"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_assets" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" },
 ]
 
 [target."R49 §2.3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.preferred_runs" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.preferred_runs/table" }]
 
 [target."R38 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.clock_observation_intervals" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.clock_observation_intervals/table" }]
 
 [target."R38 §2.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_runs" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_runs/table" }]
 
 [target."R38 §2.4"]
 locations = [
@@ -151,8 +151,8 @@ locations = [
 
 [target."R49 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.preferred_runs" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.preferred_runs/table" },
 ]
 
 [target."R53 §2.3"]
@@ -160,38 +160,38 @@ locations = [{ path = "registry/registry.schema.json", pointer = "/$defs/column/
 
 [target."R53 §2.6"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/analysis.array_assets" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/analysis.array_dimensions" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/analysis.spike_events" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_assets/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.spike_events/table" },
 ]
 
 [target."R9 §2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.source_files" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.processing_run_inputs" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.source_files/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.processing_run_inputs/table" },
 ]
 
 [target."R41 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.curation_versions" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.curation_versions/table" },
 ]
 
 [target."R3 §2.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources" }]
 
 [target."R3 §4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.units" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" }]
 
 [target."R3 §6.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.array_channels" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table" }]
 
 [target."R20 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
 [target."R20 §2.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
 [target."R24 §3.1"]
 locations = [
@@ -202,22 +202,22 @@ locations = [
 ]
 
 [target."R25 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.event_stream_observation_intervals" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.event_stream_observation_intervals/table" }]
 
 [target."R47 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.clock_observation_intervals" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.event_stream_observation_intervals" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.intervals" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_observation_intervals" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clock_observation_intervals/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.event_stream_observation_intervals/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_observation_intervals/table" },
 ]
 
 [target."R47 §2.2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.clock_observation_intervals" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.event_stream_observation_intervals" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.intervals" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_observation_intervals" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clock_observation_intervals/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.event_stream_observation_intervals/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_observation_intervals/table" },
 ]
 
 [target."R47 §2.3"]
@@ -229,84 +229,84 @@ locations = [
 ]
 
 [target."R47 §2.4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.clock_anchors" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.clock_anchors/table" }]
 
 [target."R54 §2.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.intervals" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table" }]
 
 [target."R54 §2.3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.intervals" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table" }]
 
 [target."R7 §3.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.media_assets" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.source_files" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.media_assets/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.source_files/table" },
 ]
 
 [target."R4 §3.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources" }]
 
 [target."R4 §3.3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" }]
 
 [target."R5 §3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources" }]
 
 [target."R5 §4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.units" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" }]
 
 [target."R8 §2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources" }]
 
 [target."R10 §6"]
 locations = [{ path = "registry/registry.schema.json", pointer = "/$defs/table/properties" }]
 
 [target."R11 §2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_runs" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_runs/table" }]
 
 [target."R11 §3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.units" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" }]
 
 [target."R11 §4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.event_streams" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.event_streams/table" }]
 
 [target."R11 §5"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources" }]
 
 [target."R16 §3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.units" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" }]
 
 [target."R28 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.units" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" }]
 
 [target."R34 §2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.unit_electrodes" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.unit_electrodes/table" }]
 
 [target."R46 §2.2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.curation_versions" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.curation_versions/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" },
 ]
 
 [target."R46 §2.4"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sessions" },
+  { path = "registry/logical_schemas.json", pointer = "/resources" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sessions/table" },
 ]
 
 [target."R50 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_channels" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_electrodes" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_electrodes/table" },
 ]
 
 [target."R50 §2.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" }]
 
 [target."R50 §2.3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
 [target."R62 §2.1"]
 locations = [{ path = "registry/manifest.schema.json", pointer = "/properties" }]
@@ -315,20 +315,20 @@ locations = [{ path = "registry/manifest.schema.json", pointer = "/properties" }
 locations = [{ path = "registry/sources.schema.json", pointer = "/properties/sources" }]
 
 [target."R81 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.units" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" }]
 
 [target."R81 §2.3"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.spike_events" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_coordinates" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_electrodes" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_observation_intervals" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_quality_labels" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/analysis.spike_events" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.spike_events/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_coordinates/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_electrodes/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_observation_intervals/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_quality_labels/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.spike_events/table" },
 ]
 
 [target."R81 §2.7"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.units" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" }]
 
 [target."R82 §2.1"]
 locations = [{ path = "registry/rules.json", pointer = "/rules/core.processing_runs/4/id", equals = "core.processing_runs.undeclared_currency" }]
@@ -337,98 +337,98 @@ locations = [{ path = "registry/rules.json", pointer = "/rules/core.processing_r
 locations = [{ path = "registry/rules.json", pointer = "/rules/core.processing_runs/5/id", equals = "core.processing_runs.scope_undeclared" }]
 
 [target."R83 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_run_channels" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_run_channels/table" }]
 
 [target."R83 §2.4"]
 locations = [{ path = "registry/rules.json", pointer = "/rules/core.unit_electrodes/2/id", equals = "core.unit_electrodes.electrode_is_a_run_channel" }]
 
 [target."R85 §2.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.devices" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.devices/table" }]
 
 [target."R89 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.calibrations" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.calibrations/table" },
   { path = "registry/rules.json", pointer = "/rules/core.calibrations" },
 ]
 
 [target."R89 §2.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.calibration_devices" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.calibration_devices/table" }]
 
 [target."R89 §2.3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.calibration_points" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.calibration_points/table" }]
 
 [target."R89 §2.4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.calibrations" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.calibrations/table" }]
 
 [target."R89 §2.6"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.calibrations" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.calibration_devices" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.calibration_points" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.calibrations/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.calibration_devices/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.calibration_points/table" },
 ]
 
 [target."R91 §3.1"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.event_streams" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.event_streams/table" }]
 
 [target."R91 §3.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.events" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.events/table" }]
 
 [target."R91 §3.4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.event_streams" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.event_streams/table" }]
 
 [target."R93 §3.3"]
 locations = [
   { path = "registry/registry.schema.json", pointer = "/$defs/table/properties" },
-  { path = "registry/logical_schemas.json", pointer = "/tables" },
-  { path = "registry/extensions/aind_opto.json", pointer = "/tables" },
-  { path = "registry/extensions/aind_unit_qc.json", pointer = "/tables" },
-  { path = "registry/extensions/dynamic_foraging.json", pointer = "/tables" },
-  { path = "registry/extensions/vr_foraging.json", pointer = "/tables" },
+  { path = "registry/logical_schemas.json", pointer = "/resources" },
+  { path = "registry/extensions/aind_opto.json", pointer = "/resources" },
+  { path = "registry/extensions/aind_unit_qc.json", pointer = "/resources" },
+  { path = "registry/extensions/dynamic_foraging.json", pointer = "/resources" },
+  { path = "registry/extensions/vr_foraging.json", pointer = "/resources" },
 ]
 
 [target."R96 §3.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.units" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_runs" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_runs/table" },
 ]
 
 [target."R96 §3.2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.units" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sorting_runs" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_runs/table" },
 ]
 
 [target."R96 §3.3"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.spike_events" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.spike_events/table" }]
 
 [target."R96 §3.4"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.spike_events" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.unit_observation_intervals" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.spike_events/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_observation_intervals/table" },
 ]
 
 [target."R99 §3.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.sessions" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sessions/table" },
   { path = "registry/rules.json", pointer = "/rules/core.sessions/3/id", equals = "core.sessions.alignment_bound_at_least_default" },
 ]
 
 [target."R99 §3.2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.clocks" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clocks/table" },
   { path = "registry/rules.json", pointer = "/rules/core.clocks/10/id", equals = "core.clocks.withheld_needs_anchors" },
 ]
 
 [target."R99 §3.3"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.clock_phase_steps" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clock_phase_steps/table" },
   { path = "registry/rules.json", pointer = "/rules/core.clock_phase_steps/0/id", equals = "core.clock_phase_steps.step_needs_parent" },
 ]
 
 [target."R100 §2.1"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_dimensions" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/analysis.array_dimensions" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table" },
 ]
 
 [target."R100 §2.2"]
@@ -438,34 +438,34 @@ locations = [
 ]
 
 [target."R100 §2.4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/analysis.array_dimensions" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table" }]
 
 [target."R101 §3.5"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources" }]
 
 [target."R101 §3.7"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/tables/core.event_streams" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.event_streams/table" }]
 
 [target."R101 §3.8"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_assets" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/analysis.array_assets" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_assets/table" },
 ]
 
 [target."R103 §3.3"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.array_assets" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/analysis.array_assets" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_assets/table" },
 ]
 
 [target."R106 §3.2"]
-locations = [{ path = "registry/extensions/dynamic_foraging.json", pointer = "/tables/dynamic_foraging.trials" }]
+locations = [{ path = "registry/extensions/dynamic_foraging.json", pointer = "/resources/dynamic_foraging.trials/table" }]
 
 [target."R107 §3.2"]
 locations = [
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.intervals" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.processing_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.preferred_runs" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.event_streams" },
-  { path = "registry/logical_schemas.json", pointer = "/tables/core.calibrations" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.preferred_runs/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.event_streams/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.calibrations/table" },
 ]

@@ -262,7 +262,8 @@ Sampled extracellular voltage over time and channels, represented as a dense arr
 <a id="ew-array-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.17 Array asset
 
-A dense array stored outside the table layer, with declared axes. An axis declares its coordinates; a regularly sampled axis declares them as an origin, a step, and a length rather than as stored values.
+A dense array with declared axes. An axis declares its coordinates; a regularly sampled axis
+declares them as an origin, a step, and a length rather than as stored values.
 
 An array asset holds **any** sampled quantity, whatever instrument produced it. This standard names the concepts it defines — §3.16 is the one it defines for extracellular voltage — and it does not enumerate instruments. A packet names its own arrays, and an array names the device that made it (§3.5); a rig fitted with an instrument this standard has never heard of therefore needs no extension, no new concept, and no revision.
 
@@ -272,16 +273,18 @@ It is also **nullable**, and null is the ordinary case: a writer MUST NOT fill i
 
 Which **band** of a signal an array holds is a separate question, answered by a column of its own: `wideband`, `ap` and `lfp` are reserved for the corresponding signal bands, the vocabulary is open, and an array not split into bands declares none. A band value is a conventional shorthand for a filter the packet does not record, so a consumer MUST NOT read it as a statement of the filter's corners, and MUST NOT infer a band from an asset's `semantic_type`, its device or its sampling rate — a signal can be decimated without being filtered and filtered without being decimated.
 
-An array asset SHOULD name the device that produced it, where the writer knows which one did. A consumer MAY then resolve any array to its instrument without knowing what kind of array it is, and MUST NOT infer an instrument from an asset's `semantic_type`, its name, or its URI: those are labels, and the device is a reference.
-
-An array a processing run produced MUST name that run; an acquired array names none. The manifest records a run per resource as well, and that entry keeps its meaning for resources that are not rows of a table — but it is not per row and no rule can join it, so currency is unreachable for an array without the column. A produced array without a declared run is an error.
+An array asset SHOULD name the device that produced it, where the writer knows which one did. A
+consumer MAY then resolve any array to its instrument without knowing what kind of array it is,
+and MUST NOT infer an instrument from an asset's `semantic_type` or name: those are labels, and the
+device is a reference. Parts 02 and 06 own logical declaration and resource-level provenance;
+Parts 03 and 04 own physical encoding, location, and packet binding.
 
 <a id="ew-media-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.18 Media asset
 
-An image or video stored in an ordinary container, with frame timing carried in tables.
+An image or video with frame timing carried in tables.
 
-- MUST have a stable media asset ID, a URI, and a format.
+- MUST have a stable media asset ID.
 - SHOULD carry a frame table where synchronization matters.
 
 A frame row is indexed by **presentation order**: row *n* describes the frame the asset presents nth, counting from 0. A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
@@ -294,7 +297,12 @@ A consumer MAY pass a presentation timestamp verbatim to a container library to 
 
 The asset declares the **rate** those timestamps count at, as an exact rational — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have.
 
-A media asset SHOULD name the device that recorded it where its source states one, as an array asset does. Nothing else separates two assets of one format: a behaviour video and a movie from a head-mounted microscope are both `mp4` written by a camera, and `semantic_type`, the asset's name and its URI are labels rather than references. Where the source states no device the column is null, and a consumer MUST report the instrument as unrecorded rather than read one out of the asset's name.
+A media asset SHOULD name the device that recorded it where its source states one, as an array
+asset does. Nothing else separates two such assets: a behaviour video and a movie from a
+head-mounted microscope may both be written by a camera, and `semantic_type` and the asset's name
+are labels rather than references. Where the source states no device the column is null, and a
+consumer MUST report the instrument as unrecorded rather than read one out of the asset's name.
+Parts 02–04 own its declaration, physical encoding, location, and packet binding.
 
 ### 3.19 Source file
 

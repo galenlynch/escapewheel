@@ -5,8 +5,8 @@ Normative.
 <a id="ew-packet-catalog-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
-This part defines the packet catalog: the document that binds a packet's concrete resources to the
-semantic, logical, registry, and physical-profile contracts that govern them. In the portable
+This part defines the packet catalog: the document that binds each concrete packet resource to one
+logical declaration in a checked registry context and to its physical encoding. In the portable
 profile it is `packet.json` at the packet root.
 
 Its requirements directly invoke the shared JSON and URI authorities identified in
@@ -19,7 +19,10 @@ state their extent.
 
 The catalog is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
 
-The catalog binds every resource kind, including tables, dense arrays, media, and sidecar documents. An Iceberg catalog manages only tabular resources and therefore does not replace it.
+The catalog binds every resource instance. Part 02's declaration supplies logical content class,
+kind, canonicality, instance mode, presence, table contract, and provenance policy; the packet
+entry supplies instance and physical facts. An Iceberg catalog manages only tabular resources and
+therefore does not replace the packet catalog.
 
 The catalog identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the catalog is read before any table and a number resolves against nothing.
 
@@ -54,29 +57,33 @@ fields below record those identifiers; they do not redefine their values or mean
 | field | type | requirement |
 |---|---|---|
 | `resource_id` | string | MUST, dotted and namespaced |
-| `layer` | string | MUST |
-| `kind` | string | MUST, per §4.2 |
+| `declaration_id` | string | MUST, names a visible checked logical declaration |
 | `physical_profile` | string | MUST |
 | `uri` | string | MUST |
-| `canonical` | bool | MUST |
 | `validation_state` | string | MUST |
 | `sha256` | string | SHOULD for a packet-owned resource |
-| `schema_id` | string | MUST for a table |
 | `codecs` | array of string | MUST for an array (§6.2) |
 | `external` | bool | MUST where true (§5) |
 | `source` | string | MAY, on an external entry (§5.5) |
-| `derived_from` | array of string | MUST for a derived resource (§7) |
-| `processing_run_id` | string | MUST for an analysis resource; SHOULD for any other derived resource |
+| `derived_from` | array of string | according to the declaration's `lineage` policy (§7) |
+| `processing_run_id` | string | according to the declaration's `producing_run` policy (§7) |
+
+An entry MUST NOT contain `layer`, `kind`, `canonical`, `schema_id`, `extension_id`,
+`catalog_table_ref`, `array_asset_id`, or `media_asset_id`. The top-level `extensions` map remains
+the packet's extension-registry selection.
 
 <a id="ew-logical-resource-kinds" data-spec-anchor="canonical"></a>
-### 4.2 Kinds
+### 4.2 Resolved logical facts
 
-| kind | contents |
-|---|---|
-| `table` | a Parquet table |
-| `dense_array_asset` | a Zarr array |
-| `media_asset` | an image or video |
-| `document` | a sidecar |
+The checked declaration named by `declaration_id` supplies the entry's owning registry, content
+class, logical kind, instance mode, canonicality, table contract where applicable, presence,
+lineage, and producing-run policy. A reader, writer, or validator MUST NOT infer a declaration
+from URI, directory placement, namespace alone, or logical kind.
+
+A singleton entry's `resource_id` equals its declaration ID. A catalog entry binds through the
+catalog row's `resource_id` under Part 02 §2.6. A family entry uses a packet-unique dotted resource
+ID in a namespace its declaration's registry owns. An unknown declaration or inadmissible instance
+binding makes a conformance claim invalid.
 
 ### 4.3 Withdrawn blocks
 
@@ -171,11 +178,18 @@ Every array resource MUST declare the codecs it uses. A reader checks a resource
 A codec declared for an external resource is a claim rather than an observation, and a validator reports it as `info` rather than silently accepting it.
 
 <a id="ew-resource-lineage" data-spec-anchor="canonical"></a>
-## 7. Derived resources
+## 7. Resource lineage and producing runs
 
-A derived resource MUST declare `derived_from`, naming the resources it was computed from.
+The declaration's `lineage` and `producing_run` policies govern `derived_from` and
+`processing_run_id` for every logical kind. `forbidden` requires absence, `optional` permits
+presence, and `required` requires presence. A present `derived_from` is a nonempty array of
+distinct existing packet resource IDs and obeys Part 02 §2.7's content-class relation and acyclic
+graph rule.
 
-It SHOULD declare `processing_run_id`, naming a run recorded in `core.processing_runs`. A validator resolves that name against the run table's `*_name` column, since the catalog names and the table numbers (§2).
+The exact identity represented by a present `processing_run_id` remains the catalog's name rather
+than an assigned table number. Complete row-to-entry reconciliation of that value is deferred; a
+validator MUST NOT make the nullable source bridge
+`core.processing_runs.processing_run_name` packet-unique merely to create a join.
 
 ## 8. Extensions
 
@@ -199,7 +213,10 @@ A validator MUST check that a declared extension registry exists. It MUST NOT re
 | `validator_name` | MUST |
 | `validator_version` | MUST |
 
-A packet whose committed manifest records `failed` MUST NOT present its resources as canonical.
+A failed or incomplete validation result cannot support a conformance claim. It does not alter a
+resource's declaration-derived content class or canonicality. A writer keeps staged resources out
+of a committed catalog until the applicable publication gate passes rather than representing
+staging by changing canonicality.
 
 <a id="ew-packet-catalog-normative-references" data-spec-anchor="canonical"></a>
 ## 10. Normative references

@@ -48,7 +48,9 @@ def emitted() -> set[str]:
     ids |= set(re.findall(r'report\.add\(\s*"[a-z]+",\s*"([a-z0-9_.]+)"', shim))
     ids |= set(re.findall(r'"([a-z0-9_.]+\.physical_order)"', shim))
     ids |= {
-        f"{r}.physical_order" for r in registry["tables"]
+        f"{resource}.physical_order"
+        for resource, declaration in registry["resources"].items()
+        if declaration["kind"] == "table"
     }  # built per resource at runtime
     return ids
 

@@ -67,7 +67,11 @@ def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
     frozenset of str
         Dotted resource IDs, `core.sessions` included.
     """
-    tables = registry.get("tables", {})
+    tables = {
+        str(name): declaration["table"]
+        for name, declaration in registry.get("resources", {}).items()
+        if declaration.get("kind") == "table" and "table" in declaration
+    }
     edges = {n: {r["resource"] for r in t.get("references", [])} for n, t in tables.items()}
 
     def reaches(name: str, seen: set[str]) -> bool:
@@ -383,7 +387,8 @@ def _literal(value: str | None) -> str:
 def _column_names(packet: Packet, resource_id: str) -> list[str]:
     """Return the columns a resource holds, from the packet's registry or its Parquet schema."""
     registry = packet.registry or {}
-    declared = registry.get("tables", {}).get(resource_id)
+    declaration = registry.get("resources", {}).get(resource_id, {})
+    declared = declaration.get("table") if declaration.get("kind") == "table" else None
     if declared is not None:
         return [c["name"] for c in declared["columns"]]
     return list(packet.table_resource(resource_id).schema().names)

@@ -160,9 +160,9 @@ a table or an array. Part 01 specifies it.
 <a id="ew-logical-standard" data-spec-anchor="canonical"></a>
 #### 3.1.2 Logical standard
 
-The **logical standard** defines how semantic concepts are represented as computable resources:
-tables, dense array assets, media assets, document assets, views, materialized tables, materialized
-arrays, and references between them.
+The **logical standard** defines how semantic concepts are represented as computable resources.
+Its three logical kinds are tables, dense arrays, and opaque payloads. A view or materialization is
+a realization of one of those kinds rather than another kind.
 
 The logical standard is storage-agnostic but not shape-agnostic: trials are logically table-shaped.
 Part 02 and the artifacts it incorporates specify it.
@@ -187,22 +187,24 @@ physical profile is the only abstraction level whose rules may depend on a stora
 The specification MUST call content's architectural relationship to a packet its **packet content
 class**.
 
-| content class | contents | required |
-|---|---|---|
-| core | canonical normalized facts, domain-general | yes |
-| extension | canonical typed facts a domain owns (Part 09) | no |
-| derived analysis | products reproducible from canonical resources | no |
-| compatibility projection | a deferred projection such as `nwb` | no |
+| serialized value | contents | canonical | required by class |
+|---|---|:---:|:---:|
+| `core` | domain-general normalized facts | yes | no |
+| `extension` | typed facts a domain owns (Part 09) | yes | no |
+| `analysis` | products reproducible from canonical resources | no | no |
+| `compatibility_projection` | a projection into another representation | no | no |
+| `documentation` | human-readable sidecars that assert no semantic or conformance fact | no | no |
 
 A content class MAY reference a class beneath it and MUST NOT reference one above. Core does not
 reference analysis, and neither references an extension — a discriminator names without
 referencing, which is why core is allowed that one.
 
-A packet's **canonical** resources are its canonical core resources together with its canonical
-extension resources. Core is not the whole of what is canonical: Part 09 sends a task's own facts
+A packet's **canonical** resources are exactly its `core` and `extension` resources. Core is not
+the whole of what is canonical: Part 09 sends a task's own facts
 — which side the animal licked, whether it was rewarded — to a typed extension, and no computation
-over core recovers them. Core is what every packet has and what every consumer can read without an
-extension registry.
+over core recovers them. Core is what every consumer can read without an extension registry. Part
+02's declaration presence policies, not the content class alone, determine which core resources
+every packet has.
 
 A consumer MAY read core alone, and what it reads is complete for every core resource. It MUST NOT
 conclude it has read every canonical fact the packet holds; a discriminator resolving `required`
@@ -214,10 +216,9 @@ different content classes.
 
 **Namespace** MUST remain the dotted-identifier ownership mechanism. Extension namespaces are
 specified in Part 09. **Resource kind** MUST classify a logical resource's form independently of
-its content class and physical encoding. Part 02 MUST own logical resource-kind meaning; Part 04
-MUST own the catalog field and vocabulary that record a kind. Part 00 MUST NOT duplicate either
-detailed vocabulary. This classification does not redefine the current catalog `layer` field or
-require a packet to serialize content class.
+its content class and physical encoding. Part 02 owns the exact serialized content-class and kind
+vocabularies, declaration eligibility, presence, canonicality derivation, and lineage relation. A
+packet entry names a declaration and MUST NOT repeat content class, kind, or canonicality.
 
 <a id="ew-packet" data-spec-anchor="canonical"></a>
 ### 3.3 Packet
@@ -237,9 +238,10 @@ packet declares its sessions in the catalog.
 The **packet catalog** is the dataset-level map. In the portable profile it is `packet.json`,
 specified in Part 04.
 
-It records what resources exist, where they live, what semantic type each represents, what logical
-schema and physical profile each uses, which are canonical and which derived, and what validation
-and provenance records apply.
+It records which resource instances exist, the logical declarations they instantiate, their
+locations and physical encodings, and their instance-level validation and provenance facts. The
+checked registry declaration supplies logical kind, content class, canonicality, presence, and
+provenance policy.
 
 <a id="ew-iceberg-catalog" data-spec-anchor="canonical"></a>
 ### 3.5 Iceberg catalog
@@ -262,7 +264,9 @@ identity system.
 ### 4.1 Requirements
 
 The core content class MUST contain canonical facts in the logical schemas of Part 02. A writer
-MUST validate core resources before it commits them.
+MUST validate core resources before it commits them. The required minimum is the closure of Part
+02's declaration presence, dependency, populated-reference, catalog, and producing-run rules;
+membership in the core class alone does not require an instance.
 
 A fact belongs in core when common interpretation, validation, joining or analysis would break
 without it (Part 09 §3). A fact a single domain owns belongs in that domain's extension, typed,
@@ -288,8 +292,8 @@ a validator checks against `core.spike_events`.
 ### 5.1 Requirements
 
 The analysis content class MAY contain denormalized, prejoined, binned, aligned, or otherwise
-transformed products. An analysis resource MUST declare lineage to the core resources it derives
-from.
+transformed products. Part 06 owns its exact lineage, producing-run, realization, and promotion
+requirements.
 
 Analysis resources are disposable. A writer MAY delete and recompute any of them. An analysis
 resource becomes canonical only through an explicit revision of this specification.
@@ -297,12 +301,8 @@ resource becomes canonical only through an explicit revision of this specificati
 <a id="ew-analysis-materialization-criterion" data-spec-anchor="canonical"></a>
 ### 5.2 Materialization is justified by layout, not by arithmetic
 
-A derived product is materialized only where a query cannot answer the same question at acceptable
-cost. Measurement rather than expectation decides this, and four of v0.1's five proposed analysis
-resources are withdrawn on that basis.
-
-`analysis.spike_events` is retained: it is core's spikes on the reference clock, bucketed by time
-and sorted by unit within each bucket, so that a time filter and a unit filter both prune.
+A materialization is a physical realization of an analysis resource, not a logical kind. Part 06
+defines when analysis views and materializations are justified and how their lineage is recorded.
 
 ## 6. Deferred NWB projection
 

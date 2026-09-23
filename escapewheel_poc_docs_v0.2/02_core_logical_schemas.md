@@ -5,7 +5,8 @@ Normative.
 <a id="ew-core-logical-schema-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
-This part defines how a logical schema is declared, what a declaration must contain, and which resources the core layer comprises.
+This part defines how a logical resource is declared, what each kind of declaration contains, and
+which core and analysis resources the incorporated registry comprises.
 
 The logical standard defined by this part is identified by `escapewheel-logical-v0.1`.
 
@@ -17,8 +18,8 @@ This part expressly incorporates the following artifacts:
 |---|---|
 | `registry/registry.schema.json` | exact local JSON structure and conditional shape constraints |
 | `registry/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
-| `registry/registry_contracts/escapewheel-registry-contract-v0.1.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
-| `registry/logical_schemas.json` | exact current core and analysis table, column, key, reference, vocabulary, and rule declarations |
+| `registry/registry_contracts/escapewheel-registry-contract-v0.2.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `registry/logical_schemas.json` | exact current core and analysis resource declarations, including table columns, keys, references, vocabularies, and rules |
 
 The generated core registry is what a packet embeds. `registry/tables.md` is a generated,
 informative listing of the same declarations. This part owns the declaration model, conformance
@@ -26,15 +27,166 @@ algorithms, and meanings. A disagreement among the part and its incorporated art
 specification candidate internally inconsistent.
 
 <a id="ew-table-resource-requirements" data-spec-anchor="canonical"></a>
-## 2. Table resource requirements
+## 2. Logical resource declarations
 
-Each member name of the root `tables` object is the resource identifier of the table it contains.
-That table declaration MUST contain:
+Each member name of the root `resources` object is a declaration ID. A declaration ID MUST match
+`^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`. The core registry is the exact declaration authority for
+the `core` and `analysis` namespaces. An extension registry is the sole declaration authority for
+the namespace equal to its `extension_id`.
 
-- an ordered list of columns, each conforming to §3;
-- a primary key, or `null`;
-- its references to other tables (§7);
-- its Tier 2 validation rules, if any (§10.2).
+A generated table-only implementation view MAY select table-kind declarations, but it MUST be
+derived from `resources` and MUST NOT be serialized as a second authority.
+
+<a id="ew-resource-common-fields" data-spec-anchor="canonical"></a>
+### 2.1 Common fields
+
+Every resource declaration contains exactly these common fields, plus the kind-specific field §2.3
+permits:
+
+- `content_class`, governed by §2.2;
+- `kind`, one of `table`, `dense_array`, and `opaque`;
+- `instances`, a closed object governed by §2.4;
+- `requires`, an array of distinct declaration IDs, empty where there is no explicit dependency;
+- `lineage`, one of `forbidden`, `optional`, and `required`; and
+- `producing_run`, one of `forbidden`, `optional`, and `required`.
+
+<a id="ew-resource-content-class" data-spec-anchor="canonical"></a>
+### 2.2 Content class and canonicality
+
+The `content_class` vocabulary and its consequences are:
+
+| value | meaning | canonical | required by class |
+|---|---|:---:|:---:|
+| `core` | domain-general normalized facts | yes | no |
+| `extension` | typed facts owned by a domain | yes | no |
+| `analysis` | products reproducible from canonical resources | no | no |
+| `compatibility_projection` | a projection into another representation | no | no |
+| `documentation` | human-readable sidecars that assert no semantic or conformance fact | no | no |
+
+Canonicality is derived from this table and MUST NOT be independently declared. Promoting a
+resource into the canonical set changes its declaration's content class through a specification
+or extension-registry change; an implementation MUST NOT promote it with a Boolean.
+
+A documentation resource MAY describe another resource without creating a dependency or
+supplying conformance evidence. A machine-interpreted control artifact does not acquire
+documentation semantics merely because its serialization is a document.
+
+The core registry MUST NOT declare `extension`. An extension registry MAY declare `extension`,
+`analysis`, `compatibility_projection`, or `documentation` in its own namespace and MUST NOT
+declare `core`. Every `analysis` and `compatibility_projection` declaration has required lineage
+and producing-run policies. Every `documentation` declaration forbids lineage. These three
+classes are optional under §2.5.
+
+<a id="ew-resource-kind" data-spec-anchor="canonical"></a>
+### 2.3 Kind
+
+The logical kind states which generic payload structure, if any, Escapewheel interprets:
+
+| kind | generic payload contract | kind-specific declaration |
+|---|---|---|
+| `table` | rows and declared columns | required `table` object |
+| `dense_array` | an n-dimensional dense array with declared logical axes | required closed `array` object containing `axes_resource` |
+| `opaque` | a payload with no generic Escapewheel logical model | none |
+
+A table declaration MUST contain `table`, MUST NOT contain `array`, and MUST use singleton
+instances. Its `table` object contains an ordered column list (§3), a primary key or `null`,
+references (§7), and Tier 2 rules (§10.2).
+
+A dense-array declaration MUST contain `array`, MUST NOT contain `table`, and MUST use catalog
+instances. Its `axes_resource` names a visible singleton table declaration. The axes table MUST
+have exactly one binding reference to the array declaration's catalog table: the reference targets
+the complete catalog primary key, its local columns lead the axes table's primary key, and that
+primary key adds exactly one required structural-index column. Presence of a dense-array instance
+makes its axes-table singleton necessary. Part 03 follows this declaration and MUST NOT hardcode an
+axes resource.
+
+An opaque declaration contains neither kind-specific object and may use any instance mode. Opaque
+qualifies only the generic payload model. Escapewheel still identifies, locates, integrity-checks,
+and records provenance for the resource; related declarations and tables may describe its
+scientific meaning. Generic code is not thereby required to parse, decode, or render its payload.
+
+Stored materialization and view are realizations, not kinds. `view`, `materialized_table`,
+`dense_array_asset`, `media_asset`, and `document_asset` MUST NOT be registry kinds.
+
+<a id="ew-resource-instance-model" data-spec-anchor="canonical"></a>
+### 2.4 Instance modes
+
+An `instances` object matches exactly one closed form:
+
+| mode | required fields | packet binding |
+|---|---|---|
+| singleton | `mode: "singleton"`; `presence` is `required` or `optional` | the declaration ID is the only permitted packet `resource_id` |
+| catalog | `mode: "catalog"`; `catalog_resource`; `resource_id_column` | zero or more resources bind one-to-one to rows of the named singleton table |
+| family | `mode: "family"` | zero or more resources bind only by declaration ID |
+
+A family resource ID is packet-unique and dotted within a namespace the declaration's registry
+owns. A catalog resource and column satisfy §2.6.
+
+<a id="ew-resource-presence" data-spec-anchor="canonical"></a>
+### 2.5 Presence and dependencies
+
+`core.sessions` is a required singleton. Every other currently incorporated table is an optional
+singleton. An extension selects required or optional for each singleton; declaring that extension
+in a packet activates its required declarations. Merely installing a registry does not.
+
+A packet contains an instance when any of these conditions applies:
+
+- it is a required singleton in an active registry;
+- a present declaration names its singleton declaration in `requires`;
+- a populated table reference targets its singleton table declaration;
+- a catalog row requires that exact family instance under §2.6; or
+- a present `processing_run_id` requires `core.processing_runs`.
+
+An absent optional singleton creates no empty table. A present table may contain zero rows unless
+another rule requires rows. Catalog and family declarations have no minimum instance count.
+
+Each `requires` member resolves under the same visibility and direction rules as a reference and
+names a singleton. A present instance requires the transitive closure of those dependencies.
+Dependency cycles are permitted only where every member is a singleton; presence of one then
+requires the entire cycle.
+
+<a id="ew-resource-catalog-binding" data-spec-anchor="canonical"></a>
+### 2.6 Catalog binding
+
+A catalog declaration names a visible singleton table declaration and one column. That column is a
+required string identifier with carried identity and free vocabulary. An extension catalog may
+name a core table or one in the same extension; a core catalog MUST NOT name an extension table.
+Within one visible core-and-extension context, no two catalog declarations may name the same
+table-and-column pair.
+
+For every catalog row, a conforming packet contains exactly one entry whose `resource_id` equals
+the row's catalog resource-ID value and whose `declaration_id` names that catalog family. Every
+entry in the family matches exactly one row. Catalog resource-ID values and packet resource IDs are
+unique.
+
+`core.array_assets`, `analysis.array_assets`, and `core.media_assets` each carry the required
+string identifier `resource_id`, with carried identity and free vocabulary. For this exact field,
+§4's general integer `_id` rule does not apply. The assigned `array_asset_id` and `media_asset_id`
+remain row identity, and the corresponding names remain source-label bridges. These three tables
+carry neither `uri` nor `format`; location belongs to Part 04 and physical encoding to Part 03.
+
+<a id="ew-resource-provenance-policy" data-spec-anchor="canonical"></a>
+### 2.7 Lineage and producing-run policy
+
+The `lineage` and `producing_run` fields govern the packet entry's `derived_from` and
+`processing_run_id` respectively. For either policy, `forbidden` requires absence, `optional`
+permits presence, and `required` requires presence. A present lineage is a nonempty array of
+distinct existing packet resource IDs.
+
+Lineage edges obey this relation:
+
+| derived class | permitted source classes |
+|---|---|
+| `core` | `core` |
+| `extension` | visible `core` and same-extension `extension` |
+| `analysis` | `core`, `extension`, `analysis` |
+| `compatibility_projection` | `core`, `extension`, `analysis` |
+| `documentation` | none |
+
+The lineage graph contains no self-edge or cycle. Because every analysis resource has nonempty
+lineage, every finite analysis chain terminates in canonical core or extension resources. A writer
+and validator apply these policies without regard to kind. A reader may expose the resolved facts
+without validating the registry or possessing a validation receipt for ordinary access.
 
 <a id="ew-column-declaration" data-spec-anchor="canonical"></a>
 ## 3. Column declaration
@@ -65,7 +217,8 @@ The one description compared literally is the standard `metadata` description in
 Resource names and column names MUST be lowercase snake case. Registry conformance enforces these
 relations in both directions where stated:
 
-- an identifier has an `_id` name, and an `_id` name declares an integer identifier;
+- an identifier has an `_id` name, and an `_id` name declares an integer identifier, except that
+  the exact catalog field `resource_id` is a string identifier with carried identity;
 - a coordinate has a `_tick` name, and a `_tick` name declares a coordinate;
 - a structural index has an `_index` name, and an `_index` name declares a structural index or
   sequence position;
@@ -101,7 +254,11 @@ A value that varies per row and is queried belongs in a typed column of a specia
 
 A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. Where a conversion's result would fall outside the declared type, it MUST fail before the value is written, naming the column and the value. A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
 
-Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in UTC. Identifier columns MUST be `int32`, except where the number of distinct values may exceed `int32`, where the column MUST be `int64`. No core table is near that bound; an extension declaring an identifier over more than 2^31 rows declares `int64` for it.
+Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in
+UTC. Identifier columns MUST be `int32`, except where the number of distinct values may exceed
+`int32`, where the column MUST be `int64`, and except the catalog `resource_id` defined by §2.6.
+No core table is near the integer bound; an extension declaring an integer identifier over more
+than 2^31 rows declares `int64` for it.
 
 ## 6. Presence
 
@@ -124,6 +281,9 @@ Duplication is permitted only where it buys otherwise-unavailable access. Axis n
 ## 7. References
 
 A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing.
+
+Where a reference has a populated source value, the packet MUST contain the target singleton table
+resource. This presence consequence is in addition to row-level foreign-key resolution.
 
 A reference's source and target lists MUST be nonempty, contain no duplicate member, and have equal
 arity. Every source and target member MUST resolve. The target list MUST equal the target table's
@@ -349,9 +509,9 @@ No rule checks either half, and none is added. Nothing structural tells a code f
 <a id="ew-registry-document" data-spec-anchor="canonical"></a>
 ### 9.1 The schema is one document
 
-Table structure and validation rules are carried in one JSON document. Every registry document
+Resource declarations, table structure, and validation rules are carried in one JSON document. Every registry document
 MUST carry `$schema`, `registry_version`, `logical_standard_version`, `rule_language`, and
-`tables`.
+`resources`, and MUST NOT carry `tables`.
 
 A core registry MUST carry `semantic_standard_version` and MUST NOT carry `extension_id` or
 `extends`. An extension registry MUST carry `extension_id` and MUST NOT carry
@@ -359,8 +519,8 @@ A core registry MUST carry `semantic_standard_version` and MUST NOT carry `exten
 class; caller context MUST NOT redefine it.
 
 The selected rule language applies atomically to every Tier 2 rule. A rule MUST NOT repeat or
-override it, and one document MUST NOT mix languages. Root, table, column, reference, authority,
-and rule objects are closed. Registry-build `derived_from` and `since` fields are therefore
+override it, and one document MUST NOT mix languages. Root, resource, instance, array, table,
+column, reference, authority, and rule objects are closed. Registry-build `derived_from` and `since` fields are therefore
 invalid; this does not affect the packet catalog's resource-lineage `derived_from`.
 
 <a id="ew-registry-self-description" data-spec-anchor="canonical"></a>
@@ -369,9 +529,9 @@ invalid; this does not affect the packet catalog's resource-lineage `derived_fro
 A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on. A packet whose embedded registry disagrees with its recorded version is invalid.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.4.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.5.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has
-`registry_version: 0.4.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.5.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.1`.
 
@@ -429,7 +589,7 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The initial descriptor has ID `escapewheel-registry-contract-v0.1`. A checker MUST evaluate its
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.2`. A checker MUST evaluate its
 phases in this order:
 
 1. `json`;
@@ -532,6 +692,11 @@ The descriptor assigns these invariants in this exact order:
 | `registry.rule.id_owner` | semantic | core, extension |
 | `registry.rule.required_inputs` | rule_static | core, extension |
 | `registry.core.device_detail` | semantic | core |
+| `registry.resource.classification` | semantic | core, extension |
+| `registry.resource.instance` | semantic | core, extension |
+| `registry.resource.catalog` | semantic | core, extension |
+| `registry.resource.array_axes` | semantic | core, extension |
+| `registry.resource.dependency` | semantic | core, extension |
 
 Every descriptor anchor MUST identify every numbered-part clause defining the invariant. Invariant
 IDs are unique. The descriptor schema closes its objects; requires nonempty, duplicate-free arrays;
@@ -553,6 +718,12 @@ conformance.
 In a core registry, no table other than `core.devices` may have a non-null primary key whose first
 member is `device_id`. This structural condition reserves device-detail tables for extensions.
 Each rule MUST pass Part 11's static contract, including rejection of every optional bound input.
+
+The resource invariants enforce §§2.1–2.7: document-class/content-class eligibility; kind and
+instance eligibility; unambiguous visible catalog bindings; the dense-array axes binding; and
+visible singleton dependencies. The existing table, column, reference, rule, and external-domain
+invariants operate on the `table` payload of table-kind declarations. Their stable IDs do not
+change merely because their instance pointers gain enclosing `resources` and `table` components.
 
 This section defines an abstract result. Public APIs, command-line output, reports, exception
 serialization, and the boundaries that require invocation are defined separately.
@@ -621,7 +792,8 @@ A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zar
 <a id="ew-core-resource-index" data-spec-anchor="canonical"></a>
 ## 11. Core resource index
 
-The core layer comprises the following resources. Column definitions are in the registry.
+The incorporated registry comprises the following declarations. Table column definitions and the
+common declaration fields are in the registry.
 
 ### 11.1 Session and subject
 
@@ -681,10 +853,12 @@ The core layer comprises the following resources. Column definitions are in the 
 
 | resource | contents |
 |---|---|
-| `core.array_assets` | dense arrays, owned or referenced, each naming the device that made it |
-| `core.array_dimensions` | one row per axis, with its coordinates |
+| `core.array_assets` | catalog rows describing core dense-array instances |
+| `core.array_asset_instances` | dense-array resources catalogued by `core.array_assets.resource_id`, with axes in `core.array_dimensions` |
+| `core.array_dimensions` | one row per logical axis, bound to its array catalog row |
 | `core.array_channels` | per-channel scaling, shift, and electrode |
-| `core.media_assets` | images and video |
+| `core.media_assets` | catalog rows describing image and video instances |
+| `core.media_asset_instances` | opaque resources catalogued by `core.media_assets.resource_id` |
 | `core.media_frames` | frame timing |
 
 ### 11.7 Provenance
@@ -702,8 +876,9 @@ The core layer comprises the following resources. Column definitions are in the 
 | resource | contents |
 |---|---|
 | `analysis.spike_events` | core spikes on the reference clock, bucketed by time |
-| `analysis.array_assets` | derived dense arrays |
-| `analysis.array_dimensions` | their axes |
+| `analysis.array_assets` | catalog rows describing derived dense-array instances |
+| `analysis.array_asset_instances` | analysis dense-array resources catalogued by `analysis.array_assets.resource_id` |
+| `analysis.array_dimensions` | their logical axes |
 
 ### 11.9 Space
 
@@ -716,7 +891,8 @@ Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared re
 
 ## 12. Rules for particular resources
 
-Sections 2 through 10 bind every table. What follows binds particular ones, where identifying a
+Sections 2 through 10 bind every declaration and table payload. What follows binds particular
+tables, where identifying a
 row, resolving a value, or reading an absence takes more than the generic rules give.
 
 <a id="ew-unit-identity-architecture" data-spec-anchor="alias"></a>

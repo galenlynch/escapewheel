@@ -128,7 +128,7 @@ def test_a_recipe_supplied_resource_is_declared(resource):
     )
     if registry is None:
         pytest.skip("registry not reachable from this working directory")
-    assert resource in registry["tables"]
+    assert resource in registry["resources"]
 
 
 #: Rows where an adapter sets a `*_name` to something other than the string its `*_id` is minted
@@ -156,7 +156,9 @@ def test_a_name_records_what_its_identifier_stands_for():
     registry = json.loads((Path(__file__).resolve().parents[2] / "registry/logical_schemas.json").read_text())
     pairs = {
         column["name"]: column["name"].removesuffix("_name") + "_id"
-        for table in registry["tables"].values()
+        for declaration in registry["resources"].values()
+        if declaration["kind"] == "table"
+        for table in [declaration["table"]]
         for column in table["columns"]
         if column["name"].endswith("_name")
     }

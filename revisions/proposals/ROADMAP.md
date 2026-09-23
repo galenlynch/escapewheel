@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative coordination record |
-| **Updated** | 2026-09-22 |
+| **Updated** | 2026-09-23 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 | **Objective** | Reconcile the data-driven contract, then publish one internally consistent and immutable v0.2 specification release |
 
@@ -305,7 +305,7 @@ P1 authority framework
 | P3 | Executable declarative-rule language | P2.1 | [R125](../accepted/R125-tier-2-rules-use-a-versioned-escapewheel-sql-profile.md) |
 | P4.1 | Registry-document conformance contract | P3 | [R126](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md) |
 | P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
-| P5.1 | Logical resource declarations and resource classification | P4.2 | Active proposal |
+| P5.1 | Logical resource declarations and resource classification | P4.2 | [R128](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md) |
 | P5.2 | Portable-profile encodings and capability declarations | P5.1 | Proposal to be scoped |
 | P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | Proposal to be scoped |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
@@ -604,8 +604,8 @@ portion of I9. I7's physical extension-table parity remains with P7.
 ### P5.1 — Logical resource declarations and classification
 
 Extend the data-driven logical model beyond tables. Make resources the registry's primary
-declarations and give tables, dense arrays, media, and documents one kind-specific declaration
-model. Define singleton and family instances, presence, catalog-row binding, dependencies,
+declarations and give table, dense-array, and opaque payloads one declaration model. Define
+singleton, catalog, and family instances, presence, catalog-row binding, dependencies,
 canonicality derived from content class, lineage, and extension-owned non-table assets. Bind each
 packet resource to one declaration and remove packet classification fields that merely repeat the
 declaration.
@@ -615,6 +615,13 @@ encoding is selected, but it does not declare formats, codecs, portability capab
 Part 03 descriptor that owns them.
 
 **Review coverage:** S3, S6, D3's logical half, D8, I4, I5, and the first live TODO.
+
+**Completed as R128 on 2026-09-23.** Registry resources now own logical classification and
+instance policy for 43 singleton tables and the three incorporated catalog families. Packet
+entries bind `declaration_id` without repeating logical facts; catalog rows carry packet resource
+identity; and the registry, reader, writer, validator, adapters, extensions, fixtures, and schemas
+use the incompatible 0.5/0.2 shapes. The closed logical-kind vocabulary is `table`, `dense_array`,
+and `opaque`; physical encodings and capabilities remain with the next work item.
 
 ### P5.2 — Portable-profile encodings and capability declarations
 

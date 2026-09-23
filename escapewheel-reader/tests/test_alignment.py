@@ -74,7 +74,6 @@ def aligned_packet(tmp_path, packet_root):
     manifest["resources"].append(_resource("core.events", write("core", "events", events)))
     manifest["resources"].append(_resource("core.event_streams", write("core", "event_streams", streams)))
     entry = _resource("analysis.spike_events", write("analysis", "spike_events", spikes))
-    entry["layer"] = "analysis"
     manifest["resources"].append(entry)
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     return open_packet(root)

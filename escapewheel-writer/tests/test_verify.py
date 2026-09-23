@@ -21,15 +21,23 @@ def _external(root, uri):
     not reach its store leaves it (Part 04 §5.2)."""
     path = root / "packet.json"
     manifest = json.loads(path.read_text())
+    registry_path = root / "schemas" / "logical_schemas.json"
+    registry = json.loads(registry_path.read_text())
+    registry["resources"]["core.test_payloads"] = {
+        "content_class": "core",
+        "kind": "opaque",
+        "instances": {"mode": "family"},
+        "requires": [],
+        "lineage": "optional",
+        "producing_run": "optional",
+    }
+    registry_path.write_text(json.dumps(registry, indent=2))
     manifest["resources"].append(
         {
             "resource_id": "core.probe.lfp",
-            "layer": "core",
-            "kind": "dense_array_asset",
+            "declaration_id": "core.test_payloads",
             "physical_profile": "zarr_v2",
             "uri": uri,
-            "array_asset_id": "probe.lfp",
-            "canonical": True,
             "validation_state": "passed",
             "external": True,
             "codecs": ["blosc"],

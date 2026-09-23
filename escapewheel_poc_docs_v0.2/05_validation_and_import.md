@@ -9,7 +9,8 @@ Normative.
 
 A resource is imported when it has been discovered, extracted to staging, normalized to the logical schemas, validated, committed, and recorded in the catalog with its provenance.
 
-A staged resource MUST NOT appear in the catalog as a committed canonical resource. Nothing becomes core data before it has passed the validators that apply to it.
+A staged resource MUST NOT appear in the committed catalog. Validation state does not change the
+content class or canonicality selected by its declaration; publication is the gate.
 
 ## 2. Pipeline
 
@@ -204,7 +205,15 @@ profile defect makes the registry invalid rather than producing a packet finding
 <a id="ew-validation-shim" data-spec-anchor="canonical"></a>
 ### 5.3 The shim
 
-A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and checksums outside SQL. A query cannot observe them, so such a check written as SQL fails silently rather than loudly.
+A validator MUST first resolve every packet entry's `declaration_id` in the checked registry
+context. It then checks instance eligibility, required presence, dependency closure, catalog
+binding, populated-reference targets, lineage and producing-run policies, and catalog-row
+provenance before dispatching kind-specific checks. An unknown declaration or one whose instance
+model does not admit the packet resource is an error.
+
+A validator MUST check physical order, file presence, Parquet types, Zarr rank and codecs, and
+checksums outside SQL. A query cannot observe them, so such a check written as SQL fails silently
+rather than loudly. Dense-array checks obtain the axes table from the resolved declaration.
 
 A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key.
 
@@ -293,9 +302,11 @@ A report says which of two claims it is making.
 A packet conforms to this specification when it declares a profile defined here, carries every
 resource that profile requires, satisfies every structural requirement of Part 02, completes every
 required evaluation, and produces no error-level finding from the checks of this part. An invalid,
-unsupported, or incomplete required evaluation cannot support a conformance claim. A conforming packet MAY omit any resource this
-specification does not require. A validator MUST NOT reject a packet merely for carrying a resource
-this specification does not define. Part 09 §5.4 defines how core and extension verdicts compose.
+unsupported, or incomplete required evaluation cannot support a conformance claim. A conforming
+packet MAY omit any optional instance, but every catalogued packet resource MUST resolve a logical
+declaration. A payload that Escapewheel treats as opaque still requires a declaration; an extension
+registry is the data-driven route for a resource core does not define. Part 09 §5.4 defines how
+core and extension verdicts compose.
 
 **Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming.
 

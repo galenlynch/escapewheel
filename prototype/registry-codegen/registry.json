@@ -1,203 +1,236 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
-  "registry_version": "0.4.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
+  "registry_version": "0.5.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
-  "tables": {
-    "core.sessions": {
-      "columns": [
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned"
-        },
-        {
-          "name": "subject_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned"
-        },
-        {
-          "name": "session_start_time",
-          "type": "timestamp",
-          "presence": "required",
-          "role": "data"
-        },
-        {
-          "name": "reference_clock_id",
-          "type": "int32",
-          "presence": "nullable",
-          "role": "identifier",
-          "identity": "assigned"
-        }
-      ],
-      "primary_key": [
-        "session_id"
-      ],
-      "references": [
-        {
-          "columns": [
-            "reference_clock_id"
-          ],
-          "resource": "core.clocks",
-          "resource_columns": [
-            "clock_id"
-          ]
-        }
-      ],
-      "rules": []
-    },
+  "resources": {
     "core.clocks": {
-      "columns": [
-        {
-          "name": "clock_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned"
-        },
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned"
-        },
-        {
-          "name": "name",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "vocabulary": "free"
-        },
-        {
-          "name": "tick_rate_hz",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "unit": "Hz"
-        },
-        {
-          "name": "origin",
-          "type": "string",
-          "presence": "required",
-          "role": "data",
-          "vocabulary": "open",
-          "description": "The clock origin in the source's vocabulary."
-        },
-        {
-          "name": "parent_clock_id",
-          "type": "int32",
-          "presence": "nullable",
-          "role": "identifier",
-          "identity": "assigned"
-        }
-      ],
-      "primary_key": [
-        "clock_id"
-      ],
-      "references": [
-        {
-          "columns": [
-            "session_id"
-          ],
-          "resource": "core.sessions",
-          "resource_columns": [
-            "session_id"
-          ]
-        },
-        {
-          "columns": [
-            "parent_clock_id"
-          ],
-          "resource": "core.clocks",
-          "resource_columns": [
-            "clock_id"
-          ]
-        }
-      ],
-      "rules": []
+      "content_class": "core",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "clock_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned"
+          },
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "presence": "required",
+            "role": "data",
+            "vocabulary": "free"
+          },
+          {
+            "name": "tick_rate_hz",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "unit": "Hz"
+          },
+          {
+            "name": "origin",
+            "type": "string",
+            "presence": "required",
+            "role": "data",
+            "vocabulary": "open",
+            "description": "The clock origin in the source's vocabulary."
+          },
+          {
+            "name": "parent_clock_id",
+            "type": "int32",
+            "presence": "nullable",
+            "role": "identifier",
+            "identity": "assigned"
+          }
+        ],
+        "primary_key": [
+          "clock_id"
+        ],
+        "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "parent_clock_id"
+            ],
+            "resource": "core.clocks",
+            "resource_columns": [
+              "clock_id"
+            ]
+          }
+        ],
+        "rules": []
+      }
     },
     "core.intervals": {
-      "columns": [
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned"
-        },
-        {
-          "name": "interval_kind",
-          "type": "string",
-          "presence": "required",
-          "role": "discriminator",
-          "resolves": "required"
-        },
-        {
-          "name": "interval_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "carried"
-        },
-        {
-          "name": "start_tick",
-          "type": "int64",
-          "presence": "required",
-          "role": "coordinate"
-        },
-        {
-          "name": "stop_tick",
-          "type": "int64",
-          "presence": "required",
-          "role": "coordinate"
-        },
-        {
-          "name": "clock_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned"
-        }
-      ],
-      "primary_key": [
-        "session_id",
-        "interval_kind",
-        "interval_id"
-      ],
-      "references": [
-        {
-          "columns": [
-            "session_id"
-          ],
-          "resource": "core.sessions",
-          "resource_columns": [
-            "session_id"
-          ]
-        },
-        {
-          "columns": [
-            "clock_id"
-          ],
-          "resource": "core.clocks",
-          "resource_columns": [
-            "clock_id"
-          ]
-        }
-      ],
-      "rules": [
-        {
-          "id": "core.intervals.interval_valid",
-          "level": "error",
-          "message": "stop_tick precedes start_tick",
-          "sql": "SELECT session_id, interval_kind, interval_id, start_tick, stop_tick FROM core.intervals WHERE stop_tick < start_tick"
-        }
-      ]
+      "content_class": "core",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned"
+          },
+          {
+            "name": "interval_kind",
+            "type": "string",
+            "presence": "required",
+            "role": "discriminator",
+            "resolves": "required"
+          },
+          {
+            "name": "interval_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "carried"
+          },
+          {
+            "name": "start_tick",
+            "type": "int64",
+            "presence": "required",
+            "role": "coordinate"
+          },
+          {
+            "name": "stop_tick",
+            "type": "int64",
+            "presence": "required",
+            "role": "coordinate"
+          },
+          {
+            "name": "clock_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned"
+          }
+        ],
+        "primary_key": [
+          "session_id",
+          "interval_kind",
+          "interval_id"
+        ],
+        "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "clock_id"
+            ],
+            "resource": "core.clocks",
+            "resource_columns": [
+              "clock_id"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "core.intervals.interval_valid",
+            "level": "error",
+            "message": "stop_tick precedes start_tick",
+            "sql": "SELECT session_id, interval_kind, interval_id, start_tick, stop_tick FROM core.intervals WHERE stop_tick < start_tick"
+          }
+        ]
+      }
+    },
+    "core.sessions": {
+      "content_class": "core",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "required"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned"
+          },
+          {
+            "name": "subject_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned"
+          },
+          {
+            "name": "session_start_time",
+            "type": "timestamp",
+            "presence": "required",
+            "role": "data"
+          },
+          {
+            "name": "reference_clock_id",
+            "type": "int32",
+            "presence": "nullable",
+            "role": "identifier",
+            "identity": "assigned"
+          }
+        ],
+        "primary_key": [
+          "session_id"
+        ],
+        "references": [
+          {
+            "columns": [
+              "reference_clock_id"
+            ],
+            "resource": "core.clocks",
+            "resource_columns": [
+              "clock_id"
+            ]
+          }
+        ],
+        "rules": []
+      }
     }
   }
 }

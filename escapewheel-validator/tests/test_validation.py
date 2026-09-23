@@ -133,6 +133,24 @@ def test_absent_tables_are_not_required(packet_root):
     assert validate(open_packet(packet_root)).passed
 
 
+def test_a_populated_foreign_key_requires_its_target_resource(packet_root):
+    path = packet_root / "packet.json"
+    manifest = json.loads(path.read_text())
+    manifest["resources"] = [resource for resource in manifest["resources"] if resource["resource_id"] != "core.clocks"]
+    path.write_text(json.dumps(manifest))
+    report = validate(open_packet(packet_root))
+    assert "packet.resource.reference_target_missing" in {finding.check for finding in report.findings}
+
+
+def test_an_unknown_resource_declaration_is_rejected(packet_root):
+    path = packet_root / "packet.json"
+    manifest = json.loads(path.read_text())
+    manifest["resources"][0]["declaration_id"] = "core.not_declared"
+    path.write_text(json.dumps(manifest))
+    report = validate(open_packet(packet_root))
+    assert "packet.resource.declaration_unknown" in {finding.check for finding in report.findings}
+
+
 def test_report_renders_as_json(packet_root):
     report = validate(open_packet(packet_root))
     rendered = report.to_dict("session_001")
@@ -143,16 +161,31 @@ def test_report_renders_as_json(packet_root):
 
 
 def test_generator_emits_nothing_for_an_empty_registry():
-    assert generate({"tables": {}}) == []
+    assert generate({"resources": {}}) == []
+
+
+def _add_family_declaration(root, declaration_id, *, content_class="core"):
+    """Add an opaque family for tests concerned with generic manifest behavior."""
+    path = root / "schemas" / "logical_schemas.json"
+    registry = json.loads(path.read_text())
+    registry["resources"][declaration_id] = {
+        "content_class": content_class,
+        "kind": "opaque",
+        "instances": {"mode": "family"},
+        "requires": [],
+        "lineage": "forbidden" if content_class == "documentation" else "optional",
+        "producing_run": "optional",
+    }
+    path.write_text(json.dumps(registry, indent=2))
 
 
 def test_nullable_foreign_keys_are_guarded(packet_root):
     """Without an IS NOT NULL guard, every absent optional key reports as a violation."""
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
-    registry["tables"]["core.trials"]["columns"].append(
+    registry["resources"]["core.trials"]["table"]["columns"].append(
         {"name": "probe_id", "type": "string", "presence": "nullable", "description": "probe"}
     )
-    registry["tables"]["core.trials"]["references"].append(
+    registry["resources"]["core.trials"]["table"]["references"].append(
         {"columns": ["probe_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
     )
     check = next(c for c in generate(registry) if c.id == "core.trials.probe_id_resolves")
@@ -179,7 +212,7 @@ def test_a_filled_metadata_column_is_not_reported(packet_root):
 def test_a_by_position_discriminator_gets_no_reverse_check(packet_root):
     """Part 02 §8.3. Part 02 §8.3 excludes the third shape, and `positions_in` is what says it is one."""
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
-    trials = registry["tables"]["core.trials"]
+    trials = registry["resources"]["core.trials"]["table"]
     trials["columns"].append(
         {
             "name": "axis_of",
@@ -203,7 +236,7 @@ def test_a_by_position_discriminator_gets_no_reverse_check(packet_root):
 def test_the_position_column_is_checked_against_the_registrys_roles(packet_root):
     """R100 §2.2. A role is invisible to a query and visible to whatever writes one."""
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
-    trials = registry["tables"]["core.trials"]
+    trials = registry["resources"]["core.trials"]["table"]
     trials["columns"] += [
         {
             "name": "axis_of",
@@ -216,7 +249,7 @@ def test_the_position_column_is_checked_against_the_registrys_roles(packet_root)
         },
         {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data", "description": "d"},
     ]
-    registry["tables"]["core.units"]["columns"].append(
+    registry["resources"]["core.units"]["table"]["columns"].append(
         {"name": "seat_index", "type": "int64", "presence": "nullable", "role": "structural_index", "description": "d"}
     )
     check = next(
@@ -228,13 +261,13 @@ def test_the_position_column_is_checked_against_the_registrys_roles(packet_root)
 
 
 def test_required_codecs_must_equal_the_union(packet_root):
+    _add_family_declaration(packet_root, "core.test_payloads")
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())
     entry["resources"].append(
         {
-            "resource_id": "array.probe0",
-            "layer": "core",
-            "kind": "dense_array_asset",
+            "resource_id": "core.probe0",
+            "declaration_id": "core.test_payloads",
             "uri": "s3://example/p.zarr",
             "external": True,
             "codecs": ["wavpack"],
@@ -249,13 +282,13 @@ def test_required_codecs_must_equal_the_union(packet_root):
 
 def test_external_resources_are_reported_as_unverified(packet_root):
     """A default-mode pass must not imply external claims were checked."""
+    _add_family_declaration(packet_root, "core.test_payloads")
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())
     entry["resources"].append(
         {
-            "resource_id": "array.probe0",
-            "layer": "core",
-            "kind": "dense_array_asset",
+            "resource_id": "core.probe0",
+            "declaration_id": "core.test_payloads",
             "uri": "s3://example/p.zarr",
             "external": True,
             "codecs": ["wavpack"],
@@ -267,13 +300,13 @@ def test_external_resources_are_reported_as_unverified(packet_root):
     assert report.passed  # unreachable externals do not invalidate
     info = next(f for f in report.findings if f.check == "external.unverified")
     assert info.level == "info"
-    assert info.rows == (("array.probe0",),)
+    assert info.rows == (("core.probe0",),)
 
 
 def test_advisory_rules_are_off_by_default(packet_root):
     """An advisory rule does not run unless asked (Part 02 §10.2)."""
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
-    registry["tables"]["core.trials"]["rules"].append(
+    registry["resources"]["core.trials"]["table"]["rules"].append(
         {
             "id": "core.trials.advice",
             "level": "info",
@@ -292,7 +325,7 @@ def test_advisory_rules_are_off_by_default(packet_root):
 def test_advisory_cannot_change_the_verdict(packet_root):
     """`passed` is invariant under the flag, because advisory rules are never errors."""
     registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
-    registry["tables"]["core.trials"]["rules"].append(
+    registry["resources"]["core.trials"]["table"]["rules"].append(
         {
             "id": "core.trials.advice",
             "level": "info",
@@ -346,15 +379,26 @@ def _declare(root, **overrides):
     """Add an analysis resource to the manifest, pointing at a table that already exists."""
     path = root / "packet.json"
     manifest = json.loads(path.read_text())
+    registry_path = root / "schemas" / "logical_schemas.json"
+    registry = json.loads(registry_path.read_text())
+    registry["resources"]["analysis.test_output"] = {
+        "content_class": "analysis",
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "requires": [],
+        "lineage": "required",
+        "producing_run": "required",
+        "table": {**registry["resources"]["core.trials"]["table"], "rules": []},
+    }
+    registry_path.write_text(json.dumps(registry, indent=2))
     manifest["resources"].append(
         {
-            "resource_id": "analysis.spike_events",
-            "layer": "analysis",
-            "kind": "table",
+            "resource_id": "analysis.test_output",
+            "declaration_id": "analysis.test_output",
             "physical_profile": "parquet",
             "uri": "tables/core/trials.parquet",
-            "canonical": True,
             "validation_state": "passed",
+            "derived_from": ["core.trials"],
             **overrides,
         }
     )
@@ -365,7 +409,7 @@ def test_an_analysis_resource_without_a_run_is_an_error(packet_root):
     """Part 04 §4.1: an analysis resource must name its producing run."""
     _declare(packet_root)
     report = validate(open_packet(packet_root))
-    assert any(f.check == "provenance.no_processing_run" for f in report.findings)
+    assert any(f.check == "packet.resource.processing_run_id_required" for f in report.findings)
 
 
 def test_a_run_that_resolves_to_nothing_is_an_error(packet_root):
@@ -373,7 +417,13 @@ def test_a_run_that_resolves_to_nothing_is_an_error(packet_root):
     _declare(packet_root, processing_run_id="ghost")
     report = validate(open_packet(packet_root))
     assert any(
-        f.check in {"provenance.unknown_processing_run", "provenance.no_processing_runs_table"} for f in report.findings
+        f.check
+        in {
+            "packet.resource.processing_runs_missing",
+            "provenance.unknown_processing_run",
+            "provenance.no_processing_runs_table",
+        }
+        for f in report.findings
     )
 
 
@@ -451,10 +501,144 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
     store.mkdir(parents=True)
     (store / "zarr.json").write_text(json.dumps(document or _zarr_v3()))
 
+    registry_path = root / "schemas" / "logical_schemas.json"
+    registry = json.loads(registry_path.read_text())
+    common = {
+        "content_class": "core",
+        "requires": [],
+        "lineage": "optional",
+        "producing_run": "optional",
+    }
+    registry["resources"]["core.array_assets"] = {
+        **common,
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "table": {
+            "columns": [
+                {
+                    "name": "array_asset_id",
+                    "type": "int32",
+                    "presence": "required",
+                    "role": "identifier",
+                    "identity": "assigned",
+                    "description": "Array row identity.",
+                },
+                {
+                    "name": "array_asset_name",
+                    "type": "string",
+                    "presence": "optional",
+                    "role": "data",
+                    "vocabulary": "free",
+                    "description": "Source array label.",
+                },
+                {
+                    "name": "resource_id",
+                    "type": "string",
+                    "presence": "required",
+                    "role": "identifier",
+                    "identity": "carried",
+                    "vocabulary": "free",
+                    "description": "Packet resource identity.",
+                },
+                {
+                    "name": "metadata",
+                    "type": "json_string",
+                    "presence": "optional",
+                    "role": "data",
+                    "description": (
+                        "What the source stated about this row that the standard does not model, "
+                        "carried in the source's own vocabulary and read by no rule."
+                    ),
+                },
+            ],
+            "primary_key": ["array_asset_id"],
+            "references": [],
+            "rules": [],
+        },
+    }
+    registry["resources"]["core.array_dimensions"] = {
+        **common,
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "table": {
+            "columns": [
+                {
+                    "name": "array_asset_id",
+                    "type": "int32",
+                    "presence": "required",
+                    "role": "identifier",
+                    "identity": "assigned",
+                    "description": "Array row identity.",
+                },
+                {
+                    "name": "axis_index",
+                    "type": "int64",
+                    "presence": "required",
+                    "role": "structural_index",
+                    "description": "Zero-based axis index.",
+                },
+                {
+                    "name": "dimension_name",
+                    "type": "string",
+                    "presence": "required",
+                    "role": "data",
+                    "vocabulary": "free",
+                    "description": "Axis name.",
+                },
+                {
+                    "name": "coordinate_resource",
+                    "type": "string",
+                    "presence": "optional",
+                    "role": "data",
+                    "vocabulary": "free",
+                    "description": "Optional coordinate resource.",
+                },
+            ],
+            "primary_key": ["array_asset_id", "axis_index"],
+            "references": [
+                {
+                    "columns": ["array_asset_id"],
+                    "resource": "core.array_assets",
+                    "resource_columns": ["array_asset_id"],
+                }
+            ],
+            "rules": [],
+        },
+    }
+    registry["resources"]["core.array_asset_instances"] = {
+        **common,
+        "kind": "dense_array",
+        "instances": {
+            "mode": "catalog",
+            "catalog_resource": "core.array_assets",
+            "resource_id_column": "resource_id",
+        },
+        "array": {"axes_resource": "core.array_dimensions"},
+    }
+    registry_path.write_text(json.dumps(registry, indent=2))
+
+    assets = pa.table(
+        {
+            "array_asset_id": pa.array([1], type=pa.int32()),
+            "array_asset_name": pa.array(["wf"]),
+            "resource_id": pa.array(["core.waveform_mean"]),
+        }
+    )
+    pq.write_table(assets, root / "tables" / "core" / "array_assets.parquet")
+    manifest["resources"].append(
+        {
+            "resource_id": "core.array_assets",
+            "declaration_id": "core.array_assets",
+            "physical_profile": "parquet",
+            "uri": "tables/core/array_assets.parquet",
+            "validation_state": "passed",
+        }
+    )
+
     if axes is not None:
         dimensions = pa.table(
             {
-                "array_asset_id": pa.array(["wf"] * axes),
+                "array_asset_id": pa.array([1] * axes, type=pa.int32()),
                 "axis_index": pa.array(list(range(axes)), type=pa.int64()),
                 "dimension_name": pa.array(["unit", "channel", "sample"][:axes]),
             }
@@ -464,24 +648,18 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
         manifest["resources"].append(
             {
                 "resource_id": "core.array_dimensions",
-                "layer": "core",
-                "kind": "table",
-                "schema_id": "core.array_dimensions.v0.1",
+                "declaration_id": "core.array_dimensions",
                 "physical_profile": "parquet",
                 "uri": "tables/core/array_dimensions.parquet",
-                "canonical": True,
                 "validation_state": "passed",
             }
         )
 
     entry = {
         "resource_id": "core.waveform_mean",
-        "layer": "core",
-        "kind": "dense_array_asset",
+        "declaration_id": "core.array_asset_instances",
         "physical_profile": "zarr_v3",
         "uri": uri,
-        "array_asset_id": "wf",
-        "canonical": True,
         "validation_state": "passed",
         "codecs": declared,
     }
@@ -500,6 +678,18 @@ def _checks(report, prefix="array."):
 def test_an_array_declaring_its_codecs_correctly_is_clean(packet_root):
     _add_array(packet_root, declared=["sharding_indexed", "blosc"])
     assert _checks(validate(open_packet(packet_root))) == set()
+
+
+def test_a_catalog_row_requires_its_declared_resource(packet_root):
+    _add_array(packet_root, declared=["sharding_indexed", "blosc"])
+    path = packet_root / "packet.json"
+    manifest = json.loads(path.read_text())
+    manifest["resources"] = [
+        resource for resource in manifest["resources"] if resource["resource_id"] != "core.waveform_mean"
+    ]
+    path.write_text(json.dumps(manifest))
+    report = validate(open_packet(packet_root))
+    assert "packet.resource.catalog_binding" in {finding.check for finding in report.findings}
 
 
 def test_an_omitted_sharding_codec_is_caught(packet_root):
@@ -726,7 +916,10 @@ def test_recheck_narrows_the_rules_that_run(packet_root):
     """A packet that passes still passes, over fewer checks."""
     packet = open_packet(packet_root)
     registry = packet.registry
-    every = generate(registry, only=set(registry["tables"]))
+    every = generate(
+        registry,
+        only={name for name, declaration in registry["resources"].items() if declaration["kind"] == "table"},
+    )
     narrowed = [c for c in every if concerns(c, {"core.trials"})]
     assert 0 < len(narrowed) < len(every)
     assert validate(open_packet(packet_root), recheck={"core.trials"}).passed
@@ -763,19 +956,22 @@ def _external(root, **overrides):
     )
     (array / "0.0").write_bytes(b"x" * 100)
     total = sum(f.stat().st_size for f in array.rglob("*") if f.is_file())
+    _add_array(root, declared=["blosc"], axes=2, external=True)
     manifest = json.loads((root / "packet.json").read_text())
-    entry = {
-        "resource_id": "core.probe.lfp",
-        "layer": "core",
-        "kind": "dense_array_asset",
-        "physical_profile": "zarr_v2",
-        "uri": array.resolve().as_uri(),
-        "external": True,
-        "codecs": ["blosc"],
-        "size_bytes": total,
-        **overrides,
-    }
-    manifest["resources"].append({k: v for k, v in entry.items() if v is not None})
+    entry = next(resource for resource in manifest["resources"] if resource["resource_id"] == "core.waveform_mean")
+    entry.update(
+        {
+            "physical_profile": "zarr_v2",
+            "uri": array.resolve().as_uri(),
+            "external": True,
+            "codecs": ["blosc"],
+            "size_bytes": total,
+            **overrides,
+        }
+    )
+    for key, value in tuple(entry.items()):
+        if value is None:
+            entry.pop(key)
     manifest["required_codecs"] = sorted({c for r in manifest["resources"] for c in r.get("codecs", [])})
     (root / "packet.json").write_text(json.dumps(manifest))
     return root
@@ -1014,12 +1210,23 @@ def _coordinate_table(root, *, rows, keyed=True):
     manifest = json.loads((root / "packet.json").read_text())
     dimensions = pq.read_table(root / "tables" / "core" / "array_dimensions.parquet").to_pydict()
     dimensions["coordinate_resource"] = [None, "core.array_channels", None]
-    pq.write_table(pa.table(dimensions), root / "tables" / "core" / "array_dimensions.parquet")
+    pq.write_table(
+        pa.table(
+            {
+                "array_asset_id": pa.array(dimensions["array_asset_id"], type=pa.int32()),
+                "axis_index": pa.array(dimensions["axis_index"], type=pa.int64()),
+                "dimension_name": pa.array(dimensions["dimension_name"]),
+                "coordinate_resource": pa.array(dimensions["coordinate_resource"]),
+            }
+        ),
+        root / "tables" / "core" / "array_dimensions.parquet",
+    )
     columns = {"channel_label": pa.array([f"c{i}" for i in range(rows)])}
     if keyed:
         columns = {
-            "array_asset_id": pa.array(["wf"] * rows),
+            "array_asset_id": pa.array([1] * rows, type=pa.int32()),
             "axis_index": pa.array([1] * rows, type=pa.int64()),
+            "channel_index": pa.array(list(range(rows)), type=pa.int64()),
             **columns,
         }
     pq.write_table(pa.table(columns), root / "tables" / "core" / "array_channels.parquet")
@@ -1027,15 +1234,81 @@ def _coordinate_table(root, *, rows, keyed=True):
         manifest["resources"].append(
             {
                 "resource_id": "core.array_channels",
-                "layer": "core",
-                "kind": "table",
-                "schema_id": "core.array_channels.v0.1",
+                "declaration_id": "core.array_channels",
                 "physical_profile": "parquet",
                 "uri": "tables/core/array_channels.parquet",
-                "canonical": True,
                 "validation_state": "passed",
             }
         )
+        registry_path = root / "schemas" / "logical_schemas.json"
+        registry = json.loads(registry_path.read_text())
+        registry["resources"]["core.array_channels"] = {
+            "content_class": "core",
+            "kind": "table",
+            "instances": {"mode": "singleton", "presence": "optional"},
+            "requires": [],
+            "lineage": "optional",
+            "producing_run": "optional",
+            "table": {
+                "columns": [
+                    {
+                        "name": "array_asset_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                        "description": "Array row identity.",
+                    },
+                    {
+                        "name": "axis_index",
+                        "type": "int64",
+                        "presence": "required",
+                        "role": "structural_index",
+                        "description": "Axis index.",
+                    },
+                    {
+                        "name": "channel_label",
+                        "type": "string",
+                        "presence": "required",
+                        "role": "data",
+                        "vocabulary": "free",
+                        "description": "Channel label.",
+                    },
+                    {
+                        "name": "channel_index",
+                        "type": "int64",
+                        "presence": "required",
+                        "role": "structural_index",
+                        "description": "Channel index.",
+                    },
+                ]
+                if keyed
+                else [
+                    {
+                        "name": "channel_label",
+                        "type": "string",
+                        "presence": "required",
+                        "role": "data",
+                        "vocabulary": "free",
+                        "description": "Channel label.",
+                    }
+                ],
+                "primary_key": ["array_asset_id", "axis_index", "channel_index"] if keyed else None,
+                "references": (
+                    [
+                        {
+                            "columns": ["array_asset_id"],
+                            "resource": "core.array_assets",
+                            "resource_columns": ["array_asset_id"],
+                        }
+                    ]
+                    if keyed
+                    else []
+                ),
+                "rules": [],
+            },
+        }
+        registry_path.write_text(json.dumps(registry, indent=2))
         (root / "packet.json").write_text(json.dumps(manifest))
 
 
@@ -1098,46 +1371,57 @@ def test_a_packet_recording_no_owned_digest_says_so(packet_root):
 def _extension(root, *, tables=None, mutate=None):
     """Give the packet an extension registry and a table conforming to it."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
         "extension_id": "task",
-        "tables": {
+        "resources": {
             "task.trials": {
-                "columns": [
-                    {
-                        "name": "session_id",
-                        "type": "int32",
-                        "presence": "required",
-                        "role": "identifier",
-                        "identity": "assigned",
-                    },
-                    {
-                        "name": "trial_id",
-                        "type": "int32",
-                        "presence": "required",
-                        "role": "identifier",
-                        "identity": "assigned",
-                    },
-                    {
-                        "name": "choice",
-                        "type": "string",
-                        "presence": "nullable",
-                        "role": "data",
-                        "vocabulary": "closed",
-                        "enum": ["left", "right"],
-                    },
-                ],
-                "primary_key": ["session_id", "trial_id"],
-                "references": [
-                    {
-                        "columns": ["session_id", "trial_id"],
-                        "resource": "core.trials",
-                        "resource_columns": ["session_id", "trial_id"],
-                    }
-                ],
-                "rules": [],
+                "content_class": "extension",
+                "kind": "table",
+                "instances": {"mode": "singleton", "presence": "optional"},
+                "requires": [],
+                "lineage": "optional",
+                "producing_run": "optional",
+                "table": {
+                    "columns": [
+                        {
+                            "name": "session_id",
+                            "type": "int32",
+                            "presence": "required",
+                            "role": "identifier",
+                            "identity": "assigned",
+                            "description": "Session identity.",
+                        },
+                        {
+                            "name": "trial_id",
+                            "type": "int32",
+                            "presence": "required",
+                            "role": "identifier",
+                            "identity": "assigned",
+                            "description": "Trial identity.",
+                        },
+                        {
+                            "name": "choice",
+                            "type": "string",
+                            "presence": "nullable",
+                            "role": "data",
+                            "vocabulary": "closed",
+                            "enum": ["left", "right"],
+                            "description": "Choice.",
+                        },
+                    ],
+                    "primary_key": ["session_id", "trial_id"],
+                    "references": [
+                        {
+                            "columns": ["session_id", "trial_id"],
+                            "resource": "core.trials",
+                            "resource_columns": ["session_id", "trial_id"],
+                        }
+                    ],
+                    "rules": [],
+                },
             }
         },
     }
@@ -1159,13 +1443,9 @@ def _extension(root, *, tables=None, mutate=None):
     manifest["resources"].append(
         {
             "resource_id": "task.trials",
-            "layer": "extension",
-            "extension_id": "task",
-            "kind": "table",
-            "schema_id": "task.trials.v0.1",
+            "declaration_id": "task.trials",
             "physical_profile": "parquet",
             "uri": "tables/task/trials.parquet",
-            "canonical": True,
             "validation_state": "passed",
         }
     )
@@ -1237,16 +1517,19 @@ def _discriminated(role="discriminator", **extra):
     """A one-table registry whose `k_kind` discriminates `k` (Part 02 §8.3)."""
     column = {"name": "k_kind", "type": "string", "presence": "nullable", "role": role, **extra}
     return {
-        "tables": {
+        "resources": {
             "core.runs": {
-                "columns": [
-                    {"name": "run_id", "type": "int32", "presence": "required", "role": "identifier"},
-                    column,
-                    {"name": "k", "type": "string", "presence": "nullable", "role": "data"},
-                ],
-                "primary_key": ["run_id"],
-                "references": [],
-                "rules": [],
+                "kind": "table",
+                "table": {
+                    "columns": [
+                        {"name": "run_id", "type": "int32", "presence": "required", "role": "identifier"},
+                        column,
+                        {"name": "k", "type": "string", "presence": "nullable", "role": "data"},
+                    ],
+                    "primary_key": ["run_id"],
+                    "references": [],
+                    "rules": [],
+                },
             }
         }
     }
@@ -1312,12 +1595,12 @@ def test_a_kind_the_packet_does_not_declare_is_not_joined():
 
 def _reference(root, **overrides):
     """Append an external array entry to a packet's manifest and return the path."""
+    _add_family_declaration(root, "core.test_payloads")
     path = root / "packet.json"
     entry = json.loads(path.read_text())
     resource = {
-        "resource_id": "array.probe0",
-        "layer": "core",
-        "kind": "dense_array_asset",
+        "resource_id": "core.probe0",
+        "declaration_id": "core.test_payloads",
         "uri": "processing/ecephys/LFP/data",
         "external": True,
         "source": "raw_nwb",
@@ -1374,10 +1657,15 @@ def test_a_source_on_a_packet_owned_resource_is_refused(packet_root):
 
 def test_declaring_the_resolution_document_as_a_resource_is_refused(packet_root):
     """Part 04 §5.5: inside the manifest, immutability would freeze the file that must stay editable."""
+    _add_family_declaration(packet_root, "core.test_docs", content_class="documentation")
     path = packet_root / "packet.json"
     entry = json.loads(path.read_text())
     entry["resources"].append(
-        {"resource_id": "docs.sources", "layer": "docs", "kind": "document_asset", "uri": "sources.json"}
+        {
+            "resource_id": "core.sources_document",
+            "declaration_id": "core.test_docs",
+            "uri": "sources.json",
+        }
     )
     path.write_text(json.dumps(entry))
     report = validate(open_packet(packet_root))

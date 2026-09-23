@@ -10,14 +10,25 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REG_BYTES = (HERE / "logical_schemas.json").read_bytes()
 REG = json.loads(REG_BYTES)
-T = REG["tables"]
+
+
+def tables(document):
+    """Project table contracts from the authoritative resource declarations."""
+    return {
+        name: declaration["table"]
+        for name, declaration in document["resources"].items()
+        if declaration["kind"] == "table"
+    }
+
+
+T = tables(REG)
 # Part 09 §2: an extension is a registry document in R2's format, so the invariants that hold of a
 # registry hold of it. They are checked here for the same reason core's are -- a naming
 # convention or an unparseable rule is a property of the document, which no packet's rows can
 # show and no SQL can see (R12 §4).
 EXT_PATHS = {f.stem: f for f in sorted((HERE / "extensions").glob("*.json"))}
 EXT = {name: json.loads(path.read_bytes()) for name, path in EXT_PATHS.items()}
-EXT_T = {n: t for doc in EXT.values() for n, t in doc["tables"].items()}
+EXT_T = {n: t for doc in EXT.values() for n, t in tables(doc).items()}
 ALL = T | EXT_T
 
 fail = []
@@ -48,7 +59,10 @@ check("table set matches the Part 02 ledger", expected ^ set(T))
 # Part 02 §9.4 defines one complete result for core and extension registry documents. This
 # repository check consumes that result rather than maintaining another invariant subset.
 sys.path.insert(0, str(HERE))
-from escapewheel_validator.registry_document import CheckedRegistryContext, check_registry_context_bytes
+from escapewheel_validator.registry_document import (
+    CheckedRegistryContext,
+    check_registry_context_bytes,
+)
 
 
 def _registry_result(name, data, core: CheckedRegistryContext | None = None):
@@ -85,12 +99,12 @@ check(
     ],
 )
 check(
-    "registry meta-schema identity is 0.4.0",
-    [] if META_ID == "https://escapewheel.org/schemas/registry/0.4.0" else [META_ID],
+    "registry meta-schema identity is 0.5.0",
+    [] if META_ID == "https://escapewheel.org/schemas/registry/0.5.0" else [META_ID],
 )
 check(
-    "core registry version is 0.4.0",
-    [] if REG.get("registry_version") == "0.4.0" else [REG.get("registry_version")],
+    "core registry version is 0.5.0",
+    [] if REG.get("registry_version") == "0.5.0" else [REG.get("registry_version")],
 )
 check(
     "every shipped registry selects the incorporated rule language",
@@ -259,6 +273,9 @@ INTEGERS = {"int32", "int64"}
 #: inferred: a baseline absorbing whatever exists today would have absorbed `step_ticks` too.
 #: Removing a column here without renaming it fails the run, which is the point.
 NAMING_EXCEPTIONS = {
+    "core.array_assets.resource_id": "R128 §3.6 packet identity is a carried string before row numbering",
+    "analysis.array_assets.resource_id": "as core.array_assets.resource_id",
+    "core.media_assets.resource_id": "as core.array_assets.resource_id",
     "core.array_assets.offset": "NWB-standard name; the reserved word is handled by unconditional quoting (R50 §4)",
     "analysis.array_assets.offset": "as core.array_assets.offset",
     "core.array_channels.offset": "as core.array_assets.offset, per channel (R19 §2)",
@@ -496,15 +513,15 @@ try:
         ),
         (
             "table since",
-            lambda document: next(iter(document["tables"].values())).update(
+            lambda document: next(iter(tables(document).values())).update(
                 {"since": "R1"}
             ),
         ),
         (
             "column since",
-            lambda document: next(iter(document["tables"].values()))["columns"][
-                0
-            ].update({"since": "R1"}),
+            lambda document: next(iter(tables(document).values()))["columns"][0].update(
+                {"since": "R1"}
+            ),
         ),
     ):
         _case = json.loads(json.dumps(REG))
@@ -524,7 +541,7 @@ try:
     jsonschema.Draft202012Validator.check_schema(_contract_schema)
     _contract = json.loads(
         (
-            HERE / "registry_contracts/escapewheel-registry-contract-v0.1.json"
+            HERE / "registry_contracts/escapewheel-registry-contract-v0.2.json"
         ).read_text()
     )
     _contract_errors = list(
@@ -665,7 +682,7 @@ try:
         con.sql(f"CREATE TABLE {n} ({cols})")
     broken = []
     for document in [REG, *EXT.values()]:
-        for t_ in document["tables"].values():
+        for t_ in tables(document).values():
             for r in t_["rules"]:
                 try:
                     check_rule(r["sql"], document, core_resources=REG)

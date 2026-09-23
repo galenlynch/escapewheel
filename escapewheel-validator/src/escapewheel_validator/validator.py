@@ -57,6 +57,236 @@ ARROW_TYPES = {
 }
 
 
+def _tables(registry: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    """Project the table contracts from registry resource declarations."""
+    return {
+        str(name): declaration["table"]
+        for name, declaration in registry.get("resources", {}).items()
+        if declaration.get("kind") == "table" and "table" in declaration
+    }
+
+
+def _declarations(
+    core: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
+) -> dict[str, Mapping[str, Any]]:
+    """Combine the visible declarations without creating another serialized authority."""
+    visible = dict(core.get("resources", {}))
+    for document in extensions:
+        visible.update(document.get("resources", {}))
+    return visible
+
+
+def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact validation phase
+    packet: Packet,
+    core: Mapping[str, Any],
+    extensions: Sequence[Mapping[str, Any]],
+    report: Report,
+) -> None:
+    """Check packet-to-declaration binding before kind-specific validation."""
+    visible = _declarations(core, extensions)
+    entries = list(packet.resources())
+    by_id = {entry.resource_id: entry for entry in entries}
+    if len(by_id) != len(entries):
+        counts = Counter(entry.resource_id for entry in entries)
+        report.add(
+            "error",
+            "packet.resource.id_unique",
+            "packet resource IDs must be unique",
+            [(name,) for name, count in counts.items() if count > 1],
+        )
+
+    for entry in entries:
+        declaration = visible.get(entry.declaration_id)
+        if declaration is None:
+            report.add(
+                "error",
+                "packet.resource.declaration_unknown",
+                f"{entry.resource_id}: declaration {entry.declaration_id!r} is not visible",
+            )
+            continue
+        instances = declaration["instances"]
+        mode = instances["mode"]
+        if mode == "singleton" and entry.resource_id != entry.declaration_id:
+            report.add(
+                "error",
+                "packet.resource.singleton_identity",
+                f"{entry.resource_id}: singleton identity must equal {entry.declaration_id}",
+            )
+        if mode == "family" and entry.resource_id.split(".", 1)[0] != entry.declaration_id.split(".", 1)[0]:
+            report.add(
+                "error",
+                "packet.resource.family_namespace",
+                f"{entry.resource_id}: family identity is outside {entry.declaration_id}'s namespace",
+            )
+        for dependency in declaration["requires"]:
+            if dependency not in by_id:
+                report.add(
+                    "error",
+                    "packet.resource.dependency_missing",
+                    f"{entry.resource_id}: required singleton {dependency} is absent",
+                )
+        if declaration["kind"] == "dense_array":
+            axes = declaration["array"]["axes_resource"]
+            if axes not in by_id:
+                report.add(
+                    "error",
+                    "packet.resource.array_axes_missing",
+                    f"{entry.resource_id}: declaration-selected axes resource {axes} is absent",
+                )
+
+        for policy, field_name in (
+            (declaration["lineage"], "derived_from"),
+            (declaration["producing_run"], "processing_run_id"),
+        ):
+            present = field_name in entry.entry
+            if policy == "required" and not present:
+                report.add(
+                    "error",
+                    f"packet.resource.{field_name}_required",
+                    f"{entry.resource_id}: {field_name} is required by {entry.declaration_id}",
+                )
+            elif policy == "forbidden" and present:
+                report.add(
+                    "error",
+                    f"packet.resource.{field_name}_forbidden",
+                    f"{entry.resource_id}: {field_name} is forbidden by {entry.declaration_id}",
+                )
+        lineage = entry.entry.get("derived_from")
+        if lineage is not None and (
+            not isinstance(lineage, list) or not lineage or len(lineage) != len(set(map(str, lineage)))
+        ):
+            report.add(
+                "error",
+                "packet.resource.lineage_shape",
+                f"{entry.resource_id}: derived_from must be a nonempty array of distinct resource IDs",
+            )
+        if "processing_run_id" in entry.entry and "core.processing_runs" not in by_id:
+            report.add(
+                "error",
+                "packet.resource.processing_runs_missing",
+                f"{entry.resource_id}: processing_run_id requires core.processing_runs",
+            )
+
+    active_extension_ids = set(packet.manifest.extensions)
+    for declaration_id, declaration in visible.items():
+        instances = declaration["instances"]
+        active = declaration_id.split(".", 1)[0] in {"core", "analysis"} | active_extension_ids
+        if (
+            active
+            and instances["mode"] == "singleton"
+            and instances["presence"] == "required"
+            and declaration_id not in by_id
+        ):
+            report.add(
+                "error",
+                "packet.resource.required_missing",
+                f"required singleton {declaration_id} is absent",
+            )
+
+    for declaration_id, declaration in visible.items():
+        if declaration["kind"] != "table" or declaration_id not in by_id:
+            continue
+        for reference in declaration["table"]["references"]:
+            target = str(reference["resource"])
+            if target in by_id:
+                continue
+            columns = list(reference["columns"])
+            try:
+                table = packet.table(declaration_id, columns=columns)
+            except (PacketError, OSError, pa.ArrowException):
+                continue
+            values = zip(
+                *(table.column(column).to_pylist() for column in columns),
+                strict=True,
+            )
+            if any(all(value is not None for value in row) for row in values):
+                report.add(
+                    "error",
+                    "packet.resource.reference_target_missing",
+                    f"{declaration_id}: populated foreign key {columns} requires {target}",
+                )
+
+    catalog_families = {
+        (declaration["instances"]["catalog_resource"], declaration["instances"]["resource_id_column"]): (
+            declaration_id,
+            declaration,
+        )
+        for declaration_id, declaration in visible.items()
+        if declaration["instances"]["mode"] == "catalog"
+    }
+    for (catalog_id, column), (declaration_id, _) in catalog_families.items():
+        if catalog_id not in by_id:
+            continue
+        try:
+            values = packet.table(catalog_id, columns=[column]).column(column).to_pylist()
+        except (PacketError, OSError, pa.ArrowException) as exc:
+            report.add(
+                "error",
+                "packet.resource.catalog_unreadable",
+                f"{catalog_id}.{column}: {exc}",
+            )
+            continue
+        normalized = [str(value) for value in values if value is not None]
+        counts = Counter(normalized)
+        for value, count in counts.items():
+            matches = [
+                entry for entry in entries if entry.resource_id == value and entry.declaration_id == declaration_id
+            ]
+            if count != 1 or len(matches) != 1:
+                report.add(
+                    "error",
+                    "packet.resource.catalog_binding",
+                    f"{catalog_id}.{column}={value!r} does not bind one {declaration_id} resource",
+                )
+        catalog_values = set(normalized)
+        for entry in entries:
+            if entry.declaration_id == declaration_id and entry.resource_id not in catalog_values:
+                report.add(
+                    "error",
+                    "packet.resource.catalog_binding",
+                    f"{entry.resource_id}: no row in {catalog_id}.{column}",
+                )
+
+    permitted = {
+        "core": {"core"},
+        "extension": {"core", "extension"},
+        "analysis": {"core", "extension", "analysis"},
+        "compatibility_projection": {"core", "extension", "analysis"},
+        "documentation": set(),
+    }
+    graph: dict[str, set[str]] = {}
+    for entry in entries:
+        declaration = visible.get(entry.declaration_id)
+        sources = entry.entry.get("derived_from", [])
+        if declaration is None or not isinstance(sources, list):
+            continue
+        graph[entry.resource_id] = set(map(str, sources))
+        for source in sources:
+            source_entry = by_id.get(str(source))
+            source_declaration = None if source_entry is None else visible.get(source_entry.declaration_id)
+            if source_declaration is None:
+                report.add(
+                    "error",
+                    "packet.resource.lineage_unresolved",
+                    f"{entry.resource_id}: lineage source {source!r} is absent or undeclared",
+                )
+            elif source_declaration["content_class"] not in permitted[declaration["content_class"]]:
+                report.add(
+                    "error",
+                    "packet.resource.lineage_class",
+                    f"{entry.resource_id}: {declaration['content_class']} may not derive from "
+                    f"{source_declaration['content_class']}",
+                )
+
+    def cyclic(node: str, path: frozenset[str]) -> bool:
+        return node in path or any(cyclic(child, path | {node}) for child in graph.get(node, ()) if child in graph)
+
+    for node in graph:
+        if cyclic(node, frozenset()):
+            report.add("error", "packet.resource.lineage_cycle", f"lineage cycle reaches {node}")
+            break
+
+
 @dataclass(frozen=True)
 class Finding:
     """One validation finding.
@@ -454,22 +684,14 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             f"{resource.resource_id} declares no fill_value, which Part 03 §6.1 requires",
         )
 
-    asset = resource.entry.get("array_asset_id")
-    if asset is None:
-        report.add(
-            "error",
-            "array.no_array_asset_id",
-            f"{resource.resource_id} names no array_asset_id, so core.array_dimensions cannot reach it",
-        )
-        return
-    if not (declared := extents.get(str(asset), {})):
+    if not (declared := extents.get(resource.resource_id, {})):
         return
     if set(declared) != set(range(rank)):
         report.add(
             "error",
             "array.rank_disagrees_with_dimensions",
-            f"{resource.resource_id} has rank {rank} but core.array_dimensions gives axis_index "
-            f"{sorted(declared) or 'none'} for {asset!r}; Part 03 §6.2 requires one row per stored axis",
+            f"{resource.resource_id} has rank {rank} but its declaration-selected axes resource "
+            f"gives axis_index {sorted(declared) or 'none'}; Part 03 §6.2 requires one row per stored axis",
         )
         return
     # An axis whose coordinates are a table has one row per position, so that count is its length.
@@ -503,7 +725,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     """
     # A resource naming a source is not packet-owned whatever `external` says, and `_check_sources`
     # has already reported the contradiction; resolving it here would raise instead of report.
-    owned = [r for r in packet.resources(kind="dense_array_asset") if not r.is_external and r.source is None]
+    owned = [r for r in packet.resources(kind="dense_array") if not r.is_external and r.source is None]
     if not owned:
         return
     extents = _declared_extents(packet)
@@ -511,7 +733,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         report.add(
             "error",
             "array.no_array_dimensions_table",
-            f"{len(owned)} packet-owned array(s) but no core.array_dimensions, so no axis is named (Part 02 §6)",
+            f"{len(owned)} packet-owned array(s) but no declaration-selected axes rows were resolved",
         )
     for resource in owned:
         _check_one_array(resource, packet.array_resource(resource.resource_id), extents, report)
@@ -722,7 +944,7 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False, s
     compared: Counter[str] = Counter()
     unchecksummed: list[str] = []
     # Only read core.array_dimensions where an external array would use it.
-    external_arrays = [r for r in packet.resources(kind="dense_array_asset") if r.is_external]
+    external_arrays = [r for r in packet.resources(kind="dense_array") if r.is_external]
     extents = _declared_extents(packet) if external_arrays else {}
     for resource in packet.resources():
         if not resource.is_external:
@@ -903,66 +1125,100 @@ def _stored_codecs(uri: str, found: Any) -> set[str] | None:
     return names
 
 
-def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:
-    """Per array asset, the axes `core.array_dimensions` names and the length each implies.
+def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:  # noqa: C901
+    """Resolve each dense array's axes through its declaration and catalog row."""
+    declarations: dict[str, Mapping[str, Any]] = {}
+    for document in (packet.registry, *packet.extensions().values()):
+        if isinstance(document, Mapping):
+            declarations.update(document.get("resources", {}))
 
-    An axis whose coordinates are a rule -- R20's origin and step -- fixes spacing and not
-    extent, so its length is None and only its presence is checkable. An axis whose coordinates
-    are a table has one row per position, so that table's row count for the asset and axis *is*
-    the axis length. This is the shape a packet asserts without ever storing a shape (Part 02 §6:
-    the array declares its own, and the tables must not restate it).
-    """
-    # Read only what is there. A column the registry requires and a packet omits is the schema
-    # layer's finding to report; crashing here would replace that finding with a traceback.
-    try:
-        names = set(packet.table_resource("core.array_dimensions").schema().names)
-        wanted_columns: list[str] = [c for c in ("array_asset_id", "axis_index", "coordinate_resource") if c in names]
-        if not {"array_asset_id", "axis_index"} <= set(wanted_columns):
-            return {}
-        rows = packet.table("core.array_dimensions", columns=wanted_columns)
-    except PacketError:
-        return {}
-    coordinates_named = (
-        rows.column("coordinate_resource").to_pylist()
-        if "coordinate_resource" in wanted_columns
-        else [None] * rows.num_rows
-    )
     extents: dict[str, dict[int, int | None]] = {}
-    wanted: dict[str, list[tuple[str, int]]] = {}
-    for asset, axis, coordinate in zip(
-        rows.column("array_asset_id").to_pylist(),
-        rows.column("axis_index").to_pylist(),
-        coordinates_named,
-        strict=True,
-    ):
-        if asset is None or axis is None:
+    for resource in packet.resources(kind="dense_array"):
+        declaration = declarations.get(resource.declaration_id)
+        if declaration is None:
             continue
-        extents.setdefault(str(asset), {})[int(axis)] = None
-        if coordinate:
-            wanted.setdefault(str(coordinate), []).append((str(asset), int(axis)))
-    for resource_id, pairs in wanted.items():
-        # Only a coordinate table keyed by (array_asset_id, axis_index) has one row per position
-        # of one axis, which is what makes its row count that axis's length. `core.unit_electrodes`
-        # is a coordinate resource and is not keyed that way -- a unit's electrodes are a subset,
-        # not an enumeration of the axis -- so it says nothing about extent and is skipped.
+        instances = declaration["instances"]
+        catalog_id = str(instances["catalog_resource"])
+        resource_column = str(instances["resource_id_column"])
+        axes_id = str(declaration["array"]["axes_resource"])
+        catalog_declaration = declarations.get(catalog_id)
+        axes_declaration = declarations.get(axes_id)
+        if catalog_declaration is None or axes_declaration is None:
+            continue
+        catalog_table = catalog_declaration["table"]
+        axes_table = axes_declaration["table"]
+        catalog_key = list(catalog_table["primary_key"] or [])
+        binding = next(
+            (
+                reference
+                for reference in axes_table["references"]
+                if reference["resource"] == catalog_id and reference["resource_columns"] == catalog_key
+            ),
+            None,
+        )
+        if binding is None:
+            continue
         try:
-            names = set(packet.table_resource(resource_id).schema().names)
-        except PacketError:
+            catalog_rows = packet.table(catalog_id, columns=[resource_column, *catalog_key])
+            axes_names = set(packet.table_resource(axes_id).schema().names)
+            axes_columns = [*binding["columns"], "axis_index"]
+            if "coordinate_resource" in axes_names:
+                axes_columns.append("coordinate_resource")
+            axes_rows = packet.table(axes_id, columns=axes_columns)
+        except (PacketError, OSError, pa.ArrowException):
             continue
-        if not {"array_asset_id", "axis_index"} <= names:
+        key_by_resource = {
+            str(values[0]): tuple(values[1:])
+            for values in zip(
+                catalog_rows.column(resource_column).to_pylist(),
+                *(catalog_rows.column(name).to_pylist() for name in catalog_key),
+                strict=True,
+            )
+            if values[0] is not None
+        }
+        wanted_key = key_by_resource.get(resource.resource_id)
+        if wanted_key is None:
             continue
-        coordinates = packet.table(resource_id, columns=["array_asset_id", "axis_index"])
-        counts: dict[tuple[str, int], int] = {}
-        for asset, axis in zip(
-            coordinates.column("array_asset_id").to_pylist(),
-            coordinates.column("axis_index").to_pylist(),
+        coordinates = (
+            axes_rows.column("coordinate_resource").to_pylist()
+            if "coordinate_resource" in axes_rows.column_names
+            else [None] * axes_rows.num_rows
+        )
+        wanted_coordinates: list[tuple[str, int]] = []
+        for values, coordinate in zip(
+            zip(
+                *(axes_rows.column(name).to_pylist() for name in binding["columns"]),
+                axes_rows.column("axis_index").to_pylist(),
+                strict=True,
+            ),
+            coordinates,
             strict=True,
         ):
-            if asset is not None and axis is not None:
-                counts[(str(asset), int(axis))] = counts.get((str(asset), int(axis)), 0) + 1
-        for pair in pairs:
-            if pair in counts:
-                extents[pair[0]][pair[1]] = counts[pair]
+            if tuple(values[:-1]) == wanted_key and values[-1] is not None:
+                axis = int(values[-1])
+                extents.setdefault(resource.resource_id, {})[axis] = None
+                if coordinate:
+                    wanted_coordinates.append((str(coordinate), axis))
+        for coordinate_id, axis in wanted_coordinates:
+            try:
+                coordinate_names = set(packet.table_resource(coordinate_id).schema().names)
+            except PacketError:
+                continue
+            needed = [*binding["columns"], "axis_index"]
+            if not set(needed) <= coordinate_names:
+                continue
+            coordinate_rows = packet.table(coordinate_id, columns=needed)
+            count = sum(
+                1
+                for values in zip(
+                    *(coordinate_rows.column(name).to_pylist() for name in binding["columns"]),
+                    coordinate_rows.column("axis_index").to_pylist(),
+                    strict=True,
+                )
+                if tuple(values[:-1]) == wanted_key and values[-1] == axis
+            )
+            if count:
+                extents[resource.resource_id][axis] = count
     return extents
 
 
@@ -977,8 +1233,7 @@ def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, An
 
     Free: the metadata document is read for codecs anyway, and both go through one request.
     """
-    asset = resource.entry.get("array_asset_id")
-    if asset is None or not (declared := extents.get(str(asset))):
+    if not (declared := extents.get(resource.resource_id)):
         return []
     metadata = _stored_metadata(uri, found)
     if metadata is None or not isinstance(shape := metadata.get("shape"), list):
@@ -987,8 +1242,8 @@ def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, An
         report.add(
             "error",
             "external.array_rank",
-            f"{resource.resource_id} is stored with rank {len(shape)} but core.array_dimensions "
-            f"gives axis_index {sorted(declared)} for {asset!r}; Part 03 §6.2 requires one row per stored axis",
+            f"{resource.resource_id} is stored with rank {len(shape)} but its declaration-selected "
+            f"axes resource gives axis_index {sorted(declared)}; Part 03 §6.2 requires one row per stored axis",
         )
         return ["rank"]
     offending = [
@@ -1640,13 +1895,11 @@ def _run_rules(
 
 def _install_rule_relations(packet: Packet, connection: Any, documents: Sequence[Mapping[str, Any]]) -> set[str]:
     """Install exact qualified packet relations and typed empties for absent resources."""
-    declared = {
-        resource.resource_id for resource in packet.resources() if resource.kind in {"table", "materialized_table"}
-    }
+    declared = {resource.resource_id for resource in packet.resources() if resource.kind == "table"}
     unreadable: set[str] = set()
     installed: set[str] = set()
     for document in documents:
-        for resource_id, spec in document.get("tables", {}).items():
+        for resource_id, spec in _tables(document).items():
             if resource_id in installed:
                 continue
             installed.add(resource_id)
@@ -1681,7 +1934,7 @@ def _tier2_checks(
         return []
     checked: list[Check] = []
     invalid = False
-    for resource, table in document.get("tables", {}).items():
+    for resource, table in _tables(document).items():
         for rule in table.get("rules", []):
             if rule.get("advisory") and not advisory:
                 continue
@@ -1811,13 +2064,13 @@ def _declared_kinds(
     lets a kind name an extension table and Part 02 §8.3 makes that the case the check must reach --
     the one whose hand-written union over core matched no branch and passed in silence.
     """
-    tables = dict(registry["tables"])
+    tables = dict(_tables(registry))
     # Core's absent tables get empty stand-ins in _layer4, so all of them can be joined. An
     # extension's do not, so only what the packet carries can appear in the union.
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
     for document in extensions:
-        if isinstance(document.get("tables"), Mapping):
-            tables.update({n: t for n, t in document["tables"].items() if n in carried})
+        if isinstance(_tables(document), Mapping):
+            tables.update({n: t for n, t in _tables(document).items() if n in carried})
     # Every declarable resource, whether or not a *paired* value could name it. Part 02 §8.3's
     # single-column-key rule governs the paired shape alone; R54's shared-key discriminator
     # names tables whose key is composite by construction, and dropping them here made a
@@ -1834,11 +2087,11 @@ def _specialisations(
     (Part 02 §8.3). Anything else a discriminator could name is a resource that could not carry
     the key, so generating Part 02 §8.3's reverse check for it would be checking the impossible.
     """
-    tables = dict(registry["tables"])
+    tables = dict(_tables(registry))
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
     for document in extensions:
-        if isinstance(document.get("tables"), Mapping):
-            tables.update({n: t for n, t in document["tables"].items() if n in carried})
+        if isinstance(_tables(document), Mapping):
+            tables.update({n: t for n, t in _tables(document).items() if n in carried})
     found: dict[str, list[tuple[str, dict[str, str]]]] = {}
     for name, spec in tables.items():
         for reference in spec.get("references", []):
@@ -1883,7 +2136,7 @@ def _check_extensions(
             continue
         document = extension_context.document
         assert isinstance(document, Mapping)
-        declared = set(document["tables"])
+        declared = set(_tables(document))
         # What the *packet* declares, not what the core registry knows: an extension's tables are
         # by definition absent from core's, and `present` is built from core's.
         carried = declared & {r.resource_id for r in packet.resources(kind="table")}
@@ -1899,7 +2152,7 @@ def _check_extensions(
             extension_context,
             only=carried,
             advisory=advisory,
-            resolvable=set(registry["tables"]),
+            resolvable=set(_tables(registry)),
             kinds=kinds,
             declared=False,
         )
@@ -2052,6 +2305,15 @@ def validate(
         _check_embedded_registry(packet, embedded_context.document, report)
     extension_contexts = _available_extension_contexts(packet, effective_context, report)
     _check_sources(packet, report)
+    if effective_context.result.state != "valid" or not isinstance(effective, Mapping):
+        return report
+    valid_extensions = [
+        context.document
+        for context in extension_contexts.values()
+        if context.result.state == "valid" and isinstance(context.document, Mapping)
+    ]
+    packet = packet.with_declarations(effective, *valid_extensions)
+    _check_resource_declarations(packet, effective, valid_extensions, report)
     _check_codec_declarations(packet, report, resolved=external)
     if external:
         _resolve_external(packet, report, checksums, store_digests)
@@ -2060,13 +2322,11 @@ def validate(
     _check_packet_owned_arrays(packet, report)
     _check_materialization_provenance(packet, report)
     _check_time_origin(packet, report)
-    if effective_context.result.state != "valid" or not isinstance(effective, Mapping):
-        return report
-    present = _check_schemas(packet, effective["tables"], report)
-    unsound = _check_ordering(effective["tables"], present, report, scan)
-    _check_duplication(present, effective["tables"], report)
-    _check_unfilled_metadata(present, effective["tables"], report)
-    _check_reserved_values(present, effective["tables"], report)
+    present = _check_schemas(packet, _tables(effective), report)
+    unsound = _check_ordering(_tables(effective), present, report, scan)
+    _check_duplication(present, _tables(effective), report)
+    _check_unfilled_metadata(present, _tables(effective), report)
+    _check_reserved_values(present, _tables(effective), report)
     _run_rules(
         packet,
         effective_context,

@@ -11,53 +11,65 @@ from escapewheel_validator import RegistryRejected, validate
 from escapewheel_writer import PacketWriter
 
 EXTENSION = {
-    "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
+    "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
     "registry_version": "0.1.0",
     "logical_standard_version": "escapewheel-logical-v0.1",
     "rule_language": "escapewheel-rule-sql-v0.1",
     "extension_id": "task",
-    "tables": {
+    "resources": {
         "task.trials": {
-            "columns": [
-                {
-                    "name": "session_id",
-                    "type": "int32",
-                    "presence": "required",
-                    "role": "identifier",
-                    "identity": "assigned",
-                },
-                {
-                    "name": "interval_kind",
-                    "type": "string",
-                    "presence": "required",
-                    "role": "discriminator",
-                    "resolves": "required",
-                },
-                {
-                    "name": "trial_id",
-                    "type": "int32",
-                    "presence": "required",
-                    "role": "identifier",
-                    "identity": "carried",
-                },
-                {
-                    "name": "choice",
-                    "type": "string",
-                    "presence": "nullable",
-                    "role": "data",
-                    "vocabulary": "closed",
-                    "enum": ["left", "right"],
-                },
-            ],
-            "primary_key": ["session_id", "trial_id"],
-            "references": [
-                {
-                    "columns": ["session_id", "interval_kind", "trial_id"],
-                    "resource": "core.intervals",
-                    "resource_columns": ["session_id", "interval_kind", "interval_id"],
-                }
-            ],
-            "rules": [],
+            "content_class": "extension",
+            "kind": "table",
+            "instances": {"mode": "singleton", "presence": "optional"},
+            "requires": [],
+            "lineage": "optional",
+            "producing_run": "optional",
+            "table": {
+                "columns": [
+                    {
+                        "name": "session_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                        "description": "Session identity.",
+                    },
+                    {
+                        "name": "interval_kind",
+                        "type": "string",
+                        "presence": "required",
+                        "role": "discriminator",
+                        "resolves": "required",
+                        "description": "Interval kind declaration.",
+                    },
+                    {
+                        "name": "trial_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "carried",
+                        "description": "Source trial identity.",
+                    },
+                    {
+                        "name": "choice",
+                        "type": "string",
+                        "presence": "nullable",
+                        "role": "data",
+                        "vocabulary": "closed",
+                        "enum": ["left", "right"],
+                        "description": "Choice.",
+                    },
+                ],
+                "primary_key": ["session_id", "trial_id"],
+                "references": [
+                    {
+                        "columns": ["session_id", "interval_kind", "trial_id"],
+                        "resource": "core.intervals",
+                        "resource_columns": ["session_id", "interval_kind", "interval_id"],
+                    }
+                ],
+                "rules": [],
+            },
         }
     },
 }
@@ -119,14 +131,14 @@ def test_the_packet_declares_the_extension_and_carries_its_registry(tmp_path, re
     assert open_packet(root).extensions()["task"]["extension_id"] == "task"
 
 
-def test_the_entry_says_which_extension_owns_it(tmp_path, registry, minimal):
-    """Part 05 §5.4: a reader knows what it holds without parsing the extension's registry."""
+def test_the_entry_binds_the_extension_declaration(tmp_path, registry, minimal):
+    """The declaration binding selects the sole owning extension registry."""
     root = tmp_path / "s001"
     _commit(root, registry, minimal)
     entry = next(
         r for r in json.loads((root / "packet.json").read_text())["resources"] if r["resource_id"] == "task.trials"
     )
-    assert (entry["layer"], entry["extension_id"]) == ("extension", "task")
+    assert entry["declaration_id"] == "task.trials"
 
 
 def test_the_extension_is_validated_and_reported_apart(tmp_path, registry, minimal):
@@ -139,14 +151,14 @@ def test_the_extension_is_validated_and_reported_apart(tmp_path, registry, minim
 
 
 def test_a_core_table_cannot_be_redefined(registry):
-    stray = {**EXTENSION, "tables": {"core.intervals": EXTENSION["tables"]["task.trials"]}}
+    stray = {**EXTENSION, "resources": {"core.intervals": EXTENSION["resources"]["task.trials"]}}
     with pytest.raises(RegistryRejected) as caught:
         PacketWriter(registry, packet_id="s001", extensions=[stray])
     assert caught.value.result.state == "invalid"
 
 
 def test_an_unnamespaced_table_is_refused(registry):
-    stray = {**EXTENSION, "tables": {"elsewhere.trials": EXTENSION["tables"]["task.trials"]}}
+    stray = {**EXTENSION, "resources": {"elsewhere.trials": EXTENSION["resources"]["task.trials"]}}
     with pytest.raises(RegistryRejected) as caught:
         PacketWriter(registry, packet_id="s001", extensions=[stray])
     assert caught.value.result.state == "invalid"
@@ -245,7 +257,7 @@ def test_a_draft_reads_what_the_data_shows(tmp_path):
     from escapewheel_writer.scaffold import draft
 
     drafted = draft("vrf", {"sites": _sites(tmp_path)})
-    columns = {c["name"]: c for c in drafted.document["tables"]["vrf.sites"]["columns"]}
+    columns = {c["name"]: c for c in drafted.document["resources"]["vrf.sites"]["table"]["columns"]}
     assert columns["site_id"]["type"] == "int32"
     assert columns["start_tick"]["type"] == "int64"
     # Presence is read off this data and only true of it, which is why it is reported.
@@ -284,7 +296,7 @@ def test_the_namespace_is_the_extension_id(tmp_path):
     from escapewheel_writer.scaffold import draft
 
     drafted = draft("vrf", {"sites": _sites(tmp_path), "patches": _sites(tmp_path)})
-    assert set(drafted.document["tables"]) == {"vrf.sites", "vrf.patches"}
+    assert set(drafted.document["resources"]) == {"vrf.sites", "vrf.patches"}
 
 
 # -- an extension may arrive from an installed distribution ---------------------------------
@@ -335,7 +347,7 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
     def named(extension_id, table):
         document = json.loads(json.dumps(EXTENSION))
         document["extension_id"] = extension_id
-        document["tables"] = {f"{extension_id}.{table}": document["tables"]["task.trials"]}
+        document["resources"] = {f"{extension_id}.{table}": document["resources"]["task.trials"]}
         return document
 
     writer = PacketWriter(
@@ -383,50 +395,60 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
 
 def _vrf_registry():
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
         "extension_id": "vrf",
-        "tables": {
+        "resources": {
             "vrf.sites": {
-                "columns": [
-                    {
-                        "name": "session_id",
-                        "type": "int32",
-                        "presence": "required",
-                        "role": "identifier",
-                        "identity": "assigned",
-                    },
-                    {
-                        "name": "site_id",
-                        "type": "int32",
-                        "presence": "required",
-                        "role": "identifier",
-                        "identity": "carried",
-                    },
-                    {
-                        "name": "odor",
-                        "type": "string",
-                        "presence": "nullable",
-                        "role": "data",
-                        "vocabulary": "open",
-                        "description": "Odor label reported by the source.",
-                    },
-                    {
-                        "name": "metadata",
-                        "type": "json_string",
-                        "presence": "optional",
-                        "role": "data",
-                        "description": "What the source stated about this row that the standard does not model, "
-                        "carried in the source's own vocabulary and read by no rule.",
-                    },
-                ],
-                "primary_key": ["session_id", "site_id"],
-                "references": [
-                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
-                ],
-                "rules": [],
+                "content_class": "extension",
+                "kind": "table",
+                "instances": {"mode": "singleton", "presence": "optional"},
+                "requires": [],
+                "lineage": "optional",
+                "producing_run": "optional",
+                "table": {
+                    "columns": [
+                        {
+                            "name": "session_id",
+                            "type": "int32",
+                            "presence": "required",
+                            "role": "identifier",
+                            "identity": "assigned",
+                            "description": "Session identity.",
+                        },
+                        {
+                            "name": "site_id",
+                            "type": "int32",
+                            "presence": "required",
+                            "role": "identifier",
+                            "identity": "carried",
+                            "description": "Source site identity.",
+                        },
+                        {
+                            "name": "odor",
+                            "type": "string",
+                            "presence": "nullable",
+                            "role": "data",
+                            "vocabulary": "open",
+                            "description": "Odor label reported by the source.",
+                        },
+                        {
+                            "name": "metadata",
+                            "type": "json_string",
+                            "presence": "optional",
+                            "role": "data",
+                            "description": "What the source stated about this row that the standard does not model, "
+                            "carried in the source's own vocabulary and read by no rule.",
+                        },
+                    ],
+                    "primary_key": ["session_id", "site_id"],
+                    "references": [
+                        {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
+                    ],
+                    "rules": [],
+                },
             }
         },
     }
@@ -570,7 +592,9 @@ def test_the_check_command_refuses_a_document_with_a_dangling_reference(tmp_path
     from escapewheel_reader.scripts.cli import main
 
     document = json.loads((_EXTENSIONS / "vr_foraging.json").read_text())
-    table = next(iter(document["tables"].values()))
+    table = next(
+        declaration["table"] for declaration in document["resources"].values() if declaration["kind"] == "table"
+    )
     table["references"].append(
         {"columns": [table["primary_key"][0]], "resource": "core.absent", "resource_columns": ["x"]}
     )

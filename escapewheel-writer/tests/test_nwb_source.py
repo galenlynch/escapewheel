@@ -359,45 +359,56 @@ def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, har
 #: `required`, so a packet carrying intervals and no table saying what they were is refused.
 #: One table, one column, and the reference Part 02 §8.3 requires of a named resource.
 TASK_EXTENSION = {
-    "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
+    "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
     "registry_version": "0.1.0",
     "logical_standard_version": "escapewheel-logical-v0.1",
     "rule_language": "escapewheel-rule-sql-v0.1",
     "extension_id": "task",
-    "tables": {
+    "resources": {
         "task.trials": {
-            "columns": [
-                {
-                    "name": "session_id",
-                    "type": "int32",
-                    "presence": "required",
-                    "role": "identifier",
-                    "identity": "assigned",
-                },
-                {
-                    "name": "interval_kind",
-                    "type": "string",
-                    "presence": "required",
-                    "role": "discriminator",
-                    "resolves": "required",
-                },
-                {
-                    "name": "interval_id",
-                    "type": "int32",
-                    "presence": "required",
-                    "role": "identifier",
-                    "identity": "carried",
-                },
-            ],
-            "primary_key": ["session_id", "interval_id"],
-            "references": [
-                {
-                    "columns": ["session_id", "interval_kind", "interval_id"],
-                    "resource": "core.intervals",
-                    "resource_columns": ["session_id", "interval_kind", "interval_id"],
-                }
-            ],
-            "rules": [],
+            "content_class": "extension",
+            "kind": "table",
+            "instances": {"mode": "singleton", "presence": "optional"},
+            "requires": [],
+            "lineage": "optional",
+            "producing_run": "optional",
+            "table": {
+                "columns": [
+                    {
+                        "name": "session_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                        "description": "Session identity.",
+                    },
+                    {
+                        "name": "interval_kind",
+                        "type": "string",
+                        "presence": "required",
+                        "role": "discriminator",
+                        "resolves": "required",
+                        "description": "Interval kind declaration.",
+                    },
+                    {
+                        "name": "interval_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "carried",
+                        "description": "Source interval identity.",
+                    },
+                ],
+                "primary_key": ["session_id", "interval_id"],
+                "references": [
+                    {
+                        "columns": ["session_id", "interval_kind", "interval_id"],
+                        "resource": "core.intervals",
+                        "resource_columns": ["session_id", "interval_kind", "interval_id"],
+                    }
+                ],
+                "rules": [],
+            },
         }
     },
 }

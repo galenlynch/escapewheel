@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See the repository
 [authority model](../README.md#authority) for the sources that bind.
 
 ```text
-43 tables, 351 columns, 111 references, 76 Tier 2 rules
-registry 0.4.0   logical standard escapewheel-logical-v0.1
+46 resources, 43 tables, 348 columns, 111 references, 76 Tier 2 rules
+registry 0.5.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -25,11 +25,10 @@ registry 0.4.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `array_asset_id` | int32 | **required** | — | Stable array asset ID. |
+| `resource_id` | string | **required** | free | The packet resource ID of the catalogued payload. |
 | `array_asset_name` | string | **required** | free | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 §8). |
 | `semantic_type` | string | nullable | open | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 §3.17). |
 | `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
-| `uri` | string | **required** | free | URI/path to array store. |
-| `format` | string | **required** | open | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable | — | Clock for time axis. |
 | `device_id` | int32 | nullable | — | The device that produced this array. |
 | `processing_run_id` | int32 | nullable | — | The run that produced this array. Null means it was acquired rather than computed. |
@@ -111,11 +110,10 @@ registry 0.4.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `array_asset_id` | int32 | **required** | — | Stable array asset ID. |
+| `resource_id` | string | **required** | free | The packet resource ID of the catalogued payload. |
 | `array_asset_name` | string | **required** | free | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 §8). |
 | `semantic_type` | string | nullable | open | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 §3.17). |
 | `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
-| `uri` | string | **required** | free | URI/path to array store. |
-| `format` | string | **required** | open | `zarr_v3` for portable profile. |
 | `clock_id` | int32 | nullable | — | Clock for time axis. |
 | `device_id` | int32 | nullable | — | The device that produced this array. |
 | `processing_run_id` | int32 | nullable | — | The run that produced this array. Null means it was acquired rather than computed. |
@@ -625,10 +623,9 @@ registry 0.4.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `media_asset_id` | int32 | **required** | — | Stable media asset ID. |
+| `resource_id` | string | **required** | free | The packet resource ID of the catalogued payload. |
 | `media_asset_name` | string | **required** | free | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (Part 05 §8). |
 | `semantic_type` | string | nullable | open | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 §3.17). |
-| `uri` | string | **required** | free | Media file URI. |
-| `format` | string | **required** | open | The container format, as the file extension names it: `mp4`, `avi`. |
 | `device_id` | int32 | nullable | — | The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (Part 01 §3.5). |
 | `pts_rate_num` | int64 | nullable | — | Presentation timestamps per second in this asset's container: numerator. |
 | `pts_rate_den` | int64 | nullable | — | Presentation timestamps per second in this asset's container: denominator. |

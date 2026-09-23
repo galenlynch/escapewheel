@@ -58,10 +58,8 @@ class Resource:
     ----------
     resource_id : str
         Dotted resource ID, e.g. ``core.intervals``.
-    layer : str
-        ``core``, ``analysis``, or ``docs``.
-    kind : str
-        Resource kind, e.g. ``table`` or ``dense_array_asset``.
+    declaration_id : str
+        Logical declaration this packet resource instantiates.
     uri : str
         Location, relative to the packet root unless absolute.
     entry : Mapping
@@ -69,26 +67,61 @@ class Resource:
     """
 
     resource_id: str
-    layer: str
-    kind: str
+    declaration_id: str
     uri: str
     entry: Mapping[str, Any]
+    declaration: Mapping[str, Any] | None = None
+
+    @property
+    def content_class(self) -> str | None:
+        """Content class resolved from the registry declaration, if available."""
+        value = None if self.declaration is None else self.declaration.get("content_class")
+        return str(value) if value is not None else None
+
+    @property
+    def layer(self) -> str | None:
+        """Compatibility name for the declaration-resolved content class."""
+        return self.content_class
+
+    @property
+    def kind(self) -> str | None:
+        """Logical kind resolved from the registry declaration, if available."""
+        value = None if self.declaration is None else self.declaration.get("kind")
+        return str(value) if value is not None else None
+
+    @property
+    def canonical(self) -> bool | None:
+        """Canonicality derived from content class, if the declaration resolved."""
+        content_class = self.content_class
+        return None if content_class is None else content_class in {"core", "extension"}
+
+    @property
+    def instances(self) -> Mapping[str, Any] | None:
+        """The declaration's instance model, if available."""
+        value = None if self.declaration is None else self.declaration.get("instances")
+        return value if isinstance(value, Mapping) else None
+
+    @property
+    def lineage_policy(self) -> str | None:
+        """The declaration-selected lineage policy, if available."""
+        value = None if self.declaration is None else self.declaration.get("lineage")
+        return str(value) if value is not None else None
+
+    @property
+    def producing_run_policy(self) -> str | None:
+        """The declaration-selected producing-run policy, if available."""
+        value = None if self.declaration is None else self.declaration.get("producing_run")
+        return str(value) if value is not None else None
 
     @property
     def is_table(self) -> bool:
         """Whether this resource is tabular."""
-        return self.kind in {"table", "materialized_table"}
+        return self.kind == "table"
 
     @property
     def is_partitioned(self) -> bool:
         """Whether this resource is a partitioned dataset rather than a single file."""
         return self.entry.get("physical_profile") == "parquet_dataset"
-
-    @property
-    def schema_id(self) -> str | None:
-        """The registry schema this resource claims to conform to, if declared."""
-        value = self.entry.get("schema_id")
-        return str(value) if value is not None else None
 
     @property
     def codecs(self) -> tuple[str, ...]:
@@ -222,8 +255,7 @@ class Manifest:
             resources=tuple(
                 Resource(
                     resource_id=str(r["resource_id"]),
-                    layer=str(r["layer"]),
-                    kind=str(r["kind"]),
+                    declaration_id=str(r["declaration_id"]),
                     uri=str(r["uri"]),
                     entry=r,
                 )

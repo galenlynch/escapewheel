@@ -29,9 +29,14 @@ import nwbfixture
 from escapewheel_writer import arrow
 from escapewheel_writer.sources.nwb import NWBSource
 
-REGISTRY = json.loads(
+REGISTRY_DOCUMENT = json.loads(
     (HERE.parent.parent / "registry" / "logical_schemas.json").read_text()
-)["tables"]
+)
+REGISTRY = {
+    name: declaration["table"]
+    for name, declaration in REGISTRY_DOCUMENT["resources"].items()
+    if declaration["kind"] == "table"
+}
 
 
 def reconcile(resource: str, table) -> pa.Table:

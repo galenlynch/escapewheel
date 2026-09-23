@@ -11,8 +11,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pyarrow as pa
-from escapewheel_reader.ordering import stored_order
 import pyarrow.parquet as pq
+from escapewheel_reader.ordering import stored_order
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = json.loads((HERE.parent / "registry" / "logical_schemas.json").read_text())
@@ -26,7 +26,12 @@ EXTENSION = json.loads(
 )
 
 #: Every table a fixture may write, core's and the extension's alike.
-SPECS = {**REGISTRY["tables"], **EXTENSION["tables"]}
+SPECS = {
+    name: declaration["table"]
+    for document in (REGISTRY, EXTENSION)
+    for name, declaration in document["resources"].items()
+    if declaration["kind"] == "table"
+}
 
 #: The interval kind the fixture declares, which is the extension table that carries it.
 KIND = "dynamic_foraging.trials"
@@ -687,17 +692,12 @@ def write_packet(
         rel = f"tables/{namespace}/{name}.parquet"
         (out / "tables" / namespace).mkdir(exist_ok=True)
         pq.write_table(t, out / rel, compression="zstd")
-        extension = namespace == EXTENSION_ID
         resources.append(
             {
                 "resource_id": resource,
-                "layer": "extension" if extension else namespace,
-                **({"extension_id": EXTENSION_ID} if extension else {}),
-                "kind": "table",
-                "schema_id": f"{resource}.v0.1",
+                "declaration_id": resource,
                 "physical_profile": "parquet",
                 "uri": rel,
-                "canonical": True,
                 "validation_state": "not_run",
             }
         )

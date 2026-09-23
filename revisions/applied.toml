@@ -3082,3 +3082,73 @@ note = "validators preserve all registry states and run derived checks only from
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-registry-result-reporting" }]
 note = "reports pair each complete portable result with an external subject label"
+
+[clause."R128 §3.1"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-resource-common-fields" },
+  { part = "02", anchor = "ew-registry-document" },
+  { part = "09", anchor = "ew-extension-definition" },
+]
+note = "registries have one closed resource-declaration map with exact namespace ownership"
+
+[clause."R128 §3.2"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-packet-content-classes" },
+  { part = "02", anchor = "ew-resource-content-class" },
+]
+note = "the five content classes determine canonicality and declaration eligibility"
+
+[clause."R128 §3.3"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-logical-standard" },
+  { part = "01", anchor = "ew-array-asset-concept" },
+  { part = "01", anchor = "ew-media-asset-concept" },
+  { part = "02", anchor = "ew-resource-kind" },
+]
+note = "table, dense-array, and opaque select the generic logical payload contract"
+
+[clause."R128 §3.4"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-resource-instance-model" }]
+note = "singleton, catalog, and family declarations define packet-instance binding"
+
+[clause."R128 §3.5"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-core-content-requirements" },
+  { part = "02", anchor = "ew-resource-presence" },
+  { part = "02", anchor = "ew-logical-references" },
+]
+note = "declaration presence, dependencies, foreign keys, catalogs, and runs determine required instances"
+
+[clause."R128 §3.6"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-resource-catalog-binding" }]
+note = "catalog rows carry the packet resource ID and bind one-to-one to catalog-family instances"
+
+[clause."R128 §3.7"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-resource-provenance-policy" },
+  { part = "06", anchor = "ew-analysis-rules" },
+]
+note = "lineage and producing-run policies apply by declaration to every resource kind"
+
+[clause."R128 §3.8"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-packet-catalog" },
+  { part = "04", anchor = "ew-packet-resource-entry-fields" },
+]
+note = "packet entries bind declaration IDs and no longer repeat logical classification"
+
+[clause."R128 §3.9"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-registry-self-description" },
+  { part = "02", anchor = "ew-registry-conformance" },
+]
+note = "incompatible registry, contract, manifest, and delivery identities advance with their checks"

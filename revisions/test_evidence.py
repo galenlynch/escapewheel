@@ -28,7 +28,7 @@ class EvidenceTests(unittest.TestCase):
             evidence.owner_defects(
                 {
                     "path": "registry/logical_schemas.json",
-                    "pointer": "/tables/core.units",
+                    "pointer": "/resources/core.units/table",
                 }
             ),
             [],

@@ -1,12 +1,12 @@
 # Schema registry
 
 `logical_schemas.json` is the incorporated core registry: the machine-readable declaration of
-core and analysis tables under [Part 02](../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md).
+core and analysis resources under [Part 02](../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md).
 It is the file a packet embeds at `schemas/logical_schemas.json` (Part 02 §9.2).
 
 <!-- BEGIN generated: counts -->
 ```
-43 tables, 351 columns, 111 references, 76 Tier 2 rules
+46 resources, 43 tables, 348 columns, 111 references, 76 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -20,7 +20,7 @@ history and rationale but are not current normative owners.
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
 | `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
-| `registry_contracts/escapewheel-registry-contract-v0.1.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
+| `registry_contracts/escapewheel-registry-contract-v0.2.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.1.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | JSON Schema for `packet.json` (Part 04). |
@@ -93,7 +93,7 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-167 required column, not null
+164 required column, not null
 111 reference, resolves
 43  primary key, unique
 4   closed vocabulary, member of

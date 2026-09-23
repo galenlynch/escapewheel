@@ -15,7 +15,7 @@ def _manifest(version, resources, registry="0.1.0", when="2026-01-01T00:00:00Z")
         "packet_version": version,
         "registry_version": registry,
         "created_at": when,
-        "resources": [{"resource_id": name, "uri": uri, "kind": "table"} for name, uri in resources],
+        "resources": [{"resource_id": name, "declaration_id": name, "uri": uri} for name, uri in resources],
         "validation": {"status": "passed", "validated_at": when},
     }
 
@@ -147,7 +147,12 @@ def test_a_manifest_on_the_installed_registry_names_the_unversioned_copy(packet)
 def test_an_external_resource_is_never_touched(packet):
     manifest = json.loads((packet / MANIFEST).read_text())
     manifest["resources"].append(
-        {"resource_id": "core.lfp", "uri": "s3://bucket/lfp.zarr", "external": True, "kind": "array"}
+        {
+            "resource_id": "core.lfp",
+            "declaration_id": "core.array_asset_instances",
+            "uri": "s3://bucket/lfp.zarr",
+            "external": True,
+        }
     )
     (packet / MANIFEST).write_text(json.dumps(manifest))
     assert not prune(packet).strays

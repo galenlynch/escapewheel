@@ -1,468 +1,501 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.4.0",
-  "registry_version": "0.3.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
+  "registry_version": "0.4.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "aind_unit_qc",
-  "tables": {
+  "resources": {
     "aind_unit_qc.metrics": {
-      "columns": [
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Session Id."
-        },
-        {
-          "name": "unit_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Unit Id."
-        },
-        {
-          "name": "num_spikes_used",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Spikes the metrics were computed over, where the pipeline reports it apart from core.units.n_spikes."
-        },
-        {
-          "name": "presence_ratio",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Fraction of the recording in which the unit fired."
-        },
-        {
-          "name": "firing_range",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Spread of the unit's firing rate over the recording.",
-          "unit": "Hz"
-        },
-        {
-          "name": "snr",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Signal-to-noise ratio of the unit's waveform."
-        },
-        {
-          "name": "isi_violations_ratio",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Refractory violations as a ratio to chance."
-        },
-        {
-          "name": "isi_violations_count",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Refractory violations counted."
-        },
-        {
-          "name": "rp_contamination",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Contamination estimated from the refractory period."
-        },
-        {
-          "name": "rp_violations",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Refractory-period violations counted."
-        },
-        {
-          "name": "sliding_rp_violation",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Contamination from the sliding refractory estimate. Populated for 2,555 of 4,559 units measured."
-        },
-        {
-          "name": "amplitude_cutoff",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Estimated fraction of spikes lost below threshold. Populated for 4,277 of 4,559 units measured."
-        },
-        {
-          "name": "amplitude_median",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Median spike amplitude, in the sorting's own units."
-        },
-        {
-          "name": "amplitude_cv_median",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Median of the amplitude coefficient of variation. Populated for 3,857 of 4,559 units measured."
-        },
-        {
-          "name": "amplitude_cv_range",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Range of the amplitude coefficient of variation. Populated for 3,857 of 4,559 units measured."
-        },
-        {
-          "name": "isolation_distance",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Mahalanobis distance at which as many other spikes fall inside as the unit has."
-        },
-        {
-          "name": "l_ratio",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Contamination measured in the same feature space. Populated for 4,484 of 4,559 units measured."
-        },
-        {
-          "name": "d_prime",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Linear-discriminant separation from the neighbouring cluster."
-        },
-        {
-          "name": "silhouette",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Silhouette score in the feature space."
-        },
-        {
-          "name": "nn_hit_rate",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Nearest-neighbour hit rate."
-        },
-        {
-          "name": "nn_miss_rate",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Nearest-neighbour miss rate."
-        },
-        {
-          "name": "drift_ptp",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Peak-to-peak drift of the unit's position. Populated for 2,531 of 4,559 units measured.",
-          "unit": "um"
-        },
-        {
-          "name": "drift_std",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Standard deviation of that drift. Populated for 2,531 of 4,559 units measured.",
-          "unit": "um"
-        },
-        {
-          "name": "drift_mad",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Median absolute deviation of that drift. Populated for 2,531 of 4,559 units measured.",
-          "unit": "um"
-        }
-      ],
-      "primary_key": [
-        "session_id",
-        "unit_id"
-      ],
-      "references": [
-        {
-          "columns": [
-            "unit_id"
-          ],
-          "resource": "core.units",
-          "resource_columns": [
-            "unit_id"
-          ]
-        },
-        {
-          "columns": [
-            "session_id"
-          ],
-          "resource": "core.sessions",
-          "resource_columns": [
-            "session_id"
-          ]
-        }
-      ],
-      "rules": [
-        {
-          "id": "aind_unit_qc.metrics.presence_ratio_is_bounded",
-          "level": "error",
-          "message": "presence_ratio falls outside 0-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, presence_ratio FROM aind_unit_qc.metrics WHERE presence_ratio IS NOT NULL AND (presence_ratio < 0 OR presence_ratio > 1)"
-        },
-        {
-          "id": "aind_unit_qc.metrics.amplitude_cutoff_is_bounded",
-          "level": "error",
-          "message": "amplitude_cutoff falls outside 0-0.5, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, amplitude_cutoff FROM aind_unit_qc.metrics WHERE amplitude_cutoff IS NOT NULL AND (amplitude_cutoff < 0 OR amplitude_cutoff > 0.5)"
-        },
-        {
-          "id": "aind_unit_qc.metrics.rp_contamination_is_bounded",
-          "level": "error",
-          "message": "rp_contamination falls outside 0-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, rp_contamination FROM aind_unit_qc.metrics WHERE rp_contamination IS NOT NULL AND (rp_contamination < 0 OR rp_contamination > 1)"
-        },
-        {
-          "id": "aind_unit_qc.metrics.nn_hit_rate_is_bounded",
-          "level": "error",
-          "message": "nn_hit_rate falls outside 0-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, nn_hit_rate FROM aind_unit_qc.metrics WHERE nn_hit_rate IS NOT NULL AND (nn_hit_rate < 0 OR nn_hit_rate > 1)"
-        },
-        {
-          "id": "aind_unit_qc.metrics.nn_miss_rate_is_bounded",
-          "level": "error",
-          "message": "nn_miss_rate falls outside 0-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, nn_miss_rate FROM aind_unit_qc.metrics WHERE nn_miss_rate IS NOT NULL AND (nn_miss_rate < 0 OR nn_miss_rate > 1)"
-        },
-        {
-          "id": "aind_unit_qc.metrics.silhouette_is_bounded",
-          "level": "error",
-          "message": "silhouette falls outside -1-1, which its definition does not allow",
-          "sql": "SELECT session_id, unit_id, silhouette FROM aind_unit_qc.metrics WHERE silhouette IS NOT NULL AND (silhouette < -1 OR silhouette > 1)"
-        },
-        {
-          "id": "aind_unit_qc.metrics.a_count_is_not_negative",
-          "level": "error",
-          "message": "a violation count is negative",
-          "sql": "SELECT session_id, unit_id FROM aind_unit_qc.metrics WHERE isi_violations_count < 0 OR rp_violations < 0"
-        }
-      ]
-    },
-    "aind_unit_qc.waveform_metrics": {
-      "columns": [
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Session Id."
-        },
-        {
-          "name": "unit_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Unit Id."
-        },
-        {
-          "name": "peak_to_valley",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Time from the waveform's peak to its valley.",
-          "unit": "s"
-        },
-        {
-          "name": "peak_trough_ratio",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Ratio of peak to trough amplitude."
-        },
-        {
-          "name": "half_width",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Width of the waveform at half its amplitude.",
-          "unit": "s"
-        },
-        {
-          "name": "repolarization_slope",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Slope of the repolarizing phase."
-        },
-        {
-          "name": "recovery_slope",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Slope of the recovery phase."
-        },
-        {
-          "name": "num_positive_peaks",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Positive peaks in the waveform."
-        },
-        {
-          "name": "num_negative_peaks",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Negative peaks in the waveform."
-        },
-        {
-          "name": "exp_decay",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Exponential decay of amplitude with distance from the peak channel. Populated for 4,293 of 4,559 units measured."
-        },
-        {
-          "name": "spread",
-          "type": "int64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Channels over which the waveform is detectable.",
-          "unit": "um"
-        },
-        {
-          "name": "velocity_above",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Propagation velocity above the peak channel. Sparse: the fit needs channels on that side. Populated for 807 of 4,559 units measured.",
-          "unit": "m/s"
-        },
-        {
-          "name": "velocity_below",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Propagation velocity below the peak channel. Populated for 757 of 4,559 units measured.",
-          "unit": "m/s"
-        }
-      ],
-      "primary_key": [
-        "session_id",
-        "unit_id"
-      ],
-      "references": [
-        {
-          "columns": [
-            "unit_id"
-          ],
-          "resource": "core.units",
-          "resource_columns": [
-            "unit_id"
-          ]
-        },
-        {
-          "columns": [
-            "session_id"
-          ],
-          "resource": "core.sessions",
-          "resource_columns": [
-            "session_id"
-          ]
-        }
-      ],
-      "rules": [
-        {
-          "id": "aind_unit_qc.waveform_metrics.a_width_is_positive",
-          "level": "error",
-          "message": "a waveform width is zero or negative, which no waveform has",
-          "sql": "SELECT session_id, unit_id FROM aind_unit_qc.waveform_metrics WHERE peak_to_valley <= 0 OR half_width <= 0"
-        }
-      ]
+      "content_class": "extension",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Session Id."
+          },
+          {
+            "name": "unit_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Unit Id."
+          },
+          {
+            "name": "num_spikes_used",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Spikes the metrics were computed over, where the pipeline reports it apart from core.units.n_spikes."
+          },
+          {
+            "name": "presence_ratio",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Fraction of the recording in which the unit fired."
+          },
+          {
+            "name": "firing_range",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Spread of the unit's firing rate over the recording.",
+            "unit": "Hz"
+          },
+          {
+            "name": "snr",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Signal-to-noise ratio of the unit's waveform."
+          },
+          {
+            "name": "isi_violations_ratio",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Refractory violations as a ratio to chance."
+          },
+          {
+            "name": "isi_violations_count",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Refractory violations counted."
+          },
+          {
+            "name": "rp_contamination",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Contamination estimated from the refractory period."
+          },
+          {
+            "name": "rp_violations",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Refractory-period violations counted."
+          },
+          {
+            "name": "sliding_rp_violation",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Contamination from the sliding refractory estimate. Populated for 2,555 of 4,559 units measured."
+          },
+          {
+            "name": "amplitude_cutoff",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Estimated fraction of spikes lost below threshold. Populated for 4,277 of 4,559 units measured."
+          },
+          {
+            "name": "amplitude_median",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Median spike amplitude, in the sorting's own units."
+          },
+          {
+            "name": "amplitude_cv_median",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Median of the amplitude coefficient of variation. Populated for 3,857 of 4,559 units measured."
+          },
+          {
+            "name": "amplitude_cv_range",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Range of the amplitude coefficient of variation. Populated for 3,857 of 4,559 units measured."
+          },
+          {
+            "name": "isolation_distance",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Mahalanobis distance at which as many other spikes fall inside as the unit has."
+          },
+          {
+            "name": "l_ratio",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Contamination measured in the same feature space. Populated for 4,484 of 4,559 units measured."
+          },
+          {
+            "name": "d_prime",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Linear-discriminant separation from the neighbouring cluster."
+          },
+          {
+            "name": "silhouette",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Silhouette score in the feature space."
+          },
+          {
+            "name": "nn_hit_rate",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Nearest-neighbour hit rate."
+          },
+          {
+            "name": "nn_miss_rate",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Nearest-neighbour miss rate."
+          },
+          {
+            "name": "drift_ptp",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Peak-to-peak drift of the unit's position. Populated for 2,531 of 4,559 units measured.",
+            "unit": "um"
+          },
+          {
+            "name": "drift_std",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Standard deviation of that drift. Populated for 2,531 of 4,559 units measured.",
+            "unit": "um"
+          },
+          {
+            "name": "drift_mad",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Median absolute deviation of that drift. Populated for 2,531 of 4,559 units measured.",
+            "unit": "um"
+          }
+        ],
+        "primary_key": [
+          "session_id",
+          "unit_id"
+        ],
+        "references": [
+          {
+            "columns": [
+              "unit_id"
+            ],
+            "resource": "core.units",
+            "resource_columns": [
+              "unit_id"
+            ]
+          },
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "aind_unit_qc.metrics.presence_ratio_is_bounded",
+            "level": "error",
+            "message": "presence_ratio falls outside 0-1, which its definition does not allow",
+            "sql": "SELECT session_id, unit_id, presence_ratio FROM aind_unit_qc.metrics WHERE presence_ratio IS NOT NULL AND (presence_ratio < 0 OR presence_ratio > 1)"
+          },
+          {
+            "id": "aind_unit_qc.metrics.amplitude_cutoff_is_bounded",
+            "level": "error",
+            "message": "amplitude_cutoff falls outside 0-0.5, which its definition does not allow",
+            "sql": "SELECT session_id, unit_id, amplitude_cutoff FROM aind_unit_qc.metrics WHERE amplitude_cutoff IS NOT NULL AND (amplitude_cutoff < 0 OR amplitude_cutoff > 0.5)"
+          },
+          {
+            "id": "aind_unit_qc.metrics.rp_contamination_is_bounded",
+            "level": "error",
+            "message": "rp_contamination falls outside 0-1, which its definition does not allow",
+            "sql": "SELECT session_id, unit_id, rp_contamination FROM aind_unit_qc.metrics WHERE rp_contamination IS NOT NULL AND (rp_contamination < 0 OR rp_contamination > 1)"
+          },
+          {
+            "id": "aind_unit_qc.metrics.nn_hit_rate_is_bounded",
+            "level": "error",
+            "message": "nn_hit_rate falls outside 0-1, which its definition does not allow",
+            "sql": "SELECT session_id, unit_id, nn_hit_rate FROM aind_unit_qc.metrics WHERE nn_hit_rate IS NOT NULL AND (nn_hit_rate < 0 OR nn_hit_rate > 1)"
+          },
+          {
+            "id": "aind_unit_qc.metrics.nn_miss_rate_is_bounded",
+            "level": "error",
+            "message": "nn_miss_rate falls outside 0-1, which its definition does not allow",
+            "sql": "SELECT session_id, unit_id, nn_miss_rate FROM aind_unit_qc.metrics WHERE nn_miss_rate IS NOT NULL AND (nn_miss_rate < 0 OR nn_miss_rate > 1)"
+          },
+          {
+            "id": "aind_unit_qc.metrics.silhouette_is_bounded",
+            "level": "error",
+            "message": "silhouette falls outside -1-1, which its definition does not allow",
+            "sql": "SELECT session_id, unit_id, silhouette FROM aind_unit_qc.metrics WHERE silhouette IS NOT NULL AND (silhouette < -1 OR silhouette > 1)"
+          },
+          {
+            "id": "aind_unit_qc.metrics.a_count_is_not_negative",
+            "level": "error",
+            "message": "a violation count is negative",
+            "sql": "SELECT session_id, unit_id FROM aind_unit_qc.metrics WHERE isi_violations_count < 0 OR rp_violations < 0"
+          }
+        ]
+      }
     },
     "aind_unit_qc.synchrony": {
-      "columns": [
-        {
-          "name": "session_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Session Id."
-        },
-        {
-          "name": "unit_id",
-          "type": "int32",
-          "presence": "required",
-          "role": "identifier",
-          "identity": "assigned",
-          "description": "Unit Id."
-        },
-        {
-          "name": "synchrony_size",
-          "type": "int32",
-          "presence": "required",
-          "role": "data",
-          "description": "How many units must fire together to count, which the sorter computes over a list of sizes -- 2, 4 and 8 in every session measured."
-        },
-        {
-          "name": "sync_spike",
-          "type": "float64",
-          "presence": "nullable",
-          "role": "data",
-          "description": "Fraction of the unit's spikes that fall in a synchronous event of this size."
-        }
-      ],
-      "primary_key": [
-        "session_id",
-        "unit_id",
-        "synchrony_size"
-      ],
-      "references": [
-        {
-          "columns": [
-            "unit_id"
-          ],
-          "resource": "core.units",
-          "resource_columns": [
-            "unit_id"
-          ]
-        },
-        {
-          "columns": [
-            "session_id"
-          ],
-          "resource": "core.sessions",
-          "resource_columns": [
-            "session_id"
-          ]
-        }
-      ],
-      "rules": [
-        {
-          "id": "aind_unit_qc.synchrony.a_size_is_at_least_two",
-          "level": "error",
-          "message": "a synchrony size below two describes a unit firing with itself",
-          "sql": "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc.synchrony WHERE synchrony_size < 2"
-        },
-        {
-          "id": "aind_unit_qc.synchrony.a_fraction_is_a_fraction",
-          "level": "error",
-          "message": "a synchrony fraction falls outside 0-1",
-          "sql": "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc.synchrony WHERE sync_spike IS NOT NULL AND (sync_spike < 0 OR sync_spike > 1)"
-        },
-        {
-          "id": "aind_unit_qc.synchrony.larger_is_rarer",
-          "level": "error",
-          "message": "a larger synchrony size is reported as more common than a smaller one, which its nesting forbids",
-          "sql": "SELECT a.session_id, a.unit_id, a.synchrony_size, b.synchrony_size AS larger FROM aind_unit_qc.synchrony AS a JOIN aind_unit_qc.synchrony AS b ON a.unit_id = b.unit_id AND a.synchrony_size < b.synchrony_size WHERE a.sync_spike IS NOT NULL AND b.sync_spike IS NOT NULL AND b.sync_spike > a.sync_spike"
-        }
-      ]
+      "content_class": "extension",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Session Id."
+          },
+          {
+            "name": "unit_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Unit Id."
+          },
+          {
+            "name": "synchrony_size",
+            "type": "int32",
+            "presence": "required",
+            "role": "data",
+            "description": "How many units must fire together to count, which the sorter computes over a list of sizes -- 2, 4 and 8 in every session measured."
+          },
+          {
+            "name": "sync_spike",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Fraction of the unit's spikes that fall in a synchronous event of this size."
+          }
+        ],
+        "primary_key": [
+          "session_id",
+          "unit_id",
+          "synchrony_size"
+        ],
+        "references": [
+          {
+            "columns": [
+              "unit_id"
+            ],
+            "resource": "core.units",
+            "resource_columns": [
+              "unit_id"
+            ]
+          },
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "aind_unit_qc.synchrony.a_size_is_at_least_two",
+            "level": "error",
+            "message": "a synchrony size below two describes a unit firing with itself",
+            "sql": "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc.synchrony WHERE synchrony_size < 2"
+          },
+          {
+            "id": "aind_unit_qc.synchrony.a_fraction_is_a_fraction",
+            "level": "error",
+            "message": "a synchrony fraction falls outside 0-1",
+            "sql": "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc.synchrony WHERE sync_spike IS NOT NULL AND (sync_spike < 0 OR sync_spike > 1)"
+          },
+          {
+            "id": "aind_unit_qc.synchrony.larger_is_rarer",
+            "level": "error",
+            "message": "a larger synchrony size is reported as more common than a smaller one, which its nesting forbids",
+            "sql": "SELECT a.session_id, a.unit_id, a.synchrony_size, b.synchrony_size AS larger FROM aind_unit_qc.synchrony AS a JOIN aind_unit_qc.synchrony AS b ON a.unit_id = b.unit_id AND a.synchrony_size < b.synchrony_size WHERE a.sync_spike IS NOT NULL AND b.sync_spike IS NOT NULL AND b.sync_spike > a.sync_spike"
+          }
+        ]
+      }
+    },
+    "aind_unit_qc.waveform_metrics": {
+      "content_class": "extension",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "producing_run": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Session Id."
+          },
+          {
+            "name": "unit_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Unit Id."
+          },
+          {
+            "name": "peak_to_valley",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Time from the waveform's peak to its valley.",
+            "unit": "s"
+          },
+          {
+            "name": "peak_trough_ratio",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Ratio of peak to trough amplitude."
+          },
+          {
+            "name": "half_width",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Width of the waveform at half its amplitude.",
+            "unit": "s"
+          },
+          {
+            "name": "repolarization_slope",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Slope of the repolarizing phase."
+          },
+          {
+            "name": "recovery_slope",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Slope of the recovery phase."
+          },
+          {
+            "name": "num_positive_peaks",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Positive peaks in the waveform."
+          },
+          {
+            "name": "num_negative_peaks",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Negative peaks in the waveform."
+          },
+          {
+            "name": "exp_decay",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Exponential decay of amplitude with distance from the peak channel. Populated for 4,293 of 4,559 units measured."
+          },
+          {
+            "name": "spread",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Channels over which the waveform is detectable.",
+            "unit": "um"
+          },
+          {
+            "name": "velocity_above",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Propagation velocity above the peak channel. Sparse: the fit needs channels on that side. Populated for 807 of 4,559 units measured.",
+            "unit": "m/s"
+          },
+          {
+            "name": "velocity_below",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Propagation velocity below the peak channel. Populated for 757 of 4,559 units measured.",
+            "unit": "m/s"
+          }
+        ],
+        "primary_key": [
+          "session_id",
+          "unit_id"
+        ],
+        "references": [
+          {
+            "columns": [
+              "unit_id"
+            ],
+            "resource": "core.units",
+            "resource_columns": [
+              "unit_id"
+            ]
+          },
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "aind_unit_qc.waveform_metrics.a_width_is_positive",
+            "level": "error",
+            "message": "a waveform width is zero or negative, which no waveform has",
+            "sql": "SELECT session_id, unit_id FROM aind_unit_qc.waveform_metrics WHERE peak_to_valley <= 0 OR half_width <= 0"
+          }
+        ]
+      }
     }
   }
 }

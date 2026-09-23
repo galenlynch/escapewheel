@@ -40,12 +40,15 @@ def registry(inputs: dict[str, Any]) -> dict[str, Any]:
     """Build the logical declarations one vector supplies."""
     return {
         "rule_language": PROFILE_ID,
-        "tables": {
+        "resources": {
             name: {
-                "columns": spec["columns"],
-                "primary_key": spec.get("primary_key"),
-                "references": [],
-                "rules": [],
+                "kind": "table",
+                "table": {
+                    "columns": spec["columns"],
+                    "primary_key": spec.get("primary_key"),
+                    "references": [],
+                    "rules": [],
+                },
             }
             for name, spec in inputs.items()
         },
@@ -163,24 +166,32 @@ def shipped_rule_defects() -> list[str]:
     ]
     connection = duckdb.connect()
     defects: list[str] = []
+    tables = [
+        {
+            name: declaration["table"]
+            for name, declaration in document["resources"].items()
+            if declaration["kind"] == "table"
+        }
+        for document in documents
+    ]
     try:
         for namespace in sorted(
-            {name.split(".", 1)[0] for doc in documents for name in doc["tables"]}
+            {name.split(".", 1)[0] for document in tables for name in document}
         ):
             connection.sql(f"CREATE SCHEMA {namespace}")
-        for document in documents:
-            for resource, table in document["tables"].items():
+        for document in tables:
+            for resource, table in document.items():
                 columns = ", ".join(
                     f'"{c["name"]}" {DDL[c["type"]]}' for c in table["columns"]
                 )
                 connection.sql(f"CREATE TABLE {resource} ({columns})")
         count = 0
-        for document in documents:
-            for table in document["tables"].values():
+        for source, document in zip(documents, tables, strict=True):
+            for table in document.values():
                 for rule in table["rules"]:
                     count += 1
                     try:
-                        check_rule(rule["sql"], document, core_resources=core)
+                        check_rule(rule["sql"], source, core_resources=core)
                         connection.sql(rule["sql"]).fetchall()
                     except Exception as exc:  # noqa: BLE001 - each defect is reported together
                         defects.append(f"{rule['id']}: {str(exc).splitlines()[0]}")

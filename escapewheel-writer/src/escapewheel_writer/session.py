@@ -362,7 +362,7 @@ def _fact_types(registry: Mapping[str, Any]) -> dict[str, str]:
     return {
         f"{block}.{column['name']}": column["type"]
         for block, resource in FACT_BLOCKS.items()
-        for column in registry["tables"].get(resource, {}).get("columns", ())
+        for column in registry["resources"].get(resource, {}).get("table", {}).get("columns", ())
     }
 
 
@@ -857,7 +857,7 @@ def build(  # noqa: C901
                     f"  array {staged.array_asset_id} {staged.values.shape} {staged.values.dtype}, "
                     f"{staged.values.nbytes / 1e6:.1f} MB raw"
                 )
-            writer.add_array(f"core.{staged.array_asset_id}", staged)
+            writer.add_array(staged.resource_id, staged)
         # Any adapter may reference an array, not only the LFP one: a source says so by defining
         # `external_arrays`, and what kind it happens to be is not the question (Part 04 §5.1).
         for resource_id, array in getattr(source, "external_arrays", dict)().items():

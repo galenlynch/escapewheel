@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/manifest/0.1.0",
+  "$id": "https://escapewheel.org/schemas/manifest/0.2.0",
   "title": "Escapewheel packet manifest",
   "description": "Shape of packet.json. Covers Part 04's fields, including sessions and required_codecs, with the current provenance names.",
   "type": "object",
@@ -188,36 +188,18 @@
       "type": "object",
       "required": [
         "resource_id",
-        "layer",
-        "kind",
+        "declaration_id",
         "uri"
       ],
       "properties": {
         "resource_id": {
           "type": "string"
         },
-        "layer": {
-          "enum": [
-            "core",
-            "analysis",
-            "extension",
-            "docs"
-          ]
-        },
-        "kind": {
-          "enum": [
-            "table",
-            "materialized_table",
-            "dense_array_asset",
-            "media_asset",
-            "document_asset",
-            "view"
-          ]
+        "declaration_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"
         },
         "semantic_type": {
-          "type": "string"
-        },
-        "schema_id": {
           "type": "string"
         },
         "physical_profile": {
@@ -245,9 +227,6 @@
             "type": "string"
           }
         },
-        "canonical": {
-          "type": "boolean"
-        },
         "validation_state": {
           "enum": [
             "passed",
@@ -263,12 +242,6 @@
         },
         "processing_run_id": {
           "description": "The run that produced this resource.",
-          "type": "string"
-        },
-        "catalog_table_ref": {
-          "type": "string"
-        },
-        "array_asset_id": {
           "type": "string"
         },
         "sha256": {
@@ -346,13 +319,23 @@
             "type": "string"
           },
           "uniqueItems": true
-        },
-        "extension_id": {
-          "description": "Which extension owns this resource; required when layer is extension.",
-          "type": "string"
         }
       },
       "allOf": [
+        {
+          "not": {
+            "anyOf": [
+              {"required": ["layer"]},
+              {"required": ["kind"]},
+              {"required": ["canonical"]},
+              {"required": ["schema_id"]},
+              {"required": ["extension_id"]},
+              {"required": ["catalog_table_ref"]},
+              {"required": ["array_asset_id"]},
+              {"required": ["media_asset_id"]}
+            ]
+          }
+        },
         {
           "if": {
             "properties": {
@@ -389,40 +372,6 @@
             },
             "required": [
               "external"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "dense_array_asset"
-              }
-            },
-            "required": [
-              "kind"
-            ]
-          },
-          "then": {
-            "required": [
-              "codecs"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "layer": {
-                "const": "extension"
-              }
-            },
-            "required": [
-              "layer"
-            ]
-          },
-          "then": {
-            "required": [
-              "extension_id"
             ]
           }
         },

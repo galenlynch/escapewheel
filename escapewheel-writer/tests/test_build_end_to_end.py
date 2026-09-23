@@ -98,6 +98,7 @@ root = "{sorted_root}"
 parent_clock_id = "{CLOCK_NAME}"
 contributes = ["core.clocks", "core.clock_observation_intervals", "core.processing_runs"]
 owns = [
+  "core.probes",
   "core.units",
   "core.spike_events",
   "core.sorting_runs",
@@ -163,7 +164,10 @@ def test_every_session_scoped_table_names_its_session(committed):
     packet = open_packet(root)
     held = {r.resource_id for r in packet.resources(kind="table")}
     checked = []
-    for resource_id, spec in REGISTRY["tables"].items():
+    for resource_id, declaration in REGISTRY["resources"].items():
+        if declaration["kind"] != "table":
+            continue
+        spec = declaration["table"]
         if resource_id not in held:
             continue
         if not any(c["name"] == "session_id" for c in spec["columns"]):
@@ -190,7 +194,8 @@ def test_the_writer_applies_its_own_encoding_rules(committed):
     packet = open_packet(root)
     asserted = 0
     for resource in packet.resources(kind="table"):
-        spec = REGISTRY["tables"].get(resource.resource_id)
+        declaration = REGISTRY["resources"].get(resource.resource_id)
+        spec = None if declaration is None or declaration["kind"] != "table" else declaration["table"]
         if spec is None:
             continue
         parquet = pq.ParquetFile(packet.path(resource.resource_id))

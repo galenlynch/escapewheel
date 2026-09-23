@@ -13,6 +13,15 @@ import pyarrow.parquet as pq
 from generate import generate, load
 
 
+def tables(registry: dict) -> dict:
+    """Project table payloads from the registry's logical resources."""
+    return {
+        name: declaration["table"]
+        for name, declaration in registry["resources"].items()
+        if declaration["kind"] == "table"
+    }
+
+
 def file_name(resource: str) -> str:
     """Return the portable-profile path stem for a dotted resource ID."""
     return resource.replace(".", "_")
@@ -35,7 +44,7 @@ ARROW = {
 def check_schemas(registry: dict, packet: Path) -> list[str]:
     """Column presence and physical type. Not expressible in SQL over the data."""
     findings = []
-    for resource, table in registry["tables"].items():
+    for resource, table in tables(registry).items():
         path = packet / f"{file_name(resource)}.parquet"
         if not path.exists():
             findings.append(f"{resource}: resource missing")
@@ -62,10 +71,10 @@ def run_checks(registry: dict, packet: Path):
     con = duckdb.connect()
     con.sql("SET TimeZone = 'UTC'")
     for namespace in sorted(
-        {resource.split(".", 1)[0] for resource in registry["tables"]}
+        {resource.split(".", 1)[0] for resource in tables(registry)}
     ):
         con.sql(f"CREATE SCHEMA {namespace}")
-    for resource in registry["tables"]:
+    for resource in tables(registry):
         source = packet / f"{file_name(resource)}.parquet"
         con.sql(f"CREATE VIEW {resource} AS SELECT * FROM '{source}'")
     results = []

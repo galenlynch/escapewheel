@@ -230,8 +230,18 @@ class CarriedNotAnInteger(ValueError):
     """A carried identifier arrived as something other than the source's own number."""
 
 
+def _is_string_carried_identifier(column: Mapping[str, Any]) -> bool:
+    """Return whether R128's catalog binding is the string identifier exception."""
+    return (
+        column["name"] == "resource_id"
+        and column.get("role") == "identifier"
+        and column.get("identity") == "carried"
+        and column.get("type") == "string"
+    )
+
+
 def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> None:
-    """Turn identifier values into the integers R53 §2.1 requires, in place.
+    """Normalize identifier values as their declarations require, in place.
 
     Done here rather than in each adapter because the invariant is cross-adapter: the recipe
     exists because four sources can each produce `core.probes`, and two of them numbering the
@@ -286,6 +296,8 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> No
                 row[name] = keys.of(kind, str(value))
                 if named is not None and named in declared and row.get(named) is None:
                     row[named] = str(value)
+            elif _is_string_carried_identifier(column):
+                row[name] = str(value)
             else:
                 try:
                     row[name] = int(value)
@@ -303,9 +315,14 @@ def _number_dictionary(values: pa.Array, column: Mapping[str, Any], kind: str, k
     dictionary = values.dictionary.to_pylist()
     if column.get("identity") == "assigned":
         numbered = [None if v is None else keys.of(kind, str(v)) for v in dictionary]
+        value_type = pa.int32()
+    elif _is_string_carried_identifier(column):
+        numbered = [None if v is None else str(v) for v in dictionary]
+        value_type = pa.string()
     else:
         numbered = [None if v is None else int(v) for v in dictionary]
-    return pa.array(numbered, type=pa.int32()).take(values.indices)
+        value_type = pa.int32()
+    return pa.array(numbered, type=value_type).take(values.indices)
 
 
 def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> pa.RecordBatch:
@@ -343,6 +360,8 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
             seen = [v for v in set(values.to_pylist()) if v is not None]
             mapping = {v: keys.of(kind, str(v)) for v in sorted(seen)}
             columns[name] = pa.array([None if v is None else mapping[v] for v in values.to_pylist()])
+        elif _is_string_carried_identifier(column):
+            columns[name] = pa.array([None if v is None else str(v) for v in values.to_pylist()], type=pa.string())
         else:
             columns[name] = pa.array([None if v is None else int(v) for v in values.to_pylist()])
         changed = True

@@ -1,6 +1,9 @@
+import json
+
 import pytest
 
 from escapewheel_reader import (
+    ManifestError,
     ResourceNotFoundError,
     ResourceUnreadableError,
     UnsupportedCodecError,
@@ -27,10 +30,26 @@ def test_resource_listing_and_filtering(packet_root):
     assert all(r.is_table for r in pkt.resources())
 
 
+def test_resource_facts_are_resolved_from_the_registry(packet_root):
+    resource = open_packet(packet_root).resource("core.sessions")
+    assert resource.declaration_id == "core.sessions"
+    assert resource.content_class == "core"
+    assert resource.kind == "table"
+    assert resource.canonical is True
+    assert resource.instances == {"mode": "singleton", "presence": "required"}
+
+
+def test_manifest_rejects_legacy_logical_classification(packet_root):
+    path = packet_root / "packet.json"
+    manifest = json.loads(path.read_text())
+    manifest["resources"][0]["kind"] = "table"
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ManifestError, match="does not conform"):
+        open_packet(packet_root)
+
+
 def test_resources_resolve_through_the_manifest(packet_root, tmp_path):
     """A relocated file stays readable because the manifest, not convention, locates it."""
-    import json
-
     moved = packet_root / "elsewhere"
     moved.mkdir()
     (packet_root / "tables" / "core" / "intervals.parquet").rename(moved / "t.parquet")
@@ -74,7 +93,11 @@ def test_sql_across_resources(packet_root):
 def test_embedded_registry_is_exposed(packet_root):
     registry = open_packet(packet_root).registry
     assert registry["registry_version"] == "0.1.0"
-    assert set(registry["tables"]) == {
+    assert {
+        name
+        for name, declaration in registry["resources"].items()
+        if declaration["kind"] == "table" and name.startswith("core.")
+    } == {
         "core.sessions",
         "core.clocks",
         "core.processing_runs",
@@ -99,9 +122,8 @@ def _with_array(packet_root, codecs, profile=None):
     entry = json.loads(path.read_text())
     entry["resources"].append(
         {
-            "resource_id": "array.probe0_ap",
-            "layer": "core",
-            "kind": "dense_array_asset",
+            "resource_id": "core.probe0_ap",
+            "declaration_id": "core.test_arrays",
             "uri": "s3://example/probe0.zarr",
             "external": True,
             "codecs": codecs,
@@ -110,23 +132,35 @@ def _with_array(packet_root, codecs, profile=None):
     )
     entry["required_codecs"] = codecs
     path.write_text(json.dumps(entry))
+    registry_path = packet_root / "schemas" / "logical_schemas.json"
+    registry = json.loads(registry_path.read_text())
+    registry["resources"]["core.test_arrays"] = {
+        "content_class": "core",
+        "kind": "dense_array",
+        "instances": {"mode": "family"},
+        "requires": [],
+        "lineage": "optional",
+        "producing_run": "optional",
+        "array": {"axes_resource": "core.intervals"},
+    }
+    registry_path.write_text(json.dumps(registry, indent=2))
     return open_packet(packet_root)
 
 
 def test_codec_check_passes_on_the_baseline(packet_root):
-    _with_array(packet_root, ["zstd"]).check_codecs("array.probe0_ap")
+    _with_array(packet_root, ["zstd"]).check_codecs("core.probe0_ap")
 
 
 def test_codec_check_names_what_is_missing(packet_root):
     pkt = _with_array(packet_root, ["wavpack"])
     with pytest.raises(UnsupportedCodecError, match="wavpack"):
-        pkt.check_codecs("array.probe0_ap")
+        pkt.check_codecs("core.probe0_ap")
 
 
 def test_a_missing_codec_disqualifies_only_that_resource(packet_root):
     """Part 03 §6.4: a reader must not refuse a packet over a codec it will never need."""
     pkt = _with_array(packet_root, ["wavpack"])
-    assert pkt.unopenable() == {"array.probe0_ap": ("wavpack",)}
+    assert pkt.unopenable() == {"core.probe0_ap": ("wavpack",)}
     assert pkt.table("core.intervals").num_rows == 2  # tables stay readable
     pkt.check_codecs("core.intervals")  # and declare no codecs at all
 
@@ -143,14 +177,14 @@ def test_the_floor_is_read_for_the_version_the_resource_declares(packet_root):
     between the versions.
     """
     pkt = _with_array(packet_root, ["blosc"], profile="zarr_v2")
-    pkt.check_codecs("array.probe0_ap")
+    pkt.check_codecs("core.probe0_ap")
     assert pkt.unopenable() == {}
 
 
 def test_an_unsupported_codec_names_the_version_it_was_judged_against(packet_root):
     pkt = _with_array(packet_root, ["wavpack"], profile="zarr_v2")
     with pytest.raises(UnsupportedCodecError, match="zarr_v2 codecs"):
-        pkt.check_codecs("array.probe0_ap")
+        pkt.check_codecs("core.probe0_ap")
 
 
 def test_sessions_and_repr(packet_root):

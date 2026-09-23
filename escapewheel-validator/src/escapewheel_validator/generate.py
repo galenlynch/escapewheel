@@ -276,7 +276,11 @@ def _generate(
         Generated Tier 1 checks followed by the registry's Tier 2 rules.
     """
     checks: list[Check] = []
-    tables: Mapping[str, Any] = registry["tables"]
+    tables: Mapping[str, Any] = {
+        str(name): declaration["table"]
+        for name, declaration in registry["resources"].items()
+        if declaration["kind"] == "table"
+    }
     included = set(tables) if only is None else set(only)
     # What a reference may point at, which is not the same as what gets checks. An extension
     # declares its own tables and references core's (Part 09 §2), so without this its foreign keys

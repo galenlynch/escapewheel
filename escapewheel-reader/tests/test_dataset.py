@@ -55,10 +55,15 @@ def two(packet_root, tmp_path):
 
 def _registry(**references):
     return {
-        "tables": {
+        "resources": {
             name: {
-                "columns": [],
-                "references": [{"columns": ["x"], "resource": parent, "resource_columns": ["x"]} for parent in parents],
+                "kind": "table",
+                "table": {
+                    "columns": [],
+                    "references": [
+                        {"columns": ["x"], "resource": parent, "resource_columns": ["x"]} for parent in parents
+                    ],
+                },
             }
             for name, parents in {"core.sessions": (), **references}.items()
         }
@@ -81,7 +86,7 @@ def test_a_table_reaching_sessions_through_a_parent_is_scoped():
 def test_a_table_sessions_references_is_not_scoped():
     """`core.subjects` and `core.source_files` fall out because `core.sessions` references them."""
     registry = _registry(**{"core.subjects": ()})
-    registry["tables"]["core.sessions"]["references"] = [
+    registry["resources"]["core.sessions"]["table"]["references"] = [
         {"columns": ["subject_id"], "resource": "core.subjects", "resource_columns": ["subject_id"]}
     ]
     assert session_scoped(registry) == {"core.sessions"}
@@ -127,32 +132,43 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
         manifest["resources"].append(
             {
                 "resource_id": "core.subjects",
-                "layer": "core",
-                "kind": "table",
-                "schema_id": "core.subjects.v0.1",
+                "declaration_id": "core.subjects",
                 "physical_profile": "parquet",
                 "uri": "tables/core/subjects.parquet",
-                "canonical": True,
                 "validation_state": "passed",
             }
         )
         (root / "packet.json").write_text(json.dumps(manifest, indent=2))
         registry = json.loads((root / "schemas/logical_schemas.json").read_text())
-        registry["tables"]["core.subjects"] = {
-            "columns": [
-                {
-                    "name": "subject_id",
-                    "type": "int32",
-                    "presence": "required",
-                    "role": "identifier",
-                    "identity": "assigned",
-                    "description": "",
-                },
-                {"name": "subject_name", "type": "string", "presence": "nullable", "role": "data", "description": ""},
-            ],
-            "primary_key": ["subject_id"],
-            "references": [],
-            "rules": [],
+        registry["resources"]["core.subjects"] = {
+            "content_class": "core",
+            "kind": "table",
+            "instances": {"mode": "singleton", "presence": "optional"},
+            "requires": [],
+            "lineage": "optional",
+            "producing_run": "optional",
+            "table": {
+                "columns": [
+                    {
+                        "name": "subject_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                        "description": "",
+                    },
+                    {
+                        "name": "subject_name",
+                        "type": "string",
+                        "presence": "nullable",
+                        "role": "data",
+                        "description": "",
+                    },
+                ],
+                "primary_key": ["subject_id"],
+                "references": [],
+                "rules": [],
+            },
         }
         (root / "schemas/logical_schemas.json").write_text(json.dumps(registry))
     data = open_dataset([packet_root, tmp_path / "session_002"])
@@ -262,38 +278,43 @@ def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_roo
     manifest["resources"].append(
         {
             "resource_id": "core.clock_anchors",
-            "layer": "core",
-            "kind": "table",
-            "schema_id": "core.clock_anchors.v0.1",
+            "declaration_id": "core.clock_anchors",
             "physical_profile": "parquet",
             "uri": "tables/core/clock_anchors.parquet",
-            "canonical": True,
             "validation_state": "passed",
         }
     )
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     registry = json.loads((root / "schemas/logical_schemas.json").read_text())
-    registry["tables"]["core.clock_anchors"] = {
-        "columns": [
-            {
-                "name": "clock_id",
-                "type": "int32",
-                "presence": "required",
-                "role": "identifier",
-                "identity": "assigned",
-                "description": "",
-            },
-            {
-                "name": "anchor_index",
-                "type": "int32",
-                "presence": "required",
-                "role": "sequence_position",
-                "description": "",
-            },
-        ],
-        "primary_key": ["clock_id", "anchor_index"],
-        "references": [{"columns": ["clock_id"], "resource": "core.units", "resource_columns": ["unit_id"]}],
-        "rules": [],
+    registry["resources"]["core.clock_anchors"] = {
+        "content_class": "core",
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "requires": [],
+        "lineage": "optional",
+        "producing_run": "optional",
+        "table": {
+            "columns": [
+                {
+                    "name": "clock_id",
+                    "type": "int32",
+                    "presence": "required",
+                    "role": "identifier",
+                    "identity": "assigned",
+                    "description": "",
+                },
+                {
+                    "name": "anchor_index",
+                    "type": "int32",
+                    "presence": "required",
+                    "role": "sequence_position",
+                    "description": "",
+                },
+            ],
+            "primary_key": ["clock_id", "anchor_index"],
+            "references": [{"columns": ["clock_id"], "resource": "core.units", "resource_columns": ["unit_id"]}],
+            "rules": [],
+        },
     }
     (root / "schemas/logical_schemas.json").write_text(json.dumps(registry))
 

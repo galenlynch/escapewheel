@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def _rule(registry, sql, *, rule_id="core.trials.profile_test"):
     changed = copy.deepcopy(registry)
-    changed["tables"]["core.trials"]["rules"].append(
+    changed["resources"]["core.trials"]["table"]["rules"].append(
         {"id": rule_id, "level": "error", "message": "profile test", "sql": sql}
     )
     return changed
@@ -42,7 +42,9 @@ def test_every_shipped_rule_passes_static_profile_check():
     checked = [
         check_rule(rule["sql"], document, core_resources=core)
         for document in documents
-        for table in document["tables"].values()
+        for declaration in document["resources"].values()
+        if declaration["kind"] == "table"
+        for table in [declaration["table"]]
         for rule in table["rules"]
     ]
     assert len(checked) == 121
@@ -85,12 +87,15 @@ def test_cross_extension_relation_is_rejected_before_execution():
     document = {
         "extension_id": "task_a",
         "rule_language": PROFILE_ID,
-        "tables": {
+        "resources": {
             "task_a.rows": {
-                "primary_key": ["row_id"],
-                "columns": [{"name": "row_id", "type": "int64"}],
-                "references": [],
-                "rules": [],
+                "kind": "table",
+                "table": {
+                    "primary_key": ["row_id"],
+                    "columns": [{"name": "row_id", "type": "int64"}],
+                    "references": [],
+                    "rules": [],
+                },
             }
         },
     }
@@ -105,12 +110,15 @@ def test_cross_extension_relation_is_rejected_before_execution():
 def test_undeclared_column_is_rejected_during_static_binding():
     document = {
         "rule_language": PROFILE_ID,
-        "tables": {
+        "resources": {
             "core.rows": {
-                "primary_key": ["row_id"],
-                "columns": [{"name": "row_id", "type": "int64"}],
-                "references": [],
-                "rules": [],
+                "kind": "table",
+                "table": {
+                    "primary_key": ["row_id"],
+                    "columns": [{"name": "row_id", "type": "int64"}],
+                    "references": [],
+                    "rules": [],
+                },
             }
         },
     }

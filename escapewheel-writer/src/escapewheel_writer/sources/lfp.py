@@ -260,6 +260,7 @@ class LFPSource(Compensates):
                 raise SourceDefect(f"{series.name}: zarr_format {meta.get('zarr_format')}, expected 2")
             array = ExternalArray(
                 array_asset_id=self.array_asset_id(series),
+                declaration_id="core.array_asset_instances",
                 uri=self._uri(series),
                 physical_profile="zarr_v2",
                 codecs=self._codecs(meta),
@@ -302,6 +303,7 @@ class LFPSource(Compensates):
                 )
         return ExternalArray(
             array_asset_id=array.array_asset_id,
+            declaration_id=array.declaration_id,
             uri=array.uri,
             physical_profile=array.physical_profile,
             codecs=array.codecs,

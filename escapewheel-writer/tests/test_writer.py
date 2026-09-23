@@ -150,12 +150,12 @@ def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
     _write(root, registry, minimal)
     embedded = json.loads((root / "schemas" / "logical_schemas.json").read_text())
     manifest = json.loads((root / "packet.json").read_text())
-    assert registry["registry_version"] == "0.4.0"
-    assert embedded["registry_version"] == "0.4.0"
+    assert registry["registry_version"] == "0.5.0"
+    assert embedded["registry_version"] == "0.5.0"
     assert embedded["registry_version"] == registry["registry_version"]
-    assert manifest["registry_version"] == "0.4.0"
+    assert manifest["registry_version"] == "0.5.0"
     assert manifest["registry_version"] == registry["registry_version"]
-    assert len(embedded["tables"]) == len(registry["tables"])
+    assert len(embedded["resources"]) == len(registry["resources"])
 
 
 def test_an_unknown_resource_is_refused(registry):
@@ -526,7 +526,7 @@ def test_a_registry_that_changed_without_its_version_is_refused(tmp_path, regist
     import copy
 
     altered = copy.deepcopy(registry)
-    altered["tables"]["core.sessions"]["columns"][0]["description"] = "changed, same version"
+    altered["resources"]["core.sessions"]["table"]["columns"][0]["description"] = "changed, same version"
     writer = PacketWriter(altered, packet_id=root.name)
     writer.add("core.processing_runs", _runs())
     with pytest.raises(ValueError, match="cannot be told apart"):
@@ -548,7 +548,7 @@ def test_a_registry_colliding_with_a_retained_copy_is_refused(tmp_path, registry
     assert writer.amend(root).passed
 
     altered = copy.deepcopy(registry)
-    altered["tables"]["core.sessions"]["columns"][0]["description"] = "changed, same version"
+    altered["resources"]["core.sessions"]["table"]["columns"][0]["description"] = "changed, same version"
     back = PacketWriter(altered, packet_id=root.name)
     back.add("core.source_files", [{"source_file_id": "f1", "uri": "file:///x"}])
     with pytest.raises(ValueError, match="two different .* in one packet"):
@@ -566,21 +566,19 @@ def _waveforms(units=8, channels=4, samples=10):
     return (rng.normal(0, 100, (units, channels, samples))).astype("int16")
 
 
-def _array_tables(uri: str = "arrays/core/waveform_means.zarr") -> dict[str, list[dict]]:
+def _array_tables(asset_id: str = "wf") -> dict[str, list[dict]]:
     """The rows an array must be accompanied by: Part 03 §6.2 requires every axis to be named."""
     return {
         "core.array_assets": [
             {
-                "array_asset_id": "wf",
+                "array_asset_id": asset_id,
                 "session_id": "s001",
                 "semantic_type": "waveform_mean",
                 "array_asset_name": "mean waveform per unit",
-                "uri": uri,
-                "format": "zarr_v3",
             }
         ],
         "core.array_dimensions": [
-            {"array_asset_id": "wf", "axis_index": i, "dimension_name": n}
+            {"array_asset_id": asset_id, "axis_index": i, "dimension_name": n}
             for i, n in enumerate(("unit", "channel", "sample"))
         ],
     }
@@ -598,7 +596,14 @@ def test_an_array_is_written_as_zarr_v3(tmp_path, registry, minimal):
     values = _waveforms()
     writer.add_array(
         "core.waveform_means",
-        StagedArray(values=values, array_asset_id="wf", chunks=(1, 4, 10), shard=(4, 4, 10)),
+        StagedArray(
+            values=values,
+            resource_id="core.waveform_means",
+            declaration_id="core.array_asset_instances",
+            array_asset_id="wf",
+            chunks=(1, 4, 10),
+            shard=(4, 4, 10),
+        ),
     )
     report = writer.commit(root)
     assert report.passed
@@ -607,7 +612,7 @@ def test_an_array_is_written_as_zarr_v3(tmp_path, registry, minimal):
         for r in json.loads((root / "packet.json").read_text())["resources"]
         if r["resource_id"] == "core.waveform_means"
     )
-    assert entry["kind"] == "dense_array_asset"
+    assert entry["declaration_id"] == "core.array_asset_instances"
     assert entry["physical_profile"] == "zarr_v3"  # Part 03 §6.1: packet-owned must be v3
     # Sharding is a codec, and the manifest must say so: a reader without sharding support
     # would otherwise read `["blosc"]` and discover the shard only on opening the array.
@@ -629,7 +634,15 @@ def test_the_array_reads_back_identically(tmp_path, registry, minimal):
         writer.add(resource_id, records)
     values = _waveforms()
     writer.add_array(
-        "core.waveform_means", StagedArray(values=values, array_asset_id="wf", chunks=(1, 4, 10), shard=(4, 4, 10))
+        "core.waveform_means",
+        StagedArray(
+            values=values,
+            resource_id="core.waveform_means",
+            declaration_id="core.array_asset_instances",
+            array_asset_id="wf",
+            chunks=(1, 4, 10),
+            shard=(4, 4, 10),
+        ),
     )
     writer.commit(root)
     back = zarr.open_array(str(root / "arrays" / "core" / "waveform_means.zarr"), mode="r")
@@ -644,9 +657,18 @@ def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal
     writer = PacketWriter(registry, packet_id=root.name)
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
+    for resource_id, records in _array_tables().items():
+        writer.add(resource_id, records)
     writer.add_array(
         "core.waveform_means",
-        StagedArray(values=_waveforms(), array_asset_id="wf", chunks=(3, 4, 10), shard=(4, 4, 10)),
+        StagedArray(
+            values=_waveforms(),
+            resource_id="core.waveform_means",
+            declaration_id="core.array_asset_instances",
+            array_asset_id="wf",
+            chunks=(3, 4, 10),
+            shard=(4, 4, 10),
+        ),
     )
     with pytest.raises(ValueError, match="whole number of chunks"):
         writer.commit(root)
@@ -662,7 +684,14 @@ def test_a_codec_outside_the_floor_is_written_and_declared(tmp_path):
     from escapewheel_writer.arrays import declared_codecs
     from escapewheel_writer.writer import StagedArray
 
-    spec = StagedArray(values=_waveforms(), array_asset_id="wf", chunks=(1, 4, 10), codecs=("numcodecs.delta", "zstd"))
+    spec = StagedArray(
+        values=_waveforms(),
+        resource_id="core.wf",
+        declaration_id="core.array_asset_instances",
+        array_asset_id="wf",
+        chunks=(1, 4, 10),
+        codecs=("numcodecs.delta", "zstd"),
+    )
     assert declared_codecs(spec) == ("numcodecs.delta", "zstd")
 
     from escapewheel_writer.arrays import write_zarr
@@ -722,7 +751,7 @@ def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
     from escapewheel_writer.writer import _write_stream
 
     rows = (1 << 20) + 200_000  # deliberately over pyarrow's default cut
-    spec = registry["tables"]["core.spike_events"]
+    spec = registry["resources"]["core.spike_events"]["table"]
     batch = pa.record_batch(
         {
             # int32 since R53 §2.1. `_write_stream` is below `add_batches`, which is where a
@@ -886,10 +915,13 @@ def test_a_referenced_array_is_declared_external_and_copied_nowhere(tmp_path, re
     writer = PacketWriter(registry, packet_id="s001")
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
+    for resource_id, records in _array_tables("probe.lfp").items():
+        writer.add(resource_id, records)
     writer.reference_array(
         "core.probe.lfp",
         ExternalArray(
             array_asset_id="probe.lfp",
+            declaration_id="core.array_asset_instances",
             uri="s3://bucket/lfp",
             physical_profile="zarr_v2",
             codecs=("blosc",),
@@ -912,8 +944,17 @@ def test_a_relative_reference_is_refused(tmp_path, registry):
     from escapewheel_writer.writer import ExternalArray
 
     writer = PacketWriter(registry, packet_id="s001")
+    for resource_id, records in _array_tables("probe.lfp").items():
+        writer.add(resource_id, records)
     with pytest.raises(ValueError, match="not absolute"):
-        writer.reference_array("core.probe.lfp", ExternalArray(array_asset_id="probe.lfp", uri="arrays/lfp"))
+        writer.reference_array(
+            "core.probe.lfp",
+            ExternalArray(
+                array_asset_id="probe.lfp",
+                declaration_id="core.array_asset_instances",
+                uri="arrays/lfp",
+            ),
+        )
 
 
 def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
@@ -924,9 +965,17 @@ def test_a_referenced_codec_joins_required_codecs(tmp_path, registry, minimal):
     writer = PacketWriter(registry, packet_id="s001")
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
+    for resource_id, records in _array_tables("probe.lfp").items():
+        writer.add(resource_id, records)
     writer.reference_array(
         "core.probe.lfp",
-        ExternalArray(array_asset_id="probe.lfp", uri="s3://bucket/lfp", physical_profile="zarr_v2", codecs=("blosc",)),
+        ExternalArray(
+            array_asset_id="probe.lfp",
+            declaration_id="core.array_asset_instances",
+            uri="s3://bucket/lfp",
+            physical_profile="zarr_v2",
+            codecs=("blosc",),
+        ),
     )
     writer.commit(root)
     assert json.loads((root / "packet.json").read_text())["required_codecs"] == ["blosc"]
@@ -986,11 +1035,14 @@ def test_a_referenced_source_reaches_the_default_document(tmp_path, registry, mi
     writer = PacketWriter(registry, packet_id=root.name)
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
+    for resource_id, records in _array_tables("lfp0").items():
+        writer.add(resource_id, records)
     writer.declare_source("raw_nwb", "file:///mnt/Data/ephys/session.nwb")
     writer.reference_array(
         "core.probe0.lfp",
         ExternalArray(
             array_asset_id="lfp0",
+            declaration_id="core.array_asset_instances",
             uri="processing/ecephys/LFP/data",
             source="raw_nwb",
             physical_profile="zarr_v2",
@@ -1031,7 +1083,11 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
     `conformance/parquet-probe/alternatives.py` measures against a built packet. That the column
     exists and has a type its list can encode is decidable here, with no packet in hand.
     """
-    tables = dict(registry["tables"])
+    tables = {
+        name: declaration["table"]
+        for name, declaration in registry["resources"].items()
+        if declaration["kind"] == "table"
+    }
     named = [resource for entries in (DELTA_COLUMNS, NO_DICTIONARY, DICTIONARY_COLUMNS) for resource in entries]
     assert [r for r in named if not r.startswith(("core.", "analysis."))] == [], (
         "core names an extension's table; an extension supplies its own to PacketWriter"
@@ -1124,7 +1180,7 @@ def test_a_string_chosen_plain_is_written_without_a_dictionary(tmp_path, registr
     names = pa.array(["probe.CH0", "probe.CH1", "probe.CH10"])
     table = pa.table({"electrode_name": names if held == "strings" else names.dictionary_encode()})
     path = tmp_path / "electrodes.parquet"
-    spec = registry["tables"]["core.electrodes"]
+    spec = registry["resources"]["core.electrodes"]["table"]
     pq.write_table(table, path, **_options("core.electrodes", spec, table.schema, sample=table))
     encodings = {str(e) for e in pq.ParquetFile(path).metadata.row_group(0).column(0).encodings}
     assert not any("DICTIONARY" in e for e in encodings), encodings
@@ -1144,7 +1200,7 @@ def _stream_units(tmp_path, registry, extra=None, report=None, **columns):
         }
     )
     path = tmp_path / "units.parquet"
-    _write_stream(registry["tables"]["core.units"], iter([batch]), path, "core.units", extra, report)
+    _write_stream(registry["resources"]["core.units"]["table"], iter([batch]), path, "core.units", extra, report)
     metadata = pq.ParquetFile(path).metadata
     return {
         metadata.schema.column(i).name: {str(e) for e in metadata.row_group(0).column(i).encodings}

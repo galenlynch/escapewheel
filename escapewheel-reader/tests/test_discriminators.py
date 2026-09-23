@@ -37,29 +37,36 @@ def _with_detail(packet_root, *, kind="task.trials"):
     entry["resources"].append(
         {
             "resource_id": kind,
-            "layer": "core",
-            "kind": "table",
+            "declaration_id": kind,
             "uri": "tables/task/trials.parquet",
         }
     )
     manifest.write_text(json.dumps(entry))
 
-    rows["tables"][kind] = {
-        "columns": [
-            {"name": "session_id", "type": "int32", "presence": "required", "role": "identifier"},
-            {"name": "interval_kind", "type": "string", "presence": "required", "role": "data"},
-            {"name": "trial_id", "type": "int32", "presence": "required", "role": "identifier"},
-            {"name": "outcome", "type": "string", "presence": "optional", "role": "data"},
-        ],
-        "primary_key": ["session_id", "trial_id"],
-        "references": [
-            {
-                "columns": ["session_id", "interval_kind", "trial_id"],
-                "resource": "core.intervals",
-                "resource_columns": ["session_id", "interval_kind", "interval_id"],
-            }
-        ],
-        "rules": [],
+    rows["resources"][kind] = {
+        "content_class": "extension",
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "requires": [],
+        "lineage": "optional",
+        "producing_run": "optional",
+        "table": {
+            "columns": [
+                {"name": "session_id", "type": "int32", "presence": "required", "role": "identifier"},
+                {"name": "interval_kind", "type": "string", "presence": "required", "role": "data"},
+                {"name": "trial_id", "type": "int32", "presence": "required", "role": "identifier"},
+                {"name": "outcome", "type": "string", "presence": "optional", "role": "data"},
+            ],
+            "primary_key": ["session_id", "trial_id"],
+            "references": [
+                {
+                    "columns": ["session_id", "interval_kind", "trial_id"],
+                    "resource": "core.intervals",
+                    "resource_columns": ["session_id", "interval_kind", "interval_id"],
+                }
+            ],
+            "rules": [],
+        },
     }
     (packet_root / "schemas" / "logical_schemas.json").write_text(json.dumps(rows))
     return open_packet(packet_root)

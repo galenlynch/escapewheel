@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry-contract/0.1.0",
-  "id": "escapewheel-registry-contract-v0.1",
-  "registry_schema": "https://escapewheel.org/schemas/registry/0.4.0",
+  "id": "escapewheel-registry-contract-v0.2",
+  "registry_schema": "https://escapewheel.org/schemas/registry/0.5.0",
   "semantic_standard": "escapewheel-semantic-v0.1",
   "logical_standard": "escapewheel-logical-v0.1",
   "rule_languages": ["escapewheel-rule-sql-v0.1"],
@@ -26,6 +26,11 @@
     {"id": "registry.rule.id_unique", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-tier-2-rules", "ew-registry-conformance"]},
     {"id": "registry.rule.id_owner", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-tier-2-rules", "ew-registry-conformance"]},
     {"id": "registry.rule.required_inputs", "phase": "rule_static", "classes": ["core", "extension"], "anchors": ["ew-tier-2-rules", "ew-registry-conformance", "ew-tier-2-query-profile"]},
-    {"id": "registry.core.device_detail", "phase": "semantic", "classes": ["core"], "anchors": ["ew-discriminator-semantics", "ew-registry-conformance", "ew-extension-definition"]}
+    {"id": "registry.core.device_detail", "phase": "semantic", "classes": ["core"], "anchors": ["ew-discriminator-semantics", "ew-registry-conformance", "ew-extension-definition"]},
+    {"id": "registry.resource.classification", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-resource-content-class", "ew-registry-conformance"]},
+    {"id": "registry.resource.instance", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-resource-kind", "ew-resource-instance-model", "ew-registry-conformance"]},
+    {"id": "registry.resource.catalog", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-resource-instance-model", "ew-resource-catalog-binding", "ew-registry-conformance"]},
+    {"id": "registry.resource.array_axes", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-resource-kind", "ew-registry-conformance"]},
+    {"id": "registry.resource.dependency", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-resource-presence", "ew-registry-conformance"]}
   ]
 }
