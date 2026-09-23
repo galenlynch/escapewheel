@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [Every Packet Resource Instantiates a Logical Declaration](every-packet-resource-instantiates-a-logical-declaration.md) | 4,799 | Not yet appraised; promoted 2026-09-22 from the exact proposal at `4e56020a336c6988a2252f747a6bfa2fb8781415`. | Structural reconciliation across Parts 00, 01, 02, 04, 06, and 09; generalized registry and packet declaration binding. |
