@@ -1988,6 +1988,7 @@ alone neither makes the upstream representation malformed nor decides packet con
 
 ## 3. Directory layout
 
+<a id="ew-portable-packet-layout" data-spec-anchor="canonical"></a>
 ### 3.1 Recommended layout
 
 ```text
@@ -2251,6 +2252,7 @@ The asymmetry is the design: an amendment **extends** what a packet says and doe
 
 Provenance tables are the exception because they are append-only by nature — a row records that something ran, and a later run does not change what an earlier one did.
 
+<a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
 ### 9.3 The manifest
 
 Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
@@ -2553,6 +2555,7 @@ catalog row's `resource_id` under Part 02 §2.6. A family entry uses a packet-un
 ID in a namespace its declaration's registry owns. An unknown declaration or inadmissible instance
 binding makes a conformance claim invalid.
 
+<a id="ew-withdrawn-catalog-blocks" data-spec-anchor="canonical"></a>
 ### 4.3 Withdrawn blocks
 
 The `canonical_representations` block is withdrawn: spikes have one canonical representation, so there is nothing to arbitrate.
@@ -2663,6 +2666,7 @@ than an assigned table number. Complete row-to-entry reconciliation of that valu
 validator MUST NOT make the nullable source bridge
 `core.processing_runs.processing_run_name` packet-unique merely to create a join.
 
+<a id="ew-packet-registry-bindings" data-spec-anchor="canonical"></a>
 ## 8. Extensions
 
 Where a packet carries extension resources, the catalog MUST declare each extension namespace, its version, and the path to its registry document:
@@ -3451,6 +3455,7 @@ One ecephys session with behaviour, ten probes, and two extensions.
 
 Two files are 99.3% of what the packet owns: `core.spike_events` at 232 MB and `analysis.spike_events` at 247 MB, which is 1.76 bytes per spike while carrying four identifiers, a tick, and a clock per row.
 
+<a id="ew-example-packet-layout" data-spec-anchor="canonical"></a>
 ## 2. Layout
 
 ```text
@@ -3473,6 +3478,7 @@ packet_root/
 The LFP is referenced rather than copied: ten entries instantiating the dense-array family, with
 `external: true` and absolute URIs.
 
+<a id="ew-example-packet-catalog" data-spec-anchor="canonical"></a>
 ## 3. Catalog excerpt
 
 ```json
@@ -3620,6 +3626,7 @@ Every declaration identifier in an extension registry MUST begin with the namesp
 `extension_id`. The extension owns only that namespace. An extension namespace MUST NOT be `core`,
 `analysis`, or `nwb`.
 
+<a id="ew-extension-registration" data-spec-anchor="canonical"></a>
 ### 5.3 Registration
 
 A packet carrying extension resources MUST declare each namespace in the catalog with its version and the path to its registry document (04 §8).

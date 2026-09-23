@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `23432fd55f71013bc0de27ef8985b6734241a3eb` |
+| **Based on** | `44855721f7ffe5987bf55c312905360489c62f39` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 02 §§2.5, 2.7, 9.1, 9.2, and 9.4; Part 03 §§1, 3.1, 9.3, 11.3, and 12; Part 04 §§1–4 and 7–10, with a new §10 and the references renumbered to §11; Part 05 §§5.3, 10, 14.5, and 14.6; Part 08 §§2–3; Part 09 §5.3; the specification README §4; `registry/manifest.schema.json`; `registry/resources.schema.json`; `registry/registry.schema.json`; the registry-contract descriptor; `registry/logical_schemas.json`; the example extension registries |
+| **Amends** | Part 02 §§2.5, 2.7, 9.1, 9.2, and 9.4; Part 03 §§1, 3.1, 9.3, 11.3, and 12, with a new §3.3; Part 04 §§1–4 and 7–10, with a new §10 and the references renumbered to §11; Part 05 §§5.3, 10, 14.5, and 14.6; Part 08 §§2–3; Part 09 §5.3; the specification README §4; `registry/manifest.schema.json`; `registry/resources.schema.json`; `registry/registry.schema.json`; the registry-contract descriptor; `registry/logical_schemas.json`; the example extension registries |
 | **Depends on** | [R122 §§3.2–3.3](../accepted/R122-define-specification-artifacts-and-normative-ownership.md#3-decision); [R126 §§3.2–3.3](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md#3-decision); [R127 §§3.2, 3.4, and 3.6](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md#3-decision); [R128 §§3.4–3.5, 3.7, and 3.9](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md#3-decision); [R129 §§3.6–3.7](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md#3-decision) |
 | **Profile** | all; §3.5 applies to `escapewheel-portable-v0.1` |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6; §3.7; §3.8; §3.9; §3.10; §3.11 |
@@ -50,36 +50,36 @@ specification release manifest.
 | [Part 02 §2.5](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-presence), presence conditions | revise in place | same section | a bound extension registry is active; a present `processing_run_name` requires `core.processing_runs` | §§3.3, 3.7 |
 | [Part 02 §2.7](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-provenance-policy), producing-run policy field | revise in place | same section | the policy governs `processing_run_name` | §3.7 |
 | [Part 02 §9.1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-document), required registry members | expand in place | same section and incorporated meta-schema | every registry document carries `registry_id` | §3.4 |
-| [Part 02 §9.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-self-description), a packet records a registry version and should embed the registry | replace the packet obligation with a pointer; revise identifiers | Part 04 §8 for binding; Part 03 for embedding; this section for registry identifiers | version-only binding and optional embedding become a full descriptor and mandatory embedding | §§3.3–3.5, 3.11 |
+| [Part 02 §9.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-self-description), a packet records a registry version and should embed the registry | replace the packet obligation with a pointer; revise identifiers | Part 04 §8 for binding; planned Part 03 section 3.3 for storage; this section for registry identifiers | version-only binding and optional embedding become a full descriptor and mandatory embedding | §§3.3–3.5, 3.11 |
 | [Part 02 §9.4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-conformance), contract descriptor and invariant inventory | revise in place | same section and incorporated descriptor | descriptor v0.3 selects meta-schema 0.6.0 and adds one extension invariant | §§3.4, 3.11 |
-| Part 03 §1, incorporated artifacts | expand in place | same section | incorporates the generated delivery schema | §3.10 |
-| Part 03 §3.1, recommended layout with `schemas/logical_schemas.json` and `extensions/<name>.json` | revise in place | same section | recommends `registries/<registry_id>/<version>.json.gz` | §3.5 |
-| Part 03 §9.3, superseded registry copies distinguished by `registry_version` | revise in place | same section | retention and ambiguity are judged by registry ID, version, and digest | §3.5 |
+| [Part 03 §1](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-portable-profile-scope), incorporated artifacts | expand in place | same section | incorporates the generated delivery schema | §3.10 |
+| [Part 03 §3.1](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-portable-packet-layout), recommended layout with `schemas/logical_schemas.json` and `extensions/<name>.json` | revise in place | same section | recommends `registries/<registry_id>/<version>.json.gz` | §3.5 |
+| no current section stores a bound registry | add | planned Part 03 section 3.3, "Bound registries", `ew-portable-bound-registries` | each bound registry is one gzip member at its descriptor path, embedded rather than resolved, and a named file for immutability, amendment, and cleanup | §3.5 |
+| [Part 03 §9.3](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-superseded-manifest-retention), superseded registry copies distinguished by `registry_version` | revise in place | same section | retention and ambiguity are judged by registry ID, version, and digest | §3.5 |
 | [Part 03 §11.3](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-referenced-resource-delivery), a delivered entry "as Part 04 §5 declares one" | revise in place | same section, Part 04 §4.1, and the generated delivery schema | the delivered entry is a closed, generated projection of the catalog entry | §3.10 |
 | [Part 03 §12](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-portable-profile-normative-references), portable-profile references | extend in place | same section | adds RFC 1952 and RFC 1951 | §3.5 |
 | [Part 04 §1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-scope), scope | expand in place | same section | incorporates `registry/manifest.schema.json` | §3.1 |
 | [Part 04 §2](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-principles), names rather than numbers | revise in place | same section | names `processing_run_name` | §3.7 |
 | [Part 04 §3](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-identifiers), hand-authored top-level field table | replace with a generated projection | incorporated catalog schema | `registries` replaces `registry_version` and `extensions`; the root closes | §§3.1–3.3 |
 | [Part 04 §4.1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-resource-entry-fields), hand-authored entry table and retired-field list | replace with a generated projection | incorporated catalog schema; Part 03 §10 for when `sha256` is recorded | closure replaces the retired-field list; `processing_run_name` replaces `processing_run_id`; `semantic_type` is removed; the table's duplicate `sha256` SHOULD is dropped | §§3.1–3.2, 3.7 |
-| Part 04 §4.3, withdrawn blocks | retire; move the provenance-table sentence to §7 | schema closure and Part 04 §7 | a withdrawn member is rejected by closure rather than by a list | §3.2 |
+| [Part 04 §4.3](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-withdrawn-catalog-blocks), withdrawn blocks | retire; move the provenance-table sentence to §7 | schema closure and Part 04 §7 | a withdrawn member is rejected by closure rather than by a list | §3.2 |
 | [Part 04 §7](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-resource-lineage), deferred producing-run identity | replace the deferral | same section | a present name resolves to exactly one row with that non-null name | §3.7 |
-| Part 04 §8, extension inventory | replace | same section, retitled "Registry bindings" | one descriptor map binds core and every extension | §3.3 |
+| [Part 04 §8](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-registry-bindings), extension inventory | replace | same section, retitled "Registry bindings" | one descriptor map binds core and every extension | §3.3 |
 | [Part 04 §9](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-validation-block), hand-authored validation-block table | replace with a generated projection | incorporated catalog schema | the block closes and loses `report_uri` | §§3.1–3.2 |
-| no current catalog-conformance section | add Part 04 §10 | Part 04 | ordered phases and named checks | §§3.6–3.9 |
+| no current catalog-conformance section | add | planned Part 04 section 10, "Catalog conformance", `ew-packet-catalog-conformance` | ordered phases and named checks | §§3.6–3.9 |
 | [Part 04 §10](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-normative-references), normative references | renumber to §11 | same content | none | none |
-| [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), shim list of declaration checks and the producing-run paragraph | replace with a citation of Part 04 §10 | Part 04 §10 | the check inventory and producing-run resolution gain one owner | §§3.6–3.7 |
+| [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), shim list of declaration checks and the producing-run paragraph | replace with a citation of planned Part 04 section 10 | planned Part 04 section 10 | the check inventory and producing-run resolution gain one owner | §§3.6–3.7 |
 | [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes), analysis `processing_run_id` is MUST | revise in place | Part 02 §2.7 declaration policy, cited here | the field is renamed; the obligation comes from the declaration | §3.7 |
 | [Part 05 §14.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validator-registry-boundary), embedded or caller-supplied core registry | revise in place | same section | only bound registries direct packet checks; missing-registry binding is decided | §3.9 |
 | [Part 05 §14.6](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-registry-result-reporting), subject labels | revise in place | same section | a registry ID labels each bound registry's result | §3.9 |
-| Part 08 §§2–3, example layout and catalog | regenerate | informative example | shows the descriptor map and gzip members | §§3.3, 3.5 |
-| Part 09 §5.3, extension registration | replace | same section, citing Part 04 §8 | registration is a descriptor with role `extension` | §§3.3, 3.9 |
+| [Part 08 §2](../../escapewheel_poc_docs_v0.2/08_example_packet.md#ew-example-packet-layout) and [§3](../../escapewheel_poc_docs_v0.2/08_example_packet.md#ew-example-packet-catalog), example layout and catalog | regenerate | informative example | shows the descriptor map and gzip members | §§3.3, 3.5 |
+| [Part 09 §5.3](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-registration), extension registration | replace | same section, citing Part 04 §8 | registration is a descriptor with role `extension` | §§3.3, 3.9 |
 | Specification README §4, `registry_version` row | regenerate | Part 04 §8 and Part 02 §9.2 | lists the core registry ID and version rather than a catalog field | §3.11 |
 | `registry/manifest.schema.json` | revise and incorporate | Part 04 | closed catalog shape at `manifest/0.4.0` | §§3.1–3.3, 3.7, 3.11 |
 | `registry/resources.schema.json` | generate | Part 03 §11.3 and Part 04 §4.1 | closed delivery shape at `resources/0.4.0` | §§3.10–3.11 |
 | `registry/registry.schema.json`, contract descriptor, core and extension registries | advance | Part 02 | `registry_id`, meta-schema 0.6.0, descriptor v0.3, core 0.6.0 | §§3.4, 3.11 |
 
-Seven affected headings lack canonical anchors: Part 03 §§3.1 and 9.3, Part 04 §§4.3 and 8,
-Part 08 §§2 and 3, and Part 09 §5.3. A metadata-only bootstrap commit adds them before appraisal.
+Seven affected headings lacked canonical anchors; §6.1 records the bootstrap that added them.
 
 ## 2. Background
 
@@ -191,7 +191,7 @@ Part 04 MUST expressly incorporate `registry/manifest.schema.json`, whose `$id` 
 `https://escapewheel.org/schemas/manifest/0.4.0`. The schema owns the catalog's exact local JSON
 structure: member names, JSON types, required members, object closure, patterns, enumerations,
 formats, and conditional shape within one entry. Part 04 prose owns every field's meaning,
-declaration-selected presence, and the checks of Part 04 §10. A disagreement between Part 04 and
+declaration-selected presence, and the checks of planned Part 04 section 10. A disagreement between Part 04 and
 the incorporated schema makes the specification candidate internally inconsistent.
 
 The field tables in Part 04 §§3, 4.1, 8, and 9 MUST be informative projections that
@@ -280,8 +280,8 @@ contract MUST check the extension equality as the semantic invariant
 `registry.identity.registry_id`, applicable to the extension class and ordered immediately after
 `registry.identity.name`.
 
-Part 02 §9.2 MUST NOT state a packet obligation. It cites Part 04 §8 for binding and Part 03 for
-storage and retains the incorporated meta-schema, core-registry identifiers, extension-version
+Part 02 §9.2 MUST NOT state a packet obligation. It cites Part 04 §8 for binding and planned Part 03
+section 3.3 for storage and retains the incorporated meta-schema, core-registry identifiers, extension-version
 independence, and selection rules.
 
 ### 3.5 The portable profile embeds each bound registry as one gzip member
@@ -295,7 +295,8 @@ ignore them.
 A conforming packet MUST contain every bound registry. A writer MUST NOT bind a registry by remote
 location or omit the stored copy, and a reader or validator MUST NOT resolve a bound registry from
 anywhere else. A descriptor path names a file for the immutability, amendment, and cleanup rules
-of Part 03 §§8.1, 9.1, and 9.5.
+of Part 03 §§8.1, 9.1, and 9.5. Planned Part 03 section 3.3 owns the rules of this paragraph and
+the one above.
 
 Part 03 §3.1 MUST recommend `registries/<registry_id>/<version>.json.gz` in place of
 `schemas/logical_schemas.json` and `extensions/<name>.json`. The catalog still records the actual
@@ -311,7 +312,7 @@ exact edition.
 
 ### 3.6 Catalog conformance has ordered phases and named checks
 
-Part 04 §10 MUST define catalog conformance as these phases, evaluated in order:
+Planned Part 04 section 10 MUST define catalog conformance as these phases, evaluated in order:
 
 1. `json`, which decodes the catalog as UTF-8 JSON under RFC 8259;
 2. `shape`, which validates it against the incorporated schema;
@@ -319,9 +320,10 @@ Part 04 §10 MUST define catalog conformance as these phases, evaluated in order
 4. `registry_binding`, which acquires and compares every bound registry; and
 5. `declaration`, which runs checks derived from the bound declarations.
 
-A later phase MUST NOT index into a catalog that failed an earlier phase. A shape finding carries
-the check ID `packet.catalog.schema` and the schema-location pointer. Every finding in this
-section is at `error` and names the owning resource ID or registry ID where one applies.
+A checker MUST NOT run a later phase over a catalog with a finding in `json`, `shape`, or
+`catalog`. A shape finding carries the check ID `packet.catalog.schema` and the schema-location
+pointer. Every finding in the table below is at `error` and names the owning resource ID or
+registry ID where one applies.
 
 | check ID | phase | a finding exists when |
 |---|---|---|
@@ -335,8 +337,8 @@ section is at `error` and names the owning resource ID or registry ID where one 
 | `packet.registry.core_count` | catalog | the number of core descriptors differs from one |
 | `packet.registry.path_unique` | catalog | two descriptors share a `path` |
 | `packet.registry.missing` | registry_binding | nothing exists at a descriptor's path |
-| `packet.registry.unreadable` | registry_binding | the file is not exactly one valid gzip member |
-| `packet.registry.digest` | registry_binding | the decompressed bytes' SHA-256 differs from `sha256` |
+| `packet.registry.unreadable` | registry_binding | the stored copy does not decode as the packet's physical profile requires |
+| `packet.registry.digest` | registry_binding | the decoded bytes' SHA-256 differs from `sha256` |
 | `packet.registry.identity` | registry_binding | the document's `registry_id` differs from the descriptor's name |
 | `packet.registry.role` | registry_binding | the document's class differs from the descriptor's role |
 | `packet.registry.version` | registry_binding | the document's `registry_version` differs from `version` |
@@ -362,12 +364,19 @@ section is at `error` and names the owning resource ID or registry ID where one 
 | `packet.resource.processing_run_ambiguous` | declaration | more than one `core.processing_runs` row has that `processing_run_name` |
 
 In the `registry_binding` phase, a checker MUST evaluate `missing`, `unreadable`, and `digest`
-first. Only for decompressed bytes that match the digest, it then obtains the Part 02 registry
+first. Only for decoded bytes that match the digest, it then obtains the Part 02 registry
 result through the byte-oriented entry point, supplying the core context to every extension, and
 evaluates the four comparison checks for each shape-valid document. The `declaration` phase runs
 only from checked contexts that R127 permits to direct packet checks.
 
-Part 05 §5.3 MUST cite Part 04 §10 for these checks rather than list them, and retains
+A binding finding for an extension registry withholds only that registry. The `declaration` phase
+MUST run from every bound registry that passed binding, and a checker MUST NOT report a
+declaration finding for an entry whose `declaration_id` namespace is the ID of an extension
+registry that failed. A failed core registry withholds the whole `declaration` phase, because every
+extension's checked context needs core. Part 09 §5.4 continues to attribute an extension's findings
+and compose the verdicts.
+
+Part 05 §5.3 MUST cite planned Part 04 section 10 for these checks rather than list them, and retains
 kind-specific physical dispatch and `core.sessions.manifest_sessions_match`. The validator's
 `registry.schema`, `registry.version_mismatch`, `packet.resource.lineage_shape`,
 `packet.resource.processing_run_id_required`, `packet.resource.processing_run_id_forbidden`, and
@@ -394,7 +403,7 @@ fail the load on any finding among them. A reader MAY expose the decoded JSON of
 as raw data but MUST NOT resolve declarations or resources through it.
 
 A reader resolving a declaration MUST acquire the bound registry that declares it through its
-descriptor, decompress it, and verify its digest. When the registry is missing, unreadable, or
+descriptor, decode it as the packet's physical profile requires, and verify its digest. When the registry is missing, unreadable, or
 fails the digest, the reader MUST fail the operation that needed it and name the registry ID. It
 MUST NOT substitute other bytes or silently omit a bound registry. Operations that need no such
 declaration proceed, and a reader need not run any other catalog check or obtain a registry result
@@ -408,7 +417,7 @@ resolved registry for a bound one. A validator MAY check a caller-supplied regis
 own under Part 02 but MUST NOT use it to direct packet checks or report its result as the
 packet's.
 
-Part 05 §14.5 MUST obtain a result for every bound registry whose decompressed bytes match their
+Part 05 §14.5 MUST obtain a result for every bound registry whose decoded bytes match their
 digest, and MUST treat `packet.registry.missing`, `packet.registry.unreadable`, and
 `packet.registry.digest` as the packet-level outcome for a registry that cannot be acquired. Part
 05 §14.6 MUST label each bound registry's result by its registry ID.
@@ -418,7 +427,8 @@ under §3.5, and record its descriptor before writing the final catalog. A write
 catalog with a finding in the `json`, `shape`, `catalog`, or `registry_binding` phase.
 
 Part 09 §5.3 MUST state registration as a descriptor with role `extension` under Part 04 §8 and
-cite Part 04 §10 for its checks.
+cite planned Part 04 section 10 for its checks, which replace the existence check and keep core's checks
+independent of an extension registry.
 
 ### 3.10 The delivery entry is generated from the catalog entry
 
@@ -457,8 +467,8 @@ ones. The specification README MUST project the core registry ID and version in 
 Registry declarations remain the sole owners of resource presence, dependencies, kinds, instance
 modes, tables, and rules; this revision gives their packet-side checks IDs without changing what
 they require. `profile_id` remains the sole physical-profile selector, and no physical field
-returns to the catalog. Part 04 §5's external-resource verification levels and the Part 05 §5.3
-session-inventory check are unchanged.
+returns to the catalog. Part 04 §5's external-resource verification levels, the Part 05 §5.3
+session-inventory check, and Part 09 §5.4's separate verdicts are unchanged.
 
 ## 5. Consequence
 
@@ -472,7 +482,7 @@ the union run lookup. The reader and validator gain an RFC 3339 format dependenc
 | semantic prose | unchanged; binding and catalog mechanics alter no scientific meaning | specification diff |
 | logical prose and registry | add `registry_id` to Part 02 §9.1, the meta-schema, the core registry, and every extension; add `registry.identity.registry_id`; replace Part 02 §9.2's packet obligation; rename the producing-run field in §§2.5 and 2.7; advance meta-schema, descriptor, and core identifiers | registry checker, contract-descriptor tests, and negative extension with a mismatched `registry_id` |
 | physical profiles | Part 03 stores each bound registry as one gzip member, recommends a new layout, restates retention by registry ID and version, incorporates the delivery schema, and cites RFC 1952 and RFC 1951 | writer and reader round trip of gzip members; retention test for two digests under one ID and version |
-| packet catalog and JSON Schemas | incorporate the closed catalog schema; add `registries`; remove nine root, two entry, and one validation member; rename the producing-run field; render Part 04 tables from the schema; add §10; generate the delivery schema | schema tests, generated-table comparison, and generated-delivery comparison in the repository verifier |
+| packet catalog and JSON Schemas | incorporate the closed catalog schema; add `registries`; remove nine root, two entry, and one validation member; rename the producing-run field; render Part 04 tables from the schema; add planned section 10; generate the delivery schema | schema tests, generated-table comparison, and generated-delivery comparison in the repository verifier |
 | validation and import | run the five phases; direct checks only from bound registries; retire superseded finding IDs; assert `date-time` | validator tests for every check ID |
 | extensions | each example registry gains `registry_id` and advances its version; binding applies without naming any extension in a numbered part | extension registry checks and extension packet fixtures |
 | reader, writer, validator, adapters | the reader rejects duplicate members, shape failures, and duplicate IDs at load, resolves registries through descriptors, and verifies digests; the writer serializes, hashes, and gzips registries before writing the catalog; the validator acquires registries only through descriptors; adapters deliver closed entries | package tests and cross-package builds |
@@ -510,6 +520,8 @@ It must establish these negative cases, each producing exactly its check ID:
 - a registry ID, role, version, logical-standard, and semantic-standard mismatch;
 - a caller-supplied registry that would pass a packet whose bound registry fails, which must still
   fail;
+- an extension registry that fails binding, which yields its binding finding while core's
+  declaration checks still run and no declaration finding names that extension's entries;
 - repeated member keys, a size mismatch, and a member-digest mismatch;
 - an absent required `processing_run_name`, a forbidden one, a missing run table, an unresolved
   name, and a name shared by two rows; and
@@ -518,6 +530,21 @@ It must establish these negative cases, each producing exactly its check ID:
 The reader's catalog loader must be tested against duplicate IDs and members without constructing
 a map first. The incorporation evidence must include regenerated fixtures, focused package tests,
 the generated-projection comparisons, and the full repository verifier.
+
+### 6.1 Completed anchor bootstrap
+
+Commit `44855721f7ffe5987bf55c312905360489c62f39` added one canonical anchor immediately
+before each of these affected existing headings:
+
+| current heading | canonical anchor |
+|---|---|
+| Part 03 §3.1 | `ew-portable-packet-layout` |
+| Part 03 §9.3 | `ew-superseded-manifest-retention` |
+| Part 04 §4.3 | `ew-withdrawn-catalog-blocks` |
+| Part 04 §8 | `ew-packet-registry-bindings` |
+| Part 08 §2 | `ew-example-packet-layout` |
+| Part 08 §3 | `ew-example-packet-catalog` |
+| Part 09 §5.3 | `ew-extension-registration` |
 
 ## 7. Open
 

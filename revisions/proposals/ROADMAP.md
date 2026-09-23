@@ -667,8 +667,10 @@ one dataset to its resources and registries; the latter binds one publication of
 Define `core_passed`, a result for every declared extension, and overall `packet_passed`. Specify
 how missing, unreadable, structurally invalid, semantically invalid, and unsupported registries and
 resources compose into those verdicts; P6 defines a missing, unreadable, or mismatched bound
-registry as a named catalog binding finding. Make writer publication depend on the resulting packet verdict. Preserve useful partial
-reader access without reporting an invalid declared extension as a valid packet.
+registry as a named catalog binding finding that withholds only that registry's declaration checks,
+and bars a writer from publishing a catalog with such a finding. Make writer publication depend on
+the resulting packet verdict. Preserve useful partial reader access without reporting an invalid
+declared extension as a valid packet.
 
 Validate row-valued unit codes under the same case-sensitive UCUM edition selected by P4.1 when a
 column's `unit_from` resolves to a packet column. P4.1 proves that the declaration resolves to a
