@@ -625,11 +625,12 @@ and `opaque`; physical encodings and capabilities remain with the next work item
 
 ### P5.2 — Portable-profile encodings and capability declarations
 
-Give Part 03 a machine-readable descriptor for physical encodings and portability capabilities.
-Define the relationship between each logical resource kind and its permitted encodings, separate
-mandatory portability capabilities from recognized optional ones, and represent stored
-materialization or view capability without changing logical kind. The descriptor must remain a
-physical-layer authority consumed by packet binding and validation, not a second logical registry.
+Give Part 03 a machine-readable descriptor for generic physical encodings and portability
+capabilities. Define the relationship between each modeled logical resource kind and its permitted
+encodings, leave opaque representations open and unenumerated, separate mandatory portability
+capabilities from recognized optional ones, and represent materialized or view realization without
+changing logical kind. The descriptor must remain a physical-layer authority consumed by packet
+binding and validation, not a second logical registry.
 
 This stage determines the physical-profile model needed by P6. Exact codec-floor wording and
 portability reporting remain independently reviewable in P9.3 after the capability vocabulary
