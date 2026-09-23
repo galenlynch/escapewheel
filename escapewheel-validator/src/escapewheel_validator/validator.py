@@ -1944,7 +1944,7 @@ def _run_checks(
 
 
 def _check_manifest_sessions(packet: Packet, report: Report) -> None:
-    """Compare the catalog inventory with ``core.sessions`` at the Part 05 shim."""
+    """Compare the manifest inventory with ``core.sessions`` at the Part 05 shim."""
     check = "core.sessions.manifest_sessions_match"
     message = (
         "the manifest's session inventory and core.sessions disagree; the manifest names a "
@@ -1963,10 +1963,10 @@ def _check_manifest_sessions(packet: Packet, report: Report) -> None:
         except (PacketError, OSError, pa.ArrowException) as exc:
             report.record_evaluation("core", "incomplete", rule=check, detail=str(exc))
             return
-    catalog = list(packet.manifest.sessions)
-    catalog_set, table_set = set(catalog), set(table_values)
-    rows = [(value,) for value in table_values if value not in catalog_set]
-    rows.extend((value,) for value in catalog if value not in table_set)
+    listed = list(packet.manifest.sessions)
+    listed_set, table_set = set(listed), set(table_values)
+    rows = [(value,) for value in table_values if value not in listed_set]
+    rows.extend((value,) for value in listed if value not in table_set)
     if rows:
         report.add("error", check, message, rows)
 

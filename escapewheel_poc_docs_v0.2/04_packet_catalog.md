@@ -1,11 +1,11 @@
-# Part 04 — Packet Catalog
+# Part 04 — Packet Manifest
 
 Normative.
 
 <a id="ew-packet-catalog-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
-This part defines the packet catalog: the document that binds each concrete packet resource to one
+This part defines the packet manifest: the document that binds each concrete packet resource to one
 logical declaration in a checked registry context and to its location. In the portable profile it
 is `packet.json` at the packet root.
 
@@ -17,20 +17,20 @@ state their extent.
 <a id="ew-packet-catalog-principles" data-spec-anchor="canonical"></a>
 ## 2. Principles
 
-The catalog is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
+The manifest is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
 
-The catalog binds every resource instance. Part 02's declaration supplies logical content class,
+The manifest binds every resource instance. Part 02's declaration supplies logical content class,
 kind, canonicality, instance mode, presence, table contract, and provenance policy; the packet
 entry supplies instance and location facts. Part 03 derives a generic interface from the selected
 profile and logical kind, while the resource owns self-describing physical metadata. An Iceberg catalog manages only tabular resources and
-therefore does not replace the packet catalog.
+therefore does not replace the packet manifest.
 
-The catalog identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the catalog is read before any table and a number resolves against nothing.
+The manifest identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the manifest is read before any table and a number resolves against nothing.
 
 <a id="ew-packet-identifiers" data-spec-anchor="canonical"></a>
 ## 3. Required top-level fields
 
-The catalog records the semantic-standard identifier owned by Part 01, the logical-standard and
+The manifest records the semantic-standard identifier owned by Part 01, the logical-standard and
 registry identifiers owned by Part 02, and the physical-profile identifier owned by Part 03. The
 fields below record those identifiers; they do not redefine their values or meaning.
 
@@ -89,7 +89,7 @@ binding makes a conformance claim invalid.
 
 The `canonical_representations` block is withdrawn: spikes have one canonical representation, so there is nothing to arbitrate.
 
-A top-level provenance block is withdrawn. Provenance is carried in `core.source_files`, `core.processing_runs`, and `core.processing_run_inputs`; the catalog records outputs at resource granularity only.
+A top-level provenance block is withdrawn. Provenance is carried in `core.source_files`, `core.processing_runs`, and `core.processing_run_inputs`; the manifest records outputs at resource granularity only.
 
 ## 5. External resources
 
@@ -112,7 +112,7 @@ Verification of an external resource is layered, and a report MUST state which l
 
 | level | establishes |
 |---|---|
-| 1 | the catalog is internally consistent |
+| 1 | the manifest is internally consistent |
 | 2 | packet-owned resources match their recorded digests |
 | 3a | the external resource exists and lists |
 | 3b | its recorded per-member store digests still match |
@@ -123,7 +123,7 @@ When an external resource is unavailable, its physical version, codec pipeline, 
 encoding, dtype, shape, and chunking are unassessed; a validator MUST NOT infer them from its URI,
 the packet, an adapter claim, or a stand-in.
 
-Opening the catalog, resolving declarations, listing resources, and selecting a session MUST NOT
+Opening the manifest, resolving declarations, listing resources, and selecting a session MUST NOT
 require a validation receipt or physical inspection of every resource. Before exposing logical
 values, a reader inspects only the metadata needed for the selected resource and fails that
 resource specifically when support is absent.
@@ -177,9 +177,9 @@ the bytes it found.
 <a id="ew-packet-codecs" data-spec-anchor="canonical"></a>
 ## 6. Physical metadata is not projected
 
-`profile_id` is the catalog's sole physical-profile selector. Generic interfaces derive under Part
+`profile_id` is the manifest's sole physical-profile selector. Generic interfaces derive under Part
 03, and resource-owned metadata supplies actual versions, layouts, compression, encodings, and
-codec pipelines. The catalog carries no replacement capability union or per-resource selector.
+codec pipelines. The manifest carries no replacement capability union or per-resource selector.
 
 <a id="ew-resource-lineage" data-spec-anchor="canonical"></a>
 ## 7. Resource lineage and producing runs
@@ -190,7 +190,7 @@ presence, and `required` requires presence. A present `derived_from` is a nonemp
 distinct existing packet resource IDs and obeys Part 02 §2.7's content-class relation and acyclic
 graph rule.
 
-The exact identity represented by a present `processing_run_id` remains the catalog's name rather
+The exact identity represented by a present `processing_run_id` remains the manifest's name rather
 than an assigned table number. Complete row-to-entry reconciliation of that value is deferred; a
 validator MUST NOT make the nullable source bridge
 `core.processing_runs.processing_run_name` packet-unique merely to create a join.
@@ -198,7 +198,7 @@ validator MUST NOT make the nullable source bridge
 <a id="ew-packet-registry-bindings" data-spec-anchor="canonical"></a>
 ## 8. Extensions
 
-Where a packet carries extension resources, the catalog MUST declare each extension namespace, its version, and the path to its registry document:
+Where a packet carries extension resources, the manifest MUST declare each extension namespace, its version, and the path to its registry document:
 
 ```json
 "extensions": {
@@ -220,7 +220,7 @@ A validator MUST check that a declared extension registry exists. It MUST NOT re
 
 A failed or incomplete validation result cannot support a conformance claim. It does not alter a
 resource's declaration-derived content class or canonicality. A writer keeps staged resources out
-of a committed catalog until the applicable publication gate passes rather than representing
+of a committed manifest until the applicable publication gate passes rather than representing
 staging by changing canonicality.
 
 <a id="ew-packet-catalog-normative-references" data-spec-anchor="canonical"></a>

@@ -456,7 +456,7 @@ revision-valued `since` without replacement because no compatibility behavior co
 the cleaned meta-schema a new `0.2.0` identity, advance the core registry to `0.2.0`, and regenerate
 development packets. Replace the generator's one history-valued name-column selector with the
 equivalent assigned-primary-key derivation. Do not confuse this registry-build provenance with the
-packet catalog's `derived_from`, which names source resources and remains part of the packet
+packet manifest's `derived_from`, which names source resources and remains part of the packet
 contract.
 
 **Completed as R121 on 2026-09-19.** The cleaned current owners, projections, implementation,
@@ -667,8 +667,8 @@ one dataset to its resources and registries; the latter binds one publication of
 Define `core_passed`, a result for every declared extension, and overall `packet_passed`. Specify
 how missing, unreadable, structurally invalid, semantically invalid, and unsupported registries and
 resources compose into those verdicts; P6 defines a missing, unreadable, or mismatched bound
-registry as a named catalog binding finding that withholds only that registry's declaration checks,
-and bars a writer from publishing a catalog with such a finding. Make writer publication depend on
+registry as a named manifest binding finding that withholds only that registry's declaration checks,
+and bars a writer from publishing a manifest with such a finding. Make writer publication depend on
 the resulting packet verdict. Preserve useful partial reader access without reporting an invalid
 declared extension as a valid packet.
 

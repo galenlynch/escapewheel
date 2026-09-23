@@ -32,7 +32,7 @@ effects, and which abstraction layer each option would change. A tentative prefe
 ## 5. Impact sketch
 
 <!-- Identify likely effects on the semantic standard, logical resources, physical profiles,
-packet catalog, import/validation process, reference APIs, registries, extensions, adapters,
+packet manifest, import/validation process, reference APIs, registries, extensions, adapters,
 existing packets, conformance fixtures, revision-process tooling, and documentation. Mark unknowns
 explicitly. -->
 

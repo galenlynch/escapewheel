@@ -52,7 +52,7 @@ Write “unchanged” with a reason rather than leaving a cell empty.
 | semantic prose | | |
 | logical prose and registry | | |
 | physical profiles | | |
-| packet catalog and JSON Schemas | | |
+| packet manifest and JSON Schemas | | |
 | validation and import | | |
 | extensions | | |
 | reader, writer, validator, adapters | | |

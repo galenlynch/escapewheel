@@ -521,7 +521,7 @@ class; caller context MUST NOT redefine it.
 The selected rule language applies atomically to every Tier 2 rule. A rule MUST NOT repeat or
 override it, and one document MUST NOT mix languages. Root, resource, instance, array, table,
 column, reference, authority, and rule objects are closed. Registry-build `derived_from` and `since` fields are therefore
-invalid; this does not affect the packet catalog's resource-lineage `derived_from`.
+invalid; this does not affect the packet manifest's resource-lineage `derived_from`.
 
 <a id="ew-registry-self-description" data-spec-anchor="canonical"></a>
 ### 9.2 Self-description

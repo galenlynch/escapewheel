@@ -111,7 +111,7 @@ observed in the baseline from an inference about its cause.
 
 Identify:
 
-- whether the issue is semantic, logical, physical, catalog, validation/import, publication, or
+- whether the issue is semantic, logical, physical, manifest, validation/import, publication, or
   implementation-only;
 - the artifact that currently owns each affected fact;
 - the numbered part and subject where a prose rule belongs;
@@ -129,7 +129,7 @@ The proposal's impact sketch marks each of these affected, unchanged with a reas
 - semantic prose;
 - logical prose, registry meta-schema, registry declarations, and declarative rules;
 - physical profiles;
-- packet catalog and other incorporated JSON Schemas;
+- packet manifest and other incorporated JSON Schemas;
 - validation and import;
 - extension registries;
 - reader, writer, validator, adapters, and code generation;
@@ -448,7 +448,7 @@ Apply the decision to every affected owner identified in the impact inventory:
 - registry build sources and rule sources for exact logical declarations;
 - registry or packet meta-schemas for exact document structure;
 - extension registries for extension declarations; and
-- physical-profile or packet-catalog parts for profile-specific storage and catalog behavior.
+- physical-profile or packet-manifest parts for profile-specific storage and manifest behavior.
 
 State each fact once. Where another artifact needs it, generate or mechanically compare the
 projection.

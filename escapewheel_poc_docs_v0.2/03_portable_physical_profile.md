@@ -21,7 +21,7 @@ identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the
 authorities identified in [Part 03 §12](#ew-portable-profile-normative-references). The application
 columns in those sections state their extent. The `sha256` field and prefix-resource digest meaning
 belong to Part 04 §4.1 and Part 04 §5.4; this part determines when portable-profile resources record
-and verify that catalog field rather than invoking FIPS 180-4 independently.
+and verify that manifest field rather than invoking FIPS 180-4 independently.
 
 This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
@@ -84,17 +84,17 @@ packet_root/
   validation/       validation_report.json
 ```
 
-The catalog MUST record the actual layout. A reader MUST resolve resources through the catalog and MUST NOT infer them from paths.
+The manifest MUST record the actual layout. A reader MUST resolve resources through the manifest and MUST NOT infer them from paths.
 
 ### 3.2 Files that MUST NOT be written
 
-`schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the catalog is required to carry, and so bought no otherwise-available access.
+`schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the manifest is required to carry, and so bought no otherwise-available access.
 
 ## 4. URI rules
 
-A URI in the catalog or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
+A URI in the manifest or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
 
-An absolute URI MAY name an external asset. A catalog entry for an external asset MUST declare it external (Part 04 §5).
+An absolute URI MAY name an external asset. A manifest entry for an external asset MUST declare it external (Part 04 §5).
 
 A packet root MAY itself be an object-store prefix rather than a directory, in which case a
 relative URI resolves under that prefix
@@ -247,7 +247,7 @@ Where an array declares both a sampling rate and a regular tick axis, the two de
 
 A writer MAY use any codec permitted by the applicable Zarr specification, subject to §6.2's
 `transpose` prohibition and the regular-grid rule. The resource's own metadata is the sole owner of
-the actual pipeline; the catalog does not repeat it.
+the actual pipeline; the manifest does not repeat it.
 
 The descriptor's v3 reader floor is exactly the ordered sequences `bytes`, `bytes` then `gzip`,
 and `bytes` then `zstd`. Its v2 reader floor is exactly `filters: null` with compressor null,
@@ -269,13 +269,13 @@ than from a fixed namespace or resource ID.
 Zarr attributes MAY duplicate helpful metadata. Logical and scientific facts required for
 validation MUST also be represented in their logical resources or packet fields. Self-describing
 physical facts—version, shape, dtype, chunking, and codec configuration—MUST be obtained from the
-resource and need not be copied into a table or catalog.
+resource and need not be copied into a table or the manifest.
 
 ## 7. Metadata placement
 
 | kind | location |
 |---|---|
-| packet-level facts | the catalog |
+| packet-level facts | the manifest |
 | queryable scientific facts | tables |
 | semi-structured, lab-specific values | a `json_string` column, or a sidecar |
 | human-readable context | `docs/` |
@@ -344,8 +344,8 @@ validation to return. A Part 05 shim check declares its inputs explicitly.
 A validator MUST re-run a check when it is attached to a resource the amendment writes or any
 member of its input set was written. A Tier 2 dependency MUST NOT be inferred by searching query
 text: an alias, common table expression, literal, or comment that resembles a resource does not
-create one. The session-inventory shim declares the packet catalog and `core.sessions`; installing
-a manifest writes the catalog input for this purpose. A shim without a complete declaration MUST
+create one. The session-inventory shim declares the packet manifest and `core.sessions`; installing
+a manifest writes the manifest input for this purpose. A shim without a complete declaration MUST
 run rather than be skipped.
 
 A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name inside
@@ -480,7 +480,7 @@ merges the entry into the manifest. Its shape is published as
 `registry/resources.schema.json`. A build MUST refuse a document that does not satisfy it before
 writing a manifest, naming what is wrong.
 
-The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a catalog cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
+The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a manifest cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
 
 ### 11.4 The Arrow IPC floor
 

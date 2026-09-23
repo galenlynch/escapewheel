@@ -1197,7 +1197,7 @@ class PacketWriter:
     def _write_sources(self, root: Path) -> None:
         """Write Part 04 §5.5's default resolution document, where any resource names a source.
 
-        Before the manifest, because Part 05 §6 makes publishing the catalog what makes a commit
+        Before the manifest, because Part 05 §6 makes publishing the manifest what makes a commit
         visible: everything a reader may look for is in place first. Skipped entirely when no
         resource names a source, since a document locating nothing is worse than none -- it
         would answer a lookup the caller meant to answer itself.

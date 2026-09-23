@@ -12,7 +12,7 @@ every numbered part.
 
 The design tests whether neurophysiology data can be represented over commodity substrates:
 Parquet for tables, Zarr for dense arrays, standard media containers for media, and JSON for the
-catalog. **Escapewheel** is a placeholder name. The project does not require an NWB, HDMF, or PyNWB
+manifest. **Escapewheel** is a placeholder name. The project does not require an NWB, HDMF, or PyNWB
 runtime; Part 00 defines the exact scope and exclusions.
 
 ## 2. Authority and conformance
@@ -40,7 +40,7 @@ This table is an informative projection of
 | 01 | Semantic standard | normative |
 | 02 | Core logical schemas | normative |
 | 03 | Portable physical profile | normative |
-| 04 | Packet catalog | normative |
+| 04 | Packet manifest | normative |
 | 05 | Validation, import, and reader operations | normative |
 | 06 | Analysis layer | informative except §§2 and 5, which are normative |
 | 07 | Reference implementation and plan | informative |
@@ -69,7 +69,7 @@ Part 02 §9.2 defines registry self-description and compatibility. Current devel
 use core registry `0.5.0` and are regenerated rather than treated as compatible with the earlier
 development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
-Part 04 §3 defines the catalog fields that record these identifiers.
+Part 04 §3 defines the manifest fields that record these identifiers.
 
 ## 5. Informative references
 
@@ -79,7 +79,7 @@ Part 04 §3 defines the catalog fields that record these identifiers.
 [Part 00 §10](00_architecture.md#ew-normative-references) defines normative-reference policy and
 lists shared external authorities. References invoked only by the portable profile are in
 [Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references), and the
-SHA-256 authority invoked by the packet catalog is in
+SHA-256 authority invoked by the packet manifest is in
 [Part 04 §10](04_packet_catalog.md#ew-packet-catalog-normative-references).
 The SQL and IEEE authorities invoked by the portable Tier 2 language are in
 [Part 11 §9](11_tier_2_rule_language.md#ew-rule-language-normative-references).

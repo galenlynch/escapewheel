@@ -68,7 +68,7 @@ land after the specification release and ownership model identifies its proper o
 - **Identify packet registries precisely.** A separate proposal should decide how a packet names
   the released core registry and each extension registry by stable identifier, version, and
   digest; when an embedded copy is required; what a validator compares; and whether existing
-  packets are regenerated. This is a packet-catalog change, not part of defining a specification
+  packets are regenerated. This is a packet-manifest change, not part of defining a specification
   release manifest.
 - **Replace registry replay with direct declarative authoring.** Choose one reviewed registry
   document or deterministically assembled fragments, retain provenance in accepted history and
@@ -105,7 +105,7 @@ fork. What it should generate:
 **What the instructions must state**, because each is a rule an author will otherwise break:
 
 - The document is a registry document in Part 02's format, namespaced (R17 §2, Part 09 §5.2), and the
-  packet declares it in the catalog (Part 09 §5.3).
+  packet declares it in the manifest (Part 09 §5.3).
 - Every column declares a type, a presence and a role (R2 §5, R48 §2.1); a string column declares
   its vocabulary (R101 §3.1); an identifier declares `carried` or `assigned` (R53 §2.3); a
   session-scoped table carries `session_id` and declares the reference (R88 §2.1).

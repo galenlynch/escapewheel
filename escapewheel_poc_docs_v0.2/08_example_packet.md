@@ -41,7 +41,7 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
 `external: true` and absolute URIs.
 
 <a id="ew-example-packet-catalog" data-spec-anchor="canonical"></a>
-## 3. Catalog excerpt
+## 3. Manifest excerpt
 
 ```json
 {
@@ -123,7 +123,7 @@ WHERE t_tick BETWEEN ? AND ?;
 
 A packet of this shape is conforming when:
 
-1. the catalog validates against the manifest schema;
+1. the manifest validates against the manifest schema;
 2. every declared resource exists at its URI, or is declared external;
 3. every packet-owned resource matches its recorded `sha256`;
 4. Tier 1 and Tier 2 produce no error;

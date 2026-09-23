@@ -583,7 +583,7 @@ def fetch(
 def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[str]]:
     """Read the resource document a delivery carried, refusing one that does not satisfy its shape.
 
-    Refused rather than reported, unlike a report: this is the catalog's own content arriving from
+    Refused rather than reported, unlike a report: this is the manifest's own content arriving from
     elsewhere, and a malformed entry merged into a manifest is a packet that misdescribes its own
     resources (Part 03 §11.3).
     """

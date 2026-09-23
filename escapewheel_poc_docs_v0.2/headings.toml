@@ -23,7 +23,7 @@
 "3.1.3" = "Physical profile"
 "3.2" = "Packet content classes"
 "3.3" = "Packet"
-"3.4" = "Packet catalog"
+"3.4" = "Packet manifest"
 "3.5" = "Iceberg catalog"
 "3.6" = "Resource identity"
 "4" = "Core content class"
@@ -267,7 +267,7 @@
 ["08"]
 "1" = "Shape"
 "2" = "Layout"
-"3" = "Catalog excerpt"
+"3" = "Manifest excerpt"
 "4" = "Queries"
 "5" = "Acceptance checklist"
 
@@ -513,7 +513,7 @@ aliases = []
 [anchor.ew-example-packet-catalog]
 part = "08"
 section = "3"
-title = "Catalog excerpt"
+title = "Manifest excerpt"
 aliases = []
 
 [anchor.ew-example-packet-layout]
@@ -675,7 +675,7 @@ aliases = []
 [anchor.ew-packet-catalog]
 part = "00"
 section = "3.4"
-title = "Packet catalog"
+title = "Packet manifest"
 aliases = []
 
 [anchor.ew-packet-catalog-normative-references]

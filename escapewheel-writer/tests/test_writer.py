@@ -977,12 +977,12 @@ def test_a_referenced_codec_is_not_projected_into_the_manifest(tmp_path, registr
     assert "codecs" not in entry
 
 
-def test_no_catalog_names_a_resource_that_is_not_in_place(tmp_path, registry, minimal):
-    """Part 05 §6: a reader sees the previous catalog or the new one, never a partial one.
+def test_no_manifest_names_a_resource_that_is_not_in_place(tmp_path, registry, minimal):
+    """Part 05 §6: a reader sees the previous manifest or the new one, never a partial one.
 
     The invariant is about visibility, not about the mechanism: whatever primitive publishes the
-    catalog, every resource it names must already be at its final location. Checked by reading
-    the committed catalog and demanding every packet-owned URI resolve.
+    manifest, every resource it names must already be at its final location. Checked by reading
+    the committed manifest and demanding every packet-owned URI resolve.
     """
     root = tmp_path / "packet"
     writer = PacketWriter(registry, packet_id="p")
@@ -992,13 +992,13 @@ def test_no_catalog_names_a_resource_that_is_not_in_place(tmp_path, registry, mi
 
     manifest = json.loads((root / "packet.json").read_text())
     absent = [r["uri"] for r in manifest["resources"] if not r.get("external") and not (root / r["uri"]).exists()]
-    assert not absent, f"the catalog names {absent}, which are not in place"
+    assert not absent, f"the manifest names {absent}, which are not in place"
 
 
-def test_a_refused_commit_publishes_no_catalog(tmp_path, registry, minimal):
+def test_a_refused_commit_publishes_no_manifest(tmp_path, registry, minimal):
     """Part 05 §6 again, from the other side: a failed commit leaves the previous state visible.
 
-    Here there is no previous state, so nothing at all may be published -- a catalog naming
+    Here there is no previous state, so nothing at all may be published -- a manifest naming
     resources that failed validation is the thing the ordering exists to prevent.
     """
     root = tmp_path / "packet"

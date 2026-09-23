@@ -152,8 +152,8 @@ table's whole logical contract readable in one declaration.
 | `core.unit_quality_labels` | 1 |
 <!-- END generated: rules -->
 
-`tables.md` lists them by ID with the message each reports. The catalog-to-`core.sessions`
-comparison is a Part 05 shim check because the catalog is not a SQL relation.
+`tables.md` lists them by ID with the message each reports. The manifest-to-`core.sessions`
+comparison is a Part 05 shim check because the manifest is not a SQL relation.
 
 ## Identifier quoting
 

@@ -49,7 +49,7 @@ owned by a lower layer.
 | storage-independent scientific meaning and concept identity | Part 01 |
 | logical resources, schemas, references, and registry semantics | Part 02 |
 | representation under a particular storage profile | Part 03 |
-| packet catalog and resource resolution | Part 04 |
+| packet manifest and resource resolution | Part 04 |
 | validation, import, commit, and amendment procedure | Part 05 |
 | derived analysis resources and materialization guidance | Part 06 |
 | reference APIs and implementation plan | Part 07 |

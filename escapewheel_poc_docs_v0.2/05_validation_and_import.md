@@ -7,9 +7,9 @@ Normative.
 
 **Validation is importation.** Copying bytes into a packet directory is staging, not import.
 
-A resource is imported when it has been discovered, extracted to staging, normalized to the logical schemas, validated, committed, and recorded in the catalog with its provenance.
+A resource is imported when it has been discovered, extracted to staging, normalized to the logical schemas, validated, committed, and recorded in the manifest with its provenance.
 
-A staged resource MUST NOT appear in the committed catalog. Validation state does not change the
+A staged resource MUST NOT appear in the committed manifest. Validation state does not change the
 content class or canonicality selected by its declaration; publication is the gate.
 
 ## 2. Pipeline
@@ -220,11 +220,11 @@ unassessed. A valid upstream feature outside a reader-only floor is not by itsel
 
 A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key.
 
-The shim MUST compare the catalog's session inventory with `core.sessions.session_name` under the
+The shim MUST compare the manifest's session inventory with `core.sessions.session_name` under the
 check ID `core.sessions.manifest_sessions_match`, at `error`, with the message carried by the
 registry before that check moved here. It reports each non-null table value absent from the
-catalog, preserving duplicates, and each catalog session absent from every table row. The shim
-declares the packet catalog and `core.sessions` as inputs. No Tier 2 rule may depend on the shim's
+manifest, preserving duplicates, and each manifest session absent from every table row. The shim
+declares the packet manifest and `core.sessions` as inputs. No Tier 2 rule may depend on the shim's
 implementation mechanism.
 
 ### 5.4 Extensions
@@ -238,17 +238,17 @@ Commit MUST be atomic with respect to a concurrent reader:
 1. write the staged resources;
 2. validate them;
 3. move resources into their final paths;
-4. **publish** the packet catalog at `packet.json`, last and atomically.
+4. **publish** the packet manifest at `packet.json`, last and atomically.
 
-A reader MUST observe either the previously committed catalog or the newly published one, and MUST
-NOT observe a catalog naming a resource that is not yet in place. Every packet-owned
-resource the catalog names MUST already be at its final location and MUST have passed validation
+A reader MUST observe either the previously committed manifest or the newly published one, and MUST
+NOT observe a manifest naming a resource that is not yet in place. Every packet-owned
+resource the manifest names MUST already be at its final location and MUST have passed validation
 before it is published.
 
 The publication mechanism is the profile's. A filesystem profile MAY publish by atomic rename
 within one directory; an object-store profile MAY publish by a single-object write. A writer MUST
 NOT be required to perform an atomic **directory** rename, which no object store
-offers and which the packet layout does not need — the catalog is one object.
+offers and which the packet layout does not need — the manifest is one object.
 
 Where the store offers a conditional write, a writer publishing a new version SHOULD use it, so
 two writers cannot silently overwrite one another's head. Where it offers none, a writer MUST NOT
@@ -286,7 +286,7 @@ A validator MUST NOT downgrade an error to make a packet pass. An advisory rule 
 
 ### 9.3 Comparison against a prior packet
 
-Where an import replaces an existing packet, it SHOULD report every resource the prior catalog declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
+Where an import replaces an existing packet, it SHOULD report every resource the prior manifest declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
 
 <a id="ew-incomplete-validation" data-spec-anchor="canonical"></a>
 ### 9.4 Incomplete validation
@@ -306,7 +306,7 @@ A packet conforms to this specification when it declares a profile defined here,
 resource that profile requires, satisfies every structural requirement of Part 02, completes every
 required evaluation, and produces no error-level finding from the checks of this part. An invalid,
 unsupported, or incomplete required evaluation cannot support a conformance claim. A conforming
-packet MAY omit any optional instance, but every catalogued packet resource MUST resolve a logical
+packet MAY omit any optional instance, but every packet resource the manifest lists MUST resolve a logical
 declaration. A payload that Escapewheel treats as opaque still requires a declaration; an extension
 registry is the data-driven route for a resource core does not define. Part 09 §5.4 defines how
 core and extension verdicts compose.
@@ -454,7 +454,7 @@ result, Boolean, or caller assertion is insufficient.
 ### 14.3 Reader independence
 
 A reader MUST NOT require a registry result, checked context, or validation receipt to open a
-packet, access its catalog or raw resources, present or correlate sessions, resolve
+packet, access its manifest or raw resources, present or correlate sessions, resolve
 discriminators, references, or session scope, provide extension-aware access, or analyze one or
 more packets. It may interpret declarations for those operations without making a conformance
 claim, and the reference reader does not depend on the validator package to do so. An explicit
@@ -509,5 +509,5 @@ Public checking APIs, machine-readable command output, validation reports, and s
 exceptions expose the same Part 02 §9.5 representation rather than reducing it to a Boolean or
 invalid-finding list. Human rendering may differ. Diagnostic `detail` is not interoperable
 identity. The result schema begins at version 0.1.0; this boundary and reporting change does not by
-itself change a registry meta-schema, core registry, extension registry, packet catalog, or their
+itself change a registry meta-schema, core registry, extension registry, packet manifest, or their
 version identifiers.

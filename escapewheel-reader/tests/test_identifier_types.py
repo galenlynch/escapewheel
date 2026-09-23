@@ -87,7 +87,7 @@ def test_public_logical_identifier_annotations_follow_the_registry(packet_root):
 
 
 def test_nonlogical_names_remain_strings():
-    """Catalog IDs, manifest session names, resources, and discriminator scopes are not table IDs."""
+    """Manifest IDs, manifest session names, resources, and discriminator scopes are not table IDs."""
     assert _hints(Manifest)["packet_id"] is str
     assert _hints(Manifest)["sessions"] == tuple[str, ...]
     assert _hints(Resource)["resource_id"] is str

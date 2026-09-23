@@ -10,7 +10,7 @@ This part defines how much metadata core requires, where richer metadata belongs
 
 | tier | contents | location |
 |---|---|---|
-| 1 | packet-level facts | the catalog |
+| 1 | packet-level facts | the manifest |
 | 2 | facts needed to interpret, validate, join, or reproduce | core tables |
 | 3 | domain-rich, lab-specific facts | an extension's tables |
 | 4 | human-readable context | `docs/` sidecars |
@@ -55,7 +55,7 @@ Every declaration identifier in an extension registry MUST begin with the namesp
 <a id="ew-extension-registration" data-spec-anchor="canonical"></a>
 ### 5.3 Registration
 
-A packet carrying extension resources MUST declare each namespace in the catalog with its version and the path to its registry document (04 §8).
+A packet carrying extension resources MUST declare each namespace in the manifest with its version and the path to its registry document (04 §8).
 
 A validator MUST check that a declared registry exists. It MUST NOT require an extension's schema in order to validate core.
 
@@ -150,7 +150,7 @@ A writer MUST NOT:
 
 - hide analysis-critical metadata inside free-form JSON;
 - use an object path as the only way to identify a resource;
-- treat the catalog as a store for all metadata.
+- treat the manifest as a store for all metadata.
 
 A build MUST NOT block an import because optional institutional metadata is incomplete.
 

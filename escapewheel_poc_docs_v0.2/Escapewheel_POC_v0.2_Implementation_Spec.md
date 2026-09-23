@@ -20,7 +20,7 @@ every numbered part.
 
 The design tests whether neurophysiology data can be represented over commodity substrates:
 Parquet for tables, Zarr for dense arrays, standard media containers for media, and JSON for the
-catalog. **Escapewheel** is a placeholder name. The project does not require an NWB, HDMF, or PyNWB
+manifest. **Escapewheel** is a placeholder name. The project does not require an NWB, HDMF, or PyNWB
 runtime; Part 00 defines the exact scope and exclusions.
 
 ## 2. Authority and conformance
@@ -48,7 +48,7 @@ This table is an informative projection of
 | 01 | Semantic standard | normative |
 | 02 | Core logical schemas | normative |
 | 03 | Portable physical profile | normative |
-| 04 | Packet catalog | normative |
+| 04 | Packet manifest | normative |
 | 05 | Validation, import, and reader operations | normative |
 | 06 | Analysis layer | informative except §§2 and 5, which are normative |
 | 07 | Reference implementation and plan | informative |
@@ -77,7 +77,7 @@ Part 02 §9.2 defines registry self-description and compatibility. Current devel
 use core registry `0.5.0` and are regenerated rather than treated as compatible with the earlier
 development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
-Part 04 §3 defines the catalog fields that record these identifiers.
+Part 04 §3 defines the manifest fields that record these identifiers.
 
 ## 5. Informative references
 
@@ -87,7 +87,7 @@ Part 04 §3 defines the catalog fields that record these identifiers.
 [Part 00 §10](00_architecture.md#ew-normative-references) defines normative-reference policy and
 lists shared external authorities. References invoked only by the portable profile are in
 [Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references), and the
-SHA-256 authority invoked by the packet catalog is in
+SHA-256 authority invoked by the packet manifest is in
 [Part 04 §10](04_packet_catalog.md#ew-packet-catalog-normative-references).
 The SQL and IEEE authorities invoked by the portable Tier 2 language are in
 [Part 11 §9](11_tier_2_rule_language.md#ew-rule-language-normative-references).
@@ -108,7 +108,7 @@ Normative.
 This part defines the Escapewheel specification framework: its authority and conformance model,
 architectural classifications, numbered-part ownership and status, and publication conventions. It
 also states the cross-cutting architecture of an Escapewheel packet. Detailed concept meanings,
-logical declarations, physical encodings, catalog fields, and construction and validation rules
+logical declarations, physical encodings, manifest fields, and construction and validation rules
 belong to the subject-owning parts listed in §9.
 
 This specification defines a portable representation of extracellular electrophysiology data as a
@@ -272,7 +272,7 @@ Part 02 and the artifacts it incorporates specify it.
 
 A **physical profile** defines how logical resources are stored. Two are contemplated:
 
-| profile | tables | arrays | catalog |
+| profile | tables | arrays | manifest |
 |---|---|---|---|
 | portable | Parquet | Zarr | JSON manifest |
 | lakehouse | Iceberg over Parquet | Zarr | JSON manifest plus Iceberg catalog references |
@@ -326,16 +326,16 @@ packet entry names a declaration and MUST NOT repeat content class, kind, or can
 A **packet** is one concrete dataset bundle under a declared profile. It may be a local directory,
 an object-store prefix, or a manifest pointing at distributed assets.
 
-A packet contains a packet catalog, core tables, and any of: dense arrays, media, documents and
+A packet contains a packet manifest, core tables, and any of: dense arrays, media, documents and
 sidecars, analysis materializations, and validation and provenance records.
 
 A packet is primarily single-session. Multi-session packets are a permitted extension, and a
-packet declares its sessions in the catalog.
+packet declares its sessions in the manifest.
 
 <a id="ew-packet-catalog" data-spec-anchor="canonical"></a>
-### 3.4 Packet catalog
+### 3.4 Packet manifest
 
-The **packet catalog** is the dataset-level map. In the portable profile it is `packet.json`,
+The **packet manifest** is the dataset-level map. In the portable profile it is `packet.json`,
 specified in Part 04.
 
 It records which resource instances exist, the logical declarations they instantiate, their
@@ -347,9 +347,9 @@ The packet's profile and the declaration's kind derive a generic physical interf
 <a id="ew-iceberg-catalog" data-spec-anchor="canonical"></a>
 ### 3.5 Iceberg catalog
 
-An **Iceberg catalog** is distinct from the packet catalog. It is relevant only to the lakehouse
+An **Iceberg catalog** is distinct from the packet manifest. It is relevant only to the lakehouse
 profile and manages only tabular resources. It does not catalog dense arrays, media, documents, or
-semantic relationships across a packet, and therefore does not replace the packet catalog.
+semantic relationships across a packet, and therefore does not replace the packet manifest.
 
 <a id="ew-resource-identity" data-spec-anchor="canonical"></a>
 ### 3.6 Resource identity
@@ -380,7 +380,7 @@ spike in `core.spike_events`.
 ### 4.2 Spike representation
 
 `core.spike_events`, one row per spike with primitive columns only, is the sole canonical spike
-representation. The ragged chunked representation of v0.1 is withdrawn, as is the catalog's
+representation. The ragged chunked representation of v0.1 is withdrawn, as is the manifest's
 `canonical_representations` block.
 
 `core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that
@@ -426,7 +426,7 @@ text sidecars. It MUST be readable without a server.
 
 A packet need not own every byte it describes. Referencing is expected for large resources: a
 resource the packet does not own sets `external: true` and supplies a location. Externality changes
-ownership and what can be inspected; it does not move format-owned metadata into the catalog. An
+ownership and what can be inspected; it does not move format-owned metadata into the manifest. An
 unreachable external resource's physical state remains unassessed.
 
 Externalizing a table costs more than externalizing an array, because a table's validation rules
@@ -454,7 +454,7 @@ The first implementation is not a generic NWB backend. It is:
 1. a specification of core logical resources;
 2. a validator generated from that specification;
 3. an importer that turns source data into validated resources;
-4. a packet catalog recording the committed resources;
+4. a packet manifest recording the committed resources;
 5. a small access library querying tables and arrays with standard engines.
 
 An import succeeds only when validation succeeds (Part 05 §1).
@@ -472,7 +472,7 @@ MUST make the candidate inconsistent.
 | 01 | substrate-independent meanings of scientific and provenance concepts | normative |
 | 02 | logical resources, declarations, identities, references, and registry semantics | normative |
 | 03 | portable physical mapping of logical resources to stored bytes | normative |
-| 04 | packet catalog structure, resource entries, and dataset-to-resource bindings | normative |
+| 04 | packet manifest structure, resource entries, and dataset-to-resource bindings | normative |
 | 05 | validation, import, writer and reader operations, reporting, and publication of a packet | normative |
 | 06 | analysis policy, examples, and explanation | informative except §§2 and 5, which are normative |
 | 07 | reference-implementation design and examples | informative |
@@ -499,7 +499,7 @@ The numbered parts MUST observe this dependency direction:
 6. Part 05 specifies how writers, readers, and validators construct and judge instances under the
    upstream contracts rather than becoming a second owner of those contracts.
 7. Part 09 permits namespaced extension declarations under the same applicable semantic, logical,
-   physical, catalog, and conformance boundaries without altering core.
+   physical, manifest, and conformance boundaries without altering core.
 
 A writer MUST interpret adapter declarations and output under the owning numbered parts and
 incorporated declarations. An adapter's participation in ingestion MUST NOT let it redefine the
@@ -1446,7 +1446,7 @@ class; caller context MUST NOT redefine it.
 The selected rule language applies atomically to every Tier 2 rule. A rule MUST NOT repeat or
 override it, and one document MUST NOT mix languages. Root, resource, instance, array, table,
 column, reference, authority, and rule objects are closed. Registry-build `derived_from` and `since` fields are therefore
-invalid; this does not affect the packet catalog's resource-lineage `derived_from`.
+invalid; this does not affect the packet manifest's resource-lineage `derived_from`.
 
 <a id="ew-registry-self-description" data-spec-anchor="canonical"></a>
 ### 9.2 Self-description
@@ -1955,7 +1955,7 @@ identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the
 authorities identified in [Part 03 §12](#ew-portable-profile-normative-references). The application
 columns in those sections state their extent. The `sha256` field and prefix-resource digest meaning
 belong to Part 04 §4.1 and Part 04 §5.4; this part determines when portable-profile resources record
-and verify that catalog field rather than invoking FIPS 180-4 independently.
+and verify that manifest field rather than invoking FIPS 180-4 independently.
 
 This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
@@ -2018,17 +2018,17 @@ packet_root/
   validation/       validation_report.json
 ```
 
-The catalog MUST record the actual layout. A reader MUST resolve resources through the catalog and MUST NOT infer them from paths.
+The manifest MUST record the actual layout. A reader MUST resolve resources through the manifest and MUST NOT infer them from paths.
 
 ### 3.2 Files that MUST NOT be written
 
-`schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the catalog is required to carry, and so bought no otherwise-available access.
+`schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the manifest is required to carry, and so bought no otherwise-available access.
 
 ## 4. URI rules
 
-A URI in the catalog or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
+A URI in the manifest or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
 
-An absolute URI MAY name an external asset. A catalog entry for an external asset MUST declare it external (Part 04 §5).
+An absolute URI MAY name an external asset. A manifest entry for an external asset MUST declare it external (Part 04 §5).
 
 A packet root MAY itself be an object-store prefix rather than a directory, in which case a
 relative URI resolves under that prefix
@@ -2181,7 +2181,7 @@ Where an array declares both a sampling rate and a regular tick axis, the two de
 
 A writer MAY use any codec permitted by the applicable Zarr specification, subject to §6.2's
 `transpose` prohibition and the regular-grid rule. The resource's own metadata is the sole owner of
-the actual pipeline; the catalog does not repeat it.
+the actual pipeline; the manifest does not repeat it.
 
 The descriptor's v3 reader floor is exactly the ordered sequences `bytes`, `bytes` then `gzip`,
 and `bytes` then `zstd`. Its v2 reader floor is exactly `filters: null` with compressor null,
@@ -2203,13 +2203,13 @@ than from a fixed namespace or resource ID.
 Zarr attributes MAY duplicate helpful metadata. Logical and scientific facts required for
 validation MUST also be represented in their logical resources or packet fields. Self-describing
 physical facts—version, shape, dtype, chunking, and codec configuration—MUST be obtained from the
-resource and need not be copied into a table or catalog.
+resource and need not be copied into a table or the manifest.
 
 ## 7. Metadata placement
 
 | kind | location |
 |---|---|
-| packet-level facts | the catalog |
+| packet-level facts | the manifest |
 | queryable scientific facts | tables |
 | semi-structured, lab-specific values | a `json_string` column, or a sidecar |
 | human-readable context | `docs/` |
@@ -2278,8 +2278,8 @@ validation to return. A Part 05 shim check declares its inputs explicitly.
 A validator MUST re-run a check when it is attached to a resource the amendment writes or any
 member of its input set was written. A Tier 2 dependency MUST NOT be inferred by searching query
 text: an alias, common table expression, literal, or comment that resembles a resource does not
-create one. The session-inventory shim declares the packet catalog and `core.sessions`; installing
-a manifest writes the catalog input for this purpose. A shim without a complete declaration MUST
+create one. The session-inventory shim declares the packet manifest and `core.sessions`; installing
+a manifest writes the manifest input for this purpose. A shim without a complete declaration MUST
 run rather than be skipped.
 
 A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name inside
@@ -2414,7 +2414,7 @@ merges the entry into the manifest. Its shape is published as
 `registry/resources.schema.json`. A build MUST refuse a document that does not satisfy it before
 writing a manifest, naming what is wrong.
 
-The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a catalog cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
+The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a manifest cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
 
 ### 11.4 The Arrow IPC floor
 
@@ -2469,14 +2469,14 @@ The application column states the extent to which this part invokes each externa
 
 <!-- BEGIN 04_packet_catalog.md -->
 
-# Part 04 — Packet Catalog
+# Part 04 — Packet Manifest
 
 Normative.
 
 <a id="ew-packet-catalog-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
-This part defines the packet catalog: the document that binds each concrete packet resource to one
+This part defines the packet manifest: the document that binds each concrete packet resource to one
 logical declaration in a checked registry context and to its location. In the portable profile it
 is `packet.json` at the packet root.
 
@@ -2488,20 +2488,20 @@ state their extent.
 <a id="ew-packet-catalog-principles" data-spec-anchor="canonical"></a>
 ## 2. Principles
 
-The catalog is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
+The manifest is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
 
-The catalog binds every resource instance. Part 02's declaration supplies logical content class,
+The manifest binds every resource instance. Part 02's declaration supplies logical content class,
 kind, canonicality, instance mode, presence, table contract, and provenance policy; the packet
 entry supplies instance and location facts. Part 03 derives a generic interface from the selected
 profile and logical kind, while the resource owns self-describing physical metadata. An Iceberg catalog manages only tabular resources and
-therefore does not replace the packet catalog.
+therefore does not replace the packet manifest.
 
-The catalog identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the catalog is read before any table and a number resolves against nothing.
+The manifest identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the manifest is read before any table and a number resolves against nothing.
 
 <a id="ew-packet-identifiers" data-spec-anchor="canonical"></a>
 ## 3. Required top-level fields
 
-The catalog records the semantic-standard identifier owned by Part 01, the logical-standard and
+The manifest records the semantic-standard identifier owned by Part 01, the logical-standard and
 registry identifiers owned by Part 02, and the physical-profile identifier owned by Part 03. The
 fields below record those identifiers; they do not redefine their values or meaning.
 
@@ -2560,7 +2560,7 @@ binding makes a conformance claim invalid.
 
 The `canonical_representations` block is withdrawn: spikes have one canonical representation, so there is nothing to arbitrate.
 
-A top-level provenance block is withdrawn. Provenance is carried in `core.source_files`, `core.processing_runs`, and `core.processing_run_inputs`; the catalog records outputs at resource granularity only.
+A top-level provenance block is withdrawn. Provenance is carried in `core.source_files`, `core.processing_runs`, and `core.processing_run_inputs`; the manifest records outputs at resource granularity only.
 
 ## 5. External resources
 
@@ -2583,7 +2583,7 @@ Verification of an external resource is layered, and a report MUST state which l
 
 | level | establishes |
 |---|---|
-| 1 | the catalog is internally consistent |
+| 1 | the manifest is internally consistent |
 | 2 | packet-owned resources match their recorded digests |
 | 3a | the external resource exists and lists |
 | 3b | its recorded per-member store digests still match |
@@ -2594,7 +2594,7 @@ When an external resource is unavailable, its physical version, codec pipeline, 
 encoding, dtype, shape, and chunking are unassessed; a validator MUST NOT infer them from its URI,
 the packet, an adapter claim, or a stand-in.
 
-Opening the catalog, resolving declarations, listing resources, and selecting a session MUST NOT
+Opening the manifest, resolving declarations, listing resources, and selecting a session MUST NOT
 require a validation receipt or physical inspection of every resource. Before exposing logical
 values, a reader inspects only the metadata needed for the selected resource and fails that
 resource specifically when support is absent.
@@ -2648,9 +2648,9 @@ the bytes it found.
 <a id="ew-packet-codecs" data-spec-anchor="canonical"></a>
 ## 6. Physical metadata is not projected
 
-`profile_id` is the catalog's sole physical-profile selector. Generic interfaces derive under Part
+`profile_id` is the manifest's sole physical-profile selector. Generic interfaces derive under Part
 03, and resource-owned metadata supplies actual versions, layouts, compression, encodings, and
-codec pipelines. The catalog carries no replacement capability union or per-resource selector.
+codec pipelines. The manifest carries no replacement capability union or per-resource selector.
 
 <a id="ew-resource-lineage" data-spec-anchor="canonical"></a>
 ## 7. Resource lineage and producing runs
@@ -2661,7 +2661,7 @@ presence, and `required` requires presence. A present `derived_from` is a nonemp
 distinct existing packet resource IDs and obeys Part 02 §2.7's content-class relation and acyclic
 graph rule.
 
-The exact identity represented by a present `processing_run_id` remains the catalog's name rather
+The exact identity represented by a present `processing_run_id` remains the manifest's name rather
 than an assigned table number. Complete row-to-entry reconciliation of that value is deferred; a
 validator MUST NOT make the nullable source bridge
 `core.processing_runs.processing_run_name` packet-unique merely to create a join.
@@ -2669,7 +2669,7 @@ validator MUST NOT make the nullable source bridge
 <a id="ew-packet-registry-bindings" data-spec-anchor="canonical"></a>
 ## 8. Extensions
 
-Where a packet carries extension resources, the catalog MUST declare each extension namespace, its version, and the path to its registry document:
+Where a packet carries extension resources, the manifest MUST declare each extension namespace, its version, and the path to its registry document:
 
 ```json
 "extensions": {
@@ -2691,7 +2691,7 @@ A validator MUST check that a declared extension registry exists. It MUST NOT re
 
 A failed or incomplete validation result cannot support a conformance claim. It does not alter a
 resource's declaration-derived content class or canonicality. A writer keeps staged resources out
-of a committed catalog until the applicable publication gate passes rather than representing
+of a committed manifest until the applicable publication gate passes rather than representing
 staging by changing canonicality.
 
 <a id="ew-packet-catalog-normative-references" data-spec-anchor="canonical"></a>
@@ -2716,9 +2716,9 @@ Normative.
 
 **Validation is importation.** Copying bytes into a packet directory is staging, not import.
 
-A resource is imported when it has been discovered, extracted to staging, normalized to the logical schemas, validated, committed, and recorded in the catalog with its provenance.
+A resource is imported when it has been discovered, extracted to staging, normalized to the logical schemas, validated, committed, and recorded in the manifest with its provenance.
 
-A staged resource MUST NOT appear in the committed catalog. Validation state does not change the
+A staged resource MUST NOT appear in the committed manifest. Validation state does not change the
 content class or canonicality selected by its declaration; publication is the gate.
 
 ## 2. Pipeline
@@ -2929,11 +2929,11 @@ unassessed. A valid upstream feature outside a reader-only floor is not by itsel
 
 A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key.
 
-The shim MUST compare the catalog's session inventory with `core.sessions.session_name` under the
+The shim MUST compare the manifest's session inventory with `core.sessions.session_name` under the
 check ID `core.sessions.manifest_sessions_match`, at `error`, with the message carried by the
 registry before that check moved here. It reports each non-null table value absent from the
-catalog, preserving duplicates, and each catalog session absent from every table row. The shim
-declares the packet catalog and `core.sessions` as inputs. No Tier 2 rule may depend on the shim's
+manifest, preserving duplicates, and each manifest session absent from every table row. The shim
+declares the packet manifest and `core.sessions` as inputs. No Tier 2 rule may depend on the shim's
 implementation mechanism.
 
 ### 5.4 Extensions
@@ -2947,17 +2947,17 @@ Commit MUST be atomic with respect to a concurrent reader:
 1. write the staged resources;
 2. validate them;
 3. move resources into their final paths;
-4. **publish** the packet catalog at `packet.json`, last and atomically.
+4. **publish** the packet manifest at `packet.json`, last and atomically.
 
-A reader MUST observe either the previously committed catalog or the newly published one, and MUST
-NOT observe a catalog naming a resource that is not yet in place. Every packet-owned
-resource the catalog names MUST already be at its final location and MUST have passed validation
+A reader MUST observe either the previously committed manifest or the newly published one, and MUST
+NOT observe a manifest naming a resource that is not yet in place. Every packet-owned
+resource the manifest names MUST already be at its final location and MUST have passed validation
 before it is published.
 
 The publication mechanism is the profile's. A filesystem profile MAY publish by atomic rename
 within one directory; an object-store profile MAY publish by a single-object write. A writer MUST
 NOT be required to perform an atomic **directory** rename, which no object store
-offers and which the packet layout does not need — the catalog is one object.
+offers and which the packet layout does not need — the manifest is one object.
 
 Where the store offers a conditional write, a writer publishing a new version SHOULD use it, so
 two writers cannot silently overwrite one another's head. Where it offers none, a writer MUST NOT
@@ -2995,7 +2995,7 @@ A validator MUST NOT downgrade an error to make a packet pass. An advisory rule 
 
 ### 9.3 Comparison against a prior packet
 
-Where an import replaces an existing packet, it SHOULD report every resource the prior catalog declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
+Where an import replaces an existing packet, it SHOULD report every resource the prior manifest declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
 
 <a id="ew-incomplete-validation" data-spec-anchor="canonical"></a>
 ### 9.4 Incomplete validation
@@ -3015,7 +3015,7 @@ A packet conforms to this specification when it declares a profile defined here,
 resource that profile requires, satisfies every structural requirement of Part 02, completes every
 required evaluation, and produces no error-level finding from the checks of this part. An invalid,
 unsupported, or incomplete required evaluation cannot support a conformance claim. A conforming
-packet MAY omit any optional instance, but every catalogued packet resource MUST resolve a logical
+packet MAY omit any optional instance, but every packet resource the manifest lists MUST resolve a logical
 declaration. A payload that Escapewheel treats as opaque still requires a declaration; an extension
 registry is the data-driven route for a resource core does not define. Part 09 §5.4 defines how
 core and extension verdicts compose.
@@ -3163,7 +3163,7 @@ result, Boolean, or caller assertion is insufficient.
 ### 14.3 Reader independence
 
 A reader MUST NOT require a registry result, checked context, or validation receipt to open a
-packet, access its catalog or raw resources, present or correlate sessions, resolve
+packet, access its manifest or raw resources, present or correlate sessions, resolve
 discriminators, references, or session scope, provide extension-aware access, or analyze one or
 more packets. It may interpret declarations for those operations without making a conformance
 claim, and the reference reader does not depend on the validator package to do so. An explicit
@@ -3218,7 +3218,7 @@ Public checking APIs, machine-readable command output, validation reports, and s
 exceptions expose the same Part 02 §9.5 representation rather than reducing it to a Boolean or
 invalid-finding list. Human rendering may differ. Diagnostic `detail` is not interoperable
 identity. The result schema begins at version 0.1.0; this boundary and reporting change does not by
-itself change a registry meta-schema, core registry, extension registry, packet catalog, or their
+itself change a registry meta-schema, core registry, extension registry, packet manifest, or their
 version identifiers.
 
 <!-- END 05_validation_and_import.md -->
@@ -3376,7 +3376,7 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 
 | type | responsibility |
 |---|---|
-| `Packet` | resolve the catalog; hand back resources |
+| `Packet` | resolve the manifest; hand back resources |
 | `Dataset` | present several packets as one relation per resource |
 | `TableResource` | a table, as columnar batches or a scan |
 | `ArrayResource` | an array, opened through the array library |
@@ -3479,7 +3479,7 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
 `external: true` and absolute URIs.
 
 <a id="ew-example-packet-catalog" data-spec-anchor="canonical"></a>
-## 3. Catalog excerpt
+## 3. Manifest excerpt
 
 ```json
 {
@@ -3561,7 +3561,7 @@ WHERE t_tick BETWEEN ? AND ?;
 
 A packet of this shape is conforming when:
 
-1. the catalog validates against the manifest schema;
+1. the manifest validates against the manifest schema;
 2. every declared resource exists at its URI, or is declared external;
 3. every packet-owned resource matches its recorded `sha256`;
 4. Tier 1 and Tier 2 produce no error;
@@ -3584,7 +3584,7 @@ This part defines how much metadata core requires, where richer metadata belongs
 
 | tier | contents | location |
 |---|---|---|
-| 1 | packet-level facts | the catalog |
+| 1 | packet-level facts | the manifest |
 | 2 | facts needed to interpret, validate, join, or reproduce | core tables |
 | 3 | domain-rich, lab-specific facts | an extension's tables |
 | 4 | human-readable context | `docs/` sidecars |
@@ -3629,7 +3629,7 @@ Every declaration identifier in an extension registry MUST begin with the namesp
 <a id="ew-extension-registration" data-spec-anchor="canonical"></a>
 ### 5.3 Registration
 
-A packet carrying extension resources MUST declare each namespace in the catalog with its version and the path to its registry document (04 §8).
+A packet carrying extension resources MUST declare each namespace in the manifest with its version and the path to its registry document (04 §8).
 
 A validator MUST check that a declared registry exists. It MUST NOT require an extension's schema in order to validate core.
 
@@ -3724,7 +3724,7 @@ A writer MUST NOT:
 
 - hide analysis-critical metadata inside free-form JSON;
 - use an object path as the only way to identify a resource;
-- treat the catalog as a store for all metadata.
+- treat the manifest as a store for all metadata.
 
 A build MUST NOT block an import because optional institutional metadata is incomplete.
 

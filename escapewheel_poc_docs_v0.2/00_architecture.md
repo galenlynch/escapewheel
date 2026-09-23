@@ -8,7 +8,7 @@ Normative.
 This part defines the Escapewheel specification framework: its authority and conformance model,
 architectural classifications, numbered-part ownership and status, and publication conventions. It
 also states the cross-cutting architecture of an Escapewheel packet. Detailed concept meanings,
-logical declarations, physical encodings, catalog fields, and construction and validation rules
+logical declarations, physical encodings, manifest fields, and construction and validation rules
 belong to the subject-owning parts listed in §9.
 
 This specification defines a portable representation of extracellular electrophysiology data as a
@@ -172,7 +172,7 @@ Part 02 and the artifacts it incorporates specify it.
 
 A **physical profile** defines how logical resources are stored. Two are contemplated:
 
-| profile | tables | arrays | catalog |
+| profile | tables | arrays | manifest |
 |---|---|---|---|
 | portable | Parquet | Zarr | JSON manifest |
 | lakehouse | Iceberg over Parquet | Zarr | JSON manifest plus Iceberg catalog references |
@@ -226,16 +226,16 @@ packet entry names a declaration and MUST NOT repeat content class, kind, or can
 A **packet** is one concrete dataset bundle under a declared profile. It may be a local directory,
 an object-store prefix, or a manifest pointing at distributed assets.
 
-A packet contains a packet catalog, core tables, and any of: dense arrays, media, documents and
+A packet contains a packet manifest, core tables, and any of: dense arrays, media, documents and
 sidecars, analysis materializations, and validation and provenance records.
 
 A packet is primarily single-session. Multi-session packets are a permitted extension, and a
-packet declares its sessions in the catalog.
+packet declares its sessions in the manifest.
 
 <a id="ew-packet-catalog" data-spec-anchor="canonical"></a>
-### 3.4 Packet catalog
+### 3.4 Packet manifest
 
-The **packet catalog** is the dataset-level map. In the portable profile it is `packet.json`,
+The **packet manifest** is the dataset-level map. In the portable profile it is `packet.json`,
 specified in Part 04.
 
 It records which resource instances exist, the logical declarations they instantiate, their
@@ -247,9 +247,9 @@ The packet's profile and the declaration's kind derive a generic physical interf
 <a id="ew-iceberg-catalog" data-spec-anchor="canonical"></a>
 ### 3.5 Iceberg catalog
 
-An **Iceberg catalog** is distinct from the packet catalog. It is relevant only to the lakehouse
+An **Iceberg catalog** is distinct from the packet manifest. It is relevant only to the lakehouse
 profile and manages only tabular resources. It does not catalog dense arrays, media, documents, or
-semantic relationships across a packet, and therefore does not replace the packet catalog.
+semantic relationships across a packet, and therefore does not replace the packet manifest.
 
 <a id="ew-resource-identity" data-spec-anchor="canonical"></a>
 ### 3.6 Resource identity
@@ -280,7 +280,7 @@ spike in `core.spike_events`.
 ### 4.2 Spike representation
 
 `core.spike_events`, one row per spike with primitive columns only, is the sole canonical spike
-representation. The ragged chunked representation of v0.1 is withdrawn, as is the catalog's
+representation. The ragged chunked representation of v0.1 is withdrawn, as is the manifest's
 `canonical_representations` block.
 
 `core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that
@@ -326,7 +326,7 @@ text sidecars. It MUST be readable without a server.
 
 A packet need not own every byte it describes. Referencing is expected for large resources: a
 resource the packet does not own sets `external: true` and supplies a location. Externality changes
-ownership and what can be inspected; it does not move format-owned metadata into the catalog. An
+ownership and what can be inspected; it does not move format-owned metadata into the manifest. An
 unreachable external resource's physical state remains unassessed.
 
 Externalizing a table costs more than externalizing an array, because a table's validation rules
@@ -354,7 +354,7 @@ The first implementation is not a generic NWB backend. It is:
 1. a specification of core logical resources;
 2. a validator generated from that specification;
 3. an importer that turns source data into validated resources;
-4. a packet catalog recording the committed resources;
+4. a packet manifest recording the committed resources;
 5. a small access library querying tables and arrays with standard engines.
 
 An import succeeds only when validation succeeds (Part 05 §1).
@@ -372,7 +372,7 @@ MUST make the candidate inconsistent.
 | 01 | substrate-independent meanings of scientific and provenance concepts | normative |
 | 02 | logical resources, declarations, identities, references, and registry semantics | normative |
 | 03 | portable physical mapping of logical resources to stored bytes | normative |
-| 04 | packet catalog structure, resource entries, and dataset-to-resource bindings | normative |
+| 04 | packet manifest structure, resource entries, and dataset-to-resource bindings | normative |
 | 05 | validation, import, writer and reader operations, reporting, and publication of a packet | normative |
 | 06 | analysis policy, examples, and explanation | informative except §§2 and 5, which are normative |
 | 07 | reference-implementation design and examples | informative |
@@ -399,7 +399,7 @@ The numbered parts MUST observe this dependency direction:
 6. Part 05 specifies how writers, readers, and validators construct and judge instances under the
    upstream contracts rather than becoming a second owner of those contracts.
 7. Part 09 permits namespaced extension declarations under the same applicable semantic, logical,
-   physical, catalog, and conformance boundaries without altering core.
+   physical, manifest, and conformance boundaries without altering core.
 
 A writer MUST interpret adapter declarations and output under the owning numbered parts and
 incorporated declarations. An adapter's participation in ingestion MUST NOT let it redefine the

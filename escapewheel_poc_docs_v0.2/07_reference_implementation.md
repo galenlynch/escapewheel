@@ -44,7 +44,7 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 
 | type | responsibility |
 |---|---|
-| `Packet` | resolve the catalog; hand back resources |
+| `Packet` | resolve the manifest; hand back resources |
 | `Dataset` | present several packets as one relation per resource |
 | `TableResource` | a table, as columnar batches or a scan |
 | `ArrayResource` | an array, opened through the array library |
