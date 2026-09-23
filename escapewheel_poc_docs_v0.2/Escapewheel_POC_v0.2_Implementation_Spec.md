@@ -3263,6 +3263,7 @@ Measured on a real session, the arithmetic of aligning spikes to an event and a 
 
 The test is therefore: does materializing change the *shape* of access, or only pre-compute a cheap step?
 
+<a id="ew-analysis-spike-events" data-spec-anchor="canonical"></a>
 ## 4. `analysis.spike_events`
 
 Core keeps each spike on the clock of the probe that measured it, sorted unit-major. That layout answers "this unit's spikes" well and "every unit's spikes in this window" not at all, because a window across many clocks means nothing.

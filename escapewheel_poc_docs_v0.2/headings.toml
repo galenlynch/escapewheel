@@ -378,6 +378,12 @@ section = "1"
 title = "Scope"
 aliases = []
 
+[anchor.ew-analysis-spike-events]
+part = "06"
+section = "4"
+title = "`analysis.spike_events`"
+aliases = []
+
 [anchor.ew-analysis-views-and-materializations]
 part = "06"
 section = "7"

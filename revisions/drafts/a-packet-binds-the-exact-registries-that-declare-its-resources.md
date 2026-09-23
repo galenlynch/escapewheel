@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `57e3b41afed263155a19826ec1f9b113680ac11b` |
+| **Based on** | `c459cf9f7b9c1737a8f42d2d7e0d9ea894aed6a9` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 02 §§2.5, 2.7, 9.1, 9.2, and 9.4; Part 03 §§1, 3.1, 9.3, 11.3, and 12, with a new §3.3; Part 04 §§1–4 and 7–10, with a new §10 and the references renumbered to §11; Part 05 §§5.3, 10, 14.5, and 14.6; Part 08 §§2–3; Part 09 §5.3; the specification README §4; `registry/manifest.schema.json`; `registry/resources.schema.json`; `registry/registry.schema.json`; the registry-contract descriptor; `registry/logical_schemas.json`; the example extension registries |
+| **Amends** | Part 00 §§4.1 and 5.1; Part 02 §§2.1, 2.2, 2.5, 2.7, 9.1, 9.2, and 9.4; Part 03 §§1, 3.1, 9.3, 11.3, and 12, with a new §3.3; Part 04 §§1–4 and 7–10, with a new §10 and the references renumbered to §11; Part 05 §§5.3, 10, 14.5, and 14.6; Part 06 §§2, 4, and 5; Part 08 §§2–3; Part 09 §5.3; the specification README §4; `registry/manifest.schema.json`; `registry/resources.schema.json`; `registry/registry.schema.json`; the registry-contract descriptor; `registry/logical_schemas.json`; the example extension registries |
 | **Depends on** | [R122 §§3.2–3.3](../accepted/R122-define-specification-artifacts-and-normative-ownership.md#3-decision); [R126 §§3.2–3.3](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md#3-decision); [R127 §§3.2, 3.4, and 3.6](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md#3-decision); [R128 §§3.4–3.5, 3.7, and 3.9](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md#3-decision); [R129 §§3.6–3.7](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md#3-decision) |
 | **Profile** | all; §3.5 applies to `escapewheel-portable-v0.1` |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6; §3.7; §3.8; §3.9; §3.10; §3.11 |
@@ -21,8 +21,8 @@ This revision makes the packet manifest one contract with one structural owner. 
 every registry document that declares its resources by registry ID, role, version, packet path,
 and SHA-256 digest, and a conforming packet carries each of those documents. Part 04 incorporates
 the manifest's JSON Schema as the exact owner of local structure and enumerates the named checks
-that JSON Schema cannot express. The packet entry's producing-run field names a run and resolves
-through the run table's name column.
+that JSON Schema cannot express. The manifest entry loses its producing-run field, so a processing
+run is recorded only in tables, and a reader checks only what reading needs.
 
 Here the manifest is Part 04's packet manifest, `packet.json` in the portable profile. "Catalog"
 keeps only its Part 02 §2.6 sense of a catalog table and its rows, and a release manifest is Part
@@ -51,8 +51,12 @@ specification release manifest.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
-| [Part 02 §2.5](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-presence), presence conditions | revise in place | same section | a bound extension registry is active; a present `processing_run_name` requires `core.processing_runs` | §§3.3, 3.7 |
-| [Part 02 §2.7](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-provenance-policy), producing-run policy field | revise in place | same section | the policy governs `processing_run_name` | §3.7 |
+| [Part 00 §4.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-core-content-requirements), core minimum names producing-run rules | revise in place | same section | the minimum no longer includes a producing-run rule | §3.7 |
+| [Part 00 §5.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-analysis-content-requirements), Part 06 owns producing-run requirements | revise in place | same section | Part 06 owns lineage, realization, promotion, and optional run provenance | §3.7 |
+| [Part 02 §2.1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-common-fields), declaration field `producing_run` | remove the field | none | a declaration carries no producing-run policy | §3.7 |
+| [Part 02 §2.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-content-class), analysis and compatibility-projection policies | revise in place | same section | those classes require lineage only | §3.7 |
+| [Part 02 §2.5](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-presence), presence conditions | revise in place | same section | a bound extension registry is active; a producing run no longer requires `core.processing_runs` | §§3.3, 3.7 |
+| [Part 02 §2.7](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-provenance-policy), lineage and producing-run policy | revise in place; retitle "Lineage policy" | same section | lineage is the only declaration-selected provenance | §3.7 |
 | [Part 02 §9.1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-document), required registry members | expand in place | same section and incorporated meta-schema | every registry document carries `registry_id` | §3.4 |
 | [Part 02 §9.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-self-description), a packet records a registry version and should embed the registry | replace the packet obligation with a pointer; revise identifiers | Part 04 §8 for binding; planned Part 03 section 3.3 for storage; this section for registry identifiers | version-only binding and optional embedding become a full descriptor and mandatory embedding | §§3.3–3.5, 3.11 |
 | [Part 02 §9.4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-conformance), contract descriptor and invariant inventory | revise in place | same section and incorporated descriptor | descriptor v0.3 selects meta-schema 0.6.0 and adds one extension invariant | §§3.4, 3.11 |
@@ -63,19 +67,23 @@ specification release manifest.
 | [Part 03 §11.3](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-referenced-resource-delivery), a delivered entry "as Part 04 §5 declares one" | revise in place | same section, Part 04 §4.1, and the incorporated delivery schema | the delivered entry is the closed manifest entry without its build-supplied members | §3.10 |
 | [Part 03 §12](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-portable-profile-normative-references), portable-profile references | extend in place | same section | adds RFC 1952 and RFC 1951 | §3.5 |
 | [Part 04 §1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-scope), scope | expand in place | same section | incorporates `registry/manifest.schema.json` | §3.1 |
-| [Part 04 §2](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-principles), names rather than numbers | revise in place | same section | names `processing_run_name` | §3.7 |
+| [Part 04 §2](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-principles), names rather than numbers | revise in place | same section | the manifest holds no producing-run name | §3.7 |
 | [Part 04 §3](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-identifiers), hand-authored top-level field table | replace with a generated projection | incorporated manifest schema | `registries` replaces `registry_version` and `extensions`; the root closes | §§3.1–3.3 |
-| [Part 04 §4.1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-resource-entry-fields), hand-authored entry table and retired-field list | replace with a generated projection | incorporated manifest schema; Part 03 §10 for when `sha256` is recorded | closure replaces the retired-field list; `processing_run_name` replaces `processing_run_id`; `semantic_type` is removed; the table's duplicate `sha256` SHOULD is dropped | §§3.1–3.2, 3.7 |
+| [Part 04 §4.1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-resource-entry-fields), hand-authored entry table and retired-field list | replace with a generated projection | incorporated manifest schema; Part 03 §10 for when `sha256` is recorded | closure replaces the retired-field list; `processing_run_id` and `semantic_type` are removed; the table's duplicate `sha256` SHOULD is dropped | §§3.1–3.2, 3.7 |
+| [Part 04 §4.2](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-logical-resource-kinds), resolved logical facts | revise in place | same section | the declaration supplies no producing-run policy | §3.7 |
 | [Part 04 §4.3](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-withdrawn-catalog-blocks), withdrawn blocks | retire; move the provenance-table sentence to §7 | schema closure and Part 04 §7 | a withdrawn member is rejected by closure rather than by a list | §3.2 |
-| [Part 04 §7](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-resource-lineage), deferred producing-run identity | replace the deferral | same section | a present name resolves to exactly one row with that non-null name | §3.7 |
+| [Part 04 §7](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-resource-lineage), producing-run field and deferred run identity | remove; retitle "Resource lineage" | same section | lineage alone; an entry names no run | §3.7 |
 | [Part 04 §8](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-registry-bindings), extension inventory | replace | same section, retitled "Registry bindings" | one descriptor map binds core and every extension | §3.3 |
 | [Part 04 §9](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-validation-block), hand-authored validation-block table | replace with a generated projection | incorporated manifest schema | the block closes and loses `report_uri` | §§3.1–3.2 |
 | no current manifest-conformance section | add | planned Part 04 section 10, "Manifest conformance", `ew-packet-manifest-conformance` | ordered phases and named checks | §§3.6–3.9 |
 | [Part 04 §10](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-normative-references), normative references | renumber to §11 | same content | none | none |
-| [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), shim list of declaration checks and the producing-run paragraph | replace with a citation of planned Part 04 section 10 | planned Part 04 section 10 | the check inventory and producing-run resolution gain one owner | §§3.6–3.7 |
-| [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes), analysis `processing_run_id` is MUST | revise in place | Part 02 §2.7 declaration policy, cited here | the field is renamed; the obligation comes from the declaration | §3.7 |
+| [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), shim list of declaration checks and the producing-run paragraph | replace with a citation of planned Part 04 section 10 | planned Part 04 section 10 | the check inventory gains one owner; producing-run resolution is removed | §§3.6–3.7 |
+| [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes), analysis `processing_run_id` is MUST | remove the sentence | none | an analysis resource need not name a run; provenance remains optional | §3.7 |
 | [Part 05 §14.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validator-registry-boundary), embedded or caller-supplied core registry | revise in place | same section | only bound registries direct packet checks; missing-registry binding is decided | §3.9 |
 | [Part 05 §14.6](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-registry-result-reporting), subject labels | revise in place | same section | a registry ID labels each bound registry's result | §3.9 |
+| [Part 06 §2](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-rules), required producing-run policy and the parameter rule | revise in place | same section, citing Part 06 §5 | only lineage is required; §5 owns run parameters | §3.7 |
+| [Part 06 §4](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-spike-events), bucket width, omitted count, and collision reason in the producing run | revise in place | same section, citing Part 06 §5 | each is a parameter of a run the writer chose to record | §3.7 |
+| [Part 06 §5](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-materialization-provenance), a materialization records a run and names it from the entry | replace | same section | a writer may record a run; a recorded run carries the parameters the output cannot recover | §3.7 |
 | [Part 08 §2](../../escapewheel_poc_docs_v0.2/08_example_packet.md#ew-example-packet-layout) and [§3](../../escapewheel_poc_docs_v0.2/08_example_packet.md#ew-example-packet-catalog), example layout and manifest | regenerate | informative example | shows the descriptor map and gzip members | §§3.3, 3.5 |
 | [Part 09 §5.3](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-registration), extension registration | replace | same section, citing Part 04 §8 | registration is a descriptor with role `extension` | §§3.3, 3.9 |
 | Specification README §4, `registry_version` row | regenerate | Part 04 §8 and Part 02 §9.2 | lists the core registry ID and version rather than a manifest field | §3.11 |
@@ -83,7 +91,8 @@ specification release manifest.
 | `registry/resources.schema.json` | revise and incorporate | Part 03 §§1 and 11.3, with Part 04 §4.1 | closed delivery shape at `resources/0.4.0` | §§3.10–3.11 |
 | `registry/registry.schema.json`, contract descriptor, core and extension registries | advance | Part 02 | `registry_id`, meta-schema 0.6.0, descriptor v0.3, core 0.6.0 | §§3.4, 3.11 |
 
-Seven affected headings lacked canonical anchors; §6.1 records the bootstrap that added them.
+Eight affected headings lacked canonical anchors; §6.1 records the two bootstrap commits that added
+them.
 
 ## 2. Background
 
@@ -156,21 +165,26 @@ reader's `Manifest.load()` validates without a format checker. The registry chec
 the offset-free `2026-09-04T04:22:45`, and accepted `2026-09-04T04:22:45Z`. All 58 timestamps in
 the 29 fixture manifests, and every writer timestamp, use the accepted form.
 
-### 2.5 The producing-run field names a run
+### 2.5 The producing-run field duplicates table provenance
 
 `core.processing_runs.processing_run_id` is an assigned integer, while the manifest field with the
 same name holds a string. The validator accepts a value that equals either an assigned integer or a
-non-null `processing_run_name`, a union that is not one identity. The writer's import and
-materialization paths record the run's name in both the manifest entry and the row's
-`processing_run_name`. None of the 29 fixture manifests carries the field, so the corpus cannot
-exercise the join. R128 forbade making the nullable name column packet-unique merely to create the
-join; constraining only referenced names satisfies that constraint.
+non-null `processing_run_name`, a union that is not one identity; an exact join would need a
+uniqueness rule on a nullable name column that R128 declined to add. None of the 29 fixture
+manifests carries the field.
+
+Tables already carry the provenance a consumer queries: eight core tables and
+`analysis.array_assets` have a row-level `processing_run_id` foreign key. Four core declarations
+require the manifest field, all in the analysis content class, and Part 06 makes those resources
+disposable projections or derivations of canonical ones. Part 05 §10 already treats provenance as
+optional within packet conformance. The writer names an import run on imported entries, but
+importing a resource into a packet does not produce it.
 
 ### 2.6 Cross-entry checks have no owner
 
 JSON Schema cannot establish resource-ID uniqueness, registry-byte identity, declaration
-resolution, declaration-selected presence, dependency closure, catalog-row binding, lineage
-acyclicity, or producing-run resolution. The validator implements most of these as
+resolution, declaration-selected presence, dependency closure, catalog-row binding, or lineage
+acyclicity. The validator implements most of these as
 `packet.resource.*` checks that Part 05 §5.3 lists without IDs. The reader builds
 `{resource_id: entry}` in its constructor, so a duplicate ID silently keeps the last entry during
 ordinary access, and `json.load` likewise keeps the last of two duplicate object members.
@@ -215,7 +229,7 @@ The root requires `packet_id`, `packet_version`, `profile_id`, `semantic_standar
 `logical_standard_version`, `registries`, `created_at`, `sessions`, `resources`, and `validation`,
 and admits `description` and `retention`. A resource entry requires `resource_id`,
 `declaration_id`, `uri`, and `validation_state`, and admits `external`, `source`, `sha256`,
-`size_bytes`, `verified_at`, `members`, `derived_from`, and `processing_run_name`. The validation
+`size_bytes`, `verified_at`, `members`, and `derived_from`. The validation
 block requires `status`, `validated_at`, `validator_name`, and `validator_version` and admits
 nothing else. Part 03 §9.5 continues to own the meaning of `retention`.
 
@@ -236,7 +250,6 @@ The schema MUST declare these constraints on resource-entry members:
 | `validation_state` | string | one of `passed`, `failed`, `not_run` |
 | `source` | string | nonempty; present only where `external` is `true` |
 | `derived_from` | array of string | nonempty, unique items, each matching the `resource_id` pattern |
-| `processing_run_name` | string | nonempty |
 
 The remaining entry members keep their baseline types and constraints. Part 03 §10 continues to
 own when a writer records `sha256`, so the generated entry table carries no presence rule for it.
@@ -359,11 +372,6 @@ registry ID where one applies.
 | `packet.resource.lineage_unresolved` | declaration | a `derived_from` member names no entry with a bound declaration |
 | `packet.resource.lineage_class` | declaration | a lineage edge violates Part 02 §2.7's content-class relation |
 | `packet.resource.lineage_cycle` | declaration | the lineage graph has a self-edge or cycle |
-| `packet.resource.processing_run_name_required` | declaration | the `producing_run` policy is `required` and `processing_run_name` is absent |
-| `packet.resource.processing_run_name_forbidden` | declaration | the `producing_run` policy is `forbidden` and `processing_run_name` is present |
-| `packet.resource.processing_runs_missing` | declaration | an entry records `processing_run_name` and `core.processing_runs` is absent |
-| `packet.resource.processing_run_unresolved` | declaration | no `core.processing_runs` row has that `processing_run_name` |
-| `packet.resource.processing_run_ambiguous` | declaration | more than one `core.processing_runs` row has that `processing_run_name` |
 
 In the `registry_binding` phase, a checker MUST evaluate `missing`, `unreadable`, and `digest`
 first. Only for decoded bytes that match the digest, it then obtains the Part 02 registry
@@ -381,24 +389,33 @@ and compose the verdicts.
 Part 05 §5.3 MUST cite planned Part 04 section 10 for these checks rather than list them, and
 retains kind-specific physical dispatch and `core.sessions.manifest_sessions_match`.
 
-### 3.7 A packet names its producing run
+### 3.7 A manifest entry names no producing run
 
-The resource-entry member `processing_run_name` MUST replace `processing_run_id`. The declaration's
-`producing_run` policy governs its presence. A present value MUST equal the non-null
-`processing_run_name` of exactly one `core.processing_runs` row, and that table MUST then be
-present. Unreferenced names and null names remain unconstrained, and the column does not become
-packet-unique.
+The resource-entry member `processing_run_id` MUST be removed without replacement, and the registry
+meta-schema MUST remove the declaration field `producing_run`. Part 00 §§4.1 and 5.1, Part 02
+§§2.1, 2.2, 2.5, and 2.7, Part 04 §§2, 4.1, 4.2, and 7, and Part 05 §5.3 MUST drop the
+producing-run policy and the presence condition it created. Part 02 §2.7 is retitled "Lineage
+policy", and Part 04 §7 "Resource lineage".
 
-A writer MUST record the name it wrote to the producing run's row. Part 02 §§2.5 and 2.7, Part 04
-§§2, 4.1, and 7, and Part 05 §10 MUST name `processing_run_name`. Part 05 §10 MUST derive the
-analysis obligation from the declaration's `required` producing-run policy rather than restate it.
+Part 05 §10 MUST NOT require an analysis resource to name a run; provenance remains optional within
+packet conformance. Part 06 §5 MUST permit, and not require, a writer to record a
+`core.processing_runs` row for a materialization. Where a writer records one, the row's parameters
+MUST carry every transform parameter the output cannot recover. Part 06 §2 MUST keep only the
+required lineage policy and cite §5 for parameters, and Part 06 §4 MUST state its bucket width,
+omitted-row count, and collision reason as parameters of such a recorded run.
 
-### 3.8 A reader rejects a manifest whose map would hide an entry
+Row-level `processing_run_id` columns, `core.processing_run_inputs`, and `core.preferred_runs` are
+unchanged.
 
-A reader loading a manifest MUST complete the `json` and `shape` phases and
-`packet.resource.id_unique` before it builds a lookup by resource ID or exposes an entry, and MUST
-fail the load on any finding among them. A reader MAY expose the decoded JSON of a rejected manifest
-as raw data but MUST NOT resolve declarations or resources through it.
+### 3.8 A reader checks only what reading needs
+
+A reader loading a manifest MUST decode it as UTF-8 JSON, MUST reject a repeated object member, and
+MUST reject a repeated `resource_id` before it builds a lookup by resource ID or exposes an entry.
+It MUST check the JSON type of each member it reads and fail naming a member that is absent where
+the schema requires it or has the wrong type. A reader need not apply the incorporated schema or
+assert its closure, patterns, or formats; the validator and the writer's publication gate own
+those. A reader MAY expose the decoded JSON of a rejected manifest as raw data but MUST NOT resolve
+declarations or resources through it.
 
 A reader resolving a declaration MUST acquire the bound registry that declares it through its
 descriptor, decode it as the packet's physical profile requires, and verify its digest. When the
@@ -436,8 +453,8 @@ string and requires `resources`, an array of entries. Each entry is closed, requ
 `resource_id`, `declaration_id`, and `uri`, and admits `external`, `source`, `sha256`,
 `size_bytes`, `verified_at`, and `members`. The delivery schema defines each of those members, and
 the entry's conditional shape, exactly as the manifest schema does; a difference makes the
-specification candidate internally inconsistent. A build supplies `validation_state`,
-`derived_from`, and `processing_run_name`, so a delivered entry MUST NOT carry them.
+specification candidate internally inconsistent. A build supplies `validation_state` and
+`derived_from`, so a delivered entry MUST NOT carry either.
 
 Part 03 §11.3 MUST cite Part 04 §4.1 for the entry and retain its delivery obligations.
 
@@ -472,17 +489,18 @@ session-inventory check, and Part 09 §5.4's separate verdicts are unchanged.
 Every generated packet and delivery document is incompatible and must be regenerated. The four
 local development packets are rebuilt on demand. Independent implementations gain one manifest
 schema, one delivery projection, and one check inventory, and lose the fixed registry paths and
-the union run lookup. The reader and validator gain an RFC 3339 format dependency.
+the manifest's producing-run field. The validator and writer gain an RFC 3339 format dependency;
+the reader gains none.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | unchanged; binding and manifest mechanics alter no scientific meaning | specification diff |
-| logical prose and registry | add `registry_id` to Part 02 §9.1, the meta-schema, the core registry, and every extension; add `registry.identity.registry_id`; replace Part 02 §9.2's packet obligation; rename the producing-run field in §§2.5 and 2.7; advance meta-schema, descriptor, and core identifiers | registry checker, contract-descriptor tests, and negative extension with a mismatched `registry_id` |
+| logical prose and registry | add `registry_id` to Part 02 §9.1, the meta-schema, the core registry, and every extension; add `registry.identity.registry_id`; replace Part 02 §9.2's packet obligation; remove the producing-run policy from Part 02 §§2.1, 2.2, 2.5, and 2.7, the meta-schema, and every core and extension declaration; make a materialization's run optional in Part 06 §§2, 4, and 5 and drop producing-run mentions from Part 00 §§4.1 and 5.1; advance meta-schema, descriptor, and core identifiers | registry checker, contract-descriptor tests, and negative extension with a mismatched `registry_id` |
 | physical profiles | Part 03 stores each bound registry as one gzip member, recommends a new layout, restates retention by registry ID and version, incorporates the delivery schema, and cites RFC 1952 and RFC 1951 | writer and reader round trip of gzip members; retention test for two digests under one ID and version |
-| packet manifest and JSON Schemas | incorporate the closed manifest schema; add `registries`; remove nine root, two entry, and one validation member; rename the producing-run field; add planned section 10; have `registry/build.py` render the Part 04 tables and the delivery schema from the manifest schema | schema tests, and repository-verifier comparisons of the rendered tables and delivery schema against the manifest schema |
+| packet manifest and JSON Schemas | incorporate the closed manifest schema; add `registries`; remove nine root, two entry, and one validation member; add planned section 10; have `registry/build.py` render the Part 04 tables and the delivery schema from the manifest schema | schema tests, and repository-verifier comparisons of the rendered tables and delivery schema against the manifest schema |
 | validation and import | run the five phases; direct checks only from bound registries; assert `date-time`; retire the reference validator's `registry.schema`, `registry.version_mismatch`, `packet.resource.lineage_shape`, `packet.resource.processing_run_id_required`, `packet.resource.processing_run_id_forbidden`, and `provenance.*` findings, which the registry result, the named checks, and the schema replace | validator tests for every check ID |
 | extensions | each example registry gains `registry_id` and advances its version; binding applies without naming any extension in a numbered part | extension registry checks and extension packet fixtures |
-| reader, writer, validator, adapters | the reader rejects duplicate members, shape failures, and duplicate IDs at load, resolves registries through descriptors, and verifies digests; the writer serializes, hashes, and gzips registries before writing the manifest; the validator acquires registries only through descriptors; adapters deliver closed entries | package tests and cross-package builds |
+| reader, writer, validator, adapters | the reader rejects repeated members and resource IDs at load, checks the type of each member it reads, resolves registries through descriptors, and verifies digests; the writer serializes, hashes, and gzips registries before writing the manifest and names no run on an entry; the validator acquires registries only through descriptors; adapters deliver closed entries | package tests and cross-package builds |
 | conformance fixtures and tests | regenerate every fixture; add the positive and negative cases in §6 | fixture suite and repository verifier |
 | revision process and tooling | unchanged; the ordinary lifecycle, ledger, and evidence records apply | lifecycle scripts |
 | generated publications and developer documentation | regenerate Part 04 tables, the Part 08 example, the specification README row, and the consolidated rendering; revise the root README packet layout, `registry/README.md`'s embedding path, the fixture guide's validation layers, the root contribution guide's generation diagram, and the validator guide's rule that a caller may pass a registry | clean regeneration, `facts.py`, and documentation review |
@@ -493,9 +511,9 @@ Incorporation must establish these positive cases:
 
 - a core-only packet binds exactly one descriptor, with role `core`, and passes every check;
 - a packet binding two extensions passes, and each extension's required singletons are active;
-- a writer-built packet with an analysis resource records a `processing_run_name` that resolves to
-  exactly one row, while another row with a null name and two unreferenced rows sharing one name
-  raise no finding;
+- a packet whose analysis resources name no run and that carries no `core.processing_runs` passes;
+- a reader opens a manifest whose `created_at` is malformed and whose root carries an unknown
+  member, while the validator reports `packet.manifest.schema` for both;
 - two gzip members of one registry that differ only in header fields and compression level both
   satisfy the same descriptor;
 - an amendment that binds a new core registry version retains the superseded copy at its recorded
@@ -520,9 +538,9 @@ It must establish these negative cases, each producing exactly its check ID:
 - an extension registry that fails binding, which yields its binding finding while core's
   declaration checks still run and no declaration finding names that extension's entries;
 - repeated member keys, a size mismatch, and a member-digest mismatch;
-- an absent required `processing_run_name`, a forbidden one, a missing run table, an unresolved
-  name, and a name shared by two rows; and
-- a delivered entry carrying `validation_state`, `derived_from`, or `processing_run_name`.
+- a declaration carrying `producing_run`, rejected by the registry result;
+- a reader reading a member of the wrong JSON type, which fails naming that member; and
+- a delivered entry carrying `validation_state` or `derived_from`.
 
 The reader's manifest loader must be tested against duplicate IDs and members without constructing
 a map first. The incorporation evidence must include regenerated fixtures, focused package tests,
@@ -530,8 +548,9 @@ the generated-projection comparisons, and the full repository verifier.
 
 ### 6.1 Completed anchor bootstrap
 
-Commit `44855721f7ffe5987bf55c312905360489c62f39` added one canonical anchor immediately
-before each of these affected existing headings:
+Commits `44855721f7ffe5987bf55c312905360489c62f39` and
+`c459cf9f7b9c1737a8f42d2d7e0d9ea894aed6a9` added one canonical anchor immediately before each of
+these affected existing headings:
 
 | current heading | canonical anchor |
 |---|---|
@@ -539,6 +558,7 @@ before each of these affected existing headings:
 | Part 03 §9.3 | `ew-superseded-manifest-retention` |
 | Part 04 §4.3 | `ew-withdrawn-catalog-blocks` |
 | Part 04 §8 | `ew-packet-registry-bindings` |
+| Part 06 §4 | `ew-analysis-spike-events` |
 | Part 08 §2 | `ew-example-packet-layout` |
 | Part 08 §3 | `ew-example-packet-catalog` |
 | Part 09 §5.3 | `ew-extension-registration` |
