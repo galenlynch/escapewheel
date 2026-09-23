@@ -94,7 +94,9 @@ The observations below were reproduced from the recorded baseline with a clean w
   unchecked implementation copy of them. Part 03 §11 says the referenced-resource document's shape
   "is published as" `registry/resources.schema.json` without incorporating it either, and it
   describes each entry as the one "Part 04 §5 declares", although Part 04 §4.1 declares the entry
-  fields. Part 02 and Part 03 already incorporate their exact JSON Schemas and descriptors while
+  fields. Accepted revision R128 recorded the manifest schema as an unincorporated projection and
+  deferred its express incorporation to the complete manifest reconciliation. Part 02 and Part 03
+  already incorporate their exact JSON Schemas and descriptors while
   their prose owns meaning, which is the pattern the catalog lacks.
 - Every one of the 29 generated fixture packets carries `core.processing_runs`, and every name its
   catalog entries reference matches exactly one row's non-null `processing_run_name`. Accepted
@@ -267,7 +269,7 @@ and closure precisely enough to generate a faithful schema without a second stru
 local JSON structure: field names, types, required members, closure, patterns, and formats. Part 04
 prose owns field meanings, declaration-selected presence, and the named semantic checks. Part 04's
 field tables become an informative projection generated from and checked against the schema, as
-Part 02's column tables are generated from the registry. This is the recommendation because it
+Part 02's column tables are generated from the registry. The user chose this option because it
 repeats the ownership split Parts 02 and 03 already use and gives the catalog one editable
 structural source.
 
@@ -305,7 +307,7 @@ deployed schemas remain self-contained while only one definition is edited.
 
 ## 6. Open questions
 
-The user approved these resolutions of the earlier questions on 2026-09-23:
+The user approved these resolutions on 2026-09-23:
 
 1. One closed `registries` map, keyed by registry ID, replaces `registry_version` and
    `extensions`; each descriptor carries `role`, `version`, packet-relative `path`, and `sha256`,
@@ -323,11 +325,11 @@ The user approved these resolutions of the earlier questions on 2026-09-23:
 6. Catalog loading rejects duplicate resource IDs before building its lookup map; the remaining
    named catalog checks run for explicit validation and writer publication.
 
-One question remains:
+7. Part 04 expressly incorporates `registry/manifest.schema.json` as the exact owner of local
+   catalog structure. Part 04's field tables become an informative projection generated from it,
+   and `registry/resources.schema.json` is generated from its resource entry.
 
-7. Should Part 04 expressly incorporate `registry/manifest.schema.json` as the exact owner of
-   local catalog structure, with Part 04's field tables regenerated from it as an informative
-   projection and `registry/resources.schema.json` generated from its resource entry?
+No question remains open.
 
 ## 7. Promotion criteria
 
@@ -337,7 +339,7 @@ One question remains:
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
