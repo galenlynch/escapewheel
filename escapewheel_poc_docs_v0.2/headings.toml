@@ -410,10 +410,22 @@ section = "6.3"
 title = "Axis coordinates"
 aliases = []
 
+[anchor.ew-array-codecs]
+part = "03"
+section = "6.4"
+title = "Codecs"
+aliases = []
+
 [anchor.ew-array-metadata-placement]
 part = "03"
 section = "6.5"
 title = "What the array declares, and what the tables declare"
+aliases = []
+
+[anchor.ew-array-version]
+part = "03"
+section = "6.1"
+title = "Version"
 aliases = []
 
 [anchor.ew-authority-by-concern]
@@ -528,6 +540,18 @@ aliases = []
 part = "09"
 section = "5.5"
 title = "Independent versioning"
+aliases = []
+
+[anchor.ew-external-resource-referencing]
+part = "00"
+section = "7.2"
+title = "Referencing"
+aliases = []
+
+[anchor.ew-external-resource-verification]
+part = "04"
+section = "5.3"
+title = "Verification levels"
 aliases = []
 
 [anchor.ew-free-form-metadata]
@@ -656,6 +680,18 @@ section = "1"
 title = "Scope"
 aliases = []
 
+[anchor.ew-packet-codec-union]
+part = "04"
+section = "6.2"
+title = "Packet union"
+aliases = []
+
+[anchor.ew-packet-codecs]
+part = "04"
+section = "6"
+title = "Codecs"
+aliases = []
+
 [anchor.ew-packet-content-classes]
 part = "00"
 section = "3.2"
@@ -680,6 +716,12 @@ section = "9"
 title = "Validation block"
 aliases = []
 
+[anchor.ew-parquet-reader-floor]
+part = "03"
+section = "5.5"
+title = "The Parquet floor"
+aliases = []
+
 [anchor.ew-physical-profile]
 part = "00"
 section = "3.1.3"
@@ -696,6 +738,12 @@ aliases = []
 part = "03"
 section = "1"
 title = "Scope"
+aliases = []
+
+[anchor.ew-portable-profile-technologies]
+part = "03"
+section = "2"
+title = "Required technologies"
 aliases = []
 
 [anchor.ew-reader-declared-types]
@@ -800,6 +848,12 @@ section = "2.6"
 title = "Catalog binding"
 aliases = []
 
+[anchor.ew-resource-codecs]
+part = "04"
+section = "6.1"
+title = "Per resource"
+aliases = []
+
 [anchor.ew-resource-common-fields]
 part = "02"
 section = "2.1"
@@ -888,6 +942,18 @@ aliases = []
 part = "00"
 section = "2.1"
 title = "Specification candidate and release"
+aliases = []
+
+[anchor.ew-table-encoding]
+part = "03"
+section = "5.1"
+title = "Encoding"
+aliases = []
+
+[anchor.ew-table-partitioning]
+part = "03"
+section = "5.2"
+title = "Partitioning"
 aliases = []
 
 [anchor.ew-table-resource-requirements]

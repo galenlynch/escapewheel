@@ -420,6 +420,7 @@ renaming.
 The portable profile is a JSON manifest, Parquet tables, Zarr arrays, ordinary media files, and
 text sidecars. It MUST be readable without a server.
 
+<a id="ew-external-resource-referencing" data-spec-anchor="canonical"></a>
 ### 7.2 Referencing
 
 A packet need not own every byte it describes. Referencing is expected for large resources: a
@@ -1948,6 +1949,7 @@ and verify that catalog field rather than invoking FIPS 180-4 independently.
 
 This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
+<a id="ew-portable-profile-technologies" data-spec-anchor="canonical"></a>
 ## 2. Required technologies
 
 | resource kind | format |
@@ -2007,6 +2009,7 @@ relative URI resolves under that prefix
 
 ## 5. Table storage
 
+<a id="ew-table-encoding" data-spec-anchor="canonical"></a>
 ### 5.1 Encoding
 
 A table MUST be a valid Parquet file. Compression SHOULD be Zstandard where available.
@@ -2015,6 +2018,7 @@ A large table SHOULD use row groups sized for analytical scans. Part 10 carries 
 
 An identifier column is `int32`, or `int64` where its range requires it (Part 02 §5.3) and MUST NOT be dictionary-encoded in a way that requires unification across row groups before it can be compared.
 
+<a id="ew-table-partitioning" data-spec-anchor="canonical"></a>
 ### 5.2 Partitioning
 
 A large multi-session table SHOULD be partitioned by `session_id`. A table MUST NOT be partitioned by `unit_id`, which produces many small files.
@@ -2045,6 +2049,7 @@ A writer **MUST** emit `analysis.spike_events` in that order. It is the one reso
 
 A writer **SHOULD** start a new row group at each bucket boundary. A group cut at a fixed row count straddles boundaries and spans two buckets' worth of time. Row-group size and encoding are otherwise not normative: the right values follow from session length and unit count rather than from the schema.
 
+<a id="ew-parquet-reader-floor" data-spec-anchor="canonical"></a>
 ### 5.5 The Parquet floor
 
 A reader MUST support the compressions **uncompressed, Snappy, Gzip and Zstd**. A writer MUST use
@@ -2101,6 +2106,7 @@ A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null
 
 ## 6. Array storage
 
+<a id="ew-array-version" data-spec-anchor="canonical"></a>
 ### 6.1 Version
 
 A packet-owned array MUST be Zarr v3. A referenced array MAY be Zarr v2, because a packet does not control how an external producer wrote it.
@@ -2133,6 +2139,7 @@ A rational step is a numerator and a denominator. `step_tick_den`, where present
 
 Where an array declares both a sampling rate and a regular tick axis, the two describe the same thing and MUST agree. The rate is retained as a validated denormalization, not as a second source of truth.
 
+<a id="ew-array-codecs" data-spec-anchor="canonical"></a>
 ### 6.4 Codecs
 
 A writer MAY use any Zarr codec. The catalog MUST name every codec a resource uses. A reader MUST check a resource's declared codecs before opening it, and MUST fail naming what it lacks rather than returning partial data.
@@ -2517,6 +2524,7 @@ Referencing is expected for large resources. Externalizing a table costs more th
 
 A writer that cannot reach a URI MUST record nothing rather than copying a value from a local stand-in.
 
+<a id="ew-external-resource-verification" data-spec-anchor="canonical"></a>
 ### 5.3 Verification levels
 
 Verification of an external resource is layered, and a report MUST state which level it reached.
@@ -2577,12 +2585,15 @@ A consumer MUST NOT read resolution through a different document as invalidating
 report it against the resource entry, and MUST NOT silently prefer either the recorded digest or
 the bytes it found.
 
+<a id="ew-packet-codecs" data-spec-anchor="canonical"></a>
 ## 6. Codecs
 
+<a id="ew-resource-codecs" data-spec-anchor="canonical"></a>
 ### 6.1 Per resource
 
 Every array resource MUST declare the codecs it uses. A reader checks a resource's own declaration before opening it.
 
+<a id="ew-packet-codec-union" data-spec-anchor="canonical"></a>
 ### 6.2 Packet union
 
 `required_codecs` is the union of every resource's codecs, present so a reader can answer whether it can open the packet at all. A reader MUST NOT refuse a packet over a codec used only by resources it does not open.

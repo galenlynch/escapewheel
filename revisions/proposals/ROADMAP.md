@@ -641,9 +641,9 @@ The current Parquet interface is single-file only. Partitioned tables remain fut
 until demonstrated need justifies explicit immutable membership, row-order, partition-value, and
 schema semantics.
 
-This stage determines the physical-profile model needed by P6. Exact codec-floor wording and
-portability reporting remain independently reviewable in P9.3 after the reader-floor structure
-exists.
+This stage determines the physical-profile model needed by P6 and records the measured current
+floor in terms that compare exactly with Parquet and Zarr metadata. P9.3 may later reconsider floor
+membership and owns standardized portability findings and verdict composition.
 
 **Review coverage:** S10 in model form, D3's physical half, and I8's capability-model portion.
 

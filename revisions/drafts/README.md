@@ -23,4 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | [A Portable Profile Declares Its Interfaces and Reader Floor](a-portable-profile-declares-its-interfaces-and-reader-floor.md) | 3,624 | Not yet appraised; promoted 2026-09-23 from the exact proposal at `528444689dbed02a97d3bc4c9e8ea982266adc3b`. | Structural reconciliation across Parts 00, 03, 04, and 05; physical descriptor, interface derivation, packet-field retirement, and reader floor. |
+| 1 | [A Portable Profile Declares Its Interfaces and Reader Floor](a-portable-profile-declares-its-interfaces-and-reader-floor.md) | 5,177 | Acceptance appraisal passed 2026-09-23 at `a52e4fc56dbbf7dd6be4d7d64145404b1c838b5d`: the 19-section, 246-citation impact review is complete; current Parquet output and V2-reader feasibility were reprobed; and every draft gate passes with no remaining blocker. | Structural reconciliation across Parts 00, 03, 04, and 05; physical descriptor, interface derivation, packet-field retirement, and reader floor. |
