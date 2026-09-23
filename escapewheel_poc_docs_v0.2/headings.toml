@@ -337,6 +337,48 @@ section = "5.1"
 title = "Requirements"
 aliases = []
 
+[anchor.ew-analysis-materialization-criterion]
+part = "00"
+section = "5.2"
+title = "Materialization is justified by layout, not by arithmetic"
+aliases = []
+
+[anchor.ew-analysis-materialization-provenance]
+part = "06"
+section = "5"
+title = "Provenance of a materialization"
+aliases = []
+
+[anchor.ew-analysis-promotion]
+part = "06"
+section = "8"
+title = "Promotion into core"
+aliases = []
+
+[anchor.ew-analysis-resource-index]
+part = "02"
+section = "11.8"
+title = "Analysis"
+aliases = []
+
+[anchor.ew-analysis-rules]
+part = "06"
+section = "2"
+title = "Rules"
+aliases = []
+
+[anchor.ew-analysis-scope]
+part = "06"
+section = "1"
+title = "Scope"
+aliases = []
+
+[anchor.ew-analysis-views-and-materializations]
+part = "06"
+section = "7"
+title = "Views versus materialized products"
+aliases = []
+
 [anchor.ew-architecture-classifications]
 part = "00"
 section = "3"
@@ -347,6 +389,24 @@ aliases = []
 part = "00"
 section = "1"
 title = "Scope"
+aliases = []
+
+[anchor.ew-array-asset-concept]
+part = "01"
+section = "3.17"
+title = "Array asset"
+aliases = []
+
+[anchor.ew-array-axis-coordinates]
+part = "03"
+section = "6.3"
+title = "Axis coordinates"
+aliases = []
+
+[anchor.ew-array-metadata-placement]
+part = "03"
+section = "6.5"
+title = "What the array declares, and what the tables declare"
 aliases = []
 
 [anchor.ew-authority-by-concern]
@@ -367,6 +427,12 @@ section = "14.1"
 title = "Checked registry context"
 aliases = []
 
+[anchor.ew-code-free-extension-handling]
+part = "09"
+section = "5.6"
+title = "A writer requires no code of an extension"
+aliases = []
+
 [anchor.ew-column-declaration]
 part = "02"
 section = "3"
@@ -377,6 +443,12 @@ aliases = []
 part = "05"
 section = "10"
 title = "Two conformance classes"
+aliases = []
+
+[anchor.ew-core-array-media-resource-index]
+part = "02"
+section = "11.6"
+title = "Arrays and media"
 aliases = []
 
 [anchor.ew-core-content-class]
@@ -407,6 +479,12 @@ aliases = []
 part = "02"
 section = "1"
 title = "Scope"
+aliases = []
+
+[anchor.ew-core-resource-index]
+part = "02"
+section = "11"
+title = "Core resource index"
 aliases = []
 
 [anchor.ew-discriminator-semantics]
@@ -469,6 +547,12 @@ section = "8.2"
 title = "Identity"
 aliases = []
 
+[anchor.ew-import-validation-principle]
+part = "05"
+section = "1"
+title = "Core principle"
+aliases = []
+
 [anchor.ew-incomplete-validation]
 part = "05"
 section = "9.4"
@@ -493,6 +577,12 @@ section = "7"
 title = "References"
 aliases = []
 
+[anchor.ew-logical-resource-kinds]
+part = "04"
+section = "4.2"
+title = "Kinds"
+aliases = []
+
 [anchor.ew-logical-schema-normative-references]
 part = "02"
 section = "13"
@@ -503,6 +593,12 @@ aliases = []
 part = "00"
 section = "3.1.2"
 title = "Logical standard"
+aliases = []
+
+[anchor.ew-media-asset-concept]
+part = "01"
+section = "3.18"
+title = "Media asset"
 aliases = []
 
 [anchor.ew-normative-language]
@@ -541,6 +637,12 @@ section = "10"
 title = "Normative references"
 aliases = []
 
+[anchor.ew-packet-catalog-principles]
+part = "04"
+section = "2"
+title = "Principles"
+aliases = []
+
 [anchor.ew-packet-catalog-scope]
 part = "04"
 section = "1"
@@ -557,6 +659,18 @@ aliases = []
 part = "04"
 section = "3"
 title = "Required top-level fields"
+aliases = []
+
+[anchor.ew-packet-resource-entry-fields]
+part = "04"
+section = "4.1"
+title = "Common fields"
+aliases = []
+
+[anchor.ew-packet-validation-block]
+part = "04"
+section = "9"
+title = "Validation block"
 aliases = []
 
 [anchor.ew-physical-profile]
@@ -611,6 +725,12 @@ aliases = []
 part = "07"
 section = "7"
 title = "Performance notes"
+aliases = []
+
+[anchor.ew-referenced-resource-delivery]
+part = "03"
+section = "11.3"
+title = "What a delivery states"
 aliases = []
 
 [anchor.ew-registry-conformance]
@@ -671,6 +791,12 @@ aliases = []
 part = "00"
 section = "3.6"
 title = "Resource identity"
+aliases = []
+
+[anchor.ew-resource-lineage]
+part = "04"
+section = "7"
+title = "Derived resources"
 aliases = []
 
 [anchor.ew-rule-language-normative-references]

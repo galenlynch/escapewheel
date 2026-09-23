@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `4e56020a336c6988a2252f747a6bfa2fb8781415` |
+| **Based on** | `c33d60a102b3b4b4cc0a44cf2809abbc80a64c6a` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 00 §§3.1.2, 3.2, 3.4, 4.1, and 5.1–5.2; Part 01 §§3.17–3.18; Part 02 §§1–4, 7, 9.1–9.4, and 11; Part 03 §§6.3, 6.5, and 11.3; Part 04 §§1–2, 4, 7, and 9; Part 05 §§1, 5.3, and 10; Part 06 §§1–2, 5, and 7–8; Part 09 §§5.1–5.2, 5.6, and 6.1; `registry/registry.schema.json`; `registry/logical_schemas.json`; `registry/registry_contracts/escapewheel-registry-contract-v0.1.json`; repository extension registries; `registry/manifest.schema.json`; `registry/resources.schema.json` |
@@ -47,29 +47,31 @@ capability, release binding, and verdict composition rather than logical resourc
 | [Part 00 §3.4](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-packet-catalog), catalog classification summary | revise in place | same anchor | says the catalog binds an instance to declarations rather than independently recording logical facts | §3.8 |
 | [Part 00 §4.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-core-content-requirements), “core is what every packet has” | clarify in place | same anchor | makes the registry's presence policies, not every core declaration, define the minimum | §3.5 |
 | [Part 00 §5.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-analysis-content-requirements), analysis lineage limited to core | replace in place | Part 06 §2 | permits an acyclic analysis chain rooted transitively in canonical core or extension instances and removes duplicate detailed policy from Part 00 | §§3.2, 3.7 |
-| Part 00 §5.2, exact analysis-materialization criterion | replace with architectural summary and reference | Part 06 §§2 and 7 | removes a second analysis-policy owner while preserving materialization as a realization rather than a kind | §3.3 |
-| Part 01 §3.17, array storage, URI-adjacent provenance, and producing-run statements | split | Part 01 retains the concept; Parts 02, 04, and 06 own declaration, binding, and provenance policy | removes physical and catalog mechanics from the semantic concept without changing what an array means | §§3.3, 3.6–3.8 |
-| Part 01 §3.18, media URI and format requirement | split | Part 01 retains media meaning; Parts 02–04 own declaration, encoding, and location | removes physical facts from the semantic concept; stable logical identity remains | §§3.3, 3.6, 3.8 |
+| [Part 00 §5.2](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-analysis-materialization-criterion), exact analysis-materialization criterion | replace with architectural summary and reference | Part 06 §§2 and 7 | removes a second analysis-policy owner while preserving materialization as a realization rather than a kind | §3.3 |
+| [Part 01 §3.17](../../escapewheel_poc_docs_v0.2/01_semantic_standard.md#ew-array-asset-concept), array storage, URI-adjacent provenance, and producing-run statements | split | Part 01 retains the concept; Parts 02, 04, and 06 own declaration, binding, and provenance policy | removes physical and catalog mechanics from the semantic concept without changing what an array means | §§3.3, 3.6–3.8 |
+| [Part 01 §3.18](../../escapewheel_poc_docs_v0.2/01_semantic_standard.md#ew-media-asset-concept), media URI and format requirement | split | Part 01 retains media meaning; Parts 02–04 own declaration, encoding, and location | removes physical facts from the semantic concept; stable logical identity remains | §§3.3, 3.6, 3.8 |
 | [Part 02 §1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-core-logical-schema-scope), table-oriented scope and incorporated registry extent | revise in place | same anchor | covers every logical resource declaration and the generalized incorporated registry | §§3.1–3.3 |
 | [Part 02 §2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-table-resource-requirements), table resource requirements | replace and subdivide | same anchor, retitled “Logical resource declarations” | defines common fields, instance models, presence, dependencies, kinds, and family binding before the table-specific contract | §§3.1–3.5 |
-| [Part 02 §§3–4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-column-declaration), column contract and naming | retain under the table-kind contract and revise the `resource_id` exception | same anchors | preserves existing table meaning while permitting a carried string packet resource ID in a catalog table | §§3.3, 3.6 |
+| [Part 02 §3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-column-declaration) and [Part 02 §4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-logical-column-naming), column contract and naming | retain under the table-kind contract and revise the `resource_id` exception | same anchors | preserves existing table meaning while permitting a carried string packet resource ID in a catalog table | §§3.3, 3.6 |
 | [Part 02 §7](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-logical-references), foreign keys | clarify in place | same anchor | a populated reference also makes its target table resource necessary | §3.5 |
-| [Part 02 §§9.1–9.4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-document), registry shape and conformance | revise in place | same anchors | replaces the table root with resource declarations and adds kind, presence, binding, and dependency invariants to the existing conformance phases | §§3.1–3.6, 3.9 |
-| Part 02 §11, core resource index | regenerate | same section | indexes all logical declarations while retaining table-column projections | §§3.1–3.6 |
-| Part 03 §§6.3 and 6.5, hardcoded `core.array_dimensions` lookup | revise in place | Part 02 owns the logical axes binding; Part 03 consumes it for stored rank, shape, and coordinates | a physical checker follows `array.axes_resource` instead of assuming the core table | §§3.3–3.4 |
-| Part 03 §11.3, referenced-resource document and packet-owned array binding | revise in place | same section and `registry/resources.schema.json` | requires declaration binding for referenced resources and uses the catalog row's packet resource ID for a packet-owned asset | §§3.4, 3.6, 3.8–3.9 |
-| Part 04 §§1–2, packet catalog scope and principles | revise in place | same sections | binds packet instances to checked logical declarations and physical encodings as separate axes | §§3.4, 3.8 |
-| Part 04 §§4.1–4.2, common fields and kinds | replace in place | §4.1 binding fields; Part 02 owns kind vocabulary | adds `declaration_id` and removes declaration-selected classification, table-schema, and legacy asset-row binding fields | §§3.2–3.4, 3.8 |
-| Part 04 §7, derived resources | revise in place | Part 04 retains instance lineage fields; Part 06 owns analysis obligations | applies declaration-selected lineage and producing-run policy to every kind | §3.7 |
-| Part 04 §9, failed validation forbids presenting resources as canonical | replace in place | same section, with final verdict composition deferred | validation state does not alter declaration-derived canonicality; a failed packet cannot support a conformance claim | §§3.2, 3.8 |
-| Part 05 §1, staged resources and canonical commitment | clarify in place | same section | a staged resource is not published before validation; no mutable canonical Boolean represents that state | §§3.2, 3.8 |
+| [Part 02 §9.1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-document), [Part 02 §9.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-self-description), [Part 02 §9.3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-vocabularies), and [Part 02 §9.4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-conformance), registry shape and conformance | revise in place | same anchors | replaces the table root with resource declarations and adds kind, presence, binding, and dependency invariants to the existing conformance phases | §§3.1–3.6, 3.9 |
+| [Part 02 §11](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-core-resource-index), core resource index | regenerate | same section | indexes all logical declarations while retaining table-column projections | §§3.1–3.6 |
+| [Part 02 §11.6](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-core-array-media-resource-index), arrays and media index | revise in place | same anchor | adds core catalog-family declarations and their axes bindings to the indexed tables | §§3.2–3.4, 3.6 |
+| [Part 02 §11.8](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-analysis-resource-index), analysis index | revise in place | same anchor | distinguishes the analysis catalog table and axes table from the catalogued array-family declaration | §§3.2–3.4, 3.7 |
+| [Part 03 §6.3](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-array-axis-coordinates) and [Part 03 §6.5](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-array-metadata-placement), hardcoded `core.array_dimensions` lookup | revise in place | Part 02 owns the logical axes binding; Part 03 consumes it for stored rank, shape, and coordinates | a physical checker follows `array.axes_resource` instead of assuming the core table | §§3.3–3.4 |
+| [Part 03 §11.3](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-referenced-resource-delivery), referenced-resource document and packet-owned array binding | revise in place | same section and `registry/resources.schema.json` | requires declaration binding for referenced resources and uses the catalog row's packet resource ID for a packet-owned asset | §§3.4, 3.6, 3.8–3.9 |
+| [Part 04 §1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-scope) and [Part 04 §2](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-principles), packet catalog scope and principles | revise in place | same sections | binds packet instances to checked logical declarations and physical encodings as separate axes | §§3.4, 3.8 |
+| [Part 04 §4.1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-resource-entry-fields) and [Part 04 §4.2](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-logical-resource-kinds), common fields and kinds | replace in place | §4.1 binding fields; Part 02 owns kind vocabulary | adds `declaration_id` and removes declaration-selected classification, table-schema, and legacy asset-row binding fields | §§3.2–3.4, 3.8 |
+| [Part 04 §7](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-resource-lineage), derived resources | revise in place | Part 04 retains instance lineage fields; Part 06 owns analysis obligations | applies declaration-selected lineage and producing-run policy to every kind | §3.7 |
+| [Part 04 §9](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-validation-block), failed validation forbids presenting resources as canonical | replace in place | same section, with final verdict composition deferred | validation state does not alter declaration-derived canonicality; a failed packet cannot support a conformance claim | §§3.2, 3.8 |
+| [Part 05 §1](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-import-validation-principle), staged resources and canonical commitment | clarify in place | same section | a staged resource is not published before validation; no mutable canonical Boolean represents that state | §§3.2, 3.8 |
 | [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), cross-document shim | revise in place | same anchor | adds declaration resolution, presence, dependency, catalog binding, and catalog-row provenance checks | §§3.4–3.8 |
 | [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes), undefined-resource allowance | replace in place | same anchor | every catalogued resource must resolve a declaration; an unrecognized declaration is no longer an allowed opaque resource | §3.8 |
-| Part 06 §§1–2, analysis scope and rules | revise in place | same sections | uses the analysis content class, canonical sources, and declaration policy rather than the `analysis` layer string | §§3.2, 3.7 |
-| Part 06 §5, provenance of a materialization | revise in place | same section | makes resource-level producing-run binding independent of kind and reconciles catalogued asset rows | §§3.6–3.7 |
-| Part 06 §§7–8, view/materialization and promotion | revise in place | same sections | separates logical kind from realization and makes promotion change content class | §§3.2–3.3 |
-| [Part 09 §§5.1–5.2](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-definition), extension registry and namespace | revise in place | same anchors | gives extension registries the same resource declaration model without naming a concrete extension | §§3.1–3.5 |
-| Part 09 §5.6, code-free extension handling | revise in place | same section | includes extension-owned non-table resources in the data-driven contract | §§3.1, 3.9 |
+| [Part 06 §1](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-scope) and [Part 06 §2](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-rules), analysis scope and rules | revise in place | same sections | uses the analysis content class, canonical sources, and declaration policy rather than the `analysis` layer string | §§3.2, 3.7 |
+| [Part 06 §5](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-materialization-provenance), provenance of a materialization | revise in place | same section | makes resource-level producing-run binding independent of kind and distinguishes aggregate catalog provenance from catalogued-instance provenance | §§3.6–3.7 |
+| [Part 06 §7](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-views-and-materializations) and [Part 06 §8](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-promotion), view/materialization and promotion | revise in place | same sections | separates logical kind from realization and makes promotion change content class | §§3.2–3.3 |
+| [Part 09 §5.1](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-definition) and [Part 09 §5.2](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-namespacing), extension registry and namespace | revise in place | same anchors | gives extension registries the same resource declaration model without naming a concrete extension | §§3.1–3.5 |
+| [Part 09 §5.6](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-code-free-extension-handling), code-free extension handling | revise in place | same section | includes extension-owned non-table resources in the data-driven logical contract without deciding adapter capability or physical parity | §§3.1, 3.9 |
 | [Part 09 §6.1](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-core-extension-reference-direction), reference direction | clarify in place | same anchor | applies the existing direction rule to declaration dependencies and family catalogs | §§3.4–3.5 |
 | `registry/registry.schema.json` and `registry/logical_schemas.json` | replace incompatible shapes and identities | incorporated Part 02 artifacts | `resources` becomes the sole declaration root and table contracts become kind-specific payloads | §§3.1–3.6, 3.9 |
 | current registry-contract descriptor | replace incompatible selector and invariant inventory | new `escapewheel-registry-contract-v0.2` descriptor incorporated by Part 02 | selects registry schema 0.5.0 and enumerates resource-classification, instance, catalog, and dependency invariants | §3.9 |
@@ -77,13 +79,24 @@ capability, release binding, and verdict composition rather than logical resourc
 | `registry/manifest.schema.json` | revise incompatible resource-entry shape and identity | published Part 04 schema projection | requires `declaration_id` and removes duplicated classification, schema-selection, and legacy asset-row binding fields; express incorporation and remaining manifest reconciliation are deferred | §§3.4, 3.8–3.9 |
 | `registry/resources.schema.json` | revise incompatible delivery-entry shape and identity | Part 03 §11.3 | requires `declaration_id` with `resource_id` and `uri` on a referenced-resource delivery | §§3.4, 3.8–3.9 |
 
-The affected existing headings in Part 00 §5.2; Part 01 §§3.17–3.18; Part 02 §11 and §§11.6,
-11.8; Part 03 §§6.3, 6.5, and 11.3; Part 04 §2, §§4.1–4.2, §7, and §9; Part 05 §1; Part 06 §§1–2,
-§5, and §§7–8; and Part 09 §5.6 do not yet have canonical anchors. They require a metadata-only
-anchor bootstrap before final appraisal. Part 00 §3.1.2 and the other affected headings already
-have canonical anchors. New Part 02 subsections receive canonical anchors when created. No
-normative statement in the informational specification README changes owner; its registry and
-catalog summaries are regenerated as informative projections.
+The metadata-only bootstrap commit `c33d60a102b3b4b4cc0a44cf2809abbc80a64c6a` added canonical
+anchors to all 21 affected existing headings that lacked one. The process check confirms that the
+commit inserted only one valid canonical anchor immediately before each existing heading. Part 00
+§3.1.2 and the other affected headings already had canonical anchors. New Part 02 subsections
+receive canonical anchors when created. No normative statement in the informational specification
+README changes owner; its registry and catalog summaries are regenerated as informative
+projections.
+
+The refreshed reverse-impact query covers 42 affected existing sections and reports 314 citation
+occurrences at 297 unique lines in 82 files. Of those, 132 occurrences at 116 lines in 26 accepted
+records are historical and remain unchanged. The 182 current occurrences at 181 lines in 56 files
+were read individually. Most continue to cite retained concept, vocabulary, registry-context,
+staging, or delivery meanings. Incorporation must update citations and assumptions that select
+logical behavior or ownership from packet `layer`, `kind`, `canonical`, `schema_id`, or
+resource-entry `extension_id`; hardcode the core axes table; treat a source asset name as packet
+identity; resolve extension handling only for tables; or make Part 04 own the kind and provenance
+policies moved to Parts 02 and 06. Generated tables, the heading index, and the combined rendering
+are regenerated rather than edited.
 
 ## 2. Background
 
@@ -138,8 +151,8 @@ the new packet resource-ID join.
 An in-memory migration of the incorporated registry wrapped all 43 current table contracts in the
 selected resource declaration shape. Projecting declarations with kind `table` reproduced the old
 `tables` mapping exactly, including every column, key, reference, and rule; JSON round-trip also
-preserved the generalized mapping. The canonicalized resource object measured 115,554 bytes. This
-establishes that a table helper can be a lossless projection rather than a second authority.
+preserved the generalized mapping. This establishes that a table helper can be a lossless
+projection rather than a second authority.
 
 The existing core and analysis array catalog and dimensions tables also satisfy one generic axes
 binding after the proposed catalog `resource_id` column is added. In each pair, the dimensions
@@ -149,9 +162,11 @@ copy satisfies the same predicate without a namespace-specific case. The propose
 family declaration IDs satisfy the existing declaration-ID grammar; the earlier three-component
 sketch did not.
 
-The generated corpus contains 866 packet resource entries, all of which carry `schema_id`. Removing
-that second table-schema selector is therefore an incompatible regeneration rather than cleanup of
-an unused schema field. There are no released consumers or remote compatibility obligations.
+The 29 packets produced by `fixtures/build.py` contain 866 packet resource entries, all of which
+carry `schema_id`; their 29 extension-resource entries also carry `extension_id`. Removing the
+second table-schema selector and duplicate extension owner is therefore an incompatible
+regeneration rather than cleanup of unused schema fields. There are no released consumers or
+remote compatibility obligations.
 
 ## 3. Decision
 
@@ -356,7 +371,7 @@ between a catalog row and its resource entry.
 Every `analysis` and `compatibility_projection` declaration MUST set both policies to `required`.
 Every `documentation` declaration MUST set `lineage` to `forbidden`; describing another resource
 does not create derivation. A `core` or `extension` declaration MAY select any policy consistent
-with its logical meaning.
+with the other rules in this section.
 
 A present lineage edge MUST obey this content-class relation:
 
@@ -390,12 +405,13 @@ adds a media row-level run column nor defines row-to-entry run agreement.
 ### 3.8 The packet does not repeat logical classification
 
 A packet resource entry MUST contain `declaration_id` as a string in the declaration-ID syntax and
-MUST NOT contain `layer`, `kind`, `canonical`, `schema_id`, `catalog_table_ref`, `array_asset_id`,
-or `media_asset_id`. Part 04 MUST define `declaration_id` as the logical declaration binding and
-MUST direct a consumer to the checked registry context for content class, kind, instance mode,
-canonicality, table contract, presence, and provenance policy. The catalog row's `resource_id` is
-the only packet-to-row binding for a catalog instance; assigned row IDs and source-label bridges
-retain only their Part 02 meanings.
+MUST NOT contain `layer`, `kind`, `canonical`, `schema_id`, `extension_id`, `catalog_table_ref`,
+`array_asset_id`, or `media_asset_id`. Part 04 MUST define `declaration_id` as the logical
+declaration binding and MUST direct a consumer to the checked registry context for the owning
+registry, content class, kind, instance mode, canonicality, table contract, presence, and
+provenance policy. The catalog row's `resource_id` is the only packet-to-row binding for a catalog
+instance; assigned row IDs and source-label bridges retain only their Part 02 meanings. The
+top-level `extensions` map and each extension registry's own `extension_id` remain unchanged.
 
 The packet entry MUST continue to own instance facts, including `resource_id`, `uri`, integrity and
 external-resource fields, physical-encoding selection, validation state, lineage values, and
@@ -410,8 +426,10 @@ the catalog row's `resource_id` and the unique family selected by its catalog pa
 the source label or assigned integer row ID as packet resource identity.
 
 Because JSON Schema cannot inspect a checked registry context, the manifest schema MUST check the
-local shape of `declaration_id` but MUST NOT reproduce declaration-selected kind conditions. The
-Part 05 shim MUST resolve the declaration before applying kind-specific packet and physical checks.
+local shape of `declaration_id` but MUST NOT reproduce declaration-selected kind conditions. Its
+resource-entry definition and the referenced-resource delivery schema MUST reject every duplicate
+or legacy field forbidden above even if complete manifest closure remains deferred. The Part 05
+shim MUST resolve the declaration before applying kind-specific packet and physical checks.
 
 A packet resource's validation state MUST NOT change its declaration-derived content class or
 canonicality. A failed or incomplete validation result cannot support a conformance claim; it does
@@ -422,7 +440,7 @@ representing staging by changing canonicality.
 A reader, writer, or validator MUST NOT infer a declaration from URI, directory placement,
 namespace alone, or logical kind. It MUST reject a packet conformance claim when a declaration is
 unknown, the instance mode does not admit the resource ID, a required instance is absent, a
-forbidden classification field is present, or a presence, catalog-binding, lineage, or
+forbidden duplicate or legacy binding field is present, or a presence, catalog-binding, lineage, or
 producing-run rule fails.
 
 This unknown-declaration rule supersedes Part 05's current permission to carry a resource the
@@ -506,7 +524,7 @@ operation.
 | semantic prose | Part 01 retains array and media meaning but loses URI, encoding, declaration, and catalog-provenance mechanics. | Crosswalk review and semantic-definition tests or text checks showing no physical owner remains in §§3.17–3.18. |
 | logical prose and registry | Part 02 defines resource declarations, kinds, instances, presence, dependencies, catalog binding, dense-array axes binding, and provenance policies; the registry root becomes `resources`; all current tables become singleton declarations. | Meta-schema positive and negative vectors; exact normalized declaration comparison; generated table projection from resources; registry conformance mutations for every new invariant. |
 | physical profiles | Part 03 remains the physical-encoding owner, follows the declaration-selected axes table for dense arrays, and adds declaration binding to its resource-delivery boundary; no capability descriptor is added by this revision. | Owner/citation check showing no format or codec field entered the logical registry; core, analysis, and extension axes cases; resource-document vectors require `declaration_id`. |
-| packet catalog and JSON Schemas | Part 04 adds `declaration_id` and removes `layer`, `kind`, `canonical`, `schema_id`, `catalog_table_ref`, `array_asset_id`, and `media_asset_id`; its still-unincorporated manifest-schema projection and the delivery schema advance with the same binding, while complete schema reconciliation remains deferred. | Schema vectors and manifest semantic cases for singleton, catalog, family, unknown declaration, forbidden duplicate fields, delivered references, and missing required instances. |
+| packet catalog and JSON Schemas | Part 04 adds `declaration_id` and removes `layer`, `kind`, `canonical`, `schema_id`, resource-entry `extension_id`, `catalog_table_ref`, `array_asset_id`, and `media_asset_id`; its still-unincorporated manifest-schema projection and the delivery schema advance with the same binding, while complete schema reconciliation remains deferred. The top-level extension map and registry-document identity remain. | Schema vectors and manifest semantic cases for singleton, catalog, family, unknown declaration, forbidden duplicate fields, delivered references, and missing required instances. |
 | validation and import | Part 05's shim resolves declarations before kind dispatch; presence, catalog binding, dependency closure, canonicality, lineage, and producing runs are declaration-driven, and unknown declarations fail conformance. | Stable finding IDs with positive and negative core and extension packets; phase-order tests prevent unsafe access after a non-valid registry. |
 | extensions | Each repository extension migrates to resources and independently advances; extension-owned catalog and axes declarations use the same logical checks as core declarations. | All four extension registries pass shared logical checks; fixture-only extension array and document declarations pass without a registry-specific logical checker; invalid namespace, dependency, catalog, and axes cases fail. |
 | reader, writer, validator, adapters | Shared helpers project tables and resolve declarations; writer staging covers declared kinds; reader APIs expose resolved facts; validator removes serialized-layer dispatch; adapters keep their existing source role. Static adapter capability and full extension physical parity remain deferred. | Focused package tests plus writer-to-reader-to-validator integration for core, extension, analysis, array, media, and documentation resources, without treating adapter capability or the future physical descriptor as evidence for this revision. |
@@ -516,10 +534,11 @@ operation.
 
 Existing packets, registries, and implementation fixtures are not shape-compatible. They are
 development artifacts and will be regenerated rather than silently upgraded in place. Public
-reader and writer models that expose `layer`, serialized `kind`, serialized `canonical`, or
-`schema_id` will either remove those properties or, for logical classification only, return
-declaration-resolved values documented as derived. `schema_id` has no derived packet-entry
-replacement because the declaration selects the table contract.
+reader and writer models that expose `layer`, serialized `kind`, serialized `canonical`,
+resource-entry `extension_id`, or `schema_id` will either remove those properties or, for logical
+classification and ownership only, return declaration-resolved values documented as derived.
+`schema_id` has no derived packet-entry replacement because the declaration selects the table
+contract.
 
 The four repository extension examples are independent artifacts rather than incorporated core
 members. Their incompatible migration is expected to advance `aind_opto` from 0.4.0 to 0.5.0,
@@ -558,8 +577,8 @@ The negative corpus needs to distinguish at least these cases with stable findin
 - missing, duplicate, or unmatched catalog row binding;
 - duplicate packet resource IDs or duplicate catalog `resource_id` values;
 - core declaration of extension content and extension declaration of core content;
-- any forbidden packet field: `layer`, `kind`, `canonical`, `schema_id`, `catalog_table_ref`,
-  `array_asset_id`, or `media_asset_id`;
+- any forbidden packet field: `layer`, `kind`, `canonical`, `schema_id`, resource-entry
+  `extension_id`, `catalog_table_ref`, `array_asset_id`, or `media_asset_id`;
 - a dense-array declaration with no catalog binding, no axes resource, or an ineligible axes-table
   primary-key/reference structure;
 - missing required lineage or producing run, forbidden lineage, an ineligible lineage source, a

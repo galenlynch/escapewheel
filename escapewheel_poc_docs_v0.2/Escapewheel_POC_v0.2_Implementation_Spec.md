@@ -394,6 +394,7 @@ from.
 Analysis resources are disposable. A writer MAY delete and recompute any of them. An analysis
 resource becomes canonical only through an explicit revision of this specification.
 
+<a id="ew-analysis-materialization-criterion" data-spec-anchor="canonical"></a>
 ### 5.2 Materialization is justified by layout, not by arithmetic
 
 A derived product is materialized only where a query cannot answer the same question at acceptable
@@ -822,6 +823,7 @@ An assessment of a unit by one scorer. A unit has many, not one.
 
 Sampled extracellular voltage over time and channels, represented as a dense array asset with a declared time axis and channel mapping.
 
+<a id="ew-array-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.17 Array asset
 
 A dense array stored outside the table layer, with declared axes. An axis declares its coordinates; a regularly sampled axis declares them as an origin, a step, and a length rather than as stored values.
@@ -838,6 +840,7 @@ An array asset SHOULD name the device that produced it, where the writer knows w
 
 An array a processing run produced MUST name that run; an acquired array names none. The manifest records a run per resource as well, and that entry keeps its meaning for resources that are not rows of a table — but it is not per row and no rule can join it, so currency is unreachable for an array without the column. A produced array without a declared run is an error.
 
+<a id="ew-media-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.18 Media asset
 
 An image or video stored in an ordinary container, with frame timing carried in tables.
@@ -1529,6 +1532,7 @@ not say which mode produced it cannot be compared with the other.
 
 A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
 
+<a id="ew-core-resource-index" data-spec-anchor="canonical"></a>
 ## 11. Core resource index
 
 The core layer comprises the following resources. Column definitions are in the registry.
@@ -1586,6 +1590,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | `core.unit_coordinate_values` | one row per axis of that position |
 | `core.unit_observation_intervals` | a unit's refinement of its clock's window |
 
+<a id="ew-core-array-media-resource-index" data-spec-anchor="canonical"></a>
 ### 11.6 Arrays and media
 
 | resource | contents |
@@ -1605,6 +1610,7 @@ The core layer comprises the following resources. Column definitions are in the 
 | `core.processing_run_inputs` | which files fed which run |
 | `core.preferred_runs` | which of several coexisting results to use |
 
+<a id="ew-analysis-resource-index" data-spec-anchor="canonical"></a>
 ### 11.8 Analysis
 
 | resource | contents |
@@ -1927,6 +1933,7 @@ Array axes are stored order, slowest-varying first. An array's codec chain MUST 
 
 A column-major binding enumerates axes in reverse. The client adapts; the format does not.
 
+<a id="ew-array-axis-coordinates" data-spec-anchor="canonical"></a>
 ### 6.3 Axis coordinates
 
 Every axis MUST declare its coordinates in `core.array_dimensions`, in one of its declared coordinate forms. A regularly sampled axis declares an origin tick, a step, and a length rather than storing per-sample values.
@@ -1953,6 +1960,7 @@ The floor a reader is required to support is stated per Zarr version, because im
 
 The asymmetry between the versions is measured, not chosen: `gzip` is in the v3 floor and not the v2 one because a v2 array compressed with gzip raises `KeyError: "gzip"` in a reader that reads every other combination. Codecs are declared per resource, not per packet: a reader MUST NOT refuse a packet over a codec used only by resources it does not open. The catalog's packet-level codec list is their union, for a whole-packet capability answer.
 
+<a id="ew-array-metadata-placement" data-spec-anchor="canonical"></a>
 ### 6.5 What the array declares, and what the tables declare
 
 `core.array_assets` MUST NOT carry dtype or shape. The Zarr array declares them, and restating them buys no otherwise-unavailable access.
@@ -2130,6 +2138,7 @@ An argument list is not the channel because it has a size no profile can raise �
 
 The wanted set is a term a build supplies and an adapter MAY act on. A build settles ownership before any source is opened (Part 05 §3.4), so an adapter told what is wanted may extract no more; acting on it is permitted rather than required, because for some sources producing three resources costs what producing all of them costs, and a build cannot tell an adapter that extracted three from one that extracted everything and discarded the rest.
 
+<a id="ew-referenced-resource-delivery" data-spec-anchor="canonical"></a>
 ### 11.3 What a delivery states
 
 A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is Part 02 §5's presence and nothing else. A build MUST NOT read an absent column as saying anything more.
@@ -2216,6 +2225,7 @@ Its requirements directly invoke the shared JSON and URI authorities identified 
 [Part 04 §10](#ew-packet-catalog-normative-references). The application columns in those sections
 state their extent.
 
+<a id="ew-packet-catalog-principles" data-spec-anchor="canonical"></a>
 ## 2. Principles
 
 The catalog is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
@@ -2249,6 +2259,7 @@ fields below record those identifiers; they do not redefine their values or mean
 
 ## 4. Resource entries
 
+<a id="ew-packet-resource-entry-fields" data-spec-anchor="canonical"></a>
 ### 4.1 Common fields
 
 | field | type | requirement |
@@ -2268,6 +2279,7 @@ fields below record those identifiers; they do not redefine their values or mean
 | `derived_from` | array of string | MUST for a derived resource (§7) |
 | `processing_run_id` | string | MUST for an analysis resource; SHOULD for any other derived resource |
 
+<a id="ew-logical-resource-kinds" data-spec-anchor="canonical"></a>
 ### 4.2 Kinds
 
 | kind | contents |
@@ -2369,6 +2381,7 @@ Every array resource MUST declare the codecs it uses. A reader checks a resource
 
 A codec declared for an external resource is a claim rather than an observation, and a validator reports it as `info` rather than silently accepting it.
 
+<a id="ew-resource-lineage" data-spec-anchor="canonical"></a>
 ## 7. Derived resources
 
 A derived resource MUST declare `derived_from`, naming the resources it was computed from.
@@ -2387,6 +2400,7 @@ Where a packet carries extension resources, the catalog MUST declare each extens
 
 A validator MUST check that a declared extension registry exists. It MUST NOT require an extension's schema in order to validate core.
 
+<a id="ew-packet-validation-block" data-spec-anchor="canonical"></a>
 ## 9. Validation block
 
 | field | requirement |
@@ -2415,6 +2429,7 @@ The application column states the extent to which this part invokes the external
 
 Normative.
 
+<a id="ew-import-validation-principle" data-spec-anchor="canonical"></a>
 ## 1. Core principle
 
 **Validation is importation.** Copying bytes into a packet directory is staging, not import.
@@ -2918,10 +2933,12 @@ version identifiers.
 
 Informative, except §2 and §5, which are normative.
 
+<a id="ew-analysis-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part describes the optional `analysis` layer: derived products computed from core, kept because a query cannot answer the same question at acceptable cost.
 
+<a id="ew-analysis-rules" data-spec-anchor="canonical"></a>
 ## 2. Rules
 
 Normative.
@@ -2971,6 +2988,7 @@ A row group lies inside one time bucket, so a window filter prunes at the row-gr
 
 Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
 
+<a id="ew-analysis-materialization-provenance" data-spec-anchor="canonical"></a>
 ## 5. Provenance of a materialization
 
 Normative.
@@ -2990,10 +3008,12 @@ Four resources proposed in v0.1 are withdrawn. They were specified before anythi
 
 The columns those tables carried — `condition_id`, `stimulus_id`, `block_id` — describe a particular task rather than the format, and belong in an extension (Part 09).
 
+<a id="ew-analysis-views-and-materializations" data-spec-anchor="canonical"></a>
 ## 7. Views versus materialized products
 
 Prefer a view where the query prunes and the result is small. Prefer a materialized product where the physical layout of core cannot serve the access pattern at all, which in practice means a different sort order or a different clock.
 
+<a id="ew-analysis-promotion" data-spec-anchor="canonical"></a>
 ## 8. Promotion into core
 
 An analysis resource becomes canonical only through an explicit revision of this specification. Promotion is a schema decision, not an operational one.
@@ -3323,6 +3343,7 @@ An extension's `registry_version` is that extension registry's own version. It a
 independently of the core registry's `registry_version`; the core specification neither selects
 nor assigns it.
 
+<a id="ew-code-free-extension-handling" data-spec-anchor="canonical"></a>
 ### 5.6 A writer requires no code of an extension
 
 A writer MUST be able to build a packet carrying an extension's tables given only the extension's registry document and its rows as files. A writer MUST NOT require an extension to be installed, importable, or resolvable in the writer's own environment.
