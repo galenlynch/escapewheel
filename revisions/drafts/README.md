@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [A Packet Binds the Exact Registries That Declare Its Resources](a-packet-binds-the-exact-registries-that-declare-its-resources.md) | 5,798 | Not yet appraised; promoted 2026-09-23 from the exact proposal at `23432fd55f71013bc0de27ef8985b6734241a3eb`. | Structural reconciliation across Parts 02, 03, 04, 05, 08, and 09; registry binding, catalog-schema incorporation, catalog checks, and producing-run names. |

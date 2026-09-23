@@ -307,7 +307,7 @@ P1 authority framework
 | P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
 | P5.1 | Logical resource declarations and resource classification | P4.2 | [R128](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md) |
 | P5.2 | Portable-profile interfaces and reader floor | P5.1 | [R129](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md) |
-| P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | Proposal to be scoped |
+| P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | Active draft |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
 | P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | Proposal to be scoped |
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | Proposal family; split before promotion |
@@ -665,8 +665,9 @@ one dataset to its resources and registries; the latter binds one publication of
 ### P7 — Validity composition and extension parity
 
 Define `core_passed`, a result for every declared extension, and overall `packet_passed`. Specify
-missing, unreadable, structurally invalid, semantically invalid, and unsupported registries and
-resources. Make writer publication depend on the resulting packet verdict. Preserve useful partial
+how missing, unreadable, structurally invalid, semantically invalid, and unsupported registries and
+resources compose into those verdicts; P6 defines a missing, unreadable, or mismatched bound
+registry as a named catalog binding finding. Make writer publication depend on the resulting packet verdict. Preserve useful partial
 reader access without reporting an invalid declared extension as a valid packet.
 
 Validate row-valued unit codes under the same case-sensitive UCUM edition selected by P4.1 when a
