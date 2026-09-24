@@ -2,8 +2,9 @@
 
 Core ships adapters for standards -- SpikeInterface, Open Ephys, Harp, NWB -- because many
 institutions read them. What serves one institution lives here: `session.json` and the rest of
-AIND's metadata schema, the behaviour videos and their headerless CSV, and the dialect columns an
-AIND pipeline writes into an otherwise ordinary NWB.
+AIND's metadata schema, the behaviour videos and their headerless CSV, the dialect columns an AIND
+pipeline writes into an otherwise ordinary NWB, and the unit quality metrics its sorting analyzer
+computes.
 
 The boundary, not the directory, is what this package is for
 ------------------------------------------------------------

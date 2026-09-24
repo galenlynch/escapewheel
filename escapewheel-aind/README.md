@@ -6,8 +6,8 @@ Source adapters for the Allen Institute for Neural Dynamics' own formats, for bu
 Escapewheel's writer ships adapters for standards — SpikeInterface, Open Ephys, Harp, NWB — because
 many institutions read them. An adapter serving one institution belongs outside that set, and this
 is where those live: AIND's `session.json` metadata schema, the behaviour videos with their
-headerless three-column CSV, and the dialect columns an AIND pipeline writes into an otherwise
-ordinary NWB.
+headerless three-column CSV, the dialect columns an AIND pipeline writes into an otherwise
+ordinary NWB, and the unit quality metrics its sorting analyzer computes.
 
 ## It is built as though it were already external
 
