@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [A Validator Checks Every Unit Value Against UCUM](a-validator-checks-every-unit-value-against-ucum.md) | 1993 | Not yet appraised; promoted 2026-09-23 from the exact proposal at `cd2a612`. | Part 02 §§8.4, 9.3, and 13 and Part 05 §5.3, in place |

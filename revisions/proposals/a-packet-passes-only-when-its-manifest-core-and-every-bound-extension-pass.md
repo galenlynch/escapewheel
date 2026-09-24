@@ -232,7 +232,7 @@ keeps the extension-specific separation and cites Part 05. This proposal prefers
 ## 6. Resolved direction
 
 1. Row-valued UCUM checking is a separate decision, carried by
-   [A validator checks every unit value against UCUM](a-validator-checks-every-unit-value-against-ucum.md),
+   [A validator checks every unit value against UCUM](../drafts/a-validator-checks-every-unit-value-against-ucum.md),
    which checks core's unit columns and precedes this one. Decision 4 extends that check, with
    every other, to an extension's resources.
 2. A verdict is `passed`, `failed`, or `incomplete`. A subject with an error-level finding is
