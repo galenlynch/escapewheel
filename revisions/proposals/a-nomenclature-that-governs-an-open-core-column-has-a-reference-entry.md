@@ -10,19 +10,16 @@
 
 ## 1. Problem
 
-[Part 02 §9.3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-vocabularies)
-lets a string column declare `authority`, an array naming the nomenclatures its values are drawn
-from, and requires a writer to spell a value as the named nomenclature does. A writer obligation
-resting on an outside nomenclature is what
-[Part 00 §10](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-normative-references) calls a
-direct invocation. A directly invoked authority needs one bibliographic entry, and a release needs
-its exact edition.
+Part 02 §9.3 lets a string column declare `authority`, an array naming the
+nomenclatures its values are drawn from, and requires a writer to spell a value
+as the named nomenclature does. A writer obligation resting on an outside
+nomenclature is what Part 00 §10 calls a direct invocation. A directly invoked
+authority needs one bibliographic entry, and a release needs its exact edition.
 
-The core registry names five nomenclatures, and
-[Part 02 §13](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-logical-schema-normative-references)
-has an entry only for UCUM, the Unified Code for Units of Measure. NCBI Taxonomy, the Mouse Genome
-Informatics (MGI) and Rat Genome Database (RGD) strain registries, and HL7 FHIR's administrative
-gender value set have none.
+The core registry names five nomenclatures, and Part 02 §13 has an entry only
+for UCUM, the Unified Code for Units of Measure. NCBI Taxonomy, the Mouse Genome
+Informatics (MGI) and Rat Genome Database (RGD) strain registries, and HL7
+FHIR's administrative gender value set have none.
 
 Writing those entries exposes two further defects:
 
