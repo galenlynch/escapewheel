@@ -321,9 +321,8 @@ names none. A build MUST refuse a recipe entry naming a protocol its adapter doe
 naming the source and the protocol, before it opens any source. A recipe opting an adapter into the
 writer's process has the build reach it by no protocol, whatever the adapter declares.
 
-An adapter a build ships need declare no protocol and support none, and neither rule above reaches
-it. A build that serves one out of process, as Part 03 §11.1 allows, carries the protocol with its
-own code.
+An adapter a build ships need declare no protocol, and neither rule above reaches it: a build may
+run it in process or serve it over any protocol of the group (Part 03 §11.1).
 
 A build MUST supply the terms of the protocol it reaches an adapter by, and no other protocol's
 (Part 03 §11.2); in process it supplies no protocol's terms.
