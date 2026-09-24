@@ -537,16 +537,50 @@ natural.
 ## 11. Known defects awaiting a fix
 
 Found by the P9 research at `506c14e` and during R130–R134. The mechanical ones were fixed on
-2026-09-24, each with a test, from `f97cb2e` to `4f8dc99`; what remains waits on P9.3.
+2026-09-24, each with a test, from `f97cb2e` to `4f8dc99`.
 
 - **The reader cannot name missing codec support.** It never raises `UnsupportedCodecError`, which
   Part 03 §6.1 needs to fail one resource without rejecting the rest. `ArrayResource.codecs` and
   `resources._codec_names` drop `bytes` and flatten a shard's nested pipeline "to match the
   manifest", which Part 04 §6 no longer lets carry codecs, so neither can be compared with Part
-  03 §6.4's ordered floor. P9.3 decides how a reader reports the floor, so the fix waits for it.
+  03 §6.4's ordered floor. The P9.3 draft leaves the reader unchanged, so this is maintenance,
+  and it is in progress.
 - **Source caches filled before `a702968` may hold truncated objects.** A killed download used to
   leave a partial file that later builds took as cached. `/mnt/Data/ew-source-cache` and each
   packet's `.escapewheel-source-cache` predate the fix; clearing them costs one refetch.
+
+## 12. Implementation work queued behind R135
+
+Each item follows an existing rule, so none needs a revision. They wait only because R135's
+uncommitted incorporation touches the same files; each lands as its own commit with tests once R135
+is committed.
+
+- **Deliver `tables` sources by `files-v0.1`.** `TablesSource` is the protocol with every adapter
+  rule excepted (§4). Replace each `kind = "tables"` entry with a `delivery` table naming a command,
+  `protocol = "files-v0.1"`, and a declaration document (Part 03 §11.5). Each script reads the
+  build's JSON object from standard input and writes `<resource_id>.parquet` into the
+  `delivery_root` it names. Then delete `TablesSource`, its tests, and the module docs that steer
+  extension authors to it. `extract_qc.py` declares `consumes = ["sorter"]` and takes the
+  build-supplied units as `waveforms` does, which ends its two-pass build and its packet-assigned
+  integer keys. The work covers the writer, plus scripts and recipes edited in place under
+  `/mnt/Data/776259-packet`, `/mnt/Data/786867-packet` and `/mnt/Data/df-packet`. It is done when
+  786867 builds in one pass with the same extension tables as the current packet.
+- **Refuse a recipe whose sources disagree on `prefix`.** If any source sets `prefix`, every source
+  whose adapter accepts it must set the same value. A build refuses the recipe before opening a
+  source, naming each source and its value (§4's coupling). Test one set and one unset, two
+  different values, and all equal.
+- **Keep the prefix in the three `nwb.py` names that drop it.** `device_name`, `probe_name` and
+  `event_stream_name` break R53 §2.5 and R85 once sessions merge under different prefixes. Strike
+  them from `NAME_EXCEPTIONS` in `tests/test_arbitration.py`; §4's "five sites" is now three.
+- **Prune entries that are done.** These are now done: §1 (R128), §2's registry-ID bullet (R130),
+  and §4's optional-option, `PREFERRED` and NWB-dialect paragraphs (R119, R133, R134). The
+  arbitration paragraph under §5 is also done, and the reference to §8 under "Settled 2026-09-15"
+  should point to §10. In `revisions/STATUS.md`, the open-stage inventory and P9 row are stale.
+
+Deferred to the user: clearing the source caches above. Open in R135, not decided: a source whose
+recipe entry omits `root` gets no `core.source_files` row, since R135 §3.4 counts only roots a
+recipe writes.
+
 
 ---
 
