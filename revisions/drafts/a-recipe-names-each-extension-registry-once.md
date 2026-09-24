@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `3310f2cc54a6981bf0c5ce33ea974e7048629ed1` |
+| **Based on** | `06b11fb29285fe90890ae84054ca33807bf9abfb` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 05 §3.1 |
@@ -45,8 +45,8 @@ needed. No section is added, moved, split, merged, or retired.
 ## 2. Background
 
 Section 2 is informative. Observations were read from the parts, `registry/recipe.schema.json`,
-and `escapewheel-writer`. Probes ran in the writer's environment, with R135 incorporated, against
-throwaway recipes and extension registry documents.
+and `escapewheel-writer`. Probes were rerun at the recorded baseline in the writer's environment
+against throwaway recipes and extension registry documents.
 
 ### 2.1 The recipe gives `extensions` no meaning
 
@@ -95,8 +95,9 @@ requires a build to obtain a complete Part 02 result for each registry before it
 and Part 05 §3.5's refusals read the resources of every loaded registry, so a build holds every
 resolved document when it checks the recipe.
 
-No open proposal or draft amends Part 05 §3.1. The two open drafts amend Part 05 §§5.3 and 11, and
-R135 amends Part 05 §§1, 2, and 4–8.
+No open proposal or draft amends Part 05 §3.1. The other open drafts amend Part 05 §5.1 (non-finite
+float values), §5.3 (the Zarr reader floor), and §11 (resource digests), and R135 amended
+Part 05 §§1, 2, and 4–8.
 
 ## 3. Decision
 
