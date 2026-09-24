@@ -215,8 +215,8 @@ is committed.
 - **Adapters that take no `prefix` mint bare identifiers.** A build now refuses sources that
   accept `prefix` and set it differently, but `openephys`, `harp` and AIND's `session` accept none.
   Under a non-empty prefix, `session`'s `core.calibration_devices.device_id`, an assembly name,
-  then names no prefixed NWB device. Decide whether those adapters accept `prefix` or a prefixed
-  recipe refuses them.
+  then names no prefixed NWB device. They will accept `prefix` and apply it as `nwb` does, before
+  v0.2 is finished; in progress.
 
 ---
 
