@@ -29,12 +29,16 @@ entries exposes two further defects. `core.subjects.sex` is closed and admits `h
 FHIR's value set lacks, so a writer recording a hermaphrodite subject cannot satisfy Part 02 §9.3 as
 written. NCBI Taxonomy, MGI and RGD change continually, so Part 00 §10's release rule would pin each
 to a dated state, after which a newly registered species or strain has no conforming spelling.
+Part 02 §9.3's spelling rule also has no answer for a value its nomenclature does not register, such
+as a strain not yet registered, and no validator can check the rule.
 
 This revision confines the spelling rule to open columns, so that a closed column's `authority`
-records provenance and invokes nothing. It adds a living-registry entry kind to Part 00 §10, which a
-release identifies by name and URI rather than edition. It gives Part 02 §13 the three-column table
-the other parts use, with entries for NCBI Taxonomy, MGI and RGD as living registries beside UCUM's
-exact edition, and makes every authority on an open column of the core registry need an entry there.
+records provenance and invokes nothing, and to values a named nomenclature registers, so that a
+writer writes any other value as the source states it. It states that no validator checks the rule.
+It adds a living-registry entry kind to Part 00 §10, which a release identifies by name and URI
+rather than edition. It gives Part 02 §13 the three-column table the other parts use, with entries
+for NCBI Taxonomy, MGI and RGD as living registries beside UCUM's exact edition, and makes every
+authority on an open column of the core registry need an entry there.
 
 The change is structural because it replaces rules inside existing sections: Part 00 §10's edition
 paragraph, Part 02 §9.3's spelling sentence, and Part 02 §13's one-item list. Appended sections
@@ -48,7 +52,7 @@ needed. No section is added, moved, split, or retired.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
-| Part 02 §9.3, "A writer MUST spell a value as the named nomenclature does" | replace in place | same section | the rule binds values of open columns and cites Part 02 §13; a closed column's `authority` is provenance | §3.1 |
+| Part 02 §9.3, "A writer MUST spell a value as the named nomenclature does" | replace in place | same section | the rule binds values of open columns that a named nomenclature registers and cites Part 02 §13; an unregistered value is written as the source states it; no validator checks either, except a unit column's value under Part 02 §8.4; a closed column's `authority` is provenance | §3.1 |
 | Part 00 §10, the paragraph defining the exact and unversioned entry kinds and stating the release rule | replace in place | same section | adds the living-registry kind; a release identifies a living registry by name and URI | §3.2 |
 | Part 02 §13, a one-item list naming UCUM 2.2 | replace in place | same section | a three-column table of UCUM, NCBI Taxonomy, MGI, and RGD; the closing paragraph on offline validation stays | §3.3 |
 | none; nothing ties an authority in the core registry to a reference entry | add | Part 02 §13 | every authority on an open column of the core registry has an entry there | §3.4 |
@@ -114,7 +118,20 @@ strain registered after that date would have no conforming spelling. No validato
 on the state, because Part 02 §9.3 forbids a validator to dereference an authority URI or to reject
 a value for being absent from its column's authority.
 
-### 2.4 The framework check allocates no Part 02 rows
+### 2.4 The spelling rule has no answer for an unregistered value
+
+Part 02 §9.3's sentence "A writer MUST spell a value as the named nomenclature does" assumes the
+nomenclature registers what the value names. Where it does not, as for a strain not yet registered
+with MGI or a species a source states in a form the writer cannot map to a scientific name, a writer
+has no conforming spelling short of inventing a registered name the source never stated. No
+validator can tell compliance from noncompliance, because Part 02 §9.3 forbids it to dereference an
+authority or to reject a value absent from one. Unit columns differ: Part 02 §8.4 makes each value a
+unit code, and Part 05 §5.3 has a validator parse it.
+
+The reference writer's NWB source and the AIND adapter write `species` and `strain` as the source
+states them and map neither. No writer or adapter test checks a `species` or `strain` spelling.
+
+### 2.5 The framework check allocates no Part 02 rows
 
 `escapewheel_poc_docs_v0.2/framework.py` compares the reference rows of Parts 00, 03, 04, and 11
 with an approved allocation and finds an allocated authority copied into another part's reference
@@ -122,7 +139,7 @@ section. Part 02 §13 has no table and no allocation, and UCUM is not among the 
 so an entry dropped from Part 02 §13 or copied elsewhere goes unreported. Part 05 §15's TOML entry
 is outside the allocation too; this revision does not need it there.
 
-### 2.5 Alternatives
+### 2.6 Alternatives
 
 Giving HL7 FHIR an entry would make it the basis of a requirement `hermaphrodite` cannot satisfy.
 Barring `authority` from a closed column would move `sex`'s provenance back into prose, which
@@ -131,11 +148,13 @@ registrations without a conforming spelling and move the pin at every release. C
 guidelines in place of MGI and RGD fails because they fix a symbol's form and not which symbol a
 strain was registered under, and NCBI Taxonomy has no counterpart document. Demoting the spelling
 rule to a recommendation fails because values are compared exactly, and R101 §3.5 made it a
-requirement since `mouse` and `Mus musculus` fail to name one animal. Stating §3.4's condition as a
-registry-document invariant would bind every extension registry to Part 02's bibliography, although
-an extension names nomenclatures on its own terms.
+requirement since `mouse` and `Mus musculus` fail to name one animal. Keeping the rule unscoped
+leaves a writer holding an unregistered value no conforming spelling, and having a validator check
+spellings against a registry needs the dereference Part 02 §9.3 forbids. Stating §3.4's condition
+as a registry-document invariant would bind every extension registry to Part 02's bibliography,
+although an extension names nomenclatures on its own terms.
 
-### 2.6 Feasibility and overlap
+### 2.7 Feasibility and overlap
 
 Every entry identifies its authority by the URI the core registry already declares, so §3.4 is
 decidable by comparing strings from two artifacts the repository holds, and no registry declaration
@@ -164,9 +183,14 @@ each at its owner.
 
 ### 3.1 The spelling rule governs open columns
 
-A writer MUST spell each value of an open column that declares `authority` as the named
-nomenclature it is drawn from spells it. Part 02 §13 identifies each nomenclature the core registry
-names in this way, and the edition that applies.
+Where a nomenclature named in an open column's `authority` registers the thing a value names, a
+writer MUST spell the value as that nomenclature spells it. Where none registers it, as for a strain
+not yet registered or a source value the writer cannot map to a registered name, a writer MUST write
+the value as the source states it. A validator verifies neither obligation, and Part 02 §9.3 already
+forbids it to dereference an authority or to reject a value for being absent from one. A unit
+column's value is the exception: Part 02 §8.4 requires it to be a UCUM code whatever the source
+states, and a validator checks it by UCUM's grammar. Part 02 §13 identifies each nomenclature the
+core registry names in this way, and the edition that applies.
 
 A closed column's `enum` is its whole value set and spells every value it admits. On a closed
 column, `authority` records where the `enum`'s spelling came from and invokes no nomenclature.
@@ -178,7 +202,7 @@ registered, by the registry's name and URI, and gives `living registry` as its c
 numbered part MAY give an authority a living-registry entry only where the authority is such a
 registry and no validator verdict depends on its content. A requirement invoking a living registry
 refers to the registry as it stood when the bound actor acted; for a spelling requirement, when the
-writer wrote the value.
+writer wrote the value, so a later registration or renaming leaves the value conforming.
 
 A specification release MUST identify the exact external edition on which every conformance
 requirement depends, and MUST identify each living registry by its entry's name and URI in place of
@@ -193,9 +217,9 @@ application column's role, and holds exactly these entries:
 | reference | candidate edition | application |
 |---|---|---|
 | [The Unified Code for Units of Measure](https://ucum.org/ucum) | version 2.2, revision date 2024-06-17 | unit codes (§8.4) and the spelling of values in open columns naming it (§9.3) |
-| [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | living registry | the spelling of values in open columns naming it (§9.3) |
-| [Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/) | living registry | the spelling of values in open columns naming it (§9.3) |
-| [Rat Genome Database (RGD)](https://rgd.mcw.edu/) | living registry | the spelling of values in open columns naming it (§9.3) |
+| [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
+| [Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
+| [Rat Genome Database (RGD)](https://rgd.mcw.edu/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
 
 HL7 FHIR has no entry.
 
@@ -215,14 +239,16 @@ outside the condition.
 
 Packet bytes, registry declarations, and every existing packet's conformance are unchanged, and no
 packet is rebuilt. A writer recording a hermaphrodite subject now conforms on the column's own
-terms. A release gains three living-registry identifications and no pinned registry state.
+terms, and one holding a value no named nomenclature registers conforms by writing it as the source
+states it. A release gains three living-registry identifications and no pinned registry state.
 
-No accepted clause is superseded. R101 §3.5's spelling rule is narrowed to open columns, and
-R101 §§3.6 and 3.9 keep FHIR on `sex` as provenance; their ledger notes say so. R124 §3.2 gains the
-third entry kind and R124 §3.3's allocation gains Part 02's section, each with a note. R131 §3.1's
-UCUM edition stands in the new table. Eleven ledger destinations naming Part 02 §9.3 by number, from
-R8 §§3 and 4, R9 §6, R22 §3, R101 §§3.1, 3.3, 3.6, 3.9, and 3.11, and R107 §§3.3 and 3.4, move to
-`ew-registry-vocabularies`.
+No accepted clause is superseded. R101 §3.5's spelling sentence is narrowed to registered values of
+open columns, and R101 §§3.6 and 3.9 keep FHIR on `sex` as provenance; the three ledger entries
+gain notes recording this. R101 §3.5 keeps the `registry` disposition that records its description
+requirement. R124 §3.2 gains the third entry kind and R124 §3.3's allocation gains Part 02's
+section, each with a note. R131 §3.1's UCUM edition stands in the new table. Eleven ledger
+destinations naming Part 02 §9.3 by number, from R8 §§3 and 4, R9 §6, R22 §3, R101 §§3.1, 3.3, 3.6,
+3.9, and 3.11, and R107 §§3.3 and 3.4, move to `ew-registry-vocabularies`.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -230,9 +256,9 @@ R8 §§3 and 4, R9 §6, R22 §3, R101 §§3.1, 3.3, 3.6, 3.9, and 3.11, and R107
 | logical prose and registry | Part 02 §9.3 takes §3.1; Part 02 §13 takes §§3.3 and 3.4. No `authority`, vocabulary, or `enum` changes, and no declared rule reads `authority`. | `evidence/R<N>.json` names both anchors. |
 | physical profiles | Unchanged. `authority` has no physical representation. | None required. |
 | packet manifest and JSON Schemas | Unchanged. A manifest binds registries, not their references, and the registry schema's `authority` shape stands. | None required. |
-| validation and import | Unchanged. Part 02 §9.3 already forbids a validator to dereference an authority or reject a value it lacks, and the `enum` check on `sex` stands. | None required. |
+| validation and import | Unchanged. Part 02 §9.3 already forbids a validator to dereference an authority or reject a value it lacks, so §3.1 adds no check; the `enum` check on `sex` and Part 05 §5.3's unit-code check stand. | None required. |
 | extensions | Unchanged. No extension registry declares an authority, and §3.4 excludes one that does. | None required. |
-| reader, writer, validator, adapters | Unchanged. The writer's `sex` mapping, which the AIND adapter shares, already targets the `enum`, and no reader or validator reads an authority's content. | The existing writer tests of the `sex` mapping. |
+| reader, writer, validator, adapters | Unchanged. The writer's `sex` mapping, which the AIND adapter shares, already targets the `enum`; the writer and the AIND adapter write `species` and `strain` as the source states them; and no reader or validator reads an authority's content. | `test_a_subjects_sex_lands_inside_the_closed_vocabulary` in the writer suite. No test covers `species` or `strain`. |
 | conformance fixtures and tests | `framework.py` gains probes: an entry removed from Part 02 §13, a Part 02 entry copied into another part's reference section, and an open core column naming an authority URI no Part 02 §13 entry links. Packet fixtures are unchanged, because no packet-level rule changes. | `framework.py`'s probes. |
 | revision process and tooling | `framework.py`'s allocation gains Part 02 §13's section, its four rows, and an owner for each authority, and it gains §3.4's check, which reads the core registry because the condition is a consistency condition of the candidate rather than of a registry document. The ledger changes as stated above. | `framework.py`, `ledger.py`, and `evidence.py`. |
 | generated publications and developer documentation | The combined specification regenerates. The last sentence of the specification README's reference paragraph, which places the UCUM and URI authorities in Part 02 §13, names UCUM and the three registries there, since RFC 3986's entry is in Part 00 §10. | `verify.py`. |
@@ -252,5 +278,12 @@ The negative cases distinguish the new rules from the current ones:
 
 The positive cases are the candidate after incorporation, which passes `framework.py`, and a
 `core.subjects.sex` value of `hermaphrodite`, which conforms under §3.1 and already passes the
-validator. §3.2 binds numbered parts and a release rather than an actor a probe can run, so its
-evidence is review of Part 00 §10 and of each living-registry entry against its condition.
+validator.
+
+§3.1's open-column rule has no negative case a tool can run, because deciding whether a nomenclature
+registers what a value names needs the dereference Part 02 §9.3 forbids. Its evidence would be a
+writer's own mapping tests, and none exists: the reference writer and the AIND adapter map no
+`species` or `strain` value, and no test checks either spelling.
+
+§3.2 binds numbered parts and a release rather than an actor a probe can run, so its evidence is
+review of Part 00 §10 and of each living-registry entry against its condition.
