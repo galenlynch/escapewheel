@@ -178,6 +178,7 @@ not in the next, where a schema-level declaration would claim it of every packet
 `[overrides]` puts a chosen value and its reason in a recipe for the same reason — the choice
 belongs to the build.
 
+<a id="ew-in-process-opt-in" data-spec-anchor="canonical"></a>
 ### 3.9 Whether a source runs in the writer's process
 
 A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so. An adapter the build ships with declares none (Part 03 §11.1), so in process is its only route and a recipe naming one declares nothing: a build MUST NOT require a declaration where it offers no choice.
