@@ -1103,6 +1103,7 @@ class Recipe:
                 "produces": sorted(asked["produces"]),
                 "states": list(asked["states"]),
                 "needs": list(asked["needs"]),
+                "accepts": list(asked["accepts"]),
             }
             problems += [
                 f"{spec.kind} {refusal}"

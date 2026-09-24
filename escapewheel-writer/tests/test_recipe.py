@@ -714,6 +714,20 @@ def test_an_accepted_option_the_recipe_leaves_unset_is_not_refused(tmp_path, reg
     assert not [p for p in recipe.check(registry) if p.level == "error"]
 
 
+@pytest.mark.parametrize(
+    ("accepted", "refusal"),
+    [
+        ("root", "a term a build fills"),
+        ("sample_rate_hz", "both optional and required"),
+    ],
+)
+def test_an_accepted_name_a_build_cannot_honor_is_refused(tmp_path, registry, accepted, refusal):
+    """Part 03 §11.5: an option cannot be a term, nor both accepted and needed."""
+    named = declaration_for(tmp_path, accepts=[accepted])
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert any(refusal in p.message for p in recipe.check(registry))
+
+
 def test_a_document_written_before_accepts_accepts_nothing(tmp_path, registry):
     """R119 §5's break, stated: such a document names no option, so a recipe setting one is refused."""
     import json
