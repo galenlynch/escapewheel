@@ -519,6 +519,7 @@ A reader treats end of file as end of stream, so a delivery cut at a message bou
 
 Where rows travel on standard output they are bytes. An adapter MUST write the stream to a binary handle and a build MUST read one, because a platform translating a line ending corrupts the stream, which then fails as malformed data rather than as an encoding error.
 
+<a id="ew-adapter-declaration-document" data-spec-anchor="canonical"></a>
 ### 11.5 The declaration document
 
 A build reads what an adapter declares before it opens any source, and for a class it reads that by importing the adapter — which this section forbids requiring. An adapter a build cannot import MUST publish its declarations as a JSON document the recipe names, and a build MUST read that document before it launches anything.

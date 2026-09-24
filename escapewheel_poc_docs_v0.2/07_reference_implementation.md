@@ -40,6 +40,7 @@ escapewheel verify <packet>            record what is true of external resources
 escapewheel prune <packet>             remove what the packet no longer names (03 §9.3)
 ```
 
+<a id="ew-reference-object-model" data-spec-anchor="canonical"></a>
 ## 4. Object model
 
 | type | responsibility |
