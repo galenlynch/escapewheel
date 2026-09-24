@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `d54b760e8bdbf62f262a462bc9089783f4555c3a` |
+| **Based on** | `06b11fb29285fe90890ae84054ca33807bf9abfb` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 00 §10; Part 02 §§9.3 and 13 |
@@ -124,8 +124,8 @@ is outside the allocation too; this revision does not need it there.
 ### 2.5 Alternatives
 
 Giving HL7 FHIR an entry would make it the basis of a requirement `hermaphrodite` cannot satisfy.
-Barring `authority` from a closed column would move `sex`'s provenance back into prose, which R101
-§3.6 kept it out of. Pinning each living registry to a dated snapshot would leave later
+Barring `authority` from a closed column would move `sex`'s provenance back into prose, which
+R101 §3.6 kept it out of. Pinning each living registry to a dated snapshot would leave later
 registrations without a conforming spelling and move the pin at every release. Citing the strain
 guidelines in place of MGI and RGD fails because they fix a symbol's form and not which symbol a
 strain was registered under, and NCBI Taxonomy has no counterpart document. Demoting the spelling
@@ -140,13 +140,16 @@ Every entry identifies its authority by the URI the core registry already declar
 decidable by comparing strings from two artifacts the repository holds, and no registry declaration
 changes.
 
-Two open drafts touch nearby text. `every-packet-owned-resource-records-a-named-whole-object-digest.md`
-moves RFC 1952's entry from Part 03 §12 into Part 00 §10's table and moves its allocation row from
-Part 03 to Part 00. This draft edits Part 00 §10's edition paragraph above that table and adds a
-Part 02 allocation, so the two commute; RFC 1952's entry is exact either way.
+Two open drafts touch nearby text.
+`every-packet-owned-resource-records-a-named-whole-object-digest.md` moves RFC 1952's entry from
+Part 03 §12 into Part 00 §10's table and moves its allocation row from Part 03 to Part 00. This
+draft edits Part 00 §10's edition paragraph above that table and adds a Part 02 allocation, so the
+two commute; RFC 1952's entry is exact either way. Both drafts revise the specification README's
+paragraph naming each part's references, this one its Part 02 sentence and the digest draft its
+sentences on Parts 03 and 04.
 `the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md`
-amends Part 03 §§5.5 and 6.4 and Part 05 §5.3 and relies on Part 03 §12's unversioned codec
-entries, whose release treatment this draft leaves unchanged; the two share no text. The draft
+amends Part 03 §§5.5 and 6.4 and Part 05 §5.3 and relies on Part 03 §12's unversioned codec entries,
+whose release treatment this draft leaves unchanged; the two share no text. The draft
 `a-float-column-declares-whether-it-admits-non-finite-values.md` edits Part 02 §§9.2 and 9.4 and
 cites Part 02 §9.3's rule that an absent `vocabulary` is a defect, which this draft keeps.
 
@@ -197,8 +200,8 @@ HL7 FHIR has no entry.
 
 Part 02 §13 MUST carry an entry whose link is the `uri` of each `authority` entry declared on an
 open column of the incorporated core registry, in either of its namespaces. A core registry naming
-such an authority without a matching entry makes the candidate internally inconsistent under Part
-00 §2.3.
+such an authority without a matching entry makes the candidate internally inconsistent under
+Part 00 §2.3.
 
 The comparison is exact on the URI string and dereferences nothing, so a check decides it from the
 core registry and Part 02 §13 alone. It catches an authority URI on an open core column that no
@@ -211,11 +214,11 @@ Packet bytes, registry declarations, and every existing packet's conformance are
 packet is rebuilt. A writer recording a hermaphrodite subject now conforms on the column's own
 terms. A release gains three living-registry identifications and no pinned registry state.
 
-No accepted clause is superseded. R101 §3.5's spelling rule is narrowed to open columns, and R101
-§§3.6 and 3.9 keep FHIR on `sex` as provenance; their ledger notes say so. R124 §3.2 gains the third
-entry kind and R124 §3.3's allocation gains Part 02's section, each with a note. R131 §3.1's UCUM
-edition stands in the new table. Eleven ledger destinations naming Part 02 §9.3 by number, from R8
-§§3 and 4, R9 §6, R22 §3, R101 §§3.1, 3.3, 3.6, 3.9, and 3.11, and R107 §§3.3 and 3.4, move to
+No accepted clause is superseded. R101 §3.5's spelling rule is narrowed to open columns, and
+R101 §§3.6 and 3.9 keep FHIR on `sex` as provenance; their ledger notes say so. R124 §3.2 gains the
+third entry kind and R124 §3.3's allocation gains Part 02's section, each with a note. R131 §3.1's
+UCUM edition stands in the new table. Eleven ledger destinations naming Part 02 §9.3 by number, from
+R8 §§3 and 4, R9 §6, R22 §3, R101 §§3.1, 3.3, 3.6, 3.9, and 3.11, and R107 §§3.3 and 3.4, move to
 `ew-registry-vocabularies`.
 
 | surface | required change or reason unchanged | evidence after incorporation |
