@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [An Adapter Declares Its Whole Contract and Delivers Only Where a Build Points It](an-adapter-declares-its-whole-contract-and-delivers-only-where-a-build-points-it.md) | 3530 | Not yet appraised; promoted 2026-09-24 from the exact proposal at `23e12d0`. | Part 03 §§11 and 11.5, Part 04 §5.5, Part 05 §§2 and 3.5, and Part 07 §4 in place; `registry/adapter.schema.json` and `registry/sources.schema.json` incorporated |

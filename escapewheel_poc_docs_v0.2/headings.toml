@@ -615,6 +615,12 @@ section = "8.2"
 title = "Identity"
 aliases = []
 
+[anchor.ew-import-pipeline]
+part = "05"
+section = "2"
+title = "Pipeline"
+aliases = []
+
 [anchor.ew-import-validation-principle]
 part = "05"
 section = "1"
@@ -799,6 +805,12 @@ aliases = []
 part = "03"
 section = "2"
 title = "Descriptor and interfaces"
+aliases = []
+
+[anchor.ew-reaching-a-source]
+part = "03"
+section = "11"
+title = "Reaching a source"
 aliases = []
 
 [anchor.ew-reader-declared-types]
@@ -1003,6 +1015,12 @@ aliases = []
 part = "05"
 section = "3.4"
 title = "What a source can produce"
+aliases = []
+
+[anchor.ew-source-resolution]
+part = "04"
+section = "5.5"
+title = "Source resolution"
 aliases = []
 
 [anchor.ew-specification-actors]

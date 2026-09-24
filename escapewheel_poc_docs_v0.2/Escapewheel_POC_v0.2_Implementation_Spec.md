@@ -2358,6 +2358,7 @@ A packet-owned resource recording no digest is not checked, and a verification r
 
 Verification of external resources is optional and layered (Part 04 §5.3).
 
+<a id="ew-reaching-a-source" data-spec-anchor="canonical"></a>
 ## 11. Reaching a source
 
 An adapter reads one source and returns records, and a build assembles a packet from several (Part 05 §3.1). This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, and how an adapter declares itself. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes.
@@ -2676,6 +2677,7 @@ Where a validator is asked to verify content **without reading**, it compares ea
 
 A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A validator MUST report what a verification pass skipped for these reasons, and **MUST NOT** report a store-digest pass as a checksum verification: it establishes something weaker and store-specific, so it gets its own finding.
 
+<a id="ew-source-resolution" data-spec-anchor="canonical"></a>
 ### 5.5 Source resolution
 
 An external resource entry MAY carry `source`, an identifier naming the body of data it belongs to;
@@ -2893,6 +2895,7 @@ A resource is imported when it has been discovered, extracted to staging, normal
 A staged resource MUST NOT appear in the committed manifest. Validation state does not change the
 content class or canonicality selected by its declaration; publication is the gate.
 
+<a id="ew-import-pipeline" data-spec-anchor="canonical"></a>
 ## 2. Pipeline
 
 | stage | action |
