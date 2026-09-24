@@ -239,10 +239,10 @@ def main() -> int:
     """Check every open stage document and report all defects."""
     proposals = sorted(
         p
-        for p in (HERE / "proposals").glob("*.md")
+        for p in (HERE / "proposals").glob("[!.]*.md")
         if p.name not in NON_STAGE_DOCUMENTS
     )
-    drafts = sorted(p for p in (HERE / "drafts").glob("*.md") if p.name != "README.md")
+    drafts = sorted(p for p in (HERE / "drafts").glob("[!.]*.md") if p.name != "README.md")
     accepted_paths = sorted((HERE / "accepted").glob("R[0-9]*.md"))
     failures = 0
     for path, check in (
