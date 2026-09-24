@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `06b11fb29285fe90890ae84054ca33807bf9abfb` |
+| **Based on** | `bca96ae475c220f7b8329ab47b42e6a07e6a51b2` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§3, 5, 9.2, 9.4, and 10.1; Part 03 §5.6; Part 05 §5.1; Part 08 §§2 and 3; `registry/registry.schema.json`; the registry-contract descriptor; the core registry and `registry/rules.json` |
@@ -41,10 +41,11 @@ added at the end of Part 02 §5.
 
 ### 1.1 Structural crosswalk
 
-Part 02 §§3, 9.2, and 9.4 and Part 08 §§2 and 3 carry canonical anchors. Commit `06b11fb` added
-`ew-tier-1-rules` to Part 02 §10.1, `ew-one-null` to Part 03 §5.6, and `ew-tier-1-validation` to
-Part 05 §5.1, and changed nothing else. The subsection added to Part 02 §5 takes `ew-finite-values`
-when it is created. No section moves, splits, merges, or retires.
+Part 02 §§3, 9.2, and 9.4 and Part 08 §§2 and 3 carry canonical anchors. The anchor bootstrap
+`06b11fb` added `ew-tier-1-rules` to Part 02 §10.1, `ew-one-null` to Part 03 §5.6, and
+`ew-tier-1-validation` to Part 05 §5.1, so no further bootstrap is needed. The subsection added to
+Part 02 §5 takes `ew-finite-values` when it is created. No section moves, splits, merges, or
+retires.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
@@ -65,11 +66,12 @@ column and rule declaration. Each probed rule passed the reference validator's s
 ran on DuckDB 1.5.5 against tables created from the registry's declarations, holding one or two rows
 with the tested value.
 
-### 2.1 The registries declare 103 float columns, and 31 rules read one
+### 2.1 The registries declare 105 float columns, and 31 rules read one
 
 The core registry document declares 26 float columns: 20 `float64` and 1 `float32` in `core`, and
-5 `float64` in `analysis`. The four extension registries declare 77: 10 in `aind_opto`, 28 in
-`aind_unit_qc`, 31 in `dynamic_foraging`, and 8 in `vr_foraging`. No float column is `optional`.
+5 `float64` in `analysis`. The four extension registries declare 79, all `float64`: 10 in
+`aind_opto`, 30 in `aind_unit_qc`, 31 in `dynamic_foraging`, and 8 in `vr_foraging`. No float column
+is `optional`.
 
 Of the 121 Tier 2 rules, 76 in the core document and 45 in the extensions, 31 name a float column.
 A whole-word match on column names found them, and reading each rule's SQL confirmed the match.
@@ -91,7 +93,7 @@ and negative infinity in the tested column. "flag" means the rule returned rows.
 |---|---|---|---|---|---|
 | `core.clocks.tick_rate_positive` | `tick_rate_hz` | flag | pass | pass | flag |
 | `core.sessions.alignment_bound_at_least_default` | `alignment_bound` | flag | pass | pass | flag |
-| `aind_unit_qc.waveform_metrics.a_width_is_positive` | `half_width` | flag | pass | pass | flag |
+| `aind_unit_qc.waveform_metrics.a_width_is_positive` | each of `peak_to_trough_duration`, `peak_half_width`, and `trough_half_width` | flag | pass | pass | flag |
 | `aind_unit_qc.synchrony.larger_is_rarer` | `sync_spike` at the smaller size | flag | pass | pass | flag |
 | `aind_unit_qc.synchrony.larger_is_rarer` | `sync_spike` at the larger size | flag | flag | flag | pass |
 | `dynamic_foraging.sessions.a_range_is_ordered` | `block_max` | flag | pass | pass | flag |
@@ -132,11 +134,17 @@ finiteness, so it needs a rule of its own.
 ### 2.4 No scanned packet holds a non-finite value
 
 A scan counted `NOT isfinite(x)` over every `FLOAT` and `DOUBLE` column of every Parquet file in two
-populations: the 30 fixture packets `fixtures/build.py` writes, with 901 files and 571 float
+populations: the 44 fixture packets `fixtures/build.py` writes, with 1,325 files and 847 float
 columns; and three packets the reference writer built between 2026-09-06 and 2026-09-17 from two
 extracellular sessions carrying dynamic-foraging tables, one session built twice, with 110 files and
-208 float columns. Neither held a non-finite value. The reference writer's NWB adapter writes null
-where its source holds NaN.
+208 float columns. Neither held a non-finite value. The two packets built on 2026-09-17 also carry
+`aind_unit_qc` tables, 56 of those float columns, written by per-packet scripts before that extension
+had an adapter.
+
+The reference writer's NWB adapter writes null where its source holds NaN, and the `aind_unit_qc`
+adapter in `escapewheel-aind` writes null for every non-finite metric its SpikeInterface analyzer
+holds. Over two local sortings of 4,559 and 13,234 units, the metrics that adapter maps hold 40,436
+NaN values and no infinity.
 
 ### 2.5 Alternatives
 
@@ -146,12 +154,12 @@ columns that already have a value rule, and leaves every future rule author to r
 of a bound NaN falls on, which the five existing one-sided rules show authors do not reliably do.
 Forbidding non-finite values in every float column needs no registry field, but a future column
 giving infinity a meaning, such as an unbounded interval end, would then need the field this
-revision adds. Defaulting an absent `finite` to `true` saves 103 mechanically set fields and makes
+revision adds. Defaulting an absent `finite` to `true` saves 105 mechanically set fields and makes
 an absent declaration a claim, which Part 02 §9.3 rejects for `vocabulary`. A three-valued field
 that admits infinity and rejects NaN serves no current column, and a later meta-schema change can
-add it. Declaring the `aind_unit_qc` quotients `isi_violations_ratio`, `peak_trough_ratio`,
-`l_ratio`, and `d_prime` `finite: false` would publish an infinite quotient where the metric was not
-computable, a meaning Part 03 §5.6 assigns to null.
+add it. Declaring the `aind_unit_qc` quotients `isi_violations_ratio`,
+`main_peak_to_trough_ratio`, `l_ratio`, and `d_prime` `finite: false` would publish an infinite
+quotient where the metric was not computable, a meaning Part 03 §5.6 assigns to null.
 
 ### 2.6 Feasibility and overlap
 
@@ -162,14 +170,15 @@ for NaN and both infinities, null for null, and true for 1.0 and -0.0. The query
 `SELECT clock_id, tick_rate_hz FROM core.clocks WHERE NOT isfinite(tick_rate_hz)` passes the static
 rule check and, over NaN, positive infinity, negative infinity, null, and 30000.0, returns the first
 three. Over the 286,896,563 rows of one session packet's `core.spike_events`, the same form on the
-`float32` column `amplitude` took 0.06 s, the best of five runs on 8 threads with the file cached.
+`float32` column `amplitude` took 0.05 s, the best of five runs on 8 threads with the file cached.
 
 No open proposal or draft touches Part 02 §§3, 5, or 10.1, Part 03 §5.6, Part 05 §5.1, or the
-`core.clocks` rules. The nomenclature draft revises Part 02 §9.3's authority text, which this
-revision cites without changing. The digest draft edits the resource entries of Part 08 §3's
-manifest excerpt and leaves its registry bindings, whose core version this revision advances, so the
-two touch different lines and commute. Two sections cite Part 02 §10.1: Part 03 §5.3, for how a
-profile establishes primary-key uniqueness, which is unchanged, and Part 05 §5.1, revised here.
+`core.clocks` rules, and none of R136–R138 did. The nomenclature draft, applied after this one,
+revises Part 02 §9.3's authority text, which this revision cites without changing. R136 rewrote the
+resource entries of Part 08 §3's manifest excerpt and left its registry bindings, whose core version
+this revision advances, so this revision's edit applies to the current excerpt. Two sections cite
+Part 02 §10.1: Part 03 §5.3, for how a profile establishes primary-key uniqueness, which is
+unchanged, and Part 05 §5.1, revised here.
 
 ## 3. Decision
 
@@ -278,11 +287,12 @@ negative. A writer publishing a non-finite value in a float column now fails val
 passing it; the reference writer's adapters that pass source floats through unchanged, such as the
 sorter's spike amplitudes, reach the new check only on such a value.
 
-The meta-schema change is incompatible, so the core registry and each repository extension
-registry move to 0.7.0 and each extension advances its own `registry_version`. No accepted clause
-is superseded. R101 §3.10's statement that NaN reaches every float column is narrowed by §3.1, and
-its ledger entry gains a note. The seven ledger destinations that name an affected section by
-number move to its anchor: those of R2 §§8 and 9 and R57 §§2.1 and 2.2 at Part 02 §9.2, R92 §2.1 at
+The meta-schema change is incompatible, so the core registry and each of the four repository
+extension registries name meta-schema 0.7.0. Core's `registry_version` becomes 0.7.0, and each
+extension advances its own from the 0.6.0 or 0.7.0 it carries now. No accepted clause is
+superseded. R101 §3.10's statement that NaN reaches every float column is narrowed by §3.1, and its
+ledger entry gains a note. The seven ledger destinations that name an affected section by number
+move to its anchor: those of R2 §§8 and 9 and R57 §§2.1 and 2.2 at Part 02 §9.2, R92 §2.1 at
 Part 02 §10.1, R107 §3.1 at Part 02 §3, and R101 §3.10 at Part 03 §5.6.
 
 | surface | required change or reason unchanged | evidence after incorporation |
@@ -292,11 +302,11 @@ Part 02 §10.1, R107 §3.1 at Part 02 §3, and R101 §3.10 at Part 03 §5.6.
 | physical profiles | Part 03 §5.6 says NaN reaches only a column declaring `finite: false`. | `evidence/R<N>.json` names the anchor. |
 | packet manifest and JSON Schemas | Unchanged. No manifest field names a column property; the registry meta-schema changes under the row above. | None required. |
 | validation and import | Part 05 §5.1 lists the finiteness check. Part 05 §5.4 already extends it to extension columns, and Part 11 already defines `isfinite`. | The corpus variants below. |
-| extensions | Each of the 77 float columns of the four repository extension registries declares `finite: true`; each registry names meta-schema 0.7.0 and advances its own `registry_version`. No adapter committed at the baseline writes their tables, so whether an adapter emits a non-finite metric is unknown for all but the session packets §2.4 scanned; an adapter that writes an uncomputable metric as null already satisfies §3.1. | `registry/check.py` over every extension registry. |
+| extensions | Each of the 79 float columns of the four repository extension registries declares `finite: true`; each registry names meta-schema 0.7.0 and advances its own `registry_version`. The `aind_unit_qc` adapter in `escapewheel-aind` writes that registry's three tables and already writes every non-finite source value as null, so it is unchanged. No committed adapter writes the `aind_opto`, `dynamic_foraging`, or `vr_foraging` tables, so whether one emits a non-finite value is unknown beyond the session packets §2.4 scanned; an adapter that writes an uncomputable value as null already satisfies §3.1. | `registry/check.py` over every extension registry; the AIND suite, whose unit-QC tests assert that a NaN metric arrives as null, gains the same case for an infinite one. |
 | reader, writer, validator, adapters | The validator generates §3.2's check and selects the v0.4 descriptor, and the validator and writer tests that pin meta-schema 0.6.0, the v0.3 descriptor, or core 0.6.0 follow the new identifiers. The writer's code is unchanged: its commit-time validation reports the finding, and its extension scaffold, which maps source float types to `float32` and `float64`, leaves `finite` to the extension author. The reader is unchanged; it may rely on the declaration and need not. | The validator suite and the corpus. |
 | conformance fixtures and tests | A fixture variant with NaN in `core.clocks.tick_rate_hz` draws `core.clocks.tick_rate_hz.finite`; one with a child clock's `transform_slope` at -1 draws `core.clocks.transform_slope_positive`. Registry-checker cases reject a float column without `finite` and a string column with it. | `fixtures/corpus.py` and the registry-document tests. |
-| revision process and tooling | The ordinary ledger and evidence records, and the seven numeric destinations move to anchors. `facts.py` and the interval-kinds probe, which name meta-schema 0.6.0, follow the new identifier. | `ledger.py` and `evidence.py`. |
-| generated publications and developer documentation | `registry/render.py` shows `finite` in the Declares column of `registry/tables.md`, and the generated structure count in `registry/README.md` gains a finite-column line. The specification README's identifier table, Part 08 §§2 and 3, the combined specification, and the heading index follow the new identifiers and anchors. | `verify.py`. |
+| revision process and tooling | The ordinary ledger and evidence records, and the seven numeric destinations move to anchors. `facts.py`, which names the v0.3 descriptor, and the interval-kinds probe, which names meta-schema 0.6.0, follow the new identifiers. The registry-codegen prototype's registry document, which `registry/check.py` validates against the meta-schema, names meta-schema 0.7.0 and declares `finite: true` on its one float column, `core.clocks.tick_rate_hz`. | `ledger.py`, `evidence.py`, and `registry/check.py`. |
+| generated publications and developer documentation | `registry/render.py` shows `finite` in the Declares column of `registry/tables.md`, and the generated structure count in `registry/README.md` gains a finite-column line. The specification README's identifier table and its sentence naming the core registry version current packets use, the expected value `escapewheel_poc_docs_v0.2/framework.py` holds for that table, `registry/README.md`'s entry for the descriptor file, Part 08 §§2 and 3, the combined specification, and the heading index follow the new identifiers and anchors. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
