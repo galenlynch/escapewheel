@@ -10,187 +10,232 @@
 
 ## 1. Problem
 
-Part 09 §5.4 states the composition rule in one sentence: a packet's verdict is the conjunction of
-core's and every extension's, and a validator does not report a packet whose extension fails as
-conforming. Nothing defines the parts of that conjunction. No clause says which subject a finding
-belongs to, what verdict a subject has when its evaluation is incomplete or was withheld, which
-checks apply to an extension's resources, or what a report or a writer does with the result. Part
-05 §14.5 says so directly: "Extension-table byte validation and final composition of core,
-extension, and packet verdicts are not defined here."
+A packet binds one core registry and any number of extension registries, and
+[Part 09 §5.4](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-verdicts)
+reports a verdict for core and for each extension separately. The same section makes the packet's
+verdict the conjunction of core's and every extension's, so a validator does not report a packet
+whose extension fails as conforming.
 
-The reference implementation fills the gap with a core-only verdict. A report states `passed` for
-a packet whose extension fails, the writer publishes that packet, and core's physical checks never
-run over an extension's tables. A finding about an extension's array or file is filed against core,
-so an extension's defect can also fail core, which Part 09 §5.4 forbids.
+The specification defines no part of that conjunction. No clause assigns a finding to core, to an
+extension, or to neither; gives a verdict to a subject whose evaluation was incomplete or withheld;
+names the checks an extension's resources receive; or says what a report or a writer does with the
+result.
+[Part 05 §14.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validator-registry-boundary)
+states the gap: extension-table byte validation and the final composition of core, extension, and
+packet verdicts are not defined there.
+
+The reference implementation fills the gap with a core-only verdict. Its report states `passed` for
+a packet whose extension fails, its writer publishes that packet, and its physical checks never
+read an extension's tables. It also files findings about an extension's arrays and files against
+core, so an extension's defect can fail core, which Part 09 §5.4 forbids.
 
 ## 2. Evidence
 
-The observations below were reproduced at the recorded baseline, where the full verifier passed
-all 35 stages.
+All observations below were reproduced at the recorded baseline, where the full repository
+verifier passed all 35 stages.
 
-- **The serialized status is core's.** `Report.passed` counts only findings whose `extension` is
-  null, and `Report.to_dict` writes it as the top-level `status`
-  (`escapewheel-validator/src/escapewheel_validator/validator.py`, `Report.passed` and
-  `Report.to_dict`). A packet given one extension table holding an out-of-vocabulary value
-  validates to `"status": "passed"` with `"errors": 1`, the error being
-  `task.trials.choice.in_vocabulary` attributed to extension `task`. The serialized findings carry
-  only `level`, `check`, `message`, and `rows`, so the attribution is lost in the JSON.
-- **Tests assert the core-only verdict.** `test_an_extension_finding_does_not_fail_core` asserts
-  `report.passed` beside `not report.extension_passed("task")`, and
-  `test_validator_preserves_an_available_unparseable_extension_result` asserts `report.passed` for
-  a packet binding an extension registry whose result is `invalid`.
-- **The writer publishes on the core verdict.** A first commit and an amendment each refuse only
-  when `report.passed` is false (`escapewheel-writer/src/escapewheel_writer/writer.py`, the commit
-  and `amend` gates), and the manifest's `validation.status` is written from the same value. The
-  validator command line exits 0 on it.
-- **Extension tables receive no physical checks.** Column presence and type, physical order,
-  functional-dependence duplication, unfilled `metadata`, and reserved-value checks iterate the
-  core registry's tables only (`validate`, which passes `_tables(effective)` to each). An extension
-  table receives only its generated Tier 1 and declared Tier 2 queries. The validator's own
-  extension fixture writes `task.trials.session_id` as `int64` against a declared `int32`, and no
-  check reports it. Running the same five checks over core and extension tables together reports
-  that mismatch; the writer's 26 extension tests and the 66 tests of the AIND extension package
-  pass unchanged under that probe.
-- **Findings about an extension's resources are filed against core.** Dense-array metadata,
-  owned-digest, and missing-file findings are recorded with no extension, whichever registry
-  declares the resource (`_check_packet_owned_arrays`, `_check_owned_digests`).
-- **Incomplete and failed collapse into one Boolean.** An incomplete Tier 2 evaluation makes
-  `passed` false exactly as an error does. Part 05 §9.4 requires a report to distinguish the two,
-  and the report does so only in a separate `evaluations` list, never in a verdict.
+### 2.1 The reported status counts only core's findings
+
+`Report.passed` in `escapewheel-validator` counts error-level findings that carry no extension, and
+`Report.to_dict` writes that value as the report's top-level `status`. A packet whose extension
+table `task.trials` holds a value outside its closed vocabulary validates to `"status": "passed"`
+with `"errors": 1`; the one error is `task.trials.choice.in_vocabulary`, attributed in memory to
+extension `task`. The serialized findings carry only `level`, `check`, `message`, and `rows`, so the
+JSON loses that attribution.
+
+Two validator tests assert the core-only verdict.
+`test_an_extension_finding_does_not_fail_core` asserts `report.passed` beside
+`not report.extension_passed("task")`, and
+`test_validator_preserves_an_available_unparseable_extension_result` asserts `report.passed` for a
+packet binding an extension registry whose Part 02 result is `invalid`.
+
+### 2.2 The writer publishes on core's verdict
+
+A first commit and an amendment in `escapewheel-writer/src/escapewheel_writer/writer.py` each refuse
+only when `report.passed` is false, and each writes the manifest's `validation.status` from that
+value. The validator command line exits 0 on it. A build whose extension fails therefore publishes a
+packet recorded as `passed`, although Part 05 §9.2 requires an import to refuse to commit on any
+error.
+
+### 2.3 Extension tables receive only generated and declared queries
+
+The validator's column-presence and type check, physical-order scan, functional-dependence
+duplication check, unfilled-`metadata` check, and reserved-value check each iterate the core
+registry's tables. An extension table receives its generated Tier 1 queries and its declared Tier 2
+rules and nothing else, although
+[Part 09 §5.1](../../escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md#ew-extension-definition)
+gives an extension's declarations the same applicable terms as core's and Part 05 §5.4 validates each
+extension on the same terms as core.
+
+The validator's own extension fixture shows the cost. It writes `task.trials.session_id` as `int64`
+against a declared `int32`, and no check reports it. A probe that ran the same five checks over the
+union of core and extension tables reported that mismatch, and changed no other outcome in the
+writer's 26 extension tests or the 66 tests of the AIND extension package.
+
+### 2.4 An extension's array and file defects fail core
+
+Findings from dense-array metadata checks, owned-digest checks, and missing-file checks carry no
+extension, whichever registry declares the resource they concern. A defect in an extension's array
+therefore counts against core's verdict.
+
+### 2.5 Incomplete evaluation and failure share one Boolean
+
+An incomplete Tier 2 evaluation makes `Report.passed` false exactly as an error does.
+[Part 05 §9.4](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-incomplete-validation)
+requires a report to distinguish the two, and the report does so only in a separate list of rule
+evaluations, never in a verdict.
+
+### 2.6 Baseline, overlap, and feasibility
+
+No other proposal or draft is open.
+[R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) left missing
+registries, extension-table byte validation, and the final composition of core, extension, and
+packet verdicts as separate decisions.
+[R130](../accepted/R130-a-packet-binds-the-exact-registries-that-declare-its-resources.md) decided
+the first as named binding findings and left Part 09 §5.4 unchanged. The reverse-citation scan of the
+affected sections finds live citers in Part 04 §10, Part 05 §10, the specification README, the
+validator's contribution guide, and reader and validator source comments; each changes with this
+decision.
+
+The reference validator already reports per-extension findings in memory and already records
+incomplete rule evaluations, so composition needs no new information from the packet. The probe in
+§2.3 shows that extension parity is implementable with the existing checks.
 
 ## 3. Desired outcome and constraints
 
-A report states one packet verdict and one verdict for core and for each bound extension, and a
+A report states a packet verdict, core's verdict, and each bound extension's verdict, and a
 consumer can tell from each whether its subject failed or could not be judged. A finding belongs to
-exactly one subject, fixed by the declaration that governs what it is about. The packet verdict is
-the only one that decides whether a packet conforms, and it decides whether a writer may publish.
+exactly one subject, fixed by the declaration that governs what it concerns. Only the packet
+verdict decides conformance, and it decides whether a writer publishes.
 
 The resolution preserves:
 
-- Part 09 §5.4's separation: an extension's failure never changes core's verdict, and a core
-  failure is never attributed to an extension;
+- Part 09 §5.4's separation, under which an extension's failure never changes core's verdict and a
+  core failure is never attributed to an extension;
 - Part 05 §9.4's refusal to turn an incomplete evaluation into a packet finding;
-- Part 04 §10's binding behavior, in which a failed extension registry withholds only its own
-  declarations and a failed core registry withholds the `declaration` phase;
-- Part 05 §14.3's reader independence, so a reader still reads core from a packet whose extension
-  fails; and
-- the manifest schema, the registry meta-schema, and every registry document unchanged.
+- [Part 04 §10](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-manifest-conformance)'s
+  binding behavior, under which a failed extension registry withholds only its own declarations and
+  a failed core registry withholds the `declaration` phase;
+- [Part 05 §14.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-reader-registry-independence)'s
+  reader independence, so a reader still reads core from a packet whose extension fails; and
+- the manifest schema, the registry meta-schema, and every registry document.
 
 ## 4. Options and tradeoffs
 
-### 4.1 What a verdict can say
+### 4.1 Verdict states
 
-**Two values, `passed` and `failed`.** Simple, and the current Boolean. An incomplete evaluation
-must then read as one or the other: as `failed` it conflates the validator's inability with the
-packet's defect, which Part 05 §9.4 forbids; as `passed` it lets an unjudged packet claim
-conformance, which Part 05 §10 forbids.
+**Keep two values, `passed` and `failed`.** An incomplete evaluation must then read as one or the
+other. As `failed` it conflates the validator's inability with the packet's defect, which Part 05
+§9.4 forbids; as `passed` it lets an unjudged packet claim conformance, which
+[Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes)
+forbids.
 
-**Three values, `passed`, `failed`, and `incomplete`.** A subject is `failed` when it has an
-error-level finding, `incomplete` when it has none but some required evaluation of it did not
-complete, and `passed` otherwise. Conjunction takes the worst of its parts in that order, so a
-known error decides a verdict even beside an unfinished evaluation. A bound registry whose result
-is `invalid` fails its subject, since Part 05 §14.5 already reports its outcomes as registry-document
-findings; one whose result is `unsupported` or `incomplete` leaves its subject `incomplete`. This
-proposal prefers three values: they are the distinctions Part 05 §§9.4 and 10 already draw, now
-carried into the verdict rather than beside it.
+**Use three values, `passed`, `failed`, and `incomplete`.** A subject with an error-level finding is
+`failed`; one without, whose required evaluation did not complete, is `incomplete`; any other is
+`passed`. Conjunction takes the worst in that order, so a known error decides a verdict even beside
+an unfinished evaluation. A bound registry whose result is `invalid` fails its subject, since Part 05
+§14.5 already reports its outcomes as registry-document findings, and one whose result is
+`unsupported` or `incomplete` leaves its subject `incomplete`. This proposal prefers three values,
+which carry the distinctions Part 05 §§9.4 and 10 already draw into the verdict itself.
 
-### 4.2 Which subject a finding belongs to
+### 4.2 Finding attribution
 
-**Core or an extension, with everything else filed against core.** This is the current behavior.
-It files a manifest-structure finding against core, and it has no rule for a finding about an
-extension resource that is not a query result, which is how an extension's array defect fails core.
+**File everything that is not an extension's query result against core.** This is the current
+behavior. It counts a manifest-structure finding as a core-data defect and, as §2.4 shows, lets an
+extension's array defect fail core.
 
-**The registry whose declaration governs it, and otherwise the packet.** A binding finding and a
-registry-document outcome belong to the bound registry they concern. A finding about one resource
-entry belongs to the registry that declares that entry's `declaration_id`; for a reference or
-lineage finding that is the entry holding the reference or the `derived_from` member. What no single
-registry's declaration governs belongs to the packet: the `json`, `shape`, and `entries` phases,
-`packet.registry.core_count`, `packet.registry.path_unique`, an entry whose declaration no bound
-registry can supply, and a lineage cycle. The packet verdict is then the conjunction of the
-packet-scope findings, core's verdict, and every bound extension's verdict. This proposal prefers
-it. It needs no new mechanism, because a declaration ID already names exactly one registry, and it
-stops a manifest defect from reading as a core-data defect.
+**Attribute a finding to the registry whose declaration governs it, and otherwise to the packet.** A
+binding finding or registry-document outcome belongs to the bound registry it concerns. A finding
+about a resource entry belongs to the registry declaring that entry's `declaration_id`; for a
+reference or lineage finding, that entry is the one holding the reference or the `derived_from`
+member. The findings no single declaration governs belong to the packet: those of the `json`,
+`shape`, and `entries` phases, `packet.registry.core_count`, `packet.registry.path_unique`, an
+entry whose declaration no bound registry supplies, and a lineage cycle. The packet verdict then
+conjoins the packet-scope findings, core's verdict, and every bound extension's verdict. This
+proposal prefers it, because a declaration ID already names exactly one registry and the rule needs
+no new mechanism.
 
-Under this rule a subject whose evaluation was withheld is `incomplete`, not `passed`: a manifest
-that fails `shape` leaves core and every extension unjudged, and a failed core registry leaves
-every extension unjudged. A missing or mismatched extension registry fails that extension through
-its own binding finding.
+A withheld evaluation leaves its subject `incomplete`. A manifest that fails `shape` leaves core and
+every extension unjudged, and a failed core registry leaves every extension unjudged. A missing or
+mismatched extension registry fails that extension through its own binding finding.
 
-### 4.3 Which checks reach an extension's resources
+### 4.3 Checks over extension resources
 
-**Only the generated and declared queries.** The current behavior, and the gap the evidence shows.
+**Run only the generated and declared queries.** This is the current behavior and the gap §2.3
+shows.
 
-**Every check core's resources receive, from the extension's own checked context.** Part 09 §5.1
-already gives an extension's declarations "the same applicable terms as core", and Part 05 §5.4
-already says each extension "is validated on the same terms as core". Column presence and type,
-physical order, duplication, unfilled `metadata`, reserved values, dense-array metadata, and owned
-digests would run over an extension's resources exactly as over core's, with findings attributed
-under §4.2. This proposal prefers it; it corrects stale implementation and states the scope that
-Part 05 §14.5 disclaims rather than adding a new obligation.
+**Run every check core's resources receive.** Column presence and type, physical order,
+duplication, unfilled `metadata`, reserved values, dense-array metadata, and owned digests reach an
+extension's resources exactly as they reach core's, directed by the extension's checked context and
+attributed to it under §4.2. This proposal prefers it. Part 09 §5.1 and Part 05 §5.4 already require
+the same terms, so the change corrects the implementation and closes the scope Part 05 §14.5 leaves
+open, rather than adding an obligation.
 
-### 4.4 Whether a writer may publish a packet that is not `passed`
+### 4.4 Publication gate
 
-**Publish on core's verdict.** The current behavior. It contradicts Part 05 §9.2, which requires an import to
-refuse to commit on any error, and publishes a packet a validator will report as not conforming.
+**Publish on core's verdict.** This is the current behavior. It contradicts Part 05 §9.2 and
+publishes a packet a validator reports as not conforming.
 
-**Publish only a `passed` packet, with an explicit partial-publication mode.** A mode that commits
-a packet with a failing extension as a non-canonical artifact was suggested by the project review.
-No consumer has asked for one, and Part 00 §3.2 makes an extension's resources canonical, so a
-partial packet would need a new content class or manifest marker to be honest about itself.
+**Publish a failing extension in an explicit partial-publication mode.** The project review
+suggested a mode that commits such a packet as a non-canonical artifact.
+[Part 00 §3.2](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-packet-content-classes) makes
+an extension's resources canonical, so an honest partial packet would need a new content class or
+manifest marker, and no consumer has asked for one.
 
 **Publish only a `passed` packet.** A first commit and an amendment each refuse a packet whose
 verdict is `failed` or `incomplete`, and the manifest's `validation.status` records the packet
-verdict. This proposal prefers it. It is what Part 05 §§6 and 9.2 already require once "validated"
-means the packet verdict, and a failing extension is fixed by correcting it or leaving it out of
-the recipe.
+verdict. This proposal prefers it. Part 05 §§6 and 9.2 already require it once validation means the
+packet verdict, and a build whose extension fails recovers by correcting the extension or by leaving
+it out of the recipe.
 
-### 4.5 How far to specify the report
+### 4.5 Report content
 
-**State required content in prose.** Part 05 §9 would require a report to carry the packet
-verdict, core's verdict, each bound extension's verdict, and each finding's subject; the reference
+**State the required content in prose.** Part 05 §9 requires a report to carry the packet verdict,
+core's verdict, each bound extension's verdict, and each finding's subject, and the reference
 implementation serializes them. This proposal prefers it.
 
-**Publish a closed validation-report schema.** A schema would make reports portable in the way
-`registry/registry_result.schema.json` makes registry results portable, and would also have to
-settle the external-verification level of Part 04 §5.3, the advisory flag, and rule evaluations.
-That is a larger decision than composition, and nothing in v0.2 consumes a report other than the
-tool that wrote it; it can follow as its own change.
+**Publish a closed validation-report schema.** A schema would make reports portable, as
+`registry/registry_result.schema.json` does for registry results, but it would also have to settle
+the external-verification level of
+[Part 04 §5.3](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-external-resource-verification),
+the advisory flag, and rule-evaluation records. No v0.2 consumer reads a report other than the tool
+that wrote it, so the schema can follow as its own decision.
 
-### 4.6 Where the composition rule lives
+### 4.6 Owner of verdict composition
 
-**Part 09 §5.4**, where the conjunction is stated today. The rule would remain in the extension
-part although its packet-scope findings and its three states are not about extensions.
+**Keep the rule in Part 09 §5.4.** Its packet-scope findings and verdict states are not about
+extensions, so the extension part would own a validation-reporting rule.
 
-**Part 05 §9**, beside findings, the error policy, and incomplete validation, with Part 09 §5.4
-keeping the extension-specific separation and citing it. This proposal prefers Part 05: the verdict
-is a property of validation reporting, and Part 05 §10 and §14.5 already defer to wherever it lives.
+**Move the rule to Part 05 §9.** Part 05 §9 already owns findings, the error policy, and incomplete
+validation, and Part 05 §§10 and 14.5 already defer to wherever composition lives. Part 09 §5.4
+keeps the extension-specific separation and cites Part 05. This proposal prefers Part 05.
 
 ## 5. Impact sketch
 
 | surface | effect |
 |---|---|
 | semantic prose | Unchanged. No scientific meaning changes. |
-| logical prose, registry meta-schema, registry declarations, and declarative rules | Unchanged. Declarations already name their registry, and no rule, column, or identity changes. |
-| physical profiles | Unchanged. The physical checks that now reach extension resources are the ones Part 03 and Part 05 §5.3 already define. |
-| packet manifest and incorporated JSON Schemas | Schema unchanged. Part 04 §9's `validation.status` is stated to record the packet verdict, and Part 04 §10's writer clause cites the publication gate instead of listing phases. |
-| validation and import | Affected directly: verdict states, finding attribution, packet-scope findings, extension parity, the publication gate, and required report content, in Part 05 §§5.3, 5.4, 6, 9, 10, and 14.5 and Part 09 §5.4. Part 00 §4.1's "validate core resources before it commits them" widens to every packet resource. |
-| extension registries | Unchanged in content. Their resources receive core's physical checks. The four example extensions pass them under the probe. |
+| logical prose, registry meta-schema, registry declarations, and declarative rules | Unchanged. A declaration already names its registry, and no rule, column, or identity changes. |
+| physical profiles | Unchanged. The physical checks that reach extension resources are those Part 03 and Part 05 §5.3 already define. |
+| packet manifest and incorporated JSON Schemas | Schema unchanged. Part 04 §9 states that `validation.status` records the packet verdict, and Part 04 §10's writer clause cites the publication gate. |
+| validation and import | Affected directly: verdict states, finding attribution, packet-scope findings, extension parity, the publication gate, and required report content, in Part 05 §§5.3, 5.4, 6, 9, 10, and 14.5 and Part 09 §5.4. [Part 00 §4.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-core-content-requirements)'s obligation to validate core resources before commit widens to every packet resource. |
+| extension registries | Content unchanged. Their resources receive core's physical checks, which the four example extensions pass under the probe. |
 | reader | Unchanged. Part 04 §10 and Part 05 §14.3 already let a reader read core when an extension registry fails. |
 | writer | The commit and amendment gates and the recorded `validation.status` use the packet verdict. |
-| validator | `Report` gains per-subject verdicts in three states; findings carry their subject into JSON; top-level `status` becomes the packet verdict; array, digest, and file findings are attributed by declaration; physical checks run over extension tables; the command line reports and exits on the packet verdict. |
+| validator | The report gains three-state verdicts for the packet, core, and each bound extension; findings carry their subject into JSON; top-level `status` becomes the packet verdict; array, digest, and file findings are attributed by declaration; physical checks reach extension tables; and the command line reports and exits on the packet verdict. |
 | adapters and code generation | Unchanged. Tier 1 generation already runs per registry. |
-| existing packets and migration | A packet published with a failing extension or an incomplete evaluation no longer validates as `passed`; its bytes are unchanged, and it is rebuilt or amended after the extension is corrected. The two local development packets predate the registry-binding manifest and are rebuilt regardless. Fixtures whose extension tables disagree with their declared types are corrected. |
-| conformance fixtures and tests | Add a packet with one passing and one failing extension, an extension-table type mismatch, an extension dense-array defect that leaves core `passed`, an incomplete core evaluation, a manifest `shape` failure leaving every registry `incomplete`, and writer refusals of both a failing extension and an incomplete verdict. The two tests asserting the core-only verdict are rewritten. |
+| existing packets and migration | A packet published with a failing extension or an incomplete evaluation no longer validates as `passed`. Its bytes are unchanged, and a corrected build replaces it. The two local development packets predate the registry-binding manifest and are rebuilt regardless. Test fixtures whose extension tables disagree with their declared types are corrected. |
+| conformance fixtures and tests | Add a packet with one passing and one failing extension, an extension-table type mismatch, an extension dense-array defect that leaves core `passed`, an incomplete core evaluation, a manifest `shape` failure that leaves every registry `incomplete`, and writer refusals of a failing extension and of an incomplete verdict. Rewrite the two tests that assert the core-only verdict. |
 | revision lifecycle, ledger, evidence, and process tooling | Unchanged except for the ordinary revision and evidence records. |
-| generated publications and developer documentation | The combined specification regenerates; the validator and writer READMEs describe the new report and gate. |
+| generated publications and developer documentation | The combined specification regenerates, and the validator and writer READMEs describe the report and the gate. |
 
 ## 6. Resolved direction
 
 1. Row-valued UCUM checking is a separate decision, carried by
    [A validator checks every unit value against UCUM](a-validator-checks-every-unit-value-against-ucum.md),
-   which depends on this proposal's attribution.
+   which uses this proposal's attribution.
 2. A verdict is `passed`, `failed`, or `incomplete`. A subject with an error-level finding is
-   `failed`; one with none whose required evaluation did not complete, or was withheld, is
+   `failed`; one without, whose required evaluation did not complete or was withheld, is
    `incomplete`; any other is `passed`. Conjunction takes the worst in that order. A bound registry
    whose result is `invalid` fails its subject, and one whose result is `unsupported` or
    `incomplete` leaves it `incomplete`.
@@ -199,7 +244,7 @@ is a property of validation reporting, and Part 05 §10 and §14.5 already defer
    the registry declaring the entry's `declaration_id`. Findings that no single declaration governs
    belong to the packet. The packet verdict conjoins the packet-scope findings, core's verdict, and
    every bound extension's verdict.
-4. Every check that core's resources receive reaches an extension's resources too, directed by that
+4. Every check that core's resources receive reaches an extension's resources, directed by that
    extension's checked context and attributed to it.
 5. A writer publishes, by first commit or amendment, only a packet whose verdict is `passed`, and
    records that verdict as the manifest's `validation.status`. No partial-publication mode exists.
