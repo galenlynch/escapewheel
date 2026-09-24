@@ -45,7 +45,7 @@ class UnsupportedCodecError(PacketError):
 
 
 class NoTimeOrigin(PacketError):
-    """The packet declares no `t_zero_tick`, so seconds are not defined (Part 01 §2.1).
+    """The packet declares no `t_zero_tick`, so seconds are not defined (Part 01 §2.2).
 
     Tick zero, the session's wall-clock start and the first datum are all available and all
     wrong. A consumer that picks one silently produces numbers that cannot be compared with

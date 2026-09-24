@@ -620,10 +620,10 @@ def _time_origin(
     by_clock: Mapping[str, tuple[NDArray[np.int64], NDArray[np.int64]]],
     bound: float,
 ) -> int | None:
-    """Part 01 §2.1: the earliest observation start among the session's clocks, on the reference.
+    """Part 01 §2.2: the earliest observation start among the session's clocks, on the reference.
 
     Returns None where any clock's window start cannot be mapped, since a minimum taken over
-    some of the clocks is not the minimum Part 05 §7 requires a writer to declare -- and R39
+    some of the clocks is not the minimum Part 01 §2.2 requires a writer to declare -- and R39
     §2.4 says an origin the writer cannot compute is one it must not state.
     """
     reference = context.reference.clock_id if context.reference else None
@@ -1173,7 +1173,7 @@ def _declare_origin(context: Context, say: Callable[[str], None]) -> None:
         say("  no t_zero_tick: a clock's observation start does not map to the reference (Part 01 §2.2)")
         return
     context.session_extra["t_zero_tick"] = origin
-    say(f"  t_zero_tick {origin:,} on {context.reference.clock_id} (Part 01 §2.1)")
+    say(f"  t_zero_tick {origin:,} on {context.reference.clock_id} (Part 01 §2.2)")
 
 
 def _alignment_parameters(context: Context | None) -> dict[str, Any]:

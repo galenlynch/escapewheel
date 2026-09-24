@@ -402,7 +402,7 @@ def two_clock_packet(tmp_path, packet_root):
             "session_start_time": pa.array([1_756_000_000_000_000], type=pa.timestamp("us", tz="UTC")),
             "reference_clock_id": pa.array([CLOCK_BEHAVIOUR], type=i32),
             # Probe tick 0, which is where the probe clock's observation window begins and so
-            # what Part 01 §2.1 makes the origin. It lands on a whole harp second by construction,
+            # what Part 01 §2.2 makes the origin. It lands on a whole harp second by construction,
             # so a derived second is exact and a test can say what it should be.
             "t_zero_tick": pa.array([1_000_000], type=pa.int64()),
         }

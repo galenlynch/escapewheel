@@ -882,7 +882,7 @@ CONTEXT: dict[tuple[str, str], dict[str, str]] = {
     ("core.clock_anchors", "parent_tick"): {
         "clock_from": "core.clocks.parent_clock_id"
     },
-    # The clock is named, and not `clock_id` (Part 01 §2.1).
+    # The clock is named, and not `clock_id` (Part 01 §2.2).
     ("core.sessions", "t_zero_tick"): {"clock_from": "reference_clock_id"},
     # R38 §3 gave the sorting run a clock precisely so a unit's ticks have one.
     # The stream's clock, reached through the stream (R25 §2).

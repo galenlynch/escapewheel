@@ -17,7 +17,7 @@ Support is passed, not assumed
 Nothing in this module defaults a denominator. :func:`rate` takes a count and a duration and
 neither has a default, because the error this exists to prevent is arithmetic rather than
 access: dividing by the wrong span, not failing to look one up. A packet that declares no
-windows gets an empty table and no invented extent, as Part 01 §2.1 requires of an absent origin.
+windows gets an empty table and no invented extent, as Part 01 §2.2 requires of an absent origin.
 
 An accessor returning a single point process also *attaches* its support, so :func:`rate_of`
 can be called on the result without looking anything up. That convenience needs a guard rather

@@ -89,7 +89,7 @@ def test_three_milliseconds_admits_what_this_rig_actually_needs():
 
 
 def test_the_origin_is_the_earliest_start_across_every_clock():
-    """Part 01 §2.1: no modality is preferred, so the earliest wins wherever it came from."""
+    """Part 01 §2.2: no modality is preferred, so the earliest wins wherever it came from."""
     intervals = [
         {"clock_id": "probe", "start_tick": 0},
         {"clock_id": "harp", "start_tick": int(PARENTS[0])},

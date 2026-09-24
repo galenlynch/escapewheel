@@ -365,7 +365,7 @@ def default_clock(packet: Any, present: list[int]) -> int:
 
 
 def tick_rate(packet: Any, clock_id: int) -> tuple[int, int]:
-    """Return a clock's rational tick rate, which Part 01 §2.1 prefers to `tick_rate_hz`."""
+    """Return a clock's rational tick rate, which Part 01 §3.9 prefers to `tick_rate_hz`."""
     clocks = packet.table("core.clocks")
     names = clocks.column("clock_id").to_pylist()
     if clock_id not in names:
@@ -401,14 +401,14 @@ def origin(packet: Any, session_id: int | None = None) -> tuple[int, int, int]:
     ------
     NoTimeOrigin
         If the packet declares none, or if sessions declare different origins and none was
-        named. Part 01 §2.1 requires refusing rather than inventing one.
+        named. Part 01 §2.2 requires refusing rather than inventing one.
     """
     cache = getattr(packet, "_origin_cache", None)
     if cache is not None and session_id in cache:
         return cache[session_id]  # type: ignore[no-any-return]
     sessions = packet.table("core.sessions")
     if "t_zero_tick" not in sessions.column_names:
-        raise NoTimeOrigin("core.sessions carries no t_zero_tick, so seconds are undefined (Part 01 §2.1)")
+        raise NoTimeOrigin("core.sessions carries no t_zero_tick, so seconds are undefined (Part 01 §2.2)")
     declared = {
         session: tick
         for session, tick in zip(
@@ -418,12 +418,12 @@ def origin(packet: Any, session_id: int | None = None) -> tuple[int, int, int]:
     }
     if session_id is not None:
         if session_id not in declared:
-            raise NoTimeOrigin(f"session {session_id!r} declares no t_zero_tick (Part 01 §2.1)")
+            raise NoTimeOrigin(f"session {session_id!r} declares no t_zero_tick (Part 01 §2.2)")
         found_tick = int(declared[session_id])
     else:
         found = sorted(set(declared.values()))
         if not found:
-            raise NoTimeOrigin("no session declares a t_zero_tick, so seconds are undefined (Part 01 §2.1)")
+            raise NoTimeOrigin("no session declares a t_zero_tick, so seconds are undefined (Part 01 §2.2)")
         if len(found) > 1:
             raise NoTimeOrigin(f"sessions declare different origins {found}; name a session_id")
         found_tick = int(found[0])
@@ -488,7 +488,7 @@ def on_clock(packet: Any, table: pa.Table, clock: int | None = None, *, bound: f
 def seconds(packet: Any, table: pa.Table, *, session_id: int | None = None) -> pa.Table:
     """Add a `t_second` column to a table whose ticks are on the reference clock.
 
-    Part 01 §2.1: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared
+    Part 01 §2.2: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared
     rational so nothing is lost to the rounded `tick_rate_hz`.
 
     The tick stays. Seconds are derived and this does not pretend otherwise -- a caller that
@@ -524,7 +524,7 @@ def seconds(packet: Any, table: pa.Table, *, session_id: int | None = None) -> p
     present = _present(_flat(table.column("clock_id"))) if table.num_rows else [reference]
     if present != [reference]:
         raise NotAligned(
-            f"seconds are defined on {reference!r} (Part 01 §2.1), but these ticks are on "
+            f"seconds are defined on {reference!r} (Part 01 §2.2), but these ticks are on "
             f"{present}; map them with on_clock first"
         )
     offset = pc.subtract(table.column("t_tick"), pa.scalar(start, pa.int64()))

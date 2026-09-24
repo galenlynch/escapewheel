@@ -320,7 +320,7 @@ def test_an_event_range_is_on_the_reference_clock(two_clock_packet):
     assert pkt.events(t_tick=(1_300_000, 1_400_000)).num_rows == 0
 
 
-# -- seconds (Part 01 §2.1) ----------------------------------------------------------------
+# -- seconds (Part 01 §2.2) ----------------------------------------------------------------
 
 
 def test_the_origin_is_read_not_recomputed(two_clock_packet):
@@ -342,13 +342,13 @@ def test_seconds_are_derived_beside_the_tick_not_instead_of_it(two_clock_packet)
 
 
 def test_seconds_may_be_negative(two_clock_packet):
-    """Part 01 §2.1: data outside its window is reported, not clamped away."""
+    """Part 01 §2.2: data outside its window is reported, not clamped away."""
     before = pa.table({"t_tick": pa.array([968_750], type=pa.int64()), "clock_id": pa.array([CLOCK_BEHAVIOUR])})
     assert open_packet(two_clock_packet).seconds(before).column("t_second").to_pylist() == [-1.0]
 
 
 def test_a_packet_with_no_origin_refuses_rather_than_inventing_one(packet_root):
-    """Part 01 §2.1: tick zero, the wall clock and the first datum are all available and all wrong."""
+    """Part 01 §2.2: tick zero, the wall clock and the first datum are all available and all wrong."""
     with pytest.raises(NoTimeOrigin):
         open_packet(packet_root).t_zero()
 

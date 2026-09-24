@@ -668,7 +668,7 @@ class Packet:
             The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
             :data:`STORED` for the ticks the file holds.
         seconds : bool, default False
-            Add a `t_second` column from the packet's declared origin (Part 01 §2.1). Refuses on
+            Add a `t_second` column from the packet's declared origin (Part 01 §2.2). Refuses on
             a packet that declares none, and on ticks that are not on the reference clock.
 
         Returns
@@ -779,7 +779,7 @@ class Packet:
             :data:`STORED` for the ticks the file holds. Mapping drops a spike the anchors
             cannot place, exactly as `analysis.spike_events` does.
         seconds : bool, default False
-            Add a `t_second` column from the packet's declared origin (Part 01 §2.1). Refuses on
+            Add a `t_second` column from the packet's declared origin (Part 01 §2.2). Refuses on
             a packet that declares none, and on ticks that are not on the reference clock.
 
         Returns

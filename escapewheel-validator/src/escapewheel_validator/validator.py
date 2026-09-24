@@ -572,7 +572,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
             report.add(
                 "error",
                 "time.origin_unmappable",
-                f"{clock} declares an observation window but no anchors, so the minimum Part 01 §2.1 "
+                f"{clock} declares an observation window but no anchors, so the minimum Part 01 §2.2 "
                 "defines cannot be taken",
                 [(clock,)],
                 registry="core",
@@ -601,7 +601,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
                 "error",
                 "time.origin_not_earliest",
                 f"t_zero_tick is {stated} but the earliest observation start on {reference} "
-                f"is {expected} (Part 01 §2.1)",
+                f"is {expected} (Part 01 §2.2)",
                 [(str(stated), str(expected))],
                 registry="core",
             )
