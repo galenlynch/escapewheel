@@ -1048,3 +1048,57 @@ def test_what_a_run_records_carries_no_credential(tmp_path):
     assert clean["source"][0]["storage_options"] == {"key": REDACTED, "anon": False}
     assert clean["source"][1] == document["source"][1], "everything else is recorded as written"
     assert document["source"][0]["storage_options"]["key"] == "AKIA...", "the original is untouched"
+
+
+# -- prefix -----------------------------------------------------------------------------------
+
+
+def prefixed(**by_kind):
+    """Source entries of these kinds, each setting `prefix` to its value or leaving it unset for None."""
+    return "".join(
+        f'\n[[source]]\nkind = "{kind}"\nroot = "."\nowns = []\n' + ("" if value is None else f'prefix = "{value}"\n')
+        for kind, value in by_kind.items()
+    )
+
+
+def prefix_refusals(tmp_path, registry, body):
+    """The refusals naming a prefix disagreement."""
+    return [p.message for p in Recipe.load(write(tmp_path, body)).check(registry) if "disagree on prefix" in p.message]
+
+
+def test_a_prefix_set_on_one_source_and_not_another_is_refused(tmp_path, registry):
+    """`nwb` and `waveforms` name one contact through `contact_ids`; half-prefixed, it is two electrodes."""
+    (refused,) = prefix_refusals(tmp_path, registry, prefixed(nwb="a.", waveforms=None))
+    assert "(nwb 'a.', waveforms unset)" in refused
+
+
+def test_two_different_prefixes_are_refused(tmp_path, registry):
+    (refused,) = prefix_refusals(tmp_path, registry, prefixed(nwb="a.", lfp="b."))
+    assert "(lfp 'b.', nwb 'a.')" in refused
+
+
+def test_one_prefix_on_every_source_that_accepts_it_passes(tmp_path, registry):
+    body = prefixed(sorter="a.", sync="a.", nwb="a.", lfp="a.", waveforms="a.")
+    assert prefix_refusals(tmp_path, registry, body) == []
+
+
+def test_a_source_that_takes_no_prefix_is_not_asked_for_one(tmp_path, registry):
+    """`openephys` and `harp` accept no `prefix`, so leaving it unset on them disagrees with nothing."""
+    body = prefixed(sorter="a.", openephys=None, harp=None)
+    assert prefix_refusals(tmp_path, registry, body) == []
+
+
+def test_a_delivered_source_whose_declaration_accepts_prefix_must_agree(tmp_path, registry):
+    """Whether a source takes a prefix comes from its declaration, not from a list of kinds."""
+    body = prefixed(nwb="a.") + DELIVERED.format(declaration=declaration_for(tmp_path, accepts=["prefix"]))
+    (refused,) = prefix_refusals(tmp_path, registry, body)
+    assert "(nwb 'a.', thermistor unset)" in refused
+
+
+def test_a_build_refuses_disagreeing_prefixes_before_opening_a_source(tmp_path, registry):
+    from escapewheel_writer.session import build
+
+    recipe = Recipe.load(write(tmp_path, prefixed(sorter="a.", nwb=None).replace('root = "."', 'root = "absent"')))
+    with pytest.raises(RecipeError, match="disagree on prefix"):
+        build(recipe, registry)
+    assert not (recipe.out / "staging").exists(), "refused before anything was prepared"
