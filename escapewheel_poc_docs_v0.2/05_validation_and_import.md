@@ -231,6 +231,7 @@ value that is not a unit code at `error` under the check ID `<declaration_id>.<c
 such as `core.units.amplitude_unit.ucum_code`, naming that value once. The finding is core's. The
 shim declares each such table as an input.
 
+<a id="ew-validation-extensions" data-spec-anchor="canonical"></a>
 ### 5.4 Extensions
 
 Each extension registry present is validated on the same terms as core, and its verdict is reported separately. A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension failure invalidate core.
@@ -282,6 +283,7 @@ A finding declares a level, the check that produced it, and a message. Where a c
 | `warning` | conformant, but likely not intended |
 | `info` | recorded, not judged |
 
+<a id="ew-error-policy" data-spec-anchor="canonical"></a>
 ### 9.2 Error policy
 
 An import MUST refuse to commit on any error.
