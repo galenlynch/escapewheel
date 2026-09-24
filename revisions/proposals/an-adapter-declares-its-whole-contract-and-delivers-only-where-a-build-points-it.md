@@ -1,4 +1,4 @@
-# An adapter declares its whole contract and writes only where a build points it
+# An adapter declares its whole contract and delivers only where a build points it
 
 | | |
 |---|---|
@@ -137,8 +137,9 @@ full repository verifier passes its 35 stages.
   manifest and delivery schemas do, and the prose keeps what each member means.
 - A build applies one set of checks to a declaration, whichever form it arrives in and whichever
   public route reaches the build.
-- The pipeline rule says what an adapter may write: only into a location a build supplied for it,
-  which the build creates and removes.
+- The pipeline rule says where an adapter delivers: only into a location a build supplied for it,
+  which the build creates and removes. Bytes a build never reads, such as a source cache, are
+  outside the rule.
 - The change keeps an adapter's source-format knowledge in the adapter and the packet contract in
   the registries and profiles, and it changes no packet bytes.
 
@@ -148,16 +149,20 @@ full repository verifier passes its 35 stages.
 
 **Require every member, allowing empty lists** (preferred). The schema lists all eight members
 under `required`, and Part 03 §11.5 states that a document names each. An omission then has no
-meaning to settle. Every document written before the change becomes invalid until regenerated;
-the only tracked one already complies, and a generated document complies by construction.
+meaning to settle, so the two sentences telling a build how to read a document without `accepts`
+or without `contributes` are removed. Every document written before the change becomes invalid
+until regenerated, which reverses §11.5's reading of a document predating `accepts` as accepting
+none; the only tracked document already complies, and a generated document complies by
+construction.
 
 **Keep the current four and define each omission.** The prose already does this for `accepts` and
 `contributes`, so adding `states` and `consumes` would be consistent. It leaves a schema that
-cannot tell a deliberate empty list from a forgotten key, which is the defect the review raised.
+cannot tell a deliberate empty list from a forgotten key, which is the defect §2.1 shows.
 
-**Require only `states`, `accepts`, and `consumes`.** This matches the direction agreed before
-`contributes` existed. `contributes` was added as optional so that documents without it kept
-their meaning; requiring it now costs nothing further, since the same regeneration covers it.
+**Require every member except `contributes`.** `contributes` is optional so that documents
+written before it kept their meaning. Keeping that exception buys nothing, since the regeneration
+that adds `states`, `accepts`, and `consumes` adds `contributes` too, and it leaves one member
+whose omission still needs a stated meaning.
 
 ### 4.2 Incorporation
 
@@ -189,21 +194,22 @@ Discovery skips a class that fails to import today for the same reason.
 
 ### 4.4 What an adapter writes
 
-**An adapter writes only into the locations a build supplies** (preferred). Part 05 §2 would say
+**An adapter delivers only into the locations a build supplies** (preferred). Part 05 §2 would say
 that an adapter delivers records, arrays, and reports only through `array_location`,
 `delivery_root`, `report_path`, or the protocol's socket, and that the build creates those
 locations under its staging area and removes them. Part 03 §11 and Part 07 §4 would stop
 describing an adapter as returning only records.
 
-**Delete the sentence.** The contradiction goes, and nothing then says where an adapter may write,
-which the review asked to state.
+**Delete the sentence.** The contradiction goes, and nothing then says where an adapter may
+deliver, so an adapter author still cannot tell which writes a build relies on.
 
 **Keep the sentence and treat arrays as the exception.** It would leave the files protocol and the
 report unaccounted for.
 
-A source cache is outside the delivery. Any of the options above can leave it ungoverned, so long
-as the rule is about what a build reads and stages rather than about every byte an adapter
-process writes.
+A source cache stays ungoverned. The rule covers what a build reads and stages, and a cache is
+neither: it holds source bytes an adapter may reuse, and whether an implementation lets adapters
+keep one is its own choice. Governing the cache would oblige the specification to define its
+location, layout, and lifetime, for bytes no build or reader ever consumes.
 
 ### 4.5 Array delivery binding
 
@@ -217,10 +223,10 @@ and binding by catalog row, needs no specification change and belongs with this 
 |---|---|
 | semantic prose | Unchanged; no scientific meaning changes. |
 | logical prose and registry | Unchanged; neither declares an adapter or a resolution document. |
-| physical profiles | Part 03 §11 stops describing an adapter as returning only records; §11.5 incorporates the declaration schema and requires every member. |
-| packet manifest and JSON Schemas | `adapter.schema.json` requires all eight members; Part 04 §5.5 incorporates `sources.schema.json`. The manifest and delivery schemas are unchanged. Schema `$id` versions stay until release identifiers are assigned. |
+| physical profiles | Part 03 §11 stops describing an adapter as returning only records; §11.5 incorporates the declaration schema, requires every member, and drops its readings of a document without `accepts` or `contributes`. |
+| packet manifest and JSON Schemas | `adapter.schema.json` requires all eight members; Part 04 §5.5 incorporates `sources.schema.json` and permits a reader to validate a resolution document without requiring it. The manifest and delivery schemas are unchanged. Schema `$id` versions stay until release identifiers are assigned. |
 | validation and import | Part 05 §2 states which writes an adapter makes and that the build owns their locations; §3.5 applies its declaration refusals to every declaration a recipe names. |
-| extensions | Registry content unchanged. The AIND package's generated documents gain any missing members when regenerated. |
+| extensions | Registry content unchanged. The AIND package's generated documents gain any missing members when regenerated; a third party's hand-written document omitting a member is refused until it states it. |
 | reader, writer, validator, adapters | The reference reader validates a caller-supplied resolution document; the specification permits but does not require it. The writer checks class declarations, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, and names array directories by `resource_id`, binding by catalog row. The validator is unchanged. |
 | existing packets | Unchanged; no packet byte moves. A packet's `sources.json` that fails the schema is nonconforming, and a reader may still ignore it as it does now. |
 | conformance fixtures and tests | Writer tests for a class declaration refused as its document would be, an incomplete document refused, `session.build` refusing an unchecked recipe, and array directories named by `resource_id`; reader tests for a caller-supplied resolution document failing its schema. |
@@ -229,13 +235,13 @@ and binding by catalog row, needs no specification change and belongs with this 
 
 ## 6. Open questions
 
-1. Does `contributes` join the required members? Recommendation: yes, so that every member is
-   stated and one regeneration covers all of them.
+1. Resolved: `contributes` joins the required members, so every member is stated and one
+   regeneration covers all of them.
 2. Resolved: a reader need not validate a resolution document and may. Whether to validate is an
    implementation's choice about how clearly it reports a malformed document, as with a registry,
    so the specification requires neither refusing nor skipping one.
-3. Is the source cache governed? Recommendation: no. The write rule covers what a build reads and
-   stages, and the cache is neither.
+3. Resolved: the source cache is not governed. An implementation may let adapters keep one;
+   governing it would mean defining its structure, for bytes no build reads.
 
 ## 7. Promotion criteria
 
@@ -245,7 +251,7 @@ and binding by catalog row, needs no specification change and belongs with this 
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The exact proposal and its final appraisal state are tracked in the current commit.
+- [x] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
