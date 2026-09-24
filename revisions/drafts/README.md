@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [A Packet Passes Only When Its Manifest, Core, and Every Bound Extension Pass](a-packet-passes-only-when-its-manifest-core-and-every-bound-extension-pass.md) | 2758 | Not yet appraised; promoted 2026-09-23 from the exact proposal at `d9b6686`. | Part 05 section 9.5 added; Part 00 §4.1, Part 04 §§9–10, Part 05 §§5.3, 5.4, 9.2, 10, and 14.5, and Part 09 §5.4 in place |

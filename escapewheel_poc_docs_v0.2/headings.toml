@@ -517,6 +517,12 @@ section = "8.3"
 title = "Discriminator"
 aliases = []
 
+[anchor.ew-error-policy]
+part = "05"
+section = "9.2"
+title = "Error policy"
+aliases = []
+
 [anchor.ew-example-packet-catalog]
 part = "08"
 section = "3"
@@ -1080,6 +1086,12 @@ part = "02"
 section = "12.1"
 title = "Unit identity"
 aliases = ["ew-unit-identity-architecture"]
+
+[anchor.ew-validation-extensions]
+part = "05"
+section = "5.4"
+title = "Extensions"
+aliases = []
 
 [anchor.ew-validation-shim]
 part = "05"
