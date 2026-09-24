@@ -767,7 +767,7 @@ def _check_owned_digests(packet: Packet, report: Report) -> None:
                 "error",
                 "owned.sha256",
                 f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed[:16]}… — "
-                "a packet-owned file is immutable (Part 04 §5.1) and Part 03 §9.4 bounds revalidation on that",
+                "a packet-owned file is immutable (Part 03 §8.1) and Part 03 §9.4 bounds revalidation on that",
                 registry=report.resource_owner(resource.resource_id),
             )
     if skipped:
@@ -792,7 +792,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
     Two things are structural and one is not; the manifest schema already requires `external` beside
     a `source`. A `source` names a body of data rather than a location, so the entry's `uri` MUST be
     relative to it (Part 04 §5.5). `sources.json` MUST
-    NOT be a declared resource (Part 04 §5.5): being outside the manifest is what keeps Part 04 §5.1's
+    NOT be a declared resource (Part 04 §5.5): being outside the manifest is what keeps Part 03 §8.1's
     immutability off it, and a packet that declared it would freeze the one file that has to
     stay editable.
 
@@ -810,7 +810,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
                     "error",
                     "sources.declared",
                     f"{resource.resource_id} declares {SOURCES_FILENAME} as a resource; Part 04 §5.5 keeps it "
-                    "outside the manifest so Part 04 §5.1's immutability does not reach it",
+                    "outside the manifest so Part 03 §8.1's immutability does not reach it",
                     registry=report.resource_owner(resource.resource_id),
                 )
             continue
@@ -1810,7 +1810,7 @@ def _spill_beside(packet: Packet) -> Iterator[Path | None]:
     Beside the packet, not inside it. The filesystem has to be the packet's -- `/tmp` is tmpfs
     on several distributions, so spilling there consumes the memory the limit exists to bound
     -- but the packet root is the wrong place to put it: validating a packet would write into
-    a directory whose bytes are supposed to be settled (Part 04 §5.1), leave it behind, and fail
+    a directory whose bytes are supposed to be settled (Part 03 §8.1), leave it behind, and fail
     outright on read-only media. Measured on 287 M spikes, the uniqueness check spills 26 GB,
     which is 31x the packet it is checking.
     """
@@ -2217,7 +2217,7 @@ def validate(
         run: the ones attached to such a resource, and the ones whose query names one. `None`,
         the default, runs every rule, which is what a first commit and a packet of unknown
         provenance both need. An amendment passes what it writes, because Part 03 §9.2 forbids it
-        modifying anything else and Part 04 §5.1 declares those bytes immutable, so a rule reading
+        modifying anything else and Part 03 §8.1 declares those bytes immutable, so a rule reading
         only them is already answered.
     external : bool, default False
         Resolve external URIs and check the `sha256`, `size_bytes` and `codecs` claimed for

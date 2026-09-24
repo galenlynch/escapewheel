@@ -29,7 +29,7 @@ from .errors import ManifestError, ResourceUnreadableError, UnresolvedSource
 #:
 #: Part 04 §5.1 makes an external resource's reachability a property of the reader's situation, and
 #: a packet already committed records one situation -- the writer's. Substituting a prefix is
-#: how a reader reaches the same bytes from somewhere else without touching bytes Part 04 §5.1
+#: how a reader reaches the same bytes from somewhere else without touching bytes Part 03 §8.1
 #: makes immutable. `git config url.<base>.insteadOf` is the same mechanism.
 Rewrite = Mapping[str, str]
 
@@ -37,7 +37,7 @@ Rewrite = Mapping[str, str]
 Sources = Mapping[str, str]
 
 #: Where a writer SHOULD leave a default resolution document (Part 04 §5.5). Not a packet resource,
-#: so nothing in the manifest names it and Part 04 §5.1's immutability does not reach it.
+#: so nothing in the manifest names it and Part 03 §8.1's immutability does not reach it.
 SOURCES_FILENAME = "sources.json"
 
 #: The one version of that document this reader knows how to read.

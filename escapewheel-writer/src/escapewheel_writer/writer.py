@@ -75,7 +75,7 @@ def _version() -> str:
 MANIFEST = "packet.json"
 
 #: Part 04 §5.5's default source resolution document. Written at the packet root and **not** a packet
-#: resource: under the root so a copy carries it, outside the manifest so Part 04 §5.1's immutability
+#: resource: under the root so a copy carries it, outside the manifest so Part 03 §8.1's immutability
 #: does not reach it and a moved mirror is fixed by editing it in place.
 SOURCES = "sources.json"
 
@@ -445,7 +445,7 @@ def _digest(path: Path) -> str:
     """Part 04 §5.4: what the packet says its own bytes are.
 
     Recorded for every packet-owned resource and not optional, because the promise it makes
-    checkable is not optional either: Part 04 §5.1 declares these bytes immutable and Part 03 §9.4 spends
+    checkable is not optional either: Part 03 §8.1 declares these bytes immutable and Part 03 §9.4 spends
     that, bounding revalidation after an amendment to what the amendment wrote. Costs 0.5% of a
     build -- the bytes were just written, so they are in page cache and hash at ~2 GB/s.
 
@@ -1271,7 +1271,7 @@ class PacketWriter:
         ----------
         root : str or Path
             The packet root. Created if absent; an existing packet is refused rather than
-            overwritten, because immutability covers packet-owned bytes (Part 04 §5.1).
+            overwritten, because immutability covers packet-owned bytes (Part 03 §8.1).
         limits : Mapping, optional
             DuckDB settings bounding validation, passed through to the validator. The default
             of 4 GB is not enough for every packet: a uniqueness check over 10^8 rows can
@@ -1400,7 +1400,7 @@ class PacketWriter:
         """Add resources to a committed packet, as a new packet version (R32).
 
         An amendment modifies no file the superseded manifest names. A table that gains rows is
-        written as a **new file** and the amended manifest names that one, so Part 04 §5.1's
+        written as a **new file** and the amended manifest names that one, so Part 03 §8.1's
         immutability holds literally rather than by exception.
 
         The sequence is `commit`'s, with the swap at the end doing more work: the added
@@ -1472,7 +1472,7 @@ class PacketWriter:
             # Both halves of the amendment are bounded by what it writes (R35). Physical order
             # is re-read only for those files, and only the rules attached to one or naming one
             # re-run. A file the amendment does not name is byte-identical to one already
-            # verified -- Part 03 §9.2 forbids modifying it and Part 04 §5.1 declares it immutable -- so
+            # verified -- Part 03 §9.2 forbids modifying it and Part 03 §8.1 declares it immutable -- so
             # its order cannot have changed and a rule reading only it is already answered.
             written = {e["resource_id"] for e in entries}
             report = validate(

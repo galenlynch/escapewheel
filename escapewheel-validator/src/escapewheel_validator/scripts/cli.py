@@ -89,7 +89,8 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     parser.add_argument(
         "--checksums",
         action="store_true",
-        help="also recompute each external sha256, reading every byte (level 3b); implies "
-        "--external, and reports the resources that recorded no digest to compare",
+        help="also recompute every recorded sha256, reading every byte: external resources at "
+        "Part 04 §5.3 level 3c and packet-owned ones at level 2; implies --external, and reports "
+        "the resources that recorded no digest to compare",
     )
     parser.set_defaults(func=_validate)
