@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `d54b760e8bdbf62f262a462bc9089783f4555c3a` |
+| **Based on** | `06b11fb29285fe90890ae84054ca33807bf9abfb` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§3, 5, 9.2, 9.4, and 10.1; Part 03 §5.6; Part 05 §5.1; Part 08 §§2 and 3; `registry/registry.schema.json`; the registry-contract descriptor; the core registry and `registry/rules.json` |
@@ -35,16 +35,16 @@ a rule that a clock's `transform_slope` is positive, a defect of the same column
 probing it.
 
 The change is structural because it revises rules inside Part 02 §§3, 9.2, 9.4, and 10.1,
-Part 03 §5.6, and Part 05 §5.1; appended sections would leave Part 03 §5.6 saying NaN reaches every float
-column and Part 02 §10.1 listing an incomplete set of generated checks. One subsection is added at
-the end of Part 02 §5.
+Part 03 §5.6, and Part 05 §5.1; appended sections would leave Part 03 §5.6 saying NaN reaches every
+float column and Part 02 §10.1 listing an incomplete set of generated checks. One subsection is
+added at the end of Part 02 §5.
 
 ### 1.1 Structural crosswalk
 
-Part 02 §§3, 9.2, and 9.4 and Part 08 §§2 and 3 carry canonical anchors. Part 02 §10.1,
-Part 03 §5.6, and Part 05 §5.1 lack one, so a metadata-only anchor bootstrap gives each one before the final
-appraisal. The subsection added to Part 02 §5 takes `ew-finite-values` when it is created. No
-section moves, splits, merges, or retires.
+Part 02 §§3, 9.2, and 9.4 and Part 08 §§2 and 3 carry canonical anchors. Commit `06b11fb` added
+`ew-tier-1-rules` to Part 02 §10.1, `ew-one-null` to Part 03 §5.6, and `ew-tier-1-validation` to
+Part 05 §5.1, and changed nothing else. The subsection added to Part 02 §5 takes `ew-finite-values`
+when it is created. No section moves, splits, merges, or retires.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
@@ -60,9 +60,9 @@ section moves, splits, merges, or retires.
 ## 2. Background
 
 Section 2 is informative. Every count was taken at the recorded baseline from
-`registry/logical_schemas.json` and `registry/extensions/*.json` by a script that parsed every column
-and rule declaration. Each probed rule passed the reference validator's static rule check and ran
-on DuckDB 1.5.5 against tables created from the registry's declarations, holding one or two rows
+`registry/logical_schemas.json` and `registry/extensions/*.json` by a script that parsed every
+column and rule declaration. Each probed rule passed the reference validator's static rule check and
+ran on DuckDB 1.5.5 against tables created from the registry's declarations, holding one or two rows
 with the tested value.
 
 ### 2.1 The registries declare 103 float columns, and 31 rules read one
@@ -104,8 +104,9 @@ infinity, and one flagging `x > hi` catches them, because NaN sorts above everyt
 `sample_rate_matches_axis` flags NaN only because `ABS(NaN - r) > 1e-6` is true under that order.
 The ten two-sided rules are the six `aind_unit_qc.metrics.*_is_bounded` rules,
 `aind_unit_qc.synchrony.a_fraction_is_a_fraction`,
-`dynamic_foraging.trials.a_probability_is_a_probability`, `dynamic_foraging.trials.a_draw_is_a_draw`,
-and `vr_foraging.site_odors.a_concentration_is_a_percentage`; the four probed were
+`dynamic_foraging.trials.a_probability_is_a_probability`,
+`dynamic_foraging.trials.a_draw_is_a_draw`, and
+`vr_foraging.site_odors.a_concentration_is_a_percentage`; the four probed were
 `presence_ratio_is_bounded`, `silhouette_is_bounded`, `a_probability_is_a_probability`, and
 `a_concentration_is_a_percentage`, and the other six share one of their predicate forms.
 
@@ -122,19 +123,20 @@ tick. `aind_opto.stimulations.pulsing_needs_a_frequency` likewise accepts a non-
 `frequency_hz` as the frequency it requires.
 
 No rule reads the value of `core.clocks.transform_slope`, which the registry describes as parent
-ticks per tick of the child clock. A child clock with slope NaN, positive infinity, 0, or -1, or with
-offset NaN, passes both `core.clocks.transform_pair_complete` and
+ticks per tick of the child clock. A child clock with slope NaN, positive infinity, 0, or -1, or
+with offset NaN, passes both `core.clocks.transform_pair_complete` and
 `core.clocks.alignment_declared_for_conversion`, and each of those values leaves the clock's
 alignment meaningless. A zero or negative slope is a defect of the column's domain rather than of
 finiteness, so it needs a rule of its own.
 
 ### 2.4 No scanned packet holds a non-finite value
 
-A scan counted `NOT isfinite(x)` over every `FLOAT` and `DOUBLE` column of every Parquet file in
-two populations: the 32 fixture packets under `fixtures/packets/`, with 950 files and 615 float
-columns; and three session packets the reference writer built between 2026-09-06 and 2026-09-17,
-two extracellular and one dynamic-foraging, with 110 files and 208 float columns. Neither held a
-non-finite value. The reference writer's NWB adapter writes null where its source holds NaN.
+A scan counted `NOT isfinite(x)` over every `FLOAT` and `DOUBLE` column of every Parquet file in two
+populations: the 30 fixture packets `fixtures/build.py` writes, with 901 files and 571 float
+columns; and three packets the reference writer built between 2026-09-06 and 2026-09-17 from two
+extracellular sessions carrying dynamic-foraging tables, one session built twice, with 110 files and
+208 float columns. Neither held a non-finite value. The reference writer's NWB adapter writes null
+where its source holds NaN.
 
 ### 2.5 Alternatives
 
@@ -163,11 +165,11 @@ three. Over the 286,896,563 rows of one session packet's `core.spike_events`, th
 `float32` column `amplitude` took 0.06 s, the best of five runs on 8 threads with the file cached.
 
 No open proposal or draft touches Part 02 §§3, 5, or 10.1, Part 03 §5.6, Part 05 §5.1, or the
-`core.clocks` rules. The nomenclature proposal revises Part 02 §9.3's authority text, which this
-revision cites without changing. The digest draft edits the registry binding in Part 08 §3's
-manifest excerpt, the line whose version this revision advances, so the two commute and merge by
-hand. Two sections cite Part 02 §10.1: Part 03 §5.3, for how a profile establishes primary-key
-uniqueness, which is unchanged, and Part 05 §5.1, revised here.
+`core.clocks` rules. The nomenclature draft revises Part 02 §9.3's authority text, which this
+revision cites without changing. The digest draft edits the resource entries of Part 08 §3's
+manifest excerpt and leaves its registry bindings, whose core version this revision advances, so the
+two touch different lines and commute. Two sections cite Part 02 §10.1: Part 03 §5.3, for how a
+profile establishes primary-key uniqueness, which is unchanged, and Part 05 §5.1, revised here.
 
 ## 3. Decision
 
@@ -186,8 +188,8 @@ rather than a claim.
 
 - `finite: true` declares that the column holds no non-finite value. A packet MUST NOT hold a
   non-finite value in such a column.
-- `finite: false` admits non-finite values. A Tier 2 rule reading such a column sees them in Part
-  11 §5's order.
+- `finite: false` admits non-finite values. A Tier 2 rule reading such a column sees them in
+  Part 11 §5's order.
 
 A NaN is therefore a value only of a float column declaring `finite: false`. An absent value remains
 null under Part 03 §5.6, so a source's NaN or infinity meaning that a value was not recorded or not
@@ -279,26 +281,28 @@ sorter's spike amplitudes, reach the new check only on such a value.
 The meta-schema change is incompatible, so the core registry and each repository extension
 registry move to 0.7.0 and each extension advances its own `registry_version`. No accepted clause
 is superseded. R101 §3.10's statement that NaN reaches every float column is narrowed by §3.1, and
-its ledger entry, which targets Part 03 §5.6 by number, moves to that section's anchor with a note.
+its ledger entry gains a note. The seven ledger destinations that name an affected section by
+number move to its anchor: those of R2 §§8 and 9 and R57 §§2.1 and 2.2 at Part 02 §9.2, R92 §2.1 at
+Part 02 §10.1, R107 §3.1 at Part 02 §3, and R101 §3.10 at Part 03 §5.6.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. The property constrains a logical column's value space, not a concept's meaning. | None required. |
-| logical prose and registry | The new last subsection of Part 02 §5 and Part 02 §3's new row take §3.1; Part 02 §10.1 takes §3.2; Part 02 §§9.2 and 9.4 take §3.3. The meta-schema and descriptor take §3.3; the core registry build source takes §3.4's 26 declarations; `registry/rules.json` takes §3.5's rule. | `evidence/R<N>.json` names each anchor and the meta-schema, descriptor, declaration, and rule pointers; `registry/check.py` passes. |
+| logical prose and registry | The new last subsection of Part 02 §5 and Part 02 §3's new row take §3.1; Part 02 §10.1 takes §3.2; Part 02 §§9.2 and 9.4 take §3.3. The meta-schema and descriptor take §3.3; the core registry build source takes §3.4's 26 declarations; `registry/rules.json` takes §3.5's rule. `registry/build.py` and `registry/check.py`, which name the three identifiers, follow them, and the vendored meta-schema and descriptor regenerate. | `evidence/R<N>.json` names each anchor and the meta-schema, descriptor, declaration, and rule pointers; `registry/check.py` passes. |
 | physical profiles | Part 03 §5.6 says NaN reaches only a column declaring `finite: false`. | `evidence/R<N>.json` names the anchor. |
 | packet manifest and JSON Schemas | Unchanged. No manifest field names a column property; the registry meta-schema changes under the row above. | None required. |
 | validation and import | Part 05 §5.1 lists the finiteness check. Part 05 §5.4 already extends it to extension columns, and Part 11 already defines `isfinite`. | The corpus variants below. |
-| extensions | Each of the 77 float columns of the four repository extension registries declares `finite: true`; each registry names meta-schema 0.7.0 and advances its own `registry_version`. No adapter in this repository writes their tables, so whether an external adapter emits a non-finite metric is unknown. | `registry/check.py` over every extension registry. |
-| reader, writer, validator, adapters | The validator generates §3.2's check. The writer is unchanged: its commit-time validation reports the finding, and its extension scaffold, which maps source float types to `float32` and `float64`, leaves `finite` to the extension author. The reader is unchanged; it may rely on the declaration and need not. | The validator suite and the corpus. |
+| extensions | Each of the 77 float columns of the four repository extension registries declares `finite: true`; each registry names meta-schema 0.7.0 and advances its own `registry_version`. No adapter committed at the baseline writes their tables, so whether an adapter emits a non-finite metric is unknown for all but the session packets §2.4 scanned; an adapter that writes an uncomputable metric as null already satisfies §3.1. | `registry/check.py` over every extension registry. |
+| reader, writer, validator, adapters | The validator generates §3.2's check and selects the v0.4 descriptor, and the validator and writer tests that pin meta-schema 0.6.0, the v0.3 descriptor, or core 0.6.0 follow the new identifiers. The writer's code is unchanged: its commit-time validation reports the finding, and its extension scaffold, which maps source float types to `float32` and `float64`, leaves `finite` to the extension author. The reader is unchanged; it may rely on the declaration and need not. | The validator suite and the corpus. |
 | conformance fixtures and tests | A fixture variant with NaN in `core.clocks.tick_rate_hz` draws `core.clocks.tick_rate_hz.finite`; one with a child clock's `transform_slope` at -1 draws `core.clocks.transform_slope_positive`. Registry-checker cases reject a float column without `finite` and a string column with it. | `fixtures/corpus.py` and the registry-document tests. |
-| revision process and tooling | The ordinary ledger and evidence records, and R101 §3.10's entry moves to an anchor. | `ledger.py` and `evidence.py`. |
+| revision process and tooling | The ordinary ledger and evidence records, and the seven numeric destinations move to anchors. `facts.py` and the interval-kinds probe, which name meta-schema 0.6.0, follow the new identifier. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | `registry/render.py` shows `finite` in the Declares column of `registry/tables.md`, and the generated structure count in `registry/README.md` gains a finite-column line. The specification README's identifier table, Part 08 §§2 and 3, the combined specification, and the heading index follow the new identifiers and anchors. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
-§3.1 is `applied` at the new Part 02 subsection, Part 02 §3, and Part 03 §5.6; §3.2 at
-Part 02 §10.1 and Part 05 §5.1; and §3.3 at Part 02 §§9.2 and 9.4, each by canonical anchor. §§3.4 and 3.5
-are `registry`, with targets in the core registry's column declarations and `registry/rules.json`.
+§3.1 is `applied` at the new Part 02 subsection, Part 02 §3, and Part 03 §5.6; §3.2 at Part 02 §10.1
+and Part 05 §5.1; and §3.3 at Part 02 §§9.2 and 9.4, each by canonical anchor. §§3.4 and 3.5 are
+`registry`, with targets in the core registry's column declarations and `registry/rules.json`.
 
 These cases distinguish the new rules from the current ones:
 
