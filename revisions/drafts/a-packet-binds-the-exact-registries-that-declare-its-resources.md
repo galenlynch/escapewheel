@@ -21,8 +21,9 @@ This revision makes the packet manifest one contract with one structural owner. 
 every registry document that declares its resources by registry ID, role, version, packet path,
 and SHA-256 digest, and a conforming packet carries each of those documents. Part 04 incorporates
 the manifest's JSON Schema as the exact owner of local structure and enumerates the named checks
-that JSON Schema cannot express. Lineage becomes optional provenance: the manifest entry loses its
-producing-run field, no content class forces lineage, and a reader checks only what reading needs.
+that JSON Schema cannot express. The manifest entry keeps its lineage and loses its producing-run
+field, so recording which software ran becomes optional, and a reader checks only what reading
+needs.
 
 Here the manifest is Part 04's packet manifest, `packet.json` in the portable profile. "Catalog"
 keeps only its Part 02 §2.6 sense of a catalog table and its rows, and a release manifest is Part
@@ -54,9 +55,9 @@ specification release manifest.
 | [Part 00 §4.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-core-content-requirements), core minimum names producing-run rules | revise in place | same section | the minimum no longer includes a producing-run rule | §3.7 |
 | [Part 00 §5.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-analysis-content-requirements), Part 06 owns producing-run requirements | revise in place | same section | Part 06 owns lineage, realization, promotion, and optional run provenance | §3.7 |
 | [Part 02 §2.1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-common-fields), declaration field `producing_run` | remove the field | none | a declaration carries no producing-run policy | §3.7 |
-| [Part 02 §2.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-content-class), analysis and compatibility-projection policies | revise in place | same section | no class forces lineage; each declaration selects its policy | §3.7 |
+| [Part 02 §2.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-content-class), analysis and compatibility-projection policies | revise in place | same section | those classes require lineage only | §3.7 |
 | [Part 02 §2.5](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-presence), presence conditions | revise in place | same section | a bound extension registry is active; a producing run no longer requires `core.processing_runs` | §§3.3, 3.7 |
-| [Part 02 §2.7](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-provenance-policy), lineage and producing-run policy | revise in place; retitle "Lineage policy" | same section | lineage is the only declaration-selected provenance, and a recorded chain need not reach a canonical resource | §3.7 |
+| [Part 02 §2.7](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-provenance-policy), lineage and producing-run policy | revise in place; retitle "Lineage policy" | same section | lineage is the only declaration-selected provenance | §3.7 |
 | [Part 02 §9.1](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-document), required registry members | expand in place | same section and incorporated meta-schema | every registry document carries `registry_id` | §3.4 |
 | [Part 02 §9.2](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-self-description), a packet records a registry version and should embed the registry | replace the packet obligation with a pointer; revise identifiers | Part 04 §8 for binding; planned Part 03 section 3.3 for storage; this section for registry identifiers | version-only binding and optional embedding become a full descriptor and mandatory embedding | §§3.3–3.5, 3.11 |
 | [Part 02 §9.4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-conformance), contract descriptor and invariant inventory | revise in place | same section and incorporated descriptor | descriptor v0.3 selects meta-schema 0.6.0 and adds one extension invariant | §§3.4, 3.11 |
@@ -81,7 +82,7 @@ specification release manifest.
 | [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes), analysis `processing_run_id` is MUST | remove the sentence | none | an analysis resource need not name a run; provenance remains optional | §3.7 |
 | [Part 05 §14.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validator-registry-boundary), embedded or caller-supplied core registry | revise in place | same section | only bound registries direct packet checks; missing-registry binding is decided | §3.9 |
 | [Part 05 §14.6](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-registry-result-reporting), subject labels | revise in place | same section | a registry ID labels each bound registry's result | §3.9 |
-| [Part 06 §2](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-rules), required lineage, producing-run policy, canonical chain, and the parameter rule | revise in place | same section, citing Part 06 §5 | analysis lineage and runs are optional; §5 owns run parameters | §3.7 |
+| [Part 06 §2](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-rules), required producing-run policy and the parameter rule | revise in place | same section, citing Part 06 §5 | lineage stays required and a run becomes optional; §5 owns run parameters | §3.7 |
 | [Part 06 §4](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-spike-events), bucket width, omitted count, and collision reason in the producing run | revise in place | same section, citing Part 06 §5 | each is a parameter of a run the writer chose to record | §3.7 |
 | [Part 06 §5](../../escapewheel_poc_docs_v0.2/06_analysis_layer.md#ew-analysis-materialization-provenance), a materialization records a run and names it from the entry | replace | same section | a writer may record a run; a recorded run carries the parameters the output cannot recover | §3.7 |
 | [Part 08 §2](../../escapewheel_poc_docs_v0.2/08_example_packet.md#ew-example-packet-layout) and [§3](../../escapewheel_poc_docs_v0.2/08_example_packet.md#ew-example-packet-catalog), example layout and manifest | regenerate | informative example | shows the descriptor map and gzip members | §§3.3, 3.5 |
@@ -165,7 +166,7 @@ reader's `Manifest.load()` validates without a format checker. The registry chec
 the offset-free `2026-09-04T04:22:45`, and accepted `2026-09-04T04:22:45Z`. All 58 timestamps in
 the 29 fixture manifests, and every writer timestamp, use the accepted form.
 
-### 2.5 The manifest's lineage requirements restate the declaration
+### 2.5 A required producing run forces a software record on every analysis resource
 
 The v0.1 manifest carried a producing run as `activity_id` beside `derived_from`. R9 §4 renamed it
 `processing_run_id` and made the manifest the record of what a run produced, and R31 §3 required
@@ -178,13 +179,18 @@ same name holds a string. The validator accepts a value that equals either an as
 non-null `processing_run_name`, a union that is not one identity; an exact join would need a
 uniqueness rule on a nullable name column that R128 declined to add.
 
-The four local development packets, with 45 to 56 entries each, show what the requirement
+The four local development packets, with 45 to 56 entries each, show what the requirements
 produced. Each records lineage and a run on one entry, `analysis.spike_events`: its `derived_from`
 lists `core.spike_events`, `core.clock_anchors`, and `core.clocks`, and its run is the single
-`materialization` row among the 22 in `core.processing_runs`. Both restate what the declaration
-and the writer's run naming already fix. No core or extension entry carries either field, the
-import run is a session-scoped row that no entry names, and none of the 29 fixture manifests
-carries either field.
+`materialization` row among the 22 in `core.processing_runs`, naming the writer, its version, and
+the materialization's parameters. No core or extension entry carries either field, the import run
+is a session-scoped row that no entry names, and none of the 29 fixture manifests carries either
+field.
+
+Lineage and a run answer different questions. Lineage names the resources an analysis resource
+was derived from, which the writer already knows and which traces every analysis resource to
+canonical facts. A run records which software ran, when, and with which parameters; requiring one
+obliges every producer of an analysis resource to keep an execution record.
 
 Tables already carry the provenance a consumer queries: eight core tables and
 `analysis.array_assets` have a row-level `processing_run_id` foreign key. Part 06 makes every
@@ -400,30 +406,22 @@ and compose the verdicts.
 Part 05 §5.3 MUST cite planned Part 04 section 10 for these checks rather than list them, and
 retains kind-specific physical dispatch and `core.sessions.manifest_sessions_match`.
 
-### 3.7 Lineage, including a producing run, is optional provenance
-
-A producing run is part of a resource's lineage, and a content class MUST NOT force either on a
-packet.
+### 3.7 A packet records lineage but need not record a producing run
 
 The resource-entry member `processing_run_id` MUST be removed without replacement, and the registry
 meta-schema MUST remove the declaration field `producing_run`. Part 00 §§4.1 and 5.1, Part 02
-§§2.1, 2.5, and 2.7, Part 04 §§2, 4.1, 4.2, and 7, and Part 05 §5.3 MUST drop the producing-run
-policy and the presence condition it created. Part 02 §2.7 is retitled "Lineage policy", and Part
-04 §7 "Resource lineage".
-
-Part 02 §2.2 MUST NOT require lineage of an `analysis` or `compatibility_projection` declaration;
-each declaration selects its own `lineage` policy, and every `documentation` declaration still
-forbids lineage. Every analysis declaration in the core registry MUST select `optional`, and an
-extension registry MAY select `required` for its own declarations. Part 02 §2.7's content-class
-relation and acyclicity continue to govern every recorded lineage edge, but a recorded chain need
-not reach a canonical resource, and Part 06 §2 MUST drop that requirement.
+§§2.1, 2.2, 2.5, and 2.7, Part 04 §§2, 4.1, 4.2, and 7, and Part 05 §5.3 MUST drop the
+producing-run policy and the presence condition it created. Part 02 §2.7 is retitled "Lineage
+policy", and Part 04 §7 "Resource lineage". Every `analysis` and `compatibility_projection`
+declaration continues to require lineage, and every recorded analysis chain continues to
+terminate in canonical resources.
 
 Part 05 §10 MUST NOT require an analysis resource to name a run; provenance remains optional within
 packet conformance. Part 06 §5 MUST permit, and not require, a writer to record a
 `core.processing_runs` row for a materialization. Where a writer records one, the row's parameters
-MUST carry every transform parameter the output cannot recover. Part 06 §2 MUST cite §5 for
-parameters, and Part 06 §4 MUST state its bucket width, omitted-row count, and collision reason as
-parameters of such a recorded run.
+MUST carry every transform parameter the output cannot recover. Part 06 §2 MUST keep its lineage
+requirement and cite §5 for parameters, and Part 06 §4 MUST state its bucket width, omitted-row
+count, and collision reason as parameters of such a recorded run.
 
 Row-level `processing_run_id` columns, `core.processing_run_inputs`, and `core.preferred_runs` are
 unchanged.
@@ -516,7 +514,7 @@ the reader gains none.
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | unchanged; binding and manifest mechanics alter no scientific meaning | specification diff |
-| logical prose and registry | add `registry_id` to Part 02 §9.1, the meta-schema, the core registry, and every extension; add `registry.identity.registry_id`; replace Part 02 §9.2's packet obligation; remove the producing-run policy from Part 02 §§2.1, 2.2, 2.5, and 2.7, the meta-schema, and every core and extension declaration; let each declaration select its lineage policy and set the core registry's four analysis declarations to `optional`; make a materialization's run optional in Part 06 §§2, 4, and 5 and drop producing-run mentions from Part 00 §§4.1 and 5.1; advance meta-schema, descriptor, and core identifiers | registry checker, contract-descriptor tests, and negative extension with a mismatched `registry_id` |
+| logical prose and registry | add `registry_id` to Part 02 §9.1, the meta-schema, the core registry, and every extension; add `registry.identity.registry_id`; replace Part 02 §9.2's packet obligation; remove the producing-run policy from Part 02 §§2.1, 2.2, 2.5, and 2.7, the meta-schema, and every core and extension declaration; make a materialization's run optional in Part 06 §§2, 4, and 5 and drop producing-run mentions from Part 00 §§4.1 and 5.1; advance meta-schema, descriptor, and core identifiers | registry checker, contract-descriptor tests, and negative extension with a mismatched `registry_id` |
 | physical profiles | Part 03 stores each bound registry as one gzip member, recommends a new layout, restates retention by registry ID and version, incorporates the delivery schema, and cites RFC 1952 and RFC 1951 | writer and reader round trip of gzip members; retention test for two digests under one ID and version |
 | packet manifest and JSON Schemas | incorporate the closed manifest schema; add `registries`; remove nine root, two entry, and one validation member; add planned section 10; have `registry/build.py` render the Part 04 tables and the delivery schema from the manifest schema | schema tests, and repository-verifier comparisons of the rendered tables and delivery schema against the manifest schema |
 | validation and import | run the five phases; direct checks only from bound registries; assert `date-time`; retire the reference validator's `registry.schema`, `registry.version_mismatch`, `packet.resource.lineage_shape`, `packet.resource.processing_run_id_required`, `packet.resource.processing_run_id_forbidden`, and `provenance.*` findings, which the registry result, the named checks, and the schema replace | validator tests for every check ID |
@@ -532,7 +530,7 @@ Incorporation must establish these positive cases:
 
 - a core-only packet binds exactly one descriptor, with role `core`, and passes every check;
 - a packet binding two extensions passes, and each extension's required singletons are active;
-- a packet whose analysis resources record neither lineage nor a run, and that carries no
+- a packet whose analysis resources record lineage but no run, and that carries no
   `core.processing_runs`, passes;
 - a reader opens a manifest whose `created_at` is malformed and whose root carries an unknown
   member, while the validator reports `packet.manifest.schema` for both;
@@ -570,11 +568,11 @@ the generated-projection comparisons, and the full repository verifier.
 
 The accepted-clause ledger must mark R31 §§2, 3, and 5 superseded by this revision, because the
 manifest no longer names a materialization's run, no analysis resource must name one, and no
-manifest-to-table run check remains; its note on R31 §4 must record that the derivation MUST it
+manifest-to-table run check remains; its note on R31 §4 must record that the run requirement it
 explains no longer exists. R9 §4 has no ledger record, and its placement of run outputs in the
 manifest ends here. R128 §3.7 remains applied for the lineage policy, value shape, and edge
-relation; its ledger note must record that this revision removes the producing-run policy, the
-class-forced lineage, and the canonical-chain termination.
+relation, including required analysis lineage and canonical-chain termination; its ledger note
+must record that this revision removes the producing-run policy.
 
 ### 6.1 Completed anchor bootstrap
 
