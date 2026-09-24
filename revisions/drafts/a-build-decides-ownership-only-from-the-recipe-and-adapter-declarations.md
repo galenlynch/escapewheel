@@ -6,7 +6,7 @@
 | **Based on** | `18c6ba66661674dd77022b4fe8b2c09a2e925b22` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 03 §11.5; Part 05 §§3.1, 3.3, 3.4, and 3.5; Part 07 §4; `registry/adapter.schema.json`; a new `registry/recipe.schema.json` |
+| **Amends** | Part 03 §11.5; Part 05 §§3.1, 3.3, 3.4, and 3.5; a new normative-reference section of Part 05; Part 07 §4; `registry/adapter.schema.json`; a new `registry/recipe.schema.json` |
 | **Depends on** | [R63 §2.2](../accepted/R63-default-ownership-when-a-recipe-omits-owns.md#2-decision); [R98 §3.2](../accepted/R98-a-clock-declares-when-it-was-observing.md#3-decision); [R108 §§3.1 and 3.4](../accepted/R108-a-preference-discards-no-stated-fact.md#3-decision); [R115 §3.2](../accepted/R115-a-build-reaches-a-source-through-declarations.md#3-decision); [R119 §3.4](../accepted/R119-an-adapter-declares-the-options-it-accepts.md#3-decision) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5 |
@@ -43,14 +43,16 @@ that fails it. It lets a recipe list a source kind once, so a preference names e
 The change is structural because it replaces rules inside existing sections: Part 05 §3.3's
 unspelled preference sentence, Part 05 §3.4's five declared facts and its default-ownership
 sentence, Part 03 §11.5's key list, and the five class attributes Part 07 §4 names. Appended
-sections would leave each of those contradicting its replacement.
+sections would leave each of those contradicting its replacement. The one section it adds, at
+the end of Part 05, is where Part 00 §10 puts the TOML reference that Part 05 alone invokes.
 
 ### 1.1 Structural crosswalk
 
 Commit `18c6ba6` added the canonical anchors `ew-recipe-purpose`, `ew-recipe-ownership`,
 `ew-source-declarations`, and `ew-recipe-check` to Part 05 §§3.1, 3.3, 3.4, and 3.5,
 `ew-adapter-declaration-document` to Part 03 §11.5, and `ew-reference-object-model` to Part 07
-§4, and changed nothing else. No section is added, moved, or retired.
+§4, and changed nothing else. One section is added at the end of Part 05 and takes its canonical
+anchor, `ew-validation-normative-references`, when it is created. No section is moved or retired.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
@@ -60,6 +62,7 @@ Commit `18c6ba6` added the canonical anchors `ew-recipe-purpose`, `ew-recipe-own
 | [Part 05 §3.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-recipe-check), the recipe refusals | extend in place | same section | adds refusals of a recipe failing the schema, a repeated kind, three kinds of unsound preference, and a declaration contributing what it does not produce | §§3.1, 3.2, 3.4, 3.5 |
 | [Part 03 §11.5](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-adapter-declaration-document), the declaration document's seven keys | replace in place | same section | the document carries `contributes` as an eighth key | §3.2 |
 | [Part 07 §4](../../escapewheel_poc_docs_v0.2/07_reference_implementation.md#ew-reference-object-model), five static class attributes | revise the informative list | same section | names a sixth, `CONTRIBUTES` | §3.2 |
+| none; Part 05 invokes no external authority | add | a last section of Part 05, Normative references, `ew-validation-normative-references` | lists TOML 1.0, the exact edition a recipe is written in | §3.4 |
 
 ## 2. Background
 
@@ -127,6 +130,11 @@ entry without `kind`, a clock with an unknown key, or a materialization without 
 with an uncaught Python error rather than a diagnostic. An unknown key inside a source entry is read
 as an option and refused against the adapter's declaration under R119, and an unknown top-level
 block is dropped.
+
+No numbered part names TOML, and Part 05 has no normative-reference section. Under
+[Part 00 §10](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-normative-references), an
+external authority that exactly one part invokes directly has its bibliographic entry in that
+part's normative-reference section, so a recipe rule naming a TOML edition needs one in Part 05.
 
 Ownership is keyed by source kind throughout the writer, and nothing refuses a recipe listing one
 kind twice. Two `[[source]] kind = "harp"` entries with different roots load and check, and no
@@ -263,7 +271,7 @@ of R98 §3.2 and R108 §3.4 name the removed tables and are rewritten; the ratio
 | logical prose and registry | Unchanged. Arbitration concerns a build's inputs, not a packet's resources. | None required. |
 | physical profiles | Part 03 §11.5 lists `contributes` and refuses one naming a resource outside `produces`; `registry/adapter.schema.json` gains `contributes` as an optional array of dotted resource identifiers and keeps its `$id`, as it did when `accepts` was added. | `evidence/R<N>.json` names the anchor; `registry/check.py` validates the example document. |
 | packet manifest and JSON Schemas | The manifest schema is unchanged. `registry/recipe.schema.json` is added, vendored into the writer, checked by `registry/check.py`, and incorporated by Part 05 §3.1. | The vendoring check and the writer's schema tests. |
-| validation and import | Part 05 §3.1 incorporates the schema and admits one entry per kind; §3.3 spells the preference table and what it decides; §3.4 adds the sixth fact and redefines default ownership; §3.5 adds the new refusals. | The writer tests below. |
+| validation and import | Part 05 §3.1 incorporates the schema and admits one entry per kind; §3.3 spells the preference table and what it decides; §3.4 adds the sixth fact and redefines default ownership; §3.5 adds the new refusals; a new last section lists TOML 1.0 as an exact normative reference. | The writer tests below. |
 | extensions | Registry content unchanged. AIND's adapters declare their partly supplied resources, and its `preferences` module and `escapewheel.preferences` entry point are removed. | The AIND suite. |
 | reader, writer, validator, adapters | The reader and validator are unchanged, since neither reads a recipe. The writer validates the schema on load, reads `[preference]`, and resolves default ownership, the discarded-row report, the discarded-fact refusal, and the scaffolder from the recipe and the declarations. It removes `PREFERRED`, `SHARED`, `preferences()`, `arbitrated()`, and the entry-point group. Each built-in adapter declares `CONTRIBUTES`, `escapewheel declare` writes it, and Part 07 §4 names it. For a contested resource, the scaffolder writes a commented-out preference naming a candidate and assigns the resource to no source, so the draft is refused until its author chooses. | Writer and AIND tests below. |
 | conformance fixtures and tests | Packet fixtures are unchanged, because a validator never sees a recipe. Writer tests cover a declared preference deciding a contested default, a contested default refused without one, a preference naming an unlisted kind, one naming a source whose adapter cannot supply the resource, one contradicting another entry's `owns` or `contributes`, one for a resource only one listed source produces, a preference without a reason, an unknown top-level member, a repeated kind, a declared partly supplied resource contributed by default, an entry without `owns` contributing and not owning what its `contributes` names, and a declaration contributing what it does not produce. The tests asserting the built-in tables are rewritten against declarations, and the AIND suite covers a `core.subjects` preference declared in a recipe. | `escapewheel-writer` and `escapewheel-aind` suites. |
@@ -272,8 +280,9 @@ of R98 §3.2 and R108 §3.4 name the removed tables and are rewritten; the ratio
 
 ## 6. Conformance and implementation evidence
 
-Each clause is `applied`: §§3.1 and 3.3 at Part 05 §§3.3 and 3.4, §3.2 at Part 05 §3.4 and Part 03
-§11.5, §3.4 at Part 05 §3.1 and §3.5, and §3.5 at Part 05 §3.1, each by its canonical anchor.
+Each clause is `applied`, each by its canonical anchor: §3.1 at Part 05 §§3.3–3.5; §3.2 at Part 05
+§§3.4 and 3.5 and Part 03 §11.5; §3.3 at Part 05 §3.4; §3.4 at Part 05 §§3.1 and 3.5 and the new
+normative-reference section; and §3.5 at Part 05 §3.1.
 
 The negative cases distinguish the new rule from the current one:
 
