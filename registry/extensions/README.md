@@ -6,10 +6,10 @@ reading one of their tables needs nothing installed.
 
 | | tables | columns | drawn from |
 |---|---|---|---|
-| `dynamic_foraging` | `trials`, `blocks`, `sessions` | 60 | the 67 trial columns of two real sessions, split by which of them vary |
-| `aind_unit_qc` | `metrics`, `waveform_metrics`, `synchrony` | 47 | the 32 quality columns of a real NWB's 55, measured |
-| `aind_opto` | `stimulations`, `emissions` | 18 | the 17 `laser_*` columns the real NWB's `trials` table carries |
-| `vr_foraging` | `sites`, `site_odors`, `sessions` | 38 | the `Site` and `SessionMetadata` pydantic models the packaging library writes its parquet from |
+| `dynamic_foraging` | `trials`, `blocks`, `sessions` | 62 | the 67 trial columns of two real sessions, split by which of them vary |
+| `aind_unit_qc` | `metrics`, `waveform_metrics`, `synchrony` | 42 | the 32 quality columns of a real NWB's 55, measured |
+| `aind_opto` | `stimulations`, `emissions` | 19 | the 17 `laser_*` columns the real NWB's `trials` table carries |
+| `vr_foraging` | `sites`, `site_odors`, `sessions` | 39 | the `Site` and `SessionMetadata` pydantic models the packaging library writes its parquet from |
 
 ## Why these, and why they are not core
 
@@ -70,6 +70,13 @@ units** contradict it, all with a span in the ordinary range, measured as that N
 `peak_to_valley`: the span is measured extremum to extremum, and the peak *counters* apply a
 prominence threshold, so a low-prominence waveform has a width and no detected peak. The rule is struck. `snr` already says what it was
 reaching for, and better.
+
+Units likewise come from the code that computed the values, not from the names. SpikeInterface fits
+velocity in µm/ms, declared `mm/s`. `spread` is a span of contact depths in µm, so it is `float64`
+even though every measured value is a multiple of the probe's 15 µm pitch. The slopes are the
+template's µV per second, and `exp_decay` is the exponential fit's constant over distances in µm.
+Those two hold only under the settings the analyzer records beside its metrics, `return_in_uV` and
+an exponential rather than linear fit, which every session measured uses.
 
 ## The source's columns are evidence, not a schema
 

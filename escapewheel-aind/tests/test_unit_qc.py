@@ -166,6 +166,16 @@ def test_every_declared_metric_is_one_the_adapter_reads(resource, mapping) -> No
     assert set(mapping) == declared - {"session_id", "unit_id"}
 
 
+def test_a_template_metric_arrives_as_its_declared_type(asset: Path) -> None:
+    """SpikeInterface computes `spread` as a float even where every value is integral."""
+    columns = REGISTRY["resources"]["aind_unit_qc.waveform_metrics"]["table"]["columns"]
+    declared = {column["name"]: {"float64": float, "int64": int}.get(column["type"]) for column in columns}
+    rows = UnitQCSource(asset, session_id="s1", units=UNITS).records()["aind_unit_qc.waveform_metrics"]
+    arrived = {(name, type(row[name])) for row in rows for name in WAVEFORM_METRICS.keys() & row.keys()}
+    assert "spread" in {name for name, _ in arrived}
+    assert {(name, kind) for name, kind in arrived if kind is not type(None)} <= set(declared.items())
+
+
 def test_a_stream_without_template_metrics_leaves_that_table_empty_and_says_so(tmp_path: Path) -> None:
     root = stream(tmp_path / "sorted", "experiment1_Record Node 109#Neuropix-PXI-100.A_recording1", template=False)
     source = UnitQCSource(root, session_id="s1", units=UNITS)
