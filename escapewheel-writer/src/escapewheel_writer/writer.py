@@ -457,7 +457,7 @@ def _digest(path: Path) -> str:
 
 
 class CommitRefused(Exception):
-    """Validation found errors, so nothing was committed.
+    """The packet's verdict was not ``passed``, so nothing was committed (Part 05 §9.2).
 
     Attributes
     ----------
@@ -466,8 +466,7 @@ class CommitRefused(Exception):
     """
 
     def __init__(self, report: Report, staging: Path) -> None:
-        errors = report.errors
-        super().__init__(f"{errors} error(s); staged resources left at {staging}")
+        super().__init__(f"packet {report.verdict()}, {report.errors} error(s); staged resources left at {staging}")
         self.report = report
         self.staging = staging
 

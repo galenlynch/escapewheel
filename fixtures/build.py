@@ -993,7 +993,7 @@ def main():
             write_packet(root / name, c)
         print(f"{name:26s}written")
 
-    # Two variants must break the physical schema, not the data.
+    # Three variants must break the physical schema, not the data.
     c = content()
     t = table("core.intervals", c["core.intervals"])
     wrong = t.set_column(
@@ -1003,6 +1003,17 @@ def main():
     )
     write_packet(root / "bad_type", c, raw={"core.intervals": wrong})
     print(f"{'bad_type':26s}written")
+
+    # Part 05 §5.4: an extension's table is type-checked as core's are, and the finding is its own.
+    c = content()
+    t = table(KIND, c[KIND])
+    wrong = t.set_column(
+        t.schema.get_field_index("trial_id"),
+        "trial_id",
+        t.column("trial_id").cast(pa.float64()),
+    )
+    write_packet(root / "extension_bad_type", c, raw={KIND: wrong})
+    print(f"{'extension_bad_type':26s}written")
 
     c = content()
     t = table("core.intervals", c["core.intervals"])

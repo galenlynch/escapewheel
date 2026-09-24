@@ -1,7 +1,7 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-and twenty-eight variants each violating exactly one rule. Together they are the conformance
+and twenty-nine variants each violating exactly one rule. Together they are the conformance
 corpus: expected findings recorded as data, so any implementation can be checked against
 the same evidence rather than against a prose description of what should happen.
 
@@ -56,6 +56,7 @@ description, and is not all of them.
 | `unsorted_spikes` | rows out of declared sort order | `core.spike_events.physical_order` (warning) |
 | `orphan_manifest_session` | manifest disagrees with `core.sessions` | `core.sessions.manifest_sessions_match` |
 | `bad_type` | `start_tick` written as int32 | `schema.column_type` |
+| `extension_bad_type` | the extension's `trial_id` written as float64 | `schema.column_type`, filed under `dynamic_foraging`, which fails while core passes |
 | `missing_column` | required column absent from the file | `schema.column_absent` |
 
 `bad_vocabulary` uses `good` deliberately: it is Phy's label for a single unit, and the

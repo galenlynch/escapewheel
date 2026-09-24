@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-23 |
 | **Based on** | `0b82c8a9b981990ce9f1486263abef44b13974f6` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -224,7 +224,7 @@ composition for a later decision, which this revision supplies.
 | semantic prose | Unchanged. No scientific meaning changes. | None required. |
 | logical prose and registry | Unchanged. A declaration already names its registry, and no rule, column, or identity changes. | None required. |
 | physical profiles | Unchanged. The physical checks that reach extension resources are those Part 03 and Part 05 §5.3 already define. | None required. |
-| packet manifest and JSON Schemas | Part 04 §9 cites Part 05 §9.2 for a published manifest's `status`, and Part 04 §10 cites Part 05 §9.2 and the planned section 9.5. The schema is unchanged. | `evidence/R<N>.json` names both anchors. |
+| packet manifest and JSON Schemas | Part 04 §9 cites Part 05 §9.2 for a published manifest's `status`, and Part 04 §10 cites Part 05 §9.2 and the planned section 9.5. The schema is unchanged. | `evidence/R132.json` names both anchors. |
 | validation and import | Part 05 gains section 9.5 and revises §§5.3, 5.4, 9.2, 10, and 14.5; Part 00 §4.1 cites Part 05 §9.2. | The fixtures and tests below. |
 | extensions | Registry content is unchanged. Their resources receive core's packet checks, which every extension exercised by the §2.3 probe passes. | The AIND extension suite and the corpus. |
 | reader, writer, validator, adapters | The validator reports three-state verdicts for the packet, core, and each bound extension; findings carry their subject into JSON; top-level `status` becomes the packet verdict; array, digest, and file findings are attributed by declaration; every packet check reaches extension resources; and the command line reports and exits on the packet verdict. The writer's commit and amendment gates, its `verify` command, and its command-line import use the packet verdict. The reader and adapters are unchanged; Tier 1 generation already runs per registry. | Validator and writer tests below. |

@@ -25,9 +25,9 @@ authoritative specification candidate. Part 00 defines
 
 The four conformance actors are summarized in
 [Part 00 §2.4](00_architecture.md#ew-specification-actors). Packet and writer conformance are
-defined in [Part 05 §10](05_validation_and_import.md#ew-conformance-classes). Reader resolution is
-defined by Parts 03 and 04, and extension independence and verdict composition are defined by
-Part 09.
+defined in [Part 05 §10](05_validation_and_import.md#ew-conformance-classes), and verdict
+composition in [Part 05 §9.5](05_validation_and_import.md#ew-verdict-composition). Reader
+resolution is defined by Parts 03 and 04, and extension independence by Part 09.
 
 ## 3. Numbered parts
 

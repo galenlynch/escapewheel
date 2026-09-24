@@ -289,15 +289,15 @@ def test_an_extension_matches_only_the_logical_standard(packet_root, extension_d
     _edit(packet_root, lambda m: m.update(logical_standard_version="escapewheel-other-v9"))
     report, _ = check_packet_manifest(packet_root)
     standard = [f for f in report.findings if f.check == "packet.registry.standard"]
-    assert {f.extension for f in standard} == {None, "task"}
+    assert {f.registry for f in standard} == {"core", "task"}
 
 
 def test_an_extension_binding_finding_is_attributed_to_it(packet_root, extension_document):
     install_registry(packet_root, extension_document)
     _edit(packet_root, lambda m: m["registries"]["task"].update(version="9.9.9"))
     report, bound = check_packet_manifest(packet_root)
-    assert [(f.check, f.extension) for f in report.findings] == [("packet.registry.version", "task")]
-    assert report.passed
+    assert [(f.check, f.registry) for f in report.findings] == [("packet.registry.version", "task")]
+    assert report.verdict("task") == "failed" and not report.passed
     assert bound.core is not None and bound.extensions == {}
 
 

@@ -39,6 +39,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "spike_outside_window": ("warning", "core.spike_events.within_observation"),
     "orphan_manifest_session": ("error", "core.sessions.manifest_sessions_match"),
     "bad_type": ("error", "schema.column_type"),
+    "extension_bad_type": ("error", "schema.column_type"),
     "missing_column": ("error", "schema.column_absent"),
     "no_reference_clock": ("error", "core.sessions.reference_clock_declared"),
     "clock_cycle": ("error", "core.clocks.parent_chain_well_founded"),
@@ -57,6 +58,10 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
         "session_id_coordinate_frame_axis_index_resolves",
     ),
 }
+
+#: Packets whose expected finding belongs to an extension (Part 05 §9.5), which must fail that
+#: extension and the packet and leave core passed.
+EXTENSION_FINDINGS: dict[str, str] = {"extension_bad_type": "dynamic_foraging"}
 
 #: Packets whose expected finding is advisory (Part 02 §10.2). Advisory rules are off by default --
 #: enabling them must never change whether a packet passed -- so these run with them on, and
@@ -78,7 +83,19 @@ def main() -> int:
             verdict = "clean" if ok else "UNEXPECTED FINDINGS"
         else:
             level, check = expect
-            ok = any(f.check == check and f.level == level for f in report.findings)
+            subject = EXTENSION_FINDINGS.get(name)
+            ok = any(
+                f.check == check
+                and f.level == level
+                and (subject is None or f.registry == subject)
+                for f in report.findings
+            )
+            if subject is not None:
+                ok = ok and (
+                    report.verdict(subject),
+                    report.verdict("core"),
+                    report.verdict(),
+                ) == ("failed", "passed", "failed")
             verdict = "caught" if ok else f"MISSED {check}"
         if not ok:
             failures.append((name, verdict, sorted({f.check for f in report.findings})))

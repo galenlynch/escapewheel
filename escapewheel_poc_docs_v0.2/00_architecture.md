@@ -265,7 +265,8 @@ identity system.
 ### 4.1 Requirements
 
 The core content class MUST contain canonical facts in the logical schemas of Part 02. A writer
-MUST validate core resources before it commits them. The required minimum is the closure of Part
+publishes a packet, core resources included, only as
+[Part 05 §9.2](05_validation_and_import.md#ew-error-policy) permits. The required minimum is the closure of Part
 02's declaration presence, dependency, populated-reference, and catalog rules; membership in the core class alone does not require an instance.
 
 A fact belongs in core when common interpretation, validation, joining or analysis would break

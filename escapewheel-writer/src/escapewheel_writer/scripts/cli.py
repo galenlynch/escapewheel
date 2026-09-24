@@ -275,32 +275,31 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
     try:
         report = writer.commit(out, limits=limits or None, say=say, materialize=derive)
     except CommitRefused as exc:
-        for finding in exc.report.findings[:20]:
-            print(f"  {finding.level:8s} {finding.check}: {finding.message}", file=sys.stderr)
-        print(f"refused: {exc.report.errors} error(s); staging left at {exc.staging}", file=sys.stderr)
+        _say_refusal(exc)
         return 1
     if dropped := compare.lost(reference, compare.resources(out)):
         where = "the packet it replaces" if not args.compare else str(args.compare)
         print(f"warning: {len(dropped)} resource(s) in {where} are not in this build:", file=sys.stderr)
         for resource_id in dropped:
             print(f"  lost  {resource_id}", file=sys.stderr)
-    _say_verdict(out, report)
+    print(f"committed {out} — {report.warnings} warning(s)")
     return 0
 
 
-def _say_verdict(out: Path, report: Any) -> None:
-    """Report core's verdict and the extensions' apart, as Part 05 §5.4 keeps them.
-
-    A packet stays core-conformant carrying an extension whose rules a validator cannot run, so
-    one total conflates two verdicts and reads as a packet that committed despite an error.
-    """
-    failed = [f for f in report.findings if f.level == "error" and f.extension is not None]
-    line = f"committed {out} — {report.errors - len(failed)} core error(s), {report.warnings} warning(s)"
-    if failed:
-        line += f"; {len(failed)} extension error(s), which do not change the core verdict"
-    print(line)
-    for finding in failed:
-        print(f"  {finding.extension}: {finding.check}: {finding.message}", file=sys.stderr)
+def _say_refusal(exc: CommitRefused) -> None:
+    """Name each registry's verdict, so a refusal says whether core or an extension failed (Part 05 §9.5)."""
+    report = exc.report
+    for finding in [f for f in report.findings if f.level == "error"][:20]:
+        where = f"[{finding.registry}] " if finding.registry else ""
+        print(f"  {finding.level:8s} {where}{finding.check}: {finding.message}", file=sys.stderr)
+    for evaluation in report.evaluations:
+        if evaluation.status != "complete":
+            print(f"  {evaluation.status:8s} [{evaluation.registry}] {evaluation.rule or ''}", file=sys.stderr)
+    verdicts = ", ".join(f"{name} {report.verdict(name)}" for name in report.bound)
+    print(
+        f"refused: packet {report.verdict()} ({verdicts}), {report.errors} error(s); staging left at {exc.staging}",
+        file=sys.stderr,
+    )
 
 
 def _verify(args: argparse.Namespace) -> int:

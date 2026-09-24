@@ -24,13 +24,21 @@ retains every acquired registry's result, labelled by registry ID. Only a bound 
 passed binding and is valid directs packet checks; no caller-supplied registry can stand in for
 one. An extension that fails binding withholds only its own entries.
 
+An extension's resources receive every storage check core's do: column types, physical order,
+duplication, unfilled `metadata`, reserved values, and unit codes (Part 05 §5.4). Each finding
+belongs to the packet or to one bound registry, and the report gives the packet, core, and each
+bound extension a verdict of `passed`, `failed`, or `incomplete` (Part 05 §9.5). The packet's
+verdict is the worst of them, so a failing extension fails the packet and leaves core `passed`.
+The JSON report's `status` is the packet verdict, `verdicts` maps each registry ID to its own, and
+each finding's `registry` names its subject, `null` for the packet.
+
 Rules are **data, not code**. `registry/logical_schemas.json` carries every table's structure
 and its Tier 2 rules, and the checks are generated from it rather than written per table. The
 execution contract is the whole protocol: **a check's query returns offending rows — empty is
 a pass, non-empty is a failure and the rows are the finding.**
 
 ```bash
-escapewheel validate packet/              # exits non-zero on any error
+escapewheel validate packet/              # exits non-zero unless the packet verdict is passed
 escapewheel validate packet/ --advisory   # include rules that are off by default (R26)
 ```
 
@@ -39,7 +47,8 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
 report = validate(open_packet("packet/"))
-report.passed, report.errors, report.warnings
+report.passed, report.errors, report.warnings  # passed: the packet verdict is `passed`
+report.verdict(), report.verdict("core")       # "passed", "failed", or "incomplete"
 report.registries  # complete, role-labelled registry-document results
 ```
 

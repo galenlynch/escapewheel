@@ -9,6 +9,7 @@ from escapewheel_reader import RegistryUnavailable, open_packet
 from escapewheel_validator import validate
 from escapewheel_validator.generate import Check, concerns
 from escapewheel_validator.generate import _generate as generate
+from escapewheel_validator.validator import check_packet_manifest
 
 from .conftest import install_registry, read_registry
 
@@ -1432,7 +1433,9 @@ def _extension(root, *, tables=None, mutate=None):
     if mutate is not None:
         mutate(rows)
     (root / "tables" / "task").mkdir(parents=True, exist_ok=True)
-    pq.write_table(pa.table(rows), root / "tables" / "task" / "trials.parquet")
+    types = {"session_id": pa.int32(), "trial_id": pa.int32(), "choice": pa.string()}
+    table = pa.table({name: pa.array(values, type=types.get(name)) for name, values in rows.items()})
+    pq.write_table(table, root / "tables" / "task" / "trials.parquet")
     install_registry(root, document)
 
     manifest = json.loads((root / "packet.json").read_text())
@@ -1466,17 +1469,109 @@ def test_an_extension_reference_into_core_resolves(packet_root):
     never generated and an orphan validates clean -- the gap R46 closed for core."""
     root = _extension(packet_root, mutate=lambda r: r["trial_id"].__setitem__(0, 999))
     report = validate(open_packet(root))
-    assert any(f.check.endswith("_resolves") and f.extension == "task" for f in report.findings)
+    assert any(f.check.endswith("_resolves") and f.registry == "task" for f in report.findings)
 
 
-def test_an_extension_finding_does_not_fail_core(packet_root):
-    """Part 05 §5.4. A core validator need not hold the schema at all, so holding it must not be able
-    to fail a packet that passes without it."""
+def _verdicts(report, *registries):
+    return report.verdict(), *(report.verdict(name) for name in registries)
+
+
+def test_an_extension_finding_fails_the_packet_and_not_core(packet_root):
+    """Part 05 §9.5: an extension's resources are the packet's, so its failure is the packet's too."""
     root = _extension(packet_root, mutate=lambda r: r["choice"].__setitem__(0, "sideways"))
     report = validate(open_packet(root))
-    assert report.passed, "core conformance is unchanged"
-    assert not report.extension_passed("task")
-    assert report.extensions == ("task",)
+    assert _verdicts(report, "core", "task") == ("failed", "passed", "failed")
+    assert not report.passed
+    assert report.bound == ("core", "task")
+
+
+def test_one_extension_failing_leaves_another_passed(packet_root):
+    root = _required_extension(_extension(packet_root, mutate=lambda r: r["choice"].__setitem__(0, "?")), "cue")
+    report = validate(open_packet(root))
+    assert _verdicts(report, "core", "task", "cue") == ("failed", "passed", "failed", "passed")
+
+
+def test_an_extension_table_receives_the_storage_checks(packet_root):
+    """Part 05 §5.4: a column type an extension declares is checked as core's are, and filed under it."""
+    root = _extension(packet_root)
+    table = pq.read_table(root / "tables" / "task" / "trials.parquet")
+    widened = table.set_column(0, "session_id", table["session_id"].cast(pa.int64()))
+    pq.write_table(widened, root / "tables" / "task" / "trials.parquet")
+    report = validate(open_packet(root))
+    finding = next(f for f in report.findings if f.check == "schema.column_type")
+    assert finding.registry == "task" and finding.message.startswith("task.trials.session_id")
+    assert _verdicts(report, "core", "task") == ("failed", "passed", "failed")
+
+
+def test_an_extension_unit_column_is_checked_against_ucum(packet_root):
+    """Part 05 §5.3's unit-code check covers every directing registry's tables."""
+    root = _extension(packet_root)
+    document = read_registry(root, "task")
+    choice = document["resources"]["task.trials"]["table"]["columns"][2]
+    choice.pop("enum")
+    choice |= {"vocabulary": "open", "authority": [{"name": "UCUM", "uri": "https://ucum.org/ucum"}]}
+    install_registry(root, document)
+    table = pq.read_table(root / "tables" / "task" / "trials.parquet")
+    pq.write_table(
+        table.set_column(2, "choice", pa.array(["mV", "volts"])), root / "tables" / "task" / "trials.parquet"
+    )
+    report = validate(open_packet(root))
+    finding = next(f for f in report.findings if f.check == "task.trials.choice.ucum_code")
+    assert finding.registry == "task" and finding.rows == (("volts",),)
+    assert _verdicts(report, "core", "task") == ("failed", "passed", "failed")
+
+
+def test_an_extension_array_defect_fails_the_extension_and_not_core(packet_root):
+    """Part 05 §9.5: an array finding belongs to the registry declaring the array, not to core."""
+    _add_array(packet_root, declared=["sharding_indexed", "blosc"], document=_zarr_v3(fill_value=None))
+    core = read_registry(packet_root)
+    declaration = core["resources"].pop("core.array_asset_instances") | {"content_class": "extension"}
+    install_registry(packet_root, core)
+    install_registry(
+        packet_root,
+        {
+            "$schema": core["$schema"],
+            "registry_id": "probe",
+            "registry_version": "0.1.0",
+            "logical_standard_version": core["logical_standard_version"],
+            "rule_language": core["rule_language"],
+            "extension_id": "probe",
+            "resources": {"probe.waveforms": declaration},
+        },
+    )
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    for entry in manifest["resources"]:
+        if entry["resource_id"] == "core.waveform_mean":
+            entry |= {"resource_id": "probe.waveform_mean", "declaration_id": "probe.waveforms"}
+    (packet_root / "packet.json").write_text(json.dumps(manifest))
+    assets = pq.read_table(packet_root / "tables" / "core" / "array_assets.parquet")
+    _rewrite(packet_root, "array_assets", assets.set_column(2, "resource_id", pa.array(["probe.waveform_mean"])))
+    report = validate(open_packet(packet_root))
+    finding = next(f for f in report.findings if f.check == "array.no_fill_value")
+    assert finding.registry == "probe"
+    assert _verdicts(report, "core", "probe") == ("failed", "passed", "failed")
+
+
+def test_a_shape_finding_leaves_every_registry_incomplete(packet_root):
+    """Part 05 §9.5: an early-phase finding withholds every registry's evaluation."""
+    root = _extension(packet_root)
+    manifest = json.loads((root / "packet.json").read_text())
+    manifest["created_at"] = "yesterday"
+    (root / "packet.json").write_text(json.dumps(manifest))
+    report, _ = check_packet_manifest(root)
+    assert [(f.check, f.registry) for f in report.findings] == [("packet.manifest.schema", None)]
+    assert _verdicts(report, "core", "task") == ("failed", "incomplete", "incomplete")
+
+
+def test_the_json_report_states_every_verdict_and_subject(packet_root):
+    """Part 05 §9.5: a report states the packet's verdict, each registry's, and each finding's subject."""
+    root = _extension(packet_root, mutate=lambda r: r["choice"].__setitem__(0, "sideways"))
+    document = validate(open_packet(root)).to_dict("p")
+    assert document["status"] == "failed"
+    assert document["verdicts"] == {"core": "passed", "task": "failed"}
+    errors = [f for f in document["findings"] if f["level"] == "error"]
+    assert [(f["check"], f["registry"]) for f in errors] == [("task.trials.choice.in_vocabulary", "task")]
+    assert json.loads(json.dumps(document)) == document
 
 
 def test_an_extension_the_packet_does_not_carry_is_reported_not_run(packet_root):
@@ -1508,9 +1603,7 @@ def test_validator_preserves_an_available_unparseable_extension_result(packet_ro
     report = validate(open_packet(root))
     task = next(item for item in report.registries if item.subject == "task")
     assert task.result.state == "invalid"
-    assert report.passed
-    assert not report.extension_passed("task")
-    assert "task" in report.extensions
+    assert _verdicts(report, "core", "task") == ("failed", "passed", "failed")
     assert not any(f.check == "extension.validated" for f in report.findings)
 
 
@@ -1522,9 +1615,8 @@ def test_an_extension_that_fails_binding_withholds_only_its_entries(packet_root)
     (root / "packet.json").write_text(json.dumps(manifest))
     report = validate(open_packet(root))
     binding = next(f for f in report.findings if f.check == "packet.registry.version")
-    assert binding.extension == "task"
-    assert report.passed
-    assert not report.extension_passed("task")
+    assert binding.registry == "task"
+    assert _verdicts(report, "core", "task") == ("failed", "passed", "failed")
     assert not [f for f in report.findings if f.check.startswith("packet.resource.") and "task." in f.message]
     assert any(e.registry == "core" for e in report.evaluations)
 
@@ -1588,7 +1680,7 @@ def test_two_bound_extensions_pass_and_activate_their_required_singletons(packet
     """Part 02 §2.5: binding an extension activates its required declarations."""
     root = _required_extension(_required_extension(packet_root, "cue"), "lick")
     report = validate(open_packet(root))
-    assert report.passed and report.extension_passed("cue") and report.extension_passed("lick")
+    assert _verdicts(report, "core", "cue", "lick") == ("passed", "passed", "passed", "passed")
 
     manifest = json.loads((root / "packet.json").read_text())
     manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != "lick.marks"]

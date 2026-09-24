@@ -143,7 +143,7 @@ the order matters.
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
    Changing what Tier 1 means is a code change in `generate.py`, not a data change.
-8. **`fixtures/build.py`** writes the 26-packet conformance corpus against the registry;
+8. **`fixtures/build.py`** writes the 30-packet conformance corpus against the registry;
    `fixtures/corpus.py` runs each through the real validator and checks it produced the finding
    it was built to produce.
 
@@ -195,7 +195,7 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 702 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 708 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for

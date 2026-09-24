@@ -255,7 +255,9 @@ only in the bound registries.
 <!-- END GENERATED MANIFEST FIELDS: validation -->
 
 A failed or incomplete validation result cannot support a conformance claim. It does not alter a
-resource's declaration-derived content class or canonicality. A writer keeps staged resources out
+resource's declaration-derived content class or canonicality.
+[Part 05 §9.2](05_validation_and_import.md#ew-error-policy) permits only `passed` as the `status` of
+a published manifest. A writer keeps staged resources out
 of a committed manifest until the applicable publication gate passes rather than representing
 staging by changing canonicality.
 
@@ -321,8 +323,9 @@ A binding finding for an extension registry withholds only that registry. The `d
 MUST run from every bound registry that passed binding, and a checker MUST NOT report a
 declaration finding for an entry whose `declaration_id` namespace is the ID of an extension
 registry that failed. A failed core registry withholds the whole `declaration` phase, because every
-extension's checked context needs core. Part 09 §5.4 continues to attribute an extension's findings
-and compose the verdicts.
+extension's checked context needs core.
+[Part 05 §9.5](05_validation_and_import.md#ew-verdict-composition) attributes each finding and
+composes the verdicts.
 
 A reader loading a manifest MUST decode it as UTF-8 JSON, MUST reject a repeated object member, and
 MUST reject a repeated `resource_id` before it builds a lookup by resource ID or exposes an entry.
@@ -341,7 +344,8 @@ or obtain a registry result for ordinary access.
 A writer MUST serialize each registry document, compute its digest over those exact bytes, store it
 as the packet's physical profile requires, and record its descriptor before writing the final
 manifest. A writer MUST NOT publish a manifest with a finding in the `json`, `shape`, `entries`, or
-`registry_binding` phase.
+`registry_binding` phase, and publishes any manifest only as
+[Part 05 §9.2](05_validation_and_import.md#ew-error-policy) permits.
 
 <a id="ew-packet-catalog-normative-references" data-spec-anchor="canonical"></a>
 ## 11. Normative references

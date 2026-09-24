@@ -229,6 +229,7 @@
 "9.2" = "Error policy"
 "9.3" = "Comparison against a prior packet"
 "9.4" = "Incomplete validation"
+"9.5" = "Verdicts"
 "10" = "Two conformance classes"
 "11" = "Minimum acceptance criteria"
 "12" = "Alternatives are resolved before a commit"
@@ -1103,4 +1104,10 @@ aliases = []
 part = "05"
 section = "14.5"
 title = "Validator reactions"
+aliases = []
+
+[anchor.ew-verdict-composition]
+part = "05"
+section = "9.5"
+title = "Verdicts"
 aliases = []

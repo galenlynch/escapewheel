@@ -10,6 +10,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader.scripts.cli import main
 
+from .test_validation import _extension
+
 
 def test_validate_reports_a_conforming_packet(packet_root, capsys):
     assert main(["validate", str(packet_root)]) == 0
@@ -41,3 +43,12 @@ def test_validate_reports_a_manifest_the_reader_refuses(packet_root, capsys):
     path.write_text(json.dumps(manifest))
     assert main(["validate", str(packet_root)]) == 1
     assert "packet.resource.id_unique" in capsys.readouterr().out
+
+
+def test_validate_exits_on_the_packet_verdict(packet_root, capsys):
+    """Part 05 §9.5: a failing extension fails the packet even where core passes."""
+    root = _extension(packet_root, mutate=lambda rows: rows["choice"].__setitem__(0, "sideways"))
+    assert main(["validate", str(root)]) == 1
+    out = capsys.readouterr().out
+    assert "[task] task.trials.choice.in_vocabulary" in out
+    assert "core: passed" in out and "task: failed" in out

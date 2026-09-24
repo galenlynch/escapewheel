@@ -1,14 +1,16 @@
 """A packet carries an extension's table the same way it carries a core one (R17)."""
 
+import copy
 import json
 from pathlib import Path
 
 import pyarrow as pa
 import pytest
 from escapewheel_reader import open_packet
-from escapewheel_validator import RegistryRejected, validate
+from escapewheel_validator import RegistryRejected
 
 from escapewheel_writer import PacketWriter
+from escapewheel_writer.writer import CommitRefused
 
 EXTENSION = {
     "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
@@ -95,8 +97,8 @@ TRIALS = [
 ]
 
 
-def _commit(root, registry, minimal, *, choice="left"):
-    writer = PacketWriter(registry, packet_id=root.name, extensions=[EXTENSION])
+def _commit(root, registry, minimal, *, choice="left", extension=EXTENSION):
+    writer = PacketWriter(registry, packet_id=root.name, extensions=[extension])
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
     writer.add("core.intervals", TRIALS)
@@ -146,13 +148,36 @@ def test_the_entry_binds_the_extension_declaration(tmp_path, registry, minimal):
     assert entry["declaration_id"] == "task.trials"
 
 
-def test_the_extension_is_validated_and_reported_apart(tmp_path, registry, minimal):
+def test_a_failing_extension_refuses_the_commit(tmp_path, registry, minimal):
+    """Part 05 §9.2: a packet is published only whole, so an extension's failure refuses it."""
     root = tmp_path / "s001"
-    _commit(root, registry, minimal, choice="sideways")
-    report = validate(open_packet(root))
-    assert report.passed, "core conformance is unchanged by an extension's finding (Part 05 §5.4)"
-    assert not report.extension_passed("task")
-    assert "task.trials.choice.in_vocabulary" in {f.check for f in report.findings}
+    with pytest.raises(CommitRefused) as refused:
+        _commit(root, registry, minimal, choice="sideways")
+    report = refused.value.report
+    assert (report.verdict(), report.verdict("core"), report.verdict("task")) == ("failed", "passed", "failed")
+    assert "task.trials.choice.in_vocabulary" in {f.check for f in report.findings if f.registry == "task"}
+    assert not (root / "packet.json").exists()
+
+
+def test_an_incomplete_verdict_refuses_the_commit(tmp_path, registry, minimal):
+    """Part 05 §9.2: an unjudged packet is not a passing one, so the writer publishes nothing."""
+    overflowing = copy.deepcopy(EXTENSION)
+    overflowing["resources"]["task.trials"]["table"]["rules"].append(
+        {
+            "id": "task.trials.overflow",
+            "level": "error",
+            "message": "an evaluation that cannot complete",
+            "sql": "SELECT CAST(trial_id + 1000 AS DECIMAL(38,0)) * 99999999999999999999999999999999999999 AS x "
+            "FROM task.trials",
+        }
+    )
+    root = tmp_path / "s001"
+    with pytest.raises(CommitRefused) as refused:
+        _commit(root, registry, minimal, extension=overflowing)
+    report = refused.value.report
+    assert (report.verdict(), report.verdict("task")) == ("incomplete", "incomplete")
+    assert report.errors == 0
+    assert not (root / "packet.json").exists()
 
 
 def test_a_core_table_cannot_be_redefined(registry):

@@ -257,7 +257,8 @@ where = [{ part = "00", anchor = "ew-packet-content-classes" }]
 
 [clause."R71 §2.2"]
 disposition = "applied"
-where = [{ part = "00", anchor = "ew-core-content-requirements" }]
+where = [{ part = "05", anchor = "ew-error-policy" }]
+note = "Part 00 §4.1 cites it; R132 §3.4 widened the obligation from core resources to the packet verdict"
 
 [clause."R71 §2.3"]
 disposition = "applied"
@@ -284,8 +285,8 @@ note = "restated whole in R90 §3; was a paired-value discriminator keeps R55 §
 
 [clause."R72 §2.4"]
 disposition = "applied"
-where = [{ part = "09", section = "5.4" }]
-note = "the conjunction was filed at Part 00 §3.2, which states R71 §2.1's canonical set that it follows from and says nothing of a verdict; it is stated beside R17 §4's separability, which is what R72 §2.4 adds to"
+where = [{ part = "05", anchor = "ew-verdict-composition" }]
+note = "the packet verdict is the worst of the packet's own, core's, and every bound extension's; moved from Part 09 §5.4 by R132"
 
 [clause."R74 §2.1"]
 disposition = "applied"
@@ -1076,7 +1077,8 @@ where = [{ part = "09", section = "5.1" }]
 
 [clause."R17 §4"]
 disposition = "applied"
-where = [{ part = "05", section = "5.4" }]
+where = [{ part = "05", anchor = "ew-verdict-composition" }]
+note = "separate verdicts for core and each extension; moved from Part 05 §5.4 when R132 composed verdicts in Part 05 §9.5"
 
 [clause."R57 §2.1"]
 disposition = "applied"
@@ -3277,4 +3279,34 @@ note = "neither non-rejection rule covers a unit column's non-code; no dereferen
 [clause."R131 §3.3"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-validation-shim" }]
-note = "the shim parses core's unit columns and reports <declaration_id>.<column>.ucum_code at error"
+note = "the shim parses every directing registry's unit columns and reports <declaration_id>.<column>.ucum_code at error; R132 §3.3 widened it from core's"
+
+[clause."R132 §3.1"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-verdict-composition" }, { part = "05", anchor = "ew-conformance-classes" }, { part = "05", anchor = "ew-validator-registry-boundary" }]
+note = "passed, failed, or incomplete for the packet, core, and each bound extension; the packet verdict is the worst"
+
+[clause."R132 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-verdict-composition" }]
+note = "each finding belongs to the packet or to exactly one bound registry"
+
+[clause."R132 §3.3"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim" }, { part = "05", anchor = "ew-validation-extensions" }]
+note = "an extension's resources receive every check core's receive by kind or declaration"
+
+[clause."R132 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-error-policy" }, { part = "04", anchor = "ew-packet-validation-block" }, { part = "04", anchor = "ew-packet-manifest-conformance" }]
+note = "a writer publishes a manifest version only for a passed packet"
+
+[clause."R132 §3.5"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-verdict-composition" }]
+note = "a report states every verdict and each finding's subject; no report schema"
+
+[clause."R132 §3.6"]
+disposition = "applied"
+where = [{ part = "09", anchor = "ew-extension-verdicts" }]
+note = "an extension's findings never change core's verdict; a consumer may read core from a packet whose extension fails"

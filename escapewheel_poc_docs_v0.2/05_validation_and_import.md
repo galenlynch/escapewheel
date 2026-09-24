@@ -226,15 +226,20 @@ implementation mechanism.
 
 The shim MUST parse each distinct non-null value of each
 [unit column](02_core_logical_schemas.md#ew-unit-and-clock-context) in every table resource whose
-declaration the core registry holds, under the UCUM edition Part 02 §8.4 names. It MUST report each
-value that is not a unit code at `error` under the check ID `<declaration_id>.<column>.ucum_code`,
-such as `core.units.amplitude_unit.ucum_code`, naming that value once. The finding is core's. The
-shim declares each such table as an input.
+declaration a registry directing packet checks holds, under the UCUM edition Part 02 §8.4 names. It
+MUST report each value that is not a unit code at `error` under the check ID
+`<declaration_id>.<column>.ucum_code`, such as `core.units.amplitude_unit.ucum_code`, naming that
+value once. The finding belongs to the registry holding that declaration under
+[§9.5](#ew-verdict-composition). The shim declares each such table as an input.
 
 <a id="ew-validation-extensions" data-spec-anchor="canonical"></a>
 ### 5.4 Extensions
 
-Each extension registry present is validated on the same terms as core, and its verdict is reported separately. A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension failure invalidate core.
+A validator MUST apply to each resource an extension declares every check of §§5.1–5.3 that a core
+resource receives because of its logical kind or its declarations, directed by that extension's
+checked context. A check that applies to one named core resource, such as the session-inventory
+check of §5.3, does not extend. [§9.5](#ew-verdict-composition) assigns the extension's findings to
+it and composes its verdict with core's.
 
 ## 6. Stage 5: Commit
 
@@ -286,7 +291,10 @@ A finding declares a level, the check that produced it, and a message. Where a c
 <a id="ew-error-policy" data-spec-anchor="canonical"></a>
 ### 9.2 Error policy
 
-An import MUST refuse to commit on any error.
+A writer MUST NOT publish a manifest, whether as a first commit or as a later version, unless the
+verdict of the packet it describes is `passed` under [§9.5](#ew-verdict-composition), and MUST
+record `passed` as that manifest's `validation.status`. A packet whose extension fails is therefore
+published in no partial form; its writer corrects the extension or builds the packet without it.
 
 A validator MUST NOT downgrade an error to make a packet pass. An advisory rule MUST NOT be an error (Part 02 §10.2), so enabling advisory checks cannot change whether a packet previously passed.
 
@@ -303,6 +311,48 @@ input, engine failure, exact overflow, out-of-range timestamp, timeout, or resou
 affected required evaluation incomplete. A validator MUST NOT turn its inability to evaluate into
 an error-level packet finding. Core and every extension retain separate evaluation state.
 
+<a id="ew-verdict-composition" data-spec-anchor="canonical"></a>
+### 9.5 Verdicts
+
+A validator MUST attribute each finding to exactly one subject: the packet, its core registry, or
+one extension registry its manifest binds.
+
+- A `registry_binding` finding, and each outcome of a bound registry's
+  [Part 02 §9.4](02_core_logical_schemas.md#ew-registry-conformance) result, belongs to the registry
+  it concerns.
+- A finding produced by a generated check or a declared rule belongs to the registry whose
+  declaration generated or declares it.
+- Any other finding about one resource entry, or the resource it locates, belongs to the registry
+  whose declaration the entry's `declaration_id` names. For a reference, dependency, or lineage
+  finding, that entry is the one holding the reference, the `requires` declaration, or the
+  `derived_from` member, and for `packet.resource.required_missing` it is the absent singleton's
+  declaration.
+- Every other finding belongs to the packet, including every finding of the `json`, `shape`, and
+  `entries` phases, `packet.resource.declaration_unknown`, and `packet.resource.lineage_cycle`.
+
+A validator reports a **verdict** for the packet, for its core registry, and for each bound
+extension registry. A verdict is `passed`, `failed`, or `incomplete`. A subject's verdict is:
+
+1. `failed` where an error-level finding belongs to the subject, or its bound registry's Part 02
+   result is `invalid`;
+2. otherwise `incomplete` where an evaluation the subject requires did not complete or was withheld,
+   or its bound registry's result is `unsupported` or `incomplete`; and
+3. otherwise `passed`.
+
+The packet verdict is the worst, in the order `failed`, `incomplete`, `passed`, of the verdict its
+own findings give the packet, core's verdict, and every bound extension's verdict. Only a packet
+verdict of `passed` supports the packet conformance claim of [§10](#ew-conformance-classes).
+
+Where [Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance) or
+[§14.5](#ew-validator-registry-boundary) withholds an evaluation, the subject it was withheld from is
+at best `incomplete`. A finding in the `json`, `shape`, or `entries` phase withholds every registry's
+evaluation; a core registry that fails binding or whose result is not `valid` withholds every
+extension's packet checks; and an extension registry that fails binding withholds its own.
+
+A validator's report MUST state the packet verdict, core's verdict, and each bound extension's
+verdict, and MUST state each finding's subject. This specification defines no validation-report
+schema.
+
 <a id="ew-conformance-classes" data-spec-anchor="canonical"></a>
 ## 10. Two conformance classes
 
@@ -314,8 +364,8 @@ required evaluation, and produces no error-level finding from the checks of this
 unsupported, or incomplete required evaluation cannot support a conformance claim. A conforming
 packet MAY omit any optional instance, but every packet resource the manifest lists MUST resolve a logical
 declaration. A payload that Escapewheel treats as opaque still requires a declaration; an extension
-registry is the data-driven route for a resource core does not define. Part 09 §5.4 defines how
-core and extension verdicts compose.
+registry is the data-driven route for a resource core does not define.
+[§9.5](#ew-verdict-composition) defines how the packet, core, and extension verdicts compose.
 
 **Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming.
 
@@ -502,9 +552,9 @@ packet's.
 Only a `valid` context directs generation or execution of registry-derived packet checks. For a
 non-valid result, the validator retains the complete result, skips every dependent packet check,
 preserves invalid outcomes as registry-document findings, and does not fabricate packet findings
-for unsupported, incomplete, or skipped work. Independent checks may continue. Extension-table
-byte validation and final composition of core, extension, and packet verdicts are not defined
-here. A non-valid required evaluation remains
+for unsupported, incomplete, or skipped work. Independent checks may continue.
+[§5.4](#ew-validation-extensions) extends the packet checks to extension resources, and
+[§9.5](#ew-verdict-composition) composes the verdicts. A non-valid required evaluation remains
 insufficient to support a conformance claim.
 
 <a id="ew-registry-result-reporting" data-spec-anchor="canonical"></a>

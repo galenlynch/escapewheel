@@ -84,8 +84,9 @@ sorter's units before it can attach a unit to an electrode.
 
 Part 05 Stage 5: write staged resources, validate them where they stand, move them into place, and
 rename the manifest **last**. Until that rename the root holds no manifest at all, so a reader
-finds nothing rather than a partial import claiming to be valid. A commit that finds errors
-raises `CommitRefused` and leaves `staging/` for inspection.
+finds nothing rather than a partial import claiming to be valid. A commit or amendment whose packet
+verdict is not `passed` raises `CommitRefused` and leaves `staging/` for inspection, so a failing
+extension or an incomplete evaluation publishes nothing (Part 05 §9.2).
 
 ## Installation
 

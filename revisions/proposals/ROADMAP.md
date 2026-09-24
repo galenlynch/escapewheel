@@ -308,7 +308,7 @@ P1 authority framework
 | P5.1 | Logical resource declarations and resource classification | P4.2 | [R128](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md) |
 | P5.2 | Portable-profile interfaces and reader floor | P5.1 | [R129](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md) |
 | P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | [R130](../accepted/R130-a-packet-binds-the-exact-registries-that-declare-its-resources.md) |
-| P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
+| P7 | Core, extension, and packet validity composition | P4.2, P6 | [R131](../accepted/R131-a-validator-checks-every-unit-value-against-ucum.md); [R132](../accepted/R132-a-packet-passes-only-when-its-manifest-core-and-every-bound-extension-pass.md) |
 | P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | Proposal to be scoped |
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | Proposal family; split before promotion |
 | P10 | Final identifiers, direct registry source, and release integration | P2, P2.1, and P3–P9 | Proposal plus ordinary maintenance |

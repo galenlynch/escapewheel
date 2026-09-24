@@ -32,8 +32,8 @@ class Issue:
     check: str
     message: str
     rows: tuple[tuple[Any, ...], ...] = ()
-    #: The extension registry a binding finding concerns, so it stays out of core's verdict.
-    extension: str | None = None
+    #: The registry a binding finding concerns, or None for a packet finding (Part 05 §9.5).
+    registry: str | None = None
 
 
 @dataclass
@@ -225,6 +225,20 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
     return len(issues) == before
 
 
+def named_registries(raw: bytes) -> tuple[str, ...]:
+    """Return the registry IDs a manifest's bytes name, read leniently since the phases may reject it.
+
+    A registry withheld by an early-phase finding still has a verdict (Part 05 §9.5), so a report
+    names every registry it can find, including in a manifest that fails `shape`.
+    """
+    try:
+        document = json.loads(raw)
+    except ValueError:
+        return ()
+    registries = document.get("registries") if isinstance(document, dict) else None
+    return tuple(str(name) for name in registries) if isinstance(registries, dict) else ()
+
+
 def check_manifest(raw: bytes, issues: list[Issue]) -> Mapping[str, Any] | None:
     """Run the `json`, `shape`, and `entries` phases, stopping at the first that finds anything.
 
@@ -257,11 +271,10 @@ def bind_registries(root: Location, document: Mapping[str, Any], issues: list[Is
     }
     acquired: dict[str, bytes] = {}
     for name, binding in bindings.items():
-        extension = None if binding.role == "core" else name
         try:
             acquired[name] = acquire(root, binding)
         except RegistryUnavailable as exc:
-            issues.append(Issue(f"packet.registry.{exc.reason}", str(exc), ((name, binding.path),), extension))
+            issues.append(Issue(f"packet.registry.{exc.reason}", str(exc), ((name, binding.path),), name))
     bound.core_id = next((name for name, binding in bindings.items() if binding.role == "core"), None)
     core_context = None
     if bound.core_id is not None and bound.core_id in acquired:
@@ -272,10 +285,9 @@ def bind_registries(root: Location, document: Mapping[str, Any], issues: list[Is
             bound.contexts[name] = check_registry_context_bytes(acquired[name], core=core_context)
     for name, context in bound.contexts.items():
         binding = bindings[name]
-        extension = None if name == bound.core_id else name
         failed = False
         if _shape_valid(context):
-            failed = _compare(name, binding, context.document, document, issues, extension)
+            failed = _compare(name, binding, context.document, document, issues)
         if not failed:
             bound.passed.add(name)
     return bound
@@ -287,7 +299,6 @@ def _compare(
     registry: Mapping[str, Any],
     manifest: Mapping[str, Any],
     issues: list[Issue],
-    extension: str | None,
 ) -> bool:
     """Part 04 §8's four comparisons between a descriptor and the document it binds."""
     found: list[Issue] = []
@@ -314,7 +325,7 @@ def _compare(
                     f"{name}: {member} {registry.get(member)!r} differs from the manifest's {manifest[member]!r}",
                 )
             )
-    issues.extend(Issue(i.check, i.message, ((name,),), extension) for i in found)
+    issues.extend(Issue(i.check, i.message, ((name,),), name) for i in found)
     return bool(found)
 
 
@@ -325,5 +336,6 @@ __all__ = [
     "check_manifest",
     "format_checker",
     "manifest_schema",
+    "named_registries",
     "prefix_digest",
 ]

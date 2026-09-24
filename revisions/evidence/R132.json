@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "revision": "R132",
+  "based_on": "0b82c8a9b981990ce9f1486263abef44b13974f6",
+  "clauses": {
+    "R132 \u00a73.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-verdict-composition"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-conformance-classes"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validator-registry-boundary"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "extension_bad_type",
+            "finding": "schema.column_type"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_finding_fails_the_packet_and_not_core"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_one_extension_failing_leaves_another_passed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_shape_finding_leaves_every_registry_incomplete"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_validator_preserves_an_available_unparseable_extension_result"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_that_fails_binding_withholds_only_its_entries"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_invalid_rule_is_not_executed_or_reported_as_a_packet_finding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_unsupported_language_is_distinct_from_a_finding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_engine_failure_is_incomplete_not_a_packet_finding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_an_extension_binding_finding_is_attributed_to_it"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-validator/src/escapewheel_validator/scripts/cli.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    },
+    "R132 \u00a73.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-verdict-composition"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "extension_bad_type",
+            "finding": "schema.column_type"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_array_defect_fails_the_extension_and_not_core"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_table_receives_the_storage_checks"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_an_extension_binding_finding_is_attributed_to_it"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-validator/src/escapewheel_validator/manifest.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R132 \u00a73.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-extensions"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "extension_bad_type",
+            "finding": "schema.column_type"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_table_receives_the_storage_checks"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_unit_column_is_checked_against_ucum"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_array_defect_fails_the_extension_and_not_core"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_an_extension_table_is_written_and_validates"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_three_extensions_at_once"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R132 \u00a73.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-error-policy"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-validation-block"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_a_failing_extension_refuses_the_commit"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_an_incomplete_verdict_refuses_the_commit"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_cli.py::test_validate_exits_on_the_packet_verdict"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/scripts/cli.py",
+          "escapewheel-validator/src/escapewheel_validator/scripts/cli.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R132 \u00a73.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-verdict-composition"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_the_json_report_states_every_verdict_and_subject"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_cli.py::test_validate_exits_on_the_packet_verdict"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-validator/src/escapewheel_validator/scripts/cli.py",
+          "escapewheel-writer/src/escapewheel_writer/scripts/cli.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R132 \u00a73.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md",
+          "anchor": "ew-extension-verdicts"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_finding_fails_the_packet_and_not_core"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_array_defect_fails_the_extension_and_not_core"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_unparseable_extension_fails_only_what_needs_it"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    }
+  }
+}

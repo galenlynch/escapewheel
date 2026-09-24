@@ -35,7 +35,7 @@ def _validate(args: argparse.Namespace) -> int:
             store_digests=args.store_digests,
         )
     for finding in report.findings:
-        where = f"[{finding.extension}] " if finding.extension else ""
+        where = f"[{finding.registry}] " if finding.registry else ""
         print(f"  {finding.level:8s} {where}{finding.check}: {finding.message}")
         for row in finding.rows:
             print(f"           {tuple(row)}")
@@ -45,15 +45,12 @@ def _validate(args: argparse.Namespace) -> int:
         rule = f" {evaluation.rule}" if evaluation.rule else ""
         detail = f": {evaluation.detail}" if evaluation.detail else ""
         print(f"  {evaluation.status:11s} [{evaluation.registry}]{rule}{detail}")
-    # Part 05 §5.4: the two verdicts are separate, so printing one total would say a packet failed when
-    # its core is conformant and an extension nobody is required to hold is not.
-    core_errors = sum(f.level == "error" and f.extension is None for f in report.findings)
-    status = "passed" if report.passed else "failed"
-    print(f"\n{packet_id}: core {status} — {core_errors} error(s), {report.warnings} warning(s)")
-    for extension in report.extensions:
-        errors = sum(f.level == "error" and f.extension == extension for f in report.findings)
-        verdict = "passed" if report.extension_passed(extension) else "failed"
-        print(f"{' ' * len(packet_id)}  {extension}: {verdict} — {errors} error(s)")
+    # Part 05 §9.5: the packet's verdict first, then each bound registry's, so a failing extension is
+    # visible as the reason a packet whose core passed did not.
+    print(f"\n{packet_id}: {report.verdict()} — {report.errors} error(s), {report.warnings} warning(s)")
+    for registry in report.bound:
+        errors = sum(f.level == "error" and f.registry == registry for f in report.findings)
+        print(f"{' ' * len(packet_id)}  {registry}: {report.verdict(registry)} — {errors} error(s)")
 
     if args.report is not None:
         args.report.write_text(json.dumps(report.to_dict(packet_id), indent=2) + "\n")

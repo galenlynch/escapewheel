@@ -33,7 +33,7 @@ from escapewheel_reader.location import SOURCES_FILENAME
 from escapewheel_reader.ordering import stored_order
 
 from .generate import Check, adjacency_settles_uniqueness, concerns, generate
-from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest
+from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest, named_registries
 from .registry_document import (
     UCUM_URI,
     CheckedRegistryContext,
@@ -108,12 +108,14 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                 "error",
                 "packet.resource.singleton_identity",
                 f"{entry.resource_id}: singleton identity must equal {entry.declaration_id}",
+                registry=report.owner(entry.declaration_id),
             )
         if mode == "family" and entry.resource_id.split(".", 1)[0] != entry.declaration_id.split(".", 1)[0]:
             report.add(
                 "error",
                 "packet.resource.family_namespace",
                 f"{entry.resource_id}: family identity is outside {entry.declaration_id}'s namespace",
+                registry=report.owner(entry.declaration_id),
             )
         for dependency in declaration["requires"]:
             if dependency not in by_id:
@@ -121,6 +123,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                     "error",
                     "packet.resource.dependency_missing",
                     f"{entry.resource_id}: required singleton {dependency} is absent",
+                    registry=report.owner(entry.declaration_id),
                 )
         if declaration["kind"] == "dense_array":
             axes = declaration["array"]["axes_resource"]
@@ -129,6 +132,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                     "error",
                     "packet.resource.array_axes_missing",
                     f"{entry.resource_id}: declaration-selected axes resource {axes} is absent",
+                    registry=report.owner(entry.declaration_id),
                 )
 
         present = "derived_from" in entry.entry
@@ -137,12 +141,14 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                 "error",
                 "packet.resource.derived_from_required",
                 f"{entry.resource_id}: derived_from is required by {entry.declaration_id}",
+                registry=report.owner(entry.declaration_id),
             )
         elif declaration["lineage"] == "forbidden" and present:
             report.add(
                 "error",
                 "packet.resource.derived_from_forbidden",
                 f"{entry.resource_id}: derived_from is forbidden by {entry.declaration_id}",
+                registry=report.owner(entry.declaration_id),
             )
 
     active_extension_ids = set(extensions)
@@ -159,6 +165,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                 "error",
                 "packet.resource.required_missing",
                 f"required singleton {declaration_id} is absent",
+                registry=report.owner(declaration_id),
             )
 
     for declaration_id, declaration in visible.items():
@@ -182,6 +189,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                     "error",
                     "packet.resource.reference_target_missing",
                     f"{declaration_id}: populated foreign key {columns} requires {target}",
+                    registry=report.owner(declaration_id),
                 )
 
     catalog_families = {
@@ -202,6 +210,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                 "error",
                 "packet.resource.catalog_table_unreadable",
                 f"{catalog_id}.{column}: {exc}",
+                registry=report.owner(catalog_id),
             )
             continue
         normalized = [str(value) for value in values if value is not None]
@@ -215,6 +224,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                     "error",
                     "packet.resource.catalog_row_binding",
                     f"{catalog_id}.{column}={value!r} does not bind one {declaration_id} resource",
+                    registry=report.owner(declaration_id),
                 )
         catalog_values = set(normalized)
         for entry in entries:
@@ -223,6 +233,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                     "error",
                     "packet.resource.catalog_row_binding",
                     f"{entry.resource_id}: no row in {catalog_id}.{column}",
+                    registry=report.owner(declaration_id),
                 )
 
     permitted = {
@@ -247,6 +258,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                     "error",
                     "packet.resource.lineage_unresolved",
                     f"{entry.resource_id}: lineage source {source!r} is absent or undeclared",
+                    registry=report.owner(entry.declaration_id),
                 )
             elif source_declaration["content_class"] not in permitted[declaration["content_class"]]:
                 report.add(
@@ -254,6 +266,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                     "packet.resource.lineage_class",
                     f"{entry.resource_id}: {declaration['content_class']} may not derive from "
                     f"{source_declaration['content_class']}",
+                    registry=report.owner(entry.declaration_id),
                 )
 
     def cyclic(node: str, path: frozenset[str]) -> bool:
@@ -263,6 +276,14 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
         if cyclic(node, frozenset()):
             report.add("error", "packet.resource.lineage_cycle", f"lineage cycle reaches {node}")
             break
+
+
+#: Verdicts in increasing severity; a conjunction takes the most severe (Part 05 §9.5).
+VERDICTS = ("passed", "incomplete", "failed")
+
+
+def _worst(verdicts: Iterable[str]) -> str:
+    return max(verdicts, key=VERDICTS.index, default="passed")
 
 
 @dataclass(frozen=True)
@@ -279,18 +300,17 @@ class Finding:
         What went wrong.
     rows : tuple
         Offending rows, truncated. For SQL checks these are the query's result.
-    extension : str or None
-        The extension whose table this is about, or None for core. Part 05 §5.4 requires the two be
-        reported separately: a finding against an extension's table is not a finding against the
-        packet's **core** conformance, because a core validator is not required to hold that
-        extension's schema at all.
+    registry : str or None
+        The bound registry this finding belongs to, or None where it belongs to the packet
+        (Part 05 §9.5). An extension's findings never count against core's verdict, nor core's
+        against an extension's.
     """
 
     level: str
     check: str
     message: str
     rows: tuple[tuple[str, ...], ...] = ()
-    extension: str | None = None
+    registry: str | None = None
 
 
 @dataclass(frozen=True)
@@ -324,16 +344,23 @@ class Report:
     advisory : bool
         Whether advisory rules were run (R26 §5). Recorded because an empty advisory
         result is otherwise ambiguous between "none fired" and "not asked for".
+    bound : tuple of str
+        The registry IDs the manifest binds, each of which receives a verdict.
     """
 
     findings: list[Finding] = field(default_factory=list)
     evaluations: list[Evaluation] = field(default_factory=list)
     registries: list[RegistryEvaluation] = field(default_factory=list)
     advisory: bool = False
+    bound: tuple[str, ...] = ()
+    #: Declaration ID -> the bound registry holding it, for attributing a finding about an entry.
+    declared_by: dict[str, str] = field(default_factory=dict)
+    #: Resource ID -> declaration ID, from the manifest's entries.
+    declarations: dict[str, str] = field(default_factory=dict)
 
     @property
     def errors(self) -> int:
-        """How many error-level findings were produced, core and extensions together."""
+        """How many error-level findings were produced, whatever their subject."""
         return sum(f.level == "error" for f in self.findings)
 
     @property
@@ -341,44 +368,54 @@ class Report:
         """How many warning-level findings were produced."""
         return sum(f.level == "warning" for f in self.findings)
 
+    def verdict(self, registry: str | None = None) -> str:
+        """Return one bound registry's verdict, or the packet's where `registry` is None (Part 05 §9.5).
+
+        A registry passes only once its required evaluation is recorded complete, so a registry whose
+        evaluation was withheld, or never reached, is ``incomplete`` rather than ``passed``. The
+        packet's verdict is the worst of its own findings' and every bound registry's.
+
+        Advisory rules cannot be ``error`` (Part 02 §10.2), so no verdict depends on the
+        ``advisory`` flag.
+        """
+        if registry is None:
+            own = "failed" if any(f.level == "error" and f.registry is None for f in self.findings) else "passed"
+            return _worst([own, *(self.verdict(name) for name in self.bound)])
+        if any(f.level == "error" and f.registry == registry for f in self.findings):
+            return "failed"
+        states = {item.result.state for item in self.registries if item.subject == registry}
+        statuses = {e.status for e in self.evaluations if e.registry == registry}
+        if "invalid" in states | statuses:
+            return "failed"
+        if states != {"valid"} or statuses != {"complete"}:
+            return "incomplete"
+        return "passed"
+
     @property
     def passed(self) -> bool:
-        """Whether the packet is valid **as core**. Warnings do not make a packet invalid.
+        """Whether the packet's verdict is ``passed``, the only one supporting a conformance claim."""
+        return self.verdict() == "passed"
 
-        Advisory rules cannot be ``error`` (Part 02 §10.2), so this is invariant under the
-        ``advisory`` flag: asking for more to read never changes the verdict.
+    def attribute(self, declared_by: Mapping[str, str], entries: Iterable[Any]) -> None:
+        """Record which registry holds each declaration, and which declaration each entry names."""
+        self.declared_by = dict(declared_by)
+        self.declarations = {entry.resource_id: entry.declaration_id for entry in entries}
 
-        An extension's findings are excluded (Part 05 §5.4). A packet stays core-conformant carrying
-        extension registries a validator cannot parse, so one it *can* parse must not be able to
-        change the core verdict either -- otherwise holding the schema would make a packet fail
-        that passes without it.
+    def owner(self, declaration_id: str) -> str | None:
+        """Return the bound registry holding a declaration, or None where none holds it.
+
+        A declaration no directing registry exposes is attributed by namespace to a bound extension,
+        so a finding about a withheld extension's entry is still that extension's.
         """
-        complete = all(e.registry != "core" or e.status == "complete" for e in self.evaluations)
-        registry_valid = all(not item.core or item.result.state == "valid" for item in self.registries)
-        return (
-            registry_valid and complete and sum(f.level == "error" and f.extension is None for f in self.findings) == 0
-        )
+        if (registry := self.declared_by.get(declaration_id)) is not None:
+            return registry
+        namespace = declaration_id.split(".", 1)[0]
+        return namespace if namespace in self.bound and namespace != "core" else None
 
-    def extension_passed(self, extension: str) -> bool:
-        """Whether one extension's tables validated."""
-        complete = all(e.registry != extension or e.status == "complete" for e in self.evaluations)
-        registry_valid = all(item.subject != extension or item.result.state == "valid" for item in self.registries)
-        return (
-            registry_valid
-            and complete
-            and sum(f.level == "error" and f.extension == extension for f in self.findings) == 0
-        )
-
-    @property
-    def extensions(self) -> tuple[str, ...]:
-        """Extensions this report says anything about."""
-        return tuple(
-            dict.fromkeys(
-                [f.extension for f in self.findings if f.extension is not None]
-                + [e.registry for e in self.evaluations if e.registry != "core"]
-                + [item.subject for item in self.registries if not item.core]
-            )
-        )
+    def resource_owner(self, resource_id: str) -> str | None:
+        """Return the registry declaring the resource an entry locates, or None for the packet."""
+        declaration = self.declarations.get(resource_id, resource_id)
+        return self.owner(declaration)
 
     def record_evaluation(self, registry: str, status: str, *, rule: str | None = None, detail: str = "") -> None:
         """Record a Tier 2 outcome without turning validator inability into a finding."""
@@ -389,14 +426,13 @@ class Report:
     ) -> None:
         """Retain a complete result, labelled by registry ID, and expose its invalid outcomes."""
         self.registries.append(RegistryEvaluation(subject, context.result, directs_checks, core))
-        extension = None if core else subject
         for outcome in context.result.findings:
             self.add(
                 "error",
                 outcome.id,
                 f"{subject} registry {outcome.instance or '<root>'}: "
                 f"{outcome.detail or outcome.reason or outcome.state}",
-                extension=extension,
+                registry=subject,
             )
 
     def add(
@@ -405,7 +441,7 @@ class Report:
         check: str,
         message: str,
         rows: Sequence[Sequence[Any]] = (),
-        extension: str | None = None,
+        registry: str | None = None,
     ) -> None:
         """Record a finding.
 
@@ -419,13 +455,18 @@ class Report:
             What went wrong.
         rows : sequence, optional
             Offending rows; only the first five are kept.
+        registry : str, optional
+            The bound registry the finding belongs to; None for the packet.
         """
         self.findings.append(
-            Finding(level, check, message, tuple(tuple(str(v) for v in row) for row in list(rows)[:5]), extension)
+            Finding(level, check, message, tuple(tuple(str(v) for v in row) for row in list(rows)[:5]), registry)
         )
 
     def to_dict(self, packet_id: str) -> dict[str, Any]:
         """Render the report as the JSON structure Part 05 describes.
+
+        ``status`` is the packet's verdict and ``verdicts`` each bound registry's. A finding whose
+        ``registry`` is null belongs to the packet (Part 05 §9.5).
 
         Parameters
         ----------
@@ -439,13 +480,20 @@ class Report:
         """
         return {
             "packet_id": packet_id,
-            "status": "passed" if self.passed else "failed",
+            "status": self.verdict(),
+            "verdicts": {name: self.verdict(name) for name in self.bound},
             # An empty advisory list is ambiguous between "none fired" and "not run" (R26 §5).
             "advisory": self.advisory,
             "validator": {"name": "escapewheel_validator", "version": _version()},
             "summary": {"errors": self.errors, "warnings": self.warnings},
             "findings": [
-                {"level": f.level, "check": f.check, "message": f.message, "rows": [list(r) for r in f.rows]}
+                {
+                    "level": f.level,
+                    "check": f.check,
+                    "message": f.message,
+                    "rows": [list(r) for r in f.rows],
+                    "registry": f.registry,
+                }
                 for f in self.findings
             ],
             "evaluations": [
@@ -508,7 +556,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
         reference, by_clock = reference_clock(packet), anchors(packet)
         bound = declared_bound(packet)
     except (PacketError, ValueError) as refused:
-        report.add("error", "time.origin_unmappable", f"t_zero_tick is declared but {refused}")
+        report.add("error", "time.origin_unmappable", f"t_zero_tick is declared but {refused}", registry="core")
         return
 
     starts: list[int] = []
@@ -527,6 +575,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
                 f"{clock} declares an observation window but no anchors, so the minimum Part 01 §2.1 "
                 "defines cannot be taken",
                 [(clock,)],
+                registry="core",
             )
             return
         converted, defined = align(np.array([start], dtype=np.int64), *by_clock[clock], bound=bound)
@@ -537,6 +586,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
                 f"{clock}'s observation start does not map to {reference} within the alignment "
                 "bound, so no origin is defined (Part 01 §2.2)",
                 [(clock, str(start))],
+                registry="core",
             )
             return
         starts.append(int(converted[0]))
@@ -553,6 +603,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
                 f"t_zero_tick is {stated} but the earliest observation start on {reference} "
                 f"is {expected} (Part 01 §2.1)",
                 [(str(stated), str(expected))],
+                registry="core",
             )
 
 
@@ -563,7 +614,12 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
         actual = set(handle.codecs)
         rank = len(handle.shape)
     except (ResourceUnreadableError, OSError, ValueError, KeyError) as exc:
-        report.add("error", "array.unreadable", f"{resource.resource_id}: {exc}")
+        report.add(
+            "error",
+            "array.unreadable",
+            f"{resource.resource_id}: {exc}",
+            registry=report.resource_owner(resource.resource_id),
+        )
         return
 
     if handle.zarr_format != 3:
@@ -572,6 +628,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "array.not_zarr_v3",
             f"{resource.resource_id} is packet-owned but stored as Zarr v{handle.zarr_format}; "
             "Part 03 §6.1 allows v2 only for an array the packet references",
+            registry=report.resource_owner(resource.resource_id),
         )
 
     if "transpose" in actual:
@@ -580,6 +637,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "array.transpose_codec",
             f"{resource.resource_id} uses the transpose codec, which Part 03 §6.2 forbids: axes are stored in the "
             "order the packet declares them",
+            registry=report.resource_owner(resource.resource_id),
         )
 
     if (grid := metadata.get("chunk_grid", {}).get("name")) != "regular":
@@ -587,6 +645,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "error",
             "array.irregular_chunk_grid",
             f"{resource.resource_id} declares a {grid!r} chunk grid; Part 03 §6.1 requires a regular one",
+            registry=report.resource_owner(resource.resource_id),
         )
 
     if "fill_value" not in metadata:
@@ -594,6 +653,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "error",
             "array.no_fill_value",
             f"{resource.resource_id} declares no fill_value, which Part 03 §6.1 requires",
+            registry=report.resource_owner(resource.resource_id),
         )
 
     if not (declared := extents.get(resource.resource_id, {})):
@@ -604,6 +664,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "array.rank_disagrees_with_dimensions",
             f"{resource.resource_id} has rank {rank} but its declaration-selected axes resource "
             f"gives axis_index {sorted(declared) or 'none'}; Part 03 §6.2 requires one row per stored axis",
+            registry=report.resource_owner(resource.resource_id),
         )
         return
     # An axis whose coordinates are a table has one row per position, so that count is its length.
@@ -620,6 +681,7 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "array.shape_disagrees_with_coordinates",
             f"{resource.resource_id}: {len(offending)} axis/axes are not the length their coordinate table gives them",
             [(f"axis {axis}", f"{rows} rows", f"stored {stored}") for axis, rows, stored in offending],
+            registry=report.resource_owner(resource.resource_id),
         )
 
 
@@ -690,7 +752,12 @@ def _check_owned_digests(packet: Packet, report: Report) -> None:
         try:
             actual = digest(str(packet.root / str(entry.get("uri", ""))))
         except StoreUnreachable as exc:
-            report.add("error", "resource.missing", f"{resource.resource_id}: {exc}")
+            report.add(
+                "error",
+                "resource.missing",
+                f"{resource.resource_id}: {exc}",
+                registry=report.resource_owner(resource.resource_id),
+            )
             continue
         checked += 1
         if actual == claimed:
@@ -701,6 +768,7 @@ def _check_owned_digests(packet: Packet, report: Report) -> None:
                 "owned.sha256",
                 f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed[:16]}… — "
                 "a packet-owned file is immutable (Part 04 §5.1) and Part 03 §9.4 bounds revalidation on that",
+                registry=report.resource_owner(resource.resource_id),
             )
     if skipped:
         report.add(
@@ -743,6 +811,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
                     "sources.declared",
                     f"{resource.resource_id} declares {SOURCES_FILENAME} as a resource; Part 04 §5.5 keeps it "
                     "outside the manifest so Part 04 §5.1's immutability does not reach it",
+                    registry=report.resource_owner(resource.resource_id),
                 )
             continue
         named.setdefault(source, []).append(resource.resource_id)
@@ -752,6 +821,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
                 "source.absolute_uri",
                 f"{resource.resource_id} names source {source!r} and an absolute uri {resource.uri!r}; "
                 "where a source is named the uri is a path under it (Part 04 §5.5)",
+                registry=report.resource_owner(resource.resource_id),
             )
     if not named:
         return
@@ -848,7 +918,12 @@ def _compare_external(
     try:
         found = listing(uri)
     except StoreUnreachable as exc:
-        report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
+        report.add(
+            "warning",
+            "external.unreachable",
+            f"{resource.resource_id}: {exc}",
+            registry=report.resource_owner(resource.resource_id),
+        )
         return None
     fields = []
     if (declared := entry.get("members")) is not None:
@@ -861,6 +936,7 @@ def _compare_external(
                 "external.size_bytes",
                 f"{resource.resource_id}: {found.size_bytes:,} bytes over {len(found.members)} object(s), "
                 f"manifest claims {claimed:,}",
+                registry=report.resource_owner(resource.resource_id),
             )
     if extents:
         fields.extend(_compare_shape(resource, uri, found, extents, report))
@@ -868,7 +944,12 @@ def _compare_external(
         try:
             actual = digest(uri)
         except StoreUnreachable as exc:
-            report.add("warning", "external.unreachable", f"{resource.resource_id}: {exc}")
+            report.add(
+                "warning",
+                "external.unreachable",
+                f"{resource.resource_id}: {exc}",
+                registry=report.resource_owner(resource.resource_id),
+            )
             return None
         fields.append("sha256")
         if actual != claimed_sha:
@@ -876,6 +957,7 @@ def _compare_external(
                 "error",
                 "external.sha256",
                 f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed_sha[:16]}…",
+                registry=report.resource_owner(resource.resource_id),
             )
     return fields
 
@@ -898,6 +980,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             "external.members",
             f"{resource.resource_id}: {len(missing)} declared member(s) the store does not hold",
             [(key,) for key in missing[:20]],
+            registry=report.resource_owner(resource.resource_id),
         )
     if extra := sorted(held.keys() - claimed.keys()):
         report.add(
@@ -906,6 +989,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             f"{resource.resource_id}: the store holds {len(extra)} member(s) the manifest does not "
             "declare, so a digest over the declared listing would not describe it",
             [(key,) for key in extra[:20]],
+            registry=report.resource_owner(resource.resource_id),
         )
     if sized := sorted(
         key
@@ -917,6 +1001,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             "external.members",
             f"{resource.resource_id}: {len(sized)} member(s) differ in size from the manifest",
             [(key, claimed[key]["size_bytes"], held[key].size_bytes) for key in sized[:20]],
+            registry=report.resource_owner(resource.resource_id),
         )
     if not store_digests:
         return fields
@@ -935,6 +1020,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             "external.store_digest",
             f"{resource.resource_id}: {len(changed)} member(s) changed in place since recording",
             [(key,) for key in changed[:20]],
+            registry=report.resource_owner(resource.resource_id),
         )
     if skipped:
         report.add(
@@ -943,6 +1029,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             f"{resource.resource_id}: {len(skipped)} of {len(claimed)} member(s) not checked -- the "
             "manifest recorded no store digest, or the store offers none (Part 04 §5.4)",
             [(key,) for key in skipped[:20]],
+            registry=report.resource_owner(resource.resource_id),
         )
     if compared:
         fields.append("store_digest")
@@ -1097,6 +1184,7 @@ def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, An
             "external.array_rank",
             f"{resource.resource_id} is stored with rank {len(shape)} but its declaration-selected "
             f"axes resource gives axis_index {sorted(declared)}; Part 03 §6.2 requires one row per stored axis",
+            registry=report.resource_owner(resource.resource_id),
         )
         return ["rank"]
     offending = [
@@ -1111,6 +1199,7 @@ def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, An
             f"{resource.resource_id}: {len(offending)} axis/axes are not the length the packet's "
             "coordinate tables give them",
             [(f"axis {axis}", f"{rows} rows", f"stored {stored}") for axis, rows, stored in offending],
+            registry=report.resource_owner(resource.resource_id),
         )
     return ["rank", "shape"] if any(length is not None for length in declared.values()) else ["rank"]
 
@@ -1126,7 +1215,7 @@ def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) ->
         try:
             schema = handle.schema()
         except PacketError as exc:
-            report.add("error", "resource.missing", str(exc))
+            report.add("error", "resource.missing", str(exc), registry=report.resource_owner(resource_id))
             continue
         present[resource_id] = handle
         for column in spec["columns"]:
@@ -1142,6 +1231,7 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
                 "error",
                 "schema.column_absent",
                 f"{resource_id}.{column['name']} absent (presence={column['presence']})",
+                registry=report.resource_owner(resource_id),
             )
         return
     actual = schema.field(column["name"]).type
@@ -1156,6 +1246,7 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
             "error",
             "schema.column_type",
             f"{resource_id}.{column['name']} is {actual}, registry declares {column['type']}",
+            registry=report.resource_owner(resource_id),
         )
 
 
@@ -1348,7 +1439,12 @@ def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], re
         except (OSError, pa.ArrowException):
             continue
         for a, b in pairs:
-            report.add("info", f"{resource_id}.columns_duplicated", f"{a} and {b} hold equal values in every row")
+            report.add(
+                "info",
+                f"{resource_id}.columns_duplicated",
+                f"{a} and {b} hold equal values in every row",
+                registry=report.resource_owner(resource_id),
+            )
 
 
 def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
@@ -1371,7 +1467,12 @@ def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, An
         except (OSError, pa.ArrowException):
             continue
         if index is None:
-            report.add("info", f"{resource_id}.metadata_unfilled", "metadata is declared and the file omits it")
+            report.add(
+                "info",
+                f"{resource_id}.metadata_unfilled",
+                "metadata is declared and the file omits it",
+                registry=report.resource_owner(resource_id),
+            )
             continue
         nulls = 0
         for group in range(meta.num_row_groups):
@@ -1381,7 +1482,12 @@ def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, An
             nulls += stats.null_count
         else:
             if meta.num_rows and nulls == meta.num_rows:
-                report.add("info", f"{resource_id}.metadata_unfilled", "metadata is null in every row")
+                report.add(
+                    "info",
+                    f"{resource_id}.metadata_unfilled",
+                    "metadata is null in every row",
+                    registry=report.resource_owner(resource_id),
+                )
 
 
 def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
@@ -1412,14 +1518,15 @@ def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any]
                     f"{resource_id}.{name}.outside_reserved_set",
                     f"{len(outside)} value(s) outside the reserved set: "
                     f"{', '.join(repr(v) for v in outside[:5])}" + (" ..." if len(outside) > 5 else ""),
+                    registry=report.resource_owner(resource_id),
                 )
 
 
 def _check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
     """Part 05 §5.3. Every non-null value of a unit column is a UCUM code (Part 02 §8.4).
 
-    Only core's tables reach here, which is where every unit column is declared; extension-table
-    byte validation is not defined (Part 05 §14.5). Distinct values are parsed once each.
+    Covers every table a directing registry declares (Part 05 §5.4), and files each finding and each
+    unreadable column under that registry. Distinct values are parsed once each.
     """
     for resource_id, handle in present.items():
         for column in tables[resource_id]["columns"]:
@@ -1427,10 +1534,11 @@ def _check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], rep
                 continue
             name = column["name"]
             check = f"{resource_id}.{name}.ucum_code"
+            registry = report.resource_owner(resource_id) or "core"
             try:
                 values = pc.unique(pq.read_table(handle.path, columns=[name]).column(name)).to_pylist()
             except (OSError, pa.ArrowException, KeyError) as exc:
-                report.record_evaluation("core", "incomplete", rule=check, detail=str(exc).splitlines()[0][:160])
+                report.record_evaluation(registry, "incomplete", rule=check, detail=str(exc).splitlines()[0][:160])
                 continue
             invalid = sorted(value for value in values if value is not None and ucum_error(value) is not None)
             if invalid:
@@ -1440,6 +1548,7 @@ def _check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], rep
                     f"{len(invalid)} value(s) are not UCUM codes: {', '.join(repr(v) for v in invalid[:5])}"
                     + (" ..." if len(invalid) > 5 else ""),
                     [(value,) for value in invalid],
+                    registry=registry,
                 )
 
 
@@ -1500,7 +1609,7 @@ def _scan_one_ordering(  # noqa: C901
     try:
         keys, unique, batches = _ordering_scan(handle, keys, unique)
     except (OSError, pa.ArrowException) as exc:
-        report.add("error", "resource.unreadable", f"{resource_id}: {exc}")
+        report.add("error", "resource.unreadable", f"{resource_id}: {exc}", registry=report.resource_owner(resource_id))
         return False
     damaged = None
     while True:
@@ -1543,7 +1652,9 @@ def _scan_one_ordering(  # noqa: C901
     if damaged is not None:
         # The order cannot be established, so nothing partial is reported for it: what the scan
         # saw before the damage says nothing about the file as a whole.
-        report.add("error", "resource.unreadable", f"{resource_id}: {damaged}")
+        report.add(
+            "error", "resource.unreadable", f"{resource_id}: {damaged}", registry=report.resource_owner(resource_id)
+        )
         return False
     if broken:
         report.add(
@@ -1551,6 +1662,7 @@ def _scan_one_ordering(  # noqa: C901
             f"{resource_id}.determined_by",
             "a column declared determined_by the key differs between two rows sharing it",
             [(f"row {i}", col, f"{a} != {b}") for i, col, a, b in broken[:ORDER_REPORT]],
+            registry=report.resource_owner(resource_id),
         )
     if offending:
         report.add(
@@ -1558,6 +1670,7 @@ def _scan_one_ordering(  # noqa: C901
             f"{resource_id}.physical_order",
             f"rows are not in declared sort order ({', '.join(keys)})",
             [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending[:ORDER_REPORT]],
+            registry=report.resource_owner(resource_id),
         )
         # Adjacency settles uniqueness only for a file actually in order: a duplicate anywhere but
         # beside its twin is invisible to a scan of neighbours. Part 03 §5.3 makes the departure an
@@ -1569,6 +1682,7 @@ def _scan_one_ordering(  # noqa: C901
             f"{resource_id}.primary_key_unique",
             "duplicate primary key",
             [(f"row {i}", str(row)) for i, row in duplicated[:ORDER_REPORT]],
+            registry=report.resource_owner(resource_id),
         )
     return False
 
@@ -1754,7 +1868,7 @@ def _run_rules(
             checks = [*tier1, *tier2]
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
-            _run_checks(connection, checks, report, None, "core", unreadable, finalize=False)
+            _run_checks(connection, checks, report, "core", unreadable, finalize=False)
             _check_manifest_sessions(packet, report)
             if not any(e.registry == "core" and e.status != "complete" for e in report.evaluations):
                 report.record_evaluation("core", "complete")
@@ -1768,6 +1882,7 @@ def _run_rules(
                 kinds,
                 unreadable,
                 recheck,
+                unsound,
             )
         finally:
             with contextlib.suppress(Exception):
@@ -1843,7 +1958,6 @@ def _run_checks(
     connection: Any,
     checks: Sequence[Check],
     report: Report,
-    extension: str | None,
     registry_id: str,
     unreadable: set[str],
     *,
@@ -1877,11 +1991,11 @@ def _run_checks(
                     "error",
                     check.id,
                     f"check could not run: {str(exc).splitlines()[0][:90]}",
-                    extension=extension,
+                    registry=registry_id,
                 )
             continue
         if rows:
-            report.add(check.level, check.id, check.message, rows, extension=extension)
+            report.add(check.level, check.id, check.message, rows, registry=registry_id)
     prior_failure = any(e.registry == registry_id and e.status != "complete" for e in report.evaluations)
     if finalize and not tier2_incomplete and not prior_failure:
         report.record_evaluation(registry_id, "complete")
@@ -1912,7 +2026,7 @@ def _check_manifest_sessions(packet: Packet, report: Report) -> None:
     rows = [(value,) for value in table_values if value not in listed_set]
     rows.extend((value,) for value in listed if value not in table_set)
     if rows:
-        report.add("error", check, message, rows)
+        report.add("error", check, message, rows, registry="core")
 
 
 def _resolve_column(spec: Mapping[str, Any]) -> str | None:
@@ -1997,18 +2111,16 @@ def _check_extensions(
     kinds: Mapping[str, str | None] | None = None,
     unreadable: set[str] | None = None,
     recheck: Collection[str] | None = None,
+    unsound: set[str] | None = None,
 ) -> None:
-    """Validate each extension registry the packet carries (Part 05 §5.4).
+    """Run each directing extension registry's generated and declared checks (Part 05 §5.4).
 
     R17 §3's claim is that nothing here is per-extension: the same `generate` produces an
     extension's Tier 1 checks from its structure and carries its Tier 2 rules, because an
     extension registry *is* a registry document. What this function adds is which tables its
     references may resolve against -- core's, since Part 09 §2 lets an extension reference them and
-    forbids the reverse -- and the layer its findings are filed under.
-
-    Findings are recorded against the extension, so they cannot change the packet's core verdict.
-    A core validator is not required to hold an extension's schema at all (Part 09 §6), so holding
-    one must not be able to fail a packet that passes without it.
+    forbids the reverse -- and the registry its findings are filed under, so they decide the
+    extension's verdict and never core's (Part 05 §9.5).
     """
     registry = core_context.document
     assert isinstance(registry, Mapping)
@@ -2027,12 +2139,13 @@ def _check_extensions(
                 "extension.table_absent",
                 f"{extension_id}: declares {len(absent)} table(s) this packet does not carry",
                 [(name,) for name in absent],
-                extension=extension_id,
+                registry=extension_id,
             )
         tier1 = generate(
             extension_context,
             only=carried,
             advisory=advisory,
+            aggregate=unsound or set(),
             resolvable=set(_tables(registry)),
             kinds=kinds,
             declared=False,
@@ -2041,12 +2154,12 @@ def _check_extensions(
         checks = [*tier1, *tier2]
         if recheck is not None:
             checks = [check for check in checks if concerns(check, recheck)]
-        _run_checks(connection, checks, report, extension_id, extension_id, unreadable or set())
+        _run_checks(connection, checks, report, extension_id, unreadable or set())
         report.add(
             "info",
             "extension.validated",
             f"{extension_id}: {len(checks)} check(s) over {len(carried)} table(s)",
-            extension=extension_id,
+            registry=extension_id,
         )
 
 
@@ -2134,12 +2247,17 @@ def validate(
     report, bound = check_packet_manifest(packet.location, advisory=advisory, manifest=manifest)
     if bound is None:
         return report
-    _check_sources(packet, report)
     core_context = bound.core
+    extensions = {name: context.document for name, context in bound.extensions.items()}
+    directing = ([] if core_context is None else [(bound.core_id, core_context.document)]) + list(extensions.items())
+    report.attribute(
+        {declaration: str(name) for name, document in directing for declaration in document.get("resources", {})},
+        packet.resources(),
+    )
+    _check_sources(packet, report)
     if core_context is None:
         return report
     effective = core_context.document
-    extensions = {name: context.document for name, context in bound.extensions.items()}
     withheld = set(packet.manifest.extensions) - set(extensions)
     packet = packet.with_declarations(effective, *extensions.values())
     _check_resource_declarations(packet, effective, extensions, withheld, report)
@@ -2150,12 +2268,16 @@ def validate(
         _check_owned_digests(packet, report)
     _check_packet_owned_arrays(packet, report)
     _check_time_origin(packet, report)
-    present = _check_schemas(packet, _tables(effective), report)
-    unsound = _check_ordering(_tables(effective), present, report, scan)
-    _check_duplication(present, _tables(effective), report)
-    _check_unfilled_metadata(present, _tables(effective), report)
-    _check_reserved_values(present, _tables(effective), report)
-    _check_unit_codes(present, _tables(effective), report)
+    # Every directing registry's tables receive the same storage checks (Part 05 §5.4).
+    tables = _tables(effective)
+    for document in extensions.values():
+        tables.update(_tables(document))
+    present = _check_schemas(packet, tables, report)
+    unsound = _check_ordering(tables, present, report, scan)
+    _check_duplication(present, tables, report)
+    _check_unfilled_metadata(present, tables, report)
+    _check_reserved_values(present, tables, report)
+    _check_unit_codes(present, tables, report)
     _run_rules(
         packet,
         core_context,
@@ -2202,10 +2324,11 @@ def check_packet_manifest(
     except Exception as exc:  # noqa: BLE001 - what a store raises on a failed read is its own business
         report.add("error", "packet.manifest.invalid_json", f"no readable {MANIFEST_FILENAME} at {location}: {exc}")
         return report, None
+    report.bound = named_registries(raw)
     document = check_manifest(raw, issues)
     bound = None if document is None else bind_registries(location, document, issues)
     for issue in issues:
-        report.add("error", issue.check, issue.message, issue.rows, extension=issue.extension)
+        report.add("error", issue.check, issue.message, issue.rows, registry=issue.registry)
     if bound is not None:
         for name, context in bound.contexts.items():
             report.record_registry(name, context, directs_checks=bound.directs(name), core=name == bound.core_id)
@@ -2214,6 +2337,7 @@ def check_packet_manifest(
 
 __all__ = [
     "ARROW_TYPES",
+    "VERDICTS",
     "Evaluation",
     "Finding",
     "Report",
