@@ -309,7 +309,7 @@ P1 authority framework
 | P5.2 | Portable-profile interfaces and reader floor | P5.1 | [R129](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md) |
 | P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | [R130](../accepted/R130-a-packet-binds-the-exact-registries-that-declare-its-resources.md) |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | [R131](../accepted/R131-a-validator-checks-every-unit-value-against-ucum.md); [R132](../accepted/R132-a-packet-passes-only-when-its-manifest-core-and-every-bound-extension-pass.md) |
-| P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | Proposal to be scoped |
+| P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | [R133](../accepted/R133-a-build-decides-ownership-only-from-the-recipe-and-adapter-declarations.md); [R134](../accepted/R134-an-adapter-declares-its-whole-contract-and-delivers-only-where-a-build-points-it.md) |
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | Proposal family; split before promotion |
 | P10 | Final identifiers, direct registry source, and release integration | P2, P2.1, and P3–P9 | Proposal plus ordinary maintenance |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
@@ -700,6 +700,12 @@ packet semantics in registries and profiles.
 
 **Review coverage:** S5, D4, D5, D6, I11, and the audits of `sources.schema.json` and
 `adapter.schema.json`.
+
+**Completed as R133 and R134 on 2026-09-24.** A recipe declares every source preference, and
+ownership follows only from it and the adapter declarations. An adapter declaration states all of
+its members, including the protocols it can be reached by; a build checks a registered class as
+the document it would generate. The sources schema is incorporated, and an adapter writes only to
+the empty locations a build supplies, along the routes Part 03 §11 lists.
 
 ### P9 — Remaining independent reconciliations
 
