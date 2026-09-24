@@ -132,7 +132,7 @@ lets a build choose any location it owns for a delivery, so §4.2 is the narrowe
 
 ### 4.1 Owner of the order
 
-**Part 05 §2 owns it** (agreed direction). Its numbered list becomes:
+**Part 05 §2 owns it** (preferred direction). Its numbered list becomes:
 
 1. discover what each source offers, writing nothing;
 2. deliver, through the locations and routes a build supplies;
@@ -156,10 +156,10 @@ Rejected: **Part 05 §6 owns the order.** Commit would then span delivery throug
 
 ### 4.2 Headings and stage numbers
 
-**Drop the stage numbers from the headings of Part 05 §§4 to 8** (preferred). "Stages 1 to 3",
-"Stage 4: Validate" and the rest would name their subject, and the number of a step lives only in
-§2's list. The sections stay where they are, so the change is ordinary rather than structural. Code
-citing "Part 05 Stage N" is re-pointed to the section that states the rule.
+**Drop the stage numbers from the headings of Part 05 §§4 to 8** (preferred direction). "Stages 1 to
+3", "Stage 4: Validate" and the rest would name their subject, and the number of a step lives only
+in §2's list. The sections stay where they are, so the change is ordinary rather than structural.
+Code citing "Part 05 Stage N" is re-pointed to the section that states the rule.
 
 Alternative: **renumber the headings to the new order.** Validation would become step 6 in §5, and
 the section order would no longer follow the step order unless §§7 and 8 moved before §5, which is a
@@ -167,10 +167,10 @@ structural change for no gain in meaning.
 
 ### 4.3 Recording inputs
 
-**Keep Part 05 §7's obligation and implement it** (agreed direction). What the obligation covers
+**Keep Part 05 §7's obligation and implement it** (preferred direction). What the obligation covers
 depends on its granularity:
 
-- **One row per source root** (agreed direction). A build records one `core.source_files` row per
+- **One row per source root** (preferred direction). A build records one `core.source_files` row per
   distinct `root` it supplied, with `uri` the root, and one `core.processing_run_inputs` row linking
   each to the import run. It needs no adapter change and no new delivery field. `size_bytes` and
   `sha256` stay null unless a build knows them without reading the source.
@@ -187,7 +187,7 @@ came from.
 
 ### 4.4 Staging and the stray rule
 
-**A build owns its staging area** (agreed direction). Part 05 defines the staging area as a
+**A build owns its staging area** (preferred direction). Part 05 defines the staging area as a
 location a build owns for the duration of that build, whose contents are part of no packet until
 promoted. Part 03 names its location in this profile as `staging/` directly under the packet root,
 and excludes it from §9.5's definition of a stray. A writer may then empty or remove it:
@@ -209,11 +209,11 @@ guarantee that a delivered array reaches its final path by that rename.
 
 ### 4.5 Interrupted promotion
 
-**A promotion record makes an interrupted promotion the build's own** (agreed direction, pending
-review). Promotion is the one step that writes at packet paths before a manifest names them: a
-commit moves `tables/`, `arrays/` and the registries into place and writes `sources.json` and the
-candidate manifest, and an amendment moves each written file into place and retains the superseded
-manifest under `manifests/`. A build interrupted there leaves files §9.5 calls strays, at paths a
+**A promotion record makes an interrupted promotion the build's own** (preferred direction).
+Promotion is the one step that writes at packet paths before a manifest names them: a commit moves
+`tables/`, `arrays/` and the registries into place and writes `sources.json` and the candidate
+manifest, and an amendment moves each written file into place and retains the superseded manifest
+under `manifests/`. A build interrupted there leaves files §9.5 calls strays, at paths a
 retry needs. A writer cannot tell them from files placed there another way, which is why the
 reference writer refuses to build over them.
 
@@ -265,9 +265,9 @@ must remove files by hand at the paths the specification protects.
 
 ## 6. Open questions
 
-1. **Input granularity.** Settled: one `core.source_files` row per source root, since one per file
+1. **Input granularity.** Preferred: one `core.source_files` row per source root, since one per file
    needs a new delivery field that every out-of-process adapter would have to fill.
-2. **Interrupted promotion.** Settled pending review: a promotion record in `staging/` makes the
+2. **Interrupted promotion.** Preferred: a promotion record in `staging/` makes the
    paths a promotion creates the build's own until its version is published (§4.5).
 3. **Keeping the decisions together.** The order, the input obligation, and the staging area can
    each be accepted alone. They are kept in one proposal because each settles part of the same
