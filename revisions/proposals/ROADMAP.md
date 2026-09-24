@@ -718,6 +718,10 @@ Split this family wherever the decisions can stand independently:
    behavior, audit each scientific rule that can receive NaN and decide whether its domain
    predicate intentionally accepts or rejects that value. Do not confuse that domain decision with
    the rule language's comparison semantics.
+6. **Packet-owned opaque delivery** — give an adapter a route to deliver a packet-owned resource
+   that is neither a table nor a dense array, such as a media instance, into a build-supplied
+   location bound to its catalog row by `resource_id`; the P8 adapter contract names routes only
+   for rows, packet-owned arrays, and referenced resources.
 
 Analysis lineage and canonicality belong in P5.1 rather than this catch-all; adapter write capability
 belongs in P8. This placement keeps the earlier review's “remaining reconciliations” from becoming
