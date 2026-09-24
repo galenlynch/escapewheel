@@ -96,10 +96,19 @@ Ordering comes from the adapters, not the registry: a foreign key constrains val
 write order, and what actually sequences a build is data-flow — the NWB source needs the
 sorter's units before it can attach a unit to an electrode.
 
+## Store sources are read through a cache
+
+A source root on an object store is opened through fsspec's `simplecache`, so each object is
+fetched once and read locally. The cache lives in `.escapewheel-source-cache/` in the packet's
+parent directory, on the filesystem that will hold the packet, and a rebuild into a new directory
+reuses what the last one fetched. Setting `ESCAPEWHEEL_SOURCE_CACHE` names another directory; the
+variable is also how the location reaches an adapter run out of process. The specification governs
+none of this: bytes in the cache never reach a delivery.
+
 ## Commit is atomic
 
-Part 05 Stage 5: write staged resources, validate them where they stand, move them into place, and
-rename the manifest **last**. Until that rename the root holds no manifest at all, so a reader
+Part 05: write staged resources, derive the requested analysis resources from the staged packet,
+validate the whole of it where it stands, move it into place, and rename the manifest **last**. Until that rename the root holds no manifest at all, so a reader
 finds nothing rather than a partial import claiming to be valid. A commit or amendment whose packet
 verdict is not `passed` raises `CommitRefused` and leaves `staging/` for inspection, so a failing
 extension or an incomplete evaluation publishes nothing (Part 05 §9.2).
