@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `96f5e5809aedadfd827bfd552797876116e4f5a5` |
+| **Based on** | `06b11fb29285fe90890ae84054ca33807bf9abfb` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 00 §10; Part 03 §§1, 10, 11.3, and 12; Part 04 §§1, 4.1, 5.2, 5.3, 5.4, 10, and 11, and a new last subsection of Part 04 §4; Part 05 §11; Part 08 §§3 and 5; `registry/manifest.schema.json` and the delivery schema generated from it |
-| **Depends on** | [R36 §§2.1–2.3](../accepted/R36-verifying-an-external-resource.md#2-decision); [R51 §§2.1–2.4](../accepted/R51-what-the-store-already-knows.md#2-decision); [R52 §§2.1 and 2.3](../accepted/R52-immutability-is-a-premise-nothing-checks.md#2-decision); [R130 §§3.1, 3.10, and 3.11](../accepted/R130-a-packet-binds-the-exact-registries-that-declare-its-resources.md#3-decision) |
+| **Amends** | Part 00 §10; Part 03 §§1, 10, 11.3, and 12; Part 04 §§1, 4.1, 5.2, 5.3, 5.4, 5.5, 10, and 11, and a new last subsection of Part 04 §4; Part 05 §11; Part 08 §§3 and 5; `registry/manifest.schema.json` and the delivery schema generated from it |
+| **Depends on** | R36 §§2.1–2.3; R51 §§2.1–2.4; R52 §§2.1 and 2.3; R130 §§3.1, 3.10, and 3.11 |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6 |
 
@@ -19,14 +19,12 @@ Normative keywords follow BCP 14.
 
 A packet manifest records a digest of a resource's bytes in one member, `sha256`, and the parts
 disagree about what that digest covers, whether it is present, and how it can be checked.
-[Part 03 §10](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#10-checksums) calls a
-packet-owned digest "whole-file, one file per resource", while Part 04 §5.4 defines a prefix's
-digest over its members, and every packet the reference writer builds owns one or two Zarr arrays,
-each a prefix. Part 03 §8.1 says immutability "is verified rather than assumed" because a writer
-records a digest for every packet-owned resource, and
-[Part 03 §9.4](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-incremental-revalidation)
-bounds revalidation on that premise, yet Part 03 §10 has a writer record one only "by default",
-with no requirement keyword.
+Part 03 §10 calls a packet-owned digest "whole-file, one file per resource", while Part 04 §5.4
+defines a prefix's digest over its members, and every packet the reference writer builds owns one or
+two Zarr arrays, each a prefix. Part 03 §8.1 says immutability "is verified rather than assumed"
+because a writer records a digest for every packet-owned resource, and Part 03 §9.4 bounds
+revalidation on that premise, yet Part 03 §10 has a writer record one only "by default", with no
+requirement keyword.
 
 SHA-256 is the only function a digest can use, so checking a resource held in an object store means
 reading every byte of it, although the store already holds a whole-object checksum of each object
@@ -39,35 +37,36 @@ against a store's checksum, and has a writer record every ETag verbatim as chang
 
 The change is structural because it replaces rules in existing sections: Part 03 §10's optional
 obligation, Part 04 §5.4's SHA-256-only construction and its ETag exclusion, Part 04 §5.3's level
-3c, and the `member_digest` check of Part 04 §10. It moves the digest definition out of Part 04
-§5, whose subject is external resources, into a new last subsection of Part 04 §4, because the definition governs
-packet-owned resources equally. It moves RFC 1952's bibliographic entry from Part 03 §12 to Part
-00 §10, because Parts 03 and 04 would both invoke it.
+3c, and the `member_digest` check of Part 04 §10. It moves the digest definition out of Part 04 §5,
+whose subject is external resources, into a new last subsection of Part 04 §4, because the
+definition governs packet-owned resources equally. It moves RFC 1952's bibliographic entry from
+Part 03 §12 to Part 00 §10, because Parts 03 and 04 would both invoke it.
 
 ### 1.1 Structural crosswalk
 
-Five affected sections have no canonical anchor: Part 03 §10, Part 04 §§5.2 and 5.4, Part 05 §11,
-and Part 08 §5. A metadata-only bootstrap commit adds `ew-owned-resource-digests`,
-`ew-external-resource-record`, `ew-prefix-resources`, `ew-writer-acceptance-criteria`, and
-`ew-example-acceptance-checklist` before them, and this draft's `Based on` becomes that commit. The
-new digest subsection takes `ew-resource-digests` when it is created. No section is retired.
+Commit `06b11fb` added the canonical anchors `ew-owned-resource-digests` to Part 03 §10,
+`ew-external-resource-record` and `ew-prefix-resources` to Part 04 §§5.2 and 5.4,
+`ew-writer-acceptance-criteria` to Part 05 §11, and `ew-example-acceptance-checklist` to
+Part 08 §5, and changed nothing else. The new digest subsection, "Resource digests", takes
+`ew-resource-digests` when it is created. No section splits, merges, or retires.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | Part 04 §5.4, the prefix `sha256` construction | move and generalize | a new last subsection of Part 04 §4, `ew-resource-digests` | the listing carries each member's value in the resource's algorithm and is hashed with SHA-256; a prefix holds at least one object | §3.2 |
 | none; a single object's digest is implicit in the member name | add | the new digest subsection | four named functions, one value form each, and their check values | §3.1 |
 | Part 03 §10, "records a `sha256` … by default" and the skipped-resource count | replace in place | the new digest subsection for presence; Part 03 §10 for what a portable resource's digest covers | a packet-owned resource MUST record a digest | §3.4 |
-| [Part 04 §4.1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-resource-entry-fields), the generated field table and its pointer to Part 03 §10 | regenerate and revise | same section | `digest` replaces `sha256`; the pointer names the new digest subsection | §3.3 |
+| Part 04 §4.1, the generated field table and its pointer to Part 03 §10 | regenerate and revise | same section | `digest` replaces `sha256`; the pointer names the new digest subsection | §3.3 |
 | Part 04 §5.2, what `sha256`, `size_bytes`, and `verified_at` record | revise in place | same section | names `digest` | §3.3 |
-| [Part 04 §5.3](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-external-resource-verification), levels 2 and 3c | replace in place | same section | a recorded digest holds when computed or matched against store checksums, and a report says which | §3.5 |
+| Part 04 §5.3, levels 2 and 3c | replace in place | same section | a recorded digest holds when computed or matched against store checksums, and a report says which | §3.5 |
 | Part 04 §5.4, `members`, `store_digest`, and the no-read level | revise in place | same section | members record `digest` in the resource's algorithm, all or none; an ETag is recorded verbatim as `etag` | §§3.3, 3.6 |
-| [Part 04 §10](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-manifest-conformance), `packet.resource.member_digest` | replace in place | same section | reads `digest`; a new `packet.resource.digest_missing` | §§3.3, 3.4 |
-| [Part 04 §11](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-normative-references), one entry | extend in place | same section | gains CRC64NVME's and CRC32C's authorities | §3.1 |
-| [Part 03 §12](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-portable-profile-normative-references), the RFC 1952 row | move | [Part 00 §10](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-normative-references) | none: the entry's application gains CRC-32 | §3.1 |
-| [Part 04 §1](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-catalog-scope) and [Part 03 §1](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-portable-profile-scope), schema `$id`s and member lists | revise in place | same sections | name `manifest/0.5.0`, `resources/0.5.0`, `digest`, and the new digest subsection | §3.3 |
-| [Part 03 §11.3](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-referenced-resource-delivery), "`size_bytes` and `sha256` come from" | revise in place | same section | names `digest` | §3.3 |
+| Part 04 §5.5, a recorded `sha256` that resolution through a different document does not invalidate | revise in place | same section | names a recorded `digest` | §3.3 |
+| Part 04 §10, `packet.resource.member_digest` | replace in place | same section | reads `digest`; a new `packet.resource.digest_missing` | §§3.3, 3.4 |
+| Part 04 §11, one entry | extend in place | same section | gains CRC64NVME's and CRC32C's authorities | §3.1 |
+| Part 03 §12, the RFC 1952 row | move | Part 00 §10 | none: the entry's application gains CRC-32 | §3.1 |
+| Part 04 §1 and Part 03 §1, schema `$id`s and member lists | revise in place | same sections | name `manifest/0.5.0`, `resources/0.5.0`, `digest`, and the new digest subsection | §3.3 |
+| Part 03 §11.3, "`size_bytes` and `sha256` come from" | revise in place | same section | names `digest` | §3.3 |
 | Part 05 §11, "a recorded `sha256` therefore says" | revise in place | same section | names a recorded digest | §3.3 |
-| [Part 08 §3](../../escapewheel_poc_docs_v0.2/08_example_packet.md#ew-example-packet-catalog) and §5, the example and its checklist | revise the informative text | same sections | the excerpt records `digest` objects, including one for `analysis.spike_events`, which records none | §§3.3, 3.4 |
+| Part 08 §3 and §5, the example and its checklist | revise the informative text | same sections | the excerpt records `digest` objects, including one for `analysis.spike_events`, which records none | §§3.3, 3.4 |
 
 ## 2. Background
 
@@ -94,8 +93,8 @@ each carries `extensions`, `registry_version`, and `required_codecs` and lacks `
 each fails the current `manifest/0.4.0` schema with 92 to 114 errors. They need a rebuild
 whatever this revision decides.
 
-The 31 packet fixtures under `fixtures/packets/` carry 926 packet-owned entries and no prefix, and
-none records a digest, because `fixtures/build.py` writes none.
+The 30 packet fixtures `fixtures/build.py` writes carry 901 packet-owned entries and no prefix, and
+none records a digest, because the generator writes none.
 
 ### 2.2 S3 and Google Cloud Storage keep a whole-object CRC
 
@@ -171,9 +170,10 @@ The validator computes each member's SHA-256 while digesting a prefix and discar
 writer's external-prefix paths record `members` with sizes and store digests only. An external
 prefix digested today therefore records no member digest, and checking three of its chunks later
 means reading all of them. The validator records a 32-digit hexadecimal ETag as `md5` whatever the
-object's encryption, and skips the 102 multipart LFP members. `packet.resource.member_digest` fires
-only when every member records `sha256`, so a partly digested member list goes unchecked. A
-packet-owned resource without a digest is reported as a warning.
+object's encryption, and records none for a multipart object, such as the 102 LFP members R51
+counted. `packet.resource.member_digest` fires only when every member records `sha256`, so a partly
+digested member list goes unchecked. A packet-owned resource without a digest is reported as a
+warning.
 
 ### 2.6 Alternatives
 
@@ -197,13 +197,15 @@ rewrite a resource can rewrite the manifest.
 
 ### 2.7 Overlap
 
-A draft on the Zarr reader floor amends Part 03 §§6.4 and 12 and Part 05 §5.3. Both drafts edit
-Part 03 §12's table, the other adding codec rows and this one moving the RFC 1952 row out, so they
-commute. The proposal on nomenclature references would add an entry kind to Part 00 §10, where this
-draft adds a row. A proposed move of Part 03 §11 into its own part would carry §11.3's sentence
-naming `digest` with it, and a proposed source cache keyed by URI and store identity would rely on
-§3.1's whole-object functions. `core.source_files.sha256` describes a source rather than a packet
-resource and is unchanged.
+A draft on the Zarr reader floor amends Part 03 §§5.5 and 6.4, Part 05 §5.3, and Part 10 §5, none of
+which this draft changes. A draft on nomenclature references adds an entry kind and revises the
+release rule in Part 00 §10, where this draft adds the RFC 1952 row, and both drafts change
+`framework.py`'s reference allocation and the specification README's paragraph naming each part's
+references; the edits touch different rows and sentences and commute. A draft on non-finite float
+values revises other lines of Part 08 §3's excerpt. Moving Part 03 §11 into its own part would carry
+§11.3's sentence naming `digest` with it, and a source cache keyed by URI and store identity would
+rely on §3.1's whole-object functions. `core.source_files.sha256` describes a source rather than a
+packet resource and is unchanged.
 
 ## 3. Decision
 
@@ -322,29 +324,30 @@ phases, such a packet gets no declaration findings until it is corrected.
 R36 §2.2's construction is generalized to the admitted algorithms and moves to Part 04's new
 digest subsection. R51 §2.2's rule that a writer record only a single-part content-hash ETag is
 replaced by §3.6, and its open `algorithm` string stands. R52 §2.1's SHOULD becomes §3.4's MUST,
-which the ledger already records as compiled. No clause is superseded whole; the ledger entries of R36 §2.2, R51 §2.2, and
-R52 §§2.1 and 2.3 gain notes, and 27 numeric destinations in the affected sections migrate to
-their canonical anchors.
+which the ledger already records as compiled. No clause is superseded whole; the ledger entries of
+R36 §2.2, R51 §2.2, and R52 §§2.1 and 2.3 gain notes, and the 33 destinations that name
+Part 03 §§1, 10, and 11.3, Part 04 §§1, 4.1, and 5.2–5.5, and Part 05 §11 by number migrate to their
+canonical anchors.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. No concept's meaning changes. | None required. |
 | logical prose and registry | Unchanged. `core.source_files.sha256` describes a source, and no declaration names a resource digest. | None required. |
 | physical profiles | Part 03 §1 names `resources/0.5.0`, `digest`, and Part 04's new digest subsection; §10 states what a portable resource's digest covers and loses its optional obligation and skip count; §11.3 names `digest`; §12 loses the RFC 1952 row. | `evidence/R<N>.json` owners by anchor. |
-| packet manifest and JSON Schemas | Part 04 gains a digest subsection at the end of §4; §§1, 4.1, 5.2, 5.3, 5.4, 10, and 11 change as §1.1 lists. `manifest.schema.json` changes as §3.3 states, and `registry/build.py` regenerates the delivery schema at `resources/0.5.0` and Part 04's field tables. `registry/resources.example.json` names the new `$id`. | `registry/check.py`; the vendoring check; `registry-targets.toml` pointers for §3.3. |
+| packet manifest and JSON Schemas | Part 04 gains a digest subsection at the end of §4; §§1, 4.1, 5.2–5.5, 10, and 11 change as §1.1 lists. `manifest.schema.json` changes as §3.3 states, and `registry/build.py` regenerates the delivery schema at `resources/0.5.0` and Part 04's field tables. `registry/resources.example.json` names the new `$id`. | `registry/check.py`; the vendoring check; `registry-targets.toml` pointers for §3.3. |
 | validation and import | Part 05 §11 names a recorded digest. Part 05 §5.3's shim still checks digests outside SQL. | Covered by the validator tests below. |
 | extensions | Unchanged. No extension registry declares a digest, and an extension resource's entry follows the same schema. | The AIND suite, which builds manifests through the writer. |
 | reader, writer, validator, adapters | The reader is unchanged. The writer records `digest` objects for owned resources in SHA-256, and its `verify` command and LFP source record external member digests beside the resource digest and ETags as `etag`. The validator computes the four functions, checks against store-reported full-object checksums, reports its route, adds `packet.resource.digest_missing`, revises `packet.resource.member_digest`, reads an empty prefix as missing, and records ETags as `etag`. Adapters that deliver a resource document emit `digest` in place of `sha256`. | Writer, validator, and AIND suites. |
 | conformance fixtures and tests | `fixtures/build.py` records a digest for every owned resource. New fixtures cover an owned entry without a digest, an entry with members missing some digests, a CRC64NVME, a CRC32C, and a CRC32 resource that pass and fail by one byte, a CRC-algorithm prefix whose value is the listing's SHA-256, and a member digest of the wrong width. Validator tests cover a store-checksum match with an object-store double, a composite value refused, an empty owned prefix, and a report's route. Writer tests cover external member digests and a multipart ETag recorded as `etag`. | The conformance corpus and package suites. |
 | revision process and tooling | `framework.py`'s reference allocation moves RFC 1952 to Part 00 and adds Part 04's two rows. The ledger changes as stated above. | `framework.py`, `ledger.py`, and `evidence.py`. |
-| generated publications and developer documentation | The combined specification and heading index regenerate. Part 08 §§3 and 5 show `digest`. The validator and writer READMEs describe the verification route and `verify`. | `verify.py`. |
+| generated publications and developer documentation | The combined specification and heading index regenerate. Part 08 §§3 and 5 show `digest`. The specification README's reference paragraph, which places the SHA-256 authority in Part 04 §11 and every portable-profile reference in Part 03 §12, names the CRC authorities in Part 04 §11 and RFC 1952 in Part 00 §10. The validator and writer READMEs describe the verification route and `verify`. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
-Each clause is `applied`, each by its canonical anchor: §3.1 at `ew-resource-digests`, Part 04
-§11, and Part 00 §10; §3.2 at `ew-resource-digests`; §3.3 at Part 04 §§1, 4.1, 5.4, and 10, whose
-evidence also names the manifest schema's pointers; §3.4 at `ew-resource-digests`, Part 04 §10,
-and Part 03 §10; §3.5 at Part 04 §5.3; and §3.6 at Part 04 §5.4.
+Each clause is `applied`, each by its canonical anchor: §3.1 at `ew-resource-digests`, Part 04 §11,
+and Part 00 §10; §3.2 at `ew-resource-digests`; §3.3 at Part 04 §§1, 4.1, 5.4, and 10, whose
+evidence also names the manifest schema's pointers; §3.4 at `ew-resource-digests`, Part 04 §10, and
+Part 03 §10; §3.5 at Part 04 §5.3; and §3.6 at Part 04 §5.4.
 
 The negative cases distinguish the new rule from the current one:
 
