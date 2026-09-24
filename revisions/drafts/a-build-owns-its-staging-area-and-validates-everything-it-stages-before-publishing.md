@@ -223,7 +223,13 @@ under `staging/`, so `amend` can stage a registry document and bind it there whi
 it already binds staged resources. No library, storage property, or performance claim beyond those
 Part 05 §6 already relies on is introduced.
 
-No other proposal or draft is open at the baseline. A separate change is expected to move Part 03
+No other proposal or draft is open at the baseline. Four proposals were opened after it without
+changing a part. Two touch sections this draft also amends, in different sentences:
+`every-packet-owned-resource-records-a-named-whole-object-digest.md` amends Part 03 §11.3's
+paragraph on an array's digest and leaves `core.source_files.sha256` to a later change, and
+`the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md`
+amends Part 05 §5.3, whose parent this draft retitles. This draft is ordered before both, and
+neither changes a rule it relies on. A separate change is expected to move Part 03
 §11 into a part of its own. This revision replaces one table row of Part 03 §11.2 and one sentence
 of Part 03 §11.3, and this draft cites both by their anchors, `ew-build-supplied-values` and
 `ew-referenced-resource-delivery`, which move with them. Whichever change is incorporated second
@@ -302,13 +308,13 @@ paragraph:*
 
 *Part 05 §2, "Pipeline", adds after the order of §3.1 and before its delivery paragraph:*
 
-> The **staging area** is a location a build owns for the duration of one build, where it writes
+> The **staging area** is a location a build or an amendment owns while it runs, where it writes
 > what it will publish. What the staging area holds is part of no packet until promotion moves it to
 > its final location. A physical profile names where its staging area lies.
 >
 > A writer MAY empty or remove a staging area:
 >
-> - after it publishes the manifest of the build that owns it;
+> - after it publishes the manifest of the build or amendment that owns it;
 > - when it begins a build at the same packet root; and
 > - when it begins an amendment of the packet at that root.
 >
@@ -348,8 +354,9 @@ a conditional write between the first paragraph and the fourth:*
 > naming a resource that is not yet in place. A writer MUST NOT publish a manifest until every
 > packet-owned resource it names is at its final location and has passed validation.
 >
-> A writer whose validation returns a packet verdict other than `passed` MUST NOT promote anything
-> or write a manifest at the packet root, and SHOULD leave its staging area in place for inspection.
+> A writer whose validation returns a packet verdict other than `passed` promotes nothing
+> (Part 05 §2), MUST NOT write a manifest at the packet root, and SHOULD leave its staging area in
+> place for inspection.
 >
 > Before a build or an amendment writes anything outside its staging area, the writer MUST write a
 > **promotion record** into the staging area and make it durable. The record states the
@@ -428,8 +435,12 @@ path an unpublished promotion record lists apart from its strays. The writer's `
 newly bound registry document under `staging/` instead of writing it at its final path before
 validation, so a refused amendment writes nothing outside `staging/`.
 
-No accepted clause is superseded whole. R134 §3.4's rule that a build owns each delivery location
-stands and is the case of the staging area this revision generalizes.
+No accepted clause is superseded whole. §3.5 narrows R61 §2.1's stray, which now also lies outside
+`staging/` and every path an unpublished promotion record lists, and R32 §6's ban on deleting
+during an amendment, which now admits a staging area and the paths a promotion record makes the
+amendment's own. R74 §§2.1–2.3 stand in Part 05 §6, and §3.3 restates the guarantee of R74 §2.1
+with a writer as its actor. R134 §3.4's rule that a build owns each delivery location stands and is
+the case of the staging area this revision generalizes.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -441,7 +452,7 @@ stands and is the case of the staging area this revision generalizes.
 | extensions | Registry content unchanged. The AIND package's two adapters re-point their Stage 1 citations to Part 05 §4.1. | The AIND suite passes. |
 | reader, writer, validator, adapters | The writer records one `core.source_files` row per distinct recipe `root` and one `core.processing_run_inputs` row for each in `session.build`; writes a promotion record in `commit` and `amend` before the first write outside `staging/`; on a retry acts on a record as Part 05 §6 says, replacing `_refuse_occupied`'s refusal where a record makes the paths its own; stages `amend`'s newly bound registries under `staging/`; restates its module docstring's order; and re-points the fifteen stage citations in its source and the one in `pyproject.toml` to the section that states each rule. `prune` reports `staging/` and paths an unpublished record lists apart from its strays. The reader's two docstrings citing Part 05 §7 for the time origin re-point to Part 01 §2.2. The validator is unchanged, since it checks no writer obligation (Part 05 §10). | Writer tests below. |
 | conformance fixtures and tests | Packet fixtures are unchanged, because every changed obligation binds a writer. Writer tests cover a build recording one input row per distinct root, including two sources sharing one root; a root recorded as the recipe states it; a leftover `staging/` emptied before a build; an interrupted commit and an interrupted amendment undone on retry from their promotion records; a stale record whose version is published, after which only `staging/` is removed; promoted directories with no record still refused; an unreadable record refused; a refused amendment leaving nothing outside `staging/`; and `prune` reporting `staging/` apart from strays. The adapter boundary probes re-point their Stage 1 citations. | `escapewheel-writer` and `escapewheel-aind` suites. |
-| revision process and tooling | Ordinary ledger and evidence records, each clause targeting its owners by anchor. | `ledger.py` and `evidence.py`. |
+| revision process and tooling | Ordinary ledger and evidence records, each clause targeting its owners by anchor. The ledger entries of R74 §§2.1–2.3, R32 §6, R61 §2.1, and R111 §3.5 that target Part 05 §§4.2 and 6 and Part 03 §9.5 by number move to those sections' anchors, and the notes of R32 §6 and R61 §2.1 record the narrowing. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. Part 07 §4's `PacketWriter` summary already reads "stage, validate, commit" and is unchanged. The repository and writer READMEs re-point their Stage 1 and Stages 2-6 citations, and the source inventories' Stage 1 citations re-point to Part 05 §4.1. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
