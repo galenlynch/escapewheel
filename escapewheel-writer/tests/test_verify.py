@@ -80,6 +80,21 @@ def test_verify_records_what_the_store_holds(tmp_path, registry, minimal):
     assert {m["key"] for m in entry["members"]} == {".zarray", "0.0"}
 
 
+def test_a_single_object_records_no_members(tmp_path, registry, minimal):
+    """Part 04 §5.4 gives only a prefix members; a single object has no key to list it under."""
+    root = tmp_path / "s001"
+    _commit(root, registry, minimal)
+    video = tmp_path / "camera.mp4"
+    video.write_bytes(b"x" * 100)
+    _external(root, video.resolve().as_uri())
+
+    report, manifest = verify(root, level="sha256")
+    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    entry = next(r for r in manifest["resources"] if r.get("external"))
+    assert entry["size_bytes"] == 100
+    assert "members" not in entry
+
+
 def test_verify_is_a_new_packet_version_that_retains_the_old(tmp_path, registry, minimal):
     """Part 03 §9.3: a superseded file is interpretable only while the manifest naming it survives."""
     root = tmp_path / "s001"

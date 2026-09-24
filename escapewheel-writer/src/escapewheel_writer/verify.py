@@ -26,9 +26,9 @@ from escapewheel_validator.stores import StoreUnreachable, digest, listing
 from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
-#: records Part 04 §5.4's per-member listing with whatever content hash the store handed over, and
-#: `sha256` also digests every byte. `members` is the default because it is the strongest thing
-#: available for the price of the listing.
+#: records a prefix's Part 04 §5.4 per-member listing with whatever content hash the store handed
+#: over, and `sha256` also digests every byte. `members` is the default because it is the strongest
+#: thing available for the price of the listing.
 LEVELS = ("size", "members", "sha256")
 
 
@@ -50,7 +50,7 @@ def _measure(entry: dict[str, Any], level: str, notes: list[str]) -> bool:
         return False
     entry["size_bytes"] = found.size_bytes
     entry["verified_at"] = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
-    if level in {"members", "sha256"}:
+    if level in {"members", "sha256"} and not found.is_single_object:
         entry["members"] = [_member_entry(m) for m in found.members]
     if checksum is not None:
         entry["sha256"] = checksum
