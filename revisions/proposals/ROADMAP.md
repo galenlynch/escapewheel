@@ -717,9 +717,10 @@ Split this family wherever the decisions can stand independently:
    across the physical and packet contracts (S7).
 3. **Codec capability and portability** — settle exact reader-floor membership and distinguish
    features outside the floor, validity, and portability reporting (the remaining part of S10/I8).
-4. **Profile scope and document organization** — state the present electrophysiology/profile scope
-   accurately and consider moving the adapter/build interface out of the physical-storage part in
-   the next version (S12 and documentation organization).
+4. **Profile scope and document organization** — state that the packet mechanism is general and
+   that the present core vocabulary targets extracellular electrophysiology, and move the
+   adapter/build interface out of the physical-storage part into its own part in v0.2 (S12 and
+   documentation organization).
 5. **Non-finite domain semantics** — after P3 defines deterministic floating-point language
    behavior, audit each scientific rule that can receive NaN and decide whether its domain
    predicate intentionally accepts or rejects that value. Do not confuse that domain decision with
@@ -728,6 +729,12 @@ Split this family wherever the decisions can stand independently:
    that is neither a table nor a dense array, such as a media instance, into a build-supplied
    location bound to its catalog row by `resource_id`; the P8 adapter contract names routes only
    for rows, packet-owned arrays, and referenced resources.
+7. **Recipe and reference maintenance** — refuse a recipe that names an extension twice, and add
+   normative reference entries for the nomenclature authorities the registries cite.
+8. **Adapter source cache** — give a build-supplied, persistent cache directory outside the packet
+   root and staging a place among the build-supplied locations, keyed by source URI and store
+   identity, holding whole objects and safe under concurrent writers. It depends on P9.1 for the
+   build's locations and on P9.2 for object identity.
 
 Analysis lineage and canonicality belong in P5.1 rather than this catch-all; adapter write capability
 belongs in P8. This placement keeps the earlier review's “remaining reconciliations” from becoming
@@ -805,7 +812,7 @@ This table prevents a finding from disappearing merely because it was split out 
 | D6 underspecified adapter declarations | P8 |
 | D7 imperative registry replay | P10 |
 | D8 extension non-table assets | P5.1 |
-| D9 cross-language proof | Deferred interoperability hardening, including a build-supplied location for an adapter's source cache, which the P8 adapter contract leaves ungoverned but open; reconsider as a P11 release criterion if independent implementation is required for v0.2 |
+| D9 cross-language proof | Deferred interoperability hardening; reconsider as a P11 release criterion if independent implementation is required for v0.2. The adapter source-cache location moved into v0.2 as P9.8 |
 | R1–R4 and R6–R7 process gaps | P0 is complete; continue using its gates and evidence artifacts |
 | R5 mutable publication | P11 |
 | R8 historical review labeling | Ordinary documentation maintenance |
