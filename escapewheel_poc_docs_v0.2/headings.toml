@@ -538,6 +538,12 @@ section = "9.2"
 title = "Error policy"
 aliases = []
 
+[anchor.ew-example-acceptance-checklist]
+part = "08"
+section = "5"
+title = "Acceptance checklist"
+aliases = []
+
 [anchor.ew-example-packet-catalog]
 part = "08"
 section = "3"
@@ -584,6 +590,12 @@ aliases = []
 part = "09"
 section = "5.5"
 title = "Independent versioning"
+aliases = []
+
+[anchor.ew-external-resource-record]
+part = "04"
+section = "5.2"
+title = "What is recorded"
 aliases = []
 
 [anchor.ew-external-resource-referencing]
@@ -748,6 +760,18 @@ section = "9"
 title = "Part subjects and normative status"
 aliases = []
 
+[anchor.ew-one-null]
+part = "03"
+section = "5.6"
+title = "One null"
+aliases = []
+
+[anchor.ew-owned-resource-digests]
+part = "03"
+section = "10"
+title = "Checksums"
+aliases = []
+
 [anchor.ew-packet]
 part = "00"
 section = "3.3"
@@ -866,6 +890,12 @@ aliases = []
 part = "03"
 section = "2"
 title = "Descriptor and interfaces"
+aliases = []
+
+[anchor.ew-prefix-resources]
+part = "04"
+section = "5.4"
+title = "Prefix resources"
 aliases = []
 
 [anchor.ew-protocol-groups]
@@ -1138,6 +1168,18 @@ section = "2"
 title = "Logical resource declarations"
 aliases = []
 
+[anchor.ew-tier-1-rules]
+part = "02"
+section = "10.1"
+title = "Tier 1: generated from structure"
+aliases = []
+
+[anchor.ew-tier-1-validation]
+part = "05"
+section = "5.1"
+title = "Tier 1"
+aliases = []
+
 [anchor.ew-tier-2-bounded-recursion]
 part = "11"
 section = "6"
@@ -1244,4 +1286,16 @@ aliases = []
 part = "05"
 section = "9.5"
 title = "Verdicts"
+aliases = []
+
+[anchor.ew-writer-acceptance-criteria]
+part = "05"
+section = "11"
+title = "Minimum acceptance criteria"
+aliases = []
+
+[anchor.ew-zarr-codec-floor-evidence]
+part = "10"
+section = "5"
+title = "The Zarr codec floor is version-specific"
 aliases = []

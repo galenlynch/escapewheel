@@ -1697,6 +1697,7 @@ the descriptor ID is null.
 
 ## 10. Validation rules
 
+<a id="ew-tier-1-rules" data-spec-anchor="canonical"></a>
 ### 10.1 Tier 1: generated from structure
 
 A validator MUST generate, from the declaration alone: required-column non-null checks, foreign-key anti-joins, and closed-vocabulary membership. A nullable foreign key is guarded with a null test.
@@ -2181,6 +2182,7 @@ packet is conforming whichever it uses.
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
 
+<a id="ew-one-null" data-spec-anchor="canonical"></a>
 ### 5.6 One null
 
 Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null.
@@ -2363,6 +2365,7 @@ A packet MAY declare its own retention, and a writer SHOULD emit one: how many s
 
 `packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile.
 
+<a id="ew-owned-resource-digests" data-spec-anchor="canonical"></a>
 ## 10. Checksums
 
 A writer records a `sha256` over each packet-owned resource by default. This is the one case where a digest verifies what the packet itself claims, and it is cheap: whole-file, one file per resource.
@@ -2656,6 +2659,7 @@ A resource the packet does not own MUST set `external: true`. A resource whose `
 
 Referencing is expected for large resources. Externalizing a table costs more than externalizing an array: its validation rules cannot run at all while it is unreachable.
 
+<a id="ew-external-resource-record" data-spec-anchor="canonical"></a>
 ### 5.2 What is recorded
 
 `sha256`, `size_bytes`, and `verified_at` record what was true when the resource was checked. They are not a claim about now.
@@ -2685,6 +2689,7 @@ require a validation receipt or physical inspection of every resource. Before ex
 values, a reader inspects only the metadata needed for the selected resource and fails that
 resource specifically when support is absent.
 
+<a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources
 
 Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — `sha256` and `size_bytes` are **defined over its members**, not undefined:
@@ -3179,6 +3184,7 @@ A build MUST report everything the protocol it used carries about a failure — 
 <a id="ew-import-validation" data-spec-anchor="canonical"></a>
 ## 5. Validate
 
+<a id="ew-tier-1-validation" data-spec-anchor="canonical"></a>
 ### 5.1 Tier 1
 
 Generated from structure (Part 02 §10.1): required-column non-null, primary-key uniqueness, foreign-key anti-joins, closed-vocabulary membership.
@@ -3398,6 +3404,7 @@ registry is the data-driven route for a resource core does not define.
 
 A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only a writer. Where it also checks writer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately, as it already does for core and extension verdicts.
 
+<a id="ew-writer-acceptance-criteria" data-spec-anchor="canonical"></a>
 ## 11. Minimum acceptance criteria
 
 A writer conforms when it:
@@ -3948,6 +3955,7 @@ SELECT count(*) FROM analysis_spike_events
 WHERE t_tick BETWEEN ? AND ?;
 ```
 
+<a id="ew-example-acceptance-checklist" data-spec-anchor="canonical"></a>
 ## 5. Acceptance checklist
 
 A packet of this shape is conforming when:
@@ -4330,6 +4338,7 @@ disk, so it is scan parallelism rather than skipped round trips.
 The write side is the other way: a re-sorting rewrites the whole file where partitioning writes one
 member. No session has yet had a second sorting.
 
+<a id="ew-zarr-codec-floor-evidence" data-spec-anchor="canonical"></a>
 ## 5. The Zarr codec floor is version-specific
 
 Measured in `conformance/zarr-probe/` against **zarr-python 3.3.0, Zarr.jl 0.10.2 and Julia
