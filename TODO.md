@@ -43,40 +43,16 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. Packet resource classification needs its own proposal
+## 1. Registry replay should give way to declarative authoring
 
-**Not started; follow the normative-ownership proposal.** Part 00 uses *layer* for the content
-classification `core`, extensions, `analysis`, and the deferred `nwb` projection. Part 04 requires
-every resource entry to carry `layer` without defining its values, while
-`registry/manifest.schema.json` permits `core`, `analysis`, `extension`, and `docs`. The reader,
-writer, validator, and fixtures all consume the field, so this is a packet-contract disagreement,
-not an editorial rename.
+`registry/build.py` derives the core registry by parsing Part 02's tables and then replaying the
+accepted decisions that changed them. Replace it with one reviewed registry document or
+deterministically assembled fragments, keep provenance in accepted history and Git rather than in
+the registry document, and prove that the migration preserves the released registry bytes or a
+defined canonical form. This is ordinary repository maintenance if the published contract is
+unchanged; any change to the published form returns through the revision process.
 
-The proposal should decide whether resource classification is declared or derived. The cleaner
-starting point is to remove `layer` and derive the class from the `resource_id` namespace together
-with the packet's declared extension registries; there is no released compatibility obligation
-requiring the redundant field to survive. Audit `canonical` in the same proposal: Part 04 says it
-is required, the manifest schema does not require it, and its value may also be derivable from the
-resource class. The resulting revision would update Part 00, Part 04, the incorporated manifest
-schema if applicable, reader/writer/validator behavior, APIs, fixtures, and packet regeneration.
-
-## 2. Other normative-ownership follow-ups are deliberately split
-
-These do not belong in the first authority revision. Each has its own decision boundary and can
-land after the specification release and ownership model identifies its proper owner.
-
-- **Identify packet registries precisely.** A separate proposal should decide how a packet names
-  the released core registry and each extension registry by stable identifier, version, and
-  digest; when an embedded copy is required; what a validator compares; and whether existing
-  packets are regenerated. This is a packet-manifest change, not part of defining a specification
-  release manifest.
-- **Replace registry replay with direct declarative authoring.** Choose one reviewed registry
-  document or deterministically assembled fragments, retain provenance in accepted history and
-  Git rather than the registry document, and prove that the migration preserves the released registry bytes or a defined
-  canonical form. This is ordinary repository maintenance if the published contract is unchanged;
-  any change to the published form returns through the revision process.
-
-## 3. No template scaffolds an extension project
+## 2. No template scaffolds an extension project
 
 **Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
 it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
@@ -91,11 +67,12 @@ fork. What it should generate:
 
 - `registry/<namespace>.json`, a skeleton declaring one table with every attribute a column owes,
   and a test running it against `registry/registry.schema.json`;
-- an `extract.py` matching the shape a recipe's `command` invokes — an argument list run in the
-  source root, writing Parquet to declared paths;
+- an `extract.py` delivering by `files-v0.1`: it reads the build's JSON object of terms from
+  standard input and writes `<resource_id>.parquet` into the `delivery_root` it names, beside an
+  adapter declaration document (Part 03 §11.5) for the recipe's `delivery` table;
 - an optional self-validation step against the extension's own document (R109 §3.5) and an
   optional run report (R109 §3.6);
-- a `[source]` block and an `[encoding]` block to paste into a recipe.
+- a `[source]` block, with its `delivery` table, and an `[encoding]` block to paste into a recipe.
 
 **What the instructions must state**, because each is a rule an author will otherwise break:
 
@@ -121,380 +98,41 @@ commands, and that freedom is what R109 §3.1 exists to protect. Print for a per
 put anything a build should parse in the report file. Do not restate what the build already
 derives: rows per table come from the Parquet footer at Part 05 Stage 1.
 
-## 4. The adapter boundary reaches nine of the ten adapters
+## 3. A delivered sync source cannot carry the terminal-anchor result
 
-R115 was accepted on 2026-09-11 and Part 03 §11 carries the whole contract between a build and a
-source; every piece of it was built by 2026-09-14 — a declaration, a document, a command, three
-protocols and a report. The nine are delivered out of process on real data (`ecephys_786867` at
-`--sample 2000`), and `conformance/adapter-boundary/` holds the seven scripts that measured all
-three protocols delivering one adapter's eighteen resources identically. What follows is what the
-boundary does not yet reach.
-
-**Where a protocol is needed it is `flight-v0.1`**, decided 2026-09-12. R115 §3.3 asks one of an
-adapter released independently of the build and none of an adapter the build ships, so the ten need
-nothing today; what the decision settles is which protocol the writer's own server speaks, and which
-one an adapter leaving this distribution implements. Flight owns the least of the three: a
-descriptor is the format's, so the protocol invents no metadata key, and `ListFlights` answers
-Part 05 §4.1's discovery and `DoGet` the per-resource fetch from Arrow's own vocabulary rather than
-from surface we would have to specify and version. Leaving is what makes an adapter need a protocol.
-
-**Core ships adapters for standards and not for institutions.** SpikeInterface, Open Ephys, Harp and
-NWB are read by many institutions, so support for them is worth carrying centrally; `rig.json`
-serves one. Measured against what each module actually names, the ten sort four ways:
-
-| | adapters |
-|---|---|
-| generic | `sorter`, `sync`, `openephys`, `harp` |
-| generic once the dialect leaves with the NWB split | `nwb`, `lfp`, `waveforms` |
-| one institution's, whole | `session`, `video` |
-| not an adapter | `tables` |
-
-`session` is 707 lines of AIND's metadata schema and carries both `aind.*` compensations. `video` is
-311 lines requiring a **headerless three-column CSV read positionally** — `COLUMNS = ("rig_seconds",
-"frame_counter", "camera_nanoseconds")` — beside every `.mp4` with the same stem, with `frame_index`
-derived from `frame_counter` and the `rx:Zip` pairing repair on top. One `ffprobe` call for
-container metadata is the only generic part, so it leaves whole rather than as a carving.
-
-`lfp` **is generic**, since 2026-09-16, and nothing left it. `processing/ecephys/LFP` is where
-pynwb's own `LFP` container lives, and the Zarr v2 referencing, the axis description and the band
-declaration are all format-level. Its one line of dialect recovered a probe from a series name NWB
-does not constrain — `series.name.removeprefix("ElectricalSeries").removesuffix("-LFP")` — and that
-was repaired rather than moved: an `ElectricalSeries` declares an electrode region, the contacts in
-one belong to a single `ElectrodeGroup`, and `probe_of` now reads that. Measured on the ten real
-series, the derivation and the parse agree in **10 of 10**, so no committed packet's
-`array_asset_id` moves. What it costs is a dependency: a series names its probe from the electrodes
-table, where parsing its own name needed nothing.
-
-`waveforms` reads `waveform_mean`, `waveform_sd` and the ragged `electrodes`/`electrodes_index`, all
-base NWB, and matches an array row to a unit by a **pair**: `(device_name, ks_unit_id)`, the probe
-plus the sorter's label. A run is one probe (R83) and R81 measured 810 distinct labels across 6,781
-units over 12 runs, so the probe is what makes the pair unique.
-
-**One half of that pair is base NWB and the other is in no base column**, measured 2026-09-15 on both
-sessions' files. The probe is derivable: each unit's ragged `electrodes` region spans exactly one
-`group_name`, equal to `device_name`, in **6,781 of 6,781** and **4,505 of 4,505** units, and the
-adapter already reads that column to name its contacts. The label is not. Reading the `Units` table's
-own `id` was recorded here as the fix and is wrong — `id` is `arange(n)`, the `DynamicTable` row
-number, and differs from `ks_unit_id` in **6,775 of 6,781** and **4,138 of 4,505** rows, because a
-sorter numbers from zero within each probe while the row id counts the table. `unit_name` is where
-NeuroConv writes a sorter's unit ids and holds a UUID in both files; `original_cluster_id` repeats
-`ks_unit_id`.
-
-**Row position is not the way out either.** `ks_unit_id` strictly ascends within each probe in file
-row order — 12 of 12 devices in one session, 10 of 10 in the other — so the nth row of a probe is its
-nth label and no dialect column is needed to pair them. What that spends is the detection: the NWB
-and the sorted asset it derives from hold different sortings, pairing 4,322 of 4,505 units with **0
-of 4,322** agreeing on spike count (`STATUS.md`, "Benchmark revisited"), and a positional match hands
-a template to the wrong unit there, where the pair match skips the row and says so.
-
-**Identity is the part no option makes generic.** An option names the column holding the label and
-cannot make one exist, so an adapter configured that way reaches producers that wrote the label
-somewhere rather than base NWB. Everything around it is base NWB and even the probe half of the key
-is derivable, so this is one dialect read in an otherwise generic adapter, and it moves with the
-split below rather than becoming an option of its own: a per-column option is the dialect mapping
-rejected further down, rebuilt one column at a time. R119 §2.5 argues for that option and is not
-taken up; what its Decision rests on is §2.2's 28 undeclared options and §2.3's constructor failure,
-neither of which needs a dialect option to exist.
-
-The repair recorded here is done: `units: {n} NWB row(s) match no unit or are all zero; skipped`
-summed two causes and now counts them apart, since a wrong key is a different finding from a row the
-file padded.
-
-**The NWB adapter is half a standard's and half one producer's, and the split is a lift rather
-than a rewrite.** The paths it walks are all base NWB — `general/subject`, `general/devices`,
-`general/extracellular_ephys/electrodes`, `intervals/trials`, `acquisition/` — and about fifteen of
-the columns it pulls out of them are ones base NWB does not define, which R59 measured varying
-between two exporters of one pipeline. Those columns share rows with the standard ones, and R108
-§3.2 forbids composing a row from more than one source, so the dialect cannot be split off as a
-second adapter contributing columns.
-
-What splits is the **code**, and how was decided 2026-09-15. The base NWB reader **stays in
-`escapewheel-writer`**, since core ships adapters for standards; the dialect becomes its own adapter
-that calls the base one as a library for its internal processing and emits whole rows of whole
-resources. Ownership between the two is the arbitration that already exists — the recipe declares
-which owns `core.electrode_coordinates` (Part 05 §3.3), and R108 §3.1 refuses a preference that
-discards a value the passed-over source stated — and whole rows rather than contributed columns is
-R108 §3.2. Sharing the reader is safe across a release boundary because R115 §3.9 lets an
-out-of-process adapter import whatever version it was written against: the boundary unshares the
-environment, so a shared library is not a shared closure.
-
-**`escapewheel-aind` exists and holds two of the three**, 2026-09-16. `session` (726 lines) and
-`video` (323) moved with `git mv`, so `git log --follow` reaches back through it; the NWB dialect
-follows once the carve below is done. The distribution depends on the writer as the writer depends
-on the validator — a `[tool.uv.sources]` editable path — registers both kinds through the
-`escapewheel.sources` entry-point group that `sources.discovered()` already loaded, and joins
-`verify.py`'s `SUITES` and the CI package loop. Nothing in the writer imports it, which
-`test_boundary.py` asserts by parsing the writer's imports rather than by matching the name, since
-a docstring may name what it must not import.
-
-**Two writer registries had to open for the boundary to be real.** Both named a departing kind and
-neither could be checked from the writer once it left. `COMPENSATIONS` was the hard case:
-`compensate()` raises on an unregistered id, and three of its six entries — the two `aind.*` and
-`video.zip_pairing_repaired` — belonged to the movers. `PREFERRED` was the quiet one: nothing
-breaks at build time, because `_resolve_ownership` and `_refuse_a_discarded_fact` both guard with
-`in kinds`, but `core.subjects` named `session` and no writer test could see that kind again. Each
-now merges built-ins with an entry-point group — `escapewheel.compensations` and
-`escapewheel.preferences` — on the terms `extensions.installed()` already set: a broken
-distribution is skipped with its reason, and a registered entry never replaces a built-in one.
-
-**A recipe naming one of these kinds now declares how a build reaches it.** `_builtin()` is false
-for a registered kind, so `_delivery_problems` refuses it unless the recipe sets `in_process` or a
-`[source.delivery]` command (Part 05 §3.9). The refusal names the kind and says what to add, and no
-recipe is tracked in this repository, so nothing broke — but a real AIND recipe needs the line.
-
-**The three real recipes now deliver every registered kind out of process**, 2026-09-17. Each names
-`aind_nwb` where it named `nwb`, and each of its `session`, `aind_nwb` and `video` entries carries a
-`[source.delivery]` block: a `declaration` written by `escapewheel declare` into the packet's own
-`declarations/`, and a `command` naming the environment `escapewheel-aind` is installed in. The
-protocol is `stream-v0.1`, left to the document rather than restated in the recipe, since the
-adapter is what knows it. Checked from the **writer's** venv, where `discovered()` is empty and
-`aind_nwb` cannot be imported at all — so what settles ownership before a build launches anything is
-the document, which is the boundary doing its work rather than being stepped around. All three
-report **0 errors**, and `session.order` puts `aind_nwb` ahead of `session` in each.
-
-**A kind is matched by name, so renaming one is a cross-package edit.** `session.order` raises on a
-`CONSUMES` entry the recipe does not declare, and `escapewheel_aind.SessionSource` declared `nwb` —
-which the rename made unsatisfiable, loudly and in every recipe at once. It now declares `aind_nwb`,
-pairing the adapter with the NWB reader it ships beside. The cost is that this `session` can no
-longer be ordered against the base `nwb` adapter; no recipe wants that pairing, since a recipe
-reaching for AIND's session metadata is reading an AIND NWB.
-
-**`df-packet` was four resources short and nothing had said so.** It owned `core.electrode_coordinates`
-and `core.unit_coordinates` without `core.coordinate_frames`, `core.coordinate_frame_axes`,
-`core.electrode_coordinate_values` or `core.unit_coordinate_values`, so two declared references
-resolved to a table no source owned. R63 §2 is exactly this: an omission contradicts nothing, so the
-recipe passed every test the tool applied until the reference check ran. The four are added; its
-NWB carries `ccf_ap`, `ccf_dv`, `ccf_ml` and `brain_region_id` on its electrodes, so they are real
-rows rather than an empty claim.
-
-**`PREFERRED`'s one entry now arbitrates nothing.** `{"core.probes": "nwb"}` names a kind no real
-recipe carries any more, and `_resolve_ownership` guards with `preferred in kinds`, so it is skipped
-rather than wrong. It cannot simply move: `preferences()` keeps the built-in and warns when a
-registered entry redefines a resource, so `escapewheel_aind` cannot claim `core.probes` for
-`aind_nwb` even though it is the kind that should win it. Two writer tests still exercise the entry
-against the built-in `nwb` kind and pass. This is the staleness R108 §3.4 found by hand and
-`test_every_encoding_exception_names_a_column_that_exists` guards for encodings — a preference naming
-a kind nothing registers wants the same check.
-
-**The inventory is done**, 2026-09-16, and it is
-[`inventory/nwb-adapter-base-and-dialect.md`](inventory/nwb-adapter-base-and-dialect.md): every read
-classified against the schema the file itself caches, `specifications/core/2.9.0`. Base NWB defines
-**36** of the names this adapter reads and one producer's pipeline **17**, plus three conventions no
-call site shows — a device's model and serial packed into its `description`, an instrument named in
-a stream's prose, and the `_time` suffix `event_type` strips.
-
-**Moving methods will not separate them.** Of the 18 resources the adapter produces, 4 are base
-throughout, 2 are dialect throughout, and **12 are base reads with a seam** of a line or two — a
-column name, a dict entry, a regex. That is what the shape decided above handles and what a
-method-level carve would have broken: the dialect adapter calls the base reader as a library and
-emits whole rows, so no row is composed from two sources (R108 §3.2).
-
-Two findings change what a base reader can do at all. `core.electrodes` takes its identifier from
-`channel_name`, which **no version of the NWB schema defines** — SpikeInterface reads it out of
-files it did not write, so it is the sorting ecosystem's convention rather than this rig's, and
-`_electrode_ids` raises `KeyError` where it is absent. And `core.devices` loses the serial: **0 of
-10** devices set the `serial_number` core 2.9.0 defines, all 10 pack it into `description`, so a
-base reader emits ten devices with no serial and the collapse to seven physical objects does not
-happen.
-
-**The carve is done**, 2026-09-16. `NWBSource` keeps all eighteen resources and gains hook points —
-`FRAME_AXES`, `UNIT_AXES`, `TRIAL_EVENTS`, `TRIAL_MAPPED` and `CARRIED_ELECTRODE` as class
-attributes, `_device_identity`, `_local_electrode_label`, `_annotation`, `_unit_identity` and
-`_signal_device_id` as methods reading only what core 2.9.0 declares — and
-`escapewheel_aind.nwb.AindNWBSource` subclasses it, supplying the seventeen columns and three
-conventions in about 120 lines. It declares the two unit-coordinate resources the base reader now
-does not, and `units` in its `NEEDS` where the base reader dropped it. Both fixtures split the same
-way: the writer's writes base NWB, and the dialect's writes base plus what this pipeline adds.
-
-Both findings above were repaired rather than recorded. A contact falls back to `(group_name, id)`
-where a file states no `channel_name`, so the reader opens a strictly base NWB instead of raising;
-and `core.devices` reads the three attributes core 2.9.0 declares, leaving the packed-description
-parse to the dialect. Neither changes a committed packet, since both real files carry
-`channel_name` and both are read by `aind_nwb`.
-
-**Every adapter now serves a standard, one institution, or nothing but a protocol.** Seven are
-generic — `sorter`, `sync`, `openephys`, `harp`, `nwb`, `lfp` and `waveforms` — three are one
-institution's and live in `escapewheel-aind` (`session`, `video`, `aind_nwb`), and `tables` is
-`files-v0.1` wearing the interface. No adapter in the writer reads a column no standard declares.
-
-**`waveforms` was never a dialect; it was mis-sourced**, and re-sourcing it on 2026-09-16 removed
-the dialect read as a side effect. It read `waveform_mean` out of the NWB, which is a *derived
-copy* of the analyzer's `extensions/templates/average` — the same array in both — and paid for the
-copy three times over. `(device_name, ks_unit_id)` existed only to rejoin rows to the identity the
-sorter had already minted, since the export renumbers by `DynamicTable` position. The export also
-densifies to every channel, so `units/electrodes` was a constant `[0 … n]` on every unit and the
-support could only be recovered by scanning for non-zeros. And it declares `unit: "volts"` with no
-conversion on values reaching ±1654.
-
-The analyzer states all three: `sorting/unit_ids`, equal to the `local_unit_label` that
-`core.units` carries and identical to the curated sorting's own ids on **10 of 10** streams;
-`sparsity_mask`, keeping **6.7%** of the rectangle at 14 to 26 contacts a unit; and
-`settings.return_in_uV`. So the join is `self.units[(stream.device, str(label))]` — the key the
-build already supplies — and the adapter reads no electrodes table at all, naming contacts from
-the sorting's own channel list exactly as `sorting_run_channels` does. It also gains a fact the
-export never carried: the sample axis begins at `-ms_before` rather than at a guessed centre.
-
-**The evidence first published here described the wrong asset**, corrected 2026-09-16. Every figure
-— 4,559 units, 210 samples, `ms_before 3.0` — came from
-`ecephys_786867_…_sorted_2026-01-10_10-30-10`, a SpikeInterface 0.103.0 sorting **no packet uses**.
-`/home/galen.lynch/Downloads/AnotherNWBCreationTracker-2026-09-06.xlsx` names the authoritative one
-per session in its `Sorted file` column, and both recipes' `sorter` sources already pointed at it.
-Measured against those instead: 786867's `sorted_2026-07-29_16-03-08` (SpikeInterface 0.104.7) is
-10 streams and **4,505 units, exactly the committed packet**, 150 samples at `ms_before 2.0` so the
-origin is −60, and 373 to 384 channels varying per stream as R83 predicts. 776259's
-`sorted_2026-08-11_14-40-50` is 24 streams over two experiments, of which `experiment1` is 12
-streams and **6,781 units, exactly its packet**. There was never a 54-unit discrepancy to explain;
-it was two different sortings being compared.
-
-**The three recipes now name the analyzer**, each matching its own `sorter` source:
-`776259-packet` and `df-packet` and `786867-packet` all point `waveforms` at the `s3://` prefix
-their sorting lives under, with `experiment = "experiment1"` on 776259 to match its sorter's scope.
-`df-packet`'s sorted tree carries no `postprocessed/` at all, so it reads 786867's asset; its local
-curated `unit_ids` agree with that analyzer's on **10 of 10** streams, checked rather than assumed.
-Backups sit beside each as `recipe.toml.bak`.
-
-**Reading a sorted asset on a store is what made that possible.** `zarr_compat.DenseV2` decodes a
-rank-N Zarr v2 array from its chunk bytes as `read_array` does for rank 1, so it asks a path only
-whether it is a file and for its bytes — which a cached `simplecache::s3://` path answers exactly
-as a local one does, and which keeps the `#` in `…Record Node 109#Neuropix-PXI-100…` a path segment
-rather than the URL fragment `zarr.open_array` truncates at. Verified identical to zarr on every
-slab of a `(586, 210, 384)` array chunked `(74, 27, 96)`, edge chunks included, and run end to end
-against S3: 534 units cut in 15.2 s with **0 missed and 0 blank**.
-
-**One contact-naming rule now serves all three readers of an electrodes table.**
-`nwb.contact_ids` composes every contact's name, falling back to the row `id` where a file states
-no `channel_name`, and `nwb`, `lfp` and `waveforms` all call it. Before this they disagreed: the
-base reader fell back while the other two refused outright, which would have minted one contact
-under two spellings — and a writer numbers a name (Part 05 §8), so the packet would then reference
-a row that is not there. This is the `prefix` coupling recorded below, fixed for the half that had
-a rule to share.
-
-**The plumbing is separated**, 2026-09-15 at `f1ef6f1`, which is the prerequisite: `SourceDefect`
-and the sex and UTC-offset helpers left `nwb.py` for `sources/defect.py` and `sources/values.py`, so
-lifting the NWB reading no longer drags the base exception type and two core-vocabulary helpers out
-from under `harp`, `openephys`, `video` and `sorter`. `nwb.py` is imported by three files rather than
-eight, and the two that remain take `electrode_name`, which is NWB contact naming and travels with
-it.
-
-It is cheap because the boundary work already done is the extraction. `sources/nwb.py` needs exactly
-two things of the build — `Clock` and `StagedArray` — and R115 §3.1 has the reference clock cross as
-its identifier and rational rate, while §3.8 has an array cross as a reference. What lifts is
-`nwb.py`, `zarr_compat.py` and `store.py`, **1,677 lines touching nothing of the build**.
-
-A **dialect mapping** — a recipe-named document of candidate column names per core column — was
-designed and rejected: it existed only because the row-level split looked blocked, and a rename map
-would not have covered what actually differs anyway — three columns becoming rows with an
-`axis_index`, a delimited `ccf_structure_id_path` that R3 §3.0 forbids, or a unit. Where a source
-needs converting rather than renaming, the general form already exists: a command producing Parquet,
-delivered as `files-v0.1` (R109 §3.2).
-
-**`tables` is the tenth and is not an adapter; it is `files-v0.1` wearing the interface.** It knows
-no format and normalizes nothing: it runs the recipe's command, reads row counts from Parquet
-footers, hands back `pq.ParquetFile(path).iter_batches(...)` per resource, and refuses where a
-declared file is missing — which is the protocol's definition, Part 05 §4.1's discovery, and
-Part 05 §4.4's completeness test respectively. It is the one adapter needing an exception to every
-adapter rule: `PRODUCES` is empty with a comment saying what it supplies "is not a property of the
-adapter at all", `STATES` is empty, and `records()` returns nothing. So it declares no protocol.
-`files-v0.1` reads one Parquet file per resource, named by its identifier, from the `delivery_root` a
-build supplies empty (Part 03 §11.1), so the class goes away once its command writes there rather
-than to paths the recipe names. `kind = "tables"` can stay as the recipe's spelling for one.
-
-It delivers in process — the 2026-09-14 rebuild committed all six of its resources, including
-`aind_unit_qc.metrics` at 4,505 rows — so the `extract_qc.py` defect recorded here previously, which
-writes `session_id` as the integer `0`, bites only when the rows cross a protocol. Confirm which
-before planning around it.
-
-**An optional option cannot be declared, which is a gap in R115 §3.1.** A declared name resolves
-against the terms first and the recipe's options second, and one resolving to neither is refused, so
-declaring an option makes a recipe carry it. R115 §3.1 argues an adapter declares its options so a
-build can refuse a recipe setting one the adapter ignores — and that reasoning wants every settable
-option declared, which the refusal rule forbids for any option with a default. So `NEEDS` carries
-terms plus the options an adapter cannot be constructed without, and every option carrying a default
-keeps flowing through the recipe's own dict unvalidated. Worth a clause giving `needs` an optional
-half.
-
-Measured 2026-09-15: the ten adapters take **32 constructor options beyond their `NEEDS`**, 28 of
-them the recipe's to set — the other four being `store` on three adapters, an injection point the
-tests use, and `first_samples`, a term a build fills. The two committed recipes set
-**10 distinct names** between them: `attachments`, `command`, `emit_clock`, `experiment`,
-`interval_kind`, `parent_clock_id`, `sd`, `signals`, `tables` and `zone`. Nothing checks any of the
-28 today, and the declared label column and series pattern above would each add one more.
-
-**`prefix` is the coupling left behind**, and the fix is one reader, one function, three callers.
-Three adapters must compose one contact's name identically, and a recipe setting `prefix` on one and
-not the others makes two electrodes of one. It fails loudly rather than silently, which is why it is
-not urgent.
-
-**Five sites drop a prefix rather than a label**, all in `sources/nwb.py`: `device_name`,
-`probe_name` and `event_stream_name` are set to the name without the recipe's prefix that the
-identifier carries. Inert while every packet is built at prefix `""`, and an R85 collision the day
-two sessions are merged under different ones. Recorded as exceptions in
-`test_a_name_records_what_its_identifier_stands_for`, which reads the adapters statically, refuses a
-sixth, and checks each exception still names a row that sets one.
-
-**One fact of the harvest has no channel at all.** R99 §3.2's terminal-anchor result is per probe
-clock, the sync source computes it, and the *sorter* owns those rows — so it is a fact about another
-source's rows, which no resource carries and no report key holds. A delivered sync leaves
-`withheld_first_anchor` and `withheld_last_anchor` null where an imported one fills them, and the
-build says so rather than leaving the packet quietly poorer.
+R99 §3.2's terminal-anchor result is per probe clock. The sync source computes it, but the sorter
+owns those clock rows, so it is a fact about another source's rows, which no resource carries and
+no report key holds. A delivered sync leaves `withheld_first_anchor` and `withheld_last_anchor`
+null where an in-process one fills them, and the build says so rather than leaving the packet
+quietly poorer.
 
 The build cannot recompute the result, because a withheld anchor never reaches the packet. The
-recommended fix, once a recipe delivers sync out of process, is a report key: sync's delivery
-report (Part 09 §5.8) carries the result per clock, and the build stamps it on the clock rows as
-`_declare_withheld` does in process. It needs a revision because it adds a report key. A table of
-sync's own would restate R99's columns, and a general way for one source to contribute columns to
-another's rows is more mechanism than one fact warrants. Nothing needs it while every recipe runs
-sync in process.
+recommended fix is a report key: sync's delivery report (Part 09 §5.8) carries the result per clock,
+and the build stamps it on the clock rows as `_declare_withheld` does in process. It needs a
+revision because it adds a report key. A table of sync's own would restate R99's columns, and a
+general way for one source to contribute columns to another's rows is more mechanism than one fact
+warrants. Nothing needs it while every recipe runs sync in process.
 
-**A delivered source that states facts needs a `report_path`.** Without one it states nothing, its
-`STATES` values never cross, and the recipe's declared values stand — which moved
-`core.sessions.session_end_time` by 17 minutes in the trial run. Conforming and not silent: a build
-notes each one as `went unchecked; session states none`, twice per fact. Name a report path in any
-recipe that delivers `session` or `nwb`.
-
-Done for the three real recipes, 2026-09-17: `session` and `aind_nwb` each name
-`reports/<kind>.json`, and `video` names none because its `STATES` is empty and `REPORT_AS_FILE`
-would carry nothing. The comparison is visible in the check's output — six warnings per recipe
-reading `subject.subject_id is declared and aind_nwb, session states it; the build compares them`,
-which is R87 §2 reaching a delivered source for the first time.
-
-**Parked: what a nullable identifier's null means.** Nothing obliges an adapter to report a value it
-could not fill — Part 09 §5.8's report is a MAY — so a consumer cannot tell
-`core.array_channels.electrode_id` null meaning *this channel maps to no contact* from null meaning
-*I gave up*, and that is true of every nullable reference in the registry. `lfp` now refuses rather
-than writing such a null, and the column is null in **0 of 1,152 and 0 of 960** rows of the two
-packets, so there is no instance to write a rule against. Worth a revision when something produces
-one.
-
-## 5. No code quality audit has run
+## 4. No code quality audit has run
 
 Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
 above all **which problem domains this project owns**: where a dependency already solves something
 well, the code should not be solving it again. The reader's `Location`, the writer's store
 abstraction, the registry's generators and the clock arithmetic are the places to look first.
 
-The writer's arbitration layer is the newest candidate. `STATES`, `PREFERRED`, `SHARED` and
-`RECIPE_SUPPLIES` are four tables consulted in different orders by `_resolve_ownership` and
-`_note_unclaimed`, which is how they came to disagree about what a preference means — R108 §2.2
-measures three entries where one reads the table and the other does not. One relation, derived from
-each adapter's `PRODUCES`, would make every arbitration rule a query over it and make a stale entry
-a failure rather than a silence; `core.unit_electrodes` sat in `PREFERRED` uncontested until R108
-§3.4 struck it. Not a query engine: the relation is dozens of rows, and what SQL buys in
-`rules.json` is that the queries are authored outside the code, which is not true here.
-
-## 7. The repository directory is still `nwb-lake/`
+## 5. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
-working tree's own root. Both recipes name absolute paths into it, so this and the rebuild want
-doing in one order or the other, not at once.
+working tree's own root. All three real recipes name absolute paths into it, so this and the
+rebuild want doing in one order or the other, not at once.
 
-## 8. Staging both packets to scratch needs a token
+## 6. Staging both packets to scratch needs a token
 
 `aind-scratch-data` is not public, so `--no-sign-request` does not reach it. Roughly 1.2 GB and
 700 MB excluding referenced LFP.
 
-## 9. Parked: R42's write case survives its withdrawal
+## 7. Parked: R42's write case survives its withdrawal
 
 R42 is withdrawn on the read measurement (§ Settled below), and that stands. What did not fall
 with it is the **write** cost: adding a sorting rewrites 650 MB (~48 s, growing with each sorting)
@@ -512,7 +150,7 @@ week before being withdrawn. R42 §5 records what would reopen it: accumulated s
 outgrowing one file for other reasons, or multi-session packets making `session_id` partitioning
 natural.
 
-## 10. Smaller open items
+## 8. Smaller open items
 
 - **Trial-in-block containment has no consumer.** The measurement below concluded that a trial
   needs no stored parent, and `dynamic_foraging` ships one anyway: `blocks` carries `start_tick`
@@ -541,33 +179,32 @@ natural.
   through DuckDB.jl, which reads lists (R3 §7.3), so what still supports the exclusion is the lower
   implementation floor R3 §2.3 also argues. Worth re-deciding before a table next wants a repeated
   value inline.
+- **A nullable identifier's null has no stated meaning.** Nothing obliges an adapter to report a
+  value it could not fill, since Part 09 §5.8's report is a MAY. So a consumer cannot tell
+  `core.array_channels.electrode_id` null meaning *this channel maps to no contact* from null
+  meaning *I gave up*, and that is true of every nullable reference in the registry. `lfp` now
+  refuses rather than writing such a null, and the column is null in **0 of 1,152 and 0 of 960**
+  rows of the two packets, so there is no instance to write a rule against. Worth a revision when
+  something produces one.
+- **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
+  writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
-## 11. Known defects awaiting a fix
-
-Found by the P9 research at `506c14e` and during R130–R134. The mechanical ones were fixed on
-2026-09-24, each with a test, from `f97cb2e` to `4f8dc99`.
-
-- **The reader cannot name missing codec support.** It never raises `UnsupportedCodecError`, which
-  Part 03 §6.1 needs to fail one resource without rejecting the rest. `ArrayResource.codecs` and
-  `resources._codec_names` drop `bytes` and flatten a shard's nested pipeline "to match the
-  manifest", which Part 04 §6 no longer lets carry codecs, so neither can be compared with Part
-  03 §6.4's ordered floor. The P9.3 draft leaves the reader unchanged, so this is maintenance,
-  and it is in progress.
-
-## 12. Implementation work queued behind R135
+## 9. Implementation work queued behind R135
 
 Each item follows an existing rule, so none needs a revision. They wait only because R135's
 uncommitted incorporation touches the same files; each lands as its own commit with tests once R135
 is committed.
 
-- **Deliver `tables` sources by `files-v0.1`.** `TablesSource` is the protocol with every adapter
-  rule excepted (§4). Replace each `kind = "tables"` entry with a `delivery` table naming a command,
-  `protocol = "files-v0.1"`, and a declaration document (Part 03 §11.5). Each script reads the
-  build's JSON object from standard input and writes `<resource_id>.parquet` into the
-  `delivery_root` it names. Then delete `TablesSource`, its tests, and the module docs that steer
-  extension authors to it. The work covers the writer, plus `extract.py` and the recipes edited in
-  place under `/mnt/Data/776259-packet`, `/mnt/Data/786867-packet` and `/mnt/Data/df-packet`. It is
-  done when 786867 builds in one pass with the same extension tables as the current packet.
+- **Deliver `tables` sources by `files-v0.1`.** `TablesSource` knows no format and normalizes
+  nothing: it runs a command, reads Parquet the command wrote, and needs an exception to every
+  adapter rule. That is the `files-v0.1` protocol. Replace each `kind = "tables"` entry with a
+  `delivery` table naming a command, `protocol = "files-v0.1"`, and a declaration document (Part 03
+  §11.5). Each script reads the build's JSON object from standard input and writes
+  `<resource_id>.parquet` into the `delivery_root` it names. Then delete `TablesSource`, its tests,
+  and the module docs that steer extension authors to it. The work covers the writer, plus
+  `extract.py` and the recipes edited in place under `/mnt/Data/776259-packet`,
+  `/mnt/Data/786867-packet` and `/mnt/Data/df-packet`. It is done when 786867 builds in one pass
+  with the same extension tables as the current packet.
 - **Move `extract_qc.py` into `escapewheel-aind` as the `aind_unit_qc` adapter.** The three
   per-packet copies are the only source of `aind_unit_qc.metrics`, `waveform_metrics` and
   `synchrony`, and they have drifted apart. The adapter reads the sorter's analyzer output as
@@ -575,22 +212,14 @@ is committed.
   `units` term. That ends the two-pass build and the packet-assigned integer keys the script
   writes. Delete the three scripts and switch the recipes to the new kind. It is done when the
   three tables match the current packets' and each packet builds in one pass.
-- **Refuse a recipe whose sources disagree on `prefix`.** If any source sets `prefix`, every source
-  whose adapter accepts it must set the same value. A build refuses the recipe before opening a
-  source, naming each source and its value (§4's coupling). Test one set and one unset, two
-  different values, and all equal.
+- **Refuse a recipe whose sources disagree on `prefix`.** `nwb`, `lfp` and `waveforms` compose one
+  contact's name through `nwb.contact_ids`, so a recipe setting `prefix` on one and not the others
+  mints two electrodes of one contact. If any source sets `prefix`, every source whose adapter
+  accepts it must set the same value. A build refuses the recipe before opening a source, naming
+  each source and its value. Test one set and one unset, two different values, and all equal.
 - **Keep the prefix in the three `nwb.py` names that drop it.** `device_name`, `probe_name` and
   `event_stream_name` break R53 §2.5 and R85 once sessions merge under different prefixes. Strike
-  them from `NAME_EXCEPTIONS` in `tests/test_arbitration.py`; §4's "five sites" is now three.
-- **Prune entries that are done.** These are now done: §1 (R128), §2's registry-ID bullet (R130),
-  and §4's optional-option, `PREFERRED` and NWB-dialect paragraphs (R119, R133, R134). The
-  arbitration paragraph under §5 is also done, and the reference to §8 under "Settled 2026-09-15"
-  should point to §10. In `revisions/STATUS.md`, the open-stage inventory and P9 row are stale.
-
-Open in R135, not decided: a source whose
-recipe entry omits `root` gets no `core.source_files` row, since R135 §3.4 counts only roots a
-recipe writes.
-
+  them from `NAME_EXCEPTIONS` in `tests/test_arbitration.py`. In progress.
 
 ---
 
@@ -665,6 +294,53 @@ Whole packet, 2,496 objects and 6.83 GB across twelve arrays:
 | local disk | 0.33 s | 75 s (91 MB/s, cold) |
 
 Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
+
+---
+
+# Settled 2026-09-12 to 2026-09-17: the adapter boundary
+
+- **Where a protocol is needed it is `flight-v0.1`** (2026-09-12). A Flight descriptor is the
+  format's, so the protocol invents no metadata key, and `ListFlights` and `DoGet` answer discovery
+  and the per-resource fetch from Arrow's own vocabulary. An adapter needs a protocol once it is
+  released apart from the build.
+- **Core ships adapters for standards, not institutions.** Seven adapters stay in the writer:
+  `sorter`, `sync`, `openephys`, `harp`, `nwb`, `lfp` and `waveforms`. `escapewheel-aind` holds
+  `session`, `video` and `aind_nwb`, moved with `git mv` so `git log --follow` reaches through. It
+  registers them through the `escapewheel.sources` and `escapewheel.compensations` entry-point
+  groups, and `escapewheel-aind/tests/test_boundary.py` asserts, by parsing imports, that the
+  writer imports none of it. A kind is matched by name, so AIND's `session` consumes `aind_nwb` and
+  cannot be ordered against the base `nwb`.
+- **The NWB reader splits by subclass, not by source.** R108 §3.2 forbids composing a row from two
+  sources, and the dialect's columns share rows with the standard ones. So `NWBSource` reads only
+  what NWB core 2.9.0 declares, through hook points, and `escapewheel_aind.nwb.AindNWBSource`
+  supplies the rest in about 120 lines. `inventory/nwb-adapter-base-and-dialect.md` classifies
+  every read: **36** names are base NWB, **17** are one pipeline's, and three conventions show at
+  no call site. Two base-reader gaps were repaired: a contact falls back to `(group_name, id)`
+  where a file has no `channel_name`, which no NWB version defines, and `core.devices` reads
+  `serial_number`, which **0 of 10** real devices set. A per-column dialect mapping was rejected,
+  since what differs includes columns becoming rows, and a source needing conversion delivers
+  Parquet by `files-v0.1`.
+- **`lfp` derives its probe from the series' electrodes**, which belong to one `ElectrodeGroup`,
+  rather than parsing a series name NWB does not constrain. The two agree on **10 of 10** real
+  series, so no `array_asset_id` moved.
+- **`waveforms` reads the sorter's analyzer, not the NWB copy.** The NWB's `waveform_mean` is a
+  densified copy of `extensions/templates/average`, keyed by a row `id` that differs from
+  `ks_unit_id` in **6,775 of 6,781** and **4,138 of 4,505** rows. The analyzer states the unit ids,
+  a sparsity mask keeping **6.7%** of the rectangle, and `return_in_uV`. So the join is the
+  build-supplied `units` term, and the sample axis starts at `-ms_before`. `zarr_compat.DenseV2`
+  decodes from chunk bytes, which reads a cached `s3://` path and keeps a `#` in a path segment:
+  **534 units cut in 15.2 s, 0 missed and 0 blank**. The first evidence measured a SpikeInterface
+  0.103.0 sorting no packet uses; the authoritative sortings match their packets at **4,505** and
+  **6,781** units.
+- **One rule names a contact for all three readers of an electrodes table.** `nwb.contact_ids`
+  serves `nwb`, `lfp` and `waveforms`, which had disagreed on the fallback and so could mint one
+  contact under two spellings.
+- **The three real recipes deliver every AIND kind out of process**, over `stream-v0.1`, each with
+  a declaration in the packet's `declarations/`. `session` and `aind_nwb` name
+  `reports/<kind>.json`, because a delivered source without a `report_path` states nothing and the
+  recipe's declared values stand unchecked, which moved `session_end_time` by 17 minutes in the
+  trial run. All three check with **0 errors**. `df-packet` gained the four coordinate resources
+  its two coordinate tables referenced.
 
 ---
 
