@@ -970,8 +970,6 @@ class NWBSource(Compensates):
                     # entry by.
                     # The description stays where it is read from, and is what the
                     # device row is built from.
-                    "uri": f"arrays/core/{name}.zarr",
-                    "format": "zarr_v3",
                     "clock_id": self._dispatch_clock_id(name),
                     "sample_rate_hz": round(rate, 6) if rate else None,
                     "unit": ucum_code(str(self._attrs(f"acquisition/{name}/data").get("unit") or "") or None),

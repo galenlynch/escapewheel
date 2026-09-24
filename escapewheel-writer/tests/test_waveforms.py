@@ -107,9 +107,10 @@ def test_mean_alone_is_one_array(asset: Path) -> None:
     source = _source(asset)
     assets = source.array_assets()
     assert [a["array_asset_id"] for a in assets] == ["waveform_mean"]
-    assert assets[0]["uri"] == "arrays/core/waveform_mean.zarr"
     assert len(source.array_dimensions()) == 3
-    assert [s.array_asset_id for s in source.staged_arrays()] == ["waveform_mean"]
+    (staged,) = source.staged_arrays()
+    # The build places and binds the array by this alone (Part 03 §11.3).
+    assert assets[0]["resource_id"] == staged.resource_id == "core.waveform_mean"
 
 
 def test_sd_is_a_second_array_of_the_same_shape(asset: Path) -> None:

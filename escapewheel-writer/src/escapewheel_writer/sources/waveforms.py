@@ -71,11 +71,6 @@ class _Kept:
     blank: int = 0
 
 
-def _uri(asset_id: str) -> str:
-    """Where the writer puts a packet-owned array, which `core.array_assets.uri` must match."""
-    return f"arrays/core/{asset_id}.zarr"
-
-
 def _dense(path: Any) -> DenseV2:
     """Open a multi-dimensional Zarr v2 array, wherever it is stored.
 
@@ -353,11 +348,12 @@ class WaveformSource:
         built = self._read()
         return built["values"]  # type: ignore[no-any-return]
 
-    def _asset(self, asset_id: str, semantic_type: str, scale: float, uri: str, clock_id: str | None) -> dict[str, Any]:
+    def _asset(self, asset_id: str, semantic_type: str, scale: float, clock_id: str | None) -> dict[str, Any]:
         """One `core.array_assets` row.
 
-        No `dtype` or `shape`: the Zarr array declares both, and Part 02 §6 forbids a table from
-        restating what the data already says. `conversion` is the one thing the array cannot say.
+        No `dtype`, `shape`, location or format: the Zarr array declares the first two, and the
+        build places the array by `resource_id` and records where in the manifest (Part 03 §11.3).
+        `conversion` is the one thing the array cannot say.
         """
         built = self._read()
         return {
@@ -369,8 +365,6 @@ class WaveformSource:
             "semantic_type": semantic_type,
             # No `array_asset_name`: the numbering fills it from what `array_asset_id` stands for
             # (R53 §2.5), and a phrase this adapter invented is not that.
-            "uri": uri,
-            "format": "zarr_v3",
             "clock_id": clock_id,
             "sample_rate_hz": built["rate"],
             "unit": built["unit"],
@@ -379,22 +373,16 @@ class WaveformSource:
             "metadata": {"quantisation": "int16, scale = peak / 32767"},
         }
 
-    def array_assets(self, uri: str | None = None, clock_id: str | None = None) -> list[dict[str, Any]]:
+    def array_assets(self, clock_id: str | None = None) -> list[dict[str, Any]]:
         """`core.array_assets`, one row per array this source stores.
 
         The deviation gets its own `conversion`, because it is quantised against its own peak;
         sharing the mean's scale would spend resolution on a range it never reaches.
         """
         built = self._read()
-        rows = [
-            self._asset(
-                self.array_asset_id, "waveform_mean", built["scale"], uri or _uri(self.array_asset_id), clock_id
-            )
-        ]
+        rows = [self._asset(self.array_asset_id, "waveform_mean", built["scale"], clock_id)]
         if self.sd:
-            rows.append(
-                self._asset(self.sd_asset_id, "waveform_sd", built["sd_scale"], _uri(self.sd_asset_id), clock_id)
-            )
+            rows.append(self._asset(self.sd_asset_id, "waveform_sd", built["sd_scale"], clock_id))
         return rows
 
     def _axes(self, asset_id: str, clock_id: str | None, origin: int | None) -> list[dict[str, Any]]:
@@ -499,14 +487,14 @@ class WaveformSource:
             )
         return staged
 
-    def records(self, *, uri: str | None = None, clock_id: str | None = None) -> dict[str, list[dict[str, Any]]]:
+    def records(self, *, clock_id: str | None = None) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records, keyed by resource ID.
 
         The arrays themselves are not among them: they are bytes, staged through
         `PacketWriter.add_array` from `staged_arrays`.
         """
         built = {
-            "core.array_assets": self.array_assets(uri=uri),
+            "core.array_assets": self.array_assets(),
             "core.array_dimensions": self.array_dimensions(clock_id=clock_id),
             "core.unit_electrodes": self.unit_electrodes(),
         }
