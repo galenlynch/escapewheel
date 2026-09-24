@@ -66,11 +66,13 @@ write `adc` when an analyzer does not return microvolts. The parser rejects `adc
 `volts`, `Volts`, and `µV` and accepts `V`, `uV`, `{adc}`, and `{sample}`. No rule, reader, or
 consumer compares these literal spellings.
 
-### 2.4 The reference validator always holds the parser
+### 2.4 A valid core registry already requires the UCUM edition
 
-`ucumvert` is a required dependency of the reference validator. Its registry check reports
-`unsupported`, not a finding, when the exact UCUM edition is unavailable, so a row check can report
-the same state.
+The core registry declares 9 literal `unit` values, and its registry check
+`registry.unit.ucum_2_2_cs` parses them under the exact UCUM edition. A validator lacking that
+edition obtains an `unsupported` core result, and Part 05 §14.5 then directs no packet check. Every
+packet check therefore runs where the edition is present, and the reference validator already
+requires `ucumvert` to supply it. A row check adds no dependency.
 
 ## 3. Desired outcome and constraints
 
@@ -113,8 +115,8 @@ make a nomenclature part of the SQL profile.
 **Make it a shim check under
 [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim).** The
 validator reads each distinct non-null value of each scanned column and parses it under the UCUM
-edition Part 02 §13 selects. Where that edition is unavailable, or a table is unreadable, the
-evaluation is `incomplete` under
+edition Part 02 §13 selects, which §2.4 shows is present whenever the check runs. An unreadable
+table makes the evaluation `incomplete` under
 [Part 05 §9.4](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-incomplete-validation)
 rather than a finding. The cost grows with the number of distinct values, at most two per column in
 the packets of §2.2. This proposal prefers it.
@@ -157,8 +159,9 @@ declared facts, but every recipe reading a format would then repeat a fixed prop
 2. A value that does not parse is an `error`, attributed to the registry declaring the column.
    Part 02 §9.3's rule against rejecting a value absent from an authority does not apply to UCUM,
    whose codes a grammar defines rather than a list.
-3. The check is a Part 05 §5.3 shim check. An unavailable UCUM edition or an unreadable table
-   makes the evaluation `incomplete` rather than producing a finding.
+3. The check is a Part 05 §5.3 shim check and uses the UCUM edition that a valid core registry
+   has already required. An unreadable table makes the evaluation `incomplete` rather than
+   producing a finding.
 4. Each writer source maps its own spellings to UCUM: `volts` to `V`, `adc` to `{adc}`, and
    `sample` to `{sample}`. A spelling a source cannot map fails validation, and the writer refuses
    to publish the packet.
