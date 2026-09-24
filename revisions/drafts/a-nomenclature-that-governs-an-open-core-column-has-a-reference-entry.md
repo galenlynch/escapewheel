@@ -239,16 +239,17 @@ outside the condition.
 
 Packet bytes, registry declarations, and every existing packet's conformance are unchanged, and no
 packet is rebuilt. A writer recording a hermaphrodite subject now conforms on the column's own
-terms, and one holding a value no named nomenclature registers conforms by writing it as the source
-states it. A release gains three living-registry identifications and no pinned registry state.
+terms, and one holding a value for which it can identify no registered name conforms by writing it
+as the source states it. A release gains three living-registry identifications and no pinned
+registry state.
 
-No accepted clause is superseded. R101 §3.5's spelling sentence is narrowed to registered values of
-open columns, and R101 §§3.6 and 3.9 keep FHIR on `sex` as provenance; the three ledger entries
-gain notes recording this. R101 §3.5 keeps the `registry` disposition that records its description
-requirement. R124 §3.2 gains the third entry kind and R124 §3.3's allocation gains Part 02's
-section, each with a note. R131 §3.1's UCUM edition stands in the new table. Eleven ledger
-destinations naming Part 02 §9.3 by number, from R8 §§3 and 4, R9 §6, R22 §3, R101 §§3.1, 3.3, 3.6,
-3.9, and 3.11, and R107 §§3.3 and 3.4, move to `ew-registry-vocabularies`.
+No accepted clause is superseded. R101 §3.5's spelling sentence is narrowed to open columns and to
+values whose registered name a writer can identify, and R101 §§3.6 and 3.9 keep FHIR on `sex` as
+provenance; the three ledger entries gain notes recording this. R101 §3.5 keeps the `registry`
+disposition that records its description requirement. R124 §3.2 gains the third entry kind and R124
+§3.3's allocation gains Part 02's section, each with a note. R131 §3.1's UCUM edition stands in the
+new table. Eleven ledger destinations naming Part 02 §9.3 by number, from R8 §§3 and 4, R9 §6, R22
+§3, R101 §§3.1, 3.3, 3.6, 3.9, and 3.11, and R107 §§3.3 and 3.4, move to `ew-registry-vocabularies`.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -280,10 +281,10 @@ The positive cases are the candidate after incorporation, which passes `framewor
 `core.subjects.sex` value of `hermaphrodite`, which conforms under §3.1 and already passes the
 validator.
 
-§3.1's open-column rule has no negative case a tool can run, because deciding whether a nomenclature
-registers what a value names needs the dereference Part 02 §9.3 forbids. Its evidence would be a
-writer's own mapping tests, and none exists: the reference writer and the AIND adapter map no
-`species` or `strain` value, and no test checks either spelling.
+§3.1's open-column rule has no negative case a tool can run, because deciding what name a
+nomenclature registers for what a value names needs the dereference Part 02 §9.3 forbids. Its
+evidence would be a writer's own mapping tests, and none exists: the reference writer and the AIND
+adapter map no `species` or `strain` value, and no test checks either spelling.
 
 §3.2 binds numbered parts and a release rather than an actor a probe can run, so its evidence is
 review of Part 00 §10 and of each living-registry entry against its condition.

@@ -228,7 +228,8 @@ These incorporated identifiers MUST advance:
 | core registry `registry_version` | `0.6.0` | `0.7.0` |
 
 An extension registry migrated to meta-schema 0.7.0 MUST carry a `registry_version` different from
-the one it carried under 0.6.0; the core specification does not assign it.
+the one it carried under 0.6.0; the core specification does not assign it. No checker verifies this,
+since a checker reads only the document before it and not the version that document replaced.
 
 ### 3.4 The core registry declares every float column finite
 
