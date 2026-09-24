@@ -26,11 +26,12 @@ assigns them to packet validation, and
 [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim)
 defines no such check.
 [Part 02 §9.3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-vocabularies)
-appears to forbid one, because it bars a validator from rejecting a value for being absent from a
-column's authority, and does not distinguish an authority that lists its values from UCUM, whose
-codes a grammar defines.
+appears to forbid one twice. It bars a validator from rejecting an unrecognized value of an `open`
+column, which every unit column is, and from rejecting a value for being absent from a column's
+authority. Neither rule distinguishes an authority that lists its values from UCUM, whose codes a
+grammar defines.
 
-This revision names the columns that hold unit codes, exempts UCUM from the non-rejection rule,
+This revision names the columns that hold unit codes, exempts them from both non-rejection rules,
 and adds a shim check that fails a packet holding a value that is not a code. The check covers the
 tables the core registry declares, which hold every unit column in the current registries, and its
 findings are core's.
@@ -38,7 +39,7 @@ findings are core's.
 leaves extension-table byte validation undefined, and this revision does not define it.
 
 The change is structural because it replaces sentences inside four existing sections: the
-§8.4 rule on unit columns, the §9.3 non-rejection rule, the §13 statement of where the UCUM grammar
+§8.4 rule on unit columns, the §9.3 non-rejection rules, the §13 statement of where the UCUM grammar
 applies, and the §5.3 list of shim checks. Appending new sections would leave each current sentence
 stating a narrower or contrary rule beside its replacement.
 
@@ -49,7 +50,7 @@ Every affected section already carries a canonical anchor, so no anchor bootstra
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | [Part 02 §8.4](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-unit-and-clock-context), a `unit_from` target is a string column carrying the UCUM authority, and a column holding a physical unit holds a UCUM code | replace in place | same section | defines a unit column, requires a UCUM 2.2 code in each of its non-null values and in each literal `unit`, and keeps the annotation rule | §3.1 |
-| [Part 02 §9.3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-vocabularies), a validator neither dereferences an authority URI nor rejects a value absent from it | replace in place | same section | the non-rejection rule excludes UCUM, and the dereference prohibition names packet validation as well as registry validation; the naming rule and writer spelling rule are unchanged | §3.2 |
+| [Part 02 §9.3](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-registry-vocabularies), the vocabulary table's `open` row, under which a validator rejects no unrecognized value, and the sentence under which a validator neither dereferences an authority URI nor rejects a value absent from it | replace in place | same section | neither non-rejection rule covers a unit column's value that is not a unit code, and the dereference prohibition names packet validation as well as registry validation; the naming rule and writer spelling rule are unchanged | §3.2 |
 | [Part 02 §13](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-logical-schema-normative-references), UCUM applies to literal `unit` declarations, and row values are validated with packet data | replace in place: the UCUM entry says unit codes use its syntax, and the closing paragraph becomes citations of Part 02 §9.3 and Part 05 §5.3 | Part 02 §§8.4 and 9.3, and Part 05 §5.3 | UCUM applies to every unit code; the dereference prohibition extends to packet validation and is stated once, in §9.3; the packet check is Part 05 §5.3's | §§3.1–3.3 |
 | [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), the shim's checks | extend in place with one paragraph after the session-inventory check | same section | adds the unit-code check | §3.3 |
 
@@ -122,8 +123,8 @@ unit codes, and the two sets are equal in every current registry.
 
 ## 3. Decision
 
-Three subsections define the columns holding unit codes, bound the non-rejection rule for
-authorities, and add the packet check.
+Three subsections define the columns holding unit codes, bound the rules against rejecting
+unrecognized values, and add the packet check.
 
 ### 3.1 Unit codes
 
@@ -135,12 +136,13 @@ unit column. An annotation in curly braces, such as `{adc}`, is a unit code and 
 dimensionless quantity, which is the unit of a quantity normalized by something the packet
 measured.
 
-### 3.2 Authority values
+### 3.2 Unrecognized values
 
 An authority URI is identity rather than a fetch instruction. A validator MUST NOT dereference one
-when checking a registry or a packet. A validator MUST NOT reject a value for being absent from an
-authority other than UCUM. UCUM defines its codes by a grammar rather than a list, and §3.1 makes a
-unit column's value that the grammar does not accept nonconforming.
+when checking a registry or a packet. A validator MUST NOT reject an unrecognized value of an
+`open` column, and MUST NOT reject a value for being absent from its column's authority. Neither
+prohibition covers a unit column's value that is not a unit code, which §3.1 makes nonconforming,
+because UCUM defines its codes by a grammar rather than a list.
 
 ### 3.3 Unit-code check
 
@@ -167,6 +169,10 @@ version identifier advances. The registry contract's anchors for `registry.conte
 `registry.unit.ucum_2_2_cs`, and `registry.authority.uri` keep their sections, whose registry-level
 rules §§3.1–3.2 restate unchanged.
 
+No accepted clause is superseded. R101 §§3.1 and 3.6 and R107 §3.3 keep their `applied`
+dispositions, and §3.2 narrows them only at unit columns. R126 §3.9 left unit-column values to
+packet validation, which §3.3 supplies.
+
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. UCUM remains the unit nomenclature. | None required. |
@@ -181,6 +187,9 @@ rules §§3.1–3.2 restate unchanged.
 | generated publications and developer documentation | The combined specification regenerates. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
+
+Each clause is `applied`: §3.1 at Part 02 §§8.4 and 13, §3.2 at Part 02 §9.3, and §3.3 at Part 05
+§5.3, each by its canonical anchor.
 
 The negative case is the corpus variant holding `microvolts`, which the current validator accepts
 and the revised one reports. Validator tests add a packet whose unit columns hold `V` and
