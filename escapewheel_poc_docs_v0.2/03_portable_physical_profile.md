@@ -413,6 +413,7 @@ An adapter reads one source and returns records, and a build assembles a packet 
 
 An **adapter** here is code that reads one source, whether the reference implementation ships it or a third party does. A clause binding an adapter binds one it does not ship identically.
 
+<a id="ew-protocol-groups" data-spec-anchor="canonical"></a>
 ### 11.1 Protocol groups
 
 A profile names a **group** for each way rows cross a process boundary, and the protocols in it. `escapewheel-portable-v0.1` names one group, out of process, holding three:
@@ -431,6 +432,7 @@ A protocol carries its version in its name, semantically versioned from `v0.1`. 
 
 An adapter a recipe opts into the writer's process (Part 05 §3.9) is bound by this section too: the opt-in decides where a build runs an adapter, not what the adapter supports.
 
+<a id="ew-build-supplied-values" data-spec-anchor="canonical"></a>
 ### 11.2 What a build supplies
 
 An adapter MUST declare every value a build supplies it, and a build MUST supply exactly what the adapter declares and MUST NOT decide it from the source's kind. Everything supplied is data: a build MUST NOT require an adapter to accept a live handle — an open store, a connection, an object of the implementation's own — because what crosses a process boundary is text, and an adapter with two ways in has one that depends on where it is running.
