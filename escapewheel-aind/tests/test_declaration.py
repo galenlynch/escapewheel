@@ -120,3 +120,61 @@ def test_a_recipe_preferring_the_session_source_gives_it_the_subject(tmp_path):
     assert "core.subjects" in owners["session"]
     assert "core.subjects" not in owners["nwb"]
     assert not [e for e in errors if "core.subjects" in e], errors
+
+
+#: Every source that accepts `prefix`, each at one value, with the two contests settled.
+MIXED = """
+[packet]
+id = "p"
+
+[session]
+session_id = "s"
+reference_clock_id = "harp"
+
+[[clock]]
+clock_id = "harp"
+name = "harp"
+tick_rate_num = 31250
+origin = "HARP epoch"
+{sources}
+[preference."core.probes"]
+source = "aind_nwb"
+reason = "the NWB states a probe's type and manufacturer; the sorter knows only the stream"
+
+[preference."core.subjects"]
+source = "session"
+reason = "subject.json is the record the NWB's subject group projects"
+"""
+
+#: Each kind, and whether it needs a zone and the in-process route a registered kind names.
+MIXED_KINDS = {
+    "session": 'zone = "UTC"\nin_process = true\n',
+    "aind_nwb": 'zone = "UTC"\nin_process = true\n',
+    "sorter": "",
+    "sync": "",
+    "lfp": "",
+    "waveforms": "",
+    "openephys": "",
+    "harp": "",
+}
+
+
+def _mixed(**prefixes):
+    sources = "".join(
+        f'\n[[source]]\nkind = "{kind}"\nroot = "."\n{extra}'
+        + (f'prefix = "{prefixes[kind]}"\n' if prefixes.get(kind) is not None else "")
+        for kind, extra in MIXED_KINDS.items()
+    )
+    return MIXED.format(sources=sources)
+
+
+def test_a_mixed_build_under_one_prefix_passes_the_check(tmp_path):
+    _, errors = _checked(tmp_path, _mixed(**dict.fromkeys(MIXED_KINDS, "A_")))
+    assert errors == []
+
+
+def test_a_session_source_left_unprefixed_in_a_prefixed_build_is_refused(tmp_path):
+    """Its calibration devices are the NWB's devices, so it cannot be the one source left at none."""
+    prefixes = dict.fromkeys(MIXED_KINDS, "A_") | {"session": None}
+    _, errors = _checked(tmp_path, _mixed(**prefixes))
+    assert [e for e in errors if "disagree on prefix" in e and "session unset" in e], errors

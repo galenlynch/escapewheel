@@ -131,3 +131,19 @@ def test_the_metadata_bag_does_not_restate_the_port(source):
     rows = by_name(source.devices())
     assert rows["headstage.slot3.port2"]["metadata"] == {"slot": "3"}
     assert rows["connect_board.slot3"]["metadata"] == {"slot": "3"}
+
+
+def test_a_prefix_reaches_every_device_and_every_link(tmp_path):
+    """R53 §2.5: an ID, its name and each reference to it carry the prefix, so links still resolve."""
+    node = tmp_path / "Record Node 109"
+    node.mkdir()
+    (node / "settings.xml").write_text(SETTINGS)
+    source = OpenEphysSource(tmp_path, session_id="s001", prefix="A_")
+    rows = source.devices()
+    ids = {row["device_id"] for row in rows}
+    assert all(row["device_name"] == row["device_id"] and row["device_id"].startswith("A_") for row in rows)
+    assert by_name(rows)["A_connect_board.slot3"]["parent_device_id"] == "A_basestation.slot3"
+    assert {row["parent_device_id"] for row in rows} - {None} <= ids
+    attached = source.attachments()
+    assert attached["50198"]["parent_device_id"] == "A_headstage.slot3.port2"
+    assert {link["parent_device_id"] for link in attached.values()} <= ids

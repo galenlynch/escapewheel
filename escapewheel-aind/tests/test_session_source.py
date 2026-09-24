@@ -419,3 +419,36 @@ def test_the_calibration_resources_are_staged_when_present(tmp_path):
         "core.calibration_points": 3,
         "core.calibration_devices": 2,
     }
+
+
+# -- prefix (R53 §2.5) ------------------------------------------------------------------
+
+
+def test_a_prefix_reaches_every_calibration_and_the_device_it_covers(tmp_path):
+    """Each ID this source mints, and its name, carries the prefix; the clock and subject are given."""
+    asset = build(tmp_path, streams=modules("46100", "46122"))
+    (asset / "rig.json").write_text(json.dumps({"calibrations": [WATER]}))
+    got = _session(asset, prefix="A_").records()
+    assert [(c["calibration_id"], c["calibration_name"]) for c in got["core.calibrations"]] == [
+        ("A_Lick spout Left", "A_Lick spout Left"),
+        (f"A_{TRANSFORM}", f"A_{TRANSFORM}"),
+    ]
+    assert {p["calibration_id"] for p in got["core.calibration_points"]} == {"A_Lick spout Left"}
+    assert [(d["calibration_id"], d["device_id"]) for d in got["core.calibration_devices"]] == [
+        (f"A_{TRANSFORM}", "A_46100"),
+        (f"A_{TRANSFORM}", "A_46122"),
+    ]
+    assert got["core.clocks"] == [HARP_ROW]
+
+
+def test_a_calibrated_device_is_the_nwb_device_under_one_prefix(tmp_path):
+    """The reference crosses sources, so it resolves only if both mint the device under one prefix."""
+    from escapewheel_aind.nwb import AindNWBSource
+    from tests import nwbfixture
+
+    nwb = nwbfixture.build(tmp_path / "nwb")
+    clock = {**HARP_ROW, "session_id": "mini_2025-04-09"}
+    devices = AindNWBSource(nwb, reference_clock=clock, zone=PACIFIC, prefix="A_").devices()
+    asset = build(tmp_path, streams=modules("probeA"))
+    (covered,) = _session(asset, prefix="A_").calibration_devices()
+    assert covered["device_id"] in {d["device_id"] for d in devices}

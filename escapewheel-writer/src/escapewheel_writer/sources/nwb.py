@@ -544,7 +544,7 @@ class NWBSource(Compensates):
             return {}
         from .openephys import OpenEphysSource
 
-        return OpenEphysSource(self.attachments, session_id=self.session_id).attachments()
+        return OpenEphysSource(self.attachments, session_id=self.session_id, prefix=self.prefix).attachments()
 
     @cached_property
     def _devices(self) -> list[dict[str, Any]]:

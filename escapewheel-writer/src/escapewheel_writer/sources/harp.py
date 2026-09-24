@@ -45,6 +45,8 @@ class HarpSource:
         recognised by the `device.yml` inside it.
     session_id : str
         The session these devices were used in.
+    prefix : str, optional
+        Prepended to every device ID and name.
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -65,12 +67,16 @@ class HarpSource:
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id")
 
+    #: Part 05 §3.4: options this adapter reads and can run without (Part 03 §11.2).
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix",)
+
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ()
 
-    def __init__(self, root: str | Path, *, session_id: str) -> None:
+    def __init__(self, root: str | Path, *, session_id: str, prefix: str = "") -> None:
         self.root = source_root(root)
         self.session_id = session_id
+        self.prefix = prefix
         self.notes: list[str] = []
 
     def schemas(self) -> list[Path]:
@@ -102,9 +108,9 @@ class HarpSource:
             if name in rows:
                 continue
             rows[name] = {
-                "device_id": str(name),
+                "device_id": self.prefix + str(name),
                 "session_id": self.session_id,
-                "device_name": str(name),
+                "device_name": self.prefix + str(name),
                 # Harp is the bus, not the maker: a schema names neither a manufacturer nor a
                 # serial, and inventing either would assert what nothing states.
                 "manufacturer": None,

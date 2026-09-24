@@ -325,6 +325,26 @@ def test_a_probe_finds_its_device_under_a_prefix(nwb, harp):
     assert set(attached.values()) == {d["device_id"] for d in records["core.devices"]}
 
 
+#: One probe, `probeA`, on the headstage in slot 3 port 2, docked at 1.
+SETTINGS = """<SETTINGS><NP_PROBE slot="3" port="2" dock="1" custom_probe_name="probeA"
+  bs_part_number="NP2_QBSC" bsc_part_number="NP2_CONN" headstage_part_number="NPM_HS_30"/></SETTINGS>"""
+
+
+def test_a_probe_attaches_to_the_headstage_under_the_same_prefix(nwb, harp, tmp_path):
+    """The headstage row is the acquisition source's, so the link resolves only if both carry the prefix."""
+    from escapewheel_writer.sources import OpenEphysSource
+
+    settings = tmp_path / "settings.xml"
+    settings.write_text(SETTINGS)
+    source = NWBSource(
+        nwb, reference_clock=harp.record(), zone=PACIFIC, prefix="A_", interval_kind=KIND, attachments=settings
+    )
+    (device,) = source.records()["core.devices"]
+    assert (device["parent_device_id"], device["parent_port"]) == ("A_headstage.slot3.port2", "1")
+    chain = OpenEphysSource(settings, session_id=source.session_id, prefix="A_").devices()
+    assert device["parent_device_id"] in {row["device_id"] for row in chain}
+
+
 def test_the_probe_takes_its_model_and_serial_from_the_linked_device(source):
     probe = source.records()["core.probes"][0]
     assert (probe["probe_type"], probe["serial_number"], probe["manufacturer"]) == (

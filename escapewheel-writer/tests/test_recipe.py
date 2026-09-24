@@ -1078,13 +1078,19 @@ def test_two_different_prefixes_are_refused(tmp_path, registry):
 
 
 def test_one_prefix_on_every_source_that_accepts_it_passes(tmp_path, registry):
-    body = prefixed(sorter="a.", sync="a.", nwb="a.", lfp="a.", waveforms="a.")
+    body = prefixed(sorter="a.", sync="a.", nwb="a.", lfp="a.", waveforms="a.", openephys="a.", harp="a.")
     assert prefix_refusals(tmp_path, registry, body) == []
 
 
+def test_a_device_source_left_unprefixed_is_refused(tmp_path, registry):
+    """An NWB probe links to an `openephys` headstage, so the two cannot disagree on the prefix."""
+    (refused,) = prefix_refusals(tmp_path, registry, prefixed(nwb="a.", openephys=None, harp="a."))
+    assert "(harp 'a.', nwb 'a.', openephys unset)" in refused
+
+
 def test_a_source_that_takes_no_prefix_is_not_asked_for_one(tmp_path, registry):
-    """`openephys` and `harp` accept no `prefix`, so leaving it unset on them disagrees with nothing."""
-    body = prefixed(sorter="a.", openephys=None, harp=None)
+    """`tables` accepts no `prefix`, so leaving it unset there disagrees with nothing."""
+    body = prefixed(sorter="a.", tables=None)
     assert prefix_refusals(tmp_path, registry, body) == []
 
 

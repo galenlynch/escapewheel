@@ -208,3 +208,27 @@ def test_a_mapped_task_column_is_not_repeated_in_metadata(nwb, harp):
     metadata = carrying.intervals()[0].get("metadata") or {}
     assert "goCue_start_time" not in metadata
     assert "animal_response" not in metadata
+
+
+def test_a_signal_names_the_harp_device_under_the_same_prefix(nwb, harp, tmp_path, monkeypatch):
+    """The device row is the Harp schema's, so the signal's reference resolves only if both carry the prefix.
+
+    The schema's parse is stubbed, since its YAML parser is the writer's `harp` extra and not ours.
+    """
+    from escapewheel_writer.sources import HarpSource
+
+    monkeypatch.setattr(HarpSource, "_read", lambda self, path: {"device": "SniffDetector", "whoAmI": 1401})
+
+    sniff = nwbfixture.group(
+        nwb / "acquisition/sniff", neurodata_type="TimeSeries", description="imported from HARP SniffDetector__32.bin"
+    )
+    nwbfixture.array(sniff / "timestamps", np.array([1.0, 2.0]))
+    nwbfixture.array(sniff / "data", np.array([0.1, 0.2]))
+    source = AindNWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, prefix="A_", signals=("sniff",))
+    (asset,) = [a for a in source.array_assets() if a["array_asset_id"] == "A_sniff"]
+    schema = tmp_path / "harp/SniffDetector.harp"
+    schema.mkdir(parents=True)
+    (schema / "device.yml").touch()
+    devices = HarpSource(tmp_path / "harp", session_id=SESSION, prefix="A_").devices()
+    assert asset["device_id"] == "A_SniffDetector"
+    assert asset["device_id"] in {d["device_id"] for d in devices}

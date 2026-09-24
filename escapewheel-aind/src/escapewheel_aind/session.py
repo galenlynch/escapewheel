@@ -99,6 +99,10 @@ class SessionSource(Compensates):
         half the year.
     session_id : str, optional
         Overrides the ID derived from the asset directory name.
+    prefix : str, optional
+        Prepended to every calibration ID and name, and to the device a calibration covers, which
+        is an NWB source's device ID and carries the prefix that source was built with. The
+        reference clock and the subject are not this adapter's to name, so they are left as given.
 
     Attributes
     ----------
@@ -170,6 +174,9 @@ class SessionSource(Compensates):
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "zone", "reference_clock")
 
+    #: Part 05 §3.4: options this adapter reads and can run without (Part 03 §11.2).
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix",)
+
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     #: `aind_nwb` rather than `nwb`: a kind is matched by name, and `session.order` raises on one
     #: the recipe does not declare, so an adapter pairs with the NWB reader it ships beside.
@@ -182,6 +189,7 @@ class SessionSource(Compensates):
         zone: str | ZoneInfo,
         reference_clock: Mapping[str, Any],
         session_id: str | None = None,
+        prefix: str = "",
     ) -> None:
         zone = zone_of(zone)
         #: The reference clock's own row, emitted as given. A build locates `tick_zero_utc`
@@ -193,6 +201,7 @@ class SessionSource(Compensates):
         if not self.path.is_file():
             raise SourceDefect(f"{path} holds no {SESSION_JSON}")
         self.zone = zone
+        self.prefix = prefix
         Compensates.__init__(self)
         self.notes: list[str] = []
         self._streams: list[AcquisitionStream] | None = None
@@ -553,9 +562,9 @@ class SessionSource(Compensates):
             output = _label(entry.get("output"))
             rows.append(
                 {
-                    "calibration_id": name,
+                    "calibration_id": self.prefix + name,
                     "session_id": self.session_id,
-                    "calibration_name": name,
+                    "calibration_name": self.prefix + name,
                     "calibration_type": _quantity(output) or "unknown",
                     "calibrated_at": self._calibrated_at(entry.get("calibration_date"), name),
                     "description": _clean(entry.get("description")),
@@ -571,9 +580,9 @@ class SessionSource(Compensates):
         for transform, when in self._transforms().items():
             rows.append(
                 {
-                    "calibration_id": transform,
+                    "calibration_id": self.prefix + transform,
                     "session_id": self.session_id,
-                    "calibration_name": transform,
+                    "calibration_name": self.prefix + transform,
                     "calibration_type": "manipulator_transform",
                     "calibrated_at": self._calibrated_at(when, transform),
                     "description": None,
@@ -609,7 +618,7 @@ class SessionSource(Compensates):
             rows.extend(
                 {
                     "session_id": self.session_id,
-                    "calibration_id": name,
+                    "calibration_id": self.prefix + name,
                     "point_index": index,
                     "input_value": float(x),
                     "output_value": float(y),
@@ -622,17 +631,23 @@ class SessionSource(Compensates):
         """`core.calibration_devices`: the devices each calibration covers.
 
         The assembly name is the device name the acquisition chain gives the same probe, and the
-        writer numbers both from that name (Part 05 §4.3), so the reference resolves without this
-        adapter seeing `core.devices`. A calibration covering a device the packet does not hold
-        gets no row, which is a fact rather than a defect (R89 §2.2) -- which is why the lick
-        spouts of a water calibration appear here only if some source built them.
+        writer numbers both from that name under one recipe prefix (Part 05 §4.3), so the reference
+        resolves without this adapter seeing `core.devices`. A calibration covering a device the
+        packet does not hold gets no row, which is a fact rather than a defect (R89 §2.2) -- which is
+        why the lick spouts of a water calibration appear here only if some source built them.
         """
         rows = []
         for module in self._modules():
             transform = _clean(module.get("coordinate_transform"))
             device = _clean(module.get("assembly_name"))
             if transform is not None and device is not None:
-                rows.append({"session_id": self.session_id, "calibration_id": transform, "device_id": device})
+                rows.append(
+                    {
+                        "session_id": self.session_id,
+                        "calibration_id": self.prefix + transform,
+                        "device_id": self.prefix + device,
+                    }
+                )
         return rows
 
     def _transforms(self) -> dict[str, str | None]:

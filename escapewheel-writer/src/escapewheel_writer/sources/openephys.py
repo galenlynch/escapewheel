@@ -85,6 +85,9 @@ class OpenEphysSource:
         A directory holding record nodes, a record node itself, or a `settings.xml`.
     session_id : str
         The session this hardware was used in.
+    prefix : str, optional
+        Prepended to every device ID and name, and to the headstage each of `attachments` names,
+        since that is a `device_id` of this adapter's.
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -105,12 +108,16 @@ class OpenEphysSource:
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id")
 
+    #: Part 05 §3.4: options this adapter reads and can run without (Part 03 §11.2).
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix",)
+
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ()
 
-    def __init__(self, root: str | Path, *, session_id: str) -> None:
+    def __init__(self, root: str | Path, *, session_id: str, prefix: str = "") -> None:
         self.root = source_root(root)
         self.session_id = session_id
+        self.prefix = prefix
         self.notes: list[str] = []
 
     def settings(self) -> list[Path]:
@@ -144,9 +151,9 @@ class OpenEphysSource:
                 if identifier in rows:
                     continue
                 rows[identifier] = {
-                    "device_id": identifier,
+                    "device_id": self.prefix + identifier,
                     "session_id": self.session_id,
-                    "device_name": identifier,
+                    "device_name": self.prefix + identifier,
                     # Open Ephys reports the part, not who made it. IMEC makes the Neuropixels
                     # chain, but the file does not say so and this adapter does not add it.
                     "manufacturer": None,
@@ -156,7 +163,7 @@ class OpenEphysSource:
                     "serial_number": _stated(probe.get(serial)),
                     # Part 01 §3.5: each element names the one below it in the chain. A basestation
                     # is the root here, because nothing in this file describes the PXI chassis.
-                    "parent_device_id": _identity(parent, probe) if parent else None,
+                    "parent_device_id": self.prefix + _identity(parent, probe) if parent else None,
                     # R85 §2.1: and where the file coordinates that link, which port of it.
                     "parent_port": probe.get(port) if port else None,
                     # Part 02 §8.6: what the key states and no column holds. `port` is excluded
@@ -176,7 +183,7 @@ class OpenEphysSource:
         """
         return {
             name: {
-                "parent_device_id": _identity(("headstage", ("slot", "port")), probe),
+                "parent_device_id": self.prefix + _identity(("headstage", ("slot", "port")), probe),
                 "parent_port": probe.get(PROBE_PORT),
             }
             for probe in self._probes()
