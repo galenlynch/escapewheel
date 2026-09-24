@@ -103,6 +103,51 @@ class EvidenceTests(unittest.TestCase):
             )
             self.assertEqual(queued, [])
 
+    def test_a_committed_record_is_not_resolved_against_the_working_tree(self) -> None:
+        revision = "R" + "999"
+        clause = revision + " §3.1"
+        record = {
+            "owners": [{"path": "registry/retired.json", "pointer": "/id"}],
+            "projections": {"paths": ["registry/retired.schema.json"]},
+            "conformance": {
+                "evidence": [
+                    {
+                        "kind": "pytest",
+                        "project": "escapewheel-validator",
+                        "nodeid": "tests/test_x.py::gone",
+                    }
+                ]
+            },
+            "implementations": {"unchanged": "no implementation"},
+            "documentation": {"unchanged": "no documentation"},
+        }
+        document = {
+            "version": 1,
+            "revision": revision,
+            "based_on": "0" * 40,
+            "clauses": {clause: record},
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / f"{revision}.json"
+            path.write_text(json.dumps(document))
+            resolved = evidence.manifest_defects(
+                path, revision, {clause}, [], resolve=True
+            )
+            historical = evidence.manifest_defects(
+                path, revision, {clause}, [], resolve=False
+            )
+        self.assertTrue(
+            any(
+                "does not exist" in defect and "retired" in defect
+                for defect in resolved
+            )
+        )
+        self.assertFalse(any("retired" in defect for defect in historical))
+        self.assertTrue(evidence.committed(next(evidence.ACCEPTED.glob("R130-*.md"))))
+        self.assertFalse(
+            evidence.committed(evidence.ACCEPTED / f"{revision}-not-accepted.md")
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

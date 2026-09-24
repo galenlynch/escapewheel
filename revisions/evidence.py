@@ -4,6 +4,11 @@ Every accepted revision using the current `Decision clauses` metadata has one JS
 `revisions/evidence/`. The manifest maps each clause to its normative owners, generated projections,
 conformance evidence, implementation surfaces, and human documentation. It records evidence; it
 does not make tests or implementations authoritative.
+
+Only the manifest of a revision being accepted, whose record `HEAD` does not yet hold, is resolved
+against the working tree. Once committed, a manifest is part of an immutable accepted record, which
+need not resolve against the current specification (`revisions/CONTRIBUTING.md#ew-citation-context`),
+so it is checked for shape and clause coverage alone.
 """
 
 from __future__ import annotations
@@ -102,7 +107,7 @@ def owner_defects(owner: object) -> list[str]:
     return [f"owner {owner.get('path')!r} is neither Markdown nor JSON"]
 
 
-def surface_defects(name: str, value: object) -> list[str]:
+def surface_defects(name: str, value: object, resolve: bool = True) -> list[str]:
     """Validate an affected-path list or a reason the surface is unchanged."""
     if not isinstance(value, dict) or set(value) - {"paths", "unchanged"}:
         return [f"{name} must contain only `paths` or `unchanged`"]
@@ -114,7 +119,7 @@ def surface_defects(name: str, value: object) -> list[str]:
             f"{name} must name nonempty paths or one unchanged reason, but not both"
         ]
     defects = []
-    if has_paths:
+    if has_paths and resolve:
         for item in paths:
             path, defect = resolve_path(item)
             if defect:
@@ -284,10 +289,28 @@ def accepted() -> dict[str, tuple[Path, set[str]]]:
     return found
 
 
+def committed(record: Path) -> bool:
+    """Whether `HEAD` holds this accepted record, making its manifest historical."""
+    target = f"HEAD:{record.relative_to(ROOT).as_posix()}"
+    return (
+        subprocess.run(
+            ["git", "cat-file", "-e", target],
+            cwd=ROOT,
+            capture_output=True,
+            check=False,
+        ).returncode
+        == 0
+    )
+
+
 def manifest_defects(
-    path: Path, revision: str, expected: set[str], collections: list[tuple[str, str]]
+    path: Path,
+    revision: str,
+    expected: set[str],
+    collections: list[tuple[str, str]],
+    resolve: bool = True,
 ) -> list[str]:
-    """Validate one manifest against its accepted revision."""
+    """Validate one manifest against its accepted revision, resolving its targets if `resolve`."""
     try:
         document = json.loads(path.read_text())
     except json.JSONDecodeError as exc:
@@ -346,15 +369,17 @@ def manifest_defects(
         owners = record["owners"]
         if not isinstance(owners, list) or not owners:
             defects.append(f"{clause}: owners is not a nonempty list")
-        else:
+        elif resolve:
             defects += [
                 f"{clause}: {item}" for owner in owners for item in owner_defects(owner)
             ]
         for surface in SURFACES:
             defects += [
                 f"{clause}: {item}"
-                for item in surface_defects(surface, record[surface])
+                for item in surface_defects(surface, record[surface], resolve)
             ]
+        if not resolve:
+            continue
         defects += [
             f"{clause}: {item}"
             for item in evidence_defects(record["conformance"], collections)
@@ -378,12 +403,15 @@ def main() -> int:
             f"{revision}: manifest has no accepted revision with Decision clauses"
         )
     collections: list[tuple[str, str]] = []
+    resolved = 0
     for revision in sorted(
         set(revisions) & set(manifests), key=lambda value: int(value[1:])
     ):
         path = manifests[revision]
+        resolve = not committed(revisions[revision][0])
+        resolved += resolve
         for defect in manifest_defects(
-            path, revision, revisions[revision][1], collections
+            path, revision, revisions[revision][1], collections, resolve
         ):
             defects.append(f"{path.relative_to(ROOT)}: {defect}")
     requested: dict[str, set[str]] = {}
@@ -405,7 +433,8 @@ def main() -> int:
         print(f"{len(defects)} revision evidence defect(s)")
         return 1
     print(
-        f"{len(manifests)} revision evidence manifest(s) cover every current-format accepted revision"
+        f"{len(manifests)} revision evidence manifest(s) cover every current-format accepted revision; "
+        f"{resolved} manifest(s) of uncommitted revisions resolved against the working tree"
     )
     return 0
 

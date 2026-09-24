@@ -580,7 +580,7 @@ internally inconsistent even when the next commit repairs it.
 | `repoint.py` | Implementation requirement citations name current parts rather than historical decisions. | Every requirement has an implementation or test. |
 | `impact.py` | Files citing a changed section are discoverable. | Uncited consumers or duplicated facts agree. |
 | `revisions/applied.toml`, `registry-targets.toml`, and `ledger.py` | Every accepted Decision clause has a disposition and every named current owner or registry target resolves. | Semantic fidelity, or any need for the current owner to cite the revision back. |
-| `evidence/R<N>.json` and `evidence.py` | Every current-format accepted clause maps to owners and downstream surfaces; paths and pointers resolve; named fixtures and pytest nodes are collected. | Evidence becomes authority, or the named test proves more than it asserts. |
+| `evidence/R<N>.json` and `evidence.py` | Every current-format accepted clause maps to owners and downstream surfaces; for a revision not yet committed, paths and pointers resolve and named fixtures and pytest nodes are collected. | Evidence becomes authority, or the named test proves more than it asserts. |
 | `headings.py` | Section numbering and changed heading subjects were deliberately reviewed. | The body belongs under that heading. |
 | `columns.py` | Embedded column tables reproduce the registry. | Non-tabular prose agrees with the registry. |
 | registry checks | Registry documents are structurally self-consistent and declared SQL is executable. | An adapter can produce every required fact or prose gives the declaration the same meaning. |

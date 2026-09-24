@@ -44,8 +44,8 @@
     },
     "R129 §3.6": {
       "owners": [{"path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md", "anchor": "ew-packet-identifiers"}, {"path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md", "anchor": "ew-packet-resource-entry-fields"}, {"path": "registry/manifest.schema.json", "pointer": "/$id"}, {"path": "registry/resources.schema.json", "pointer": "/$id"}],
-      "projections": {"paths": ["escapewheel-validator/src/escapewheel_validator/schemas/manifest.schema.json", "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
-      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_retired_codec_summary_is_rejected_by_the_manifest_schema"}, {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_writer.py::test_a_referenced_codec_is_not_projected_into_the_manifest"}]},
+      "projections": {"paths": ["escapewheel-reader/src/escapewheel_reader/schemas/manifest.schema.json", "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-reader", "nodeid": "tests/test_manifest.py::test_retired_physical_field_is_an_error"}, {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_writer.py::test_a_referenced_codec_is_not_projected_into_the_manifest"}]},
       "implementations": {"paths": ["escapewheel-writer/src/escapewheel_writer/writer.py", "escapewheel-writer/src/escapewheel_writer/delivery.py", "escapewheel-reader/src/escapewheel_reader/manifest.py"]},
       "documentation": {"paths": ["README.md", "escapewheel_poc_docs_v0.2/08_example_packet.md"]}
     },
