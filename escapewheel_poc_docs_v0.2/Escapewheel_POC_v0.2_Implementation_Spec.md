@@ -1507,7 +1507,8 @@ A value MAY be reserved only where it is read **whole**: where a consumer compar
 
 An `open` column MUST carry a nonempty description stating the form its values take. A string data
 column with an open or closed vocabulary MAY declare `authority`, a nonempty array whose entries
-each carry a human-readable `name` and an absolute RFC 3986 `uri`. No URI may occur twice in one
+each carry a human-readable `name` and an absolute `uri` as RFC 3986
+([Part 00 §10](00_architecture.md#ew-normative-references)) defines one. No URI may occur twice in one
 array. An authority URI is identity rather than a fetch instruction: a validator MUST NOT
 dereference one when checking a registry or a packet, and MUST NOT reject a value for being absent
 from its column's authority. Neither this rule nor the `open` row above covers a unit column's value
@@ -1938,10 +1939,8 @@ A coordinate MAY carry values on fewer axes than its frame declares, where its s
 
 - [The Unified Code for Units of Measure, version 2.2](https://ucum.org/ucum), revision date
   2024-06-17. Unit codes (§8.4) use its case-sensitive syntax and terminal tables.
-- [RFC 3986, *Uniform Resource Identifier (URI): Generic Syntax*](https://www.rfc-editor.org/rfc/rfc3986).
-  Authority identifiers use its absolute-URI syntax.
 
-Validation of both lexical domains is offline, and §9.3 forbids dereferencing an identifier. A
+Validation of unit codes and authority URIs is offline, and §9.3 forbids dereferencing an identifier. A
 registry check parses literal `unit` declarations, and
 [Part 05 §5.3](05_validation_and_import.md#ew-validation-shim) parses the values of a packet's unit
 columns.
