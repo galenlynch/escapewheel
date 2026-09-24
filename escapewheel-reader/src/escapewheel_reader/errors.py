@@ -11,6 +11,27 @@ class ManifestError(PacketError):
     """The packet manifest is absent, unparsable, or does not conform to its schema."""
 
 
+class RegistryUnavailable(PacketError):
+    """A bound registry cannot be used to resolve a declaration (Part 04 §10).
+
+    Raised by the operation that needed the registry, never when the packet opens, so reading a
+    resource no unavailable registry declares still works.
+
+    Attributes
+    ----------
+    registry_id : str
+        The descriptor's name in the manifest's `registries` map.
+    reason : str
+        ``missing``, ``unreadable``, or ``digest``, as Part 04 §10 names them, or ``invalid``
+        where the verified bytes are not a JSON object.
+    """
+
+    def __init__(self, registry_id: str, reason: str, message: str) -> None:
+        super().__init__(f"registry {registry_id!r}: {message}")
+        self.registry_id = registry_id
+        self.reason = reason
+
+
 class ResourceNotFoundError(PacketError):
     """A resource was requested that the manifest does not declare."""
 

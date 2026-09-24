@@ -29,7 +29,17 @@ from escapewheel_reader.observation import (
     unit_windows,
 )
 
-from .conftest import CLOCK_BEHAVIOUR, CURATION, SESSION, SORTING_RUN, UNITS, _resource, _write
+from .conftest import (
+    CLOCK_BEHAVIOUR,
+    CURATION,
+    SESSION,
+    SORTING_RUN,
+    UNITS,
+    _resource,
+    _write,
+    install_registry,
+    read_registry,
+)
 
 CLOCK = CLOCK_BEHAVIOUR
 LICKS, CUES = 30, 31
@@ -37,10 +47,11 @@ LICKS, CUES = 30, 31
 
 def _extend(root, manifest, **tables):
     """Write extra core tables into a copied packet and declare them."""
-    registry_path = root / "schemas" / "logical_schemas.json"
-    registry = json.loads(registry_path.read_text())
+    registry = read_registry(root)
     for name, table in tables.items():
         resource_id = f"core.{name}"
+        # A table the fixture already has is replaced: two entries may not share an ID.
+        manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != resource_id]
         manifest["resources"].append(_resource(resource_id, _write(root, name, table)))
         registry["resources"].setdefault(
             resource_id,
@@ -50,11 +61,10 @@ def _extend(root, manifest, **tables):
                 "instances": {"mode": "singleton", "presence": "optional"},
                 "requires": [],
                 "lineage": "optional",
-                "producing_run": "optional",
                 "table": {"columns": [], "primary_key": [], "references": [], "rules": []},
             },
         )
-    registry_path.write_text(json.dumps(registry, indent=2))
+    manifest["registries"]["core"] = install_registry(root, registry)
     return manifest
 
 

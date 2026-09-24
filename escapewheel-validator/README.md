@@ -8,7 +8,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-grayscale-inverted-border.json)](https://github.com/copier-org/copier)
 
-Validate an Escapewheel packet against the registry it embeds.
+Validate an Escapewheel packet against the registries it binds.
 
 Registry documents have their own ordered conformance result before packet rows are considered.
 The incorporated descriptor enumerates seven phases and 20 stable invariant IDs; the validator
@@ -16,11 +16,13 @@ uses the same result for core and extensions. Local JSON shape comes from the re
 meta-schema, cross-declaration meaning from Parts 02 and 09, Tier 2 static checks from Part 11,
 and literal units from an offline case-sensitive UCUM 2.2 parser.
 
-Validation checks the exact embedded registry bytes before deriving packet checks. The report
-retains the complete portable result, including `unsupported` and `incomplete` states, and pairs
-it with the registry's external role. A caller-supplied mapping is copied before it is checked.
-Only the resulting in-process checked context may direct generated checks; paths, declared
-versions, and unspecified JSON digests are not transferable validation receipts.
+Validation first runs Part 04 §10's manifest phases: the manifest's JSON and shape, the checks
+that need only the manifest, then registry binding. Binding acquires each registry through its
+descriptor, verifies the digest over the decompressed bytes, obtains the registry's complete
+result, and compares its identity, role, version, and standards with the descriptor. The report
+retains every acquired registry's result, labelled by registry ID. Only a bound registry that
+passed binding and is valid directs packet checks; no caller-supplied registry can stand in for
+one. An extension that fails binding withholds only its own entries.
 
 Rules are **data, not code**. `registry/logical_schemas.json` carries every table's structure
 and its Tier 2 rules, and the checks are generated from it rather than written per table. The

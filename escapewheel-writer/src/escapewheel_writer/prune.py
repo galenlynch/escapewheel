@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .writer import MANIFEST, MANIFESTS, REGISTRY_PATH, NotCommitted
+from .writer import MANIFEST, MANIFESTS, NotCommitted
 
 #: Part 03 §9.3. One superseded manifest, and no age limit: a packet is an archival artifact where a
 #: table is an operational one, so age alone never expires one.
@@ -81,24 +81,19 @@ def _stamp(manifest: Mapping[str, Any]) -> datetime | None:
         return None
 
 
-def _names(manifest: Mapping[str, Any], *, installed: Any) -> set[str]:
+def _names(manifest: Mapping[str, Any]) -> set[str]:
     """Packet-relative paths one manifest names.
 
     An external resource is not named: Part 04 §5.1 puts its bytes outside the packet, so cleanup has
-    no standing over them. The registry is named because a retained manifest is uninterpretable
-    without the one it was written against (Part 03 §9.3). Its path depends on `installed`, the
-    registry_version the packet currently carries: that one lives at the unversioned path and
-    every other at a versioned copy, so a retained manifest written against the current registry
-    names the same file the current manifest does.
+    no standing over them. Each bound registry is named, because a retained manifest is
+    uninterpretable without the registries its descriptors bind (Part 03 §9.3).
     """
     named = {
         resource["uri"]
         for resource in manifest.get("resources", [])
         if not resource.get("external") and not str(resource.get("uri", "")).startswith(("s3://", "gs://", "http"))
     }
-    version = manifest.get("registry_version")
-    named.add(REGISTRY_PATH if version == installed else f"schemas/logical_schemas.{version}.json")
-    named.update(entry["registry"] for entry in (manifest.get("extensions") or {}).values() if entry.get("registry"))
+    named.update(descriptor["path"] for descriptor in (manifest.get("registries") or {}).values())
     return named
 
 
@@ -155,7 +150,6 @@ def prune(
     # The current version's own retained copy is not superseded, whatever the policy says.
     superseded = [pair for pair in superseded if pair[1].get("packet_version") != current.get("packet_version")]
 
-    installed = current.get("registry_version")
     # Retention is decided first, because an orphan is judged against the manifests that
     # *survive*: a file named only by a manifest being kept is still needed, and deleting it
     # would leave that manifest uninterpretable -- which is the property Part 03 §9.3 retains for.
@@ -176,13 +170,12 @@ def prune(
                 continue
         expire.append((path, manifest))
 
-    installed = current.get("registry_version")
-    surviving = _names(current, installed=installed)
+    surviving = _names(current)
     for _, manifest in keep:
-        surviving |= _names(manifest, installed=installed)
+        surviving |= _names(manifest)
     named_ever = set(surviving)
     for _, manifest in expire:
-        named_ever |= _names(manifest, installed=installed)
+        named_ever |= _names(manifest)
 
     present = {path.relative_to(root).as_posix(): path for path in _files(root)}
     orphans = tuple(sorted(path for name, path in present.items() if name in named_ever - surviving))

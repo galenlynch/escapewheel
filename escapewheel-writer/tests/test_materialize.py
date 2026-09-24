@@ -248,7 +248,7 @@ class Recorder:
     """The three calls `into` makes on a writer."""
 
     def __init__(self):
-        self.batches, self.tables, self.derived, self.runs = {}, {}, {}, {}
+        self.batches, self.tables, self.derived = {}, {}, {}
 
     def add_batches(self, rid, batches):
         self.batches[rid] = list(batches)
@@ -259,16 +259,13 @@ class Recorder:
     def derives(self, rid, sources):
         self.derived[rid] = list(sources)
 
-    def produced_by(self, rid, run_id):
-        self.runs[rid] = run_id
 
-
-def test_into_records_the_run_that_produced_the_table(tmp_path):
+def test_into_records_lineage_and_a_run_row(tmp_path):
+    """Part 04 §7 requires the lineage; Part 06 §5 permits the run, which no manifest member names."""
     from escapewheel_writer.materialize import RUN_ID, into
 
     writer = Recorder()
     assert into(Fake(tmp_path, ticks=[1000], clocks=[PROBE]), writer) == "analysis.spike_events"
-    assert writer.runs["analysis.spike_events"] == RUN_ID
     assert writer.derived["analysis.spike_events"] == [
         "core.spike_events",
         "core.clock_anchors",

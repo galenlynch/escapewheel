@@ -55,9 +55,11 @@ Every declaration identifier in an extension registry MUST begin with the namesp
 <a id="ew-extension-registration" data-spec-anchor="canonical"></a>
 ### 5.3 Registration
 
-A packet carrying extension resources MUST declare each namespace in the manifest with its version and the path to its registry document (04 §8).
-
-A validator MUST check that a declared registry exists. It MUST NOT require an extension's schema in order to validate core.
+A packet carrying extension resources MUST bind each extension registry that declares them with a
+registry descriptor whose role is `extension`, under
+[Part 04 §8](04_packet_catalog.md#ew-packet-registry-bindings).
+[Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance) owns the checks of that
+binding. A validator MUST NOT require an extension registry in order to validate core.
 
 <a id="ew-extension-verdicts" data-spec-anchor="canonical"></a>
 ### 5.4 Separate verdicts

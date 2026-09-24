@@ -1,13 +1,16 @@
+import inspect
 import json
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-from escapewheel_reader import ManifestError, PacketError, open_packet
+from escapewheel_reader import RegistryUnavailable, open_packet
 
 from escapewheel_validator import validate
 from escapewheel_validator.generate import Check, concerns
 from escapewheel_validator.generate import _generate as generate
+
+from .conftest import install_registry, read_registry
 
 
 def _rewrite(root, name, table):
@@ -81,41 +84,51 @@ def test_physical_order_is_an_error(packet_root):
     assert any(f.check == "core.events.physical_order" and f.level == "error" for f in report.findings)
 
 
-def test_registry_version_must_match_the_manifest(packet_root):
-    path = packet_root / "schemas" / "logical_schemas.json"
-    registry = json.loads(path.read_text())
+def test_registry_version_must_match_its_descriptor(packet_root):
+    registry = read_registry(packet_root)
     registry["registry_version"] = "0.2.0"
-    path.write_text(json.dumps(registry))
+    install_registry(packet_root, registry)
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    manifest["registries"]["core"]["version"] = "0.1.0"
+    (packet_root / "packet.json").write_text(json.dumps(manifest))
     report = validate(open_packet(packet_root))
-    assert any(f.check == "registry.version_mismatch" for f in report.findings)
+    assert not report.passed
+    assert "packet.registry.version" in {f.check for f in report.findings}
 
 
-def test_no_registry_anywhere_is_an_error(packet_root):
-    (packet_root / "schemas" / "logical_schemas.json").unlink()
-    with pytest.raises(PacketError, match="embeds no registry"):
-        validate(open_packet(packet_root))
+def test_a_missing_bound_registry_fails_the_packet(packet_root):
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    (packet_root / manifest["registries"]["core"]["path"]).unlink()
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert [f.check for f in report.findings] == ["packet.registry.missing"]
+    assert report.registries == [] and report.evaluations == []
 
 
-def test_supplied_registry_overrides_the_absent_one(packet_root):
-    path = packet_root / "schemas" / "logical_schemas.json"
-    registry = json.loads(path.read_text())
-    path.unlink()
-    assert validate(open_packet(packet_root), registry=registry).passed
+def test_no_caller_supplied_registry_can_stand_in_for_a_bound_one(packet_root):
+    """Part 05 §14.5: the packet's bound registries direct its checks, so there is no override."""
+    assert "registry" not in inspect.signature(validate).parameters
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    manifest["registries"]["core"]["sha256"] = "0" * 64
+    (packet_root / "packet.json").write_text(json.dumps(manifest))
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert {f.check for f in report.findings} == {"packet.registry.digest"}
 
 
 def test_unsupported_registry_result_is_preserved_and_dependent_checks_are_skipped(packet_root):
-    path = packet_root / "schemas" / "logical_schemas.json"
-    registry = json.loads(path.read_text())
+    registry = read_registry(packet_root)
     registry["$schema"] = "https://example.org/unknown"
-    path.write_text(json.dumps(registry))
+    install_registry(packet_root, registry)
     report = validate(open_packet(packet_root))
     assert not report.passed
     assert report.registries[0].result.state == "unsupported"
+    assert not report.registries[0].directs_checks
     assert not any(f.check.startswith("core.trials.") for f in report.findings)
 
 
 def test_invalid_json_registry_is_a_complete_result_not_a_crash(packet_root):
-    (packet_root / "schemas" / "logical_schemas.json").write_text("{not json")
+    install_registry(packet_root, read_registry(packet_root), body=b"{not json")
     report = validate(open_packet(packet_root))
     assert not report.passed
     assert report.registries[0].result.state == "invalid"
@@ -166,22 +179,20 @@ def test_generator_emits_nothing_for_an_empty_registry():
 
 def _add_family_declaration(root, declaration_id, *, content_class="core"):
     """Add an opaque family for tests concerned with generic manifest behavior."""
-    path = root / "schemas" / "logical_schemas.json"
-    registry = json.loads(path.read_text())
+    registry = read_registry(root)
     registry["resources"][declaration_id] = {
         "content_class": content_class,
         "kind": "opaque",
         "instances": {"mode": "family"},
         "requires": [],
         "lineage": "forbidden" if content_class == "documentation" else "optional",
-        "producing_run": "optional",
     }
-    path.write_text(json.dumps(registry, indent=2))
+    install_registry(root, registry)
 
 
 def test_nullable_foreign_keys_are_guarded(packet_root):
     """Without an IS NOT NULL guard, every absent optional key reports as a violation."""
-    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    registry = read_registry(packet_root)
     registry["resources"]["core.trials"]["table"]["columns"].append(
         {"name": "probe_id", "type": "string", "presence": "nullable", "description": "probe"}
     )
@@ -211,7 +222,7 @@ def test_a_filled_metadata_column_is_not_reported(packet_root):
 
 def test_a_by_position_discriminator_gets_no_reverse_check(packet_root):
     """Part 02 §8.3. Part 02 §8.3 excludes the third shape, and `positions_in` is what says it is one."""
-    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    registry = read_registry(packet_root)
     trials = registry["resources"]["core.trials"]["table"]
     trials["columns"].append(
         {
@@ -235,7 +246,7 @@ def test_a_by_position_discriminator_gets_no_reverse_check(packet_root):
 
 def test_the_position_column_is_checked_against_the_registrys_roles(packet_root):
     """R100 §2.2. A role is invisible to a query and visible to whatever writes one."""
-    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    registry = read_registry(packet_root)
     trials = registry["resources"]["core.trials"]["table"]
     trials["columns"] += [
         {
@@ -270,12 +281,14 @@ def test_retired_codec_summary_is_rejected_by_the_manifest_schema(packet_root):
             "declaration_id": "core.test_payloads",
             "uri": "s3://example/p.zarr",
             "external": True,
+            "validation_state": "not_run",
         }
     )
     entry["required_codecs"] = ["wavpack"]
     path.write_text(json.dumps(entry))
-    with pytest.raises(ManifestError, match="does not conform"):
-        open_packet(packet_root)
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert {f.check for f in report.findings} == {"packet.manifest.schema"}
 
 
 def test_external_resources_are_reported_as_unverified(packet_root):
@@ -289,6 +302,7 @@ def test_external_resources_are_reported_as_unverified(packet_root):
             "declaration_id": "core.test_payloads",
             "uri": "s3://example/p.zarr",
             "external": True,
+            "validation_state": "not_run",
         }
     )
     path.write_text(json.dumps(entry))
@@ -301,7 +315,7 @@ def test_external_resources_are_reported_as_unverified(packet_root):
 
 def test_advisory_rules_are_off_by_default(packet_root):
     """An advisory rule does not run unless asked (Part 02 §10.2)."""
-    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    registry = read_registry(packet_root)
     registry["resources"]["core.trials"]["table"]["rules"].append(
         {
             "id": "core.trials.advice",
@@ -311,16 +325,17 @@ def test_advisory_rules_are_off_by_default(packet_root):
             "sql": "SELECT session_id, trial_id FROM core.trials",
         }
     )
-    quiet = validate(open_packet(packet_root), registry=registry)
+    install_registry(packet_root, registry)
+    quiet = validate(open_packet(packet_root))
     assert not any(f.check == "core.trials.advice" for f in quiet.findings)
 
-    loud = validate(open_packet(packet_root), registry=registry, advisory=True)
+    loud = validate(open_packet(packet_root), advisory=True)
     assert any(f.check == "core.trials.advice" for f in loud.findings)
 
 
 def test_advisory_cannot_change_the_verdict(packet_root):
     """`passed` is invariant under the flag, because advisory rules are never errors."""
-    registry = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    registry = read_registry(packet_root)
     registry["resources"]["core.trials"]["table"]["rules"].append(
         {
             "id": "core.trials.advice",
@@ -330,8 +345,9 @@ def test_advisory_cannot_change_the_verdict(packet_root):
             "sql": "SELECT session_id, trial_id FROM core.trials",
         }
     )
-    quiet = validate(open_packet(packet_root), registry=registry)
-    loud = validate(open_packet(packet_root), registry=registry, advisory=True)
+    install_registry(packet_root, registry)
+    quiet = validate(open_packet(packet_root))
+    loud = validate(open_packet(packet_root), advisory=True)
     assert quiet.passed is loud.passed is True
     assert loud.errors == quiet.errors == 0
 
@@ -368,67 +384,54 @@ def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatc
     assert _offending(connection, "SELECT clock_id, tick_zero_utc FROM core_clocks WHERE FALSE") == []
 
 
-# -- materialization provenance (Part 05 §5.3) ------------------------------------------------
+# -- resource lineage (Part 04 §7) -----------------------------------------------------------
 
 
 def _declare(root, **overrides):
     """Add an analysis resource to the manifest, pointing at a table that already exists."""
-    path = root / "packet.json"
-    manifest = json.loads(path.read_text())
-    registry_path = root / "schemas" / "logical_schemas.json"
-    registry = json.loads(registry_path.read_text())
+    registry = read_registry(root)
     registry["resources"]["analysis.test_output"] = {
         "content_class": "analysis",
         "kind": "table",
         "instances": {"mode": "singleton", "presence": "optional"},
         "requires": [],
         "lineage": "required",
-        "producing_run": "required",
         "table": {**registry["resources"]["core.trials"]["table"], "rules": []},
     }
-    registry_path.write_text(json.dumps(registry, indent=2))
-    manifest["resources"].append(
-        {
-            "resource_id": "analysis.test_output",
-            "declaration_id": "analysis.test_output",
-            "uri": "tables/core/trials.parquet",
-            "validation_state": "passed",
-            "derived_from": ["core.trials"],
-            **overrides,
-        }
-    )
+    install_registry(root, registry)
+    path = root / "packet.json"
+    manifest = json.loads(path.read_text())
+    entry = {
+        "resource_id": "analysis.test_output",
+        "declaration_id": "analysis.test_output",
+        "uri": "tables/core/trials.parquet",
+        "validation_state": "passed",
+        "derived_from": ["core.trials"],
+        **overrides,
+    }
+    manifest["resources"].append({key: value for key, value in entry.items() if value is not None})
     path.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
-def test_an_analysis_resource_without_a_run_is_an_error(packet_root):
-    """Part 04 §4.1: an analysis resource must name its producing run."""
+def test_an_analysis_resource_names_its_lineage_and_no_run(packet_root):
+    """Part 06 §5: a materialization's run is optional provenance the manifest does not carry."""
     _declare(packet_root)
     report = validate(open_packet(packet_root))
-    assert any(f.check == "packet.resource.processing_run_id_required" for f in report.findings)
+    assert report.passed, [f for f in report.findings if f.level == "error"]
 
 
-def test_a_run_that_resolves_to_nothing_is_an_error(packet_root):
-    """Manifest-to-table, so no query can see it and the shim has to (R12 §4)."""
+def test_an_analysis_resource_without_lineage_is_an_error(packet_root):
+    _declare(packet_root, derived_from=None)
+    report = validate(open_packet(packet_root))
+    assert "packet.resource.derived_from_required" in {f.check for f in report.findings}
+
+
+def test_a_manifest_entry_naming_a_run_is_refused_by_its_schema(packet_root):
     _declare(packet_root, processing_run_id="ghost")
     report = validate(open_packet(packet_root))
-    assert any(
-        f.check
-        in {
-            "packet.resource.processing_runs_missing",
-            "provenance.unknown_processing_run",
-            "provenance.no_processing_runs_table",
-        }
-        for f in report.findings
-    )
-
-
-def test_a_core_resource_needs_no_run(packet_root):
-    """R31 §4: the MUST is about derivation, not acquisition."""
-    report = validate(open_packet(packet_root))
-    assert not [f for f in report.findings if f.check.startswith("provenance.")]
-
-
-# -- uniqueness by adjacency (the sort order makes it free) ------------------------------
+    assert not report.passed
+    finding = next(f for f in report.findings if f.check == "packet.manifest.schema")
+    assert finding.rows[0][1].endswith("/additionalProperties")
 
 
 def test_a_duplicate_beside_its_twin_is_caught_by_the_scan(packet_root):
@@ -496,13 +499,11 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
     store.mkdir(parents=True)
     (store / "zarr.json").write_text(json.dumps(document or _zarr_v3()))
 
-    registry_path = root / "schemas" / "logical_schemas.json"
-    registry = json.loads(registry_path.read_text())
+    registry = read_registry(root)
     common = {
         "content_class": "core",
         "requires": [],
         "lineage": "optional",
-        "producing_run": "optional",
     }
     registry["resources"]["core.array_assets"] = {
         **common,
@@ -610,7 +611,8 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
         },
         "array": {"axes_resource": "core.array_dimensions"},
     }
-    registry_path.write_text(json.dumps(registry, indent=2))
+    install_registry(root, registry)
+    manifest["registries"] = json.loads((root / "packet.json").read_text())["registries"]
 
     assets = pa.table(
         {
@@ -679,7 +681,7 @@ def test_a_catalog_row_requires_its_declared_resource(packet_root):
     ]
     path.write_text(json.dumps(manifest))
     report = validate(open_packet(packet_root))
-    assert "packet.resource.catalog_binding" in {finding.check for finding in report.findings}
+    assert "packet.resource.catalog_row_binding" in {finding.check for finding in report.findings}
 
 
 def test_a_packet_owned_array_must_be_zarr_v3(packet_root):
@@ -1047,7 +1049,11 @@ def test_declared_members_are_checked_against_the_store(packet_root):
 
 
 def test_a_member_the_store_does_not_hold_is_an_error(packet_root):
-    root = _with_members(_external(packet_root), mutate=lambda e: e["members"].append({"key": "9.9", "size_bytes": 1}))
+    def add(entry):
+        entry["members"].append({"key": "9.9", "size_bytes": 1})
+        entry["size_bytes"] += 1  # so the entry stays self-consistent and only the store disagrees
+
+    root = _with_members(_external(packet_root), mutate=add)
     report = validate(open_packet(root), external=True)
     assert not report.passed
     assert "external.members" in {f.check for f in report.findings}
@@ -1194,15 +1200,13 @@ def _coordinate_table(root, *, rows, keyed=True):
                 "validation_state": "passed",
             }
         )
-        registry_path = root / "schemas" / "logical_schemas.json"
-        registry = json.loads(registry_path.read_text())
+        registry = read_registry(root)
         registry["resources"]["core.array_channels"] = {
             "content_class": "core",
             "kind": "table",
             "instances": {"mode": "singleton", "presence": "optional"},
             "requires": [],
             "lineage": "optional",
-            "producing_run": "optional",
             "table": {
                 "columns": [
                     {
@@ -1262,8 +1266,8 @@ def _coordinate_table(root, *, rows, keyed=True):
                 "rules": [],
             },
         }
-        registry_path.write_text(json.dumps(registry, indent=2))
         (root / "packet.json").write_text(json.dumps(manifest))
+        install_registry(root, registry)
 
 
 def test_a_packet_owned_arrays_axis_length_is_checked_too(packet_root):
@@ -1325,7 +1329,8 @@ def test_a_packet_recording_no_owned_digest_says_so(packet_root):
 def _extension(root, *, tables=None, mutate=None):
     """Give the packet an extension registry and a table conforming to it."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+        "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
@@ -1337,7 +1342,6 @@ def _extension(root, *, tables=None, mutate=None):
                 "instances": {"mode": "singleton", "presence": "optional"},
                 "requires": [],
                 "lineage": "optional",
-                "producing_run": "optional",
                 "table": {
                     "columns": [
                         {
@@ -1389,11 +1393,9 @@ def _extension(root, *, tables=None, mutate=None):
         mutate(rows)
     (root / "tables" / "task").mkdir(parents=True, exist_ok=True)
     pq.write_table(pa.table(rows), root / "tables" / "task" / "trials.parquet")
-    (root / "extensions").mkdir(exist_ok=True)
-    (root / "extensions" / "task.json").write_text(json.dumps(document))
+    install_registry(root, document)
 
     manifest = json.loads((root / "packet.json").read_text())
-    manifest["extensions"] = {"task": {"version": "0.1.0", "registry": "extensions/task.json"}}
     manifest["resources"].append(
         {
             "resource_id": "task.trials",
@@ -1447,23 +1449,113 @@ def test_an_extension_the_packet_does_not_carry_is_reported_not_run(packet_root)
     assert "extension.table_absent" in {f.check for f in report.findings}
 
 
-def test_an_unreadable_extension_registry_is_ignored_by_the_reader(packet_root):
-    """Part 09 §6 makes checking declared files the validator's job; a reader must not refuse core
-    over an extension it cannot parse."""
-    root = _extension(packet_root)
-    (root / "extensions" / "task.json").write_text("{not json")
-    assert open_packet(root).extensions() == {}
+def _unparseable_extension(root):
+    """Bind the extension to bytes that match their digest and are not JSON."""
+    install_registry(root, read_registry(root, "task"), body=b"{not json")
+    return root
+
+
+def test_an_unparseable_extension_fails_only_what_needs_it(packet_root):
+    """Part 04 §10: a reader fails the operation that needs the registry, naming it."""
+    packet = open_packet(_unparseable_extension(_extension(packet_root)))
+    assert packet.table("core.trials").num_rows == 2
+    with pytest.raises(RegistryUnavailable, match="'task'"):
+        packet.extensions()
 
 
 def test_validator_preserves_an_available_unparseable_extension_result(packet_root):
-    root = _extension(packet_root)
-    (root / "extensions" / "task.json").write_text("{not json")
+    root = _unparseable_extension(_extension(packet_root))
     report = validate(open_packet(root))
     task = next(item for item in report.registries if item.subject == "task")
     assert task.result.state == "invalid"
+    assert report.passed
     assert not report.extension_passed("task")
     assert "task" in report.extensions
     assert not any(f.check == "extension.validated" for f in report.findings)
+
+
+def test_an_extension_that_fails_binding_withholds_only_its_entries(packet_root):
+    """Part 04 §10: core's declaration phase still runs, and the extension's entries are not judged."""
+    root = _extension(packet_root)
+    manifest = json.loads((root / "packet.json").read_text())
+    manifest["registries"]["task"]["version"] = "0.9.0"
+    (root / "packet.json").write_text(json.dumps(manifest))
+    report = validate(open_packet(root))
+    binding = next(f for f in report.findings if f.check == "packet.registry.version")
+    assert binding.extension == "task"
+    assert report.passed
+    assert not report.extension_passed("task")
+    assert not [f for f in report.findings if f.check.startswith("packet.resource.") and "task." in f.message]
+    assert any(e.registry == "core" for e in report.evaluations)
+
+
+def _required_extension(root, extension_id):
+    """Bind a second extension whose only declaration is a required singleton, and carry it."""
+    table = {
+        "columns": [
+            {
+                "name": "session_id",
+                "type": "int32",
+                "presence": "required",
+                "role": "identifier",
+                "identity": "assigned",
+                "description": "Session identity.",
+            }
+        ],
+        "primary_key": ["session_id"],
+        "references": [{"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}],
+        "rules": [],
+    }
+    install_registry(
+        root,
+        {
+            "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+            "registry_id": extension_id,
+            "registry_version": "0.1.0",
+            "logical_standard_version": "escapewheel-logical-v0.1",
+            "rule_language": "escapewheel-rule-sql-v0.1",
+            "extension_id": extension_id,
+            "resources": {
+                f"{extension_id}.marks": {
+                    "content_class": "extension",
+                    "kind": "table",
+                    "instances": {"mode": "singleton", "presence": "required"},
+                    "requires": [],
+                    "lineage": "optional",
+                    "table": table,
+                }
+            },
+        },
+    )
+    (root / "tables" / extension_id).mkdir(parents=True, exist_ok=True)
+    pq.write_table(
+        pa.table({"session_id": pa.array([1], type=pa.int32())}), root / "tables" / extension_id / "marks.parquet"
+    )
+    manifest = json.loads((root / "packet.json").read_text())
+    manifest["resources"].append(
+        {
+            "resource_id": f"{extension_id}.marks",
+            "declaration_id": f"{extension_id}.marks",
+            "uri": f"tables/{extension_id}/marks.parquet",
+            "validation_state": "passed",
+        }
+    )
+    (root / "packet.json").write_text(json.dumps(manifest))
+    return root
+
+
+def test_two_bound_extensions_pass_and_activate_their_required_singletons(packet_root):
+    """Part 02 §2.5: binding an extension activates its required declarations."""
+    root = _required_extension(_required_extension(packet_root, "cue"), "lick")
+    report = validate(open_packet(root))
+    assert report.passed and report.extension_passed("cue") and report.extension_passed("lick")
+
+    manifest = json.loads((root / "packet.json").read_text())
+    manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != "lick.marks"]
+    (root / "packet.json").write_text(json.dumps(manifest))
+    report = validate(open_packet(root))
+    missing = [f for f in report.findings if f.check == "packet.resource.required_missing"]
+    assert [f.message for f in missing] == ["required singleton lick.marks is absent"]
 
 
 def _discriminated(role="discriminator", **extra):
@@ -1557,6 +1649,7 @@ def _reference(root, **overrides):
         "uri": "processing/ecephys/LFP/data",
         "external": True,
         "source": "raw_nwb",
+        "validation_state": "not_run",
     }
     resource.update(overrides)
     entry["resources"].append(resource)
@@ -1599,11 +1692,11 @@ def test_a_source_with_an_absolute_uri_is_refused(packet_root):
 
 
 def test_a_source_on_a_packet_owned_resource_is_refused(packet_root):
-    """Part 04 §5.5: a source locates bytes the packet does not own."""
+    """Part 04 §5.5: a source locates bytes the packet does not own, which the schema enforces."""
     _reference(packet_root, external=False)
     report = validate(open_packet(packet_root))
     assert not report.passed
-    assert any(f.check == "source.not_external" and f.level == "error" for f in report.findings)
+    assert {f.check for f in report.findings} == {"packet.manifest.schema"}
 
 
 def test_declaring_the_resolution_document_as_a_resource_is_refused(packet_root):
@@ -1616,6 +1709,7 @@ def test_declaring_the_resolution_document_as_a_resource_is_refused(packet_root)
             "resource_id": "core.sources_document",
             "declaration_id": "core.test_docs",
             "uri": "sources.json",
+            "validation_state": "passed",
         }
     )
     path.write_text(json.dumps(entry))

@@ -146,16 +146,21 @@ def test_a_naive_timestamp_is_refused(tmp_path, registry, minimal):
 
 
 def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
+    """Part 04 §10: the digest covers the serialized bytes, stored as one gzip member (Part 03 §3.3)."""
+    import gzip
+    import hashlib
+
     root = tmp_path / "s001"
     _write(root, registry, minimal)
-    embedded = json.loads((root / "schemas" / "logical_schemas.json").read_text())
     manifest = json.loads((root / "packet.json").read_text())
-    assert registry["registry_version"] == "0.5.0"
-    assert embedded["registry_version"] == "0.5.0"
-    assert embedded["registry_version"] == registry["registry_version"]
-    assert manifest["registry_version"] == "0.5.0"
-    assert manifest["registry_version"] == registry["registry_version"]
-    assert len(embedded["resources"]) == len(registry["resources"])
+    assert "registry_version" not in manifest
+    descriptor = manifest["registries"]["core"]
+    assert descriptor["role"] == "core"
+    assert descriptor["version"] == registry["registry_version"] == "0.6.0"
+    assert descriptor["path"] == "registries/core/0.6.0.json.gz"
+    body = gzip.decompress((root / descriptor["path"]).read_bytes())
+    assert hashlib.sha256(body).hexdigest() == descriptor["sha256"]
+    assert json.loads(body) == dict(registry)
 
 
 def test_an_unknown_resource_is_refused(registry):
@@ -428,14 +433,14 @@ def test_an_amendment_still_validates_what_it_writes(tmp_path, registry, minimal
         _amend(root, registry, {"core.processing_runs": _runs(status="finished")})
 
 
-def test_an_amendment_bumps_the_version_and_says_what_it_supersedes(tmp_path, registry, minimal):
+def test_an_amendment_bumps_the_version(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     before = json.loads((root / "packet.json").read_text())
     _amend(root, registry, {"core.processing_runs": _runs()})
     after = json.loads((root / "packet.json").read_text())
     assert after["packet_version"] == "0.1.1"
-    assert after["supersedes"] == before["packet_version"]
+    assert after["registries"] == before["registries"]
 
 
 def test_an_amendment_keeps_packet_level_fields(tmp_path, registry, minimal):
@@ -491,19 +496,19 @@ def test_a_failed_amendment_leaves_the_packet_at_its_old_version(tmp_path, regis
 
 
 def test_an_amendment_installs_a_newer_registry_and_retains_the_old(tmp_path, registry, minimal):
-    """Part 03 §9.3: the embedded copy must describe the added resource, and the superseded one
-    is kept so a packet at the old version stays interpretable."""
+    """Part 03 §9.3: the bound registry must describe the added resource, and the superseded one
+    stays where its manifest names it, so a packet at the old version stays interpretable."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     newer = {**registry, "registry_version": "9.9.9"}
     writer = PacketWriter(newer, packet_id=root.name)
     writer.add("core.processing_runs", _runs())
     assert writer.amend(root).passed
-    installed = json.loads((root / "schemas" / "logical_schemas.json").read_text())
-    assert installed["registry_version"] == "9.9.9"
-    kept = json.loads((root / "schemas" / f"logical_schemas.{registry['registry_version']}.json").read_text())
-    assert kept["registry_version"] == registry["registry_version"]
-    assert json.loads((root / "packet.json").read_text())["registry_version"] == "9.9.9"
+    bound = json.loads((root / "packet.json").read_text())["registries"]["core"]
+    assert (bound["version"], bound["path"]) == ("9.9.9", "registries/core/9.9.9.json.gz")
+    retained = json.loads((root / "manifests" / "nwb.packet.0.1.0.json").read_text())["registries"]["core"]
+    assert (root / retained["path"]).is_file()
+    assert retained["version"] == registry["registry_version"]
 
 
 def test_a_failed_amendment_restores_the_registry(tmp_path, registry, minimal):
@@ -515,9 +520,8 @@ def test_a_failed_amendment_restores_the_registry(tmp_path, registry, minimal):
     writer.add("core.processing_runs", _runs(status="bogus"))
     with pytest.raises(CommitRefused):
         writer.amend(root)
-    installed = json.loads((root / "schemas" / "logical_schemas.json").read_text())
-    assert installed["registry_version"] == registry["registry_version"]
-    assert not (root / "schemas" / f"logical_schemas.{registry['registry_version']}.json").exists()
+    assert json.loads((root / "packet.json").read_text())["registries"]["core"]["version"] == "0.6.0"
+    assert not (root / "registries" / "core" / "9.9.9.json.gz").exists()
 
 
 def test_a_registry_that_changed_without_its_version_is_refused(tmp_path, registry, minimal):
@@ -529,19 +533,19 @@ def test_a_registry_that_changed_without_its_version_is_refused(tmp_path, regist
     altered["resources"]["core.sessions"]["table"]["columns"][0]["description"] = "changed, same version"
     writer = PacketWriter(altered, packet_id=root.name)
     writer.add("core.processing_runs", _runs())
-    with pytest.raises(ValueError, match="cannot be told apart"):
+    with pytest.raises(ValueError, match="two digests under one"):
         writer.amend(root)
 
 
 def test_a_registry_colliding_with_a_retained_copy_is_refused(tmp_path, registry, minimal):
-    """Part 03 §9.3: two different registries at one version inside one packet would make its own
-    retained manifests name something that no longer identifies anything."""
+    """Part 03 §9.3: two digests under one registry ID and version would make the packet's own
+    retained manifests name bytes that no longer exist."""
     import copy
 
     root = tmp_path / "s001"
     _write(root, registry, minimal)
 
-    # Move off 0.1.0, retaining it, then try to come back to 0.1.0 with different content.
+    # Move off the registry's version, retaining it, then come back to it with different content.
     newer = {**copy.deepcopy(registry), "registry_version": "9.9.9"}
     writer = PacketWriter(newer, packet_id=root.name)
     writer.add("core.processing_runs", _runs())
@@ -551,7 +555,7 @@ def test_a_registry_colliding_with_a_retained_copy_is_refused(tmp_path, registry
     altered["resources"]["core.sessions"]["table"]["columns"][0]["description"] = "changed, same version"
     back = PacketWriter(altered, packet_id=root.name)
     back.add("core.source_files", [{"source_file_id": "f1", "uri": "file:///x"}])
-    with pytest.raises(ValueError, match="two different .* in one packet"):
+    with pytest.raises(ValueError, match="two digests under one"):
         back.amend(root)
 
 
@@ -1266,3 +1270,24 @@ def test_inefficient_reports_a_string_a_dictionary_does_not_pay_for(registry, he
     table = pa.table({"electrode_name": names if held == "strings" else names.dictionary_encode()})
     assert inefficient("core.pretend", table, delta=[], plain=[]), "a dictionary of 4,000 distinct names"
     assert inefficient("core.pretend", table, delta=[], plain=["electrode_name"]) == []
+
+
+def test_a_retained_binding_elsewhere_still_fixes_its_digest(tmp_path, registry, minimal):
+    """Part 03 §9.3 judges two digests across every manifest, not only the file at one path."""
+    import copy
+
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    manifest = json.loads((root / "packet.json").read_text())
+    moved = "registries/elsewhere.json.gz"
+    (root / manifest["registries"]["core"]["path"]).rename(root / moved)
+    manifest["registries"]["core"]["path"] = moved
+    (root / "packet.json").write_text(json.dumps(manifest))
+
+    altered = copy.deepcopy(registry)
+    altered["resources"]["core.sessions"]["table"]["columns"][0]["description"] = "changed, same version"
+    writer = PacketWriter(altered, packet_id=root.name)
+    writer.add("core.processing_runs", _runs())
+    with pytest.raises(ValueError, match="two digests under one"):
+        writer.amend(root)
+    assert not (root / "registries" / "core" / f"{registry['registry_version']}.json.gz").exists()

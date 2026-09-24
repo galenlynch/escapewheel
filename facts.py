@@ -58,7 +58,7 @@ def documents() -> list[Path]:
 #: their algorithms; the shared checker implements them and `registry/check.py` consumes one
 #: complete result.
 REGISTRY_CONTRACT = (
-    "registry/registry_contracts/escapewheel-registry-contract-v0.2.json"
+    "registry/registry_contracts/escapewheel-registry-contract-v0.3.json"
 )
 
 

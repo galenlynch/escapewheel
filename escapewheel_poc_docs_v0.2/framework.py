@@ -34,7 +34,8 @@ IDENTIFIERS = {
         "02",
         "ew-core-logical-schema-scope",
     ),
-    "registry_version": ("0.5.0", "02", "ew-registry-self-description"),
+    "registry_id": ("core", "02", "ew-registry-self-description"),
+    "registry_version": ("0.6.0", "02", "ew-registry-self-description"),
 }
 
 REFERENCE_MARKERS = {
@@ -61,6 +62,8 @@ REFERENCE_MARKERS = {
     "Zarr Zstandard": "zarr-specs.readthedocs.io/en/latest/v3/codecs/zstd/",
     "Zarr v2": "zarr-specs.readthedocs.io/en/latest/v2/v2.0.html",
     "RFC 8878": "https://www.rfc-editor.org/info/rfc8878",
+    "RFC 1952": "https://www.rfc-editor.org/info/rfc1952",
+    "RFC 1951": "https://www.rfc-editor.org/info/rfc1951",
     "FIPS 180-4": "csrc.nist.gov/pubs/fips/180-4",
     "ISO/IEC 9075-1:2023": "https://www.iso.org/standard/76583.html",
     "ISO/IEC 9075-1:2023/Cor 1:2026": "https://www.iso.org/standard/93690.html",
@@ -93,6 +96,8 @@ REFERENCE_OWNERS = {
     "Zarr Zstandard": "03",
     "Zarr v2": "03",
     "RFC 8878": "03",
+    "RFC 1952": "03",
+    "RFC 1951": "03",
     "FIPS 180-4": "04",
     "ISO/IEC 9075-1:2023": "11",
     "ISO/IEC 9075-1:2023/Cor 1:2026": "11",
@@ -167,6 +172,16 @@ REFERENCE_ROWS = {
             "exact",
             "Zstandard framing",
         ),
+        (
+            "[RFC 1952](https://www.rfc-editor.org/info/rfc1952)",
+            "exact",
+            "gzip member format of a bound registry (§3.3)",
+        ),
+        (
+            "[RFC 1951](https://www.rfc-editor.org/info/rfc1951)",
+            "exact",
+            "DEFLATE compression of a bound registry (§3.3)",
+        ),
     ),
     "04": (
         (
@@ -207,7 +222,7 @@ REFERENCE_ROWS = {
 REFERENCE_INVOCATIONS = {
     "00": "Normative prose invokes an external authority **directly**",
     "03": "Its requirements directly invoke the shared JSON and URI authorities",
-    "04": "Its requirements directly invoke the shared JSON and URI authorities",
+    "04": "Its requirements directly invoke the shared JSON, URI, and JSON Schema authorities",
     "11": "SQL/Foundation editions, corrigenda, and IEEE floating-point edition identified in §9",
 }
 
@@ -357,8 +372,8 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
 
     numbered_texts = {number: documents[name] for number, name in PARTS.items()}
     for field, (value, owner, _anchor) in IDENTIFIERS.items():
-        if field == "registry_version":
-            declaration = f"`registry_version: {value}`"
+        if field in {"registry_id", "registry_version"}:
+            declaration = f"`{field}: {value}`"
             if declaration not in numbered_texts[owner]:
                 found.append(f"{field} owner declaration is missing from Part {owner}")
         else:

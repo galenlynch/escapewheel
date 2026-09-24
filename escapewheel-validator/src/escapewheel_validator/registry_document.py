@@ -23,7 +23,7 @@ from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, ch
 SCHEMAS = Path(__file__).resolve().parent / "schemas"
 SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
-CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.2.json"
+CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.3.json"
 RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
 METADATA_DESCRIPTION = (
@@ -582,6 +582,7 @@ def _semantic_checks() -> dict[str, Any]:
         "registry.reference.compatible": _references_compatible,
         "registry.session_scope.path": _session_scope,
         "registry.identity.name": _identity_names,
+        "registry.identity.registry_id": _registry_id,
         "registry.metadata.eligibility": _metadata,
         "registry.determined_by.resolves": _determined_by,
         "registry.discriminator.declaration": _discriminator_declarations,
@@ -649,17 +650,18 @@ def _resource_instance(
                     f"{declaration['content_class']} declarations must be optional",
                 )
             )
-        if declaration["content_class"] in {"analysis", "compatibility_projection"}:
-            for field in ("lineage", "producing_run"):
-                if declaration[field] != "required":
-                    outcomes.append(
-                        _invalid(
-                            "registry.resource.instance",
-                            _pointer(("resources", resource, field)),
-                            resource,
-                            f"{declaration['content_class']} declarations require {field}",
-                        )
-                    )
+        if (
+            declaration["content_class"] in {"analysis", "compatibility_projection"}
+            and declaration["lineage"] != "required"
+        ):
+            outcomes.append(
+                _invalid(
+                    "registry.resource.instance",
+                    _pointer(("resources", resource, "lineage")),
+                    resource,
+                    f"{declaration['content_class']} declarations require lineage",
+                )
+            )
         if declaration["content_class"] == "documentation" and declaration["lineage"] != "forbidden":
             outcomes.append(
                 _invalid(
@@ -1087,6 +1089,23 @@ def _session_scope(
                 )
             )
     return outcomes
+
+
+def _registry_id(
+    document: Mapping[str, Any], universe: Mapping[str, Any], class_name: str, core_usable: bool
+) -> list[Outcome]:
+    """Part 02 §9.1: an extension binds under its own namespace, so the two names are one."""
+    del universe, class_name, core_usable
+    if document["registry_id"] == document["extension_id"]:
+        return []
+    return [
+        _invalid(
+            "registry.identity.registry_id",
+            "/registry_id",
+            None,
+            f"registry_id {document['registry_id']!r} differs from extension_id {document['extension_id']!r}",
+        )
+    ]
 
 
 def _identity_names(

@@ -205,11 +205,10 @@ profile defect makes the registry invalid rather than producing a packet finding
 <a id="ew-validation-shim" data-spec-anchor="canonical"></a>
 ### 5.3 The shim
 
-A validator MUST first resolve every packet entry's `declaration_id` in the checked registry
-context. It then checks instance eligibility, required presence, dependency closure, catalog
-binding, populated-reference targets, lineage and producing-run policies, and catalog-row
-provenance before dispatching kind-specific checks. An unknown declaration or one whose instance
-model does not admit the packet resource is an error.
+A validator MUST first evaluate manifest conformance under
+[Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance), which owns the declaration
+resolution, instance, presence, dependency, catalog, reference-target, and lineage checks, before
+dispatching kind-specific checks.
 
 A validator MUST derive the physical interface from the checked logical kind and the selected
 profile, then check available resource-owned metadata: physical order, file presence, Parquet
@@ -217,8 +216,6 @@ types and footer features, Zarr version, rank and codecs, and checksums outside 
 observe them, so such a check written as SQL fails silently rather than loudly. Dense-array checks
 obtain the axes table from the resolved declaration. An unavailable external resource is physically
 unassessed. A valid upstream feature outside a reader-only floor is not by itself a profile error.
-
-A claim that crosses from the manifest to a table belongs here for the same reason. A resource's `processing_run_id` lives in the manifest, which no query sees, so the check that it names a run present in `core.processing_runs` is the shim's and not a foreign key.
 
 The shim MUST compare the manifest's session inventory with `core.sessions.session_name` under the
 check ID `core.sessions.manifest_sessions_match`, at `error`, with the message carried by the
@@ -316,8 +313,6 @@ core and extension verdicts compose.
 **Writer conformance** is a property of a process. A writer conforms when it satisfies this part, which includes recording provenance for the import activity and the inputs it read. A packet is not judged by it.
 
 A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only a writer. Where it also checks writer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately, as it already does for core and extension verdicts.
-
-An analysis resource is where the two meet: `processing_run_id` is MUST for one, and that is a packet obligation rather than a writer's, because a derived resource naming no run is unreproducible whoever built it.
 
 ## 11. Minimum acceptance criteria
 
@@ -482,28 +477,33 @@ create an explicitly unfinished draft when it makes no conformance or publicatio
 
 ### 14.5 Validator reactions
 
-A packet validator obtains a complete result for every embedded or caller-supplied core registry it
-loads and for every available extension registry that §5.4 requires it to validate. An extension
-registry is available when its declared bytes can be acquired, whether or not they parse as JSON.
-The validator identifies the checked core context directing packet checks and supplies that exact
-context to every extension evaluation. If it is non-valid, each available extension is still
-evaluated as far as Part 02 permits.
+A packet validator obtains a complete result for every bound registry whose decoded bytes match
+their digest under [Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance). For a
+bound registry that cannot be acquired, `packet.registry.missing`, `packet.registry.unreadable`,
+or `packet.registry.digest` is the packet-level outcome. The validator identifies the checked core
+context directing packet checks and supplies that exact context to every extension evaluation. If
+it is non-valid, each acquired extension is still evaluated as far as Part 02 permits.
+
+A validator MUST direct packet checks only from the checked contexts of bound registries that
+passed the `registry_binding` phase. It MUST NOT substitute a caller-supplied, bundled, or remotely
+resolved registry for a bound one. A validator MAY check a caller-supplied registry document on its
+own under Part 02 but MUST NOT use it to direct packet checks or report its result as the
+packet's.
 
 Only a `valid` context directs generation or execution of registry-derived packet checks. For a
 non-valid result, the validator retains the complete result, skips every dependent packet check,
 preserves invalid outcomes as registry-document findings, and does not fabricate packet findings
-for unsupported, incomplete, or skipped work. Independent checks may continue. Missing or
-unreadable registry policy, extension-table byte validation, and final composition of core,
-extension, and packet verdicts are not defined here. A non-valid required evaluation remains
+for unsupported, incomplete, or skipped work. Independent checks may continue. Extension-table
+byte validation and final composition of core, extension, and packet verdicts are not defined
+here. A non-valid required evaluation remains
 insufficient to support a conformance claim.
 
 <a id="ew-registry-result-reporting" data-spec-anchor="canonical"></a>
 
 ### 14.6 Portable reporting
 
-Each reported result has an external subject label identifying its registry role, such as `core` or
-a manifest extension identifier. Multiple documents in one role receive source-distinguishing
-labels. A label does not replace or manufacture the document's own identity.
+Each reported result has an external subject label. A bound registry's label is its registry ID,
+and a registry checked outside a packet receives a source-distinguishing label. A label does not replace or manufacture the document's own identity.
 
 Public checking APIs, machine-readable command output, validation reports, and structured
 exceptions expose the same Part 02 §9.5 representation rather than reducing it to a Boolean or

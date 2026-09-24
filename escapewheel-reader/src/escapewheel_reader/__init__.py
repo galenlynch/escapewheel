@@ -35,6 +35,7 @@ from .errors import (
     ManifestError,
     NoTimeOrigin,
     PacketError,
+    RegistryUnavailable,
     ResourceNotFoundError,
     ResourceUnreadableError,
     UnresolvableChannelIndex,
@@ -42,7 +43,7 @@ from .errors import (
     UnsupportedCodecError,
 )
 from .location import Location, read_sources
-from .manifest import Manifest, Resource, sources_schema
+from .manifest import Manifest, RegistryBinding, Resource, sources_schema
 from .observation import (
     StaleSupport,
     clock_windows,
@@ -82,6 +83,8 @@ __all__ = [
     "Packet",
     "PacketError",
     "Predicate",
+    "RegistryBinding",
+    "RegistryUnavailable",
     "Resource",
     "ResourceNotFoundError",
     "ResourceUnreadableError",

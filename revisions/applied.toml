@@ -353,9 +353,9 @@ where = [{ part = "02", section = "10.2" }]
 note = "restored 2026-09-04; a report must say whether advisory rules ran"
 
 [clause."R31 §3"]
-disposition = "applied"
-where = [{ part = "04", section = "3" }]
-note = "restored 2026-09-04; compiled as SHOULD where R31 §3 says MUST"
+disposition = "superseded"
+by = "R130"
+note = "no analysis resource must name a producing run; R130 §3.7"
 
 [clause."R35 §2"]
 disposition = "applied"
@@ -805,17 +805,18 @@ where = [{ part = "02", section = "9.3" }]
 note = "covered by the general open-vocabulary rule; activity_type declares no enum"
 
 [clause."R31 §2"]
-disposition = "applied"
-where = [{ part = "04", section = "3" }]
+disposition = "superseded"
+by = "R130"
+note = "the manifest no longer names a materialization's run; R130 §3.7"
 
 [clause."R31 §4"]
 disposition = "rationale"
-note = "reconciles R9's SHOULD with 06's MUST; both stand and the spec states each"
+note = "reconciled R9's SHOULD with 06's MUST; R130 §3.7 removed the run requirement it explains"
 
 [clause."R31 §5"]
-disposition = "applied"
-where = [{ part = "05", section = "5.3" }]
-note = "restored 2026-09-04; a manifest-to-table claim is the shim's, not a foreign key"
+disposition = "superseded"
+by = "R130"
+note = "no manifest-to-table run check remains; R130 §3.7"
 
 [clause."R31 §6"]
 disposition = "rationale"
@@ -3135,7 +3136,7 @@ where = [
   { part = "02", anchor = "ew-resource-provenance-policy" },
   { part = "06", anchor = "ew-analysis-rules" },
 ]
-note = "lineage and producing-run policies apply by declaration to every resource kind"
+note = "lineage policy applies by declaration to every resource kind; R130 §3.7 removed the producing-run policy"
 
 [clause."R128 §3.8"]
 disposition = "applied"
@@ -3207,3 +3208,58 @@ note = "current interfaces are materialized; ownership is not a realization kind
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-array-metadata-placement" }, { part = "03", anchor = "ew-referenced-resource-delivery" }]
 note = "logical facts and self-describing physical metadata retain separate owners"
+
+[clause."R130 §3.1"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-catalog-scope" }, { part = "04", anchor = "ew-packet-identifiers" }, { part = "04", anchor = "ew-packet-manifest-conformance" }]
+note = "Part 04 incorporates the manifest schema, projects its field tables, and asserts date-time"
+
+[clause."R130 §3.2"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-identifiers" }, { part = "04", anchor = "ew-packet-resource-entry-fields" }, { part = "04", anchor = "ew-packet-validation-block" }]
+note = "every manifest object is closed; closure replaces the retired-field list"
+
+[clause."R130 §3.3"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-registry-bindings" }]
+note = "a packet binds each registry by identity, role, version, path, and digest"
+
+[clause."R130 §3.4"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-document" }, { part = "02", anchor = "ew-registry-self-description" }, { part = "02", anchor = "ew-registry-conformance" }]
+note = "every registry document carries registry_id; the extension equality is registry.identity.registry_id"
+
+[clause."R130 §3.5"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-bound-registries" }, { part = "03", anchor = "ew-portable-packet-layout" }, { part = "03", anchor = "ew-superseded-manifest-retention" }, { part = "03", anchor = "ew-portable-profile-normative-references" }]
+note = "each bound registry is one gzip member; retention is judged by registry ID, version, and digest"
+
+[clause."R130 §3.6"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-manifest-conformance" }, { part = "05", anchor = "ew-validation-shim" }]
+note = "five ordered manifest phases with named check IDs"
+
+[clause."R130 §3.7"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-resource-provenance-policy" }, { part = "04", anchor = "ew-resource-lineage" }, { part = "06", anchor = "ew-analysis-rules" }, { part = "06", anchor = "ew-analysis-spike-events" }, { part = "06", anchor = "ew-analysis-materialization-provenance" }, { part = "05", anchor = "ew-conformance-classes" }, { part = "00", anchor = "ew-analysis-content-requirements" }]
+note = "lineage stays required for analysis; a materialization's run is optional and no entry names one"
+
+[clause."R130 §3.8"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-manifest-conformance" }]
+note = "a reader checks decoding, repetition, member types, and the digest of a registry it needs"
+
+[clause."R130 §3.9"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validator-registry-boundary" }, { part = "05", anchor = "ew-registry-result-reporting" }, { part = "04", anchor = "ew-packet-manifest-conformance" }, { part = "09", anchor = "ew-extension-registration" }]
+note = "only bound registries that pass binding direct packet checks"
+
+[clause."R130 §3.10"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-profile-scope" }, { part = "03", anchor = "ew-referenced-resource-delivery" }]
+note = "the delivery schema is the manifest entry without validation_state and derived_from"
+
+[clause."R130 §3.11"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-self-description" }, { part = "02", anchor = "ew-registry-conformance" }]
+note = "meta-schema, contract, core registry, manifest, and delivery identifiers advance together"

@@ -1,3 +1,5 @@
+import gzip
+import hashlib
 import json
 
 import pyarrow as pa
@@ -22,6 +24,37 @@ EVENTS = (20, 21, 22)
 #: The session's name, which is what the manifest lists and what a stable cross-packet
 #: reference uses (R53 §2.3.1).
 SESSION_NAME = "s001"
+
+
+def install_registry(root, document, *, role=None):
+    """Store a registry as the portable profile does and bind it in the packet's manifest.
+
+    The manifest's descriptor is rewritten to match, so a test that edits a registry exercises
+    the edit rather than a digest mismatch.
+    """
+    registry_id = document["registry_id"]
+    body = json.dumps(document, indent=2).encode()
+    relative = f"registries/{registry_id}/{document['registry_version']}.json.gz"
+    (root / relative).parent.mkdir(parents=True, exist_ok=True)
+    (root / relative).write_bytes(gzip.compress(body, mtime=0))
+    descriptor = {
+        "role": role or ("core" if registry_id == "core" else "extension"),
+        "version": document["registry_version"],
+        "path": relative,
+        "sha256": hashlib.sha256(body).hexdigest(),
+    }
+    manifest_path = root / "packet.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+        manifest.setdefault("registries", {})[registry_id] = descriptor
+        manifest_path.write_text(json.dumps(manifest, indent=2))
+    return descriptor
+
+
+def read_registry(root, registry_id="core"):
+    """The registry a packet binds under `registry_id`, decoded."""
+    manifest = json.loads((root / "packet.json").read_text())
+    return json.loads(gzip.decompress((root / manifest["registries"][registry_id]["path"]).read_bytes()))
 
 
 def _write(root, name, table):
@@ -62,6 +95,7 @@ def _col(name, type_, presence, **extra):
 def _registry():
     """A registry describing exactly the tables the fixture writes."""
     document = {
+        "registry_id": "core",
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -237,7 +271,6 @@ def _registry():
             },
             "requires": [],
             "lineage": "optional",
-            "producing_run": "optional",
             "table": table,
         }
         for name, table in tables.items()
@@ -248,7 +281,6 @@ def _registry():
         "instances": {"mode": "singleton", "presence": "optional"},
         "requires": [],
         "lineage": "required",
-        "producing_run": "required",
         "table": tables["core.spike_events"],
     }
     return document
@@ -321,9 +353,7 @@ def packet_root(tmp_path):
         _resource("core.spike_events", _write(root, "spike_events", spike_events)),
     ]
 
-    (root / "schemas").mkdir()
-    (root / "schemas" / "logical_schemas.json").write_text(json.dumps(_registry(), indent=2))
-
+    core = install_registry(root, _registry())
     (root / "packet.json").write_text(
         json.dumps(
             {
@@ -332,7 +362,7 @@ def packet_root(tmp_path):
                 "profile_id": "escapewheel-portable-v0.1",
                 "semantic_standard_version": "escapewheel-semantic-v0.1",
                 "logical_standard_version": "escapewheel-logical-v0.1",
-                "registry_version": "0.1.0",
+                "registries": {"core": core},
                 "created_at": "2026-08-26T00:00:00Z",
                 "sessions": [SESSION_NAME],
                 "resources": resources,

@@ -13,7 +13,14 @@ def _manifest(version, resources, registry="0.1.0", when="2026-01-01T00:00:00Z")
     return {
         "packet_id": "p",
         "packet_version": version,
-        "registry_version": registry,
+        "registries": {
+            "core": {
+                "role": "core",
+                "version": registry,
+                "path": f"registries/core/{registry}.json.gz",
+                "sha256": "0" * 64,
+            }
+        },
         "created_at": when,
         "resources": [{"resource_id": name, "declaration_id": name, "uri": uri} for name, uri in resources],
         "validation": {"status": "passed", "validated_at": when},
@@ -25,16 +32,15 @@ def packet(tmp_path):
     """A packet at 0.3.0 whose 0.1.0 named a table 0.2.0 dropped."""
     root = tmp_path / "p"
     (root / "tables" / "core").mkdir(parents=True)
-    (root / "schemas").mkdir()
+    (root / "registries" / "core").mkdir(parents=True)
     for name in ("kept.parquet", "dropped.parquet"):
         (root / "tables" / "core" / name).write_text("x")
-    (root / "schemas" / "logical_schemas.json").write_text("{}")
-    (root / "schemas" / "logical_schemas.0.1.0.json").write_text("{}")
+    for version in ("0.1.0", "0.2.0"):
+        (root / "registries" / "core" / f"{version}.json.gz").write_text("{}")
 
     kept = ("core.kept", "tables/core/kept.parquet")
     dropped = ("core.dropped", "tables/core/dropped.parquet")
-    # The packet is on registry 0.2.0, so 0.1.0 survives as the versioned copy its own
-    # manifest names, exactly as `_install_registry` retains it.
+    # The packet is on registry 0.2.0, and 0.1.0 stays at the path its own manifest names.
     (root / MANIFEST).write_text(json.dumps(_manifest("0.3.0", [kept], registry="0.2.0")))
     (root / MANIFESTS).mkdir()
     for version, resources, registry in (
@@ -51,7 +57,7 @@ def packet(tmp_path):
 def test_an_orphan_is_a_file_no_surviving_manifest_names(packet):
     """Expiring 0.1.0 unreferences both what it named and the registry it was written against."""
     plan = prune(packet)
-    assert [p.name for p in plan.orphans] == ["logical_schemas.0.1.0.json", "dropped.parquet"]
+    assert [p.name for p in plan.orphans] == ["0.1.0.json.gz", "dropped.parquet"]
     assert not plan.strays
     assert (packet / "tables/core/dropped.parquet").exists(), "reporting must not remove"
 
@@ -121,9 +127,9 @@ def test_a_manifest_with_no_timestamp_is_kept_and_said_so(packet):
 def test_a_retained_registry_lives_as_long_as_the_manifest_naming_it_survives(packet):
     """R61 §2.3. Kept while its manifest is kept, and an orphan in the run that expires it."""
     kept = prune(packet, keep_versions=2)
-    assert "logical_schemas.0.1.0.json" not in [p.name for p in kept.orphans]
+    assert "0.1.0.json.gz" not in [p.name for p in kept.orphans]
     expiring = prune(packet, keep_versions=1)
-    assert "logical_schemas.0.1.0.json" in [p.name for p in expiring.orphans]
+    assert "0.1.0.json.gz" in [p.name for p in expiring.orphans]
 
 
 def test_a_manifest_deleted_out_of_band_strands_its_registry(packet):
@@ -131,17 +137,15 @@ def test_a_manifest_deleted_out_of_band_strands_its_registry(packet):
     stray, and a stray is never removed."""
     (packet / MANIFESTS / "nwb.packet.0.1.0.json").unlink()
     plan = prune(packet)
-    assert "logical_schemas.0.1.0.json" in [p.name for p in plan.strays]
-    assert "logical_schemas.0.1.0.json" not in [p.name for p in plan.orphans]
+    assert "0.1.0.json.gz" in [p.name for p in plan.strays]
+    assert "0.1.0.json.gz" not in [p.name for p in plan.orphans]
 
 
-def test_a_manifest_on_the_installed_registry_names_the_unversioned_copy(packet):
-    """`_install_registry` puts the current registry at one path and every other at a versioned
-    one, so a retained manifest written against the current registry names the same file the
-    current manifest does -- not a versioned copy that was never written."""
-    plan = prune(packet)
-    assert not [p for p in plan.orphans if p.name == "logical_schemas.json"]
-    assert not [p for p in plan.strays if p.name == "logical_schemas.json"]
+def test_a_registry_the_current_manifest_binds_is_never_an_orphan(packet):
+    """A registry version is stored once, at the path every manifest binding it names."""
+    plan = prune(packet, keep_versions=0)
+    assert not [p for p in plan.orphans if p.name == "0.2.0.json.gz"]
+    assert not [p for p in plan.strays if p.name == "0.2.0.json.gz"]
 
 
 def test_an_external_resource_is_never_touched(packet):

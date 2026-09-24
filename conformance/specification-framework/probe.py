@@ -203,8 +203,8 @@ def main() -> int:
         "missing Part 04 invocation",
         _replace(
             "04_packet_catalog.md",
-            "Its requirements directly invoke the shared JSON and URI authorities",
-            "Its requirements use the shared JSON and URI authorities",
+            "Its requirements directly invoke the shared JSON, URI, and JSON Schema authorities",
+            "Its requirements use the shared JSON, URI, and JSON Schema authorities",
         ),
         "Part 04 external-reference invocation is missing",
     )

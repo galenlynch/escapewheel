@@ -605,8 +605,8 @@ class Recipe:
         value is cannot be decided without looking at the filesystem and the installed
         distributions -- see `extensions.load`.
     registry : Path or None
-        The registry to write against. Declared here rather than defaulted, because Part 02 §9.2 has
-        the packet embed the registry it was written against -- so which one that is belongs in
+        The registry to write against. Declared here rather than defaulted, because Part 04 §8 has
+        the packet bind the registry it was written against -- so which one that is belongs in
         the parameters, not in whichever copy the tool happened to find.
     document : Mapping
         The parsed file, carried whole so it can go into `core.processing_runs.parameters`.

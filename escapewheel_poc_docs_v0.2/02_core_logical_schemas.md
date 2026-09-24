@@ -47,8 +47,8 @@ permits:
 - `kind`, one of `table`, `dense_array`, and `opaque`;
 - `instances`, a closed object governed by §2.4;
 - `requires`, an array of distinct declaration IDs, empty where there is no explicit dependency;
-- `lineage`, one of `forbidden`, `optional`, and `required`; and
-- `producing_run`, one of `forbidden`, `optional`, and `required`.
+  and
+- `lineage`, one of `forbidden`, `optional`, and `required`.
 
 <a id="ew-resource-content-class" data-spec-anchor="canonical"></a>
 ### 2.2 Content class and canonicality
@@ -73,8 +73,8 @@ documentation semantics merely because its serialization is a document.
 
 The core registry MUST NOT declare `extension`. An extension registry MAY declare `extension`,
 `analysis`, `compatibility_projection`, or `documentation` in its own namespace and MUST NOT
-declare `core`. Every `analysis` and `compatibility_projection` declaration has required lineage
-and producing-run policies. Every `documentation` declaration forbids lineage. These three
+declare `core`. Every `analysis` and `compatibility_projection` declaration requires lineage.
+Every `documentation` declaration forbids lineage. These three
 classes are optional under §2.5.
 
 <a id="ew-resource-kind" data-spec-anchor="canonical"></a>
@@ -126,16 +126,16 @@ owns. A catalog resource and column satisfy §2.6.
 ### 2.5 Presence and dependencies
 
 `core.sessions` is a required singleton. Every other currently incorporated table is an optional
-singleton. An extension selects required or optional for each singleton; declaring that extension
-in a packet activates its required declarations. Merely installing a registry does not.
+singleton. An extension selects required or optional for each singleton; binding that extension
+registry in a packet under [Part 04 §8](04_packet_catalog.md#ew-packet-registry-bindings)
+activates its required declarations. Merely installing a registry does not.
 
 A packet contains an instance when any of these conditions applies:
 
 - it is a required singleton in an active registry;
 - a present declaration names its singleton declaration in `requires`;
-- a populated table reference targets its singleton table declaration;
-- a catalog row requires that exact family instance under §2.6; or
-- a present `processing_run_id` requires `core.processing_runs`.
+- a populated table reference targets its singleton table declaration; or
+- a catalog row requires that exact family instance under §2.6.
 
 An absent optional singleton creates no empty table. A present table may contain zero rows unless
 another rule requires rows. Catalog and family declarations have no minimum instance count.
@@ -166,11 +166,10 @@ remain row identity, and the corresponding names remain source-label bridges. Th
 carry neither `uri` nor `format`; location belongs to Part 04 and physical encoding to Part 03.
 
 <a id="ew-resource-provenance-policy" data-spec-anchor="canonical"></a>
-### 2.7 Lineage and producing-run policy
+### 2.7 Lineage policy
 
-The `lineage` and `producing_run` fields govern the packet entry's `derived_from` and
-`processing_run_id` respectively. For either policy, `forbidden` requires absence, `optional`
-permits presence, and `required` requires presence. A present lineage is a nonempty array of
+The `lineage` field governs the packet entry's `derived_from`. `forbidden` requires absence,
+`optional` permits presence, and `required` requires presence. A present lineage is a nonempty array of
 distinct existing packet resource IDs.
 
 Lineage edges obey this relation:
@@ -185,7 +184,7 @@ Lineage edges obey this relation:
 
 The lineage graph contains no self-edge or cycle. Because every analysis resource has nonempty
 lineage, every finite analysis chain terminates in canonical core or extension resources. A writer
-and validator apply these policies without regard to kind. A reader may expose the resolved facts
+and validator apply this policy without regard to kind. A reader may expose the resolved facts
 without validating the registry or possessing a validation receipt for ordinary access.
 
 <a id="ew-column-declaration" data-spec-anchor="canonical"></a>
@@ -510,8 +509,12 @@ No rule checks either half, and none is added. Nothing structural tells a code f
 ### 9.1 The schema is one document
 
 Resource declarations, table structure, and validation rules are carried in one JSON document. Every registry document
-MUST carry `$schema`, `registry_version`, `logical_standard_version`, `rule_language`, and
-`resources`, and MUST NOT carry `tables`.
+MUST carry `$schema`, `registry_id`, `registry_version`, `logical_standard_version`,
+`rule_language`, and `resources`, and MUST NOT carry `tables`.
+
+`registry_id` names the document to a packet that binds it and matches `^[a-z][a-z0-9_]*$`. A core
+registry's `registry_id` MUST be `core`. An extension registry's `registry_id` MUST equal its
+`extension_id`, and therefore MUST NOT be `core`, `analysis`, or `nwb`.
 
 A core registry MUST carry `semantic_standard_version` and MUST NOT carry `extension_id` or
 `extends`. An extension registry MUST carry `extension_id` and MUST NOT carry
@@ -526,12 +529,15 @@ invalid; this does not affect the packet manifest's resource-lineage `derived_fr
 <a id="ew-registry-self-description" data-spec-anchor="canonical"></a>
 ### 9.2 Self-description
 
-A packet MUST record the registry version it was written against and SHOULD embed the registry itself, so the packet stays readable as the reference registry moves on. A packet whose embedded registry disagrees with its recorded version is invalid.
+A packet binds each registry that declares its resources under
+[Part 04 §8](04_packet_catalog.md#ew-packet-registry-bindings), and
+[Part 03 §3.3](03_portable_physical_profile.md#ew-portable-bound-registries) owns how the portable
+profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.5.0`. Every registry document conforming to that
-schema MUST carry that value in `$schema`. The incorporated core registry has
-`registry_version: 0.5.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`https://escapewheel.org/schemas/registry/0.6.0`. Every registry document conforming to that
+schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
+`registry_version: 0.6.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.1`.
 
@@ -589,7 +595,8 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.2`. A checker MUST evaluate its
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.3` and selects the 0.6.0
+meta-schema. A checker MUST evaluate its
 phases in this order:
 
 1. `json`;
@@ -681,6 +688,7 @@ The descriptor assigns these invariants in this exact order:
 | `registry.reference.compatible` | semantic | core, extension |
 | `registry.session_scope.path` | semantic | core, extension |
 | `registry.identity.name` | semantic | core, extension |
+| `registry.identity.registry_id` | semantic | extension |
 | `registry.metadata.eligibility` | semantic | core, extension |
 | `registry.determined_by.resolves` | semantic | core, extension |
 | `registry.discriminator.declaration` | semantic | core, extension |

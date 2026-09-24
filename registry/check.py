@@ -99,12 +99,12 @@ check(
     ],
 )
 check(
-    "registry meta-schema identity is 0.5.0",
-    [] if META_ID == "https://escapewheel.org/schemas/registry/0.5.0" else [META_ID],
+    "registry meta-schema identity is 0.6.0",
+    [] if META_ID == "https://escapewheel.org/schemas/registry/0.6.0" else [META_ID],
 )
 check(
-    "core registry version is 0.5.0",
-    [] if REG.get("registry_version") == "0.5.0" else [REG.get("registry_version")],
+    "core registry version is 0.6.0",
+    [] if REG.get("registry_version") == "0.6.0" else [REG.get("registry_version")],
 )
 check(
     "every shipped registry selects the incorporated rule language",
@@ -502,6 +502,26 @@ for _schema, _consumer in VENDORED.items():
         )
 check("every vendored schema matches its source", stale)
 
+# Part 04's field tables and Part 03's delivery schema are projections of the incorporated
+# manifest schema, so a hand edit to either, or a schema change nobody rebuilt, is a defect.
+from build import delivery_schema, fill_manifest_tables
+
+_manifest_schema = json.loads((HERE / "manifest.schema.json").read_text())
+_part04 = HERE.parent / "escapewheel_poc_docs_v0.2/04_packet_catalog.md"
+check(
+    "Part 04's field tables project the manifest schema",
+    []
+    if fill_manifest_tables(_part04.read_text(), _manifest_schema) == _part04.read_text()
+    else ["04_packet_catalog.md is stale; run build.py"],
+)
+check(
+    "the delivery schema is the manifest entry without build-supplied members",
+    []
+    if json.loads((HERE / "resources.schema.json").read_text())
+    == delivery_schema(_manifest_schema)
+    else ["resources.schema.json is stale; run build.py"],
+)
+
 # The same argument one level up: a count restated in prose goes stale, and this one did --
 # 33 tables against 34, 51 rules against 61, and two rules revisions had removed.
 import render
@@ -567,7 +587,7 @@ try:
     jsonschema.Draft202012Validator.check_schema(_contract_schema)
     _contract = json.loads(
         (
-            HERE / "registry_contracts/escapewheel-registry-contract-v0.2.json"
+            HERE / "registry_contracts/escapewheel-registry-contract-v0.3.json"
         ).read_text()
     )
     _contract_errors = list(

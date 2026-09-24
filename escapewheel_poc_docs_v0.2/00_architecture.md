@@ -266,8 +266,7 @@ identity system.
 
 The core content class MUST contain canonical facts in the logical schemas of Part 02. A writer
 MUST validate core resources before it commits them. The required minimum is the closure of Part
-02's declaration presence, dependency, populated-reference, catalog, and producing-run rules;
-membership in the core class alone does not require an instance.
+02's declaration presence, dependency, populated-reference, and catalog rules; membership in the core class alone does not require an instance.
 
 A fact belongs in core when common interpretation, validation, joining or analysis would break
 without it (Part 09 §3). A fact a single domain owns belongs in that domain's extension, typed,
@@ -293,8 +292,8 @@ a validator checks against `core.spike_events`.
 ### 5.1 Requirements
 
 The analysis content class MAY contain denormalized, prejoined, binned, aligned, or otherwise
-transformed products. Part 06 owns its exact lineage, producing-run, realization, and promotion
-requirements.
+transformed products. Part 06 owns its exact lineage, realization, and promotion requirements and
+its optional run provenance.
 
 Analysis resources are disposable. A writer MAY delete and recompute any of them. An analysis
 resource becomes canonical only through an explicit revision of this specification.

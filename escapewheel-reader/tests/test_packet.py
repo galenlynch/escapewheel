@@ -4,6 +4,7 @@ import pytest
 
 from escapewheel_reader import (
     ManifestError,
+    RegistryUnavailable,
     ResourceNotFoundError,
     ResourceUnreadableError,
     open_packet,
@@ -38,13 +39,13 @@ def test_resource_facts_are_resolved_from_the_registry(packet_root):
     assert resource.instances == {"mode": "singleton", "presence": "required"}
 
 
-def test_manifest_rejects_legacy_logical_classification(packet_root):
+def test_a_legacy_classification_member_does_not_select_a_kind(packet_root):
+    """Closure is the validator's (Part 04 §10); a reader takes kind from the declaration only."""
     path = packet_root / "packet.json"
     manifest = json.loads(path.read_text())
-    manifest["resources"][0]["kind"] = "table"
+    manifest["resources"][0]["kind"] = "dense_array"
     path.write_text(json.dumps(manifest))
-    with pytest.raises(ManifestError, match="does not conform"):
-        open_packet(packet_root)
+    assert open_packet(packet_root).resource("core.sessions").kind == "table"
 
 
 def test_resources_resolve_through_the_manifest(packet_root, tmp_path):
@@ -108,9 +109,11 @@ def test_embedded_registry_is_exposed(packet_root):
     }
 
 
-def test_registry_is_optional(packet_root):
-    (packet_root / "schemas" / "logical_schemas.json").unlink()
-    assert open_packet(packet_root).registry is None
+def test_a_missing_core_registry_fails_the_access_that_needs_it(packet_root):
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    (packet_root / manifest["registries"]["core"]["path"]).unlink()
+    with pytest.raises(RegistryUnavailable, match="'core'"):
+        _ = open_packet(packet_root).registry
 
 
 def test_sessions_and_repr(packet_root):
@@ -213,8 +216,6 @@ def test_a_document_of_an_unknown_version_is_refused(packet_root, tmp_path):
     import json
 
     import pytest
-
-    from escapewheel_reader import ManifestError
 
     doc = tmp_path / "future.json"
     doc.write_text(json.dumps({"sources_standard_version": "escapewheel-sources-v9", "sources": {}}))

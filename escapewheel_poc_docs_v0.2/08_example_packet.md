@@ -23,10 +23,10 @@ Two files are 99.3% of what the packet owns: `core.spike_events` at 232 MB and `
 ```text
 packet_root/
   packet.json
-  schemas/logical_schemas.json
-  extensions/
-    dynamic_foraging.json
-    aind_unit_qc.json
+  registries/
+    core/             0.6.0.json.gz
+    dynamic_foraging/ 0.7.0.json.gz
+    aind_unit_qc/     0.5.0.json.gz
   tables/
     core/            sessions, subjects, clocks, clock_anchors, electrodes,
                      units, spike_events, unit_quality_labels, …
@@ -48,7 +48,16 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
   "packet_id": "ecephys_786867_2025-09-25",
   "packet_version": "0.1.0",
   "profile_id": "escapewheel-portable-v0.1",
-  "registry_version": "0.5.0",
+  "semantic_standard_version": "escapewheel-semantic-v0.1",
+  "logical_standard_version": "escapewheel-logical-v0.1",
+  "registries": {
+    "core": { "role": "core", "version": "0.6.0",
+              "path": "registries/core/0.6.0.json.gz", "sha256": "…" },
+    "dynamic_foraging": { "role": "extension", "version": "0.7.0",
+                          "path": "registries/dynamic_foraging/0.7.0.json.gz", "sha256": "…" },
+    "aind_unit_qc": { "role": "extension", "version": "0.5.0",
+                      "path": "registries/aind_unit_qc/0.5.0.json.gz", "sha256": "…" }
+  },
   "sessions": ["ecephys_786867_2025-09-25"],
   "resources": [
     {
@@ -77,13 +86,10 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
       "resource_id": "analysis.spike_events",
       "declaration_id": "analysis.spike_events",
       "uri": "tables/analysis/spike_events.parquet",
-      "derived_from": ["core.spike_events", "core.clock_anchors", "core.clocks"],
-      "processing_run_id": "materialize.analysis.spike_events"
+      "validation_state": "passed",
+      "derived_from": ["core.spike_events", "core.clock_anchors", "core.clocks"]
     }
   ],
-  "extensions": {
-    "dynamic_foraging": { "version": "0.1.0", "registry": "extensions/dynamic_foraging.json" }
-  },
   "validation": { "status": "passed", "validated_at": "2026-09-04T04:24:49Z",
                   "validator_name": "escapewheel_validator", "validator_version": "0.1.0" }
 }
@@ -128,4 +134,4 @@ A packet of this shape is conforming when:
 3. every packet-owned resource matches its recorded `sha256`;
 4. Tier 1 and Tier 2 produce no error;
 5. every table is in its declared physical order;
-6. each declared extension registry exists and validates on its own terms.
+6. each bound registry is present, matches its descriptor, and validates on its own terms.

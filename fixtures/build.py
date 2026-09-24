@@ -5,6 +5,8 @@ rule. Table schemas are taken from the registry rather than restated, so a fixtu
 drift from the specification it is meant to exercise.
 """
 
+import gzip
+import hashlib
 import json
 import shutil
 from datetime import datetime, timedelta, timezone
@@ -682,7 +684,6 @@ def write_packet(
     KEYS.clear()
     preassign(tables)
     (out / "tables" / "core").mkdir(parents=True)
-    (out / "schemas").mkdir()
 
     resources = []
     for resource, rows in tables.items():
@@ -701,13 +702,9 @@ def write_packet(
             }
         )
 
-    (out / "schemas" / "logical_schemas.json").write_text(
-        json.dumps(REGISTRY, indent=2) + "\n"
-    )
-    (out / "extensions").mkdir()
-    (out / "extensions" / f"{EXTENSION_ID}.json").write_text(
-        json.dumps(EXTENSION, indent=2) + "\n"
-    )
+    registries = {
+        document["registry_id"]: bind(out, document) for document in (REGISTRY, EXTENSION)
+    }
 
     sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
     (out / "packet.json").write_text(
@@ -718,17 +715,10 @@ def write_packet(
                 "profile_id": "escapewheel-portable-v0.1",
                 "semantic_standard_version": REGISTRY["semantic_standard_version"],
                 "logical_standard_version": REGISTRY["logical_standard_version"],
-                "registry_version": REGISTRY["registry_version"],
+                "registries": registries,
                 "created_at": "2026-08-26T00:00:00Z",
-                "dataset_id": "escapewheel_phase0",
                 "description": "Phase 0 synthetic fixture, single session (R1 §6).",
                 "sessions": sessions,
-                "extensions": {
-                    EXTENSION_ID: {
-                        "version": str(EXTENSION["registry_version"]),
-                        "registry": f"extensions/{EXTENSION_ID}.json",
-                    }
-                },
                 "resources": resources,
                 "validation": {
                     "status": "not_run",
@@ -736,12 +726,25 @@ def write_packet(
                     "validator_name": "escapewheel_validate",
                     "validator_version": "0.1.0",
                 },
-                "provenance": {"import_processing_run_id": "run_import_001"},
             },
             indent=2,
         )
         + "\n"
     )
+
+
+def bind(out, document):
+    """Store a registry as Part 03 §3.3 requires and return its manifest descriptor."""
+    body = (json.dumps(document, indent=2) + "\n").encode()
+    relative = f"registries/{document['registry_id']}/{document['registry_version']}.json.gz"
+    (out / relative).parent.mkdir(parents=True, exist_ok=True)
+    (out / relative).write_bytes(gzip.compress(body, mtime=0))
+    return {
+        "role": "extension" if "extension_id" in document else "core",
+        "version": document["registry_version"],
+        "path": relative,
+        "sha256": hashlib.sha256(body).hexdigest(),
+    }
 
 
 # Each variant violates exactly one rule, so the corpus demonstrates that each check fires.

@@ -172,16 +172,14 @@ class Dataset:
     def _scope(packets: Sequence[Packet]) -> frozenset[str]:
         """Return the union of what each packet's own registry says is session-scoped.
 
-        Each packet embeds the registry it was written against (Part 02 §9.2), so two packets built
+        Each packet binds the registry it was written against (Part 04 §8), so two packets built
         against different revisions can disagree. The union is what keeps a table scoped once
         any packet says it is, which is the safe direction: an extra discriminator is harmless,
         while omitting one where it is needed can correlate unrelated rows.
         """
         scoped: set[str] = set()
         for packet in packets:
-            registry = packet.registry
-            if registry is not None:
-                scoped |= session_scoped(registry)
+            scoped |= session_scoped(packet.registry)
         return frozenset(scoped)
 
     @property
@@ -385,7 +383,7 @@ def _literal(value: str | None) -> str:
 
 def _column_names(packet: Packet, resource_id: str) -> list[str]:
     """Return the columns a resource holds, from the packet's registry or its Parquet schema."""
-    registry = packet.registry or {}
+    registry = packet.registry
     declaration = registry.get("resources", {}).get(resource_id, {})
     declared = declaration.get("table") if declaration.get("kind") == "table" else None
     if declared is not None:

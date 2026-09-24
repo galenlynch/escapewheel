@@ -44,7 +44,6 @@ def base_registry():
         "instances": {"mode": "singleton", "presence": "optional"},
         "requires": [],
         "lineage": "optional",
-        "producing_run": "optional",
         "table": {
             "columns": [
                 col("session_id", "int32", "required", "identifier"),
@@ -128,7 +127,8 @@ def detail(extension_id, table, extra, *, based):
             }
         )
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+        "registry_id": extension_id,
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
@@ -140,7 +140,6 @@ def detail(extension_id, table, extra, *, based):
                 "instances": {"mode": "singleton", "presence": "optional"},
                 "requires": [],
                 "lineage": "optional",
-                "producing_run": "optional",
                 "table": {
                     "columns": columns + extra,
                     "primary_key": key,

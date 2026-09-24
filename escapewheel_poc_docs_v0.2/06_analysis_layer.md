@@ -14,7 +14,7 @@ answer the same question at acceptable cost.
 
 Normative.
 
-An analysis resource MUST satisfy Part 02 §2.7's required lineage and producing-run policies. Its
+An analysis resource MUST satisfy Part 02 §2.7's required lineage policy. Its
 lineage may name the canonical core or extension resources it consumed or an intermediate analysis
 resource; the acyclic chain MUST terminate in canonical resources.
 
@@ -22,7 +22,7 @@ An analysis resource is disposable. A writer MAY delete and recompute any of the
 
 A writer SHOULD materialize an analysis resource only where doing so materially reduces repeated computational or I/O cost, gives an access layout core cannot, preserves the result of an expensive transformation, or provides a stable interface to an explicitly parameterised derivation. A cheap filter, projection, rename or small join SHOULD remain a view.
 
-Where the justification is an expensive transformation or a parameterised derivation, the producing run MUST record the transformation's parameters and not merely that it ran. A spectrogram whose window and overlap are unrecorded is not reproducible, and an irreproducible derived asset fails the disposability test below.
+Where the justification is an expensive transformation or a parameterised derivation and a writer records the materialization's run, §5 requires that run to carry the transformation's parameters and not merely that it ran. A spectrogram whose window and overlap are unrecorded is not reproducible, and an irreproducible derived asset fails the disposability test below.
 
 An analysis resource MUST NOT be the only place a fact exists. Anything a consumer needs that is
 not recomputable from the canonical resources belongs among them; which canonical layer
@@ -53,11 +53,11 @@ Core keeps each spike on the clock of the probe that measured it, sorted unit-ma
 | `time_bucket_tick` | `int64` | required | First tick of the bucket this spike falls in, on clock_id. |
 <!-- /columns -->
 
-A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data and is therefore recorded in the producing run's parameters.
+A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data, so it is a parameter of a recorded materialization run (§5).
 
-**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A writer MUST record the count omitted in the producing run's parameters, even when it is zero: a derived table one row short otherwise looks exactly like a complete one.
+**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A writer that records the materialization's run MUST record the count omitted among its parameters, even when it is zero: a derived table one row short otherwise looks exactly like a complete one.
 
-**A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and MUST record the reason in the producing run's parameters as it does for omitted rows. A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
+**A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and where it records the run, it MUST record the reason among the run's parameters as it does for omitted rows. A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
 
 Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
 
@@ -66,11 +66,10 @@ Measured on one session, a ten-second population window costs 0.025 s here again
 
 Normative.
 
-A materialized analysis resource MUST record a `core.processing_runs` row and MUST name its run
-from the resource entry. A singleton analysis catalog table and each analysis instance it catalogs
-are distinct packet resources: the table entry records aggregate materialization provenance, and
-each catalogued instance records its own declaration-selected provenance. The run's parameters
-MUST carry any transform parameter that cannot be recovered from the output.
+A writer MAY record a `core.processing_runs` row for a materialization and need not. Where it
+records one, the row's parameters MUST carry every transform parameter the output cannot recover.
+A singleton analysis catalog table and each analysis instance it catalogs are distinct packet
+resources, each recording its own declaration-selected lineage.
 
 ## 6. Withdrawn resources
 

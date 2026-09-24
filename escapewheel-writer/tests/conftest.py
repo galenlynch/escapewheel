@@ -1,3 +1,5 @@
+import gzip
+import hashlib
 import json
 from pathlib import Path
 
@@ -37,3 +39,22 @@ def minimal():
             }
         ],
     }
+
+
+def read_registry(root, registry_id="core"):
+    """The registry a committed packet binds under `registry_id`, decoded."""
+    manifest = json.loads((root / "packet.json").read_text())
+    return json.loads(gzip.decompress((root / manifest["registries"][registry_id]["path"]).read_bytes()))
+
+
+def rebind_registry(root, document):
+    """Store an edited registry at its own versioned path and bind it, as a test's shortcut past a writer."""
+    body = json.dumps(document, indent=2).encode()
+    registry_id = document["registry_id"]
+    relative = f"registries/{registry_id}/{document['registry_version']}.json.gz"
+    (root / relative).parent.mkdir(parents=True, exist_ok=True)
+    (root / relative).write_bytes(gzip.compress(body, mtime=0))
+    path = root / "packet.json"
+    manifest = json.loads(path.read_text())
+    manifest["registries"][registry_id] |= {"path": relative, "sha256": hashlib.sha256(body).hexdigest()}
+    path.write_text(json.dumps(manifest))

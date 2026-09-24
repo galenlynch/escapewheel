@@ -74,10 +74,10 @@ packet, which is worse than having no check.
 
 ## Rules that hold here
 
-- **No registry is bundled.** `validate()` uses the copy the packet embeds (Part 02 §9.2), or one passed
-  explicitly. A packet must keep validating against its embedded registry when the reference
-  registry moves on. Bundling a reference copy would let this package's idea of the
-  schema silently overrule the packet's own.
+- **No registry is bundled or supplied.** `validate()` uses the registries the packet binds (Part 04
+  §8), and Part 05 §14.5 forbids a caller-supplied one. A packet must keep validating against its
+  bound registries when the reference registry moves on. A bundled or supplied copy would let
+  this package's idea of the schema silently overrule the packet's own.
 - **A nullable foreign key needs an `IS NOT NULL` guard.** Without it every null row reports as an
   unresolved reference.
 - **An amendment re-runs only the rules its resources implicate** (R35 §5). `validate` takes

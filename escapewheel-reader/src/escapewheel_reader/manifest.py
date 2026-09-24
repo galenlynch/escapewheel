@@ -1,19 +1,19 @@
-"""Parsing and validation of ``packet.json``.
+"""Parsing of ``packet.json``.
 
 The manifest is the packet's entry point: it declares which resources exist, where they
-live, and which sessions the packet covers.
+live, which registries declare them, and which sessions the packet covers. A reader checks only
+what reading needs (Part 04 §10); the incorporated schema is the validator's.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections import Counter
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
-
-import jsonschema
 
 from .errors import ManifestError
 from .location import Location
@@ -21,25 +21,14 @@ from .profile import interface_for
 
 MANIFEST_FILENAME = "packet.json"
 
-
-def manifest_schema() -> dict[str, Any]:
-    """Load the bundled JSON Schema for the packet manifest.
-
-    Returns
-    -------
-    dict
-        The parsed schema.
-    """
-    text = importlib_resources.files(__package__).joinpath("schemas/manifest.schema.json").read_text()
-    parsed: dict[str, Any] = json.loads(text)
-    return parsed
+#: The namespaces the core registry declares; every other namespace is its extension's own.
+CORE_NAMESPACES = frozenset({"core", "analysis"})
 
 
 def sources_schema() -> dict[str, Any]:
     """Load the bundled JSON Schema for a source resolution document (Part 04 §5.5).
 
-    Vendored from `registry/` the way the manifest's is, because a wheel cannot read a file from
-    another repository.
+    Vendored from `registry/`, because a wheel cannot read a file from another repository.
 
     Returns
     -------
@@ -49,6 +38,82 @@ def sources_schema() -> dict[str, Any]:
     text = importlib_resources.files(__package__).joinpath("schemas/sources.schema.json").read_text()
     parsed: dict[str, Any] = json.loads(text)
     return parsed
+
+
+def _unique_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    counts = Counter(name for name, _ in pairs)
+    repeated = sorted(name for name, count in counts.items() if count > 1)
+    if repeated:
+        raise ManifestError(f"an object repeats member {repeated[0]!r}")
+    return dict(pairs)
+
+
+def decode_json(raw: bytes, what: str) -> Any:
+    """Decode UTF-8 JSON, rejecting a repeated object member rather than keeping the last.
+
+    Parameters
+    ----------
+    raw : bytes
+        The document's bytes.
+    what : str
+        What to call the document in an error.
+
+    Returns
+    -------
+    Any
+        The decoded value.
+
+    Raises
+    ------
+    ManifestError
+        If the bytes are not UTF-8, not JSON, or repeat a member within one object.
+    """
+    try:
+        return json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_members)
+    except ManifestError as exc:
+        raise ManifestError(f"{what}: {exc}") from None
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ManifestError(f"{what} is not valid UTF-8 JSON: {exc}") from exc
+
+
+def _typed(entry: Mapping[str, Any], name: str, kind: type | tuple[type, ...], where: str) -> Any:
+    """Read one required member, failing by name where it is absent or of the wrong JSON type."""
+    if name not in entry:
+        raise ManifestError(f"{where} lacks required member {name!r}")
+    return _optional(entry, name, kind, where)
+
+
+def _optional(entry: Mapping[str, Any], name: str, kind: type | tuple[type, ...], where: str) -> Any:
+    value = entry.get(name)
+    # JSON has no boolean-integer overlap, but Python's bool subclasses int.
+    if value is not None and (not isinstance(value, kind) or (kind is not bool and isinstance(value, bool))):
+        raise ManifestError(f"{where} member {name!r} has the wrong JSON type")
+    return value
+
+
+@dataclass(frozen=True)
+class RegistryBinding:
+    """One registry descriptor from the manifest's `registries` map (Part 04 §8).
+
+    Attributes
+    ----------
+    registry_id : str
+        The member name, which the bound document's own `registry_id` must equal.
+    role : str
+        ``core`` or ``extension``.
+    version : str
+        The bound document's `registry_version`.
+    path : str
+        Where the stored copy is, relative to the packet root.
+    sha256 : str
+        Digest of the document's exact bytes, after the profile's storage decoding.
+    """
+
+    registry_id: str
+    role: str
+    version: str
+    path: str
+    sha256: str
 
 
 @dataclass(frozen=True)
@@ -65,13 +130,27 @@ class Resource:
         Location, relative to the packet root unless absolute.
     entry : Mapping
         The complete manifest entry, including fields this class does not surface.
+    resolve : callable, optional
+        Looks a declaration ID up in the packet's bound registries. Called only when a property
+        needs the declaration, so listing resources acquires no registry.
     """
 
     resource_id: str
     declaration_id: str
     uri: str
     entry: Mapping[str, Any]
-    declaration: Mapping[str, Any] | None = None
+    resolve: Callable[[str], Mapping[str, Any] | None] | None = field(default=None, compare=False, repr=False)
+
+    @property
+    def declaration(self) -> Mapping[str, Any] | None:
+        """The declaration `declaration_id` names in a bound registry, or None if none does.
+
+        Raises
+        ------
+        RegistryUnavailable
+            If the registry that would declare it is missing, unreadable, or fails its digest.
+        """
+        return None if self.resolve is None else self.resolve(self.declaration_id)
 
     @property
     def content_class(self) -> str | None:
@@ -109,12 +188,6 @@ class Resource:
         return str(value) if value is not None else None
 
     @property
-    def producing_run_policy(self) -> str | None:
-        """The declaration-selected producing-run policy, if available."""
-        value = None if self.declaration is None else self.declaration.get("producing_run")
-        return str(value) if value is not None else None
-
-    @property
     def is_table(self) -> bool:
         """Whether this resource is tabular."""
         return self.kind == "table"
@@ -131,19 +204,19 @@ class Resource:
         Where present, `uri` is a path relative to wherever that source turns out to be, and a
         resolution document says where that is. Neither field is a location.
         """
-        value = self.entry.get("source")
-        return str(value) if value is not None else None
+        value: str | None = _optional(self.entry, "source", str, self.resource_id)
+        return value
 
     @property
     def is_external(self) -> bool:
         """Whether the packet references these bytes rather than owning them."""
-        return bool(self.entry.get("external", False))
+        return bool(_optional(self.entry, "external", bool, self.resource_id))
 
     @property
     def validation_state(self) -> str | None:
         """The validation state recorded for this resource, if declared."""
-        value = self.entry.get("validation_state")
-        return str(value) if value is not None else None
+        value: str | None = _optional(self.entry, "validation_state", str, self.resource_id)
+        return value
 
 
 @dataclass(frozen=True)
@@ -156,13 +229,10 @@ class Manifest:
         Identifier for this packet.
     profile_id : str
         Physical profile the packet claims to conform to.
-    registry_version : str
-        Version of the schema registry the packet was written against.
     sessions : tuple of str
         Every session the packet contains.
-    extensions : Mapping
-        Extension registries the packet declares (Part 09 §6, Part 09 §2), by `extension_id`. Empty is
-        the common case and is conforming: core is interpretable without any.
+    registries : Mapping
+        Every bound registry's descriptor, by registry ID (Part 04 §8).
     resources : tuple of Resource
         Every declared resource.
     entry : Mapping
@@ -171,22 +241,53 @@ class Manifest:
 
     packet_id: str
     profile_id: str
-    registry_version: str
     sessions: tuple[str, ...]
-    extensions: Mapping[str, Any]
+    registries: Mapping[str, RegistryBinding]
     resources: tuple[Resource, ...]
     entry: Mapping[str, Any]
 
+    @property
+    def core(self) -> RegistryBinding | None:
+        """The descriptor whose role is ``core``, or None where the manifest binds none."""
+        return next((binding for binding in self.registries.values() if binding.role == "core"), None)
+
+    @property
+    def extensions(self) -> dict[str, RegistryBinding]:
+        """The descriptors whose role is ``extension``, by registry ID."""
+        return {name: binding for name, binding in self.registries.items() if binding.role == "extension"}
+
+    def binding_for(self, declaration_id: str) -> RegistryBinding | None:
+        """Find the bound registry that would declare `declaration_id`, by its namespace.
+
+        Parameters
+        ----------
+        declaration_id : str
+            A dotted declaration ID.
+
+        Returns
+        -------
+        RegistryBinding or None
+            The core descriptor for ``core`` and ``analysis``, the extension descriptor named by
+            any other namespace, or None where nothing bound could declare it.
+        """
+        namespace = declaration_id.split(".", 1)[0]
+        if namespace in CORE_NAMESPACES:
+            return self.core
+        binding = self.extensions.get(namespace)
+        return binding
+
     @classmethod
-    def load(cls, root: Location | Path | str, *, validate: bool = True) -> Manifest:
+    def load(cls, root: Location | Path | str) -> Manifest:
         """Read and parse the manifest at a packet root.
+
+        Only what reading needs is checked: UTF-8 JSON with no repeated member, unique resource
+        IDs, and the JSON type of each member read. The incorporated schema is not applied, so a
+        manifest carrying an unknown member or a malformed timestamp still opens.
 
         Parameters
         ----------
         root : Location, Path, or str
             Packet root: a local directory or a store prefix such as ``s3://bucket/prefix``.
-        validate : bool, default True
-            Whether to check the manifest against its JSON Schema before parsing.
 
         Returns
         -------
@@ -196,7 +297,8 @@ class Manifest:
         Raises
         ------
         ManifestError
-            If the manifest is missing, unparsable, or does not conform to its schema.
+            If the manifest is missing, is not UTF-8 JSON, repeats a member or a resource ID, or
+            lacks or mistypes a member reading needs.
         """
         where = Location.of(root)
         document = where.join(MANIFEST_FILENAME)
@@ -206,46 +308,65 @@ class Manifest:
             raw = document.read_bytes()
         except Exception as exc:
             raise ManifestError(f"no {MANIFEST_FILENAME} at {where}: {exc}") from exc
-        try:
-            parsed: dict[str, Any] = json.loads(raw)
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ManifestError(f"{document} is not valid JSON: {exc}") from exc
-        if validate:
-            errors = sorted(
-                jsonschema.Draft202012Validator(manifest_schema()).iter_errors(parsed),
-                key=lambda e: list(e.path),
-            )
-            if errors:
-                detail = "; ".join(f"{'/'.join(map(str, e.path)) or '<root>'}: {e.message}" for e in errors[:5])
-                raise ManifestError(f"{document} does not conform to the manifest schema: {detail}")
+        parsed = decode_json(raw, str(document))
+        if not isinstance(parsed, Mapping):
+            raise ManifestError(f"{document} is not a JSON object")
         return cls.from_dict(parsed)
 
     @classmethod
     def from_dict(cls, entry: Mapping[str, Any]) -> Manifest:
-        """Build a manifest from an already-parsed mapping.
+        """Build a manifest from an already-decoded mapping.
 
         Parameters
         ----------
         entry : Mapping
-            The parsed manifest contents.
+            The decoded manifest.
 
         Returns
         -------
         Manifest
             The parsed manifest.
+
+        Raises
+        ------
+        ManifestError
+            If a resource ID repeats, or a member reading needs is absent or mistyped.
         """
-        raw_resources: Sequence[Mapping[str, Any]] = entry.get("resources", [])
+        raw_resources: Sequence[Any] = _typed(entry, "resources", list, "manifest")
+        for index, resource in enumerate(raw_resources):
+            if not isinstance(resource, Mapping):
+                raise ManifestError(f"manifest member 'resources' item {index + 1} is not an object")
+        # Before any lookup is built: a mapping keyed by resource ID would keep one silently.
+        counts = Counter(r["resource_id"] for r in raw_resources if isinstance(r.get("resource_id"), str))
+        repeated = sorted(str(name) for name, count in counts.items() if count > 1)
+        if repeated:
+            raise ManifestError(f"resource ID {repeated[0]!r} names more than one entry")
+        raw_registries: Mapping[str, Any] = _typed(entry, "registries", dict, "manifest")
+        registries = {}
+        for name, descriptor in raw_registries.items():
+            where = f"registry descriptor {name!r}"
+            if not isinstance(descriptor, Mapping):
+                raise ManifestError(f"{where} is not an object")
+            registries[str(name)] = RegistryBinding(
+                registry_id=str(name),
+                role=_typed(descriptor, "role", str, where),
+                version=_typed(descriptor, "version", str, where),
+                path=_typed(descriptor, "path", str, where),
+                sha256=_typed(descriptor, "sha256", str, where),
+            )
+        sessions = _typed(entry, "sessions", list, "manifest")
+        if not all(isinstance(session, str) for session in sessions):
+            raise ManifestError("manifest member 'sessions' has the wrong JSON type")
         return cls(
-            packet_id=str(entry["packet_id"]),
-            profile_id=str(entry["profile_id"]),
-            registry_version=str(entry.get("registry_version", "")),
-            sessions=tuple(str(s) for s in entry.get("sessions", [])),
-            extensions=dict(entry.get("extensions") or {}),
+            packet_id=_typed(entry, "packet_id", str, "manifest"),
+            profile_id=_typed(entry, "profile_id", str, "manifest"),
+            sessions=tuple(sessions),
+            registries=registries,
             resources=tuple(
                 Resource(
-                    resource_id=str(r["resource_id"]),
-                    declaration_id=str(r["declaration_id"]),
-                    uri=str(r["uri"]),
+                    resource_id=_typed(r, "resource_id", str, "resource entry"),
+                    declaration_id=_typed(r, "declaration_id", str, f"resource {r['resource_id']!r}"),
+                    uri=_typed(r, "uri", str, f"resource {r['resource_id']!r}"),
                     entry=r,
                 )
                 for r in raw_resources

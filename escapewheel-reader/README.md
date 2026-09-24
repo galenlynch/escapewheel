@@ -12,8 +12,10 @@ Read Escapewheel packets: Parquet tables, Zarr v3 arrays, and the JSON manifest 
 
 A packet is a directory. This package opens one, resolves its resources by dotted ID rather
 than by path, and hands back Arrow tables and Zarr arrays. It does not write packets and does
-not validate their contents beyond the manifest's own shape — that is
-[escapewheel-validator](../escapewheel-validator).
+not validate them — that is [escapewheel-validator](../escapewheel-validator). It checks only what
+reading needs (Part 04 §10): the manifest decodes, repeats no member or resource ID, and has the
+members it reads at their JSON types; and a bound registry, acquired only when a declaration is
+needed, matches its descriptor's digest.
 
 Reading is deliberately not a validation boundary. Opening a packet, resolving references and
 discriminators, correlating sessions, and extension-aware analysis require neither a validation

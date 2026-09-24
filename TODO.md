@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R129 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R130 accepted. R42 and R73 withdrawn. No proposal or draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 348 columns, 111 references, 76 Tier 2 rules (2 advisory)
@@ -35,7 +35,7 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 ### What stands between here and a production trial
 
 1. **Define the publication model.** The current core registry and its meta-schema now identify the
-   complete registry-contract development shape as `0.4.0` (Part 02 §9.2). The dependent authority
+   complete registry-contract development shape as `0.6.0` (Part 02 §9.2). The dependent authority
    work still needs to define the released artifact set, publication state, and identifier
    discipline before a production trial.
 

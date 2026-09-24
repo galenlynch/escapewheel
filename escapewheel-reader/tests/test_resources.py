@@ -2,7 +2,7 @@ import pytest
 
 from escapewheel_reader import ResourceNotFoundError, ResourceUnreadableError, open_packet
 
-from .conftest import TRIALS
+from .conftest import TRIALS, install_registry, read_registry
 
 
 def test_handle_reads_and_describes(packet_root):
@@ -198,18 +198,16 @@ def array_packet(tmp_path, packet_root):
         }
     )
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
-    registry_path = root / "schemas" / "logical_schemas.json"
-    registry = json.loads(registry_path.read_text())
+    registry = read_registry(root)
     registry["resources"]["core.test_arrays"] = {
         "content_class": "core",
         "kind": "dense_array",
         "instances": {"mode": "family"},
         "requires": [],
         "lineage": "optional",
-        "producing_run": "optional",
         "array": {"axes_resource": "core.intervals"},
     }
-    registry_path.write_text(json.dumps(registry, indent=2))
+    install_registry(root, registry)
     return root
 
 

@@ -1,6 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
-  "registry_version": "0.6.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+  "registry_id": "dynamic_foraging",
+  "registry_version": "0.7.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "dynamic_foraging",
@@ -14,7 +15,6 @@
       },
       "requires": [],
       "lineage": "optional",
-      "producing_run": "optional",
       "table": {
         "columns": [
           {
@@ -144,7 +144,6 @@
       },
       "requires": [],
       "lineage": "optional",
-      "producing_run": "optional",
       "table": {
         "columns": [
           {
@@ -422,7 +421,6 @@
       },
       "requires": [],
       "lineage": "optional",
-      "producing_run": "optional",
       "table": {
         "columns": [
           {

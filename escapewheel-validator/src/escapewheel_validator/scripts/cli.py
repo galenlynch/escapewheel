@@ -11,22 +11,29 @@ import argparse
 import json
 from pathlib import Path
 
-from escapewheel_reader import open_packet
+from escapewheel_reader import ManifestError, open_packet
 
-from ..validator import validate
+from ..validator import check_packet_manifest, validate
 
 
 def _validate(args: argparse.Namespace) -> int:
-    """Validate a packet against the registry it embeds."""
-    packet = open_packet(args.packet)
-    # A digest is pointless without resolving, so asking for one asks for the level under it.
-    report = validate(
-        packet,
-        advisory=args.advisory,
-        external=args.external or args.checksums or args.store_digests,
-        checksums=args.checksums,
-        store_digests=args.store_digests,
-    )
+    """Validate a packet against the registries it binds."""
+    try:
+        packet = open_packet(args.packet)
+    except ManifestError:
+        # A manifest the reader refuses still gets Part 04 §10's findings, from its bytes alone.
+        report, _ = check_packet_manifest(args.packet, advisory=args.advisory)
+        packet_id = str(args.packet)
+    else:
+        packet_id = packet.manifest.packet_id
+        # A digest is pointless without resolving, so asking for one asks for the level under it.
+        report = validate(
+            packet,
+            advisory=args.advisory,
+            external=args.external or args.checksums or args.store_digests,
+            checksums=args.checksums,
+            store_digests=args.store_digests,
+        )
     for finding in report.findings:
         where = f"[{finding.extension}] " if finding.extension else ""
         print(f"  {finding.level:8s} {where}{finding.check}: {finding.message}")
@@ -42,14 +49,14 @@ def _validate(args: argparse.Namespace) -> int:
     # its core is conformant and an extension nobody is required to hold is not.
     core_errors = sum(f.level == "error" and f.extension is None for f in report.findings)
     status = "passed" if report.passed else "failed"
-    print(f"\n{packet.manifest.packet_id}: core {status} — {core_errors} error(s), {report.warnings} warning(s)")
+    print(f"\n{packet_id}: core {status} — {core_errors} error(s), {report.warnings} warning(s)")
     for extension in report.extensions:
         errors = sum(f.level == "error" and f.extension == extension for f in report.findings)
         verdict = "passed" if report.extension_passed(extension) else "failed"
-        print(f"{' ' * len(packet.manifest.packet_id)}  {extension}: {verdict} — {errors} error(s)")
+        print(f"{' ' * len(packet_id)}  {extension}: {verdict} — {errors} error(s)")
 
     if args.report is not None:
-        args.report.write_text(json.dumps(report.to_dict(packet.manifest.packet_id), indent=2) + "\n")
+        args.report.write_text(json.dumps(report.to_dict(packet_id), indent=2) + "\n")
         print(f"report written to {args.report}")
     return 0 if report.passed else 1
 
@@ -62,7 +69,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     subcommands : argparse._SubParsersAction
         The subparser action `escapewheel_reader` passes to every registered extension.
     """
-    parser = subcommands.add_parser("validate", help="validate a packet against its registry")
+    parser = subcommands.add_parser("validate", help="validate a packet against the registries it binds")
     parser.add_argument("packet", type=Path, help="packet root directory")
     parser.add_argument("--report", type=Path, default=None, help="write a JSON report here")
     parser.add_argument(

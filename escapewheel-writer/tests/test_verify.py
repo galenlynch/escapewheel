@@ -8,6 +8,8 @@ from escapewheel_writer import PacketWriter
 from escapewheel_writer.verify import verify
 from escapewheel_writer.writer import NotCommitted
 
+from .conftest import read_registry, rebind_registry
+
 
 def _commit(root, registry, tables):
     writer = PacketWriter(registry, packet_id=root.name)
@@ -19,31 +21,26 @@ def _commit(root, registry, tables):
 def _external(root, uri):
     """Declare an external array the committed packet says nothing about, as a build that could
     not reach its store leaves it (Part 04 §5.2)."""
-    path = root / "packet.json"
-    manifest = json.loads(path.read_text())
-    registry_path = root / "schemas" / "logical_schemas.json"
-    registry = json.loads(registry_path.read_text())
+    registry = read_registry(root)
     registry["resources"]["core.test_payloads"] = {
         "content_class": "core",
         "kind": "opaque",
         "instances": {"mode": "family"},
         "requires": [],
         "lineage": "optional",
-        "producing_run": "optional",
     }
-    registry_path.write_text(json.dumps(registry, indent=2))
+    rebind_registry(root, registry)
+    path = root / "packet.json"
+    manifest = json.loads(path.read_text())
     manifest["resources"].append(
         {
             "resource_id": "core.probe.lfp",
             "declaration_id": "core.test_payloads",
-            "physical_profile": "zarr_v2",
             "uri": uri,
             "validation_state": "passed",
             "external": True,
-            "codecs": ["blosc"],
         }
     )
-    manifest["required_codecs"] = sorted({c for r in manifest["resources"] for c in r.get("codecs", [])})
     path.write_text(json.dumps(manifest))
     return root
 
@@ -91,7 +88,6 @@ def test_verify_is_a_new_packet_version_that_retains_the_old(tmp_path, registry,
 
     _, manifest = verify(root)
     assert manifest["packet_version"] == "0.1.1"
-    assert manifest["supersedes"] == "0.1.0"
     assert sorted(p.name for p in (root / "manifests").iterdir()) == [
         "nwb.packet.0.1.0.json",
         "nwb.packet.0.1.1.json",

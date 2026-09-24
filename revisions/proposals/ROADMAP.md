@@ -307,7 +307,7 @@ P1 authority framework
 | P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
 | P5.1 | Logical resource declarations and resource classification | P4.2 | [R128](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md) |
 | P5.2 | Portable-profile interfaces and reader floor | P5.1 | [R129](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md) |
-| P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | Active draft |
+| P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | [R130](../accepted/R130-a-packet-binds-the-exact-registries-that-declare-its-resources.md) |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | Proposal to be scoped |
 | P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | Proposal to be scoped |
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | Proposal family; split before promotion |
@@ -661,6 +661,13 @@ one dataset to its resources and registries; the latter binds one publication of
 
 **Review coverage:** S2, S3, S11, I6, packet registry identity from the TODO, and the audits of
 `manifest.schema.json` and `resources.schema.json`.
+
+**Completed as R130 on 2026-09-23.** Part 04 incorporates the closed manifest schema and owns an
+ordered, named manifest-conformance inventory. A packet binds core and every declaring extension
+through one `registries` map of registry ID, role, version, path, and SHA-256 digest, and the
+portable profile embeds each bound registry as one gzip member. Every registry document names
+itself; the manifest entry keeps required analysis lineage and loses its producing-run field; a
+reader checks only what reading needs; and only bound registries direct packet checks.
 
 ### P7 — Validity composition and extension parity
 

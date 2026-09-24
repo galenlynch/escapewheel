@@ -46,12 +46,16 @@ registry/rules.json (+ R24 templates) ─┘         │
 
 registry/registry.schema.json ──build.py──> escapewheel-validator/src/…/schemas/
 registry/registry_contract*  ──build.py──> escapewheel-validator/src/…/schemas/
-registry/manifest.schema.json ──build.py──> escapewheel-reader/src/…/schemas/
+registry/manifest.schema.json ──build.py──> escapewheel-validator/src/…/schemas/
+                              ├─build.py─> registry/resources.schema.json ──build.py──> escapewheel-writer/src/…/schemas/
+                              └─build.py─> Part 04 §§3, 4.1, 8 and 9 field tables
 ```
 
-`logical_schemas.json`, `tables.md`, the README's generated regions, and the two vendored schema
-copies are **build artifacts that happen to be committed**. They are committed because a packet
-embeds the registry and a reviewer should see it change; they are not files to edit.
+`logical_schemas.json`, `tables.md`, the README's generated regions, the delivery schema, Part 04's
+field tables, and the vendored schema copies are **build artifacts that happen to be committed**.
+They are committed because a packet binds the registry and a reviewer should see it change; they
+are not files to edit. The delivery schema is the manifest's resource entry without
+`validation_state` and `derived_from`, so change the manifest schema and rebuild.
 
 The registry regenerates from the frozen Part 02 plus accepted build blocks and rules: delete
 `logical_schemas.json` and `tables.md`, run `uv run --project ../escapewheel-writer python build.py`
@@ -191,7 +195,7 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 688 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 699 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
@@ -203,7 +207,7 @@ that complete result. `check.py` separately adds checks true only of this reposi
 `facts.py` counts the descriptor inventory and those repository checks:
 
 <!-- BEGIN facts: checks -->
-25 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 36 further checks over the whole set
+26 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 38 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |

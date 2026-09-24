@@ -6,12 +6,20 @@ Normative.
 ## 1. Scope
 
 This part defines the packet manifest: the document that binds each concrete packet resource to one
-logical declaration in a checked registry context and to its location. In the portable profile it
-is `packet.json` at the packet root.
+logical declaration in a bound registry and to its location. In the portable profile it is
+`packet.json` at the packet root.
 
-Its requirements directly invoke the shared JSON and URI authorities identified in
+This part incorporates `registry/manifest.schema.json`, whose `$id` is
+`https://escapewheel.org/schemas/manifest/0.4.0`. The schema owns the manifest's exact local JSON
+structure: member names, JSON types, required members, object closure, patterns, enumerations,
+formats, and conditional shape within one entry. This prose owns every field's meaning,
+declaration-selected presence, and the checks of §10. A disagreement between this part and the
+incorporated schema makes the specification candidate internally inconsistent. The field tables in
+§§3, 4.1, 8, and 9 are informative projections of the schema.
+
+Its requirements directly invoke the shared JSON, URI, and JSON Schema authorities identified in
 [Part 00 §10](00_architecture.md#ew-normative-references) and the SHA-256 authority identified in
-[Part 04 §10](#ew-packet-catalog-normative-references). The application columns in those sections
+[Part 04 §11](#ew-packet-catalog-normative-references). The application columns in those sections
 state their extent.
 
 <a id="ew-packet-catalog-principles" data-spec-anchor="canonical"></a>
@@ -20,76 +28,78 @@ state their extent.
 The manifest is the packet's map. A reader MUST resolve resources through it and MUST NOT infer them from file layout.
 
 The manifest binds every resource instance. Part 02's declaration supplies logical content class,
-kind, canonicality, instance mode, presence, table contract, and provenance policy; the packet
+kind, canonicality, instance mode, presence, table contract, and lineage policy; the packet
 entry supplies instance and location facts. Part 03 derives a generic interface from the selected
 profile and logical kind, while the resource owns self-describing physical metadata. An Iceberg catalog manages only tabular resources and
 therefore does not replace the packet manifest.
 
-The manifest identifies by name. `packet_id`, every entry's `resource_id`, the session list, and a resource's `processing_run_id` hold names rather than assigned numbers, because the manifest is read before any table and a number resolves against nothing.
+The manifest identifies by name. `packet_id`, every registry ID, every entry's `resource_id`, and
+the session list hold names rather than assigned numbers, because the manifest is read before any
+table and a number resolves against nothing.
 
 <a id="ew-packet-identifiers" data-spec-anchor="canonical"></a>
 ## 3. Required top-level fields
 
-The manifest records the semantic-standard identifier owned by Part 01, the logical-standard and
-registry identifiers owned by Part 02, and the physical-profile identifier owned by Part 03. The
-fields below record those identifiers; they do not redefine their values or meaning.
+The manifest records the semantic-standard identifier owned by Part 01, the logical-standard
+identifier owned by Part 02, the bound registries of §8, and the physical-profile identifier owned
+by Part 03. The fields below record those identifiers; they do not redefine their values or
+meaning. Every object the incorporated schema declares is closed, so a manifest MUST NOT carry a
+member the schema does not declare. Part 03 §9.5 owns the meaning of `retention`.
 
-| field | type | requirement |
-|---|---|---|
-| `packet_id` | string | MUST |
-| `packet_version` | string | MUST |
-| `profile_id` | string | MUST |
-| `semantic_standard_version` | string | MUST |
-| `logical_standard_version` | string | MUST |
-| `registry_version` | string | MUST |
-| `created_at` | timestamp | MUST |
-| `sessions` | array of string | MUST |
-| `resources` | array of entry | MUST |
-| `validation` | object | MUST |
-| `extensions` | object | where extensions are present (§8) |
-| `description` | string | MAY |
+<!-- BEGIN GENERATED MANIFEST FIELDS: manifest -->
+| member | JSON type | required | constraint |
+|---|---|:---:|---|
+| `packet_id` | string | yes | nonempty |
+| `packet_version` | string | yes | pattern `^\d+\.\d+\.\d+$` |
+| `profile_id` | string | yes | `escapewheel-portable-v0.1` |
+| `semantic_standard_version` | string | yes | — |
+| `logical_standard_version` | string | yes | — |
+| `registries` | object of registry descriptor (§8) | yes | at least one member; member names match `^[a-z][a-z0-9_]*$` |
+| `created_at` | string | yes | format `date-time` |
+| `sessions` | array of string | yes | nonempty; unique items |
+| `resources` | array of resource entry (§4.1) | yes | — |
+| `validation` | validation block (§9) | yes | — |
+| `description` | string | no | — |
+| `retention` | object | no | — |
+<!-- END GENERATED MANIFEST FIELDS: manifest -->
 
 ## 4. Resource entries
 
 <a id="ew-packet-resource-entry-fields" data-spec-anchor="canonical"></a>
 ### 4.1 Common fields
 
-| field | type | requirement |
-|---|---|---|
-| `resource_id` | string | MUST, dotted and namespaced |
-| `declaration_id` | string | MUST, names a visible checked logical declaration |
-| `uri` | string | MUST |
-| `validation_state` | string | MUST |
-| `sha256` | string | SHOULD for a packet-owned resource |
-| `external` | bool | MUST where true (§5) |
-| `source` | string | MAY, on an external entry (§5.5) |
-| `derived_from` | array of string | according to the declaration's `lineage` policy (§7) |
-| `processing_run_id` | string | according to the declaration's `producing_run` policy (§7) |
+<!-- BEGIN GENERATED MANIFEST FIELDS: resource -->
+| member | JSON type | required | constraint |
+|---|---|:---:|---|
+| `resource_id` | string | yes | pattern `^[a-z][a-z0-9_]*\.[a-z0-9_.-]+$` |
+| `declaration_id` | string | yes | pattern `^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$` |
+| `uri` | string | yes | nonempty |
+| `validation_state` | string | yes | one of `passed`, `failed`, `not_run` |
+| `external` | boolean | no | — |
+| `source` | string | no | nonempty |
+| `sha256` | string | no | pattern `^[0-9a-f]{64}$` |
+| `size_bytes` | integer | no | at least 0 |
+| `verified_at` | string | no | format `date-time` |
+| `members` | array of member (§5.4) | no | — |
+| `derived_from` | array of string | no | nonempty; unique items; each item pattern `^[a-z][a-z0-9_]*\.[a-z0-9_.-]+$` |
+<!-- END GENERATED MANIFEST FIELDS: resource -->
 
-An entry MUST NOT contain `layer`, `kind`, `canonical`, `schema_id`, `extension_id`,
-`catalog_table_ref`, `array_asset_id`, `media_asset_id`, `physical_profile`, `partitioning`, or
-`codecs`. The top-level `extensions` map remains
-the packet's extension-registry selection.
+`derived_from` follows the declaration's lineage policy (§7), `external` and `source` follow §5,
+and `members` follows §5.4. Part 03 §10 owns when a writer
+records `sha256`.
 
 <a id="ew-logical-resource-kinds" data-spec-anchor="canonical"></a>
 ### 4.2 Resolved logical facts
 
 The checked declaration named by `declaration_id` supplies the entry's owning registry, content
-class, logical kind, instance mode, canonicality, table contract where applicable, presence,
-lineage, and producing-run policy. A reader, writer, or validator MUST NOT infer a declaration
+class, logical kind, instance mode, canonicality, table contract where applicable, presence, and
+lineage policy. A reader, writer, or validator MUST NOT infer a declaration
 from URI, directory placement, namespace alone, or logical kind.
 
 A singleton entry's `resource_id` equals its declaration ID. A catalog entry binds through the
 catalog row's `resource_id` under Part 02 §2.6. A family entry uses a packet-unique dotted resource
 ID in a namespace its declaration's registry owns. An unknown declaration or inadmissible instance
 binding makes a conformance claim invalid.
-
-<a id="ew-withdrawn-catalog-blocks" data-spec-anchor="canonical"></a>
-### 4.3 Withdrawn blocks
-
-The `canonical_representations` block is withdrawn: spikes have one canonical representation, so there is nothing to arbitrate.
-
-A top-level provenance block is withdrawn. Provenance is carried in `core.source_files`, `core.processing_runs`, and `core.processing_run_inputs`; the manifest records outputs at resource granularity only.
 
 ## 5. External resources
 
@@ -182,49 +192,159 @@ the bytes it found.
 codec pipelines. The manifest carries no replacement capability union or per-resource selector.
 
 <a id="ew-resource-lineage" data-spec-anchor="canonical"></a>
-## 7. Resource lineage and producing runs
+## 7. Resource lineage
 
-The declaration's `lineage` and `producing_run` policies govern `derived_from` and
-`processing_run_id` for every logical kind. `forbidden` requires absence, `optional` permits
-presence, and `required` requires presence. A present `derived_from` is a nonempty array of
-distinct existing packet resource IDs and obeys Part 02 §2.7's content-class relation and acyclic
-graph rule.
+The declaration's `lineage` policy, which Part 02 §2.7 defines, governs `derived_from` for every
+logical kind. A present `derived_from` is a nonempty array of distinct existing packet resource IDs
+and obeys that section's content-class relation and acyclic graph rule.
 
-The exact identity represented by a present `processing_run_id` remains the manifest's name rather
-than an assigned table number. Complete row-to-entry reconciliation of that value is deferred; a
-validator MUST NOT make the nullable source bridge
-`core.processing_runs.processing_run_name` packet-unique merely to create a join.
+An entry names no producing run. Provenance resides in `core.source_files`,
+`core.processing_runs`, and `core.processing_run_inputs`, and the manifest records outputs at
+resource granularity only. [Part 06 §5](06_analysis_layer.md#ew-analysis-materialization-provenance)
+owns when a writer records the run that materialized an analysis resource.
 
 <a id="ew-packet-registry-bindings" data-spec-anchor="canonical"></a>
-## 8. Extensions
+## 8. Registry bindings
 
-Where a packet carries extension resources, the manifest MUST declare each extension namespace, its version, and the path to its registry document:
+The root member `registries` binds the registry documents that declare the packet's resources.
+Each member name is a registry ID under
+[Part 02 §9.1](02_core_logical_schemas.md#ew-registry-document), and each value is a closed
+registry descriptor:
 
-```json
-"extensions": {
-  "dynamic_foraging": { "version": "0.1.0", "registry": "extensions/dynamic_foraging.json" }
-}
-```
+<!-- BEGIN GENERATED MANIFEST FIELDS: registry -->
+| member | JSON type | required | constraint |
+|---|---|:---:|---|
+| `role` | string | yes | one of `core`, `extension` |
+| `version` | string | yes | pattern `^\d+\.\d+\.\d+$` |
+| `path` | string | yes | pattern `^(?![A-Za-z][A-Za-z0-9+.-]*:)(?!\.{1,2}(?:/\|$))(?!.*/\.{1,2}(?:/\|$))[^/\\]+(?:/[^/\\]+)*$` |
+| `sha256` | string | yes | pattern `^[0-9a-f]{64}$` |
+<!-- END GENERATED MANIFEST FIELDS: registry -->
 
-A validator MUST check that a declared extension registry exists. It MUST NOT require an extension's schema in order to validate core.
+A descriptor's `path` is a relative reference to a location under the packet root: one or more
+nonempty segments separated by `/`, with no scheme, no leading `/`, no `\`, and no segment equal
+to `.` or `..`. Its `sha256` is the SHA-256 digest of the exact bytes of the registry document,
+without decoding, re-serialization, or any other canonicalization. The packet's physical profile
+owns how those bytes are stored;
+[Part 03 §3.3](03_portable_physical_profile.md#ew-portable-bound-registries) owns the portable
+profile's storage.
+
+A manifest MUST contain exactly one descriptor with role `core` and MUST NOT give two descriptors
+the same `path`. The document at a descriptor's path MUST:
+
+- carry `registry_id` equal to the descriptor's member name;
+- be a core registry exactly when the descriptor's role is `core`;
+- carry `registry_version` equal to the descriptor's `version`; and
+- carry `logical_standard_version` equal to the manifest's, and, for the core registry,
+  `semantic_standard_version` equal to the manifest's.
+
+A packet MUST bind the core registry and every extension registry that declares one of its
+resources. Binding an extension registry activates its required declarations under
+[Part 02 §2.5](02_core_logical_schemas.md#ew-resource-presence). Every `declaration_id` resolves
+only in the bound registries.
 
 <a id="ew-packet-validation-block" data-spec-anchor="canonical"></a>
 ## 9. Validation block
 
-| field | requirement |
-|---|---|
-| `status` | MUST: `passed`, `failed`, or `not_run` |
-| `validated_at` | MUST |
-| `validator_name` | MUST |
-| `validator_version` | MUST |
+<!-- BEGIN GENERATED MANIFEST FIELDS: validation -->
+| member | JSON type | required | constraint |
+|---|---|:---:|---|
+| `status` | string | yes | one of `passed`, `failed`, `not_run` |
+| `validated_at` | string | yes | format `date-time` |
+| `validator_name` | string | yes | — |
+| `validator_version` | string | yes | — |
+<!-- END GENERATED MANIFEST FIELDS: validation -->
 
 A failed or incomplete validation result cannot support a conformance claim. It does not alter a
 resource's declaration-derived content class or canonicality. A writer keeps staged resources out
 of a committed manifest until the applicable publication gate passes rather than representing
 staging by changing canonicality.
 
+<a id="ew-packet-manifest-conformance" data-spec-anchor="canonical"></a>
+## 10. Manifest conformance
+
+A checker evaluates manifest conformance in these phases, in order:
+
+1. `json`, which decodes the manifest as UTF-8 JSON under RFC 8259;
+2. `shape`, which validates it against the incorporated schema;
+3. `entries`, which runs checks that need only the manifest;
+4. `registry_binding`, which acquires and compares every bound registry; and
+5. `declaration`, which runs checks derived from the bound declarations.
+
+A checker MUST NOT run a later phase over a manifest with a finding in `json`, `shape`, or
+`entries`. A checker evaluating manifest shape MUST assert the `date-time` format that JSON Schema
+Validation Draft 2020-12 defines. A shape finding carries the check ID `packet.manifest.schema`
+and the schema-location pointer. Every finding in the table below is at `error` and names the
+owning resource ID or registry ID where one applies.
+
+| check ID | phase | a finding exists when |
+|---|---|---|
+| `packet.manifest.invalid_json` | json | the bytes are not UTF-8 or not JSON |
+| `packet.manifest.duplicate_member` | json | an object repeats a member name |
+| `packet.manifest.schema` | shape | the manifest violates the incorporated schema |
+| `packet.resource.id_unique` | entries | two entries share a `resource_id` |
+| `packet.resource.member_unique` | entries | two members of one entry share a `key` |
+| `packet.resource.member_size` | entries | an entry with `members` records `size_bytes` unequal to the sum of the members' sizes |
+| `packet.resource.member_digest` | entries | an entry records `sha256` and `members`, every member records `sha256`, and the entry's value differs from the §5.4 digest of that member list |
+| `packet.registry.core_count` | entries | the number of core descriptors differs from one |
+| `packet.registry.path_unique` | entries | two descriptors share a `path` |
+| `packet.registry.missing` | registry_binding | nothing exists at a descriptor's path |
+| `packet.registry.unreadable` | registry_binding | the stored copy does not decode as the packet's physical profile requires |
+| `packet.registry.digest` | registry_binding | the decoded bytes' SHA-256 differs from `sha256` |
+| `packet.registry.identity` | registry_binding | the document's `registry_id` differs from the descriptor's name |
+| `packet.registry.role` | registry_binding | the document's class differs from the descriptor's role |
+| `packet.registry.version` | registry_binding | the document's `registry_version` differs from `version` |
+| `packet.registry.standard` | registry_binding | a standard identifier differs from the manifest's under §8 |
+| `packet.resource.declaration_unknown` | declaration | `declaration_id` names no declaration in a bound registry |
+| `packet.resource.singleton_identity` | declaration | a singleton entry's `resource_id` differs from its declaration ID |
+| `packet.resource.family_namespace` | declaration | a family entry's `resource_id` lies outside its declaration's namespace |
+| `packet.resource.required_missing` | declaration | an active required singleton has no entry |
+| `packet.resource.dependency_missing` | declaration | a present declaration's transitive `requires` names an absent singleton |
+| `packet.resource.array_axes_missing` | declaration | a dense-array entry's axes resource is absent |
+| `packet.resource.reference_target_missing` | declaration | a populated table reference targets an absent singleton |
+| `packet.resource.catalog_table_unreadable` | declaration | a catalog table's resource-ID column cannot be read |
+| `packet.resource.catalog_row_binding` | declaration | a catalog row and a family entry do not bind one-to-one under Part 02 §2.6 |
+| `packet.resource.derived_from_required` | declaration | the `lineage` policy is `required` and `derived_from` is absent |
+| `packet.resource.derived_from_forbidden` | declaration | the `lineage` policy is `forbidden` and `derived_from` is present |
+| `packet.resource.lineage_unresolved` | declaration | a `derived_from` member names no entry with a bound declaration |
+| `packet.resource.lineage_class` | declaration | a lineage edge violates Part 02 §2.7's content-class relation |
+| `packet.resource.lineage_cycle` | declaration | the lineage graph has a self-edge or cycle |
+
+In the `registry_binding` phase, a checker MUST evaluate `missing`, `unreadable`, and `digest`
+first. Only for decoded bytes that match the digest does it then obtain the
+[Part 02 §9.4](02_core_logical_schemas.md#ew-registry-conformance) registry result through the
+byte-oriented entry point, supplying the core context to every extension, and evaluate the four
+comparison checks for each shape-valid document. The `declaration` phase runs only from checked
+contexts that [Part 05 §14.5](05_validation_and_import.md#ew-validator-registry-boundary) permits
+to direct packet checks.
+
+A binding finding for an extension registry withholds only that registry. The `declaration` phase
+MUST run from every bound registry that passed binding, and a checker MUST NOT report a
+declaration finding for an entry whose `declaration_id` namespace is the ID of an extension
+registry that failed. A failed core registry withholds the whole `declaration` phase, because every
+extension's checked context needs core. Part 09 §5.4 continues to attribute an extension's findings
+and compose the verdicts.
+
+A reader loading a manifest MUST decode it as UTF-8 JSON, MUST reject a repeated object member, and
+MUST reject a repeated `resource_id` before it builds a lookup by resource ID or exposes an entry.
+It MUST check the JSON type of each member it reads and fail naming a member that is absent where
+the schema requires it or has the wrong type. A reader need not apply the incorporated schema or
+assert its closure, patterns, or formats. A reader MAY expose the decoded JSON of a rejected
+manifest as raw data but MUST NOT resolve declarations or resources through it.
+
+A reader resolving a declaration MUST acquire the bound registry that declares it through its
+descriptor, decode it as the packet's physical profile requires, and verify its digest. When the
+registry is missing, unreadable, or fails the digest, the reader MUST fail the operation that needed
+it and name the registry ID. It MUST NOT substitute other bytes or silently omit a bound registry.
+Operations that need no such declaration proceed, and a reader need not run any other manifest check
+or obtain a registry result for ordinary access.
+
+A writer MUST serialize each registry document, compute its digest over those exact bytes, store it
+as the packet's physical profile requires, and record its descriptor before writing the final
+manifest. A writer MUST NOT publish a manifest with a finding in the `json`, `shape`, `entries`, or
+`registry_binding` phase.
+
 <a id="ew-packet-catalog-normative-references" data-spec-anchor="canonical"></a>
-## 10. Normative references
+## 11. Normative references
 
 The application column states the extent to which this part invokes the external authority:
 

@@ -2,7 +2,8 @@
 
 `logical_schemas.json` is the incorporated core registry: the machine-readable declaration of
 core and analysis resources under [Part 02](../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md).
-It is the file a packet embeds at `schemas/logical_schemas.json` (Part 02 §9.2).
+A packet binds it as registry `core`, stored at `registries/core/<version>.json.gz` (Part 04 §8,
+Part 03 §3.3).
 
 <!-- BEGIN generated: counts -->
 ```
@@ -16,14 +17,16 @@ history and rationale but are not current normative owners.
 
 | File | Contents |
 |---|---|
-| `logical_schemas.json` | The registry. Embedded in packets at `schemas/logical_schemas.json`. |
+| `logical_schemas.json` | The registry. Bound by packets as `core` at `registries/core/<version>.json.gz`. |
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
 | `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
-| `registry_contracts/escapewheel-registry-contract-v0.2.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
+| `registry_contracts/escapewheel-registry-contract-v0.3.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.1.json` | Exact incorporated portable Tier 2 language profile. |
-| `manifest.schema.json` | JSON Schema for `packet.json` (Part 04). |
+| `manifest.schema.json` | Incorporated closed schema for `packet.json` (Part 04). |
+| `resources.schema.json` | Incorporated delivery schema (Part 03 §11.3). **Generated** by `build.py` from the manifest's resource entry. |
+| `resources.example.json` | A delivery document that `check.py` validates against it. |
 
 The schemas and language profile are hand-written here and **vendored** by the distributions that use them — a
 wheel cannot read a file from another distribution. Those copies are *build artifacts*, written by
@@ -36,7 +39,8 @@ registry_contract.schema.json ─┐
 registry_contracts/*.json ────├─build.py─> escapewheel-validator/src/escapewheel_validator/schemas/
 rule_language.schema.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
 rule_languages/escapewheel-rule-sql-v0.1.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
-manifest.schema.json  ──build.py──>  escapewheel-reader/src/escapewheel_reader/schemas/
+manifest.schema.json  ──build.py──>  escapewheel-validator/src/escapewheel_validator/schemas/
+resources.schema.json ──build.py──>  escapewheel-writer/src/escapewheel_writer/schemas/
 ```
 
 Edit the copy here, run `build.py`, and commit both repositories. A stale copy has broken every

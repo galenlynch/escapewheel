@@ -67,8 +67,10 @@ packet in the wrong order is conforming, only slower (R10 §2).
 
 Four, in the validator's own order — what each owes is Part 05 §5's:
 
-1. **Manifest shape** against `manifest.schema.json`, when the packet is opened.
-2. **The embedded registry** against the meta-schema, and its version against the manifest's.
+1. **Manifest conformance** under Part 04 §10: its shape against `manifest.schema.json`, then
+   the checks that need only the manifest.
+2. **Each bound registry**, acquired through its descriptor, digest-checked, checked against the
+   meta-schema, and compared with its descriptor.
 3. **Physical schema** per resource — column presence and Parquet type.
 4. **Rules** — Tier 1 generated from structure, Tier 2 carried in the registry.
 

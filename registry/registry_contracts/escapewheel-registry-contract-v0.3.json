@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry-contract/0.1.0",
-  "id": "escapewheel-registry-contract-v0.2",
-  "registry_schema": "https://escapewheel.org/schemas/registry/0.5.0",
+  "id": "escapewheel-registry-contract-v0.3",
+  "registry_schema": "https://escapewheel.org/schemas/registry/0.6.0",
   "semantic_standard": "escapewheel-semantic-v0.1",
   "logical_standard": "escapewheel-logical-v0.1",
   "rule_languages": ["escapewheel-rule-sql-v0.1"],
@@ -16,6 +16,7 @@
     {"id": "registry.reference.compatible", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-logical-references", "ew-registry-conformance"]},
     {"id": "registry.session_scope.path", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-session-scope", "ew-registry-conformance"]},
     {"id": "registry.identity.name", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-identifier-semantics", "ew-registry-conformance"]},
+    {"id": "registry.identity.registry_id", "phase": "semantic", "classes": ["extension"], "anchors": ["ew-registry-document", "ew-registry-conformance"]},
     {"id": "registry.metadata.eligibility", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-free-form-metadata", "ew-registry-conformance"]},
     {"id": "registry.determined_by.resolves", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-functional-dependence", "ew-registry-conformance"]},
     {"id": "registry.discriminator.declaration", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-discriminator-semantics", "ew-registry-conformance"]},

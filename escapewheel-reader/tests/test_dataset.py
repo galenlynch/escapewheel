@@ -15,7 +15,7 @@ from escapewheel_reader import (
     session_scoped,
 )
 
-from .conftest import SESSION, SESSION_NAME
+from .conftest import SESSION, SESSION_NAME, install_registry, read_registry
 
 SECOND_SESSION = SESSION  # deliberately the same number in the other packet
 SECOND_NAME = "s002"
@@ -138,14 +138,13 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
             }
         )
         (root / "packet.json").write_text(json.dumps(manifest, indent=2))
-        registry = json.loads((root / "schemas/logical_schemas.json").read_text())
+        registry = read_registry(root)
         registry["resources"]["core.subjects"] = {
             "content_class": "core",
             "kind": "table",
             "instances": {"mode": "singleton", "presence": "optional"},
             "requires": [],
             "lineage": "optional",
-            "producing_run": "optional",
             "table": {
                 "columns": [
                     {
@@ -169,7 +168,7 @@ def test_an_unscoped_table_carries_no_discriminator(packet_root, tmp_path):
                 "rules": [],
             },
         }
-        (root / "schemas/logical_schemas.json").write_text(json.dumps(registry))
+        install_registry(root, registry)
     data = open_dataset([packet_root, tmp_path / "session_002"])
     assert "core.subjects" not in data.scoped
     assert set(data.table("core.subjects").column_names) == {"subject_id", "subject_name"}
@@ -283,14 +282,13 @@ def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_roo
         }
     )
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
-    registry = json.loads((root / "schemas/logical_schemas.json").read_text())
+    registry = read_registry(root)
     registry["resources"]["core.clock_anchors"] = {
         "content_class": "core",
         "kind": "table",
         "instances": {"mode": "singleton", "presence": "optional"},
         "requires": [],
         "lineage": "optional",
-        "producing_run": "optional",
         "table": {
             "columns": [
                 {
@@ -314,7 +312,7 @@ def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_roo
             "rules": [],
         },
     }
-    (root / "schemas/logical_schemas.json").write_text(json.dumps(registry))
+    install_registry(root, registry)
 
     data = open_dataset([root])
     assert len(data.sessions) == 2

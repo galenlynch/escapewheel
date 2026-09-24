@@ -10,6 +10,8 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, check_rule
 
+from .conftest import install_registry, read_registry
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -51,33 +53,29 @@ def test_every_shipped_rule_passes_static_profile_check():
 
 
 def test_invalid_rule_is_not_executed_or_reported_as_a_packet_finding(packet_root):
-    packet = open_packet(packet_root)
-    registry = _rule(packet.registry, "DELETE FROM core.trials")
-    report = validate(packet, registry=registry)
+    install_registry(packet_root, _rule(read_registry(packet_root), "DELETE FROM core.trials"))
+    report = validate(open_packet(packet_root))
     assert not report.passed
-    supplied = next(item for item in report.registries if item.subject == "core:supplied")
-    assert supplied.result.state == "invalid"
+    assert report.registries[0].result.state == "invalid"
     assert not any(f.check == "core.trials.profile_test" for f in report.findings)
 
 
 def test_unsupported_language_is_distinct_from_a_finding(packet_root):
-    packet = open_packet(packet_root)
-    registry = copy.deepcopy(packet.registry)
+    registry = read_registry(packet_root)
     registry["rule_language"] = "another-rule-language-v1.0"
-    report = validate(packet, registry=registry)
+    install_registry(packet_root, registry)
+    report = validate(open_packet(packet_root))
     assert not report.passed
-    supplied = next(item for item in report.registries if item.subject == "core:supplied")
-    assert supplied.result.state == "unsupported"
+    assert report.registries[0].result.state == "unsupported"
     assert not any(f.check == "rule_language.unsupported" for f in report.findings)
 
 
 def test_engine_failure_is_incomplete_not_a_packet_finding(packet_root):
-    packet = open_packet(packet_root)
     sql = (
         "SELECT CAST(start_tick AS DECIMAL(38,0)) * 99999999999999999999999999999999999999 AS exploded FROM core.trials"
     )
-    registry = _rule(packet.registry, sql)
-    report = validate(packet, registry=registry)
+    install_registry(packet_root, _rule(read_registry(packet_root), sql))
+    report = validate(open_packet(packet_root))
     assert not report.passed
     assert any(e.status == "incomplete" and e.rule == "core.trials.profile_test" for e in report.evaluations)
     assert not any(f.check == "core.trials.profile_test" for f in report.findings)

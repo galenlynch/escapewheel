@@ -87,7 +87,7 @@
 "2.4" = "Instance modes"
 "2.5" = "Presence and dependencies"
 "2.6" = "Catalog binding"
-"2.7" = "Lineage and producing-run policy"
+"2.7" = "Lineage policy"
 "3" = "Column declaration"
 "4" = "Naming"
 "5" = "Type system"
@@ -142,6 +142,7 @@
 "3" = "Directory layout"
 "3.1" = "Recommended layout"
 "3.2" = "Files that MUST NOT be written"
+"3.3" = "Bound registries"
 "4" = "URI rules"
 "5" = "Table storage"
 "5.1" = "Encoding"
@@ -184,7 +185,6 @@
 "4" = "Resource entries"
 "4.1" = "Common fields"
 "4.2" = "Resolved logical facts"
-"4.3" = "Withdrawn blocks"
 "5" = "External resources"
 "5.1" = "Declaration"
 "5.2" = "What is recorded"
@@ -192,10 +192,11 @@
 "5.4" = "Prefix resources"
 "5.5" = "Source resolution"
 "6" = "Physical metadata is not projected"
-"7" = "Resource lineage and producing runs"
-"8" = "Extensions"
+"7" = "Resource lineage"
+"8" = "Registry bindings"
 "9" = "Validation block"
-"10" = "Normative references"
+"10" = "Manifest conformance"
+"11" = "Normative references"
 
 ["05"]
 "1" = "Core principle"
@@ -686,7 +687,7 @@ aliases = []
 
 [anchor.ew-packet-catalog-normative-references]
 part = "04"
-section = "10"
+section = "11"
 title = "Normative references"
 aliases = []
 
@@ -720,10 +721,16 @@ section = "3"
 title = "Required top-level fields"
 aliases = []
 
+[anchor.ew-packet-manifest-conformance]
+part = "04"
+section = "10"
+title = "Manifest conformance"
+aliases = []
+
 [anchor.ew-packet-registry-bindings]
 part = "04"
 section = "8"
-title = "Extensions"
+title = "Registry bindings"
 aliases = []
 
 [anchor.ew-packet-resource-entry-fields]
@@ -748,6 +755,12 @@ aliases = []
 part = "00"
 section = "3.1.3"
 title = "Physical profile"
+aliases = []
+
+[anchor.ew-portable-bound-registries]
+part = "03"
+section = "3.3"
+title = "Bound registries"
 aliases = []
 
 [anchor.ew-portable-packet-layout]
@@ -909,7 +922,7 @@ aliases = []
 [anchor.ew-resource-lineage]
 part = "04"
 section = "7"
-title = "Resource lineage and producing runs"
+title = "Resource lineage"
 aliases = []
 
 [anchor.ew-resource-presence]
@@ -921,7 +934,7 @@ aliases = []
 [anchor.ew-resource-provenance-policy]
 part = "02"
 section = "2.7"
-title = "Lineage and producing-run policy"
+title = "Lineage policy"
 aliases = []
 
 [anchor.ew-rule-language-normative-references]
@@ -1078,10 +1091,4 @@ aliases = []
 part = "05"
 section = "14.5"
 title = "Validator reactions"
-aliases = []
-
-[anchor.ew-withdrawn-catalog-blocks]
-part = "04"
-section = "4.3"
-title = "Withdrawn blocks"
 aliases = []

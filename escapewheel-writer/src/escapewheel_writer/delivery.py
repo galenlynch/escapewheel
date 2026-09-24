@@ -606,12 +606,12 @@ def _refuses(document: Mapping[str, Any]) -> str | None:
     """Return why a resource document does not satisfy its published shape, or None."""
     from importlib import resources as bundled
 
-    try:
-        import jsonschema
-    except ImportError:  # pragma: no cover - jsonschema is a dependency of the validator
-        return None
+    import jsonschema
+    from escapewheel_validator.manifest import format_checker
+
     schema = json.loads(bundled.files(__package__).joinpath("schemas/resources.schema.json").read_text())
-    found = sorted(jsonschema.Draft202012Validator(schema).iter_errors(document), key=lambda e: list(e.path))
+    validator = jsonschema.Draft202012Validator(schema, format_checker=format_checker())
+    found = sorted(validator.iter_errors(document), key=lambda e: list(e.path))
     if not found:
         return None
     where = "/".join(str(p) for p in found[0].path) or "document"

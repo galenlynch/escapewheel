@@ -31,7 +31,8 @@ def _ls(args: argparse.Namespace) -> int:
     """List the resources a packet declares."""
     packet = open_packet(args.packet)
     manifest = packet.manifest
-    print(f"{manifest.packet_id}  profile={manifest.profile_id}  registry={manifest.registry_version}")
+    core = manifest.core
+    print(f"{manifest.packet_id}  profile={manifest.profile_id}  registry={core.version if core else 'unbound'}")
     print(f"sessions: {', '.join(packet.sessions) or 'none'}")
     print()
     width = max((len(r.resource_id) for r in packet.resources()), default=0)

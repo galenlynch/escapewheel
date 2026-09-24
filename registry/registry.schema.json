@@ -1,13 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/registry/0.5.0",
+  "$id": "https://escapewheel.org/schemas/registry/0.6.0",
   "title": "Escapewheel schema registry",
   "description": "Local shape of an Escapewheel core or extension registry document.",
   "type": "object",
-  "required": ["$schema", "registry_version", "logical_standard_version", "rule_language", "resources"],
+  "required": ["$schema", "registry_id", "registry_version", "logical_standard_version", "rule_language", "resources"],
   "additionalProperties": false,
   "properties": {
     "$schema": {"type": "string", "format": "uri"},
+    "registry_id": {
+      "description": "The name a packet binds this document under; `core` for the core registry and the extension_id for an extension (Part 02 §9.1).",
+      "$ref": "#/$defs/name"
+    },
     "registry_version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
     "semantic_standard_version": {"$ref": "#/$defs/standard_id"},
     "logical_standard_version": {"$ref": "#/$defs/standard_id"},
@@ -25,7 +29,11 @@
     }
   },
   "oneOf": [
-    {"required": ["semantic_standard_version"], "not": {"required": ["extension_id"]}},
+    {
+      "required": ["semantic_standard_version"],
+      "not": {"required": ["extension_id"]},
+      "properties": {"registry_id": {"const": "core"}}
+    },
     {"required": ["extension_id"], "not": {"required": ["semantic_standard_version"]}}
   ],
   "$defs": {
@@ -40,7 +48,7 @@
     },
     "resource": {
       "type": "object",
-      "required": ["content_class", "kind", "instances", "requires", "lineage", "producing_run"],
+      "required": ["content_class", "kind", "instances", "requires", "lineage"],
       "additionalProperties": false,
       "properties": {
         "content_class": {
@@ -54,7 +62,6 @@
           "items": {"$ref": "#/$defs/declaration_id"}
         },
         "lineage": {"enum": ["forbidden", "optional", "required"]},
-        "producing_run": {"enum": ["forbidden", "optional", "required"]},
         "table": {"$ref": "#/$defs/table"},
         "array": {"$ref": "#/$defs/array"}
       },

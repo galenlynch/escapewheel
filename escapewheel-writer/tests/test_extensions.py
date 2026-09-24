@@ -11,7 +11,8 @@ from escapewheel_validator import RegistryRejected, validate
 from escapewheel_writer import PacketWriter
 
 EXTENSION = {
-    "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
+    "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+    "registry_id": "task",
     "registry_version": "0.1.0",
     "logical_standard_version": "escapewheel-logical-v0.1",
     "rule_language": "escapewheel-rule-sql-v0.1",
@@ -23,7 +24,6 @@ EXTENSION = {
             "instances": {"mode": "singleton", "presence": "optional"},
             "requires": [],
             "lineage": "optional",
-            "producing_run": "optional",
             "table": {
                 "columns": [
                     {
@@ -126,8 +126,13 @@ def test_the_packet_declares_the_extension_and_carries_its_registry(tmp_path, re
     root = tmp_path / "s001"
     _commit(root, registry, minimal)
     manifest = json.loads((root / "packet.json").read_text())
-    assert manifest["extensions"] == {"task": {"version": "0.1.0", "registry": "extensions/task.json"}}
-    assert (root / "extensions" / "task.json").is_file()
+    descriptor = manifest["registries"]["task"]
+    assert {k: descriptor[k] for k in ("role", "version", "path")} == {
+        "role": "extension",
+        "version": "0.1.0",
+        "path": "registries/task/0.1.0.json.gz",
+    }
+    assert (root / descriptor["path"]).is_file()
     assert open_packet(root).extensions()["task"]["extension_id"] == "task"
 
 
@@ -346,7 +351,7 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
 
     def named(extension_id, table):
         document = json.loads(json.dumps(EXTENSION))
-        document["extension_id"] = extension_id
+        document["extension_id"] = document["registry_id"] = extension_id
         document["resources"] = {f"{extension_id}.{table}": document["resources"]["task.trials"]}
         return document
 
@@ -395,7 +400,8 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
 
 def _vrf_registry():
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+        "registry_id": "vrf",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",
@@ -407,7 +413,6 @@ def _vrf_registry():
                 "instances": {"mode": "singleton", "presence": "optional"},
                 "requires": [],
                 "lineage": "optional",
-                "producing_run": "optional",
                 "table": {
                     "columns": [
                         {
@@ -604,8 +609,8 @@ def test_the_check_command_refuses_a_document_with_a_dangling_reference(tmp_path
     assert "registry.reference.resolves" in capsys.readouterr().out
 
 
-def test_the_check_command_reads_the_registry_a_packet_embeds(tmp_path, capsys, registry, minimal):
-    """Part 02 §9.2 makes the packet's own copy the authority, and it is what an author has to hand."""
+def test_the_check_command_reads_the_registry_a_packet_binds(tmp_path, capsys, registry, minimal):
+    """Part 04 §8 makes the packet's bound copy the authority, and it is what an author has to hand."""
     from escapewheel_reader.scripts.cli import main
 
     writer = PacketWriter(registry, packet_id="p")

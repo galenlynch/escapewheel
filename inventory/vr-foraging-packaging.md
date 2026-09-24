@@ -65,7 +65,7 @@ Independently arrived at, which is worth more than agreement by construction:
 | NWB's role | a secondary projection built from the same processors | a compatibility projection, deferred (Part 00) |
 | Event representation | `event_name`, `data` (JSON), `timestamp` | `core.events`: `event_type`, `payload`, `t_tick` |
 | Join key | `session_id` on every table | `core.sessions.session_id`, referenced from nine tables |
-| Provenance | three versions in parquet schema metadata, readable without pandas | `core.processing_runs`, plus `registry_version` in the manifest |
+| Provenance | three versions in parquet schema metadata, readable without pandas | `core.processing_runs`, plus each bound registry's version and digest in the manifest |
 | Time base | one harp timeline | one declared reference clock (R27 §2) |
 | Cross-session | flat concatenated tables | multi-session packets (R1) |
 | Expected reader | DuckDB or Polars over parquet, local or S3 | the same |

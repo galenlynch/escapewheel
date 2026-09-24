@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import json
 import re
 import warnings
 from collections.abc import Collection, Iterable, Mapping, Sequence
@@ -16,10 +15,11 @@ import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
 from .clocks import NotAligned, anchors, on_clock, origin, seconds, stored_span
-from .errors import ResourceNotFoundError, ResourceUnreadableError
+from .errors import RegistryUnavailable, ResourceNotFoundError, ResourceUnreadableError
 from .location import SOURCES_FILENAME, Location, Rewrite, Sources, read_sources
 from .manifest import Manifest, Resource
 from .observation import VIEWS, attach_support, register_views, unit_windows
+from .registries import acquire, parse
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity
 from .runs import check as _check_runs
@@ -35,8 +35,6 @@ if TYPE_CHECKING:  # pragma: no cover
 #: What a column constraint may be: a scalar for equality, a two-item tuple for a closed
 #: range, or None to leave the column unconstrained.
 Predicate = str | int | float | bool | tuple[Any, Any] | list[Any] | None
-
-REGISTRY_PATH = "schemas/logical_schemas.json"
 
 #: Ask for ticks exactly as the file stores them. Spikes are counted on the probe that
 #: recorded them, so stored ticks from two probes are not comparable and neither is a stored
@@ -69,15 +67,10 @@ class Packet:
             The parsed manifest.
         """
         self._root = Location.of(root)
-        self._registry = self._load_json(REGISTRY_PATH)
-        self._extensions = self._load_extensions(manifest)
-        declarations: dict[str, Mapping[str, Any]] = {}
-        for document in (self._registry, *self._extensions.values()):
-            if isinstance(document, Mapping) and isinstance(document.get("resources"), Mapping):
-                declarations.update(document["resources"])
-        resolved = tuple(
-            replace(resource, declaration=declarations.get(resource.declaration_id)) for resource in manifest.resources
-        )
+        # Acquired on first need, so opening a packet or listing its resources reads no registry.
+        self._acquired: dict[str, bytes] = {}
+        self._documents: dict[str, dict[str, Any]] = {}
+        resolved = tuple(replace(resource, resolve=self._declaration) for resource in manifest.resources)
         self._manifest = replace(manifest, resources=resolved)
         self._by_id = {r.resource_id: r for r in resolved}
         self._anchor_cache: dict[str, Any] | None = None
@@ -267,62 +260,101 @@ class Packet:
 
     # -- the registry the packet carries --------------------------------------------
 
-    @property
-    def registry(self) -> dict[str, Any] | None:
-        """The schema registry embedded in the packet, if it carries one.
+    def registry_bytes(self, registry_id: str) -> bytes:
+        """One bound registry's exact document bytes, verified against its descriptor.
 
-        A packet SHOULD embed its registry so that it stays self-describing as the
-        reference registry moves on. Reading does not require it; validation does.
+        Parameters
+        ----------
+        registry_id : str
+            A member name of the manifest's `registries` map.
 
         Returns
         -------
-        dict or None
-            The parsed registry, or None if the packet does not embed one.
+        bytes
+            The decompressed document, whose SHA-256 equals the descriptor's.
+
+        Raises
+        ------
+        RegistryUnavailable
+            If the manifest binds no such registry, or it is missing, unreadable, or fails its
+            digest. Nothing is substituted for it (Part 04 §10).
         """
-        return self._registry
+        if registry_id not in self._acquired:
+            binding = self._manifest.registries.get(registry_id)
+            if binding is None:
+                raise RegistryUnavailable(registry_id, "missing", "the manifest binds no such registry")
+            self._acquired[registry_id] = acquire(self._root, binding)
+        return self._acquired[registry_id]
 
-    def _load_json(self, path: str) -> dict[str, Any] | None:
-        """Read one optional JSON object without making a validation claim."""
-        try:
-            parsed = json.loads(self._root.join(path).read_bytes())
-        except Exception:  # noqa: BLE001 - ordinary access tolerates unavailable declarations
-            return None
-        return parsed if isinstance(parsed, dict) else None
+    def registry_document(self, registry_id: str) -> dict[str, Any]:
+        """One bound registry, decoded for declaration lookup and not otherwise checked.
 
-    def _load_extensions(self, manifest: Manifest) -> dict[str, dict[str, Any]]:
-        """Load the extension registries available for declaration resolution."""
-        loaded: dict[str, dict[str, Any]] = {}
-        for extension_id, entry in (manifest.extensions or {}).items():
-            location = entry.get("registry") if isinstance(entry, Mapping) else None
-            if location and (document := self._load_json(str(location))) is not None:
-                loaded[str(extension_id)] = document
-        return loaded
-
-    def extensions(self) -> dict[str, dict[str, Any]]:
-        """Extension registries this packet declares and carries (Part 09 §5.1, Part 09 §5.3).
-
-        Each is a registry document in R2's format, namespaced by its `extension_id`. Reading a
-        packet never needs one -- core stays interpretable when no extension is present, which
-        Part 09 §6.1 requires by forbidding core to reference an extension.
-
-        A declared extension whose file is absent or unparseable is **left out**, not raised:
-        Part 09 §5.3 makes verifying that a declared registry exists the validator's job, and a reader that
-        refused the packet over it would make holding an extension a condition of reading core.
+        Parameters
+        ----------
+        registry_id : str
+            A member name of the manifest's `registries` map.
 
         Returns
         -------
         dict
-            `extension_id` to parsed registry, for every one that loaded.
+            The registry document.
+
+        Raises
+        ------
+        RegistryUnavailable
+            If the registry cannot be acquired or is not a JSON object.
         """
-        return dict(self._extensions)
+        if registry_id not in self._documents:
+            document = self.registry_bytes(registry_id)
+            self._documents[registry_id] = parse(self._manifest.registries[registry_id], document)
+        return self._documents[registry_id]
+
+    @property
+    def registry(self) -> dict[str, Any]:
+        """The core registry the packet binds, acquired on first use.
+
+        Raises
+        ------
+        RegistryUnavailable
+            If the manifest binds no core registry, or it cannot be acquired.
+        """
+        core = self._manifest.core
+        if core is None:
+            raise RegistryUnavailable("core", "missing", "the manifest binds no core registry")
+        return self.registry_document(core.registry_id)
+
+    def extensions(self) -> dict[str, dict[str, Any]]:
+        """Every extension registry the packet binds, by registry ID (Part 04 §8).
+
+        Reading core never needs one -- Part 09 §6.1 forbids core to reference an extension --
+        so only a caller that asks acquires them.
+
+        Returns
+        -------
+        dict
+            Registry ID to registry document.
+
+        Raises
+        ------
+        RegistryUnavailable
+            If a bound extension registry cannot be acquired. It is not silently left out.
+        """
+        return {name: self.registry_document(name) for name in self._manifest.extensions}
+
+    def _declaration(self, declaration_id: str) -> Mapping[str, Any] | None:
+        """Resolve a declaration in the bound registry its namespace selects, acquiring it once."""
+        binding = self._manifest.binding_for(declaration_id)
+        if binding is None:
+            return None
+        declarations = self.registry_document(binding.registry_id).get("resources")
+        found = declarations.get(declaration_id) if isinstance(declarations, Mapping) else None
+        return found if isinstance(found, Mapping) else None
 
     def with_declarations(self, *documents: Mapping[str, Any]) -> Packet:
-        """Return this packet with manifest resources resolved against supplied registries.
+        """Return this packet with manifest resources resolved against the given registries only.
 
-        This is the validator's supplied-registry path. Ordinary reads resolve against embedded
-        registries during construction; an explicit validation registry may be the only available
-        authority and must drive the same resource-kind and policy lookups without changing the
-        packet on disk.
+        The validator passes the bound registries whose checked contexts may direct packet checks
+        (Part 05 §14.5), so a declaration in a registry that failed binding resolves to nothing.
         """
         from copy import copy
 
@@ -331,10 +363,7 @@ class Packet:
             resources = document.get("resources")
             if isinstance(resources, Mapping):
                 declarations.update(resources)
-        resolved = tuple(
-            replace(resource, declaration=declarations.get(resource.declaration_id))
-            for resource in self._manifest.resources
-        )
+        resolved = tuple(replace(resource, resolve=declarations.get) for resource in self._manifest.resources)
         rebound = copy(self)
         rebound._manifest = replace(self._manifest, resources=resolved)
         rebound._by_id = {resource.resource_id: resource for resource in resolved}
@@ -1043,7 +1072,6 @@ def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | N
 def open_packet(
     path: str | Path | Location,
     *,
-    validate_manifest: bool = True,
     rewrite: Rewrite | None = None,
     sources: Iterable[Sources | str | Path] | None = None,
 ) -> Packet:
@@ -1054,8 +1082,6 @@ def open_packet(
     path : str, Path, or Location
         Packet root: a local directory, or a store prefix such as ``s3://bucket/prefix``.
         Part 00 §3.3 admits both, and an object store is where a shared dataset lives.
-    validate_manifest : bool, default True
-        Whether to check the manifest against its JSON Schema before parsing.
     rewrite : Mapping, optional
         Declared-URI prefix to replacement, applied to every resource before it is resolved.
         Part 04 §5.1 makes reachability the reader's situation, and a committed packet records the
@@ -1073,5 +1099,5 @@ def open_packet(
     root = Location.of(path, rewrite)
     return Packet(
         Location.of(root, rewrite, resolve_sources(root, sources)),
-        Manifest.load(root, validate=validate_manifest),
+        Manifest.load(root),
     )

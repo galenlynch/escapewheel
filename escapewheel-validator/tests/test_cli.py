@@ -31,3 +31,13 @@ def test_validate_writes_a_json_report(packet_root, tmp_path, capsys):
     report = tmp_path / "report.json"
     assert main(["validate", str(packet_root), "--report", str(report)]) == 0
     assert json.loads(report.read_text())["status"] == "passed"
+
+
+def test_validate_reports_a_manifest_the_reader_refuses(packet_root, capsys):
+    """Part 04 §10: a repeated resource ID stops a reader, and still gets its finding."""
+    path = packet_root / "packet.json"
+    manifest = json.loads(path.read_text())
+    manifest["resources"].append(manifest["resources"][0])
+    path.write_text(json.dumps(manifest))
+    assert main(["validate", str(packet_root)]) == 1
+    assert "packet.resource.id_unique" in capsys.readouterr().out

@@ -8,7 +8,7 @@ This generated rendering is not a standalone specification. See the repository
 
 ```text
 46 resources, 43 tables, 348 columns, 111 references, 76 Tier 2 rules
-registry 0.5.0   logical standard escapewheel-logical-v0.1
+registry 0.6.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents

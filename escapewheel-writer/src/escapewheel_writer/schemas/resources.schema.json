@@ -1,61 +1,167 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/resources/0.3.0",
+  "$id": "https://escapewheel.org/schemas/resources/0.4.0",
   "title": "Escapewheel resource document",
-  "description": "Shape of the document an adapter delivers alongside its rows to describe the resources it references rather than writes, per Part 03 §11.3. Each entry is a manifest resource entry as Part 04 §5 declares one, so this is a wrapper around the manifest's own schema rather than a second description of an entry: it checks the envelope and the two fields a build cannot fill for itself, and the manifest's schema checks the entry when the build writes it.",
+  "description": "Shape of the document an adapter delivers alongside its rows to describe the resources it references rather than writes (Part 03 \u00a711.3). Generated from the manifest schema by registry/build.py: each entry is a manifest resource entry without the members a build supplies.",
   "type": "object",
   "required": [
     "resources"
   ],
+  "additionalProperties": false,
   "properties": {
     "$schema": {
-      "type": "string",
-      "description": "This document's meta-schema, by $id. Identity rather than a fetch instruction: a build MUST NOT dereference it and MUST NOT require it (Part 04 §5.4)."
+      "description": "This document's schema, by $id. Identity rather than a fetch instruction.",
+      "type": "string"
     },
     "resources": {
       "type": "array",
-      "description": "One entry per resource this run references. A resource the adapter delivered rows for and wrote no bytes for belongs here; one the packet owns does not, its manifest entry being read off the array the adapter wrote.",
       "items": {
-        "type": "object",
-        "required": [
-          "resource_id",
-          "declaration_id",
-          "uri"
-        ],
-        "properties": {
-          "resource_id": {
-            "type": "string",
-            "pattern": "^[a-z0-9_]+\\.[a-z0-9_.-]+$",
-            "description": "The resource this entry describes, dotted as every resource identifier is."
-          },
-          "declaration_id": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
-            "description": "The checked logical declaration this resource instantiates."
-          },
-          "uri": {
-            "type": "string",
-            "description": "Where the resource is: an absolute URI, or a path under the source a `source` field names (Part 04 §5.5)."
-          }
-        },
-        "not": {
-          "anyOf": [
-            {"required": ["layer"]},
-            {"required": ["kind"]},
-            {"required": ["canonical"]},
-            {"required": ["schema_id"]},
-            {"required": ["extension_id"]},
-            {"required": ["catalog_table_ref"]},
-            {"required": ["array_asset_id"]},
-            {"required": ["media_asset_id"]},
-            {"required": ["physical_profile"]},
-            {"required": ["partitioning"]},
-            {"required": ["codecs"]}
-          ]
-        },
-        "description": "A manifest resource entry. Only `resource_id`, `declaration_id`, and `uri` are required. Every other field the manifest declares is permitted here and carried through."
+        "$ref": "#/$defs/entry"
       }
     }
   },
-  "additionalProperties": false
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": [
+        "resource_id",
+        "declaration_id",
+        "uri"
+      ],
+      "properties": {
+        "resource_id": {
+          "$ref": "#/$defs/resource_id"
+        },
+        "declaration_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"
+        },
+        "uri": {
+          "description": "Relative to the packet root, or to the source `source` names, unless absolute.",
+          "type": "string",
+          "minLength": 1
+        },
+        "external": {
+          "description": "True when the packet does not own these bytes. Required wherever uri is absolute.",
+          "type": "boolean"
+        },
+        "source": {
+          "description": "The body of data this external resource belongs to (Part 04 \u00a75.5). Names no location itself.",
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "description": "As verified at validation time.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified_at": {
+          "description": "When sha256 or size_bytes last held. Not a promise about now.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "members": {
+          "description": "What a prefix held when someone looked. A record, not a resolution rule (Part 04 \u00a75.4).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/member"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "uri": {
+                "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*://"
+              }
+            },
+            "required": [
+              "uri"
+            ]
+          },
+          "then": {
+            "properties": {
+              "external": {
+                "const": true
+              }
+            },
+            "required": [
+              "external"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "source"
+            ]
+          },
+          "then": {
+            "properties": {
+              "external": {
+                "const": true
+              }
+            },
+            "required": [
+              "external"
+            ]
+          }
+        }
+      ]
+    },
+    "member": {
+      "type": "object",
+      "required": [
+        "key",
+        "size_bytes"
+      ],
+      "properties": {
+        "key": {
+          "description": "Relative to uri, with / separators.",
+          "type": "string",
+          "minLength": 1
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "store_digest": {
+          "description": "What the store itself said about this member, in the store's own algorithm. Never a substitute for sha256.",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "minLength": 1
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "resource_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9_.-]+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
 }

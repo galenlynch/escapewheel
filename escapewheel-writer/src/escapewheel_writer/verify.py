@@ -109,7 +109,6 @@ def verify(
                 notes.append(f"{entry['resource_id']}: no digest recorded, {exc}")
 
     candidate["packet_version"] = packet_version or _bump(superseded["packet_version"])
-    candidate["supersedes"] = superseded["packet_version"]
 
     # Level 3 against what was just recorded, and nothing else. This writes no file and adds no
     # resource, so every packet-owned verdict is determined by immutability exactly as Part 03 §9.4

@@ -10,6 +10,8 @@ import pytest
 
 from escapewheel_reader import declared, kinds, open_packet, resolved, specialised, unresolved
 
+from .conftest import install_registry, read_registry
+
 
 def _with_detail(packet_root, *, kind="task.trials"):
     """Add the detail table `core.intervals` already names, as a shared-key resource.
@@ -19,7 +21,7 @@ def _with_detail(packet_root, *, kind="task.trials"):
     """
     manifest = packet_root / "packet.json"
     entry = json.loads(manifest.read_text())
-    rows = json.loads((packet_root / "schemas" / "logical_schemas.json").read_text())
+    rows = read_registry(packet_root)
     intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
 
     detail = pa.table(
@@ -49,7 +51,6 @@ def _with_detail(packet_root, *, kind="task.trials"):
         "instances": {"mode": "singleton", "presence": "optional"},
         "requires": [],
         "lineage": "optional",
-        "producing_run": "optional",
         "table": {
             "columns": [
                 {"name": "session_id", "type": "int32", "presence": "required", "role": "identifier"},
@@ -68,7 +69,7 @@ def _with_detail(packet_root, *, kind="task.trials"):
             "rules": [],
         },
     }
-    (packet_root / "schemas" / "logical_schemas.json").write_text(json.dumps(rows))
+    install_registry(packet_root, rows)
     return open_packet(packet_root)
 
 

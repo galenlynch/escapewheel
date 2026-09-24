@@ -1,0 +1,895 @@
+{
+  "version": 1,
+  "revision": "R130",
+  "based_on": "c459cf9f7b9c1737a8f42d2d7e0d9ea894aed6a9",
+  "clauses": {
+    "R130 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-identifiers"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$id"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/schemas/manifest.schema.json",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "Part 04's field tables project the manifest schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_malformed_date_time_is_a_shape_finding[yesterday]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_malformed_date_time_is_a_shape_finding[2026-08-26T00:00:00]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_every_date_time_member_is_asserted"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-validator/src/escapewheel_validator/manifest.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "CONTRIBUTING.md",
+          "registry/README.md"
+        ]
+      }
+    },
+    "R130 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-identifiers"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-resource-entry-fields"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-validation-block"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/additionalProperties"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/schemas/manifest.schema.json",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[root_registry_version]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[root_extensions]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[root_provenance]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[root_unknown]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[entry_processing_run_id]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[entry_semantic_type]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[entry_unknown]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[validation_report_uri]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[descriptor_unknown]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[retention_unknown]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[member_unknown]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[store_digest_unknown]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[resource_id_without_namespace]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[derived_from_empty]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[derived_from_repeated]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[source_not_external]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[absolute_uri_not_external]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_retired_codec_summary_is_rejected_by_the_manifest_schema"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/verify.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "README.md"
+        ]
+      }
+    },
+    "R130 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-registry-bindings"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$defs/registry"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/schemas/manifest.schema.json",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_exactly_one_core_descriptor"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_two_descriptors_do_not_share_a_path"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_descriptor_path_stays_inside_the_packet[/registries/core.json.gz]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_descriptor_path_stays_inside_the_packet[../core.json.gz]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_descriptor_path_stays_inside_the_packet[a/../b.json.gz]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_descriptor_path_stays_inside_the_packet[s3://b/k]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_document_identity_matches_its_descriptor_name"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_document_class_matches_its_descriptor_role"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_document_version_matches_its_descriptor"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_core_registry_matches_the_manifest_standards[semantic_standard_version]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_core_registry_matches_the_manifest_standards[logical_standard_version]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_an_extension_matches_only_the_logical_standard"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_two_bound_extensions_pass_and_activate_their_required_singletons"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-reader/src/escapewheel_reader/manifest.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "README.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md"
+        ]
+      }
+    },
+    "R130 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-document"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/properties/registry_id"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.3.json",
+          "pointer": "/invariants"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.3.json",
+          "registry/logical_schemas.json",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_an_extension_registry_id_names_its_extension"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_core_registry_id_is_fixed_by_the_meta_schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_descriptor_and_semantic_implementation_have_no_hidden_checks"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[aind_opto]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[aind_unit_qc]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[dynamic_foraging]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[vr_foraging]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "registry/build.py",
+          "registry/extensions/aind_opto.json",
+          "registry/extensions/aind_unit_qc.json",
+          "registry/extensions/dynamic_foraging.json",
+          "registry/extensions/vr_foraging.json",
+          "escapewheel-writer/src/escapewheel_writer/scaffold.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md"
+        ]
+      }
+    },
+    "R130 §3.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-bound-registries"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-packet-layout"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-superseded-manifest-retention"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_a_second_gzip_member_makes_a_registry_unreadable"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_gzip_header_fields_do_not_change_what_a_descriptor_matches"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_registry_that_is_not_gzip_is_unreadable"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_registry_of_two_gzip_members_is_unreadable"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_digest_mismatch_obtains_no_registry_result"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_an_amendment_installs_a_newer_registry_and_retains_the_old"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_registry_colliding_with_a_retained_copy_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_retained_binding_elsewhere_still_fixes_its_digest"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_prune.py::test_a_retained_registry_lives_as_long_as_the_manifest_naming_it_survives"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/registries.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/prune.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "README.md",
+          "registry/README.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md"
+        ]
+      }
+    },
+    "R130 §3.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_bytes_that_are_not_utf8_json_are_refused[{not json]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_repeated_member_is_refused_before_the_schema_runs"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_repeated_member_inside_an_entry_is_named_where_it_repeats"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_repeated_resource_id_is_an_entries_finding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_member_keys_are_unique"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_size_bytes_is_the_sum_of_the_members"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_sha256_is_the_digest_of_a_fully_digested_member_list"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_missing_registry_is_named"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_cli.py::test_validate_reports_a_manifest_the_reader_refuses"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-validator/src/escapewheel_validator/scripts/cli.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md",
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R130 §3.7": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-resource-provenance-policy"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-resource-lineage"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/06_analysis_layer.md",
+          "anchor": "ew-analysis-materialization-provenance"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-conformance-classes"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$defs/resource"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_analysis_resource_names_its_lineage_and_no_run"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_analysis_resource_without_lineage_is_an_error"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_manifest_entry_naming_a_run_is_refused_by_its_schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_declaration_naming_a_producing_run_policy_is_rejected"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_materialize.py::test_into_records_lineage_and_a_run_row"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_materialize.py::test_the_bucket_width_is_recorded_because_it_cannot_be_recovered"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-writer/src/escapewheel_writer/materialize.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "registry/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/08_example_packet.md"
+        ]
+      }
+    },
+    "R130 §3.8": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_a_reader_does_not_apply_the_manifest_schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_a_repeated_member_is_rejected"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_a_repeated_resource_id_is_rejected_before_any_lookup"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_a_member_read_with_the_wrong_type_is_named"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_a_missing_required_member_is_named"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_listing_resources_acquires_no_registry"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_manifest.py::test_a_registry_failing_its_digest_fails_the_operation_that_needed_it"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_packet.py::test_a_missing_core_registry_fails_the_access_that_needs_it"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_unparseable_extension_fails_only_what_needs_it"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_manifest_the_reader_opens_still_fails_its_schema"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/manifest.py",
+          "escapewheel-reader/src/escapewheel_reader/packet.py",
+          "escapewheel-reader/src/escapewheel_reader/registries.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-reader/README.md"
+        ]
+      }
+    },
+    "R130 §3.9": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validator-registry-boundary"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-registry-result-reporting"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md",
+          "anchor": "ew-extension-registration"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_no_caller_supplied_registry_can_stand_in_for_a_bound_one"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_that_fails_binding_withholds_only_its_entries"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_an_extension_binding_finding_is_attributed_to_it"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_conforming_manifest_binds_its_core_registry"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_the_packet_declares_the_extension_and_carries_its_registry"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel-validator/CONTRIBUTING.md"
+        ]
+      }
+    },
+    "R130 §3.10": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-referenced-resource-delivery"
+        },
+        {
+          "path": "registry/resources.schema.json",
+          "pointer": "/$defs/entry"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the delivery schema is the manifest entry without build-supplied members"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the example resource document validates against it"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivery.py::test_a_delivered_entry_carries_no_build_supplied_member[validation_state]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivery.py::test_a_delivered_entry_carries_no_build_supplied_member[derived_from]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-writer/src/escapewheel_writer/delivery.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md",
+          "CONTRIBUTING.md"
+        ]
+      }
+    },
+    "R130 §3.11": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.3.json",
+          "pointer": "/id"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/resources.schema.json",
+          "pointer": "/$id"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "registry/logical_schemas.json",
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "registry meta-schema identity is 0.6.0"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_reference_registry_has_one_complete_valid_result"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "facts.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md"
+        ]
+      }
+    }
+  }
+}

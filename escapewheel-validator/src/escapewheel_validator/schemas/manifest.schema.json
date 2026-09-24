@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://escapewheel.org/schemas/manifest/0.4.0",
+  "title": "Escapewheel packet manifest",
+  "description": "Exact local shape of a packet manifest, incorporated by Part 04. Part 04 owns each member's meaning and the checks JSON Schema cannot express; every object here is closed.",
+  "type": "object",
+  "required": [
+    "packet_id",
+    "packet_version",
+    "profile_id",
+    "semantic_standard_version",
+    "logical_standard_version",
+    "registries",
+    "created_at",
+    "sessions",
+    "resources",
+    "validation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "packet_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "packet_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "profile_id": {
+      "type": "string",
+      "const": "escapewheel-portable-v0.1"
+    },
+    "semantic_standard_version": {
+      "type": "string"
+    },
+    "logical_standard_version": {
+      "type": "string"
+    },
+    "registries": {
+      "description": "Every registry document that declares one of this packet's resources, keyed by registry ID (Part 04 §8).",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/registry"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sessions": {
+      "description": "Every session in the packet. One entry in the primary single-session case.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    },
+    "description": {
+      "type": "string"
+    },
+    "retention": {
+      "description": "How many superseded manifests this packet retains, and for how long. Both are floors: a manifest is expired only when both permit it. Absent means the defaults, one kept version and no age limit.",
+      "type": "object",
+      "properties": {
+        "keep_versions": {
+          "description": "Superseded manifests to retain. Default 1.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "keep_days": {
+          "description": "Drop a superseded manifest older than this. Absent means age alone never expires one.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "resource_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9_.-]+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "registry": {
+      "description": "One bound registry document. The digest covers its exact bytes, decoded from whatever the physical profile stores.",
+      "type": "object",
+      "required": [
+        "role",
+        "version",
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "core",
+            "extension"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "path": {
+          "description": "Relative to the packet root: nonempty /-separated segments, with no scheme, leading /, backslash, or . or .. segment.",
+          "type": "string",
+          "pattern": "^(?![A-Za-z][A-Za-z0-9+.-]*:)(?!\\.{1,2}(?:/|$))(?!.*/\\.{1,2}(?:/|$))[^/\\\\]+(?:/[^/\\\\]+)*$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "resource": {
+      "type": "object",
+      "required": [
+        "resource_id",
+        "declaration_id",
+        "uri",
+        "validation_state"
+      ],
+      "properties": {
+        "resource_id": {
+          "$ref": "#/$defs/resource_id"
+        },
+        "declaration_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"
+        },
+        "uri": {
+          "description": "Relative to the packet root, or to the source `source` names, unless absolute.",
+          "type": "string",
+          "minLength": 1
+        },
+        "validation_state": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "not_run"
+          ]
+        },
+        "external": {
+          "description": "True when the packet does not own these bytes. Required wherever uri is absolute.",
+          "type": "boolean"
+        },
+        "source": {
+          "description": "The body of data this external resource belongs to (Part 04 §5.5). Names no location itself.",
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "description": "As verified at validation time.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "verified_at": {
+          "description": "When sha256 or size_bytes last held. Not a promise about now.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "members": {
+          "description": "What a prefix held when someone looked. A record, not a resolution rule (Part 04 §5.4).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/member"
+          }
+        },
+        "derived_from": {
+          "description": "The packet resources this one was derived from, under its declaration's lineage policy (Part 04 §7).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/resource_id"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "uri": {
+                "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*://"
+              }
+            },
+            "required": [
+              "uri"
+            ]
+          },
+          "then": {
+            "properties": {
+              "external": {
+                "const": true
+              }
+            },
+            "required": [
+              "external"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "source"
+            ]
+          },
+          "then": {
+            "properties": {
+              "external": {
+                "const": true
+              }
+            },
+            "required": [
+              "external"
+            ]
+          }
+        }
+      ]
+    },
+    "member": {
+      "type": "object",
+      "required": [
+        "key",
+        "size_bytes"
+      ],
+      "properties": {
+        "key": {
+          "description": "Relative to uri, with / separators.",
+          "type": "string",
+          "minLength": 1
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "store_digest": {
+          "description": "What the store itself said about this member, in the store's own algorithm. Never a substitute for sha256.",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "value"
+          ],
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "minLength": 1
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "validation": {
+      "type": "object",
+      "required": [
+        "status",
+        "validated_at",
+        "validator_name",
+        "validator_version"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "not_run"
+          ]
+        },
+        "validated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validator_name": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

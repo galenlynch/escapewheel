@@ -15,6 +15,15 @@ their meaning and actor obligations. A conforming distributed copy MUST pass the
 generic cross-member checker at a packaging or equivalent conformance boundary; an implementation
 MAY cache that result and MUST NOT revalidate an unchanged bundled descriptor for each packet.
 
+This part also incorporates `registry/resources.schema.json`, whose `$id` is
+`https://escapewheel.org/schemas/resources/0.4.0`, as the exact shape of the resource document of
+§11.3. Its closed envelope admits an optional `$schema` string and requires `resources`, an array
+of closed entries. An entry requires `resource_id`, `declaration_id`, and `uri`, and admits
+`external`, `source`, `sha256`, `size_bytes`, `verified_at`, and `members`. The delivery schema
+defines each of those members, and the entry's conditional shape, exactly as the manifest schema
+[Part 04 §1](04_packet_catalog.md#ew-packet-catalog-scope) incorporates defines them; a difference
+makes the specification candidate internally inconsistent.
+
 The portable physical profile defined by this part is identified by
 `escapewheel-portable-v0.1`. Its requirements directly invoke the shared JSON and URI authorities
 identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the portable-profile
@@ -72,10 +81,8 @@ packet_root/
 
   media/            <media_asset_id>.<ext>
 
-  extensions/       <name>.json             extension registries
-
-  schemas/
-    logical_schemas.json                    the embedded registry
+  registries/
+    <registry_id>/  <version>.json.gz       bound registries (§3.3)
 
   manifests/        <packet_version>.json   superseded manifests
 
@@ -89,6 +96,21 @@ The manifest MUST record the actual layout. A reader MUST resolve resources thro
 ### 3.2 Files that MUST NOT be written
 
 `schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the manifest is required to carry, and so bought no otherwise-available access.
+
+<a id="ew-portable-bound-registries" data-spec-anchor="canonical"></a>
+### 3.3 Bound registries
+
+A writer MUST store each registry that the manifest binds under
+[Part 04 §8](04_packet_catalog.md#ew-packet-registry-bindings) at its descriptor's `path`, as
+exactly one gzip member under RFC 1952 using the DEFLATE compression method of RFC 1951. The
+decompressed bytes MUST be exactly the bytes the descriptor's `sha256` covers. A gzip header's
+modification time, operating system, file name, and comment carry no meaning, and a reader MUST
+ignore them.
+
+A conforming packet MUST contain every bound registry. A writer MUST NOT bind a registry by remote
+location or omit the stored copy, and a reader or validator MUST NOT resolve a bound registry from
+anywhere else. A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
+of §§8.1, 9.1, and 9.5.
 
 ## 4. URI rules
 
@@ -323,7 +345,10 @@ Provenance tables are the exception because they are append-only by nature — a
 
 Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
 
-Where an amendment installs a different registry, the packet retains the superseded copy alongside it. Installing different content under a `registry_version` the packet has already retained makes that version ambiguous **within one packet**, and a writer MUST refuse it.
+Where an amendment binds a different registry document, the packet retains the superseded copy at
+the path the superseded manifest records. A writer MUST refuse an amendment that would bind,
+anywhere in the packet's current and retained manifests, two different digests under the same
+registry ID and version, because that version would then be ambiguous within one packet.
 
 <a id="ew-incremental-revalidation" data-spec-anchor="canonical"></a>
 ### 9.4 Scope of revalidation
@@ -472,13 +497,13 @@ I/O at all, which is the cost of an array not being records.
 
 **A referenced resource crosses as a resource document.** An adapter that delivers one MUST
 deliver that document with it, under the reserved resource identifier `resources` (§11.4): a JSON
-object carrying `resources`, an array with one entry per such resource, each a manifest resource
-entry as Part 04 §5 declares one. Every entry MUST carry `resource_id`, `declaration_id`, and `uri`,
-and MUST NOT carry `physical_profile`, `partitioning`, or `codecs`.
-A build preserves that binding, rejects one that does not resolve or admit the resource ID, and
-merges the entry into the manifest. Its shape is published as
-`registry/resources.schema.json`. A build MUST refuse a document that does not satisfy it before
-writing a manifest, naming what is wrong.
+object carrying `resources`, an array with one entry per such resource. Each entry is a manifest
+resource entry as [Part 04 §4.1](04_packet_catalog.md#ew-packet-resource-entry-fields) declares
+one, without the members a build supplies, so it MUST NOT carry `validation_state` or
+`derived_from`. A build preserves that binding, rejects one that does not resolve or admit the
+resource ID, and merges the entry into the manifest. Its shape is the delivery schema §1
+incorporates. A build MUST refuse a document that does not satisfy it before writing a manifest,
+naming what is wrong.
 
 The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a manifest cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
 
@@ -530,3 +555,5 @@ The application column states the extent to which this part invokes each externa
 | [Zarr v3 Zstandard codec specification](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/zstd/) | unversioned | `zstd` codec metadata object and configuration |
 | [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html) | 2.0 | permitted external Zarr v2 arrays |
 | [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | exact | Zstandard framing |
+| [RFC 1952](https://www.rfc-editor.org/info/rfc1952) | exact | gzip member format of a bound registry (§3.3) |
+| [RFC 1951](https://www.rfc-editor.org/info/rfc1951) | exact | DEFLATE compression of a bound registry (§3.3) |

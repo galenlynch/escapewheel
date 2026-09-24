@@ -19,6 +19,8 @@ finding a partial import that claims to be valid.
 
 from __future__ import annotations
 
+import gzip
+import hashlib
 import json
 import os
 import shutil
@@ -35,6 +37,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet, open_packet
 from escapewheel_reader.profile import parquet_floor
+from escapewheel_reader.registries import gunzip_member as gzip_member
 from escapewheel_validator import (
     CheckedRegistryContext,
     RegistryRejected,
@@ -79,10 +82,9 @@ SOURCES = "sources.json"
 #: The version of that document this writer emits (Part 04 §5.5).
 SOURCES_VERSION = "escapewheel-sources-v0.1"
 
-#: Where a packet embeds the registry it was written against (Part 02 §9.2).
-REGISTRY_PATH = "schemas/logical_schemas.json"
-#: Where an extension registry lives in a packet (Part 09 §2, Part 09 §6).
-EXTENSIONS_PATH = "extensions"
+#: Where the portable profile stores each bound registry, as `<registry_id>/<version>.json.gz`
+#: (Part 03 §3.3).
+REGISTRIES = "registries"
 
 #: Part 03's portable profile.
 PROFILE = "escapewheel-portable-v0.1"
@@ -476,7 +478,7 @@ class PacketWriter:
     Parameters
     ----------
     registry : Mapping
-        The registry to write against. It is embedded in the packet (Part 02 §9.2), so the packet
+        The registry to write against. The packet binds and stores it (Part 04 §8, Part 03 §3.3), so the packet
         stays readable when the reference registry moves on.
     packet_id : str
         The packet's identifier.
@@ -573,7 +575,6 @@ class PacketWriter:
         #: Called with `say` once staging has run, for whatever only a written packet knows.
         self._after_stage: list[Callable[[Callable[[str], None]], None]] = []
         self._derived: dict[str, list[str]] = {}
-        self._runs: dict[str, str] = {}
         self._ordered: set[str] = set()
         self._staged_arrays: dict[str, StagedArray] = {}
         self._referenced_arrays: dict[str, ExternalArray] = {}
@@ -933,33 +934,6 @@ class PacketWriter:
         self._bind_catalog_row(declaration, resource_id, "media_asset_id", media.media_asset_id)
         self._referenced_media[resource_id] = media
 
-    def produced_by(self, resource_id: str, processing_run_id: str) -> None:
-        """Name the run that produced a resource (Part 04 §4.1).
-
-        Part 06 requires a derived resource to declare its transform parameters and software
-        version, and R31 puts them in a `core.processing_runs` row that the manifest points at.
-        The run itself is added like any other table; this records the link, which lives in the
-        manifest because it is a fact about a resource rather than about any row.
-
-        Parameters
-        ----------
-        resource_id : str
-            The produced resource.
-        processing_run_id : str
-            A `core.processing_runs.processing_run_id`. The validator checks it resolves.
-
-        Raises
-        ------
-        KeyError
-            If the registry does not define this resource.
-        """
-        if self.spec(resource_id) is None:
-            raise KeyError(
-                f"no registry defines a table named {resource_id}; core and "
-                f"{len(self._extensions)} extension(s) were consulted"
-            )
-        self._runs[resource_id] = processing_run_id
-
     @property
     def resources(self) -> list[str]:
         """Resource IDs with at least one record, in insertion order."""
@@ -1107,12 +1081,6 @@ class PacketWriter:
             entry["sha256"] = _digest(path)
             if lineage := self._derived.get(resource_id):
                 entry["derived_from"] = lineage
-            if run := self._runs.get(resource_id):
-                # The name, not the assigned number: a manifest identifies by name throughout
-                # -- `packet_id`, `sessions`, every `resource_id` -- because it is read before
-                # any table and a number resolves against nothing. Part 02 §5.3's `*_name` columns
-                # are the bridge, and Part 05 §5.3's check crosses it.
-                entry["processing_run_id"] = run
             entries.append(entry)
         return entries
 
@@ -1146,8 +1114,13 @@ class PacketWriter:
             for value in sorted(pending[kind]):
                 self.keys.of(kind, value)
 
-    def _manifest(self, entries: Sequence[Mapping[str, Any]], report: Report | None) -> dict[str, Any]:
-        """Build the manifest for these resources."""
+    def _manifest(
+        self,
+        entries: Sequence[Mapping[str, Any]],
+        registries: Mapping[str, Mapping[str, str]],
+        report: Report | None,
+    ) -> dict[str, Any]:
+        """Build the manifest for these resources, binding the registries `_store_registries` wrote."""
         sessions = sorted({r["session_id"] for r in self._tables.get("core.sessions", []) if "session_id" in r})
         now = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
         validation = {
@@ -1162,7 +1135,7 @@ class PacketWriter:
             "profile_id": PROFILE,
             "semantic_standard_version": self._registry["semantic_standard_version"],
             "logical_standard_version": self._registry["logical_standard_version"],
-            "registry_version": self._registry["registry_version"],
+            "registries": {name: dict(descriptor) for name, descriptor in registries.items()},
             "created_at": now,
             "sessions": sessions,
             "resources": [dict(e) for e in entries],
@@ -1171,8 +1144,6 @@ class PacketWriter:
             "retention": dict(self._retention),
             "validation": validation,
         }
-        if inventory := self._extension_inventory():
-            manifest["extensions"] = inventory
         if self._description is not None:
             manifest["description"] = self._description
         return manifest
@@ -1292,9 +1263,7 @@ class PacketWriter:
         for report in self._after_stage:
             report(say)
         clock = time.perf_counter()
-        (staging / "schemas").mkdir(parents=True, exist_ok=True)
-        (staging / REGISTRY_PATH).write_text(json.dumps(self._registry, indent=2) + "\n")
-        self._install_extensions(staging)
+        registries, _ = self._store_registries(staging)
 
         # 2. derive whatever the caller asked for from the staged packet, before anything is
         #    validated or promoted. Part 05 stages 8 and 9 put materialization inside the import
@@ -1303,7 +1272,7 @@ class PacketWriter:
         #    doing it after the commit costs a second manifest, a version bump and a
         #    revalidation of resources validated seconds earlier, which is what `amend` is for
         #    and what a build the recipe fully describes should never pay.
-        (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, None), indent=2) + "\n")
+        (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, registries, None), indent=2) + "\n")
         if materialize:
             # Row counts, not just names: a materializer adds its own `core.processing_runs`
             # row (Part 06 §5), and that table was staged in the pass above. Restaging only what is
@@ -1322,7 +1291,7 @@ class PacketWriter:
             restaged = self._stage(staging, only=touched)
             kept = [e for e in entries if e["resource_id"] not in touched]
             entries = [*kept, *restaged]
-            (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, None), indent=2) + "\n")
+            (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, registries, None), indent=2) + "\n")
             say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
             clock = time.perf_counter()
         # Scan the order of everything except what `_write_stream` compared on the way in.
@@ -1338,7 +1307,7 @@ class PacketWriter:
         # 3. move into final paths
         for entry in entries:
             entry["validation_state"] = "passed"
-        for name in ("tables", "arrays", "schemas", EXTENSIONS_PATH):
+        for name in ("tables", "arrays", REGISTRIES):
             source = staging / name
             if source.exists():
                 shutil.move(str(source), str(root / name))
@@ -1347,7 +1316,7 @@ class PacketWriter:
         #    so a reader finds nothing rather than a partial import claiming to be valid.
         self._write_sources(root)
         candidate = root / f"{MANIFEST}.candidate"
-        candidate.write_text(json.dumps(self._manifest(entries, report), indent=2) + "\n")
+        candidate.write_text(json.dumps(self._manifest(entries, registries, report), indent=2) + "\n")
         os.replace(candidate, root / MANIFEST)
         shutil.rmtree(staging)
         if self._workspace is not None and self._workspace.exists():
@@ -1370,7 +1339,7 @@ class PacketWriter:
 
         The sequence is `commit`'s, with the swap at the end doing more work: the added
         resources are staged and validated before anything reaches a final path, the superseded
-        manifest and registry are retained, and `packet.json` is replaced by an atomic
+        manifest and registries are retained, and `packet.json` is replaced by an atomic
         rename last. A reader sees the old packet or the new one, never a blend.
 
         Parameters
@@ -1426,16 +1395,13 @@ class PacketWriter:
         kept = [e for e in superseded["resources"] if e["resource_id"] not in added]
         candidate = dict(superseded)
         candidate["resources"] = kept + [dict(e, uri=f"staging/{e['uri']}") for e in entries]
-        candidate["registry_version"] = self._registry["registry_version"]
         candidate["packet_version"] = packet_version or _bump(superseded["packet_version"])
-        candidate["supersedes"] = superseded["packet_version"]
 
-        # The registry goes in before validation, not after: the validator compares the
-        # manifest's declared registry_version against the copy the packet carries (Part 02 §9.2), so
-        # a candidate declaring the new version against the old embedded copy fails on a
-        # mismatch that says nothing about the data. Rolled back if this does not pass, which
-        # leaves the packet exactly as it was.
-        restore = self._install_registry(root)
+        # The registries go in before validation, not after: the validator acquires each through
+        # the candidate's descriptor (Part 04 §10). A version the packet already stores stays where
+        # it is, so a superseded manifest still binds the bytes it named (Part 03 §9.3); what this
+        # adds is removed again if validation refuses, leaving the packet exactly as it was.
+        candidate["registries"], restore = self._store_registries(root)
         try:
             # Both halves of the amendment are bounded by what it writes (R35). Physical order
             # is re-read only for those files, and only the rules attached to one or naming one
@@ -1445,7 +1411,6 @@ class PacketWriter:
             written = {e["resource_id"] for e in entries}
             report = validate(
                 Packet(root, Manifest.from_dict(candidate)),
-                registry=dict(self._registry),
                 limits=limits,
                 scan=written - self._ordered,
                 recheck=written,
@@ -1514,77 +1479,58 @@ class PacketWriter:
             path = versions / f"nwb.packet.{manifest['packet_version']}.json"
             path.write_text(json.dumps(manifest, indent=2) + "\n")
 
-    def _install_extensions(self, root: Path) -> None:
-        """Write each extension registry into the packet, beside the core one (R17 §5, Part 09 §6).
+    def _store_registries(self, root: Path) -> tuple[dict[str, dict[str, str]], Callable[[], None]]:
+        """Store core and every extension as Part 03 §3.3 requires, returning their descriptors.
 
-        A packet embeds the registry it was written against so it stays self-describing; an
-        extension is a registry document, so it is embedded the same way and for the same reason.
-        Each carries its own `registry_version`, independent of core's.
+        The digest covers the exact serialized bytes (Part 04 §10). A registry ID and version that
+        the packet's current or a retained manifest already binds is reused where the digest
+        matches and refused where it differs (Part 03 §9.3), so every manifest keeps naming bytes
+        that exist.
+
+        Returns
+        -------
+        dict
+            A descriptor per registry ID, for the manifest's `registries`.
+        Callable
+            Removes whatever this call wrote, for an amendment that validation refuses.
         """
-        if not self._extensions:
-            return
-        (root / EXTENSIONS_PATH).mkdir(parents=True, exist_ok=True)
-        for extension_id, document in self._extensions.items():
-            path = root / EXTENSIONS_PATH / f"{extension_id}.json"
-            path.write_text(json.dumps(document, indent=2) + "\n")
-
-    def _extension_inventory(self) -> dict[str, dict[str, str]]:
-        """Return what the manifest says about the extensions this packet carries."""
-        return {
-            extension_id: {
-                "version": str(document["registry_version"]),
-                "registry": f"{EXTENSIONS_PATH}/{extension_id}.json",
+        recorded: dict[tuple[str, str], Mapping[str, str]] = {}
+        for manifest_path in [root / MANIFEST, *sorted((root / MANIFESTS).glob("*.json"))]:
+            if manifest_path.is_file():
+                for name, bound in json.loads(manifest_path.read_text()).get("registries", {}).items():
+                    recorded.setdefault((name, bound["version"]), bound)
+        descriptors: dict[str, dict[str, str]] = {}
+        written: list[Path] = []
+        for document in (self._registry, *self._extensions.values()):
+            registry_id = str(document["registry_id"])
+            body = (json.dumps(document, indent=2) + "\n").encode()
+            version = str(document["registry_version"])
+            digest = hashlib.sha256(body).hexdigest()
+            earlier = recorded.get((registry_id, version))
+            relative = earlier["path"] if earlier else f"{REGISTRIES}/{registry_id}/{version}.json.gz"
+            path = root / relative
+            stored = hashlib.sha256(gzip_member(path.read_bytes())).hexdigest() if path.is_file() else None
+            if (earlier is not None and earlier["sha256"] != digest) or stored not in {None, digest}:
+                raise ValueError(
+                    f"this packet already binds a different {registry_id} {version} at {relative}; two digests "
+                    "under one registry ID and version cannot both be retained (Part 03 §9.3). Bump registry_version."
+                )
+            if stored is None:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(gzip.compress(body, mtime=0))
+                written.append(path)
+            descriptors[registry_id] = {
+                "role": "extension" if "extension_id" in document else "core",
+                "version": version,
+                "path": relative,
+                "sha256": digest,
             }
-            for extension_id, document in self._extensions.items()
-        }
-
-    def _install_registry(self, root: Path) -> Callable[[], None]:
-        """Put this writer's registry in the packet, retaining the superseded copy (Part 03 §9.3).
-
-        Returns a callable that undoes it, because this has to happen *before* validation --
-        the validator checks the embedded copy against the manifest's declared version -- and a
-        failed amendment must leave the packet exactly as it was.
-        """
-        installed = root / REGISTRY_PATH
-        # A retained copy at this version settles it too, not just the current one: installing
-        # different content under a version the packet has already retained makes that version
-        # ambiguous *within one packet*, so its older manifests name a registry that no longer
-        # identifies anything.
-        already = installed.with_name(f"logical_schemas.{self._registry['registry_version']}.json")
-        if already.is_file() and json.loads(already.read_text()) != self._registry:
-            raise ValueError(
-                f"{already.name} is retained with different content; installing this registry would leave "
-                f"two different {self._registry['registry_version']} in one packet (Part 03 §9.3). Bump "
-                "registry_version, or rebuild the packet so it retains only one."
-            )
-
-        previous = installed.read_bytes() if installed.is_file() else None
-        if previous is not None:
-            embedded = json.loads(previous)
-            if embedded["registry_version"] == self._registry["registry_version"]:
-                if embedded != self._registry:
-                    raise ValueError(
-                        f"registry {embedded['registry_version']} differs from the packet's copy at the same "
-                        "version; two registries that cannot be told apart make Part 02 §9.2 vacuous (Part 03 §9.3)"
-                    )
-                return lambda: None
-            keep = installed.with_name(f"logical_schemas.{embedded['registry_version']}.json")
-            keep.write_text(json.dumps(embedded, indent=2) + "\n")
-        else:
-            keep = None
-
-        installed.parent.mkdir(parents=True, exist_ok=True)
-        installed.write_text(json.dumps(self._registry, indent=2) + "\n")
 
         def restore() -> None:
-            if previous is None:
-                installed.unlink(missing_ok=True)
-            else:
-                installed.write_bytes(previous)
-            if keep is not None:
-                keep.unlink(missing_ok=True)
+            for path in written:
+                path.unlink(missing_ok=True)
 
-        return restore
+        return descriptors, restore
 
 
 __all__ = [
@@ -1592,7 +1538,7 @@ __all__ = [
     "MANIFESTS",
     "PROFILE",
     "PROVENANCE",
-    "REGISTRY_PATH",
+    "REGISTRIES",
     "CommitRefused",
     "ExternalMedia",
     "NotCommitted",

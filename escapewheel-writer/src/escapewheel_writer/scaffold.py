@@ -142,6 +142,7 @@ def draft(
             # Part 02 §9.2. Taken from the meta-schema the validator vendors rather than written
             # here, because a second copy of a URI is a second thing to go stale.
             "$schema": registry_meta_schema()["$id"],
+            "registry_id": extension_id,
             "registry_version": "0.1.0",
             "logical_standard_version": logical_standard_version,
             "rule_language": "escapewheel-rule-sql-v0.1",
@@ -153,7 +154,6 @@ def draft(
                     "instances": {"mode": "singleton", "presence": "optional"},
                     "requires": [],
                     "lineage": "optional",
-                    "producing_run": "optional",
                     "table": table,
                 }
                 for resource_id, table in drafted.items()

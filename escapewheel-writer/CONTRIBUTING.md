@@ -128,7 +128,7 @@ and an extension whose author moved on rots. That is why they are a misery, and 
 rather than a necessity.
 
 Here an extension is data the packet carries. `pkt.table("vrf.sites")` needs nothing installed —
-no package, no plugin, no registration — because the packet embeds the registry that describes it.
+no package, no plugin, no registration — because the packet binds the registry that describes it.
 A validator generates its checks from the same document with no per-extension code.
 
 The **only** code an extension may require is a source adapter, and only to *write*. That is the

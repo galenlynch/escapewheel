@@ -359,7 +359,8 @@ def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, har
 #: `required`, so a packet carrying intervals and no table saying what they were is refused.
 #: One table, one column, and the reference Part 02 §8.3 requires of a named resource.
 TASK_EXTENSION = {
-    "$schema": "https://escapewheel.org/schemas/registry/0.5.0",
+    "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+    "registry_id": "task",
     "registry_version": "0.1.0",
     "logical_standard_version": "escapewheel-logical-v0.1",
     "rule_language": "escapewheel-rule-sql-v0.1",
@@ -371,7 +372,6 @@ TASK_EXTENSION = {
             "instances": {"mode": "singleton", "presence": "optional"},
             "requires": [],
             "lineage": "optional",
-            "producing_run": "optional",
             "table": {
                 "columns": [
                     {

@@ -24,21 +24,19 @@ from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
 
-import jsonschema
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-from escapewheel_reader import Packet, PacketError, ResourceUnreadableError, sql_name
+from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, sql_name
 from escapewheel_reader.location import SOURCES_FILENAME
 from escapewheel_reader.ordering import stored_order
 
 from .generate import Check, adjacency_settles_uniqueness, concerns, generate
+from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest
 from .registry_document import (
     CheckedRegistryContext,
     RegistryResult,
-    check_registry_context,
-    check_registry_context_bytes,
 )
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
 from .stores import StoreUnreachable, digest, listing, read_member
@@ -79,21 +77,18 @@ def _declarations(
 def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact validation phase
     packet: Packet,
     core: Mapping[str, Any],
-    extensions: Sequence[Mapping[str, Any]],
+    extensions: Mapping[str, Mapping[str, Any]],
+    withheld: Collection[str],
     report: Report,
 ) -> None:
-    """Check packet-to-declaration binding before kind-specific validation."""
-    visible = _declarations(core, extensions)
-    entries = list(packet.resources())
-    by_id = {entry.resource_id: entry for entry in entries}
-    if len(by_id) != len(entries):
-        counts = Counter(entry.resource_id for entry in entries)
-        report.add(
-            "error",
-            "packet.resource.id_unique",
-            "packet resource IDs must be unique",
-            [(name,) for name, count in counts.items() if count > 1],
-        )
+    """Part 04 §10's `declaration` phase, from the bound registries that may direct checks.
+
+    An entry in the namespace of an extension registry that failed binding or its registry result
+    is withheld rather than reported undeclared: nothing about it can be decided (Part 05 §14.5).
+    """
+    visible = _declarations(core, list(extensions.values()))
+    entries = [entry for entry in packet.resources() if entry.declaration_id.split(".", 1)[0] not in withheld]
+    by_id = {entry.resource_id: entry for entry in packet.resources()}
 
     for entry in entries:
         declaration = visible.get(entry.declaration_id)
@@ -134,40 +129,21 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
                     f"{entry.resource_id}: declaration-selected axes resource {axes} is absent",
                 )
 
-        for policy, field_name in (
-            (declaration["lineage"], "derived_from"),
-            (declaration["producing_run"], "processing_run_id"),
-        ):
-            present = field_name in entry.entry
-            if policy == "required" and not present:
-                report.add(
-                    "error",
-                    f"packet.resource.{field_name}_required",
-                    f"{entry.resource_id}: {field_name} is required by {entry.declaration_id}",
-                )
-            elif policy == "forbidden" and present:
-                report.add(
-                    "error",
-                    f"packet.resource.{field_name}_forbidden",
-                    f"{entry.resource_id}: {field_name} is forbidden by {entry.declaration_id}",
-                )
-        lineage = entry.entry.get("derived_from")
-        if lineage is not None and (
-            not isinstance(lineage, list) or not lineage or len(lineage) != len(set(map(str, lineage)))
-        ):
+        present = "derived_from" in entry.entry
+        if declaration["lineage"] == "required" and not present:
             report.add(
                 "error",
-                "packet.resource.lineage_shape",
-                f"{entry.resource_id}: derived_from must be a nonempty array of distinct resource IDs",
+                "packet.resource.derived_from_required",
+                f"{entry.resource_id}: derived_from is required by {entry.declaration_id}",
             )
-        if "processing_run_id" in entry.entry and "core.processing_runs" not in by_id:
+        elif declaration["lineage"] == "forbidden" and present:
             report.add(
                 "error",
-                "packet.resource.processing_runs_missing",
-                f"{entry.resource_id}: processing_run_id requires core.processing_runs",
+                "packet.resource.derived_from_forbidden",
+                f"{entry.resource_id}: derived_from is forbidden by {entry.declaration_id}",
             )
 
-    active_extension_ids = set(packet.manifest.extensions)
+    active_extension_ids = set(extensions)
     for declaration_id, declaration in visible.items():
         instances = declaration["instances"]
         active = declaration_id.split(".", 1)[0] in {"core", "analysis"} | active_extension_ids
@@ -222,7 +198,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
         except (PacketError, OSError, pa.ArrowException) as exc:
             report.add(
                 "error",
-                "packet.resource.catalog_unreadable",
+                "packet.resource.catalog_table_unreadable",
                 f"{catalog_id}.{column}: {exc}",
             )
             continue
@@ -235,7 +211,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
             if count != 1 or len(matches) != 1:
                 report.add(
                     "error",
-                    "packet.resource.catalog_binding",
+                    "packet.resource.catalog_row_binding",
                     f"{catalog_id}.{column}={value!r} does not bind one {declaration_id} resource",
                 )
         catalog_values = set(normalized)
@@ -243,7 +219,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
             if entry.declaration_id == declaration_id and entry.resource_id not in catalog_values:
                 report.add(
                     "error",
-                    "packet.resource.catalog_binding",
+                    "packet.resource.catalog_row_binding",
                     f"{entry.resource_id}: no row in {catalog_id}.{column}",
                 )
 
@@ -332,6 +308,7 @@ class RegistryEvaluation:
     subject: str
     result: RegistryResult
     directs_checks: bool = False
+    core: bool = False
 
 
 @dataclass
@@ -375,7 +352,7 @@ class Report:
         that passes without it.
         """
         complete = all(e.registry != "core" or e.status == "complete" for e in self.evaluations)
-        registry_valid = all(not item.directs_checks or item.result.state == "valid" for item in self.registries)
+        registry_valid = all(not item.core or item.result.state == "valid" for item in self.registries)
         return (
             registry_valid and complete and sum(f.level == "error" and f.extension is None for f in self.findings) == 0
         )
@@ -383,9 +360,7 @@ class Report:
     def extension_passed(self, extension: str) -> bool:
         """Whether one extension's tables validated."""
         complete = all(e.registry != extension or e.status == "complete" for e in self.evaluations)
-        registry_valid = all(
-            item.subject.split(":", 1)[0] != extension or item.result.state == "valid" for item in self.registries
-        )
+        registry_valid = all(item.subject != extension or item.result.state == "valid" for item in self.registries)
         return (
             registry_valid
             and complete
@@ -399,7 +374,7 @@ class Report:
             dict.fromkeys(
                 [f.extension for f in self.findings if f.extension is not None]
                 + [e.registry for e in self.evaluations if e.registry != "core"]
-                + [item.subject.split(":", 1)[0] for item in self.registries if not item.subject.startswith("core")]
+                + [item.subject for item in self.registries if not item.core]
             )
         )
 
@@ -407,10 +382,12 @@ class Report:
         """Record a Tier 2 outcome without turning validator inability into a finding."""
         self.evaluations.append(Evaluation(registry, status, rule, detail))
 
-    def record_registry(self, subject: str, context: CheckedRegistryContext, *, directs_checks: bool = False) -> None:
-        """Retain a complete result and expose invalid outcomes as document findings."""
-        self.registries.append(RegistryEvaluation(subject, context.result, directs_checks))
-        extension = None if subject.startswith("core") else subject.split(":", 1)[0]
+    def record_registry(
+        self, subject: str, context: CheckedRegistryContext, *, directs_checks: bool = False, core: bool = False
+    ) -> None:
+        """Retain a complete result, labelled by registry ID, and expose its invalid outcomes."""
+        self.registries.append(RegistryEvaluation(subject, context.result, directs_checks, core))
+        extension = None if core else subject
         for outcome in context.result.findings:
             self.add(
                 "error",
@@ -476,6 +453,7 @@ class Report:
             "registries": [
                 {
                     "subject": item.subject,
+                    "core": item.core,
                     "directs_checks": item.directs_checks,
                     "result": item.result.to_dict(),
                 }
@@ -500,63 +478,6 @@ def registry_meta_schema() -> dict[str, Any]:
     text = importlib_resources.files("escapewheel_validator").joinpath("schemas/registry.schema.json").read_text()
     parsed: dict[str, Any] = json.loads(text)
     return parsed
-
-
-def _check_embedded_registry(packet: Packet, embedded: Mapping[str, Any], report: Report) -> None:
-    """Layer 1: the registry the packet carries (Part 02 §9.2, §9)."""
-    for error in jsonschema.Draft202012Validator(registry_meta_schema()).iter_errors(embedded):
-        report.add("error", "registry.schema", f"{'/'.join(str(p) for p in error.path)}: {error.message}")
-    declared = packet.manifest.registry_version
-    if embedded.get("registry_version") != declared:
-        report.add(
-            "error",
-            "registry.version_mismatch",
-            f"manifest says {declared}, embedded registry says {embedded.get('registry_version')}",
-        )
-
-
-def _check_materialization_provenance(packet: Packet, report: Report) -> None:
-    """Layer 1c: every analysis resource names the run that produced it (Part 05 §5.3).
-
-    Not SQL, and deliberately. `processing_run_id` lives in the manifest, which no query sees,
-    so a Tier 1 foreign key cannot reach it -- a rule written in SQL here would pass silently
-    on a packet whose manifest names a run that does not exist, which is the failure mode R12
-    was written about.
-    """
-    analysis = [r for r in packet.resources() if r.layer == "analysis"]
-    if not analysis:
-        return
-
-    for resource_id in sorted(r.resource_id for r in analysis if not r.entry.get("processing_run_id")):
-        report.add(
-            "error",
-            "provenance.no_processing_run",
-            f"{resource_id} is derived but names no processing_run_id (Part 04 §4.1)",
-        )
-
-    named = {r.entry["processing_run_id"] for r in analysis if r.entry.get("processing_run_id")}
-    if not named:
-        return
-    try:
-        runs = packet.table("core.processing_runs")
-    except PacketError:
-        report.add(
-            "error",
-            "provenance.no_processing_runs_table",
-            f"{len(named)} resource(s) name a processing run but the packet carries no core.processing_runs",
-        )
-        return
-    # A manifest names a run and the table numbers it (Part 02 §5.3), so the join is across the
-    # `*_name` column. Both are accepted: a packet built before R53 has names in both places.
-    known = set(runs.column("processing_run_id").to_pylist())
-    if "processing_run_name" in runs.column_names:
-        known |= {n for n in runs.column("processing_run_name").to_pylist() if n is not None}
-    for missing in sorted(named - known):
-        report.add(
-            "error",
-            "provenance.unknown_processing_run",
-            f"processing_run_id {missing!r} appears in no row of core.processing_runs (Part 05 §5.3)",
-        )
 
 
 def _check_time_origin(packet: Packet, report: Report) -> None:
@@ -798,9 +719,9 @@ def _check_owned_digests(packet: Packet, report: Report) -> None:
 def _check_sources(packet: Packet, report: Report) -> None:
     """R80: what a source declaration must be, decided without reaching the network.
 
-    Three things are structural and one is not. A `source` names a body of data rather than a
-    location, so the entry's `uri` MUST be relative to it (Part 04 §5.5) and the entry MUST be
-    external, since the mechanism exists for bytes the packet does not own. `sources.json` MUST
+    Two things are structural and one is not; the manifest schema already requires `external` beside
+    a `source`. A `source` names a body of data rather than a location, so the entry's `uri` MUST be
+    relative to it (Part 04 §5.5). `sources.json` MUST
     NOT be a declared resource (Part 04 §5.5): being outside the manifest is what keeps Part 04 §5.1's
     immutability off it, and a packet that declared it would freeze the one file that has to
     stay editable.
@@ -823,13 +744,6 @@ def _check_sources(packet: Packet, report: Report) -> None:
                 )
             continue
         named.setdefault(source, []).append(resource.resource_id)
-        if not resource.is_external:
-            report.add(
-                "error",
-                "source.not_external",
-                f"{resource.resource_id} names source {source!r} without external: true; a source locates "
-                "bytes the packet does not own (Part 04 §5.5)",
-            )
         if "://" in resource.uri:
             report.add(
                 "error",
@@ -2120,30 +2034,9 @@ def _offending(connection: Any, sql: str) -> list[tuple[Any, ...]]:
     return list(zip(*[column.to_pylist() for column in table.columns], strict=True))
 
 
-def _available_extension_contexts(
-    packet: Packet, core: CheckedRegistryContext, report: Report
-) -> dict[str, CheckedRegistryContext]:
-    """Check every declared extension whose exact bytes can be acquired."""
-    contexts: dict[str, CheckedRegistryContext] = {}
-    for extension_id, entry in (packet.manifest.extensions or {}).items():
-        location = entry.get("registry") if isinstance(entry, Mapping) else None
-        if not location:
-            continue
-        try:
-            data = packet.location.join(str(location)).read_bytes()
-        except (OSError, PacketError, ResourceUnreadableError, ValueError):
-            # Missing/unreadable policy is deliberately owned by a later decision.
-            continue
-        context = check_registry_context_bytes(data, core=core)
-        contexts[str(extension_id)] = context
-        report.record_registry(str(extension_id), context)
-    return contexts
-
-
 def validate(
     packet: Packet,
     *,
-    registry: Mapping[str, Any] | None = None,
     advisory: bool = False,
     limits: Mapping[str, Any] | None = None,
     scan: Collection[str] | None = None,
@@ -2152,18 +2045,15 @@ def validate(
     checksums: bool = False,
     store_digests: bool = False,
 ) -> Report:
-    """Validate a packet.
+    """Validate a packet against the registries it binds.
 
-    The registry is taken from the packet unless one is supplied. Nothing is bundled: a
-    packet SHOULD embed the registry it was written against (Part 02 §9.2), and a bundled copy
-    would go stale against the reference one.
+    Only a bound registry that passes Part 04 §10's binding checks directs packet checks; no
+    bundled or caller-supplied registry stands in for one (Part 05 §14.5).
 
     Parameters
     ----------
     packet : Packet
         The packet to validate.
-    registry : Mapping, optional
-        Registry to validate against. Defaults to the packet's embedded copy.
     limits : Mapping, optional
         DuckDB settings bounding what validation may consume, defaulting to :data:`LIMITS`,
         with `temp_directory` filled in beside the packet so the limit has somewhere to spill.
@@ -2207,57 +2097,28 @@ def validate(
     -------
     Report
         Every finding, in the order the layers ran.
-
-    Raises
-    ------
-    PacketError
-        If no registry is available.
     """
-    report = Report(advisory=advisory)
-    embedded_context: CheckedRegistryContext | None = None
-    try:
-        embedded_bytes = packet.location.join("schemas/logical_schemas.json").read_bytes()
-    except (OSError, PacketError, ResourceUnreadableError, ValueError):
-        embedded_bytes = None
-    if embedded_bytes is not None:
-        embedded_context = check_registry_context_bytes(embedded_bytes)
-
-    supplied_context = check_registry_context(registry) if registry is not None else None
-    effective_context = supplied_context or embedded_context
-    if effective_context is None:
-        raise PacketError(
-            f"{packet.manifest.packet_id} embeds no registry at schemas/logical_schemas.json and none was supplied"
-        )
-    if embedded_context is not None:
-        report.record_registry(
-            "core:embedded" if supplied_context is not None else "core",
-            embedded_context,
-            directs_checks=supplied_context is None,
-        )
-    if supplied_context is not None:
-        report.record_registry("core:supplied", supplied_context, directs_checks=True)
-
-    effective = effective_context.document
-    if embedded_context is not None and isinstance(embedded_context.document, Mapping):
-        _check_embedded_registry(packet, embedded_context.document, report)
-    extension_contexts = _available_extension_contexts(packet, effective_context, report)
-    _check_sources(packet, report)
-    if effective_context.result.state != "valid" or not isinstance(effective, Mapping):
+    # The manifest the packet carries, which for an amendment's candidate is not the file on disk. A
+    # reader already refused bytes the `json` phase would, so re-encoding what it decoded loses no finding.
+    manifest = json.dumps(packet.manifest.entry).encode()
+    report, bound = check_packet_manifest(packet.location, advisory=advisory, manifest=manifest)
+    if bound is None:
         return report
-    valid_extensions = [
-        context.document
-        for context in extension_contexts.values()
-        if context.result.state == "valid" and isinstance(context.document, Mapping)
-    ]
-    packet = packet.with_declarations(effective, *valid_extensions)
-    _check_resource_declarations(packet, effective, valid_extensions, report)
+    _check_sources(packet, report)
+    core_context = bound.core
+    if core_context is None:
+        return report
+    effective = core_context.document
+    extensions = {name: context.document for name, context in bound.extensions.items()}
+    withheld = set(packet.manifest.extensions) - set(extensions)
+    packet = packet.with_declarations(effective, *extensions.values())
+    _check_resource_declarations(packet, effective, extensions, withheld, report)
     _check_codec_declarations(packet, report, resolved=external)
     if external:
         _resolve_external(packet, report, checksums, store_digests)
     if checksums:
         _check_owned_digests(packet, report)
     _check_packet_owned_arrays(packet, report)
-    _check_materialization_provenance(packet, report)
     _check_time_origin(packet, report)
     present = _check_schemas(packet, _tables(effective), report)
     unsound = _check_ordering(_tables(effective), present, report, scan)
@@ -2266,8 +2127,8 @@ def validate(
     _check_reserved_values(present, _tables(effective), report)
     _run_rules(
         packet,
-        effective_context,
-        extension_contexts,
+        core_context,
+        bound.extensions,
         present,
         report,
         advisory,
@@ -2278,4 +2139,55 @@ def validate(
     return report
 
 
-__all__ = ["ARROW_TYPES", "Evaluation", "Finding", "Report", "registry_meta_schema", "sql_name", "validate"]
+def check_packet_manifest(
+    root: Location | str | Path, *, advisory: bool = False, manifest: bytes | None = None
+) -> tuple[Report, Bound | None]:
+    """Run Part 04 §10's phases up to `registry_binding`, from the manifest's bytes.
+
+    Needs no opened packet, so a manifest a reader refuses -- one repeating a member or a resource
+    ID -- still gets its findings.
+
+    Parameters
+    ----------
+    root : Location, str, or Path
+        The packet root, against which descriptor paths resolve.
+    advisory : bool, default False
+        Recorded on the report.
+    manifest : bytes, optional
+        The manifest to check. Defaults to the root's `packet.json`.
+
+    Returns
+    -------
+    Report
+        The manifest and registry findings, and every acquired registry's complete result.
+    Bound or None
+        What binding established, or None where an earlier phase stopped evaluation.
+    """
+    report = Report(advisory=advisory)
+    location = Location.of(root)
+    issues: list[Issue] = []
+    try:
+        raw = location.join(MANIFEST_FILENAME).read_bytes() if manifest is None else manifest
+    except Exception as exc:  # noqa: BLE001 - what a store raises on a failed read is its own business
+        report.add("error", "packet.manifest.invalid_json", f"no readable {MANIFEST_FILENAME} at {location}: {exc}")
+        return report, None
+    document = check_manifest(raw, issues)
+    bound = None if document is None else bind_registries(location, document, issues)
+    for issue in issues:
+        report.add("error", issue.check, issue.message, issue.rows, extension=issue.extension)
+    if bound is not None:
+        for name, context in bound.contexts.items():
+            report.record_registry(name, context, directs_checks=bound.directs(name), core=name == bound.core_id)
+    return report, bound
+
+
+__all__ = [
+    "ARROW_TYPES",
+    "Evaluation",
+    "Finding",
+    "Report",
+    "check_packet_manifest",
+    "registry_meta_schema",
+    "sql_name",
+    "validate",
+]

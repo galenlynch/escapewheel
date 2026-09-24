@@ -351,8 +351,6 @@ def spike_events(
     # decoding them -- 9.13 GB of Arrow per 40 row groups -- has nothing left to avoid: four
     # bytes a row is what the code alone used to cost.
     registry = packet.registry
-    if registry is None:
-        raise NotAligned("the packet embeds no registry, so the derived table has no declared types")
     spike_spec = registry["resources"]["analysis.spike_events"]["table"]
     out = arrow_schema(spike_spec, {*columns, "clock_id", "time_bucket_tick"})
 
@@ -407,9 +405,9 @@ def spike_events(
             shutil.rmtree(root, ignore_errors=True)
 
 
-#: `processing_run_id` for this materialization. Stable rather than random, so re-running it
-#: produces the same identifier and an amendment that replaces the table replaces its run
-#: rather than accumulating one per attempt.
+#: `processing_run_id` of the run row this materialization records. Stable rather than random, so
+#: re-running it produces the same identifier and an amendment that replaces the table replaces its
+#: run rather than accumulating one per attempt.
 RUN_ID = "materialize.analysis.spike_events"
 
 
@@ -424,11 +422,11 @@ def into(
     memory_budget: int | str = 0,
     scratch: Path | None = None,
 ) -> str:
-    """Add `analysis.spike_events` to a writer, with the provenance Part 06 and R31 require.
+    """Add `analysis.spike_events` to a writer, with its lineage and a run row.
 
-    Three things are recorded, across the two places R9 left provenance in: the source
-    resources as the manifest's `derived_from`, the run as a `core.processing_runs` row, and
-    the link between them as the resource's `processing_run_id`.
+    The source resources become the manifest's required `derived_from` (Part 04 §7). The run is a
+    `core.processing_runs` row, which Part 06 §5 permits rather than requires, and no manifest member
+    names it.
 
     `bucket_seconds` goes in `parameters` because it cannot be recovered from the data -- a
     table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s
@@ -491,7 +489,6 @@ def into(
             }
         ],
     )
-    writer.produced_by(resource, run_id)
     return resource
 
 

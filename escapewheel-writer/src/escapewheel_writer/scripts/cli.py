@@ -383,15 +383,17 @@ def _extension_check(args: argparse.Namespace) -> int:
         print(f"error: {args.document} does not exist", file=sys.stderr)
         return 2
     if args.packet is not None:
-        from escapewheel_reader import open_packet
+        from escapewheel_reader import RegistryUnavailable, open_packet
 
         packet = open_packet(args.packet)
+        core = packet.manifest.core
+        if core is None:
+            print(f"error: {args.packet} binds no core registry to check against", file=sys.stderr)
+            return 2
         try:
-            core_context = check_registry_context_bytes(
-                packet.location.join("schemas/logical_schemas.json").read_bytes()
-            )
-        except OSError:
-            print(f"error: {args.packet} embeds no registry to check against", file=sys.stderr)
+            core_context = check_registry_context_bytes(packet.registry_bytes(core.registry_id))
+        except RegistryUnavailable as exc:
+            print(f"error: {exc}", file=sys.stderr)
             return 2
     else:
         if not args.registry.is_file():

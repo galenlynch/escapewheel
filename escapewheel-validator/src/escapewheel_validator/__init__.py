@@ -1,4 +1,4 @@
-"""Validate Escapewheel packets against the registry they embed.
+"""Validate Escapewheel packets against the registries they bind.
 
 Rules are data, not code: Tier 1 checks are generated from each table's structure, and Tier 2
 rules are parsed against the registry's versioned portable language before execution. A completed
@@ -12,6 +12,7 @@ separate package: `escapewheel_reader` opens a packet with PyArrow alone.
 from importlib.metadata import PackageNotFoundError, version
 
 from .generate import Check, generate
+from .manifest import manifest_schema
 from .registry_document import (
     CheckedRegistryContext,
     RegistryRejected,
@@ -19,7 +20,16 @@ from .registry_document import (
     check_registry_context,
     check_registry_context_bytes,
 )
-from .validator import Evaluation, Finding, OrderViolation, RegistryEvaluation, Report, validate, verify_order
+from .validator import (
+    Evaluation,
+    Finding,
+    OrderViolation,
+    RegistryEvaluation,
+    Report,
+    check_packet_manifest,
+    validate,
+    verify_order,
+)
 
 try:
     __version__ = version("escapewheel-validator")
@@ -37,9 +47,11 @@ __all__ = [
     "RegistryResult",
     "Report",
     "__version__",
+    "check_packet_manifest",
     "check_registry_context",
     "check_registry_context_bytes",
     "generate",
+    "manifest_schema",
     "validate",
     "verify_order",
 ]

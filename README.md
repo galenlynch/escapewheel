@@ -58,8 +58,8 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 ## A packet
 
 ```
-packet.json                      the manifest: every resource, declaration, and location
-schemas/logical_schemas.json         the registry this packet was written against
+packet.json                      the manifest: every resource, its location, and each bound registry's digest
+registries/<id>/<version>.json.gz    the registries that declare the packet's resources
 tables/core/*.parquet                canonical normalized facts
 arrays/core/*.zarr                   dense arrays
 ```
