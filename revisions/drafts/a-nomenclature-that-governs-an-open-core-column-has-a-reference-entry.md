@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `06b11fb29285fe90890ae84054ca33807bf9abfb` |
+| **Based on** | `0526ab09528afca6dbea7e79fe10cdea51846c29` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 00 §10; Part 02 §§9.3 and 13 |
@@ -49,7 +49,7 @@ needed. No section is added, moved, split, or retired.
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | Part 02 §9.3, "A writer MUST spell a value as the named nomenclature does" | replace in place | same section | the rule binds values of open columns and cites Part 02 §13; a closed column's `authority` is provenance | §3.1 |
-| Part 00 §10, the exact and unversioned entry kinds and the release rule | replace in place | same section | adds the living-registry kind; a release identifies a living registry by name and URI | §3.2 |
+| Part 00 §10, the paragraph defining the exact and unversioned entry kinds and stating the release rule | replace in place | same section | adds the living-registry kind; a release identifies a living registry by name and URI | §3.2 |
 | Part 02 §13, a one-item list naming UCUM 2.2 | replace in place | same section | a three-column table of UCUM, NCBI Taxonomy, MGI, and RGD; the closing paragraph on offline validation stays | §3.3 |
 | none; nothing ties an authority in the core registry to a reference entry | add | Part 02 §13 | every authority on an open column of the core registry has an entry there | §3.4 |
 
@@ -89,8 +89,9 @@ column invokes nothing.
 page is FHIR 5.0.0, whose value set holds `male`, `female`, `other` and `unknown`. R101 §3.6 put
 FHIR on the column as the source of three values' spelling, stating that "drawn from is not equal
 to" and that the `enum` is the set a validator enforces. Part 02 §9.3 does not carry that
-distinction, so its spelling sentence reaches `sex` as it reaches `species`. The reference writer
-maps a source's sex onto the four `enum` values, so no packet depends on the literal reading.
+distinction, so its spelling sentence reaches `sex` as it reaches `species`. The reference writer's
+`sex` mapping, which the AIND adapter shares, targets the four `enum` values, so no packet depends
+on the literal reading.
 
 ### 2.3 NCBI Taxonomy, MGI and RGD publish dated states, not editions
 
@@ -140,18 +141,20 @@ Every entry identifies its authority by the URI the core registry already declar
 decidable by comparing strings from two artifacts the repository holds, and no registry declaration
 changes.
 
-Two open drafts touch nearby text.
-`every-packet-owned-resource-records-a-named-whole-object-digest.md` moves RFC 1952's entry from
-Part 03 §12 into Part 00 §10's table and moves its allocation row from Part 03 to Part 00. This
-draft edits Part 00 §10's edition paragraph above that table and adds a Part 02 allocation, so the
-two commute; RFC 1952's entry is exact either way. Both drafts revise the specification README's
-paragraph naming each part's references, this one its Part 02 sentence and the digest draft its
-sentences on Parts 03 and 04.
-`the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md`
-amends Part 03 §§5.5 and 6.4 and Part 05 §5.3 and relies on Part 03 §12's unversioned codec entries,
-whose release treatment this draft leaves unchanged; the two share no text. The draft
-`a-float-column-declares-whether-it-admits-non-finite-values.md` edits Part 02 §§9.2 and 9.4 and
-cites Part 02 §9.3's rule that an absent `vocabulary` is a defect, which this draft keeps.
+R136 moved RFC 1952's entry from Part 03 §12 into Part 00 §10's table, moved its row in
+`framework.py`'s allocation from Part 03 to Part 00, added Part 04 rows for the CRC64NVME and CRC32C
+authorities, and revised the Part 00 and Part 04 sentences of the specification README's paragraph
+naming each part's references. It left Part 00 §10's edition paragraph and the README's Part 02
+sentence as they were, so this draft's replacements apply to the current text, and RFC 1952's exact
+entry is unaffected. R137 amended Part 03 §§5.5 and 6.4 and Part 05 §5.3; the Blosc and
+sharding-indexed codecs it admitted to the Zarr v3 floor have unversioned entries in Part 03 §12,
+whose release treatment this draft leaves unchanged. R138 amended Part 05 §3.1. R137 and R138 share
+no text with this draft.
+
+One other draft is open. `a-float-column-declares-whether-it-admits-non-finite-values.md` edits
+Part 02 §§3, 5, 9.2, 9.4, and 10.1 and the specification README's identifier table, and cites
+Part 02 §9.3's rule that an absent `vocabulary` is a defect, which this draft keeps. The two share
+no text and neither depends on the other; the drafts' application order puts the float draft first.
 
 ## 3. Decision
 
@@ -229,10 +232,10 @@ R8 §§3 and 4, R9 §6, R22 §3, R101 §§3.1, 3.3, 3.6, 3.9, and 3.11, and R107
 | packet manifest and JSON Schemas | Unchanged. A manifest binds registries, not their references, and the registry schema's `authority` shape stands. | None required. |
 | validation and import | Unchanged. Part 02 §9.3 already forbids a validator to dereference an authority or reject a value it lacks, and the `enum` check on `sex` stands. | None required. |
 | extensions | Unchanged. No extension registry declares an authority, and §3.4 excludes one that does. | None required. |
-| reader, writer, validator, adapters | Unchanged. The writer's `sex` mapping already targets the `enum`, and no reader or validator reads an authority's content. | The existing writer tests of the `sex` mapping. |
+| reader, writer, validator, adapters | Unchanged. The writer's `sex` mapping, which the AIND adapter shares, already targets the `enum`, and no reader or validator reads an authority's content. | The existing writer tests of the `sex` mapping. |
 | conformance fixtures and tests | `framework.py` gains probes: an entry removed from Part 02 §13, a Part 02 entry copied into another part's reference section, and an open core column naming an authority URI no Part 02 §13 entry links. Packet fixtures are unchanged, because no packet-level rule changes. | `framework.py`'s probes. |
 | revision process and tooling | `framework.py`'s allocation gains Part 02 §13's section, its four rows, and an owner for each authority, and it gains §3.4's check, which reads the core registry because the condition is a consistency condition of the candidate rather than of a registry document. The ledger changes as stated above. | `framework.py`, `ledger.py`, and `evidence.py`. |
-| generated publications and developer documentation | The combined specification regenerates. The specification README's reference paragraph, which places the UCUM and URI authorities in Part 02 §13, names UCUM and the three registries there; RFC 3986 is in Part 00 §10. | `verify.py`. |
+| generated publications and developer documentation | The combined specification regenerates. The last sentence of the specification README's reference paragraph, which places the UCUM and URI authorities in Part 02 §13, names UCUM and the three registries there, since RFC 3986's entry is in Part 00 §10. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
