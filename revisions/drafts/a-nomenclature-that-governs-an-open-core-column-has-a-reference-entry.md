@@ -33,12 +33,12 @@ Part 02 §9.3's spelling rule also has no answer for a value its nomenclature do
 as a strain not yet registered, and no validator can check the rule.
 
 This revision confines the spelling rule to open columns, so that a closed column's `authority`
-records provenance and invokes nothing, and to values a named nomenclature registers, so that a
-writer writes any other value as the source states it. It states that no validator checks the rule.
-It adds a living-registry entry kind to Part 00 §10, which a release identifies by name and URI
-rather than edition. It gives Part 02 §13 the three-column table the other parts use, with entries
-for NCBI Taxonomy, MGI and RGD as living registries beside UCUM's exact edition, and makes every
-authority on an open column of the core registry need an entry there.
+records provenance and invokes nothing, and to values whose registered name a writer can identify,
+so that a writer writes any other value as the source states it. It states that no validator checks
+the rule. It adds a living-registry entry kind to Part 00 §10, which a release identifies by name
+and URI rather than edition. It gives Part 02 §13 the three-column table the other parts use, with
+entries for NCBI Taxonomy, MGI and RGD as living registries beside UCUM's exact edition, and makes
+every authority on an open column of the core registry need an entry there.
 
 The change is structural because it replaces rules inside existing sections: Part 00 §10's edition
 paragraph, Part 02 §9.3's spelling sentence, and Part 02 §13's one-item list. Appended sections
@@ -52,7 +52,7 @@ needed. No section is added, moved, split, or retired.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
-| Part 02 §9.3, "A writer MUST spell a value as the named nomenclature does" | replace in place | same section | the rule binds values of open columns that a named nomenclature registers and cites Part 02 §13; an unregistered value is written as the source states it; no validator checks either, except a unit column's value under Part 02 §8.4; a closed column's `authority` is provenance | §3.1 |
+| Part 02 §9.3, "A writer MUST spell a value as the named nomenclature does" | replace in place | same section | the rule binds values of open columns whose registered name a writer can identify and cites Part 02 §13; any other value is written as the source states it; no validator checks either, except a unit column's value under Part 02 §8.4; a closed column's `authority` is provenance | §3.1 |
 | Part 00 §10, the paragraph defining the exact and unversioned entry kinds and stating the release rule | replace in place | same section | adds the living-registry kind; a release identifies a living registry by name and URI | §3.2 |
 | Part 02 §13, a one-item list naming UCUM 2.2 | replace in place | same section | a three-column table of UCUM, NCBI Taxonomy, MGI, and RGD; the closing paragraph on offline validation stays | §3.3 |
 | none; nothing ties an authority in the core registry to a reference entry | add | Part 02 §13 | every authority on an open column of the core registry has an entry there | §3.4 |
@@ -183,14 +183,14 @@ each at its owner.
 
 ### 3.1 The spelling rule governs open columns
 
-Where a nomenclature named in an open column's `authority` registers the thing a value names, a
-writer MUST spell the value as that nomenclature spells it. Where none registers it, as for a strain
-not yet registered or a source value the writer cannot map to a registered name, a writer MUST write
-the value as the source states it. A validator verifies neither obligation, and Part 02 §9.3 already
-forbids it to dereference an authority or to reject a value for being absent from one. A unit
-column's value is the exception: Part 02 §8.4 requires it to be a UCUM code whatever the source
-states, and a validator checks it by UCUM's grammar. Part 02 §13 identifies each nomenclature the
-core registry names in this way, and the edition that applies.
+Where a writer can identify the name that a nomenclature in an open column's `authority` registers
+for the thing a value names, it MUST write that name as the nomenclature spells it. Otherwise, as
+for a strain not yet registered or a source value matching no registered name, a writer MUST write
+the value as the source states it. A validator verifies neither obligation, since it neither
+dereferences an authority nor rejects a value for being absent from one. A unit column's value is
+the exception: Part 02 §8.4 requires it to be a UCUM code whatever the source states, and a
+validator checks it by UCUM's grammar. Part 02 §13 identifies each nomenclature the core registry
+names in this way, and the edition that applies.
 
 A closed column's `enum` is its whole value set and spells every value it admits. On a closed
 column, `authority` records where the `enum`'s spelling came from and invokes no nomenclature.
