@@ -217,6 +217,10 @@ is committed.
   mints two electrodes of one contact. If any source sets `prefix`, every source whose adapter
   accepts it must set the same value. A build refuses the recipe before opening a source, naming
   each source and its value. Test one set and one unset, two different values, and all equal.
+  The check does not reach adapters that take no `prefix`: `openephys`, `harp` and AIND's
+  `session` mint bare identifiers, so under a non-empty prefix `session`'s
+  `core.calibration_devices.device_id`, an assembly name, names no prefixed NWB device. Decide
+  whether those adapters accept `prefix` or a prefixed recipe refuses them.
 
 ---
 
