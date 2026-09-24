@@ -653,6 +653,12 @@ class PacketWriter:
             document = extension_context.document
             assert isinstance(document, Mapping)
             extension_id = str(document["extension_id"])
+            if extension_id in self._extensions:
+                versions = (self._extensions[extension_id]["registry_version"], document["registry_version"])
+                raise ValueError(
+                    f"two registries for extension {extension_id!r} (versions {versions[0]} and {versions[1]}); a "
+                    "packet binds one per extension (Part 04 §8, Part 05 §3.1), so the writer keeps neither"
+                )
             for resource_id in document["resources"]:
                 if not resource_id.startswith(f"{extension_id}."):
                     raise ValueError(

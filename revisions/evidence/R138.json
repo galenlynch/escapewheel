@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "revision": "R138",
+  "based_on": "06b11fb29285fe90890ae84054ca33807bf9abfb",
+  "clauses": {
+    "R138 \u00a73.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_a_recipe_listing_two_extensions_builds_and_binds_both"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_a_recipe_may_name_a_path_or_an_installed_id"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "escapewheel_writer.extensions already resolves each entry as a path or an installed identifier, and a build already binds every registry it resolves"
+      },
+      "documentation": {
+        "unchanged": "escapewheel-writer/CONTRIBUTING.md already describes naming an extension by path or installed identifier, which the clause leaves open"
+      }
+    },
+    "R138 \u00a73.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_a_recipe_listing_one_extension_twice_is_refused[repeated-path]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_a_recipe_listing_one_extension_twice_is_refused[two-versions]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_a_recipe_listing_one_extension_twice_is_refused[path-and-installed-id]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_the_check_command_refuses_one_extension_listed_twice"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_two_registries_for_one_extension_are_refused_given_directly"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "escapewheel-writer/CONTRIBUTING.md"
+        ]
+      }
+    }
+  }
+}

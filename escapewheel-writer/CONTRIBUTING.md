@@ -213,7 +213,9 @@ owns = ["vr_foraging.sites", "vr_foraging.patches"]
 
 Nothing about carrying one extension is special-cased, so carrying three is carrying one thrice.
 They cannot collide: R17 §2 namespaces every table by its `extension_id`, and the writer refuses a
-document that defines a table outside its own namespace or redefines a core one.
+document that defines a table outside its own namespace or redefines a core one. A packet binds
+one registry per extension, so `Recipe.check` refuses two entries resolving to one `extension_id`,
+and `PacketWriter` two documents carrying one, rather than keeping the later (Part 05 §3.1).
 
 Reading the resulting packet needs **none of those packages installed**.
 

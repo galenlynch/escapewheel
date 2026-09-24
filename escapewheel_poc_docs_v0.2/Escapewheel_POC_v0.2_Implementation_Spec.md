@@ -3136,6 +3136,18 @@ A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This par
 
 A recipe MUST NOT list a source kind in more than one `source` entry, and a build MUST refuse one that does, naming the kind. A preference, an ownership refusal, and a build's reports name a source by its kind.
 
+Each entry of the `[packet]` member `extensions` names one extension registry, and a build MUST
+bind every registry so named under
+[Part 09 §5.3](09_metadata_and_extensions.md#ew-extension-registration). This specification does
+not fix how a build resolves an entry to a registry document, whether it reads the entry as a path
+beside the recipe or as the identifier of a registry an implementation has installed.
+
+A recipe MUST NOT list one extension in more than one `extensions` entry, and a build MUST refuse
+one that does, naming the `extension_id` and each entry that resolves to it, before it opens any
+source. Two entries list one extension when the registry documents they resolve to carry the same
+`extension_id`, whether the entries repeat one string, pair a path with an identifier, or name two
+versions of the registry.
+
 ### 3.2 The recipe is the provenance record
 
 A writer MUST record the recipe in the import run's parameters, and its digest as the run's `code_uri`. A committed packet therefore states what produced it.

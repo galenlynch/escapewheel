@@ -420,6 +420,128 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
     assert packet.table("unit_qc.metrics").num_rows == 2
 
 
+# -- a recipe names each extension once (Part 05 §3.1) ----------------------------------------
+
+
+def _task_version(version):
+    """The task extension at `version`, 0.2.0 admitting one more choice so the two are not the same bytes."""
+    document = copy.deepcopy(EXTENSION)
+    document["registry_version"] = version
+    if version != EXTENSION["registry_version"]:
+        choice = document["resources"]["task.trials"]["table"]["columns"][3]
+        choice["enum"] = [*choice["enum"], "none"]
+    return document
+
+
+def _named(extension_id):
+    """The task extension renamed, so a recipe can list two distinct extensions."""
+    document = json.loads(json.dumps(EXTENSION).replace('"task', f'"{extension_id}'))
+    document["extension_id"] = document["registry_id"] = extension_id
+    return document
+
+
+def _extensions_recipe(tmp_path, entries, documents, source=""):
+    """A recipe listing `entries` under `[packet].extensions`, with `documents` written beside it."""
+    for name, document in documents.items():
+        (tmp_path / name).write_text(json.dumps(document))
+    path = tmp_path / "session.toml"
+    path.write_text(
+        f'[packet]\nid = "s001"\nextensions = {json.dumps(entries)}\n'
+        '[session]\nsession_id = "s001"\nsubject_id = "m001"\nsession_start_time = "2026-08-27T00:00:00Z"\n'
+        '[subject]\nsubject_id = "m001"\nspecies = "Mus musculus"\nsex = "male"\n'
+        '[[clock]]\nclock_id = "harp"\nname = "harp"\ntick_rate_num = 31250\norigin = "harp_epoch"\n' + source
+    )
+    return path
+
+
+#: A source the build would open were the recipe not refused first.
+SORTER = (
+    '[[source]]\nkind = "sorter"\nroot = "sorted"\n'
+    'owns = ["core.units", "core.clocks", "core.curation_versions", "core.sorting_runs"]\n'
+)
+
+
+def _build_refuses(recipe, registry, monkeypatch):
+    """Build `recipe`, requiring a refusal before any source is opened, and return the refusal."""
+    from escapewheel_writer import session
+
+    def opened(*_args, **_kwargs):
+        raise AssertionError("a source was opened")
+
+    monkeypatch.setattr(session, "_build_source", opened)
+    with pytest.raises(session.RecipeError) as refused:
+        session.build(recipe, registry)
+    assert not (recipe.out / "staging").exists(), "refused before anything was prepared"
+    return str(refused.value)
+
+
+@pytest.mark.parametrize(
+    ("entries", "documents", "installed"),
+    [
+        (["task.json", "task.json"], {"task.json": EXTENSION}, {}),
+        (
+            ["task-0.1.0.json", "task-0.2.0.json"],
+            {"task-0.1.0.json": EXTENSION, "task-0.2.0.json": _task_version("0.2.0")},
+            {},
+        ),
+        (["task.json", "task"], {"task.json": EXTENSION}, {"task": EXTENSION}),
+    ],
+    ids=["repeated-path", "two-versions", "path-and-installed-id"],
+)
+def test_a_recipe_listing_one_extension_twice_is_refused(
+    tmp_path, registry, monkeypatch, entries, documents, installed
+):
+    """Part 05 §3.1: entries list one extension when their documents carry one `extension_id`, however
+    each entry names it, and the build refuses before it opens a source rather than keeping the last."""
+    from escapewheel_writer import extensions as ext
+    from escapewheel_writer.recipe import Recipe
+
+    monkeypatch.setattr(ext, "installed", lambda: installed)
+    recipe = Recipe.load(_extensions_recipe(tmp_path, entries, documents, SORTER))
+    refusal = _build_refuses(recipe, registry, monkeypatch)
+    named = ", ".join(repr(entry) for entry in entries)
+    assert "refused, 1 error(s)" in refusal
+    assert f"extension task is listed in 2 entries ({named})" in refusal
+
+
+def test_the_check_command_refuses_one_extension_listed_twice(tmp_path, capsys):
+    """`import --check` reaches the same refusal, from the recipe and the registries alone."""
+    from escapewheel_reader.scripts.cli import main
+
+    registry = Path(__file__).resolve().parents[2] / "registry" / "logical_schemas.json"
+    path = _extensions_recipe(
+        tmp_path,
+        ["task-0.1.0.json", "task-0.2.0.json"],
+        {"task-0.1.0.json": EXTENSION, "task-0.2.0.json": _task_version("0.2.0")},
+    )
+    assert main(["import", str(path), "--registry", str(registry), "--check"]) == 2
+    assert "extension task is listed in 2 entries ('task-0.1.0.json', 'task-0.2.0.json')" in capsys.readouterr().err
+
+
+def test_a_recipe_listing_two_extensions_builds_and_binds_both(tmp_path, registry):
+    """Distinct `extension_id` values are two extensions, each bound (Part 05 §3.1, Part 09 §5.3)."""
+    from escapewheel_writer.recipe import Recipe
+    from escapewheel_writer.session import build
+
+    recipe = Recipe.load(
+        _extensions_recipe(tmp_path, ["task.json", "cue.json"], {"task.json": EXTENSION, "cue.json": _named("cue")})
+    )
+    assert not [p for p in recipe.check(registry.document, [EXTENSION, _named("cue")]) if "extension" in p.message]
+    writer = build(recipe, registry)
+    assert writer.commit(recipe.out).passed
+    bound = json.loads((recipe.out / "packet.json").read_text())["registries"]
+    assert {registry_id: bound[registry_id]["role"] for registry_id in ("task", "cue")} == {
+        "task": "extension",
+        "cue": "extension",
+    }
+
+
+def test_two_registries_for_one_extension_are_refused_given_directly(registry):
+    """A writer given the documents rather than a recipe refuses too, instead of keeping the later."""
+    with pytest.raises(ValueError, match=r"two registries for extension 'task' \(versions 0.1.0 and 0.2.0\)"):
+        PacketWriter(registry, packet_id="s001", extensions=[EXTENSION, _task_version("0.2.0")])
+
+
 # -- an extension that is entirely data ------------------------------------------------------
 
 

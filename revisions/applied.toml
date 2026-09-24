@@ -3482,3 +3482,13 @@ note = "physical.outside_reader_floor per assessed resource, warning for a packe
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-validation-shim" }]
 note = "external.physical_unassessed at info, one per external resource with a floor whose metadata was not read"
+
+[clause."R138 §3.1"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-purpose" }]
+note = "each [packet].extensions entry names one extension registry the build binds under Part 09 §5.3; how an entry resolves, as a path or an installed identifier, is not fixed"
+
+[clause."R138 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-purpose" }]
+note = "a recipe lists an extension in one entry, compared by the extension_id each entry resolves to, and a build refuses otherwise before opening a source, naming the extension_id and each entry"

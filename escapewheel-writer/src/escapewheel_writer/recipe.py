@@ -821,7 +821,8 @@ class Recipe:
         extensions : sequence of Mapping
             Extension registries, whose tables a source may also own. An extension's references
             resolve against core; core's never resolve against an extension, which Part 09 §2
-            requires by forbidding core to reference one at all.
+            requires by forbidding core to reference one at all. Given in the order of the
+            `[packet].extensions` entries they resolve from, so a refusal can name the entries.
 
         Returns
         -------
@@ -860,6 +861,7 @@ class Recipe:
                 errors.append(f"{resource} is owned by {kinds[0]} but also supplied by {', '.join(others)}")
 
         errors.extend(self._arbitration_problems())
+        errors.extend(self._extension_problems(extensions or ()))
         warnings.extend(self._unclaimed())
         errors.extend(self._dangling_references(tables, claimants, warnings))
         errors.extend(self._clock_problems())
@@ -929,6 +931,28 @@ class Recipe:
                 for resource in sorted(asked["contributes"] - asked["produces"])
             ]
         return problems
+
+    def _extension_problems(self, extensions: Sequence[Mapping[str, Any]]) -> list[str]:
+        """Report one extension listed in more than one `extensions` entry (Part 05 §3.1).
+
+        Compared by `extension_id`, which only a resolved document carries, so a path paired with
+        an installed id, or paths to two versions, are caught as well as a repeated string. A
+        packet binds one registry per extension, so otherwise the build keeps one silently.
+        """
+        entries = (
+            self.extensions
+            if len(self.extensions) == len(extensions)
+            else tuple(f"document {position}" for position in range(1, len(extensions) + 1))
+        )
+        by_extension: dict[str, list[str]] = {}
+        for entry, document in zip(entries, extensions, strict=True):
+            by_extension.setdefault(str(document["extension_id"]), []).append(entry)
+        return [
+            f"extension {extension_id} is listed in {len(named)} entries ({', '.join(repr(e) for e in named)}); "
+            "a recipe lists an extension once, since a packet binds one registry per extension (Part 05 §3.1)"
+            for extension_id, named in sorted(by_extension.items())
+            if len(named) > 1
+        ]
 
     def _states_problems(self) -> list[str]:
         """Adapters a build cannot ask which recipe fields they state (Part 05 §3.4).

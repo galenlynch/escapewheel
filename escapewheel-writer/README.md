@@ -54,7 +54,10 @@ reason = "the NWB states a probe's type and manufacturer; the sorter knows only 
 A recipe is TOML 1.0 whose decoded form satisfies `schemas/recipe.schema.json`, vendored from
 `registry/recipe.schema.json` (Part 05 §3.1). Its top-level blocks are closed, so a misspelled
 block is refused on load rather than dropped; `registry/recipe.example.toml` uses every one. A
-source kind appears once, and every report names a source by its kind.
+source kind appears once, and every report names a source by its kind. An extension appears once
+too: `[packet].extensions` entries whose documents carry one `extension_id`, whether a repeated
+entry, a path and an installed id, or two versions, are refused, since a packet binds one registry
+per extension.
 
 `owns` is exclusive and `contributes` is additive. That distinction is load-bearing: several
 adapters can produce `core.probes`, and without a declared owner the last one to run wins
