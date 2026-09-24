@@ -890,6 +890,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "escapewheel-validator" },
+    { name = "fsspec" },
     { name = "numpy" },
     { name = "pyarrow" },
     { name = "s3fs" },
@@ -967,6 +968,7 @@ requires-dist = [
     { name = "escapewheel-validator", editable = "../escapewheel-validator" },
     { name = "escapewheel-validator", extras = ["remote"], marker = "extra == 'remote'", editable = "../escapewheel-validator" },
     { name = "escapewheel-validator", extras = ["s3"], marker = "extra == 's3'", editable = "../escapewheel-validator" },
+    { name = "fsspec", specifier = ">=2026.7.0" },
     { name = "numcodecs", marker = "extra == 'nwb'", specifier = ">=0.13" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pyarrow", specifier = ">=25.0.1" },

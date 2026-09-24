@@ -19,6 +19,7 @@ version = "0.1.0"
 # it the reader -- is a dependency rather than an optional extra.
 dependencies = [
     "escapewheel-validator",
+    "fsspec>=2026.7.0",
     "numpy>=1.26",
     "pyarrow>=25.0.1",
     "s3fs>=2026.7.0",
@@ -151,6 +152,11 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 # zarr is the `arrays` extra, absent on a read-only install.
 module = "zarr.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# fsspec ships no py.typed marker.
+module = "fsspec.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

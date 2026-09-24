@@ -196,3 +196,27 @@ def test_a_store_root_caches_where_it_was_told(tmp_path):
     assert root.fs.storage == [str(tmp_path / "cache")]
     # The target's own options survive the chaining; anonymity is what a public bucket needs.
     assert root.fs.fs.anon is True
+
+
+def test_a_killed_download_leaves_nothing_cached(tmp_path, monkeypatch):
+    """A cached object is whole or absent: an interrupted fetch is fetched again, not read short."""
+    import fsspec
+    from fsspec.implementations.memory import MemoryFileSystem
+
+    from escapewheel_writer.sources.store import WholeObjectCache, source_root
+
+    fsspec.filesystem("memory").pipe("/bucket/obj", b"x" * 1000)
+
+    def killed(self, rpath, lpath, **kwargs):
+        with open(lpath, "wb") as partial:
+            partial.write(b"x" * 10)
+        raise KeyboardInterrupt
+
+    with monkeypatch.context() as patched:
+        patched.setattr(MemoryFileSystem, "get_file", killed)
+        with pytest.raises(KeyboardInterrupt):
+            source_root("memory://bucket/obj", cache=tmp_path / "cache").read_bytes()
+    assert list((tmp_path / "cache").iterdir()) == []
+    root = source_root("memory://bucket/obj", cache=tmp_path / "cache")
+    assert isinstance(root.fs, WholeObjectCache)
+    assert len(root.read_bytes()) == 1000

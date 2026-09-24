@@ -23,10 +23,39 @@ import tempfile
 from pathlib import Path, PurePath
 from typing import Any
 
+import fsspec
+from fsspec.implementations.cached import SimpleCacheFileSystem
 from numpy.typing import NDArray
 from upath import UPath
 
 from .zarr_compat import attrs, members, read_array
+
+
+class WholeObjectCache(SimpleCacheFileSystem):  # type: ignore[misc]
+    """`simplecache`, publishing an object into the cache only once all of it has arrived.
+
+    Upstream downloads into the file it later treats as cached and counts a file as cached if it
+    exists, so a build killed mid-download leaves a truncated object every later build reads as
+    whole. Registered under `simplecache` so every chained path this process opens uses it.
+    """
+
+    def _get_cached_file_before_open(self, path: str, **kwargs: Any) -> None:
+        if self.compression:
+            super()._get_cached_file_before_open(path, **kwargs)
+            return
+        cached = os.path.join(self.storage[-1], self._mapper(path))
+        partial = f"{cached}.{os.getpid()}.part"
+        self._mkcache()
+        self._cache_size = None
+        try:
+            self.fs.get_file(path, partial)
+            os.replace(partial, cached)
+        finally:
+            if os.path.exists(partial):
+                os.remove(partial)
+
+
+fsspec.register_implementation("simplecache", WholeObjectCache, clobber=True)
 
 
 class SourceStore:
