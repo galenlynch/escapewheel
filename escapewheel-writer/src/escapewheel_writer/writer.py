@@ -803,8 +803,8 @@ class PacketWriter:
         resource_id : str
             Dotted resource ID.
         batches : iterable of pyarrow.RecordBatch
-            Consumed once, at commit. A generator is the expected shape, and keeps the
-            source's rows out of memory until they are written.
+            Consumed once, at commit, before any table given to `add` is built. A generator is
+            the expected shape, and keeps the source's rows out of memory until they are written.
 
         Raises
         ------
@@ -1069,7 +1069,9 @@ class PacketWriter:
         if only is None:
             self._ordered = set()
         self._preassign()
-        for resource_id in self.resources:
+        # Streams first, so a held row may record what a stream only knows once consumed, such
+        # as a materializer's count of the spikes it could not place.
+        for resource_id in sorted(self.resources, key=lambda r: r not in self._batches):
             if only is not None and resource_id not in only:
                 continue
             spec = self.spec(resource_id)

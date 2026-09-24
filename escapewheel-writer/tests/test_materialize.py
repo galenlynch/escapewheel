@@ -277,6 +277,20 @@ def test_into_records_lineage_and_a_run_row(tmp_path):
     assert run["software_name"] and run["software_version"]
 
 
+def test_the_dropped_count_is_the_one_the_stream_reached(tmp_path):
+    """A writer consumes the stream at commit, after `into` has returned the run row."""
+    from escapewheel_writer.materialize import into
+
+    class Deferred(Recorder):
+        def add_batches(self, rid, batches):
+            self.batches[rid] = batches
+
+    writer = Deferred()
+    into(Fake(tmp_path, ticks=[1000, 1000 + 20 * AP], clocks=[PROBE] * 2), writer)
+    list(writer.batches["analysis.spike_events"])
+    assert writer.tables["core.processing_runs"][0]["parameters"]["spikes_without_a_defined_mapping"] == 1
+
+
 def test_the_bucket_width_is_recorded_because_it_cannot_be_recovered(tmp_path):
     """Part 06 §5: an unrecoverable transform parameter is recorded."""
     from escapewheel_writer.materialize import into

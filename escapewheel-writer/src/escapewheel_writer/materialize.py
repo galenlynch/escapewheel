@@ -447,9 +447,35 @@ def into(
     bound = declared_bound(packet) if bound is None else bound
     started = datetime.now(tz=timezone.utc)
     dropped: list[int] = [0]
-    writer.add_batches(
-        resource,
-        spike_events(
+    run: dict[str, Any] = {
+        "processing_run_id": run_id,
+        "session_id": session,
+        "activity_type": "materialization",
+        # R44 §2.1: session-wide, so the session is the scope. Both stay null on a
+        # multi-session packet rather than naming one of several, because a writer that
+        # cannot determine a fact records nothing (Part 04 §5.2). Part 02 §8.3: the pair is set
+        # together or not at all.
+        "scope_kind": "core.sessions" if session else None,
+        "scope": session,
+        "software_name": "escapewheel_writer",
+        "software_version": __version__,
+        "parameters": {
+            "bucket_seconds": bucket_seconds,
+            "bound": bound,
+            "reference_clock_id": reference,
+            # Part 06 §4. Recorded even when zero: that a bound was sufficient is a
+            # fact about this packet, not an assumption a reader should have to make.
+            "spikes_without_a_defined_mapping": None,
+        },
+        "started_at": started,
+        "ended_at": None,
+        "status": "succeeded",
+    }
+
+    def streamed() -> Iterator[pa.RecordBatch]:
+        # The writer consumes this at commit, after `into` has returned but before it builds
+        # `core.processing_runs`, so the run row is completed here rather than when it is added.
+        yield from spike_events(
             packet,
             reference=reference,
             bound=bound,
@@ -457,38 +483,13 @@ def into(
             memory_budget=memory_budget,
             scratch=scratch,
             dropped=dropped,
-        ),
-    )
+        )
+        run["parameters"]["spikes_without_a_defined_mapping"] = dropped[0]
+        run["ended_at"] = datetime.now(tz=timezone.utc)
+
+    writer.add_batches(resource, streamed())
     writer.derives(resource, ["core.spike_events", "core.clock_anchors", "core.clocks"])
-    writer.add(
-        "core.processing_runs",
-        [
-            {
-                "processing_run_id": run_id,
-                "session_id": session,
-                "activity_type": "materialization",
-                # R44 §2.1: session-wide, so the session is the scope. Both stay null on a
-                # multi-session packet rather than naming one of several, because a writer that
-                # cannot determine a fact records nothing (Part 04 §5.2). Part 02 §8.3: the pair is set
-                # together or not at all.
-                "scope_kind": "core.sessions" if session else None,
-                "scope": session,
-                "software_name": "escapewheel_writer",
-                "software_version": __version__,
-                "parameters": {
-                    "bucket_seconds": bucket_seconds,
-                    "bound": bound,
-                    "reference_clock_id": reference,
-                    # Part 06 §4. Recorded even when zero: that a bound was sufficient is a
-                    # fact about this packet, not an assumption a reader should have to make.
-                    "spikes_without_a_defined_mapping": dropped[0],
-                },
-                "started_at": started,
-                "ended_at": datetime.now(tz=timezone.utc),
-                "status": "succeeded",
-            }
-        ],
-    )
+    writer.add("core.processing_runs", [run])
     return resource
 
 

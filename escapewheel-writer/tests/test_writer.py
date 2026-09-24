@@ -314,6 +314,26 @@ def test_batches_reach_the_packet(tmp_path, registry, minimal):
     assert table.column("t_tick").to_pylist()[:3] == [0, 1, 2]
 
 
+def test_a_stream_is_consumed_before_any_table_is_built(tmp_path, registry, minimal):
+    """A row may record what a stream only knows once it has run, such as how many rows it dropped."""
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource, rows in minimal.items():
+        writer.add(resource, rows)
+    _add_spike_context(writer)
+    run = dict(_run("run_import"), parameters={"batches": 0})
+    writer.add("core.processing_runs", [run])
+    unit = writer.keys.of("unit", "1")
+
+    def batches():
+        yield _spike_batch(10, unit, 0)
+        run["parameters"]["batches"] = 1
+
+    writer.add_batches("core.spike_events", batches())
+    writer.commit(tmp_path / "pkt")
+    runs = pq.read_table(tmp_path / "pkt" / "tables" / "core" / "processing_runs.parquet")
+    assert [json.loads(p) for p in runs.column("parameters").to_pylist()] == [{"batches": 1}]
+
+
 def test_a_generator_is_consumed_lazily(tmp_path, registry):
     """Peak memory is one batch, so the source must not be materialized before commit."""
     seen = []
