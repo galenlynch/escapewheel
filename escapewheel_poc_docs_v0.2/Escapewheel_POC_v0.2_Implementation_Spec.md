@@ -2471,6 +2471,7 @@ A reader treats end of file as end of stream, so a delivery cut at a message bou
 
 Where rows travel on standard output they are bytes. An adapter MUST write the stream to a binary handle and a build MUST read one, because a platform translating a line ending corrupts the stream, which then fails as malformed data rather than as an encoding error.
 
+<a id="ew-adapter-declaration-document" data-spec-anchor="canonical"></a>
 ### 11.5 The declaration document
 
 A build reads what an adapter declares before it opens any source, and for a class it reads that by importing the adapter — which this section forbids requiring. An adapter a build cannot import MUST publish its declarations as a JSON document the recipe names, and a build MUST read that document before it launches anything.
@@ -2906,6 +2907,7 @@ A writer MUST NOT combine parsing, normalization, validation, and writing into o
 
 ## 3. The session recipe
 
+<a id="ew-recipe-purpose" data-spec-anchor="canonical"></a>
 ### 3.1 Purpose
 
 One source is rarely sufficient: integer sample indices come from a sorter, task structure and registration from an exported file, and session identity from acquisition metadata. The unit of work is therefore a **recipe** naming several sources, not a single input file.
@@ -2924,6 +2926,7 @@ A recipe MAY declare a fact a source it reads also states; §3.6 says which of t
 
 A writer MUST record the recipe in the import run's parameters, and its digest as the run's `code_uri`. A committed packet therefore states what produced it.
 
+<a id="ew-recipe-ownership" data-spec-anchor="canonical"></a>
 ### 3.3 Ownership
 
 Each source declares its resources as `owns` or `contributes`.
@@ -2941,6 +2944,7 @@ A preference is declared in the recipe, in a table keyed by resource, each entry
 
 A preference MUST NOT name a resource only one source produces. Such an entry arbitrates nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes stale the moment the second producer stops producing.
 
+<a id="ew-source-declarations" data-spec-anchor="canonical"></a>
 ### 3.4 What a source can produce
 
 Every source adapter MUST declare the set of resource identifiers it can supply. It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
@@ -2959,6 +2963,7 @@ A build MUST NOT compose a row from more than one source. The merged row would b
 
 A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for. What an implementation calls that declaration in code is Part 07 §4's, and the key it takes in a declaration document is Part 03 §11.5's.
 
+<a id="ew-recipe-check" data-spec-anchor="canonical"></a>
 ### 3.5 Checking a recipe
 
 A build MUST check a recipe against the registry before it opens any source. A build MUST refuse:
@@ -3600,6 +3605,7 @@ escapewheel verify <packet>            record what is true of external resources
 escapewheel prune <packet>             remove what the packet no longer names (03 §9.3)
 ```
 
+<a id="ew-reference-object-model" data-spec-anchor="canonical"></a>
 ## 4. Object model
 
 | type | responsibility |

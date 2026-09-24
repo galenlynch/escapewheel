@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [A Build Decides Ownership Only From the Recipe and Adapter Declarations](a-build-decides-ownership-only-from-the-recipe-and-adapter-declarations.md) | 2991 | Not yet appraised; promoted 2026-09-23 from the exact proposal at `896f392`. | Part 03 §11.5, Part 05 §§3.1 and 3.3–3.5, and Part 07 §4 in place; `registry/recipe.schema.json` added |

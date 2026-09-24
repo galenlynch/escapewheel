@@ -332,6 +332,12 @@ section = "3.1"
 title = "Abstraction levels"
 aliases = []
 
+[anchor.ew-adapter-declaration-document]
+part = "03"
+section = "11.5"
+title = "The declaration document"
+aliases = []
+
 [anchor.ew-analysis-content-class]
 part = "00"
 section = "5"
@@ -824,6 +830,30 @@ section = "13.2"
 title = "Exact unit selection and currency"
 aliases = []
 
+[anchor.ew-recipe-check]
+part = "05"
+section = "3.5"
+title = "Checking a recipe"
+aliases = []
+
+[anchor.ew-recipe-ownership]
+part = "05"
+section = "3.3"
+title = "Ownership"
+aliases = []
+
+[anchor.ew-recipe-purpose]
+part = "05"
+section = "3.1"
+title = "Purpose"
+aliases = []
+
+[anchor.ew-reference-object-model]
+part = "07"
+section = "4"
+title = "Object model"
+aliases = []
+
 [anchor.ew-reference-performance-notes]
 part = "07"
 section = "7"
@@ -966,6 +996,12 @@ aliases = []
 part = "02"
 section = "7.1"
 title = "Session scope"
+aliases = []
+
+[anchor.ew-source-declarations]
+part = "05"
+section = "3.4"
+title = "What a source can produce"
 aliases = []
 
 [anchor.ew-specification-actors]
