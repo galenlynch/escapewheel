@@ -157,6 +157,7 @@ Where a validator is asked to verify content **without reading**, it compares ea
 
 A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A validator MUST report what a verification pass skipped for these reasons, and **MUST NOT** report a store-digest pass as a checksum verification: it establishes something weaker and store-specific, so it gets its own finding.
 
+<a id="ew-source-resolution" data-spec-anchor="canonical"></a>
 ### 5.5 Source resolution
 
 An external resource entry MAY carry `source`, an identifier naming the body of data it belongs to;

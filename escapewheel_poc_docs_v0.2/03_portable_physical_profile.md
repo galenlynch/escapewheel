@@ -406,6 +406,7 @@ A packet-owned resource recording no digest is not checked, and a verification r
 
 Verification of external resources is optional and layered (Part 04 §5.3).
 
+<a id="ew-reaching-a-source" data-spec-anchor="canonical"></a>
 ## 11. Reaching a source
 
 An adapter reads one source and returns records, and a build assembles a packet from several (Part 05 §3.1). This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, and how an adapter declares itself. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes.

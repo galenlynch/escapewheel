@@ -12,6 +12,7 @@ A resource is imported when it has been discovered, extracted to staging, normal
 A staged resource MUST NOT appear in the committed manifest. Validation state does not change the
 content class or canonicality selected by its declaration; publication is the gate.
 
+<a id="ew-import-pipeline" data-spec-anchor="canonical"></a>
 ## 2. Pipeline
 
 | stage | action |
