@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `f5f33647eb9c3e29ff8c850afa480468fea0c582` |
+| **Based on** | `3ac0410c3476570785e1e6239044456ae63289c6` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 00 §§2.4 and 8; Part 03 §§3, 9.5, 11.2, and 11.3; Part 05 §§1, 2, 4, 4.2, 5, 6, 7, and 8 |
@@ -26,9 +26,9 @@ relative to publication. Read literally, Part 05 §2 has a writer publish a pack
 provenance and its analysis resources, which only an amendment can do.
 
 Two rules around that sequence hold of no build the reference writer performs.
-[Part 05 §7](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#7-stage-6-provenance)
+[Part 05 §7](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-import-provenance)
 obliges a writer to record the sources it read and link them to the import run, and the writer
-records neither. [Part 03 §9.5](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#95-cleanup)
+records neither. [Part 03 §9.5](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-packet-cleanup)
 forbids a writer to remove a file no manifest ever named, and every build removes its staging area,
 whose files no manifest names.
 
@@ -51,9 +51,8 @@ beside its replacement. One subsection is added, at the end of Part 03 §3.
 ### 1.1 Structural crosswalk
 
 Part 05 §§1 and 2, Part 03 §§11.2 and 11.3, and Part 00 §2.4 already carry canonical anchors. Part
-05 §§4, 4.2, 5, 6, 7, and 8, Part 03 §9.5, and Part 00 §8 carry none, so a metadata-only anchor
-bootstrap commit must give them the IDs in the table below and become this draft's `Based on`
-before its final appraisal. The subsection this revision adds to Part 03 §3 receives
+05 §§4, 4.2, 5, 6, 7, and 8, Part 03 §9.5, and Part 00 §8 received the IDs in the table below in
+the metadata-only anchor bootstrap commit `3ac0410`, which is this draft's `Based on`. The subsection this revision adds to Part 03 §3 receives
 `ew-staging-area` when it is created. No section moves, splits, merges, or retires.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
