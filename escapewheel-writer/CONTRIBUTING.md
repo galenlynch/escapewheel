@@ -151,23 +151,31 @@ The least coupled way to supply a resource, and what an extension should reach f
 extensions = ["vrf.json"]        # a document beside the recipe — no package at all
 
 [[source]]
-kind = "tables"
+kind = "vrf_sites"
 root = "/data/…/export"
 owns = ["vrf.sites"]
-tables = { "vrf.sites" = "sites.parquet" }
-# optional, where the raw source needs converting first:
-command = "python -m aind_vr_foraging.export"
+
+[source.delivery]
+declaration = "declarations/vrf_sites.json"   # what it produces and which terms it needs
+command = ["python", "/opt/vrf/export.py"]
+protocol = "files-v0.1"
 ```
 
-**An extension supplied this way needs no Python of ours, and ships none.** A registry document
-and some Parquet: nothing to install, so nothing to rot. That is the same failure `ndx-`
-extensions demonstrate on the read path, avoided one step earlier.
+**An extension supplied this way needs no Python of ours, and ships none.** A registry document,
+a declaration and a script that writes Parquet: nothing to install, so nothing to rot. That is the
+same failure `ndx-` extensions demonstrate on the read path, avoided one step earlier.
 
-`command` is an argument list run in `root` — **not a shell**, and with no opinion about how the
-environment is arranged. `uv run export.py`, `python -m package.export` and
-`/opt/venv/bin/python -m package.export` are all just commands, so isolating an adapter's
-dependencies is your choice rather than a tool this package makes you adopt. A non-zero exit is a
-`SourceDefect`, and so is a command that returns 0 without producing what it claimed.
+Under `files-v0.1` the command reads the build's terms as one JSON object on standard input (Part
+03 §11.2) and writes `<resource_id>.parquet` for each resource into the `delivery_root` that
+object names. The declaration document satisfies `registry/adapter.schema.json`, and a build reads
+it before it launches anything, so a term the script needs is one it declares.
+
+`command` is an argument list — **not a shell**, and with no opinion about how the environment is
+arranged. It does not run in `root`, so a script it names is an absolute path.
+`uv run /opt/vrf/export.py`, `python -m package.export` and `/opt/venv/bin/python -m
+package.export` are all just commands, so isolating an adapter's dependencies is your choice
+rather than a tool this package makes you adopt. A non-zero exit is a failure, and so is a wanted
+resource that never arrives.
 
 Rows arrive as **names, not numbers**: R53 §2.5 assigns identifiers packet-wide before staging, so
 a process outside this one cannot know them and does not need to. Write `session_id` as

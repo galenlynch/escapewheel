@@ -178,7 +178,7 @@ def test_sources_sharing_a_root_record_it_once():
 
     from escapewheel_writer.session import _source_roots
 
-    document = {"source": [{"kind": "sync", "root": "raw"}, {"kind": "harp", "root": "raw"}, {"kind": "tables"}]}
+    document = {"source": [{"kind": "sync", "root": "raw"}, {"kind": "harp", "root": "raw"}, {"kind": "thermistor"}]}
     assert _source_roots(SimpleNamespace(document=document)) == ["raw"]
 
 

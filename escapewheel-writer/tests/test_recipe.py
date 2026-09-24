@@ -576,7 +576,7 @@ def test_what_a_source_produces_is_what_it_can_emit():
 
     for kind, adapter in ADAPTERS.items():
         declared = set(getattr(adapter, "PRODUCES", ()))
-        assert declared or kind == "tables", f"{kind} declares no PRODUCES (Part 05 §3.4)"
+        assert declared, f"{kind} declares no PRODUCES (Part 05 §3.4)"
         assert all(r.count(".") == 1 for r in declared), f"{kind} declares a malformed resource ID"
 
 
@@ -1089,8 +1089,8 @@ def test_a_device_source_left_unprefixed_is_refused(tmp_path, registry):
 
 
 def test_a_source_that_takes_no_prefix_is_not_asked_for_one(tmp_path, registry):
-    """`tables` accepts no `prefix`, so leaving it unset there disagrees with nothing."""
-    body = prefixed(sorter="a.", tables=None)
+    """A delivered source whose declaration accepts no `prefix` disagrees with nothing by leaving it unset."""
+    body = prefixed(sorter="a.") + DELIVERED.format(declaration=declaration_for(tmp_path))
     assert prefix_refusals(tmp_path, registry, body) == []
 
 

@@ -484,37 +484,34 @@ def _vrf_registry():
     }
 
 
-def _export(root, *, rows=2):
-    import pyarrow as pa
-    import pyarrow.parquet as pq
+def test_a_file_delivered_source_needs_no_python_of_ours(tmp_path, registry, minimal):
+    """The whole point: a registry document and a script writing Parquet, nothing of ours imported."""
+    import sys
 
-    root.mkdir(parents=True, exist_ok=True)
-    pq.write_table(
-        pa.table(
-            {
-                "session_id": pa.array(["s001"] * rows),
-                "site_id": pa.array(list(range(rows)), type=pa.int32()),
-                "odor": pa.array(["a", "b"][:rows]),
-            }
-        ),
-        root / "sites.parquet",
+    from escapewheel_writer import delivery
+
+    script = tmp_path / "export.py"
+    script.write_text(
+        "import json, sys\n"
+        "import pyarrow as pa, pyarrow.parquet as pq\n"
+        "terms = json.load(sys.stdin)\n"
+        "pq.write_table(pa.table({'session_id': pa.array([terms['session_id']] * 2),"
+        " 'site_id': pa.array([0, 1], type=pa.int32()), 'odor': pa.array(['a', 'b'])}),"
+        " f\"{terms['delivery_root']}/vrf.sites.parquet\")\n"
     )
-    return root
-
-
-def test_a_file_source_needs_no_python_of_ours(tmp_path, registry, minimal):
-    """The whole point: a registry document and some Parquet, nothing installed, nothing to rot."""
-    from escapewheel_writer.sources import TablesSource
-
-    export = _export(tmp_path / "export")
-    source = TablesSource(export, session_id="s001", tables={"vrf.sites": "sites.parquet"})
+    source = delivery.fetch(
+        "vrf_sites",
+        [sys.executable, str(script)],
+        {"root": str(tmp_path), "session_id": "s001"},
+        protocol="files-v0.1",
+        wanted=["vrf.sites"],
+        workspace=tmp_path / "work",
+    )
     assert source.offers() == {"vrf.sites": 2}
 
     writer = PacketWriter(registry, packet_id="s001", extensions=[_vrf_registry()])
-    for resource_id, records in minimal.items():
+    for resource_id, records in {**minimal, **source.records()}.items():
         writer.add(resource_id, records)
-    for resource_id, batches in source.batches().items():
-        writer.add_batches(resource_id, batches)
     root = tmp_path / "p"
     assert writer.commit(root).passed
 
@@ -522,84 +519,6 @@ def test_a_file_source_needs_no_python_of_ours(tmp_path, registry, minimal):
     table = open_packet(root).table("vrf.sites")
     assert table.schema.field("session_id").type == pa.int32()
     assert table.column("site_id").to_pylist() == [0, 1]
-
-
-def test_a_command_runs_first_and_is_not_a_shell(tmp_path):
-    """`uv run …`, `python -m …` and `/opt/venv/bin/python …` are all just commands, so isolating
-    an adapter's dependencies is the recipe author's choice and not a tool we require."""
-    import sys
-
-    from escapewheel_writer.sources import TablesSource
-
-    root = tmp_path / "raw"
-    root.mkdir()
-    script = root / "export.py"
-    script.write_text(
-        "import pyarrow as pa, pyarrow.parquet as pq\n"
-        "pq.write_table(pa.table({'session_id': pa.array(['s001']),"
-        " 'site_id': pa.array([0], type=pa.int32()), 'odor': pa.array(['a'])}), 'sites.parquet')\n"
-    )
-    source = TablesSource(
-        root,
-        session_id="s001",
-        tables={"vrf.sites": "sites.parquet"},
-        command=[sys.executable, "export.py"],
-    )
-    assert source.offers() == {"vrf.sites": 1}
-    assert any("export.py" in note for note in source.notes)
-
-
-def test_a_failing_command_is_a_source_defect(tmp_path):
-    import sys
-
-    from escapewheel_writer.sources import TablesSource
-    from escapewheel_writer.sources.nwb import SourceDefect
-
-    root = tmp_path / "raw"
-    root.mkdir()
-    source = TablesSource(
-        root,
-        session_id="s001",
-        tables={"vrf.sites": "sites.parquet"},
-        command=[sys.executable, "-c", "raise SystemExit(3)"],
-    )
-    with pytest.raises(SourceDefect, match="failed"):
-        source.offers()
-
-
-def test_a_command_that_does_not_produce_what_it_claimed_says_so(tmp_path):
-    import sys
-
-    from escapewheel_writer.sources import TablesSource
-    from escapewheel_writer.sources.nwb import SourceDefect
-
-    root = tmp_path / "raw"
-    root.mkdir()
-    source = TablesSource(
-        root,
-        session_id="s001",
-        tables={"vrf.sites": "sites.parquet"},
-        command=[sys.executable, "-c", "pass"],
-    )
-    with pytest.raises(SourceDefect, match="no file at the declared path after running"):
-        source.offers()
-
-
-def test_a_command_given_as_a_string_is_refused(tmp_path):
-    r"""Part 05 §3.7: splitting one applies a quoting convention the recipe never declared, and
-    POSIX rules eat a backslash on every host, so `C:\Python\python.exe` loses its separators."""
-    from escapewheel_writer.sources import TablesSource
-    from escapewheel_writer.sources.nwb import SourceDefect
-
-    root = tmp_path / "raw"
-    root.mkdir()
-    with pytest.raises(SourceDefect, match="argument list"):
-        TablesSource(
-            root,
-            session_id="s001",
-            tables={"vrf.sites": "sites.parquet"},
-            command="python export.py",
-        )
 
 
 #: Where the reference registry and the extensions this repository ships live, for the checks that

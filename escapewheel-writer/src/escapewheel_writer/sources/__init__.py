@@ -22,7 +22,6 @@ from .nwb import NWBSource
 from .openephys import OpenEphysSource
 from .sorter import SortedStream, SorterSource
 from .sync import SyncSource, SyncStream
-from .tables import TablesSource
 from .waveforms import WaveformSource
 
 #: Entry-point group a distribution registers a source adapter under. Part 07 names one CLI and the
@@ -47,7 +46,6 @@ ADAPTERS: dict[str, Any] = {
     "nwb": NWBSource,
     "waveforms": WaveformSource,
     "lfp": LFPSource,
-    "tables": TablesSource,
 }
 
 
@@ -81,7 +79,6 @@ __all__ = [
     "SourceDefect",
     "SyncSource",
     "SyncStream",
-    "TablesSource",
     "WaveformSource",
     "discovered",
 ]
