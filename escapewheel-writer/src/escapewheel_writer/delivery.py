@@ -412,6 +412,20 @@ class Delivered:
 
         return self._referenced(ExternalMedia, "media_asset_id", "core.media_assets")
 
+    def unresolved(self) -> list[str]:
+        """Return the referenced entries no delivered catalog row declares, which a build rejects."""
+        declared = {
+            str(row[identity])
+            for identity, resource in (("array_asset_id", "core.array_assets"), ("media_asset_id", "core.media_assets"))
+            for row in self.rows(resource)
+            if row.get(identity)
+        }
+        return [
+            str(entry["resource_id"])
+            for entry in self.referenced
+            if str(entry["resource_id"]).split(".", 1)[-1] not in declared
+        ]
+
     def _referenced(self, kind: Any, identity: str, resource: str) -> dict[str, Any]:
         """Build one kind of reference from the entries whose asset the delivery's rows declare.
 
@@ -555,7 +569,7 @@ def fetch(
         failures.append(f"{len(missing)} resource(s) never arrived: {', '.join(missing)}")
     if failures:
         raise SourceDefect(f"{kind}: " + "; ".join(failures) + _tail(notes))
-    return Delivered(
+    delivered = Delivered(
         kind,
         tables,
         notes=notes,
@@ -565,6 +579,12 @@ def fetch(
         referenced=document,
         arrays=Path(supplied["array_location"]) if supplied.get("array_location") else None,
     )
+    if unresolved := delivered.unresolved():
+        raise SourceDefect(
+            f"{kind}: {len(unresolved)} referenced resource(s) bind no delivered catalog row "
+            f"(Part 03 §11.3): {', '.join(unresolved)}" + _tail(notes)
+        )
+    return delivered
 
 
 def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[str]]:

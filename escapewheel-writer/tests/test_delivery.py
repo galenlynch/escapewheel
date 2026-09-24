@@ -855,6 +855,33 @@ def test_a_malformed_resource_document_is_refused(tmp_path, supplied):
         )
 
 
+def test_a_referenced_resource_no_row_declares_is_refused(tmp_path, supplied):
+    """Part 03 §11.3: a build rejects an entry that does not resolve rather than dropping it."""
+    script = tmp_path / "stray.py"
+    script.write_text(
+        "import json, sys\n"
+        "import pyarrow as pa\n"
+        "from escapewheel_writer import delivery\n"
+        "json.loads(sys.stdin.buffer.read())\n"
+        "out = sys.stdout.buffer\n"
+        "entry = {'resource_id': 'core.nowhere', 'declaration_id': 'core.media_asset_instances',\n"
+        "         'uri': 's3://bucket/nowhere.mp4', 'external': True}\n"
+        "doc = json.dumps({'resources': [entry]})\n"
+        "delivery._write(out, delivery.RESOURCES, delivery.as_table([{'document': doc}]))\n"
+        "delivery._write(out, delivery.SENTINEL, pa.table({}))\n"
+        "out.flush()\n"
+    )
+    with pytest.raises(SourceDefect, match="core.nowhere"):
+        delivery.fetch(
+            "stray",
+            [sys.executable, str(script)],
+            supplied,
+            protocol="stream-v0.1",
+            wanted=[],
+            workspace=tmp_path / "work",
+        )
+
+
 @pytest.mark.parametrize(
     "extra",
     [
