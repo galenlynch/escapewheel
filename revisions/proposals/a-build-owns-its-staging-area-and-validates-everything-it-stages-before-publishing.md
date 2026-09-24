@@ -207,22 +207,59 @@ Rejected: **move staging outside the packet root.** It would remove the conflict
 but promotion would no longer be a rename within one filesystem, and Part 03 §11.3 would lose the
 guarantee that a delivered array reaches its final path by that rename.
 
+### 4.5 Interrupted promotion
+
+**A promotion record makes an interrupted promotion the build's own** (agreed direction, pending
+review). Promotion is the one step that writes at packet paths before a manifest names them: a
+commit moves `tables/`, `arrays/` and the registries into place and writes `sources.json` and the
+candidate manifest, and an amendment moves each written file into place and retains the superseded
+manifest under `manifests/`. A build interrupted there leaves files §9.5 calls strays, at paths a
+retry needs. A writer cannot tell them from files placed there another way, which is why the
+reference writer refuses to build over them.
+
+The rule:
+
+- Before its first write outside `staging/`, a build writes a **promotion record** into
+  `staging/`: every path outside `staging/` the promotion will create, relative to the packet root,
+  and the `packet_version` it will publish. The record is durable before promotion begins, and it
+  lists no path that already exists.
+- A path the record lists is the build's own until that `packet_version` is published. A retry
+  that finds a record, and a published manifest at an earlier version or none, may remove every
+  listed path that exists and then proceed as a new build.
+- A retry that finds a record whose `packet_version` is published treats it as stale and removes
+  only `staging/`, since promotion completed and only the cleanup was lost.
+- A path at the packet root that no record lists and no manifest names stays a stray, which no
+  writer removes.
+
+Part 03 §9.5 then defines a stray as a file no manifest ever named, outside `staging/`, and not
+listed by a promotion record whose version is unpublished. Because the record lives in `staging/`,
+it adds no reserved name beyond §4.4's. Because a listed path cannot have existed before the record
+was written, removing it cannot remove anything a build did not create.
+
+Rejected: **complete the interrupted promotion instead of undoing it.** The moved bytes would need
+checking against the staged manifest's digests before publication, which costs a read of them and
+saves only the rebuild that removal forces.
+
+Rejected: **keep promoted files as strays**, as the reference writer does now. It is safe, but a
+crash during a promotion that takes seconds leaves a root that no writer may repair, and a person
+must remove files by hand at the paths the specification protects.
+
 ## 5. Impact sketch
 
 | surface | effect |
 |---|---|
 | semantic prose | Unchanged; no concept's meaning changes. |
 | logical prose, registry declarations, rules | Unchanged; the three provenance tables keep their declarations and optional presence. |
-| physical profiles | Affected: Part 03 §9.5 excludes `staging/`, and §11.2 and §11.3 cite Part 05 for the staging area instead of Part 05 §1. |
+| physical profiles | Affected: Part 03 §9.5 excludes `staging/` and paths an unpublished promotion record lists, and §11.2 and §11.3 cite Part 05 for the staging area instead of Part 05 §1. |
 | packet manifest and schemas | Unchanged. |
 | validation and import | Affected: Part 05 §§1, 2, 4.2, 6, 7 and 8 as in §4. Part 05 §§10 and 11 cite no step number and are unchanged. |
 | extension registries | Unchanged. |
-| writer | Affected: record source roots and inputs for the import run; module docstring; the Part 05 stage citations listed in §2.1, including the AIND package and the adapter boundary probes. |
+| writer | Affected: record source roots and inputs for the import run; write a promotion record before `commit` and `amend` promote, and undo a recorded interrupted promotion on retry instead of refusing it; module docstring; the Part 05 stage citations listed in §2.1, including the AIND package and the adapter boundary probes. |
 | writer cleanup | Affected: `prune` reports `staging/` apart from strays. |
 | reader and validator | Unchanged; the validator checks no writer obligation (Part 05 §10). |
 | adapters | Unchanged under one row per root; affected under one row per file. |
 | existing packets | Unchanged and still conforming; an amendment may add input rows (Part 03 §9.2). |
-| conformance fixtures and tests | Affected: writer tests for the input rows, for removing a leftover staging area, and for `prune` leaving `staging/` out of its strays. No packet fixture changes. |
+| conformance fixtures and tests | Affected: writer tests for the input rows, for removing a leftover staging area, for undoing an interrupted promotion and refusing an unrecorded one, and for `prune` leaving `staging/` out of its strays. No packet fixture changes. |
 | revision tooling | Unchanged. |
 | documentation | Affected: Part 07 §4's `PacketWriter` summary and the writer README's commit sequence, if they state an order. |
 
@@ -230,10 +267,8 @@ guarantee that a delivered array reaches its final path by that rename.
 
 1. **Input granularity.** Settled: one `core.source_files` row per source root, since one per file
    needs a new delivery field that every out-of-process adapter would have to fill.
-2. **Interrupted promotion.** Does a build also own files it promoted before a failed publication,
-   so that a retry may remove them, or do they stay strays that a writer refuses to build over, as
-   now? The preference is to keep them strays. They sit at packet paths, and a writer cannot tell
-   its own interrupted promotion from files placed there another way.
+2. **Interrupted promotion.** Settled pending review: a promotion record in `staging/` makes the
+   paths a promotion creates the build's own until its version is published (§4.5).
 3. **Keeping the decisions together.** The order, the input obligation, and the staging area can
    each be accepted alone. They are kept in one proposal because each settles part of the same
    build sequence, and Part 05 §§2, 6 and 7 would otherwise be amended three times in succession.
