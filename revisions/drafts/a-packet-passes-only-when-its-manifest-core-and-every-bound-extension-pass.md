@@ -48,11 +48,11 @@ the planned Part 05 section 9.5 receives `ew-verdict-composition` when it is cre
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | [Part 00 §4.1](../../escapewheel_poc_docs_v0.2/00_architecture.md#ew-core-content-requirements), a writer validates core resources before committing them | replace the obligation with a citation | Part 05 §9.2 | the obligation covers every packet resource and is stated once | §3.4 |
-| [Part 04 §9](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-validation-block), validation block | extend in place | same section | a published manifest's `status` is `passed` | §3.4 |
+| [Part 04 §9](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-validation-block), validation block | extend in place with a citation | Part 05 §9.2 | states that Part 05 §9.2 permits only `passed` in a published manifest's `status` | §3.4 |
 | [Part 04 §10](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-manifest-conformance), Part 09 §5.4 attributes an extension's findings and composes the verdicts; a writer publishes no manifest with an early-phase finding | replace the first sentence; add a citation to the second | Part 05 §9.2 and planned section 9.5 | no rule changes here; the owners move | §§3.2, 3.4 |
 | [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), the unit-code check covers core's tables and its finding is core's | replace in place | same section | the check covers every registry directing packet checks, and its finding belongs to the declaring registry | §3.3 |
 | [Part 05 §5.4](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-extensions), each extension is validated on core's terms with its verdict reported separately | replace in place | same section; separation moves to planned Part 05 section 9.5 | every check core's resources receive reaches an extension's | §3.3 |
-| [Part 05 §9.2](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-error-policy), an import refuses to commit on any error | replace the first sentence | same section | a writer publishes only a `passed` packet, by first commit or amendment, and records that verdict | §3.4 |
+| [Part 05 §9.2](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-error-policy), an import refuses to commit on any error | replace the first sentence | same section | a writer publishes a manifest, first or later version, only for a `passed` packet, and records that verdict | §3.4 |
 | no current section composes verdicts | add | planned Part 05 section 9.5, "Verdicts", `ew-verdict-composition` | verdict states, finding subjects, conjunction, and report content | §§3.1, 3.2, 3.5 |
 | [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes), Part 09 §5.4 defines how verdicts compose | replace the citation | planned Part 05 section 9.5 | no rule changes here | §3.1 |
 | [Part 05 §14.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validator-registry-boundary), extension-table byte validation and verdict composition are not defined here | replace with citations | Part 05 §5.4 and planned section 9.5 | the deferred subjects are decided | §§3.1, 3.3 |
@@ -171,16 +171,18 @@ A validator MUST attribute each finding to exactly one subject:
 ### 3.3 Extension resources
 
 A validator MUST apply to each resource an extension declares every check of Part 05 §§5.1–5.3 that
-a core resource of the same kind receives, directed by that extension's checked context. The shim's
-unit-code check therefore covers every table resource whose declaration a registry directing packet
-checks holds, and its finding belongs to the declaring registry.
+a core resource receives because of its logical kind or its declarations, directed by that
+extension's checked context. A check that applies to one named core resource, such as the
+session-inventory check, does not extend. The shim's unit-code check therefore covers every table
+resource whose declaration a registry directing packet checks holds, and its finding belongs to the
+declaring registry.
 
 ### 3.4 Publication
 
-A writer MUST NOT publish a packet, by first commit or by amendment, unless its packet verdict is
-`passed`, and MUST record `passed` as the published manifest's `validation.status`. A writer MUST
-NOT publish a packet whose extension fails as a partial or non-canonical artifact; it corrects the
-extension or builds the packet without it.
+A writer MUST NOT publish a manifest, whether as a first commit or as a later version, unless the
+verdict of the packet it describes is `passed`, and MUST record `passed` as that manifest's
+`validation.status`. A packet whose extension fails is therefore published in no partial form; its
+writer corrects the extension or builds the packet without it.
 
 ### 3.5 Report content
 
@@ -222,10 +224,10 @@ composition for a later decision, which this revision supplies.
 | semantic prose | Unchanged. No scientific meaning changes. | None required. |
 | logical prose and registry | Unchanged. A declaration already names its registry, and no rule, column, or identity changes. | None required. |
 | physical profiles | Unchanged. The physical checks that reach extension resources are those Part 03 and Part 05 §5.3 already define. | None required. |
-| packet manifest and JSON Schemas | Part 04 §9 states that a published manifest's `status` is `passed`, and Part 04 §10 cites Part 05 §9.2 and the planned section 9.5. The schema is unchanged. | `evidence/R<N>.json` names both anchors. |
+| packet manifest and JSON Schemas | Part 04 §9 cites Part 05 §9.2 for a published manifest's `status`, and Part 04 §10 cites Part 05 §9.2 and the planned section 9.5. The schema is unchanged. | `evidence/R<N>.json` names both anchors. |
 | validation and import | Part 05 gains section 9.5 and revises §§5.3, 5.4, 9.2, 10, and 14.5; Part 00 §4.1 cites Part 05 §9.2. | The fixtures and tests below. |
 | extensions | Registry content is unchanged. Their resources receive core's packet checks, which every extension exercised by the §2.3 probe passes. | The AIND extension suite and the corpus. |
-| reader, writer, validator, adapters | The validator reports three-state verdicts for the packet, core, and each bound extension; findings carry their subject into JSON; top-level `status` becomes the packet verdict; array, digest, and file findings are attributed by declaration; every packet check reaches extension resources; and the command line reports and exits on the packet verdict. The writer's commit and amendment gates use the packet verdict. The reader and adapters are unchanged; Tier 1 generation already runs per registry. | Validator and writer tests below. |
+| reader, writer, validator, adapters | The validator reports three-state verdicts for the packet, core, and each bound extension; findings carry their subject into JSON; top-level `status` becomes the packet verdict; array, digest, and file findings are attributed by declaration; every packet check reaches extension resources; and the command line reports and exits on the packet verdict. The writer's commit and amendment gates, its `verify` command, and its command-line import use the packet verdict. The reader and adapters are unchanged; Tier 1 generation already runs per registry. | Validator and writer tests below. |
 | conformance fixtures and tests | Correct the validator's extension fixture to write `task.trials.session_id` as `int32`. Rewrite the two tests asserting the core-only verdict. Add tests for a packet with one passing and one failing extension, an extension-table type mismatch attributed to the extension, an extension dense-array defect that leaves core `passed`, an incomplete core evaluation reported as `incomplete`, a manifest `shape` failure that leaves every registry `incomplete`, JSON findings carrying their subject, and writer refusals of a failing extension and of an incomplete verdict. Add a corpus variant whose extension table holds a type mismatch. | `fixtures/corpus.py` and the package suites. |
 | revision process and tooling | Ledger destinations for R17 §4, R71 §2.2, and R72 §2.4 move as stated above; otherwise the ordinary revision and evidence records. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. The validator and writer READMEs describe the verdicts and the gate, and the specification README's pointer names Part 05's verdict section. | `verify.py`. |
