@@ -46,9 +46,9 @@ This revision makes every declaration member required, lets `protocols` name eve
 adapter supports, and incorporates the declaration schema, so a build checks a class and a document
 alike. It has a build reach an adapter by a protocol the adapter declares. It incorporates the
 resolution schema, leaves validating a resolution document to the reader, and restores the version
-rule. It replaces the no-write sentence with a rule saying where an adapter delivers and that the build owns those
-locations. The rule governs only a delivery, so a cache of source bytes stays an implementation
-matter that a later revision may still govern.
+rule. It replaces the no-write sentence with a rule saying where an adapter delivers and that the
+build owns those locations. The rule governs only a delivery, so a cache of source bytes stays an
+implementation matter that a later revision may still govern.
 
 The change is structural because it replaces rules inside existing sections: Part 03 §11.5's
 single `protocol`, its readings of an absent member, and its reference to a published schema; Part
@@ -228,9 +228,10 @@ discovery would refuse a package before any recipe names it, so a broken package
 that never uses it. Requiring a reader to refuse a malformed resolution document would make a
 broken optional `sources.json` stop a packet from opening, including its tables that need no
 source. Deleting Part 05 §2's sentence without a replacement removes the contradiction and still
-leaves an adapter author unable to tell where a build reads a delivery. Requiring a build to remove
-its locations after a refusal would discard what a person diagnosing the refusal reads, and once a
-build supplies each location empty, a location kept after a refusal cannot reach a later build.
+leaves an adapter author unable to tell where a build reads a delivery. Requiring a build to supply
+each location empty, or to remove it once the build commits, would forbid a build from pointing an
+adapter at the place its bytes will stay, which Part 03 §11.3 already does for a packet-owned array.
+A rerun needs only that a build not read an earlier run's leftovers as this run's delivery.
 
 Requiring every importable declaration to carry a protocol would withdraw Part 03 §11.1's exemption
 for an adapter a build ships, and would check a fact that does not apply: running such an adapter in
@@ -300,10 +301,12 @@ through a document whose `sources_standard_version` it does not know.
 ### 3.4 An adapter delivers only where a build points it
 
 An adapter MUST deliver only through the channels and locations a build supplies it, and a
-build MUST read a delivery from nowhere else. A build owns each location it chooses for a delivery:
-it MUST supply the location empty, and MUST remove what remains of it once the build commits. An
-adapter MUST NOT rely on a location outliving the build. This rule governs a delivery and nothing
-else an adapter writes.
+build MUST read a delivery from nowhere else. A build owns each location it chooses for a delivery,
+and may choose the place the delivered bytes will stay, as Part 03 §11.3 has a packet-owned array
+written under the staging area. A build MUST NOT read as a run's delivery anything that run's
+adapter did not write. An adapter MUST NOT rely on what a location held before its run, or on what
+it writes there remaining after the build. This rule governs a delivery and nothing else an adapter
+writes.
 
 For the portable profile, Part 03 §11 names the routes:
 
@@ -366,8 +369,8 @@ records, and §3.4 leaves that intact for rows. R80 §2.2's version rule gains a
 | packet manifest and JSON Schemas | Part 04 §5.5 incorporates `registry/sources.schema.json`, lets a reader choose whether to validate, and states the version rule. The schema drops its source-name pattern and length limit, and its `$schema` description drops the keyword. The manifest and delivery schemas are unchanged. | `registry/check.py` validates the example and a name with a space. |
 | validation and import | Part 05 §2 states where an adapter delivers and that the build owns those locations; §3.5 adds the refusals of a declaration failing its schema and of a recipe naming a protocol its adapter does not declare. | The writer tests below. |
 | extensions | Registry content unchanged. The AIND package's three adapters declare all three protocols of the group, and its generated documents gain any missing members and carry `protocols`. | The AIND suite validates its generated documents against the schema. |
-| reader, writer, validator, adapters | The reader already resolves nothing through a document of unknown version. It validates a caller-supplied document, refusing one that fails with where it fails, and keeps treating a packet root `sources.json` it cannot read as resolving nothing. The writer lets an adapter class state its protocols by the constants it exports, checks a class declaration as its document at the recipe check, refuses there an adapter another distribution registers that states no protocol and a recipe protocol its adapter does not declare, renders a class's own protocols in `escapewheel declare`'s output and takes a repeatable `--protocol` only for a class stating none, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, empties each delivery location before it supplies it, names array directories by `resource_id`, and binds arrays by catalog row without `_resources.json`. The validator is unchanged. | Reader and writer tests below. |
-| conformance fixtures and tests | Packet fixtures are unchanged, because a validator reads neither document. Writer tests cover a document missing each member, a document of empty arrays, a class with an undeclared resource, a term in `accepts`, or a malformed name refused at the recipe check, an adapter another distribution registers that states no protocol refused at the recipe check while a built-in one passes, a document with an empty or repeating `protocols` refused, a recipe naming a protocol its adapter does not declare refused, a recipe naming none reaching the adapter by one it declares with only that protocol's terms supplied, the same adapter run in process with no protocol's terms supplied, `escapewheel declare` output passing the schema, `session.build` refusing a recipe that fails the check, a `sources.json` the writer writes passing the schema, array directories named by `resource_id`, a delivery location supplied empty after a refused run left files in it, and the workspace removed after a commit. Reader tests cover a caller-supplied document failing the schema, one of an unknown version, and a packet root document of an unknown version. | `escapewheel-writer`, `escapewheel-reader`, and `escapewheel-aind` suites. |
+| reader, writer, validator, adapters | The reader already resolves nothing through a document of unknown version. It validates a caller-supplied document, refusing one that fails with where it fails, and keeps treating a packet root `sources.json` it cannot read as resolving nothing. The writer lets an adapter class state its protocols by the constants it exports, checks a class declaration as its document at the recipe check, refuses there an adapter another distribution registers that states no protocol and a recipe protocol its adapter does not declare, renders a class's own protocols in `escapewheel declare`'s output and takes a repeatable `--protocol` only for a class stating none, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, empties its workspace's delivery locations before it supplies them so it reads nothing an earlier run left, names array directories by `resource_id`, and binds arrays by catalog row without `_resources.json`. The validator is unchanged. | Reader and writer tests below. |
+| conformance fixtures and tests | Packet fixtures are unchanged, because a validator reads neither document. Writer tests cover a document missing each member, a document of empty arrays, a class with an undeclared resource, a term in `accepts`, or a malformed name refused at the recipe check, an adapter another distribution registers that states no protocol refused at the recipe check while a built-in one passes, a document with an empty or repeating `protocols` refused, a recipe naming a protocol its adapter does not declare refused, a recipe naming none reaching the adapter by one it declares with only that protocol's terms supplied, the same adapter run in process with no protocol's terms supplied, `escapewheel declare` output passing the schema, `session.build` refusing a recipe that fails the check, a `sources.json` the writer writes passing the schema, array directories named by `resource_id`, and a rerun after a refused run left files under `delivery_root` reading none of them. Reader tests cover a caller-supplied document failing the schema, one of an unknown version, and a packet root document of an unknown version. | `escapewheel-writer`, `escapewheel-reader`, and `escapewheel-aind` suites. |
 | revision process and tooling | Ordinary ledger and evidence records. The notes of R119 §3.4, R133 §3.2, R117 §3.1, R115 §§3.1, 3.3, and 3.12, and R80 §2.2 are rewritten, and R115 §§3.1 and 3.3 target Part 03 §§11.2 and 11.1 by anchor. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. The writer and reader READMEs, `registry/README.md`'s incorporation column, the writer's `sources/__init__.py` docstring, and the repository TODO's schema-audit item are updated. | `verify.py`. |
 
