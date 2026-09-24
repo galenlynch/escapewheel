@@ -75,7 +75,7 @@ recorded baseline: the two commits between them add only the proposal and three 
 Probes ran in the writer's environment against `registry/logical_schemas.json`, using throwaway
 recipes, adapter classes, and documents under a scratch directory.
 
-### 2.1 The declaration schema admits an incomplete document
+### 2.1 The adapter declaration schema admits an incomplete document
 
 `registry/adapter.schema.json` requires `kind`, `protocol`, `produces`, and `needs`, and closes the
 object. A document carrying only those four validates with no error. Part 03 §11.5 says only that
@@ -95,7 +95,7 @@ tracked. The schema's `$schema` description binds a build with an uppercase keyw
 04 §5.4, which is about prefix resources; the `accepts` and `contributes` descriptions restate the
 two readings of an absent member.
 
-### 2.2 A class declaration escapes the refusals
+### 2.2 An adapter class escapes the declaration refusals
 
 A class registered as kind `bogus` with `PRODUCES = {"core.tirals"}` and `ACCEPTS = ("root",)`
 was checked by `Recipe.check`. Its errors named the undeclared resource through the ownership check
@@ -118,7 +118,7 @@ caller's job", and its body does not call it. The command line calls `Recipe.che
 gap is open to a caller of the Python function, which is the route an orchestrator takes. Part 05
 §3.5 already requires a build to check a recipe before it opens any source.
 
-### 2.3 The reader never applies the resolution schema
+### 2.3 The reader never applies the source resolution schema
 
 Part 04 §5.5 says the source resolution document's shape "is published as"
 `https://escapewheel.org/schemas/sources/0.1.0`. The reader vendors `sources.schema.json` and
@@ -154,15 +154,19 @@ The routes an adapter writes through are:
 |---|---|---|
 | a packet-owned array | `array_location` (Part 03 §11.2) | the adapter, as Zarr v3 (Part 03 §11.3) |
 | a `files-v0.1` delivery | `delivery_root` | the adapter, as Parquet |
-| a report | `report_path` | the adapter, under `files-v0.1` and `stream-v0.1` |
+| a report | `report_path`, at the path the recipe names (Part 09 §5.8) | the adapter, under `files-v0.1` and `stream-v0.1` |
 | a `flight-v0.1` socket | `socket` | the adapter binds it |
 
 Part 03 §11 says an adapter "reads one source and returns records", and Part 07 §4 says an
 adapter's return type is records, not a path, before describing an adapter that writes an array.
 The writer's `sources/__init__.py` docstring says an adapter never writes.
 
-The writer creates each location under its own workspace and removes the workspace when a build
-ends, so cleanup already belongs to the build; no part says so.
+The writer creates the other three locations under a workspace beside the packet,
+`<out>.deliveries`, and removes it when it commits, so cleanup already belongs to the build; no part
+says so. After a refusal the workspace stays, and the next build reuses it with
+`mkdir(exist_ok=True)` and clears nothing. Under `files-v0.1`, `_read_files` reads every Parquet file under
+`delivery_root`, so a rerun whose adapter no longer writes a resource reads the file an earlier run
+left as that resource's delivery. This is from reading the code; it was not reproduced.
 
 One write takes no supplied location. An adapter reading a remote store keeps fetched objects in a
 cache, found from `ESCAPEWHEEL_SOURCE_CACHE` or else under `TMPDIR`. The cache holds source bytes
@@ -189,7 +193,9 @@ discovery would refuse a package before any recipe names it, so a broken package
 that never uses it. Requiring a reader to refuse a malformed resolution document would make a
 broken optional `sources.json` stop a packet from opening, including its tables that need no
 source. Deleting Part 05 §2's sentence without a replacement removes the contradiction and still
-leaves an adapter author unable to tell where a build reads a delivery.
+leaves an adapter author unable to tell where a build reads a delivery. Requiring a build to remove
+its locations after a refusal would discard what a person diagnosing the refusal reads, and once a
+build supplies each location empty, a location kept after a refusal cannot reach a later build.
 
 ### 2.7 Feasibility and overlap
 
@@ -201,28 +207,29 @@ baseline, and the full repository verifier passed its 35 stages at `63aa520`.
 
 ## 3. Decision
 
-Four subsections complete and incorporate the declaration document, check a declaration alike in
-either form, incorporate the resolution document while leaving its validation to the reader, and
-say where an adapter delivers.
+Four subsections complete and incorporate an adapter's declaration document, check an adapter's
+declaration alike whether it is a class or a document, incorporate the source resolution
+document's schema while leaving its validation to the reader, and say where an adapter delivers.
 
-### 3.1 The declaration document states every member
+### 3.1 An adapter's declaration document states every member
 
 Part 03 §11.5 incorporates `registry/adapter.schema.json`, whose `$id` is
 `https://escapewheel.org/schemas/adapter/0.1.0`, as the exact shape of an adapter's declaration
 document. The schema owns member names, JSON types, required members, closure, and patterns; the
 prose owns what each member means and every refusal. The schema's descriptions are informative.
 
-A declaration document MUST carry all eight members: `kind`, `protocol`, `produces`, `contributes`,
-`states`, `needs`, `accepts`, and `consumes`. Each member listing names is an array, and an empty
-array declares none. The schema requires all eight.
+An adapter's declaration document MUST carry all eight members: `kind`, `protocol`, `produces`,
+`contributes`, `states`, `needs`, `accepts`, and `consumes`. Each member listing names is an array,
+and an empty array declares none. The schema requires all eight.
 
-### 3.2 A build checks a declaration alike in either form
+### 3.2 A build checks an adapter's class and document alike
 
-A build MUST refuse a declaration that fails the schema §3.1 incorporates, naming where it fails,
-before it opens any source. A build MUST check an importable declaration as the document holding
-the same facts, so a class and a document are refused for the same defects under the same terms.
+A build MUST refuse an adapter's declaration that fails the schema §3.1 incorporates, naming where
+it fails, before it opens any source. A build MUST check an importable declaration as the document
+holding the same facts, so a class and a document are refused for the same defects under the same
+terms.
 
-### 3.3 The source resolution document
+### 3.3 A source resolution document has an incorporated shape a reader need not check
 
 Part 04 §5.5 incorporates `registry/sources.schema.json`, whose `$id` is
 `https://escapewheel.org/schemas/sources/0.1.0`, as the exact shape of a source resolution
@@ -230,16 +237,17 @@ document. The schema owns member names, JSON types, required members, closure, p
 version constant; the prose owns what each member means. The schema's descriptions are
 informative. A source name is any string an external resource entry's `source` can hold.
 
-A writer that writes a resolution document MUST write one that satisfies the schema. A reader need
-not validate a resolution document, and MAY. A reader MUST NOT resolve a source through a document
-whose `sources_standard_version` it does not know.
+A writer that writes a resolution document MUST write one that satisfies the schema. A reader MAY
+validate a resolution document against the schema, and need not. A reader MUST NOT resolve a source
+through a document whose `sources_standard_version` it does not know.
 
 ### 3.4 An adapter delivers only where a build points it
 
-A source adapter MUST deliver only through the channels and locations a build supplies it, and a
-build MUST read a delivery from nowhere else. A build MUST create each location it supplies under
-its staging area and MUST remove what remains of each when the build ends, whether it commits or
-refuses. This rule governs a delivery and nothing else an adapter writes.
+An adapter MUST deliver only through the channels and locations a build supplies it, and a
+build MUST read a delivery from nowhere else. A build owns each location it chooses for a delivery:
+it MUST supply the location empty, and MUST remove what remains of it once the build commits. An
+adapter MUST NOT rely on a location outliving the build. This rule governs a delivery and nothing
+else an adapter writes.
 
 For the portable profile, Part 03 §11 names the routes:
 
@@ -247,7 +255,7 @@ For the portable profile, Part 03 §11 names the routes:
   declares, with a `flight-v0.1` adapter serving them at `socket`;
 - a packet-owned array, written into `array_location`;
 - a `files-v0.1` delivery, written into `delivery_root`; and
-- a report, written at `report_path`.
+- a report, written at the `report_path` the recipe names (Part 09 §5.8).
 
 ## 4. What this does not change
 
@@ -257,8 +265,8 @@ documents exist, and structural validation still needs none.
 
 ## 5. Consequence
 
-Packet bytes are unchanged, and no packet is rebuilt. A declaration document omitting a member is
-refused until it states that member; the tracked example complies, and a generated document
+Packet bytes are unchanged, and no packet is rebuilt. An adapter's declaration document omitting a
+member is refused until it states that member; the tracked example complies, and a generated document
 complies by construction. A third party's hand-written document must be updated. An importable
 declaration the writer now accepts with an undeclared resource, a term in `accepts`, or a malformed
 name is refused at the recipe check. A resolution document is refused by no conforming reader
@@ -281,8 +289,8 @@ records, and §3.4 leaves that intact for rows. R80 §2.2's version rule gains a
 | packet manifest and JSON Schemas | Part 04 §5.5 incorporates `registry/sources.schema.json`, lets a reader choose whether to validate, and states the version rule. The schema drops its source-name pattern and length limit, and its `$schema` description drops the keyword. The manifest and delivery schemas are unchanged. | `registry/check.py` validates the example and a name with a space. |
 | validation and import | Part 05 §2 states where an adapter delivers and that the build owns those locations; §3.5 adds the refusal of a declaration failing its schema. | The writer tests below. |
 | extensions | Registry content unchanged. The AIND package's generated documents gain any missing members when regenerated. | The AIND suite validates its generated documents against the schema. |
-| reader, writer, validator, adapters | The reader already resolves nothing through a document of unknown version. It validates a caller-supplied document, refusing one that fails with where it fails, and keeps treating a packet root `sources.json` it cannot read as resolving nothing. The writer checks a class declaration as its document at the recipe check, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, names array directories by `resource_id`, and binds arrays by catalog row without `_resources.json`. The validator is unchanged. | Reader and writer tests below. |
-| conformance fixtures and tests | Packet fixtures are unchanged, because a validator reads neither document. Writer tests cover a document missing each member, a document of empty arrays, a class with an undeclared resource, a term in `accepts`, or a malformed name refused at the recipe check, `escapewheel declare` output passing the schema, `session.build` refusing a recipe that fails the check, a `sources.json` the writer writes passing the schema, array directories named by `resource_id`, and supplied locations removed after a commit and after a refusal. Reader tests cover a caller-supplied document failing the schema, one of an unknown version, and a packet root document of an unknown version. | `escapewheel-writer`, `escapewheel-reader`, and `escapewheel-aind` suites. |
+| reader, writer, validator, adapters | The reader already resolves nothing through a document of unknown version. It validates a caller-supplied document, refusing one that fails with where it fails, and keeps treating a packet root `sources.json` it cannot read as resolving nothing. The writer checks a class declaration as its document at the recipe check, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, empties each delivery location before it supplies it, names array directories by `resource_id`, and binds arrays by catalog row without `_resources.json`. The validator is unchanged. | Reader and writer tests below. |
+| conformance fixtures and tests | Packet fixtures are unchanged, because a validator reads neither document. Writer tests cover a document missing each member, a document of empty arrays, a class with an undeclared resource, a term in `accepts`, or a malformed name refused at the recipe check, `escapewheel declare` output passing the schema, `session.build` refusing a recipe that fails the check, a `sources.json` the writer writes passing the schema, array directories named by `resource_id`, a delivery location supplied empty after a refused run left files in it, and the workspace removed after a commit. Reader tests cover a caller-supplied document failing the schema, one of an unknown version, and a packet root document of an unknown version. | `escapewheel-writer`, `escapewheel-reader`, and `escapewheel-aind` suites. |
 | revision process and tooling | Ordinary ledger and evidence records. The notes of R119 §3.4, R133 §3.2, R117 §3.1, and R80 §2.2 are rewritten. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. The writer and reader READMEs, `registry/README.md`'s incorporation column, the writer's `sources/__init__.py` docstring, and the repository TODO's schema-audit item are updated. | `verify.py`. |
 
@@ -293,13 +301,15 @@ Each clause is `applied`, each by its canonical anchor: §3.1 at Part 03 §11.5;
 
 The negative cases distinguish the new rule from the current one:
 
-- a declaration document omitting `states`, `accepts`, `consumes`, or `contributes` is refused,
-  naming the member, where the schema now admits it;
+- an adapter's declaration document omitting `states`, `accepts`, `consumes`, or `contributes` is
+  refused, naming the member, where the schema now admits it;
 - a class declaring an undeclared resource, a term in `accepts`, or a `produces` entry that fails
   the schema's pattern is refused at the recipe check, where the writer now passes it;
-- `session.build` refuses a recipe that fails the check, where it now builds from it; and
+- `session.build` refuses a recipe that fails the check, where it now builds from it;
 - a `files-v0.1` adapter that writes its Parquet outside `delivery_root` delivers nothing, and the
-  build reports its resources as not arriving.
+  build reports its resources as not arriving; and
+- a rerun after a refused build, whose adapter no longer writes a resource, reads no file an earlier
+  run left under `delivery_root`, where the writer now reads it as that resource's delivery.
 
 The positive cases are a document of all eight members with empty arrays, which is accepted, and a
 resolution document naming a source whose name carries a space, which now satisfies the schema.
