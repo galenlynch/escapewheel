@@ -11,6 +11,11 @@ Each metric keeps the name the pipeline gives it, which is the vocabulary people
 one rename is `num_spikes`, which becomes `num_spikes_used` so it cannot be read as core's
 `n_spikes`. The synchrony metric arrives as one column per size, `sync_spike_<size>`, and becomes
 one row per size, so a fourth size is a row rather than a schema change.
+
+Where a recipe names the session's NWB, an amplitude metric the analyzer left NaN is taken from the
+NWB's `units` table, which may have been repaired after the analyzer was written. A unit is filled
+only where every other quality metric both state agrees, so a file from another sorting fills
+nothing.
 """
 
 from __future__ import annotations
@@ -23,6 +28,7 @@ from typing import Any, ClassVar
 import numpy as np
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.sources.defect import SourceDefect
+from escapewheel_writer.sources.nwb import _clean
 from escapewheel_writer.sources.sorter import STREAM as STREAM_NAME
 from escapewheel_writer.sources.sorter import SortedStream
 from escapewheel_writer.sources.store import SourceStore, source_root
@@ -65,9 +71,10 @@ METRICS = {
 WAVEFORM_METRICS = {
     name: name
     for name in (
-        "peak_to_valley",
-        "peak_trough_ratio",
-        "half_width",
+        "peak_to_trough_duration",
+        "main_peak_to_trough_ratio",
+        "peak_half_width",
+        "trough_half_width",
         "repolarization_slope",
         "recovery_slope",
         "num_positive_peaks",
@@ -81,6 +88,13 @@ WAVEFORM_METRICS = {
 
 #: A synchrony column, and the size it counts.
 SYNCHRONY = re.compile(r"^sync_spike_(?P<size>\d+)$")
+
+#: `quality_metrics` columns an NWB may supply where the analyzer holds NaN.
+FILLABLE = ("amplitude_median", "amplitude_cutoff")
+
+#: How closely a metric the analyzer and the NWB both state must agree for the NWB to fill a unit.
+#: The NWB copies the analyzer's float64 values, so a difference beyond rounding means another unit.
+AGREEMENT_RTOL = 1e-9
 
 
 class UnitQCSource:
@@ -99,6 +113,9 @@ class UnitQCSource:
     experiment : str, optional
         Restrict to one experiment, as the sorter is. Streams of two experiments share their probe
         names, so without it a unit of one would match a unit of the other.
+    nwb : str or Path, optional
+        The session's NWB, whose `units` table fills a `FILLABLE` metric the analyzer left NaN. Its
+        rows are keyed by `(device_name, ks_unit_id)`, the stream's probe and the sorter's label.
     """
 
     #: Part 03 §11.1: released apart from the writer, so it declares its protocols.
@@ -116,7 +133,7 @@ class UnitQCSource:
 
     #: Part 05 §3.4: options this adapter reads and can run without. `store` is absent because it
     #: is a handle, which a recipe cannot carry and a declaration may not name.
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("experiment",)
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("experiment", "nwb")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads. `units` is the sorter's.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
@@ -128,6 +145,7 @@ class UnitQCSource:
         session_id: str,
         units: Sequence[Mapping[str, Any]],
         experiment: str | None = None,
+        nwb: str | Path | None = None,
         store: Any = None,
     ) -> None:
         path = source_root(root)
@@ -140,8 +158,13 @@ class UnitQCSource:
         # A mapping keyed by a pair does not cross a boundary (Part 03 §11.2), so the build hands
         # over rows and this keys them.
         self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
+        self.nwb = SourceStore(nwb) if nwb is not None else None
         self.notes: list[str] = []
         self._built: dict[str, list[dict[str, Any]]] | None = None
+        self._nwb_rows: dict[tuple[str, str], int] | None = None
+        self._filled = dict.fromkeys(FILLABLE, 0)
+        self._disagreed = 0
+        self._unstated = 0
 
     def streams(self) -> list[SortedStream]:
         """Every analyzer in the tree, named as the curated sorting names its streams."""
@@ -208,6 +231,8 @@ class UnitQCSource:
                             "set `experiment` to the one the sorter reads"
                         )
                     seen[unit] = stream.key
+                if self.nwb is not None:
+                    quality = self._fill(stream, quality, kept)
                 built["aind_unit_qc.metrics"] += self._table(quality, METRICS, kept, identity)
                 built["aind_unit_qc.synchrony"] += self._synchrony(quality, kept, identity)
             template = self._frame(stream, TEMPLATE)
@@ -218,8 +243,92 @@ class UnitQCSource:
             raise SourceDefect("no unit in the analyzer's quality metrics matches the packet's sorting")
         if missed:
             self.notes.append(f"units: {missed} analyzer unit(s) match no unit in the packet's sorting; skipped")
+        if self.nwb is not None:
+            counts = " and ".join(f"{count} {name}" for name, count in self._filled.items())
+            self.notes.append(f"nwb: filled {counts} value(s) the analyzer left NaN")
+            self.notes.append(
+                f"nwb: {self._disagreed} unit(s) disagree with the analyzer on a metric both state; not filled"
+            )
+            if self._unstated:
+                self.notes.append(
+                    f"nwb: {self._unstated} unit(s) with a NaN to fill are absent from the NWB; left null"
+                )
         self._built = built
         return built
+
+    def _nwb_row_of(self) -> dict[tuple[str, str], int]:
+        """Map each NWB unit's `(device_name, ks_unit_id)` to its row, read once."""
+        if self._nwb_rows is None:
+            assert self.nwb is not None
+            names = self.nwb.members("units")
+            if "device_name" not in names or "ks_unit_id" not in names:
+                raise SourceDefect(f"{self.nwb.root}/units names no unit by device_name and ks_unit_id")
+            devices = self.nwb.array("units/device_name")
+            labels = self.nwb.array("units/ks_unit_id")
+            rows: dict[tuple[str, str], int] = {}
+            for row, (device, label) in enumerate(zip(devices, labels, strict=True)):
+                key = (str(_clean(device)), _label(label))
+                if key in rows:
+                    raise SourceDefect(f"{self.nwb.root}/units holds unit {key[1]} of {key[0]} twice")
+                rows[key] = row
+            self._nwb_rows = rows
+        return self._nwb_rows
+
+    def _nwb_column(self, name: str) -> NDArray[Any] | None:
+        """One numeric column of the NWB's units table, or None where it holds none by that name."""
+        assert self.nwb is not None
+        if name not in self.nwb.members("units") or not self.nwb.is_array(f"units/{name}"):
+            return None
+        try:
+            values = self.nwb.array(f"units/{name}")
+        except UnsupportedEncoding:
+            return None
+        return values if values.dtype.kind in "iufb" and len(values) == len(self._nwb_row_of()) else None
+
+    def _fill(
+        self, stream: SortedStream, frame: Mapping[str, NDArray[Any]], kept: Sequence[int]
+    ) -> dict[str, NDArray[Any]]:
+        """Return the frame with each kept unit's NaN `FILLABLE` metric taken from the NWB.
+
+        A unit is filled only where every other metric the frame and the NWB both hold agrees,
+        NaN matching only NaN; a value the analyzer states is never replaced.
+        """
+        found = self._nwb_row_of()
+        stated = {name: column for name in FILLABLE if name in frame and (column := self._nwb_column(name)) is not None}
+        if not stated:
+            return dict(frame)
+        compared = {
+            name: column
+            for name in frame
+            if name != "index" and name not in FILLABLE and (column := self._nwb_column(name)) is not None
+        }
+        offsets = np.asarray(kept, dtype=np.int64)
+        rows = np.asarray([found.get((stream.device, _label(v)), -1) for v in frame["index"][offsets]], dtype=np.int64)
+        matched = rows >= 0
+        agrees = matched & bool(compared)
+        for name, column in compared.items():
+            agrees[matched] &= np.isclose(
+                frame[name][offsets[matched]].astype(np.float64),
+                column[rows[matched]].astype(np.float64),
+                rtol=AGREEMENT_RTOL,
+                atol=0.0,
+                equal_nan=True,
+            )
+        lacking = np.zeros(len(offsets), dtype=bool)
+        for name in stated:
+            lacking |= ~np.isfinite(frame[name][offsets])
+        self._unstated += int(np.sum(lacking & ~matched))
+        self._disagreed += int(np.sum(lacking & matched & ~agrees))
+        filled = dict(frame)
+        for name, column in stated.items():
+            values = frame[name].astype(np.float64)
+            take = agrees & ~np.isfinite(values[offsets])
+            source = column[rows[take]].astype(np.float64)
+            stated_here = np.isfinite(source)
+            values[offsets[take][stated_here]] = source[stated_here]
+            filled[name] = values
+            self._filled[name] += int(np.sum(stated_here))
+        return filled
 
     def _table(
         self,
@@ -270,4 +379,4 @@ def _values(column: NDArray[Any]) -> list[Any]:
     return list(column.tolist())
 
 
-__all__ = ["METRICS", "WAVEFORM_METRICS", "UnitQCSource"]
+__all__ = ["FILLABLE", "METRICS", "WAVEFORM_METRICS", "UnitQCSource"]

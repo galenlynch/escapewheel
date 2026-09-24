@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
   "registry_id": "aind_unit_qc",
-  "registry_version": "0.5.0",
+  "registry_version": "0.6.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "aind_unit_qc",
@@ -379,26 +379,34 @@
             "description": "Unit Id."
           },
           {
-            "name": "peak_to_valley",
+            "name": "peak_to_trough_duration",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Time from the waveform's peak to its valley.",
+            "description": "Time from the template's trough (minimum) to the main peak (maximum) after it.",
             "unit": "s"
           },
           {
-            "name": "peak_trough_ratio",
+            "name": "main_peak_to_trough_ratio",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Ratio of peak to trough amplitude."
+            "description": "Absolute amplitude of the template's larger peak, before or after the trough, over the trough's."
           },
           {
-            "name": "half_width",
+            "name": "peak_half_width",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Width of the waveform at half its amplitude.",
+            "description": "Width at half amplitude of the template's larger peak, before or after the trough.",
+            "unit": "s"
+          },
+          {
+            "name": "trough_half_width",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Width at half amplitude of the template's trough.",
             "unit": "s"
           },
           {
@@ -490,7 +498,7 @@
             "id": "aind_unit_qc.waveform_metrics.a_width_is_positive",
             "level": "error",
             "message": "a waveform width is zero or negative, which no waveform has",
-            "sql": "SELECT session_id, unit_id FROM aind_unit_qc.waveform_metrics WHERE peak_to_valley <= 0 OR half_width <= 0"
+            "sql": "SELECT session_id, unit_id FROM aind_unit_qc.waveform_metrics WHERE peak_to_trough_duration <= 0 OR peak_half_width <= 0 OR trough_half_width <= 0"
           }
         ]
       }

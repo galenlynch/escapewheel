@@ -65,10 +65,10 @@ for 757, because the fit needs channels on that side of the peak; the three `dri
 2,531. Every one is nullable, and the descriptions say so.
 
 A rule invented from the column names did not survive the data. `a_peak_is_counted` asserted that
-a waveform with a measured `peak_to_valley` has a peak of one sign or the other. **61 of 4,322
-units** contradict it, all with a `peak_to_valley` in the ordinary range: the span is measured
-extremum to extremum, and the peak *counters* apply a prominence threshold, so a low-prominence
-waveform has a width and no detected peak. The rule is struck. `snr` already says what it was
+a waveform with a measured peak-to-trough span has a peak of one sign or the other. **61 of 4,322
+units** contradict it, all with a span in the ordinary range, measured as that NWB's
+`peak_to_valley`: the span is measured extremum to extremum, and the peak *counters* apply a
+prominence threshold, so a low-prominence waveform has a width and no detected peak. The rule is struck. `snr` already says what it was
 reaching for, and better.
 
 ## The source's columns are evidence, not a schema

@@ -84,9 +84,10 @@ fork. What it should generate:
 - Rows arrive with identifiers as the **names** their source used, never numbers: the writer mints
   those packet-wide (R53 §2.5).
 - The document **MUST NOT** be derived from the rows it delivers (R109 §3.2). Declare the **union**
-  of what the pipeline may emit, as `nullable` — `aind_unit_qc.waveform_metrics` declares 13
-  columns where the extraction delivers 10, and that difference is what says a run did not compute
-  `half_width` rather than that the extension lacks it.
+  of what the pipeline may emit, as `nullable` — `aind_unit_qc.waveform_metrics` declares 14
+  columns and its adapter delivers those its analyzer computed, so an analyzer run without
+  `velocity_fits` delivers 12, and the two it lacks say that run did not compute them rather than
+  that the extension lacks them.
 - The command **MUST** be a function of its inputs (R109 §3.7). Where it cannot be, deliver a file
   produced beforehand instead.
 - An encoding exception goes in the recipe's `[encoding]`, never in the schema, because it is a
