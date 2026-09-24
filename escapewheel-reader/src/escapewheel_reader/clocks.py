@@ -379,7 +379,7 @@ def tick_rate(packet: Any, clock_id: int) -> tuple[int, int]:
 
 
 def origin(packet: Any, session_id: int | None = None) -> tuple[int, int, int]:
-    """Return the session's time origin and the reference clock's rational rate (Part 05 §7).
+    """Return the session's time origin and the reference clock's rational rate (Part 01 §§2.2 and 3.9).
 
     Read from `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum
     across clocks through R13's mapping, which is arithmetic a reader should not have to repeat

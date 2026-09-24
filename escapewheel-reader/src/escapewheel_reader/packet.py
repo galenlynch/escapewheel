@@ -903,7 +903,7 @@ class Packet:
         return self._reference_cache
 
     def t_zero(self, *, session_id: int | None = None) -> int:
-        """Return the session's time origin, on the reference clock (Part 05 §7).
+        """Return the session's time origin, on the reference clock (Part 01 §2.2).
 
         The earliest tick at which any of the session's clocks was observing. It is read from
         `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum across
