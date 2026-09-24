@@ -633,6 +633,12 @@ section = "1"
 title = "Core principle"
 aliases = []
 
+[anchor.ew-in-process-opt-in]
+part = "05"
+section = "3.9"
+title = "Whether a source runs in the writer's process"
+aliases = []
+
 [anchor.ew-incomplete-validation]
 part = "05"
 section = "9.4"

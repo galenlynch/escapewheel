@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `cf0d686ee169a201849c0a0113d1c86982c9fb30` |
+| **Based on** | `89e2d608bae73f5bae733cbe38e2ade269ed063f` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 03 §§11, 11.1, 11.2, and 11.5; Part 04 §5.5; Part 05 §§2 and 3.5; Part 07 §4; `registry/adapter.schema.json`; `registry/sources.schema.json` |
-| **Depends on** | [R80 §§2.2–2.4](../accepted/R80-a-source-resolution-document-locates-an-external-resource.md#2-decision); [R115 §§3.1, 3.3, 3.6, and 3.12](../accepted/R115-a-build-reaches-a-source-through-declarations.md#3-decision); [R117 §3.1](../accepted/R117-an-adapter-delivers-an-array-by-writing-it.md#3-decision); [R119 §3.4](../accepted/R119-an-adapter-declares-the-options-it-accepts.md#3-decision); [R133 §3.2](../accepted/R133-a-build-decides-ownership-only-from-the-recipe-and-adapter-declarations.md#3-decision) |
+| **Amends** | Part 03 §§11, 11.1, 11.2, 11.3, and 11.5; Part 04 §5.5; Part 05 §§2, 3.5, and 3.9; Part 07 §4; `registry/adapter.schema.json`; `registry/sources.schema.json` |
+| **Depends on** | [R80 §§2.2–2.4](../accepted/R80-a-source-resolution-document-locates-an-external-resource.md#2-decision); [R115 §§3.1, 3.3, 3.5, 3.6, and 3.12](../accepted/R115-a-build-reaches-a-source-through-declarations.md#3-decision); [R117 §3.1](../accepted/R117-an-adapter-delivers-an-array-by-writing-it.md#3-decision); [R119 §3.4](../accepted/R119-an-adapter-declares-the-options-it-accepts.md#3-decision); [R133 §3.2](../accepted/R133-a-build-decides-ownership-only-from-the-recipe-and-adapter-declarations.md#3-decision) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5 |
 
@@ -40,7 +40,9 @@ source adapter returns records and writes no files.
 [Part 03 §11](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-reaching-a-source)
 has an adapter write a packet-owned array, a `files-v0.1` delivery, and a report into locations a
 build supplies. Neither part says who owns those locations, so an adapter author cannot tell which
-writes a build relies on.
+writes a build relies on. Part 03 §11.1 still has a recipe name a `files-v0.1` delivery's files,
+which no recipe member can, and Part 05 §3.9 still confines an adapter a build ships to the
+writer's process, which Part 03 §11.1 does not.
 
 This revision makes every declaration member required, lets `protocols` name every protocol an
 adapter supports, and incorporates the declaration schema, so a build checks a class and a document
@@ -50,38 +52,43 @@ rule. It replaces the no-write sentence with a rule saying where an adapter deli
 build owns those locations. The rule governs only a delivery, so a cache of source bytes stays an
 implementation matter that a later revision may still govern.
 
-The change is structural because it replaces rules inside existing sections: Part 03 §11.5's
-single `protocol`, its readings of an absent member, and its reference to a published schema; Part
-03 §11.2's rule that declaring the protocol asks for its terms; Part 04 §5.5's reference to a
-published schema; Part 05 §2's no-write sentence; and the descriptions of an adapter as returning
-only records in Part 03 §11 and Part 07 §4. Appended sections would leave each contradicting its
-replacement.
+The change is structural because it replaces rules inside existing sections: Part 03 §11.5's single
+`protocol`, its readings of an absent member, and its reference to a published schema; Part 03
+§11.2's rule that declaring the protocol asks for its terms; Part 03 §11.1's recipe-named Parquet;
+Part 03 §11.3's rule that an adapter writes every packet-owned array; Part 04 §5.5's reference to a
+published schema; Part 05 §2's no-write sentence; Part 05 §3.9's in-process-only route for an
+adapter a build ships; and the descriptions of an adapter as returning only records in Part 03 §11
+and Part 07 §4. Appended sections would leave each contradicting its replacement.
 
 ### 1.1 Structural crosswalk
 
 Commit `18c6ba6` gave Part 03 §11.5, Part 05 §3.5, and Part 07 §4 their canonical anchors. Commit
 `23e12d0` added `ew-reaching-a-source` to Part 03 §11, `ew-source-resolution` to Part 04 §5.5, and
-`ew-import-pipeline` to Part 05 §2, and commit `cf0d686` added `ew-protocol-groups` to Part 03
-§11.1 and `ew-build-supplied-values` to Part 03 §11.2. None changed anything else. No section is
+`ew-import-pipeline` to Part 05 §2, and commit `cf0d686` added `ew-protocol-groups` to Part 03 §11.1
+and `ew-build-supplied-values` to Part 03 §11.2, and commit `89e2d60` added `ew-in-process-opt-in`
+to Part 05 §3.9. None changed anything else; Part 03 §11.3 already had its anchor. No section is
 added, moved, or retired.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | [Part 03 §11](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-reaching-a-source), an adapter reads one source and returns records | extend in place | same section | an adapter delivers through the channels and locations the profile names, listed there | §3.4 |
-| [Part 03 §11.1](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-protocol-groups), an adapter declares and supports at least one protocol | extend in place | same section | out of process, a build reaches an adapter by the protocol its recipe entry names, which the adapter must declare, or else by any the adapter declares; in process, by none | §3.5 |
+| [Part 03 §11.1](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-protocol-groups), an adapter declares and supports at least one protocol; `files-v0.1` crosses as Parquet the recipe names | extend in place | same section | out of process, a build reaches an adapter by the protocol its recipe entry names, which the adapter must declare, or else by any the adapter declares; in process, by none; `files-v0.1` crosses as one Parquet file per resource under `delivery_root`, named by its resource identifier | §§3.4, 3.5 |
 | [Part 03 §11.2](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-build-supplied-values), declaring the protocol asks for its terms | replace in place | same section | a build supplies the terms of the protocol it reaches the adapter by | §3.5 |
+| [Part 03 §11.3](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-referenced-resource-delivery), an adapter writes a packet-owned array into the location a build supplies | replace in place | same section | an array crossing a protocol is written into `array_location`; one returned in process may be handed over with its values | §3.4 |
 | [Part 03 §11.5](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-adapter-declaration-document), a shape published as a schema; a single `protocol`; readings of a document without `accepts` or `contributes` | replace in place | same section | the schema is incorporated, every member is required, `protocols` names a set, and a class is checked as the document holding its facts, which only an adapter a build ships may leave without a protocol | §§3.1, 3.2 |
 | [Part 04 §5.5](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-source-resolution), a shape published as a schema | replace in place | same section | the schema is incorporated, a writer writes a conforming document, a reader may validate one, and a reader does not resolve through an unknown version | §3.3 |
 | [Part 05 §2](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-import-pipeline), a source adapter returns records and writes no files | replace in place | same section | an adapter delivers only where a build points it, and the build owns those locations | §3.4 |
-| [Part 05 §3.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-recipe-check), the declaration refusals | extend in place | same section | adds the refusal of a declaration failing its schema, in either form, and of a recipe naming a protocol its adapter does not declare | §§3.2, 3.5 |
-| [Part 07 §4](../../escapewheel_poc_docs_v0.2/07_reference_implementation.md#ew-reference-object-model), an adapter's return type is records; an adapter names its protocol by a constant | revise the informative text | same section | rows are returned as records; an array and a report are written where the build points; an independently released adapter names its protocols by constants | §§3.1, 3.4 |
+| [Part 05 §3.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-recipe-check), the declaration refusals | extend in place | same section | adds the refusal of a declaration failing its schema, in either form, and of a recipe naming a protocol its adapter does not declare; the protocol refusal names only an adapter released independently of a build | §§3.2, 3.5 |
+| [Part 05 §3.9](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-in-process-opt-in), in process is the only route for an adapter a build ships | replace in place | same section | a build runs such an adapter in process unless its recipe entry gives it a delivery, and then serves it over a protocol of the group | §3.5 |
+| [Part 07 §4](../../escapewheel_poc_docs_v0.2/07_reference_implementation.md#ew-reference-object-model), an adapter's return type is records; an adapter names its protocol by a constant; an adapter writes its arrays rather than handing values over | revise the informative text | same section | rows are returned as records; an array crossing a protocol and a report are written where the build points, and an adapter run in process may hand an array's values over; an independently released adapter names its protocols by constants | §§3.1, 3.4 |
 
 ## 2. Background
 
 Section 2 is informative. Every observation was reproduced at `63aa520` or a later commit up to the
 recorded baseline, all sharing one code: the commits between them change only revision documents,
-status records, and five canonical anchors. Probes ran in the writer's environment against `registry/logical_schemas.json`, using throwaway
-recipes, adapter classes, and documents under a scratch directory.
+status records, and six canonical anchors. Probes ran in the writer's environment against
+`registry/logical_schemas.json`, using throwaway recipes, adapter classes, and documents under a
+scratch directory.
 
 ### 2.1 The adapter declaration schema admits an incomplete document
 
@@ -153,6 +160,13 @@ would have reached the adapter by `flight-v0.1`. Part 03 §11.2 has a build supp
 its adapter's protocol requires", on the ground that "declaring the protocol is what asks for it",
 which presumes one.
 
+[Part 05 §3.9](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-in-process-opt-in),
+from [R115 §3.5](../accepted/R115-a-build-reaches-a-source-through-declarations.md#3-decision),
+says an adapter a build ships declares no protocol, "so in process is its only route". Part 03
+§11.1 lets a build serve such an adapter over any protocol of the group, and the writer runs a
+built-in adapter out of process wherever its recipe entry carries a `[source.delivery]` block, as
+the `nwb` recipe above does.
+
 ### 2.4 The reader never applies the source resolution schema
 
 Part 04 §5.5 says the source resolution document's shape "is published as"
@@ -196,12 +210,25 @@ Part 03 §11 says an adapter "reads one source and returns records", and Part 07
 adapter's return type is records, not a path, before describing an adapter that writes an array.
 The writer's `sources/__init__.py` docstring says an adapter never writes.
 
+Part 03 §11.1 describes `files-v0.1` as "Parquet the recipe names, one file per resource", as R115
+§3.3 did, where R115 also has the protocol invent "a mapping from resource to path, which a recipe
+already carries for a `tables` source". No recipe member names a delivered file: the recipe
+schema's `[source.delivery]` block admits `command`, `protocol`, `declaration`, and `report_path`,
+and Part 03 §11.2 has a build supply `delivery_root` instead. The writer reads each
+`<resource_id>.parquet` under `delivery_root`, and a resource document as `resources.json`; no part
+states either name.
+
+Part 03 §11.3 says without qualification that an adapter writes a packet-owned array into the
+location a build supplies. R117 left the in-process path "untouched", and the built-in `nwb` and
+`waveforms` adapters, run in process, hand an array's values to the writer, which writes it. Served
+out of process, the same adapters write their arrays through the writer's shipped protocol code.
+
 The writer creates the other three locations under a workspace beside the packet,
 `<out>.deliveries`, and removes it when it commits, so cleanup already belongs to the build; no part
 says so. After a refusal the workspace stays, and the next build reuses it with
-`mkdir(exist_ok=True)` and clears nothing. Under `files-v0.1`, `_read_files` reads every Parquet file under
-`delivery_root`, so a rerun whose adapter no longer writes a resource reads the file an earlier run
-left as that resource's delivery. This is from reading the code; it was not reproduced.
+`mkdir(exist_ok=True)` and clears nothing. Under `files-v0.1`, `_read_files` reads every Parquet
+file under `delivery_root`, so a rerun whose adapter no longer writes a resource reads the file an
+earlier run left as that resource's delivery. This is from reading the code; it was not reproduced.
 
 Every other route identifies its own delivery. Under `stream-v0.1` and `flight-v0.1` the delivery is
 what crosses the stream or the connection; a packet-owned array is named by its catalog row's
@@ -219,10 +246,12 @@ lifetime, and its layout wherever adapters share one.
 
 [Part 03 §11.3](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-referenced-resource-delivery)
 has an adapter name each packet-owned array's directory by its catalog row's `resource_id` and a
-build bind bytes to rows one-to-one. The writer names the directory by `array_asset_id` and writes a
-`_resources.json` beside the arrays, which no part mentions and no schema checks; the build reads
-the binding from that file. Bringing the writer to the current rule needs no specification change
-and belongs with this implementation.
+build bind bytes to rows one-to-one, and has a build supply `array_location` under the staging area
+so commit moves the array by a rename. The writer supplies it under its workspace beside the packet
+and moves each array into a staging area it creates at commit. It names the directory by
+`array_asset_id` and writes a `_resources.json` beside the arrays, which no part mentions and no
+schema checks; the build reads the binding from that file. Bringing the writer to the current rule
+needs no specification change and belongs with this implementation.
 
 ### 2.7 Alternatives
 
@@ -232,17 +261,21 @@ nothing, since the regeneration that adds `states`, `accepts`, and `consumes` ad
 leaves one member whose omission still needs a stated meaning. Leaving both schemas published and
 unincorporated keeps a build checking a shape that governs nothing. Checking a registered class at
 discovery would refuse a package before any recipe names it, so a broken package would stop a build
-that never uses it. Requiring a reader to refuse a malformed resolution document would make a
-broken optional `sources.json` stop a packet from opening, including its tables that need no
-source. Deleting Part 05 §2's sentence without a replacement removes the contradiction and still
-leaves an adapter author unable to tell where a build reads a delivery. Requiring a build to supply
-every location empty, or to remove each once the build commits, would forbid a build from pointing
-an adapter at the place its bytes will stay, which Part 03 §11.3 already does for a packet-owned
-array; `delivery_root` is the one location whose contents are the only record of a delivery, and
-Parquet delivered there never becomes the packet's bytes, since a build settles types and sort on
-arrival. Having a `files-v0.1` adapter write an index of what it delivered would change how rows
-cross, which Part 03 §11.1 makes a new protocol, and would restore a side file like the
-`_resources.json` this revision removes for arrays.
+that never uses it. Requiring a reader to refuse a malformed resolution document would make a broken
+optional `sources.json` stop a packet from opening, including its tables that need no source.
+Deleting Part 05 §2's sentence without a replacement removes the contradiction and still leaves an
+adapter author unable to tell where a build reads a delivery. Requiring a build to supply every
+location empty, or to remove each once the build commits, would forbid a build from pointing an
+adapter at the place its bytes will stay, which Part 03 §11.3 already does for a packet-owned array;
+`delivery_root` is the one location whose contents are the only record of a delivery, and Parquet
+delivered there never becomes the packet's bytes, since a build settles types and sort on arrival.
+Having a `files-v0.1` adapter write an index of what it delivered would change how rows cross, which
+Part 03 §11.1 makes a new protocol, and would restore a side file like the `_resources.json` this
+revision removes for arrays. Restoring Parquet the recipe names would need a per-resource path
+mapping no recipe has, and a named file is one an earlier extraction may have left, which is the
+staleness an empty `delivery_root` rules out; an extraction worth keeping stays in the adapter's own
+storage, as the cache does. Requiring an adapter run in process to write its arrays would undo the
+path R117 kept, for a boundary that is not there.
 
 Requiring every importable declaration to carry a protocol would withdraw Part 03 §11.1's exemption
 for an adapter a build ships, and would check a fact that does not apply: running such an adapter in
@@ -262,12 +295,13 @@ No other proposal or draft is open. The writer resolves a declaration through on
 `declared`, whether it comes from a class or a document, and `declaration.of` renders a class as a
 document once it is given a protocol, so checking a class as its document reuses the existing path
 wherever the class states its protocols. A built-in class states none, so its check omits that
-member alone. An independently released class needs a way to state its protocols, which the
-writer's adapter classes do not yet have, and the AIND package's three adapters must use it. The
-writer already chooses one protocol per source when it parses a recipe, and supplies the terms of
-that protocol alone, and none for a source it runs in process. The writer's suite has 592 tests,
-the AIND package's 67, and the reader's 228, all passing at the recorded baseline, and the full
-repository verifier passed its 35 stages at `63aa520`.
+member alone. An independently released class needs a way to state its protocols, which the writer's
+adapter classes do not yet have, and the AIND package's three adapters must use it. The writer
+already chooses one protocol per source when it parses a recipe, and supplies the terms of that
+protocol alone, and none for a source it runs in process. It creates its staging area at commit, so
+supplying `array_location` under it means creating the area before the first source runs. The
+writer's suite has 592 tests, the AIND package's 67, and the reader's 228, all passing at the
+recorded baseline, and the full repository verifier passed its 35 stages at `63aa520`.
 
 ## 3. Decision
 
@@ -321,10 +355,13 @@ nothing else an adapter writes.
 
 For the portable profile, Part 03 §11 names the routes:
 
-- rows, returned in process where a recipe opts the adapter in, or across the protocol a build
+- rows, returned to the build where it runs the adapter in process, or across the protocol a build
   reaches the adapter by (§3.5), with a `flight-v0.1` adapter serving them at `socket`;
-- a packet-owned array, written into `array_location`;
-- a `files-v0.1` delivery, written into `delivery_root`; and
+- a packet-owned array, written into `array_location` where it crosses a protocol, and in process
+  either written there or handed to the build with its values;
+- a `files-v0.1` delivery, written into `delivery_root` as one Parquet file per resource named by
+  its resource identifier with the suffix `.parquet`, and a resource document (Part 03 §11.3) as
+  `resources.json`; and
 - a report, written at the `report_path` the recipe names (Part 09 §5.8).
 
 ### 3.5 A build reaches an adapter by a protocol the adapter declares
@@ -335,8 +372,10 @@ names none. A build MUST refuse a recipe entry naming a protocol its adapter doe
 naming the source and the protocol, before it opens any source. A recipe opting an adapter into the
 writer's process has the build reach it by no protocol, whatever the adapter declares.
 
-An adapter a build ships need declare no protocol, and neither rule above reaches it: a build may
-run it in process or serve it over any protocol of the group (Part 03 §11.1).
+An adapter a build ships that declares no protocol is reached by neither rule above. A build MUST
+run such an adapter in process unless its recipe entry gives it a `delivery` table naming a command
+(Part 05 §§3.1 and 3.7), and then reaches it over the protocol the entry names or any of the group
+(Part 03 §11.1); a build MUST NOT require a recipe to opt such an adapter into the writer's process.
 
 A build MUST supply the terms of the protocol it reaches an adapter by, and no other protocol's
 (Part 03 §11.2); in process it supplies no protocol's terms.
@@ -350,46 +389,52 @@ documents exist, and structural validation still needs none.
 ## 5. Consequence
 
 Packet bytes are unchanged, and no packet is rebuilt. An adapter's declaration document omitting a
-member is refused until it states that member; the tracked example complies, and a generated document
-complies by construction. A third party's hand-written document must be updated. An importable
-declaration the writer now accepts with an undeclared resource, a term in `accepts`, or a malformed
-name is refused at the recipe check. An independently released adapter that a recipe runs in
-process and that declares no protocol is refused at the recipe check, as Part 03 §11.1 already
+member is refused until it states that member; the tracked example complies, and a generated
+document complies by construction. A third party's hand-written document must be updated. An
+importable declaration the writer now accepts with an undeclared resource, a term in `accepts`, or a
+malformed name is refused at the recipe check. An independently released adapter that a recipe runs
+in process and that declares no protocol is refused at the recipe check, as Part 03 §11.1 already
 requires; the AIND package's three adapters declare all three protocols of the group. Every
 declaration document replaces `protocol` with `protocols`, which a generated document does by
 construction. A recipe naming a protocol its adapter does not declare is refused, and a build
-supplies the terms of the one protocol it reaches an adapter by. A resolution document is refused
-by no conforming reader merely for failing the schema, and a document a conforming writer writes always satisfies it. A
-source name that the schema now refuses becomes resolvable. The schema `$id` versions stay until
-release identifiers are assigned.
+supplies the terms of the one protocol it reaches an adapter by. A recipe may give an adapter a
+build ships a `delivery` table and have it served out of process, which Part 05 §3.9 forbade and the
+writer already does. A `files-v0.1` adapter names its files as the writer already reads them, and an
+adapter run in process may still hand an array over with its values. A resolution document is
+refused by no conforming reader merely for failing the schema, and a document a conforming writer
+writes always satisfies it. A source name that the schema now refuses becomes resolvable. The schema
+`$id` versions stay until release identifiers are assigned.
 
-No accepted clause is superseded whole. R119 §3.4's reading of a document without `accepts` and
-R133 §3.2's reading of one without `contributes` are replaced by §3.1; the rest of each clause
-stands, and their ledger notes record the change. R115 §3.12's `protocol` key is replaced by §3.1's
+No accepted clause is superseded whole. R119 §3.4's reading of a document without `accepts` and R133
+§3.2's reading of one without `contributes` are replaced by §3.1; the rest of each clause stands,
+and their ledger notes record the change. R115 §3.12's `protocol` key is replaced by §3.1's
 `protocols`, R115 §3.1's rule that declaring the protocol asks for its terms by §3.5, and R115
-§3.3's requirement of at least one protocol stands and gains the build's choice among them. R117 §3.1's sentence that no other adapter writes
-anything is replaced by §3.4, and its rule for arrays stands. R115 §3.6 keeps an adapter's interface
-records, and §3.4 leaves that intact for rows. R80 §2.2's version rule gains a stated owner in Part
-04 §5.5.
+§3.3's requirement of at least one protocol stands and gains the build's choice among them, while
+its description of `files-v0.1` as Parquet the recipe names is replaced by §3.4. R115 §3.5's
+in-process-only route for an adapter a build ships is replaced by §3.5. R117's in-process path,
+which its consequence kept, becomes a route §3.4 names. R117 §3.1's sentence that no other adapter
+writes anything is replaced by §3.4, and its rule for arrays stands. R115 §3.6 keeps an adapter's
+interface records, and §3.4 leaves that intact for rows. R80 §2.2's version rule gains a stated
+owner in Part 04 §5.5.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. No scientific meaning changes. | None required. |
 | logical prose and registry | Unchanged. Neither declares an adapter or a resolution document. | None required. |
-| physical profiles | Part 03 §11 lists the delivery routes; §11.1 says which declared protocol a build reaches an adapter by; §11.2 supplies the terms of that protocol; §11.5 incorporates `registry/adapter.schema.json`, names `protocols`, requires every member, drops its readings of an absent `accepts` or `contributes`, and checks a class as its document, exempting only a built-in class from `protocols`. The schema replaces `protocol` with `protocols`, an array of at least one protocol name with no repeats, lists all eight members under `required`, its `$schema` description drops the keyword and the wrong citation, and its `accepts` and `contributes` descriptions drop the absent-member readings. | `evidence/R<N>.json` names the anchors; `registry/check.py` validates the example document, and a document missing a member or carrying an empty `protocols` fails. |
+| physical profiles | Part 03 §11 lists the delivery routes; §11.1 says which declared protocol a build reaches an adapter by and describes `files-v0.1` as Parquet under `delivery_root` named by resource identifier; §11.3 has an adapter write an array crossing a protocol and lets one run in process hand it over; §11.2 supplies the terms of that protocol; §11.5 incorporates `registry/adapter.schema.json`, names `protocols`, requires every member, drops its readings of an absent `accepts` or `contributes`, and checks a class as its document, exempting only a built-in class from `protocols`. The schema replaces `protocol` with `protocols`, an array of at least one protocol name with no repeats, lists all eight members under `required`, its `$schema` description drops the keyword and the wrong citation, and its `accepts` and `contributes` descriptions drop the absent-member readings. | `evidence/R<N>.json` names the anchors; `registry/check.py` validates the example document, and a document missing a member or carrying an empty `protocols` fails. |
 | packet manifest and JSON Schemas | Part 04 §5.5 incorporates `registry/sources.schema.json`, lets a reader choose whether to validate, and states the version rule. The schema drops its source-name pattern and length limit, and its `$schema` description drops the keyword. The manifest and delivery schemas are unchanged. | `registry/check.py` validates the example and a name with a space. |
-| validation and import | Part 05 §2 states where an adapter delivers and that the build owns those locations; §3.5 adds the refusals of a declaration failing its schema and of a recipe naming a protocol its adapter does not declare. | The writer tests below. |
+| validation and import | Part 05 §2 states where an adapter delivers and that the build owns those locations; §3.5 adds the refusals of a declaration failing its schema and of a recipe naming a protocol its adapter does not declare, and limits its protocol refusal to an adapter released independently of a build; §3.9 runs an adapter a build ships in process unless its recipe entry gives it a delivery. | The writer tests below. |
 | extensions | Registry content unchanged. The AIND package's three adapters declare all three protocols of the group, and its generated documents gain any missing members and carry `protocols`. | The AIND suite validates its generated documents against the schema. |
-| reader, writer, validator, adapters | The reader already resolves nothing through a document of unknown version. It validates a caller-supplied document, refusing one that fails with where it fails, and keeps treating a packet root `sources.json` it cannot read as resolving nothing. The writer lets an adapter class state its protocols by the constants it exports, checks a class declaration as its document at the recipe check, refuses there an adapter another distribution registers that states no protocol and a recipe protocol its adapter does not declare, renders a class's own protocols in `escapewheel declare`'s output and takes a repeatable `--protocol` only for a class stating none, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, supplies `delivery_root` empty, names array directories by `resource_id`, and binds arrays by catalog row without `_resources.json`. The validator is unchanged. | Reader and writer tests below. |
-| conformance fixtures and tests | Packet fixtures are unchanged, because a validator reads neither document. Writer tests cover a document missing each member, a document of empty arrays, a class with an undeclared resource, a term in `accepts`, or a malformed name refused at the recipe check, an adapter another distribution registers that states no protocol refused at the recipe check while a built-in one passes, a document with an empty or repeating `protocols` refused, a recipe naming a protocol its adapter does not declare refused, a recipe naming none reaching the adapter by one it declares with only that protocol's terms supplied, the same adapter run in process with no protocol's terms supplied, `escapewheel declare` output passing the schema, `session.build` refusing a recipe that fails the check, a `sources.json` the writer writes passing the schema, array directories named by `resource_id`, and a rerun after a refused run left files under `delivery_root` reading none of them. Reader tests cover a caller-supplied document failing the schema, one of an unknown version, and a packet root document of an unknown version. | `escapewheel-writer`, `escapewheel-reader`, and `escapewheel-aind` suites. |
-| revision process and tooling | Ordinary ledger and evidence records. The notes of R119 §3.4, R133 §3.2, R117 §3.1, R115 §§3.1, 3.3, and 3.12, and R80 §2.2 are rewritten, and R115 §§3.1 and 3.3 target Part 03 §§11.2 and 11.1 by anchor. | `ledger.py` and `evidence.py`. |
+| reader, writer, validator, adapters | The reader already resolves nothing through a document of unknown version. It validates a caller-supplied document, refusing one that fails with where it fails, and keeps treating a packet root `sources.json` it cannot read as resolving nothing. The writer lets an adapter class state its protocols by the constants it exports, checks a class declaration as its document at the recipe check, refuses there an adapter another distribution registers that states no protocol and a recipe protocol its adapter does not declare, renders a class's own protocols in `escapewheel declare`'s output and takes a repeatable `--protocol` only for a class stating none, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, supplies `delivery_root` empty and `array_location` under its staging area, names array directories by `resource_id`, and binds arrays by catalog row without `_resources.json`. The validator is unchanged. | Reader and writer tests below. |
+| conformance fixtures and tests | Packet fixtures are unchanged, because a validator reads neither document. Writer tests cover a document missing each member, a document of empty arrays, a class with an undeclared resource, a term in `accepts`, or a malformed name refused at the recipe check, an adapter another distribution registers that states no protocol refused at the recipe check while a built-in one passes, a document with an empty or repeating `protocols` refused, a recipe naming a protocol its adapter does not declare refused, a recipe naming none reaching the adapter by one it declares with only that protocol's terms supplied, the same adapter run in process with no protocol's terms supplied, `escapewheel declare` output passing the schema, `session.build` refusing a recipe that fails the check, a `sources.json` the writer writes passing the schema, array directories named by `resource_id`, a rerun after a refused run left files under `delivery_root` reading none of them, `array_location` supplied under the staging area, a built-in adapter with a `delivery` table served out of process, and a built-in adapter run in process handing over an array's values. Reader tests cover a caller-supplied document failing the schema, one of an unknown version, and a packet root document of an unknown version. | `escapewheel-writer`, `escapewheel-reader`, and `escapewheel-aind` suites. |
+| revision process and tooling | Ordinary ledger and evidence records. The notes of R119 §3.4, R133 §3.2, R117 §3.1, R115 §§3.1, 3.3, 3.5, and 3.12, and R80 §2.2 are rewritten, and R115 §§3.1, 3.3, and 3.5 target Part 03 §§11.2 and 11.1 and Part 05 §3.9 by anchor. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. The writer and reader READMEs, `registry/README.md`'s incorporation column, the writer's `sources/__init__.py` docstring, and the repository TODO's schema-audit item are updated. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
 Each clause is `applied`, each by its canonical anchor: §3.1 at Part 03 §11.5 and Part 07 §4; §3.2
-at Part 03 §11.5 and Part 05 §3.5; §3.3 at Part 04 §5.5; §3.4 at Part 05 §2, Part 03 §11, and Part
-07 §4; and §3.5 at Part 03 §§11.1 and 11.2 and Part 05 §3.5.
+at Part 03 §11.5 and Part 05 §3.5; §3.3 at Part 04 §5.5; §3.4 at Part 05 §2, Part 03 §§11, 11.1,
+and 11.3, and Part 07 §4; and §3.5 at Part 03 §§11.1 and 11.2 and Part 05 §§3.5 and 3.9.
 
 The negative cases distinguish the new rule from the current one:
 
@@ -413,12 +458,15 @@ The positive cases are a document of all eight members whose arrays other than `
 empty, which is accepted; a document declaring all three protocols, whose recipe entry names none
 and which a build reaches by one of them, supplying only that protocol's terms; the same adapter
 opted into the writer's process, which a build reaches by none and supplies no protocol's terms; a
-built-in adapter declaring no protocol, which passes the recipe check; and a resolution document naming a source
-whose name carries a space, which now satisfies the schema.
-A document whose `protocols` is empty or names a protocol twice is refused, as the current schema
-refuses any member it does not know. Two reader cases hold the restored and optional rules without
-distinguishing them from current behavior: a resolution document of an unknown version resolves no source, and a caller-supplied
-document failing the schema is refused by the reference reader, naming where it fails.
+built-in adapter declaring no protocol, which passes the recipe check; and a resolution document
+naming a source whose name carries a space, which now satisfies the schema. A document whose
+`protocols` is empty or names a protocol twice is refused, as the current schema refuses any member
+it does not know. A built-in adapter given a `delivery` table is served out of process, and one run
+in process may hand over an array's values; the writer does both today, so these cases hold the
+corrected text rather than distinguish it. Two reader cases hold the restored and optional rules
+without distinguishing them from current behavior: a resolution document of an unknown version
+resolves no source, and a caller-supplied document failing the schema is refused by the reference
+reader, naming where it fails.
 
 ## 7. Open
 
