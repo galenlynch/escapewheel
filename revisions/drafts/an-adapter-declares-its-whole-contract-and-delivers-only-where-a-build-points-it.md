@@ -319,7 +319,7 @@ document failing the schema is refused by the reference reader, naming where it 
 
 ## 7. Open
 
-A build-supplied location for an adapter's source cache is deferred. §3.4 forbids no write outside
-a delivery, so a later revision can add one without amending it; that revision would settle the
-location's lifetime, which would outlast a build, and how an adapter declares an optional term,
-since Part 03 §11.5 lets it name a term only in `needs`.
+A build-supplied location for an adapter's source cache is deferred. §3.4 does not forbid a write
+outside a delivery location, so a later revision can add a cache location without amending it; that
+revision would settle the location's lifetime, which would outlast a build, and how an adapter
+declares an optional term, since Part 03 §11.5 lets it name a term only in `needs`.
