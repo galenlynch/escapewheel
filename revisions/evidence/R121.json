@@ -101,12 +101,12 @@
           {
             "kind": "check",
             "stage": "registry: structural checks",
-            "id": "registry validates against its meta-schema"
+            "id": "registry meta-schema identity is 0.2.0"
           },
           {
             "kind": "check",
             "stage": "registry: structural checks",
-            "id": "every shipped registry names the current meta-schema"
+            "id": "core registry version is 0.2.0"
           },
           {
             "kind": "check",

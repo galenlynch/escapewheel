@@ -9,10 +9,10 @@
         {"path": "escapewheel_poc_docs_v0.2/09_metadata_and_extensions.md", "anchor": "ew-extension-definition"},
         {"path": "registry/registry.schema.json", "pointer": "/$id"},
         {"path": "registry/registry_contract.schema.json", "pointer": "/$id"},
-        {"path": "registry/registry_contracts/escapewheel-registry-contract-v0.2.json", "pointer": "/id"},
-        {"path": "registry/logical_schemas.json", "pointer": "/resources"}
+        {"path": "registry/registry_contracts/escapewheel-registry-contract-v0.1.json", "pointer": "/id"},
+        {"path": "registry/logical_schemas.json", "pointer": "/tables"}
       ],
-      "projections": {"paths": ["escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json", "escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json", "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.2.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "projections": {"paths": ["escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json", "escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json", "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.1.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
       "conformance": {"evidence": [{"kind": "check", "stage": "registry: structural checks", "id": "the incorporated registry contract validates against its schema"}]},
       "implementations": {"paths": ["registry/build.py", "escapewheel-validator/src/escapewheel_validator/registry_document.py"]},
       "documentation": {"paths": ["README.md", "CONTRIBUTING.md", "escapewheel-validator/README.md"]}
@@ -34,9 +34,9 @@
       "owners": [
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-registry-self-description"},
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-registry-conformance"},
-        {"path": "registry/registry_contracts/escapewheel-registry-contract-v0.2.json", "pointer": "/phases"}
+        {"path": "registry/registry_contracts/escapewheel-registry-contract-v0.1.json", "pointer": "/phases"}
       ],
-      "projections": {"paths": ["escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.2.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "projections": {"paths": ["escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.1.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
       "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_registry_document.py::test_reference_registry_has_one_complete_valid_result"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_registry_document.py::test_invalid_outcome_dominates_an_independent_unsupported_phase"}]},
       "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/registry_document.py"]},
       "documentation": {"paths": ["escapewheel-validator/README.md"]}
@@ -56,9 +56,9 @@
       "owners": [
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-registry-conformance"},
         {"path": "registry/registry_contract.schema.json", "pointer": "/properties/invariants"},
-        {"path": "registry/registry_contracts/escapewheel-registry-contract-v0.2.json", "pointer": "/invariants"}
+        {"path": "registry/registry_contracts/escapewheel-registry-contract-v0.1.json", "pointer": "/invariants"}
       ],
-      "projections": {"paths": ["escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json", "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.2.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "projections": {"paths": ["escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json", "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.1.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
       "conformance": {"evidence": [{"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_registry_document.py::test_descriptor_and_semantic_implementation_have_no_hidden_checks"}, {"kind": "check", "stage": "registry: structural checks", "id": "registry contract invariant IDs are unique"}]},
       "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/registry_document.py", "registry/check.py"]},
       "documentation": {"paths": ["escapewheel-validator/README.md", "escapewheel-validator/CONTRIBUTING.md"]}
@@ -69,7 +69,7 @@
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-logical-references"},
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-identifier-semantics"},
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-registry-conformance"},
-        {"path": "registry/logical_schemas.json", "pointer": "/resources"}
+        {"path": "registry/logical_schemas.json", "pointer": "/tables"}
       ],
       "projections": {"paths": ["registry/tables.md", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
       "conformance": {"evidence": [{"kind": "check", "stage": "registry: R126 migration and external-domain evidence", "id": "R126 migration preserves 121 rules and 128 complete references"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_registry_document.py::test_cross_declaration_invariants_have_stable_ids_and_pointers"}]},
@@ -99,7 +99,7 @@
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-unit-and-clock-context"},
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-registry-conformance"},
         {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-logical-schema-normative-references"},
-        {"path": "registry/registry_contracts/escapewheel-registry-contract-v0.2.json", "pointer": "/invariants/14"}
+        {"path": "registry/registry_contracts/escapewheel-registry-contract-v0.1.json", "pointer": "/invariants/14"}
       ],
       "projections": {"paths": ["registry/logical_schemas.json", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
       "conformance": {"evidence": [{"kind": "check", "stage": "registry: R126 migration and external-domain evidence", "id": "R126 parses 61 literal UCUM units offline"}, {"kind": "check", "stage": "registry: R126 migration and external-domain evidence", "id": "R126 UCUM parser and license evidence is distributable"}, {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_registry_document.py::test_missing_exact_ucum_domain_is_unsupported"}]},
@@ -113,7 +113,7 @@
         {"path": "registry/logical_schemas.json", "pointer": "/registry_version"}
       ],
       "projections": {"paths": ["registry/extensions/aind_opto.json", "registry/extensions/aind_unit_qc.json", "registry/extensions/dynamic_foraging.json", "registry/extensions/vr_foraging.json", "prototype/registry-codegen/registry.json", "escapewheel_poc_docs_v0.2/08_example_packet.md", "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
-      "conformance": {"evidence": [{"kind": "check", "stage": "registry: R126 migration and external-domain evidence", "id": "R126 migration preserves 54 table declarations"}, {"kind": "check", "stage": "registry: structural checks", "id": "core registry version is 0.5.0"}]},
+      "conformance": {"evidence": [{"kind": "check", "stage": "registry: R126 migration and external-domain evidence", "id": "R126 migration preserves 54 table declarations"}, {"kind": "check", "stage": "registry: structural checks", "id": "core registry version is 0.4.0"}]},
       "implementations": {"paths": ["registry/build.py", "escapewheel-writer/src/escapewheel_writer/scaffold.py"]},
       "documentation": {"paths": ["README.md", "escapewheel_poc_docs_v0.2/README.md", "escapewheel-validator/CONTRIBUTING.md"]}
     }
