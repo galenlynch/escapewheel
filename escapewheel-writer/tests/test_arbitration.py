@@ -128,20 +128,11 @@ def test_a_recipe_supplied_resource_is_declared(resource):
     assert resource in registry["resources"]
 
 
-#: Rows where an adapter sets a `*_name` to something other than the string its `*_id` is minted
-#: from, each with why it is still here. R85 wants a name unique within its packet and the
-#: numbering fills one from the identifier where a row leaves it unset, so an override that drops
-#: the prefix is a name that collides once two sessions are merged under different ones — inert
-#: while every packet is built at prefix "", which is why these are recorded rather than fixed.
-NAME_EXCEPTIONS = {
-    ("nwb.py", "device_name"): "drops the recipe's prefix, which the identifier carries",
-    ("nwb.py", "probe_name"): "drops the recipe's prefix, which the identifier carries",
-    ("nwb.py", "event_stream_name"): "drops the recipe's prefix, which the identifier carries",
-}
-
-
 def test_a_name_records_what_its_identifier_stands_for():
     """R53 §2.5: a `*_name` is the string the number was minted from, and nothing else.
+
+    No exception: R85 wants a name unique within its packet, and one that drops the recipe's prefix
+    its identifier carries collides once two sessions share a packet under different prefixes.
 
     Read statically rather than by running the adapters, because what is wrong is visible in the
     row an adapter writes: `core.clocks` had a human label in `clock_name` and nothing could
@@ -171,18 +162,8 @@ def test_a_name_records_what_its_identifier_stands_for():
                     continue
                 if ast.dump(keys[name]) == ast.dump(keys[identity]):
                     continue
-                if (path.name, name) in NAME_EXCEPTIONS:
-                    continue
                 found.append(
                     f"{path.name}:{keys[name].lineno} {name} = {ast.unparse(keys[name])} "
                     f"where {identity} = {ast.unparse(keys[identity])}"
                 )
     assert found == [], "a name column holds something other than what its identifier stands for:\n" + "\n".join(found)
-
-
-def test_every_name_exception_still_names_a_row_that_sets_one():
-    """An exception that stops matching is one the code has outgrown, and it must not go stale."""
-    sources = Path(__file__).resolve().parents[1] / "src/escapewheel_writer/sources"
-    for (filename, column), reason in sorted(NAME_EXCEPTIONS.items()):
-        text = (sources / filename).read_text()
-        assert f'"{column}"' in text, f"{filename} no longer sets {column}; strike the exception ({reason})"

@@ -566,7 +566,7 @@ class NWBSource(Compensates):
             row = {
                 "device_id": self.prefix + name,
                 "session_id": self.session_id,
-                "device_name": name,
+                "device_name": self.prefix + name,
                 "manufacturer": _clean(described.get("manufacturer")),
                 "model": identity["model"],
                 "serial_number": serial,
@@ -587,7 +587,7 @@ class NWBSource(Compensates):
             covers = row.pop("covers")
             if len(covers) > 1:
                 shared = commonprefix(covers).rstrip("-_ .") or covers[0]
-                row |= {"device_id": self.prefix + shared, "device_name": shared}
+                row |= {"device_id": self.prefix + shared, "device_name": self.prefix + shared}
                 self.notes.append(
                     f"devices: {', '.join(covers)} share serial {row['serial_number']}; "
                     f"recorded as one device named {shared} (Part 01 §3.5)"
@@ -620,7 +620,7 @@ class NWBSource(Compensates):
             by_name[name] = self._device_identity(described)["serial_number"]
         rows = {row["serial_number"]: row for row in self.devices() if row["serial_number"]}
         named = {row["device_name"]: row for row in self.devices()}
-        return {name: rows.get(serial) or named.get(name) for name, serial in by_name.items()}
+        return {name: rows.get(serial) or named.get(self.prefix + name) for name, serial in by_name.items()}
 
     def probes(self) -> list[dict[str, Any]]:
         """`core.probes`, one row per NWB ElectrodeGroup.
@@ -646,7 +646,7 @@ class NWBSource(Compensates):
                     "probe_id": self.prefix + name,
                     "session_id": self.session_id,
                     "device_id": device["device_id"] if device else None,
-                    "probe_name": name,
+                    "probe_name": self.prefix + name,
                     "probe_type": device["model"] if device else None,
                     "manufacturer": device["manufacturer"] if device else None,
                     "serial_number": device["serial_number"] if device else None,
@@ -1075,7 +1075,7 @@ class NWBSource(Compensates):
                 {
                     "event_stream_id": self.prefix + name,
                     "session_id": self.session_id,
-                    "event_stream_name": name,
+                    "event_stream_name": self.prefix + name,
                     "event_type": name.removesuffix("_time"),
                     "clock_id": self.clock.clock_id,
                     "metadata": {"description": self._attrs(f"acquisition/{name}").get("description")},
@@ -1086,7 +1086,7 @@ class NWBSource(Compensates):
                 {
                     "event_stream_id": self.prefix + kind,
                     "session_id": self.session_id,
-                    "event_stream_name": kind,
+                    "event_stream_name": self.prefix + kind,
                     "event_type": kind,
                     "clock_id": self.clock.clock_id,
                     "metadata": {"description": f"intervals/trials/{column}, one per trial"},

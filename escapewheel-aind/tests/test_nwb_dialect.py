@@ -136,6 +136,20 @@ def test_a_unit_coordinate_needs_the_pipelines_unit_identity(nwb, harp):
     assert [note for note in source.notes if "spike_times" in note] == []
 
 
+def test_a_prefix_reaches_the_names_and_leaves_the_unit_join_alone(nwb, harp):
+    """The join is on the file's own `device_name`, which a recipe's prefix does not rename; the
+    packet's names are minted with their identifiers and carry it (R53 §2.5)."""
+    units = nwbfixture.units(nwb)
+    source = AindNWBSource(
+        nwb, reference_clock=harp.record(), zone=PACIFIC, prefix="A_", units=units, interval_kind=KIND
+    )
+    assert [row["unit_id"] for row in source.unit_coordinates()] == [1]
+    records = source.records()
+    assert [(d["device_id"], d["device_name"]) for d in records["core.devices"]] == [("A_probeA", "A_probeA")]
+    assert [(p["probe_name"], p["device_id"]) for p in records["core.probes"]] == [("A_probeA", "A_probeA")]
+    assert all(s["event_stream_name"] == s["event_stream_id"] for s in records["core.event_streams"])
+
+
 def test_a_unit_row_matching_no_unit_is_skipped_and_counted(nwb, harp):
     """A wrong key is a build defect, so it is reported rather than passed over in silence."""
     nwbfixture.units(nwb)

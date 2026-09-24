@@ -217,9 +217,6 @@ is committed.
   mints two electrodes of one contact. If any source sets `prefix`, every source whose adapter
   accepts it must set the same value. A build refuses the recipe before opening a source, naming
   each source and its value. Test one set and one unset, two different values, and all equal.
-- **Keep the prefix in the three `nwb.py` names that drop it.** `device_name`, `probe_name` and
-  `event_stream_name` break R53 §2.5 and R85 once sessions merge under different prefixes. Strike
-  them from `NAME_EXCEPTIONS` in `tests/test_arbitration.py`. In progress.
 
 ---
 

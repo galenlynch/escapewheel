@@ -280,6 +280,51 @@ def test_a_prefix_disambiguates_ids_for_a_multi_session_packet(nwb, harp):
     assert records["core.probes"][0]["probe_id"] == "A_probeA"
 
 
+def _more_devices(nwb):
+    """Add a Device with no serial and two sharing one, each recorded by its own group.
+
+    The first reaches its probe only by name and the pair only by serial, so together they exercise
+    both halves of the lookup a probe finds its device through.
+    """
+    devices, ephys = nwb / "general/devices", nwb / "general/extracellular_ephys"
+    for name, serial in (("probeB", None), ("probeC-1", "999"), ("probeC-2", "999")):
+        stated = {"serial_number": serial} if serial else {}
+        nwbfixture.group(devices / name, neurodata_type="Device", manufacturer="IMEC", **stated)
+        nwbfixture.group(
+            ephys / name,
+            neurodata_type="ElectrodeGroup",
+            location="CA1",
+            zarr_link=[{"name": "device", "path": f"/general/devices/{name}", "source": "."}],
+        )
+
+
+def test_a_name_carries_the_prefix_its_identifier_does(nwb, harp):
+    """R53 §2.5 and R85: a name is the string its identifier is minted from, so it is unique in a
+    packet holding two sessions under different prefixes only if it carries the prefix too."""
+    _more_devices(nwb)
+    records = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, prefix="A_", interval_kind=KIND).records()
+    for stem in ("device", "probe", "event_stream"):
+        rows = records[f"core.{stem}s"]
+        assert rows, stem
+        assert [r[f"{stem}_name"] for r in rows] == [r[f"{stem}_id"] for r in rows]
+        assert all(r[f"{stem}_id"].startswith("A_") for r in rows)
+    assert "A_probeC" in {d["device_name"] for d in records["core.devices"]}
+
+
+def test_a_probe_finds_its_device_under_a_prefix(nwb, harp):
+    """By serial where the Device states one and by name where it does not, both prefixed."""
+    _more_devices(nwb)
+    records = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, prefix="A_", interval_kind=KIND).records()
+    attached = {p["probe_id"]: p["device_id"] for p in records["core.probes"]}
+    assert attached == {
+        "A_probeA": "A_probeA",
+        "A_probeB": "A_probeB",
+        "A_probeC-1": "A_probeC",
+        "A_probeC-2": "A_probeC",
+    }
+    assert set(attached.values()) == {d["device_id"] for d in records["core.devices"]}
+
+
 def test_the_probe_takes_its_model_and_serial_from_the_linked_device(source):
     probe = source.records()["core.probes"][0]
     assert (probe["probe_type"], probe["serial_number"], probe["manufacturer"]) == (

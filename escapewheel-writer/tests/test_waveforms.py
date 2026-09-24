@@ -229,6 +229,37 @@ def test_a_unit_matching_nothing_and_a_unit_masked_nowhere_are_counted_apart(tmp
     ]
 
 
+@pytest.mark.parametrize("prefix", ["", "A_"])
+def test_a_unit_the_build_harvested_resolves_under_a_prefix(tmp_path: Path, prefix: str) -> None:
+    """The `units` term keys on the stream's own probe name, which a recipe's prefix does not reach.
+
+    The prefix goes on identifiers and the names minted with them; `device_name` here is the
+    source's label, so it matches `stream.device` bare however the sorter's rows were prefixed.
+    """
+    from types import SimpleNamespace
+
+    from escapewheel_writer.session import Context, _harvest, _rows
+    from escapewheel_writer.sources.sorter import SorterSource
+    from tests import sorterfixture
+
+    root = tmp_path / "sorted"
+    labels = list(range(UNITS))
+    sorterfixture.stream(
+        root, STREAM.removesuffix(".zarr"), spikes=[(u, 10 * (u + 1)) for u in labels], unit_ids=labels, analyzer=False
+    )
+    build(root)
+    sorter = SorterSource(root, session_id="s1", prefix=prefix)
+    context = Context(session_id="s1")
+    recipe = SimpleNamespace(session={}, subject={}, overrides={}, declared_facts={})
+    _harvest(SimpleNamespace(kind="sorter"), sorter, context, recipe, _rows(sorter, sorter.records()))
+    minted = {row["unit_id"] for row in sorter.units()}
+    assert {row["unit_id"] for row in context.units} == minted
+
+    source = WaveformSource(root, session_id="s1", prefix=prefix, units=context.units)
+    assert {row["unit_id"] for row in source.records()["core.unit_electrodes"]} == minted
+    assert source.notes == []
+
+
 def test_no_unit_matching_at_all_is_a_defect(asset: Path) -> None:
     """An array of nothing is not an array, so the build stops rather than committing one."""
     source = WaveformSource(asset, session_id="s1", units=[])
