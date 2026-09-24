@@ -449,6 +449,7 @@ clause of Part 03.
 `packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A writer
 MUST NOT increment `packet_version` for a rewrite of rows.
 
+<a id="ew-implementation-thesis" data-spec-anchor="canonical"></a>
 ## 8. Implementation thesis
 
 The first implementation is not a generic NWB backend. It is:
@@ -2329,6 +2330,7 @@ a string literal or a comment re-runs a check that did not need it, which costs 
 match one costs correctness. A validator that cannot show an input is immutable MUST run the
 check: skipping a check whose inputs *could* have changed stays forbidden.
 
+<a id="ew-packet-cleanup" data-spec-anchor="canonical"></a>
 ### 9.5 Cleanup
 
 Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second. Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
@@ -3102,12 +3104,14 @@ The recipe declares it because the recipe author chose the environment. One proc
 
 What the opt-in buys is a saved transfer and what it costs is a solvable environment. A build that cannot import an adapter the recipe opted in MUST refuse, naming the source and the import that failed, before any source is opened.
 
+<a id="ew-import-sources" data-spec-anchor="canonical"></a>
 ## 4. Stages 1 to 3
 
 ### 4.1 Discover
 
 For each source, report what it offers per resource, and how many rows. Discovery MUST NOT write to the packet.
 
+<a id="ew-import-delivery" data-spec-anchor="canonical"></a>
 ### 4.2 Extract
 
 Copy or stream candidate resources into a staging area under the packet root. A writer MUST stream a table whose row count is large rather than materializing it as host objects.
@@ -3134,6 +3138,7 @@ A build MUST report a delivery it cannot parse as a failure where the command ex
 
 A build MUST report everything the protocol it used carries about a failure — standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its detail for `flight-v0.1`, where a failing adapter writes nothing to standard error because the diagnosis travels on the connection it was asked over. A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
 
+<a id="ew-import-validation" data-spec-anchor="canonical"></a>
 ## 5. Stage 4: Validate
 
 ### 5.1 Tier 1
@@ -3187,6 +3192,7 @@ checked context. A check that applies to one named core resource, such as the se
 check of §5.3, does not extend. [§9.5](#ew-verdict-composition) assigns the extension's findings to
 it and composes its verdict with core's.
 
+<a id="ew-import-commit" data-spec-anchor="canonical"></a>
 ## 6. Stage 5: Commit
 
 Commit MUST be atomic with respect to a concurrent reader:
@@ -3212,10 +3218,12 @@ claim it detected a conflict it could not detect.
 
 A commit that finds an error MUST NOT write a manifest at the packet root, and SHOULD leave staging in place for inspection.
 
+<a id="ew-import-provenance" data-spec-anchor="canonical"></a>
 ## 7. Stage 6: Provenance
 
 Record `core.source_files` for the inputs, one `core.processing_runs` row for the import, and `core.processing_run_inputs` linking them. The run declares its `scope` and `scope_kind`.
 
+<a id="ew-import-materialization" data-spec-anchor="canonical"></a>
 ## 8. Stage 7: Materialize
 
 Materialization runs inside the import: core is staged, the staged packet is opened, derived resources are computed from it, and everything is validated together before anything is promoted.

@@ -621,10 +621,52 @@ section = "8.2"
 title = "Identity"
 aliases = []
 
+[anchor.ew-implementation-thesis]
+part = "00"
+section = "8"
+title = "Implementation thesis"
+aliases = []
+
+[anchor.ew-import-commit]
+part = "05"
+section = "6"
+title = "Stage 5: Commit"
+aliases = []
+
+[anchor.ew-import-delivery]
+part = "05"
+section = "4.2"
+title = "Extract"
+aliases = []
+
+[anchor.ew-import-materialization]
+part = "05"
+section = "8"
+title = "Stage 7: Materialize"
+aliases = []
+
 [anchor.ew-import-pipeline]
 part = "05"
 section = "2"
 title = "Pipeline"
+aliases = []
+
+[anchor.ew-import-provenance]
+part = "05"
+section = "7"
+title = "Stage 6: Provenance"
+aliases = []
+
+[anchor.ew-import-sources]
+part = "05"
+section = "4"
+title = "Stages 1 to 3"
+aliases = []
+
+[anchor.ew-import-validation]
+part = "05"
+section = "5"
+title = "Stage 4: Validate"
 aliases = []
 
 [anchor.ew-import-validation-principle]
@@ -733,6 +775,12 @@ aliases = []
 part = "04"
 section = "1"
 title = "Scope"
+aliases = []
+
+[anchor.ew-packet-cleanup]
+part = "03"
+section = "9.5"
+title = "Cleanup"
 aliases = []
 
 [anchor.ew-packet-codecs]
