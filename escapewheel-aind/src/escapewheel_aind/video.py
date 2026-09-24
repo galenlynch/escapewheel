@@ -90,6 +90,10 @@ class VideoSource(Compensates):
     uri_base : str, optional
         Absolute base the videos are addressed under. Without one the packet records a `file://`
         URI, which resolves only on the machine that built it.
+    prefix : str, optional
+        Prepended to every media asset ID and name, and to the name part of the resource ID each
+        video is referenced under, which a build binds to the asset by that name (Part 03 §11.3).
+        The reference clock is not this adapter's to name, so it is left as given.
     """
 
     #: Part 03 §11.1: released apart from the writer, so it declares its protocols. `escapewheel
@@ -112,7 +116,7 @@ class VideoSource(Compensates):
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
     #: unset (Part 03 §11.2).
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "batch_rows")
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "batch_rows", "prefix")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ()
@@ -125,12 +129,14 @@ class VideoSource(Compensates):
         reference_clock: Mapping[str, Any],
         uri_base: str | None = None,
         batch_rows: int = BATCH_ROWS,
+        prefix: str = "",
     ) -> None:
         self.root = source_root(root)
         self.session_id = session_id
         self.clock_id = str(reference_clock["clock_id"])
         self.uri_base = uri_base.rstrip("/") if uri_base else None
         self.batch_rows = batch_rows
+        self.prefix = prefix
         super().__init__()
         self.notes: list[str] = []
 
@@ -153,7 +159,7 @@ class VideoSource(Compensates):
         """Each video as a resource the packet references and does not own."""
         found = {}
         for video in self.videos():
-            name = video.stem
+            name = self.prefix + video.stem
             local = self.uri_base is None
             found[f"core.{name}"] = ExternalMedia(
                 media_asset_id=name,
@@ -182,11 +188,11 @@ class VideoSource(Compensates):
                 self.compensate("video.zip_pairing_repaired")
             rows.append(
                 {
-                    "media_asset_id": video.stem,
+                    "media_asset_id": self.prefix + video.stem,
                     "session_id": self.session_id,
                     "semantic_type": "behavior_video",
-                    "media_asset_name": video.stem,
-                    "resource_id": f"core.{video.stem}",
+                    "media_asset_name": self.prefix + video.stem,
+                    "resource_id": f"core.{self.prefix}{video.stem}",
                     **(self._pts_rate(video) if timing else {}),
                     "clock_id": self.clock_id if timing else None,
                 }
@@ -273,7 +279,7 @@ class VideoSource(Compensates):
             stop = min(start + self.batch_rows, ticks.size)
             yield pa.record_batch(
                 {
-                    "media_asset_id": pa.array([video.stem] * (stop - start)),
+                    "media_asset_id": pa.array([self.prefix + video.stem] * (stop - start)),
                     "frame_index": pa.array(np.arange(start, stop, dtype=np.int64)),
                     "t_tick": pa.array(ticks[start:stop]),
                     "clock_id": pa.array([self.clock_id] * (stop - start)),

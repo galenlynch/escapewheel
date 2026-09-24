@@ -156,6 +156,7 @@ MIXED_KINDS = {
     "waveforms": "",
     "openephys": "",
     "harp": "",
+    "video": "in_process = true\n",
 }
 
 
