@@ -694,8 +694,8 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     external array is level 3 and stays with the requested mode, where
     `_check_codec_declarations` already reports it as `info`.
 
-    Storage, not values, so the shim and not SQL (R12 §4). No query can see a chunk grid, and
-    a codec the manifest omits is exactly the kind of disagreement a SQL rule passes silently.
+    Storage, not values, so the shim and not SQL (R12 §4): no query can see a chunk grid or a codec
+    pipeline.
     """
     # A resource naming a source is not packet-owned whatever `external` says, and `_check_sources`
     # has already reported the contradiction; resolving it here would raise instead of report.
@@ -856,8 +856,7 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False, s
     default mode gives it, while a claim that resolved and *disagrees* is an error.
 
     **A check with nothing to compare against is reported, not counted as a pass.** A manifest
-    need not record `sha256` or `size_bytes`, and a Zarr v3 array does not carry its codecs where
-    `_stored_codecs` reads them -- so any of the three can be absent on a resource that resolves
+    need not record `sha256` or `size_bytes`, so either can be absent on a resource that resolves
     cleanly. `external.verified` therefore names what it compared rather than asserting a resource
     was "checked", and a requested digest with nothing to compare gets its own finding.
 
@@ -1052,19 +1051,6 @@ def _stored_metadata(uri: str, found: Any) -> Mapping[str, Any] | None:
     return None
 
 
-def _stored_codecs(uri: str, found: Any) -> set[str] | None:
-    """Codecs a Zarr v2 array declares, or None where the metadata is not v2 or not readable."""
-    if not any(member.key == ".zarray" for member in found.members):
-        return None
-    parsed = _stored_metadata(uri, found)
-    if parsed is None:
-        return None
-    names = {str(f["id"]) for f in parsed.get("filters") or []}
-    if compressor := parsed.get("compressor"):
-        names.add(str(compressor["id"]))
-    return names
-
-
 def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:  # noqa: C901
     """Resolve each dense array's axes through its declaration and catalog row."""
     declarations: dict[str, Mapping[str, Any]] = {}
@@ -1171,7 +1157,7 @@ def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, An
     changes what the packet claims about the array's *values*, which it claims nothing about --
     which is why this and not a content digest is what an external array needs verified.
 
-    Free: the metadata document is read for codecs anyway, and both go through one request.
+    Cheap: one request for the metadata document the array's store already holds.
     """
     if not (declared := extents.get(resource.resource_id)):
         return []
@@ -2220,7 +2206,7 @@ def validate(
         modifying anything else and Part 03 §8.1 declares those bytes immutable, so a rule reading
         only them is already answered.
     external : bool, default False
-        Resolve external URIs and check the `sha256`, `size_bytes` and `codecs` claimed for
+        Resolve external URIs and check the `sha256`, `size_bytes` and `members` claimed for
         them (Part 04 §5.3, level 3). Off by default because Part 04 §5.3 forbids structural validation
         reaching for a resource the packet does not own: whether one is reachable is a property
         of the reader's situation, not of the packet. An unreachable resource is a warning; one
