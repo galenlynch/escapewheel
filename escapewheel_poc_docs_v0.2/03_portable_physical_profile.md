@@ -378,6 +378,7 @@ a string literal or a comment re-runs a check that did not need it, which costs 
 match one costs correctness. A validator that cannot show an input is immutable MUST run the
 check: skipping a check whose inputs *could* have changed stays forbidden.
 
+<a id="ew-packet-cleanup" data-spec-anchor="canonical"></a>
 ### 9.5 Cleanup
 
 Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second. Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.

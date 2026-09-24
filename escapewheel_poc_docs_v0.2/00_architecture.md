@@ -347,6 +347,7 @@ clause of Part 03.
 `packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A writer
 MUST NOT increment `packet_version` for a rewrite of rows.
 
+<a id="ew-implementation-thesis" data-spec-anchor="canonical"></a>
 ## 8. Implementation thesis
 
 The first implementation is not a generic NWB backend. It is:
