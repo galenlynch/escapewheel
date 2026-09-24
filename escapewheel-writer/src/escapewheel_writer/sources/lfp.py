@@ -338,10 +338,8 @@ class LFPSource(Compensates):
                     # source's own label here left the packet with no record of what the
                     # identifier was minted from, and nothing to join a row to its manifest
                     # entry by.
-                    # The series name is in the `uri` either way.
+                    # The series name reaches the manifest entry's `uri` through `external_arrays`.
                     "band": "lfp",
-                    "uri": self._uri(series),
-                    "format": "zarr_v2",
                     "clock_id": self._clock(series),
                     # No sample_rate_hz: core.array_dimensions declares the step in ticks on a
                     # clock whose rate is declared, so a rate here would be a second, rounded

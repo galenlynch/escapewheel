@@ -147,19 +147,7 @@ def test_every_built_in_kind_is_checked():
     assert set(BUILDERS) == set(ADAPTERS)
 
 
-#: Kinds known to emit an undeclared column, each failing strictly so a fix removes its entry.
-KNOWN_UNDECLARED = {"lfp": "core.array_assets carries `uri` and `format`, which the registry no longer declares"}
-
-
-@pytest.mark.parametrize(
-    "kind",
-    [
-        pytest.param(kind, marks=pytest.mark.xfail(reason=KNOWN_UNDECLARED[kind], strict=True))
-        if kind in KNOWN_UNDECLARED
-        else kind
-        for kind in sorted(BUILDERS)
-    ],
-)
+@pytest.mark.parametrize("kind", sorted(BUILDERS))
 def test_an_adapter_emits_only_declared_columns(kind, tmp_path):
     source = BUILDERS[kind](tmp_path)
     assert emitted(source), f"{kind}'s fixture emits nothing, so the check below would pass vacuously"
