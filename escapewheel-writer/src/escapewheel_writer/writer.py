@@ -441,6 +441,21 @@ def _check_reference(resource_id: str, uri: str, source: str | None) -> None:
         raise ValueError(f"{resource_id}: {uri!r} is absolute, so naming source {source!r} would have no effect")
 
 
+def _refuse_occupied(root: Path) -> None:
+    """Refuse a root holding a committed manifest or a directory commit would promote into.
+
+    A promoted directory with no manifest is what an interrupted promotion leaves: a stray a writer
+    may not remove (Part 03 §9.5), and moving another into it would nest the new one inside.
+    """
+    if (root / MANIFEST).exists():
+        raise FileExistsError(f"{root} already holds a committed {MANIFEST}")
+    if occupied := [name for name in ("tables", "arrays", REGISTRIES) if (root / name).exists()]:
+        raise FileExistsError(
+            f"{root} holds {', '.join(occupied)} but no committed {MANIFEST}, as an interrupted promotion "
+            "leaves it; remove them or commit elsewhere"
+        )
+
+
 def _digest(path: Path) -> str:
     """Part 04 §5.4: what the packet says its own bytes are.
 
@@ -1241,8 +1256,7 @@ class PacketWriter:
             If `root` already holds a committed manifest.
         """
         root = Path(root)
-        if (root / MANIFEST).exists():
-            raise FileExistsError(f"{root} already holds a committed {MANIFEST}")
+        _refuse_occupied(root)
         self._prepared = None
         staging = self._staging(root)
         self._prepared = staging.resolve()
@@ -1302,8 +1316,7 @@ class PacketWriter:
             workspace are left in place.
         """
         root = Path(root)
-        if (root / MANIFEST).exists():
-            raise FileExistsError(f"{root} already holds a committed {MANIFEST}")
+        _refuse_occupied(root)
         # R1 §6 makes the session inventory part of the manifest and the schema requires it
         # non-empty. Refusing here beats letting the staged manifest fail its own schema,
         # which surfaces as an unhelpful error from a directory the caller never named.

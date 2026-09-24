@@ -169,11 +169,22 @@ def test_an_unknown_resource_is_refused(registry):
 
 
 def test_committing_over_a_packet_is_refused(tmp_path, registry, minimal):
-    """Immutability covers packet-owned bytes (Part 04 §5.1)."""
+    """Immutability covers packet-owned bytes (Part 03 §8.1)."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     with pytest.raises(FileExistsError):
         _write(root, registry, minimal)
+
+
+def test_committing_over_an_interrupted_promotion_is_refused(tmp_path, registry, minimal):
+    """A promoted directory with no manifest is a stray a writer may not remove (Part 03 §9.5), and
+    promoting into it would nest the new one inside."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    (root / "packet.json").unlink()
+    with pytest.raises(FileExistsError, match="tables"):
+        _write(root, registry, minimal)
+    assert not (root / "tables" / "tables").exists()
 
 
 def test_localize_resolves_dst_per_date():
