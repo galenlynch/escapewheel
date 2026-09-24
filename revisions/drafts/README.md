@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [A Build Owns Its Staging Area and Validates Everything It Stages Before Publishing](a-build-owns-its-staging-area-and-validates-everything-it-stages-before-publishing.md) | 5805 | Not yet appraised; promoted 2026-09-24 from the exact proposal at `cc6209e`. | Part 00 §§2.4 and 8, Part 03 §§9.5, 11.2, and 11.3, and Part 05 §§1, 2, 4, 4.2, 5, 6, 7, and 8 in place; a subsection added at the end of Part 03 §3 |
