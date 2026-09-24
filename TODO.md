@@ -553,9 +553,6 @@ Found by the P9 research at `506c14e` and during R130–R134. The mechanical one
   manifest", which Part 04 §6 no longer lets carry codecs, so neither can be compared with Part
   03 §6.4's ordered floor. The P9.3 draft leaves the reader unchanged, so this is maintenance,
   and it is in progress.
-- **Source caches filled before `a702968` may hold truncated objects.** A killed download used to
-  leave a partial file that later builds took as cached. `/mnt/Data/ew-source-cache` and each
-  packet's `.escapewheel-source-cache` predate the fix; clearing them costs one refetch.
 
 ## 12. Implementation work queued behind R135
 
@@ -590,7 +587,7 @@ is committed.
   arbitration paragraph under §5 is also done, and the reference to §8 under "Settled 2026-09-15"
   should point to §10. In `revisions/STATUS.md`, the open-stage inventory and P9 row are stale.
 
-Deferred to the user: clearing the source caches above. Open in R135, not decided: a source whose
+Open in R135, not decided: a source whose
 recipe entry omits `root` gets no `core.source_files` row, since R135 §3.4 counts only roots a
 recipe writes.
 
