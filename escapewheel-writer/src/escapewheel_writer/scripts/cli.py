@@ -4,10 +4,11 @@
 ``escapewheel.commands`` group, so installing this package makes the subcommands appear rather
 than competing for the command name.
 
-The three follow Part 05's stages. ``inspect`` is Stage 1 -- what a source offers, before anything
-is staged. ``init`` turns several inspections into a recipe draft, so the ownership decisions a
-build depends on are made from what the sources actually hold rather than from memory.
-``import`` is Stages 2-6.
+The three follow Part 05 §2's order. ``inspect`` is discovery (Part 05 §4.1) -- what a source
+offers, before anything is staged. ``init`` turns several inspections into a recipe draft, so the
+ownership decisions a build depends on are made from what the sources actually hold rather than
+from memory.
+``import`` is every later step, delivery through publication.
 
 ``declare`` and ``deliver`` are the two halves of Part 03 §11's boundary. ``declare`` writes an
 adapter's declarations as the document a build reads where it cannot import one, generated from the
@@ -81,7 +82,7 @@ def _open(kind: str, root: Path, session_id: str) -> Any:
         return LFPSource(root, session_id=session_id)
     if kind == "nwb":
         # A stand-in row: counting what the file offers needs a grid to convert against, and any
-        # rate answers that. Which clock it really is decides tick values, which Stage 1 does not
+        # rate answers that. Which clock it really is decides tick values, which discovery does not
         # report.
         row = {"clock_id": "harp", "session_id": session_id, "origin": "HARP epoch", "tick_rate_num": 31250}
         return NWBSource(root, reference_clock=row, zone="UTC", session_id=session_id)
@@ -89,7 +90,7 @@ def _open(kind: str, root: Path, session_id: str) -> Any:
 
 
 def _inspect(args: argparse.Namespace) -> int:
-    """Report what one source offers (Part 05 Stage 1)."""
+    """Report what one source offers (Part 05 §4.1)."""
     source = _open(args.kind, args.root, args.session_id)
     offered = source.offers()
     print(f"{args.kind}  {args.root}")
@@ -198,7 +199,7 @@ HINTS = {
 
 
 def _import(args: argparse.Namespace) -> int:  # noqa: C901
-    """Build and commit a packet from a recipe (Part 05 Stages 2-6)."""
+    """Build and commit a packet from a recipe (Part 05 §2, delivery through publication)."""
     # The override goes into the load rather than onto the result: a build derives where a
     # delivery lands and where the source cache sits from where the packet is going, and the
     # second of those is fixed when the first source root resolves.
@@ -330,6 +331,11 @@ def _prune(args: argparse.Namespace) -> int:
         print(f"  manifest  {mark:9s} {path.relative_to(args.packet)}")
     for path in plan.strays:
         print(f"  stray     kept      {path.relative_to(args.packet)}")
+    # A build's own files, which the next build or amendment removes (Part 05 §§2 and 6).
+    for path in plan.staged:
+        print(f"  staged    kept      {path.relative_to(args.packet)}")
+    for path in plan.promoting:
+        print(f"  promoting kept      {path.relative_to(args.packet)}")
     for note in plan.notes:
         print(f"  note      {note}")
     verb = "removed" if plan.applied else "would remove"
@@ -476,7 +482,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     subcommands : argparse._SubParsersAction
         The subparser action to register against.
     """
-    inspect = subcommands.add_parser("inspect", help="report what one source offers (05 Stage 1)")
+    inspect = subcommands.add_parser("inspect", help="report what one source offers (Part 05 §4.1)")
     inspect.add_argument("kind", choices=KINDS)
     inspect.add_argument("root", type=Path)
     inspect.add_argument("--session-id", default="session", help="session the records are scoped to")

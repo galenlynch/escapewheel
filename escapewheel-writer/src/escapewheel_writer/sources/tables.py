@@ -119,7 +119,7 @@ class TablesSource:
             )
 
     def offers(self) -> dict[str, int]:
-        """Part 05 Stage 1: how many rows of each resource. Read from the footer, not the data."""
+        """Part 05 §4.1: how many rows of each resource. Read from the footer, not the data."""
         self._prepare()
         return {resource: pq.ParquetFile(path).metadata.num_rows for resource, path in self.tables.items()}
 

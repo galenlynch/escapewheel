@@ -964,7 +964,7 @@ class SorterSource:
         return sum(n if self.sample is None else min(n, self.sample) for n in held)
 
     def offers(self) -> dict[str, int]:
-        """Which resources this source supplies from its root, and how many rows (Part 05 §1)."""
+        """Which resources this source supplies from its root, and how many rows (Part 05 §4.1)."""
         return {
             **{resource: len(rows) for resource, rows in self.records().items()},
             "core.spike_events": self.spike_count,

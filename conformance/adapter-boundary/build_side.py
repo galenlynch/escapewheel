@@ -118,7 +118,7 @@ def rendezvous(socket: str, child: subprocess.Popen) -> fl.FlightClient:
 def over_flight(
     tmp: str, supplied: dict, wanted: list[str]
 ) -> tuple[dict, dict, float]:
-    """`flight-v0.1`: Stage 1 from ListFlights, then one DoGet per resource."""
+    """`flight-v0.1`: discovery from ListFlights, then one DoGet per resource."""
     socket = str(Path(tmp) / "adapter.sock")
     started = time.perf_counter()
     child = subprocess.Popen(
@@ -142,7 +142,7 @@ def over_flight(
 
 
 def over_files(tmp: str, supplied: dict, wanted: list[str]) -> tuple[dict, dict, float]:
-    """`files-v0.1`: the adapter writes Parquet, and Stage 1 is the footers."""
+    """`files-v0.1`: the adapter writes Parquet, and discovery reads the footers."""
     root = Path(tmp) / "delivered"
     root.mkdir()
     started = time.perf_counter()
@@ -189,7 +189,7 @@ def over_stream(
     child.wait()
     if not ended or child.returncode:
         raise SystemExit(f"delivery truncated, exit {child.returncode}")
-    # Stage 1 is the delivery: a stream is read before anything about it is known.
+    # Discovery is the delivery: a stream is read before anything about it is known.
     return (
         {n: t.num_rows for n, t in got.items()},
         got,
@@ -255,7 +255,7 @@ def main() -> int:
             )
 
         agreed = len({tuple(sorted(s.items())) for s, _ in results.values()}) == 1
-        print(f"\nall three protocols report the same Stage 1: {agreed}")
+        print(f"\nall three protocols report the same discovery: {agreed}")
         absent = sorted(r for r in wanted if r not in here)
         print(f"in process the adapter omits {len(absent)} of {len(wanted)}: {absent}")
         print("over every protocol they arrive at 0 rows")

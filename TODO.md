@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R134 accepted. R42 and R73 withdrawn. 0 proposals and 6 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R135 accepted. R42 and R73 withdrawn. 0 proposals and 5 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 348 columns, 111 references, 76 Tier 2 rules (2 advisory)
@@ -96,7 +96,7 @@ fork. What it should generate:
 command is an argument list, so `uv run`, a pinned interpreter and a container are all just
 commands, and that freedom is what R109 §3.1 exists to protect. Print for a person on stdout and
 put anything a build should parse in the report file. Do not restate what the build already
-derives: rows per table come from the Parquet footer at Part 05 Stage 1.
+derives: rows per table come from the Parquet footer at discovery (Part 05 §4.1).
 
 ## 3. A delivered sync source cannot carry the terminal-anchor result
 

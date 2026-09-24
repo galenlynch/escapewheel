@@ -1,8 +1,8 @@
 """Build a packet from a recipe.
 
-This is Part 05 Stages 2-6 with the parameters supplied rather than written into the code. The
-recipe says which sources exist and which resources each is responsible for; this module
-orders them, runs them, keeps what each one owns, and commits.
+This is Part 05 §2's build, delivery through publication, with the parameters supplied rather
+than written into the code. The recipe says which sources exist and which resources each is
+responsible for; this module orders them, runs them, keeps what each one owns, and commits.
 
 **Ordering comes from the adapters, not from the registry.** A foreign key constrains
 validity, not write order -- Parquet files are independent and `core.spike_events` can be
@@ -898,7 +898,17 @@ def build(  # noqa: C901
             }
         ],
     )
-    writer.add("core.processing_runs", [_import_run(recipe, applied, context)])
+    run = _import_run(recipe, applied, context)
+    writer.add("core.processing_runs", [run])
+    if roots := _source_roots(recipe):
+        writer.add("core.source_files", [{"source_file_id": root, "uri": root} for root in roots])
+        writer.add(
+            "core.processing_run_inputs",
+            [
+                {"session_id": session_id, "processing_run_id": run["processing_run_id"], "source_file_id": root}
+                for root in roots
+            ],
+        )
     for entry in describe(applied):
         say(f"  compensated: {entry['id']}")
 
@@ -928,12 +938,23 @@ def _say_notes(kind: str, source: Any, seen: int, say: Callable[[str], None], st
     return len(notes)
 
 
+def _source_roots(recipe: Recipe) -> list[str]:
+    """Return each distinct `root` the recipe's sources state, as written (Part 05 §7).
+
+    As written rather than as this build resolved it: a relative root resolves against wherever
+    the recipe sits, and recording that would make two builds of one recipe over the same bytes
+    differ (Part 05 §11). A source stating no root states none to record.
+    """
+    stated = (entry.get("root") for entry in recipe.document.get("source", []))
+    return list(dict.fromkeys(str(root) for root in stated if root is not None))
+
+
 def _import_run(
     recipe: Recipe, compensations: list[str] | None = None, context: Context | None = None
 ) -> dict[str, Any]:
     """Build the `core.processing_runs` row for this import, carrying the recipe as its parameters.
 
-    Part 05 Stage 3 wants normalization deterministic in declared parameters. Putting the recipe
+    Part 05 §4.3 wants normalization deterministic in declared parameters. Putting the recipe
     itself in `parameters` is what makes the run record answerable rather than merely present:
     a reader can see what produced the packet, and `code_uri` names the file it came from.
 

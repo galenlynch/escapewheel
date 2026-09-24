@@ -15,7 +15,7 @@ each is responsible for, and the clocks they share. It is also the provenance re
 recipe lands in `core.processing_runs.parameters`, so a committed packet says what produced it.
 
 ```bash
-escapewheel inspect sorter /data/session_sorted        # what a source offers (05 Stage 1)
+escapewheel inspect sorter /data/session_sorted        # what a source offers (Part 05 §4.1)
 escapewheel init --session-id s001 \
   --source sorter=/data/session_sorted \
   --source nwb=/data/session.nwb > session.toml     # a draft; contested resources await a [preference]
@@ -112,6 +112,11 @@ validate the whole of it where it stands, move it into place, and rename the man
 finds nothing rather than a partial import claiming to be valid. A commit or amendment whose packet
 verdict is not `passed` raises `CommitRefused` and leaves `staging/` for inspection, so a failing
 extension or an incomplete evaluation publishes nothing (Part 05 §9.2).
+
+Before its first write outside `staging/`, a commit or amendment records in `staging/promotion.json`
+every path it will create. A retry after an interruption removes those paths and publishes; a
+promoted directory with no record, or a record it cannot read, is refused and nothing is removed
+(Part 05 §6). `escapewheel prune` reports `staging/` and those paths apart from strays.
 
 ## Installation
 

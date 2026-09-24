@@ -15,7 +15,7 @@ classifiers = ["Programming Language :: Python :: 3"]
 readme = "README.md"
 version = "0.1.0"
 
-# The committer validates before it renames (05 Stage 5), so the validator -- and through
+# The committer validates before it promotes (Part 05 §2), so the validator -- and through
 # it the reader -- is a dependency rather than an optional extra.
 dependencies = [
     "escapewheel-validator",

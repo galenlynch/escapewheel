@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from escapewheel_writer.prune import KEEP_VERSIONS, prune
-from escapewheel_writer.writer import MANIFEST, MANIFESTS, NotCommitted
+from escapewheel_writer.writer import MANIFEST, MANIFESTS, PROMOTION, STAGING, NotCommitted
 
 
 def _manifest(version, resources, registry="0.1.0", when="2026-01-01T00:00:00Z"):
@@ -165,3 +165,45 @@ def test_an_external_resource_is_never_touched(packet):
 def test_an_uncommitted_packet_is_refused(tmp_path):
     with pytest.raises(NotCommitted):
         prune(tmp_path)
+
+
+def _record(root, version, paths):
+    (root / STAGING).mkdir(exist_ok=True)
+    (root / STAGING / PROMOTION).write_text(json.dumps({"packet_version": version, "paths": paths}))
+
+
+def test_a_leftover_staging_area_holds_no_stray(packet):
+    """Part 03 §9.5: the staging area is the next build's to empty, and apply leaves it."""
+    (packet / STAGING / "tables" / "core").mkdir(parents=True)
+    (packet / STAGING / "tables" / "core" / "partial.parquet").write_text("x")
+    _record(packet, "0.4.0", ["tables/core/new.parquet"])
+    plan = prune(packet, apply=True)
+    assert not plan.strays
+    assert [p.name for p in plan.staged] == [PROMOTION, "partial.parquet"]
+    assert (packet / STAGING / "tables" / "core" / "partial.parquet").exists()
+
+
+def test_a_path_an_unpublished_record_lists_is_no_stray(packet):
+    (packet / "tables" / "core" / "new.parquet").write_text("x")
+    _record(packet, "0.4.0", ["tables/core/new.parquet"])
+    plan = prune(packet, apply=True)
+    assert not plan.strays
+    assert [p.name for p in plan.promoting] == ["new.parquet"]
+    assert (packet / "tables" / "core" / "new.parquet").exists()
+
+
+def test_a_stale_record_claims_nothing(packet):
+    """Its version is published, so what it lists is either named by a manifest or a stray."""
+    (packet / "tables" / "core" / "notes.txt").write_text("mine")
+    _record(packet, "0.3.0", ["tables/core/notes.txt"])
+    plan = prune(packet)
+    assert [p.name for p in plan.strays] == ["notes.txt"]
+    assert not plan.promoting
+
+
+def test_an_unreadable_record_is_said_so(packet):
+    (packet / STAGING).mkdir()
+    (packet / STAGING / PROMOTION).write_text("{")
+    plan = prune(packet)
+    assert not plan.strays
+    assert any(PROMOTION in note for note in plan.notes)

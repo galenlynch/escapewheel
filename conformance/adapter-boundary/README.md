@@ -154,7 +154,7 @@ handle at 376 and then at 752, which is what lets a second open find the second 
 end-of-stream marker and the read fails loudly: `Header-type of flatbuffer-encoded Message is not
 RecordBatch`.
 
-## Arrow Flight answers Stage 1 from its own vocabulary
+## Arrow Flight answers discovery from its own vocabulary
 
 Part 05 §4.1 has a build report, per source, what it offers per resource and how many rows, without
 writing to the packet. `ListFlights` is that: a descriptor per resource with its schema and row
@@ -189,7 +189,7 @@ and reads its rows over Flight. `serve_nwb.py` is the adapter side: it rebuilds 
 
     a build supplies ['reference_clock', 'root', 'session_id', 'wanted', 'zone']
       as 389 bytes of JSON, naming 4 of the 18 resources this adapter produces
-    Stage 1, before any rows move: {'core.sessions': 1, 'core.probes': 1,
+    discovery, before any rows move: {'core.sessions': 1, 'core.probes': 1,
                                     'core.electrodes': 2, 'core.clock_anchors': 0}
     fetched 4 resource(s), 4 rows, 194 ms including the adapter's process start
     rows identical to the same adapter in process: True
@@ -211,7 +211,7 @@ All three protocols now run the same adapter over all eighteen resources, and ag
       18 resources, 33 rows, 5 empty, complete=True, 259 ms
       identical to the adapter in process: True
 
-    all three protocols report the same Stage 1: True
+    all three protocols report the same discovery: True
     in process the adapter omits 5 of 18: ['core.array_assets', 'core.array_dimensions',
       'core.clock_anchors', 'core.unit_coordinate_values', 'core.unit_coordinates']
     over every protocol they arrive at 0 rows
@@ -225,7 +225,7 @@ the registry's declared types; the three probe adapters each reached for the nai
 which is the argument for shipping the conversion with the protocol rather than leaving it to each
 adapter.
 
-**Stage 1 costs each protocol something different.** Flight answers from `ListFlights`, files from
+**Discovery (Part 05 §4.1) costs each protocol something different.** Flight answers from `ListFlights`, files from
 the Parquet footers, and the stream only by reading the delivery — the same ranking the draft gives,
 now measured against a real adapter rather than argued.
 
@@ -287,7 +287,7 @@ process boundary, not what an adapter extracts.
       FlightServerError, rows delivered to the build: 0
 
     **A run that succeeded and has something to say.** Two places carry it in band:
-      Stage 1 `app_metadata`, per resource: 127 bytes, level='warning'
+      discovery `app_metadata`, per resource: 127 bytes, level='warning'
       `DoAction('report')`, per run, after the rows: 1 problem(s), read [...]
 
     **An adapter with nothing to say.** Asking costs a build one refused call:
@@ -306,8 +306,8 @@ Part 09 §5.8 `problems` entry is 125 bytes a build parses.
 returned none, so a build never holds part of a resource and needs no count to know it.
 
 **A report needs a channel the protocol already has.** `DoAction("report")` is one action name and
-no file; a build asks after the rows and before the adapter exits. `app_metadata` on the Stage 1
-`FlightInfo` carries bytes too and is the wrong place — Stage 1 runs before the extraction a finding
+no file; a build asks after the rows and before the adapter exits. `app_metadata` on the discovery
+`FlightInfo` carries bytes too and is the wrong place — discovery runs before the delivery a finding
 would be about.
 
 ## What a failure carries over the stream, where nothing discards

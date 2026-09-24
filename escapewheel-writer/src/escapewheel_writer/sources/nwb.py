@@ -1272,7 +1272,7 @@ class NWBSource(Compensates):
         return counted
 
     def offers(self) -> dict[str, int]:
-        """Which resources this source supplies from its root, and how many rows (Part 05 §1)."""
+        """Which resources this source supplies from its root, and how many rows (Part 05 §4.1)."""
         return {resource: len(rows) for resource, rows in self.records().items()}
 
 

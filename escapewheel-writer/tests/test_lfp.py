@@ -223,7 +223,7 @@ def test_an_nwb_with_no_lfp_group_yields_nothing(tmp_path):
 
 
 def test_offers_counts_the_channels_it_can_supply(nwb):
-    """Part 05 Stage 1 must name every resource a recipe has this source own, and the recipe
+    """Part 05 §4.1 must name every resource a recipe has this source own, and the recipe
     owns `core.array_channels`. It was left out, so `inspect` under-reported the source."""
     source = _source(nwb)
     assert source.offers()["core.array_channels"] == len(source.array_channels())

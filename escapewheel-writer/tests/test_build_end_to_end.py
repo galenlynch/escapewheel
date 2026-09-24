@@ -145,6 +145,43 @@ def test_a_recipe_builds_and_commits(committed):
     assert (root / "packet.json").exists()
 
 
+def _inputs(root: Path) -> list[str]:
+    """The `core.source_files` URIs published as inputs of the import run."""
+    files = {r["source_file_id"]: r["uri"] for r in _table(root, "core.source_files").to_pylist()}
+    runs = {r["processing_run_id"]: r["processing_run_name"] for r in _table(root, "core.processing_runs").to_pylist()}
+    links = _table(root, "core.processing_run_inputs").to_pylist()
+    assert len(links) == len(files)
+    assert {runs[r["processing_run_id"]].split(".")[0] for r in links} == {"import"}
+    return sorted(files[r["source_file_id"]] for r in links)
+
+
+def test_each_source_root_is_an_input_of_the_import(committed):
+    """Part 05 §7: one `core.source_files` row per distinct root, linked to the import run."""
+    root, _ = committed
+    assert _inputs(root) == sorted([str(root.parent / "raw"), str(root.parent / "sorted")])
+
+
+def test_a_relative_root_is_recorded_as_the_recipe_writes_it(tmp_path):
+    """Resolved against the recipe's directory to read it, and recorded unresolved (Part 05 §11)."""
+    from escapewheel_writer.recipe import Recipe
+    from escapewheel_writer.session import build
+
+    sorted_root, raw = _sources(tmp_path)
+    recipe = Recipe.load(_recipe(tmp_path, sorted_root.relative_to(tmp_path), raw.relative_to(tmp_path)))
+    build(recipe, REGISTRY).commit(recipe.out)
+    assert _inputs(recipe.out) == ["raw", "sorted"]
+
+
+def test_sources_sharing_a_root_record_it_once():
+    """A source stating no root states none to record."""
+    from types import SimpleNamespace
+
+    from escapewheel_writer.session import _source_roots
+
+    document = {"source": [{"kind": "sync", "root": "raw"}, {"kind": "harp", "root": "raw"}, {"kind": "tables"}]}
+    assert _source_roots(SimpleNamespace(document=document)) == ["raw"]
+
+
 def test_a_clock_name_is_what_its_identifier_stands_for(committed):
     """Part 02 §8.2. `Clock.record` wrote the human label, so no recipe spelling resolved to a clock."""
     root, _ = committed

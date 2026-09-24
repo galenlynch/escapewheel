@@ -1,6 +1,6 @@
 """The session recipe: what a packet is built from, declared as a file rather than a script.
 
-Part 05 Stage 3 requires normalization to be deterministic in declared parameters, and
+Part 05 §4.3 requires normalization to be deterministic in declared parameters, and
 `core.processing_runs` records the run that used them. A build script satisfies neither. Its
 parameters are wherever its statements happen to put them, nothing can hash it, and the
 `processing_run_id` a packet carries then names a run whose inputs are unrecoverable. A recipe

@@ -5,9 +5,10 @@ version, so expiring it before they are removed makes an orphan and a stray indi
 does so permanently. Superseded manifests go second, and only as far as the retention policy
 allows.
 
-A stray -- a file no manifest has ever named -- is reported and never removed. A packet may carry
-files this specification does not govern, and cleanup that deletes the ungoverned is a data-loss
-operation wearing a maintenance name.
+A stray -- a file no manifest has ever named, outside the staging area and every path an
+unpublished promotion record claims -- is reported and never removed. A packet may carry files this
+specification does not govern, and cleanup that deletes the ungoverned is a data-loss operation
+wearing a maintenance name. Files a build or amendment owns are reported apart, and left to it.
 
 Nothing is removed unless a caller asks. Part 03 §9.5 makes reporting the default because the
 alternative is a delete whose blast radius is a listing the caller has not read.
@@ -22,7 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .writer import MANIFEST, MANIFESTS, NotCommitted
+from .writer import MANIFEST, MANIFESTS, STAGING, NotCommitted, PromotionRecordUnreadable, read_promotion, semver
 
 #: Part 03 §9.3. One superseded manifest, and no age limit: a packet is an archival artifact where a
 #: table is an operational one, so age alone never expires one.
@@ -41,7 +42,13 @@ class Plan:
     expired : tuple of Path
         Superseded manifests the retention policy no longer keeps.
     strays : tuple of Path
-        Files no manifest has ever named. Reported, never removed.
+        Files no manifest has ever named, outside every build's own paths (Part 03 §9.5).
+        Reported, never removed.
+    staged : tuple of Path
+        Files in the staging area (Part 03 §3.4), which the next build or amendment owns.
+    promoting : tuple of Path
+        Files under a path an unpublished promotion record lists (Part 05 §6), which the next
+        build or amendment removes.
     retained : tuple of Path
         Superseded manifests the policy keeps.
     applied : bool
@@ -54,6 +61,8 @@ class Plan:
     retained: tuple[Path, ...] = ()
     applied: bool = False
     notes: tuple[str, ...] = field(default=())
+    staged: tuple[Path, ...] = ()
+    promoting: tuple[Path, ...] = ()
 
     def __len__(self) -> int:
         """How many files the plan removes. A stray is not counted, because it is never one."""
@@ -63,11 +72,6 @@ class Plan:
 def _read(path: Path) -> Mapping[str, Any]:
     parsed: Mapping[str, Any] = json.loads(path.read_text())
     return parsed
-
-
-def _semver(text: str) -> tuple[int, ...]:
-    """Order a packet_version. A part that is not a number sorts before one that is."""
-    return tuple(int(part) if part.isdigit() else -1 for part in str(text).split("."))
 
 
 def _stamp(manifest: Mapping[str, Any]) -> datetime | None:
@@ -145,7 +149,7 @@ def prune(
 
     superseded = sorted(
         ((path, _read(path)) for path in (root / MANIFESTS).glob("nwb.packet.*.json")),
-        key=lambda pair: _semver(pair[1].get("packet_version", "")),
+        key=lambda pair: semver(pair[1].get("packet_version", "")),
     )
     # The current version's own retained copy is not superseded, whatever the policy says.
     superseded = [pair for pair in superseded if pair[1].get("packet_version") != current.get("packet_version")]
@@ -178,8 +182,18 @@ def prune(
         named_ever |= _names(manifest)
 
     present = {path.relative_to(root).as_posix(): path for path in _files(root)}
+    staged = {name for name in present if name.split("/", 1)[0] == STAGING}
+    claimed: set[str] = set()
+    try:
+        record = read_promotion(root)
+    except PromotionRecordUnreadable as error:
+        record = None
+        notes.append(f"{error}; the paths it lists cannot be told from strays")
+    if record is not None and semver(record[0]) > semver(current.get("packet_version", "")):
+        listed = record[1]
+        claimed = {n for n in present if any(n == p or n.startswith(f"{p}/") for p in listed)}
     orphans = tuple(sorted(path for name, path in present.items() if name in named_ever - surviving))
-    strays = tuple(sorted(path for name, path in present.items() if name not in named_ever))
+    strays = tuple(sorted(path for name, path in present.items() if name not in named_ever | staged | claimed))
 
     plan = Plan(
         orphans,
@@ -188,6 +202,8 @@ def prune(
         tuple(sorted(path for path, _ in keep)),
         apply,
         tuple(notes),
+        tuple(sorted(present[name] for name in staged)),
+        tuple(sorted(present[name] for name in claimed - staged)),
     )
     if not apply:
         return plan

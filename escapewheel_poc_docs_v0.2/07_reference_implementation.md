@@ -35,7 +35,7 @@ escapewheel inspect <kind> <root>      what one source offers (05 §4.1)
 escapewheel init --source k=path ...   draft a recipe, flagging contested resources
 escapewheel import <recipe> --check    every problem, before any I/O (05 §3.5)
 escapewheel import <recipe> --strict   refuse anything an adapter worked around
-escapewheel import <recipe>            stages 2 to 7
+escapewheel import <recipe>            steps 2 to 8 (05 §2)
 escapewheel verify <packet>            record what is true of external resources
 escapewheel prune <packet>             remove what the packet no longer names (03 §9.3)
 ```

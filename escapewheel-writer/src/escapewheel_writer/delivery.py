@@ -358,7 +358,7 @@ class Delivered:
             setattr(self, attribute, stated.get(field))
 
     def offers(self) -> dict[str, int]:
-        """Part 05 Stage 1: how many rows of each resource arrived."""
+        """Part 05 §4.1: how many rows of each resource arrived."""
         return {
             resource: (table.num_rows if isinstance(table, pa.Table) else pq.ParquetFile(table).metadata.num_rows)
             for resource, table in self.tables.items()
@@ -715,7 +715,7 @@ def _said(collected: Sequence[str]) -> str:
 def _read_files(
     kind: str, argv: Sequence[str], crossing: bytes, supplied: Mapping[str, Any], wanted: Sequence[str]
 ) -> tuple[dict[str, Any], list[str]]:
-    """`files-v0.1`: the adapter writes Parquet, and Stage 1 is the footers."""
+    """`files-v0.1`: the adapter writes Parquet, and discovery reads the footers."""
     root = Path(supplied["delivery_root"])
     root.mkdir(parents=True, exist_ok=True)
     # `communicate` writes the input and drains both output streams together, which is what keeps

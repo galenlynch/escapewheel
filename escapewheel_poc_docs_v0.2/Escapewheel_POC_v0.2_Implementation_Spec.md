@@ -2064,6 +2064,15 @@ location or omit the stored copy, and a reader or validator MUST NOT resolve a b
 anywhere else. A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
 of §§8.1, 9.1, and 9.5.
 
+<a id="ew-staging-area" data-spec-anchor="canonical"></a>
+### 3.4 The staging area
+
+In this profile a build's staging area ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline))
+is the directory `staging/` directly under the packet root, and a writer MUST stage an import or an
+amendment there and nowhere else under the packet root. Under the packet root, promotion moves a
+staged resource to its final path by a rename within one filesystem; the fixed name lets a writer
+and a cleanup tell a staging area from a directory this specification does not govern (§9.5).
+
 ## 4. URI rules
 
 A URI in the manifest or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
@@ -2335,13 +2344,18 @@ check: skipping a check whose inputs *could* have changed stays forbidden.
 
 Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second. Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
 
-A writer MUST NOT remove a **stray** — a file no manifest ever named. A packet may carry
-files this specification does not govern, and cleanup that deletes the ungoverned is a data-loss
-bug wearing an operation's name. The operation reports by default and acts only when asked.
+A **stray** is a file under the packet root that no manifest ever named, that lies outside the
+staging area (§3.4), and that neither is listed by nor lies inside a directory listed by a promotion
+record whose `packet_version` is unpublished ([Part 05 §6](05_validation_and_import.md#ew-import-commit)).
+A writer MUST NOT remove a stray. A packet may carry files this specification does not govern, and
+cleanup that deletes the ungoverned is a data-loss bug wearing an operation's name. The operation
+reports by default and acts only when asked.
 
-An amendment **MUST NOT** delete anything as part of amending. A file that no manifest
-version names any longer MAY be deleted, but by cleanup, as a separate operation — which is what
-keeps an amendment's failure from having removed something.
+An amendment **MUST NOT** delete anything as part of amending, other than a staging area as
+[Part 05 §2](05_validation_and_import.md#ew-import-pipeline) permits and the paths Part 05 §6 lets it
+remove when it acts on a promotion record. A file that no manifest version names any longer MAY be
+deleted, but by cleanup, as a separate operation — which is what keeps an amendment's failure from
+having removed something.
 
 A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
@@ -2410,7 +2424,7 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 | `first_samples` | one record per stream: its name, and the integer its samples start at |
 | `units` | one record per unit: the source's label for it, and the identifier assigned |
 | `wanted` | the resource IDs the recipe leaves this source owning, so it produces no more |
-| `array_location` | a location under the staging area to write an array to (§11.3) |
+| `array_location` | a location under the build's staging area ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline)) to write an array to (§11.3) |
 | an option, by its name | the value the recipe carries under it — a `zone`, an `interval_kind` |
 
 A build MUST resolve each declared name against that list first and the recipe's options second, and MUST refuse a recipe where a name resolves to neither. A profile adding a term amends this section.
@@ -2441,9 +2455,9 @@ An adapter MUST hand over identifiers as the names its source used and never as 
 A resource an adapter owns and has no rows for MUST arrive empty rather than not arriving. An empty delivery states that the source had nothing to say; a resource that does not arrive states that the run failed, and a build that cannot tell them apart cannot report either.
 
 An adapter's arrays MUST NOT cross as rows. A dense array crosses by identity and location. Where
-the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1),
-and an adapter reached by a protocol MUST write the array there, so commit moves it by the rename
-Part 05 §6 already performs. An adapter a build runs in process MAY instead hand the build the
+the packet will own the array, a build MUST supply a location under the staging area (Part 05 §2),
+and an adapter reached by a protocol MUST write the array there, so promotion (Part 05 §6) moves it
+to its final path by a rename within one filesystem (§3.4). An adapter a build runs in process MAY instead hand the build the
 array's values, and the build writes the array there. Where the array is external (§8.2), a build
 supplies no location and the producer returns the URI its source already has.
 
@@ -2910,7 +2924,8 @@ Normative.
 
 **Validation is importation.** Copying bytes into a packet directory is staging, not import.
 
-A resource is imported when it has been discovered, extracted to staging, normalized to the logical schemas, validated, committed, and recorded in the manifest with its provenance.
+A resource is imported when a build has staged it, validated it with the whole staged packet,
+promoted it, and published a manifest naming it, in the order §2 states.
 
 A staged resource MUST NOT appear in the committed manifest. Validation state does not change the
 content class or canonicality selected by its declaration; publication is the gate.
@@ -2918,15 +2933,36 @@ content class or canonicality selected by its declaration; publication is the ga
 <a id="ew-import-pipeline" data-spec-anchor="canonical"></a>
 ## 2. Pipeline
 
-| stage | action |
-|---|---|
-| 1 | discover what each source offers |
-| 2 | extract candidate resources to staging |
-| 3 | normalize to the logical schemas |
-| 4 | validate the staged resources |
-| 5 | commit |
-| 6 | record provenance |
-| 7 | materialize analysis resources |
+A build MUST perform these steps in this order:
+
+1. discover what each source offers, writing nothing (§4.1);
+2. deliver each source's resources through the locations and routes the build supplies (§4.2);
+3. normalize them to the logical schemas and write the result to the staging area (§4.3);
+4. record the import's provenance in the staging area (§7);
+5. materialize analysis resources from the staged packet into the staging area (§8);
+6. validate the whole staged packet (§5);
+7. promote the staged resources to their final locations (§6); and
+8. publish the packet manifest (§6).
+
+A build MAY interleave steps 1 to 3 across sources, within the constraints §4.3 places on
+normalization, and a packet-owned array delivered into the staging area is staged by its delivery.
+A build MUST finish steps 4 and 5 before it begins step 6, MUST NOT begin step 7 until step 6 has
+returned a packet verdict of `passed` ([§9.5](#ew-verdict-composition)), and MUST NOT begin step 8
+until step 7 has finished.
+
+The **staging area** is the location a build or an amendment owns while it runs and into which it
+writes what it will publish. What it holds belongs to no packet until promotion moves it to its
+final location. A physical profile names where its staging area lies; the portable profile's is
+[Part 03 §3.4](03_portable_physical_profile.md#ew-staging-area).
+
+A writer MAY empty or remove a staging area:
+
+- after it publishes the manifest of the build or amendment that owns it;
+- when it begins a build at the same packet root; and
+- when it begins an amendment of the packet at that root.
+
+A writer MUST NOT empty or remove a staging area that holds a promotion record until it has acted
+on the record as §6 requires.
 
 A writer MUST NOT combine parsing, normalization, validation, and writing into one opaque step.
 
@@ -3105,16 +3141,18 @@ The recipe declares it because the recipe author chose the environment. One proc
 What the opt-in buys is a saved transfer and what it costs is a solvable environment. A build that cannot import an adapter the recipe opted in MUST refuse, naming the source and the import that failed, before any source is opened.
 
 <a id="ew-import-sources" data-spec-anchor="canonical"></a>
-## 4. Stages 1 to 3
+## 4. Discover, deliver, and normalize
 
 ### 4.1 Discover
 
 For each source, report what it offers per resource, and how many rows. Discovery MUST NOT write to the packet.
 
 <a id="ew-import-delivery" data-spec-anchor="canonical"></a>
-### 4.2 Extract
+### 4.2 Deliver
 
-Copy or stream candidate resources into a staging area under the packet root. A writer MUST stream a table whose row count is large rather than materializing it as host objects.
+A build reads each source's delivery where it supplied it (§2), which need not be the staging area,
+and writes what it normalizes from it into the staging area (§4.3). A writer MUST stream a table
+whose row count is large rather than materializing it as host objects.
 
 ### 4.3 Normalize
 
@@ -3139,7 +3177,7 @@ A build MUST report a delivery it cannot parse as a failure where the command ex
 A build MUST report everything the protocol it used carries about a failure — standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its detail for `flight-v0.1`, where a failing adapter writes nothing to standard error because the diagnosis travels on the connection it was asked over. A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
 
 <a id="ew-import-validation" data-spec-anchor="canonical"></a>
-## 5. Stage 4: Validate
+## 5. Validate
 
 ### 5.1 Tier 1
 
@@ -3193,19 +3231,14 @@ check of §5.3, does not extend. [§9.5](#ew-verdict-composition) assigns the ex
 it and composes its verdict with core's.
 
 <a id="ew-import-commit" data-spec-anchor="canonical"></a>
-## 6. Stage 5: Commit
+## 6. Commit
 
-Commit MUST be atomic with respect to a concurrent reader:
-
-1. write the staged resources;
-2. validate them;
-3. move resources into their final paths;
-4. **publish** the packet manifest at `packet.json`, last and atomically.
-
-A reader MUST observe either the previously committed manifest or the newly published one, and MUST
-NOT observe a manifest naming a resource that is not yet in place. Every packet-owned
-resource the manifest names MUST already be at its final location and MUST have passed validation
-before it is published.
+A **commit** is steps 7 and 8 of §2: **promotion**, which moves a validated staged packet's
+resources to their final locations, and **publication** of its manifest at `packet.json`, last and
+atomically. Commit MUST be atomic with respect to a concurrent reader: a reader MUST observe either
+the previously committed manifest or the newly published one, and MUST NOT observe a manifest naming
+a resource that is not yet in place. A writer MUST NOT publish a manifest until every packet-owned
+resource it names is at its final location and has passed validation.
 
 The publication mechanism is the profile's. A filesystem profile MAY publish by atomic rename
 within one directory; an object-store profile MAY publish by a single-object write. A writer MUST
@@ -3216,17 +3249,55 @@ Where the store offers a conditional write, a writer publishing a new version SH
 two writers cannot silently overwrite one another's head. Where it offers none, a writer MUST NOT
 claim it detected a conflict it could not detect.
 
-A commit that finds an error MUST NOT write a manifest at the packet root, and SHOULD leave staging in place for inspection.
+A writer whose validation returns a packet verdict other than `passed` promotes nothing, MUST NOT
+write a manifest at the packet root, and SHOULD leave its staging area in place for inspection.
+
+Before a build or an amendment writes anything outside its staging area, the writer MUST write a
+**promotion record** into the staging area and make it durable. The record states the
+`packet_version` the writer will publish and lists, relative to the packet root, every file and
+directory the writer will create outside the staging area before it publishes, other than the
+manifest. For an import these are the promoted resource directories, the bound registries, the
+source resolution document, and any file publication writes before it installs the manifest; for
+an amendment, every file it writes and the superseded manifest it retains
+([Part 03 §9.3](03_portable_physical_profile.md#ew-superseded-manifest-retention)). A writer MUST
+refuse to promote where a path its record lists already exists, naming the path, and MUST NOT
+create outside the staging area a path its record neither lists nor places inside a listed
+directory. This specification does not fix the record's format.
+
+A listed path, with everything inside it, belongs to the build or amendment that wrote the record
+until a manifest carrying the record's `packet_version` is published. A writer beginning a build or
+an amendment at a packet root whose staging area holds a promotion record MUST read the record
+before it empties the staging area or writes anything else, and then:
+
+- where no manifest is published at the packet root, or the published manifest's `packet_version`
+  sorts before the record's as a semantic version, the writer MAY remove every listed path that
+  exists, and then proceeds as a new build or amendment; and
+- where the published manifest's `packet_version` equals the record's or sorts after it, the record
+  is stale, and the writer MUST NOT remove a listed path.
+
+A writer that cannot read a promotion record MUST NOT remove any path outside the staging area on
+the record's account, and MUST refuse to build or amend at that packet root, naming the record.
 
 <a id="ew-import-provenance" data-spec-anchor="canonical"></a>
-## 7. Stage 6: Provenance
+## 7. Provenance
 
-Record `core.source_files` for the inputs, one `core.processing_runs` row for the import, and `core.processing_run_inputs` linking them. The run declares its `scope` and `scope_kind`.
+A writer MUST record, in the staging area at step 4 of §2:
+
+- one `core.processing_runs` row for the import, declaring its `scope` and `scope_kind`;
+- one `core.source_files` row for each distinct `root` among the recipe's sources (§3.1), whose
+  `uri` is that root as the recipe states it; and
+- one `core.processing_run_inputs` row linking each of those `core.source_files` rows to the import
+  run.
+
+A writer need not read a source to fill `sha256`, `size_bytes`, `format`, or `modified_at`, each of
+which may be null.
 
 <a id="ew-import-materialization" data-spec-anchor="canonical"></a>
-## 8. Stage 7: Materialize
+## 8. Materialize
 
-Materialization runs inside the import: core is staged, the staged packet is opened, derived resources are computed from it, and everything is validated together before anything is promoted.
+Materialization is step 5 of §2: a build opens the staged packet, computes each derived resource
+from it, and writes the result to the staging area, so step 6 validates it with core before
+anything is promoted.
 
 Deriving into an already-committed packet is an amendment (03 §9.1), not part of an import.
 
@@ -3680,7 +3751,7 @@ escapewheel inspect <kind> <root>      what one source offers (05 §4.1)
 escapewheel init --source k=path ...   draft a recipe, flagging contested resources
 escapewheel import <recipe> --check    every problem, before any I/O (05 §3.5)
 escapewheel import <recipe> --strict   refuse anything an adapter worked around
-escapewheel import <recipe>            stages 2 to 7
+escapewheel import <recipe>            steps 2 to 8 (05 §2)
 escapewheel verify <packet>            record what is true of external resources
 escapewheel prune <packet>             remove what the packet no longer names (03 §9.3)
 ```

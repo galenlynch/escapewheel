@@ -66,7 +66,7 @@ class Served(fl.FlightServerBase):
         super().__init__(fl.Location.for_grpc_unix(location))
 
     def list_flights(self, context, criteria):
-        """Stage 1: what this source offers per resource, and how many rows (Part 05 §4.1)."""
+        """Discovery: what this source offers per resource, and how many rows (Part 05 §4.1)."""
         for name, table in self.tables.items():
             descriptor = fl.FlightDescriptor.for_path(name)
             yield fl.FlightInfo(

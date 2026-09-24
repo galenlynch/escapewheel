@@ -112,6 +112,15 @@ location or omit the stored copy, and a reader or validator MUST NOT resolve a b
 anywhere else. A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
 of §§8.1, 9.1, and 9.5.
 
+<a id="ew-staging-area" data-spec-anchor="canonical"></a>
+### 3.4 The staging area
+
+In this profile a build's staging area ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline))
+is the directory `staging/` directly under the packet root, and a writer MUST stage an import or an
+amendment there and nowhere else under the packet root. Under the packet root, promotion moves a
+staged resource to its final path by a rename within one filesystem; the fixed name lets a writer
+and a cleanup tell a staging area from a directory this specification does not govern (§9.5).
+
 ## 4. URI rules
 
 A URI in the manifest or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
@@ -383,13 +392,18 @@ check: skipping a check whose inputs *could* have changed stays forbidden.
 
 Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second. Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
 
-A writer MUST NOT remove a **stray** — a file no manifest ever named. A packet may carry
-files this specification does not govern, and cleanup that deletes the ungoverned is a data-loss
-bug wearing an operation's name. The operation reports by default and acts only when asked.
+A **stray** is a file under the packet root that no manifest ever named, that lies outside the
+staging area (§3.4), and that neither is listed by nor lies inside a directory listed by a promotion
+record whose `packet_version` is unpublished ([Part 05 §6](05_validation_and_import.md#ew-import-commit)).
+A writer MUST NOT remove a stray. A packet may carry files this specification does not govern, and
+cleanup that deletes the ungoverned is a data-loss bug wearing an operation's name. The operation
+reports by default and acts only when asked.
 
-An amendment **MUST NOT** delete anything as part of amending. A file that no manifest
-version names any longer MAY be deleted, but by cleanup, as a separate operation — which is what
-keeps an amendment's failure from having removed something.
+An amendment **MUST NOT** delete anything as part of amending, other than a staging area as
+[Part 05 §2](05_validation_and_import.md#ew-import-pipeline) permits and the paths Part 05 §6 lets it
+remove when it acts on a promotion record. A file that no manifest version names any longer MAY be
+deleted, but by cleanup, as a separate operation — which is what keeps an amendment's failure from
+having removed something.
 
 A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
@@ -458,7 +472,7 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 | `first_samples` | one record per stream: its name, and the integer its samples start at |
 | `units` | one record per unit: the source's label for it, and the identifier assigned |
 | `wanted` | the resource IDs the recipe leaves this source owning, so it produces no more |
-| `array_location` | a location under the staging area to write an array to (§11.3) |
+| `array_location` | a location under the build's staging area ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline)) to write an array to (§11.3) |
 | an option, by its name | the value the recipe carries under it — a `zone`, an `interval_kind` |
 
 A build MUST resolve each declared name against that list first and the recipe's options second, and MUST refuse a recipe where a name resolves to neither. A profile adding a term amends this section.
@@ -489,9 +503,9 @@ An adapter MUST hand over identifiers as the names its source used and never as 
 A resource an adapter owns and has no rows for MUST arrive empty rather than not arriving. An empty delivery states that the source had nothing to say; a resource that does not arrive states that the run failed, and a build that cannot tell them apart cannot report either.
 
 An adapter's arrays MUST NOT cross as rows. A dense array crosses by identity and location. Where
-the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1),
-and an adapter reached by a protocol MUST write the array there, so commit moves it by the rename
-Part 05 §6 already performs. An adapter a build runs in process MAY instead hand the build the
+the packet will own the array, a build MUST supply a location under the staging area (Part 05 §2),
+and an adapter reached by a protocol MUST write the array there, so promotion (Part 05 §6) moves it
+to its final path by a rename within one filesystem (§3.4). An adapter a build runs in process MAY instead hand the build the
 array's values, and the build writes the array there. Where the array is external (§8.2), a build
 supplies no location and the producer returns the URI its source already has.
 

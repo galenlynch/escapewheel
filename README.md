@@ -53,7 +53,7 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 | `escapewheel-writer/` | The writer, the source adapters, and the session recipe that drives them. |
 | `fixtures/` | The conformance corpus: one valid packet and its variants, each with its expected finding recorded as data. |
 | `conformance/` | Mechanical probes producing the measured evidence revisions cite. |
-| `inventory/` | Stage 1 source inventories, and the upstream defects found while writing adapters. |
+| `inventory/` | Source inventories from discovery (Part 05 §4.1), and the upstream defects found while writing adapters. |
 
 ## A packet
 
@@ -78,11 +78,11 @@ uses file layout as identity.
 ```bash
 uv sync                                       # in any of the three package directories
 
-escapewheel inspect sorter /data/session_sorted  # what a source offers (05 Stage 1)
+escapewheel inspect sorter /data/session_sorted  # what a source offers (Part 05 §4.1)
 escapewheel init --session-id s001 \
   --source sorter=/data/session_sorted \
   --source nwb=/data/session.nwb > session.toml
-escapewheel import session.toml                  # stage, validate, commit (05 Stages 2-6)
+escapewheel import session.toml                  # stage, validate, commit (Part 05 §2)
 escapewheel validate packet/                     # re-validate any time
 escapewheel ls packet/                           # what is in it
 ```

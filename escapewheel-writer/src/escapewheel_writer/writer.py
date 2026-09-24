@@ -6,16 +6,17 @@ This module is the writer and committer halves of that pipeline. It knows nothin
 SpikeInterface, or any other source -- adapters hand it records, and it turns them into a
 packet or refuses to.
 
-The commit sequence is Part 05's, and its ordering is the whole guarantee:
+A build follows Part 05 §2's order, and the part of it this module performs is its guarantee:
 
-1. write staged resources under ``staging/``;
+1. write the normalized resources and the import's provenance under ``staging/`` (Part 03 §3.4);
 2. derive the analysis resources the caller asked for from the staged packet (Part 05 §8);
 3. validate the whole staged packet there;
-4. move it into its final paths;
+4. record every path promotion will create, then promote into the final paths (Part 05 §6);
 5. rename the manifest to ``packet.json`` **last**.
 
-Until step 5 the packet root holds no manifest, so a reader finds nothing rather than
-finding a partial import that claims to be valid.
+Until step 5 the packet root holds no manifest, so a reader finds nothing rather than finding a
+partial import that claims to be valid, and the promotion record makes whatever an interrupted
+step 4 left the next build's to remove.
 """
 
 from __future__ import annotations
@@ -89,6 +90,12 @@ REGISTRIES = "registries"
 
 #: Part 03's portable profile.
 PROFILE = "escapewheel-portable-v0.1"
+
+#: The portable profile's staging area, directly under the packet root (Part 03 §3.4).
+STAGING = "staging"
+
+#: The promotion record inside the staging area (Part 05 §6). Its format is this writer's.
+PROMOTION = "promotion.json"
 
 
 #: Columns whose resource must not dictionary-encode them, by resource ID. Deliberately not in
@@ -330,6 +337,89 @@ PROVENANCE = ("core.processing_runs", "core.source_files", "core.processing_run_
 MANIFESTS = "manifests"
 
 
+def semver(text: str) -> tuple[int, ...]:
+    """Order a packet_version. A part that is not a number sorts before one that is."""
+    return tuple(int(part) if part.isdigit() else -1 for part in str(text).split("."))
+
+
+class PromotionRecordUnreadable(Exception):
+    """A staging area holds a promotion record this writer cannot read (Part 05 §6)."""
+
+
+def _record_promotion(staging: Path, packet_version: str, paths: Iterable[str]) -> None:
+    """Write the promotion record durably, before anything is written outside `staging` (Part 05 §6)."""
+    body = json.dumps({"packet_version": packet_version, "paths": sorted(set(paths))}, indent=2) + "\n"
+    pending = staging / f"{PROMOTION}.pending"
+    with pending.open("w") as handle:
+        handle.write(body)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(pending, staging / PROMOTION)
+    directory = os.open(staging, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
+def read_promotion(root: Path) -> tuple[str, list[str]] | None:
+    """Return the version and paths of the promotion record at `root`, or None where there is none.
+
+    Raises
+    ------
+    PromotionRecordUnreadable
+        If the record cannot be parsed, or lists a path outside the packet root.
+    """
+    path = root / STAGING / PROMOTION
+    if not path.exists():
+        return None
+    try:
+        record = json.loads(path.read_text())
+        version = str(record["packet_version"])
+        paths = [str(p) for p in record["paths"]]
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise PromotionRecordUnreadable(f"{path}: cannot read the promotion record ({error})") from None
+    if escaping := [p for p in paths if Path(p).is_absolute() or ".." in Path(p).parts or not p]:
+        raise PromotionRecordUnreadable(f"{path}: lists {escaping[0]!r}, which is not under the packet root")
+    return version, paths
+
+
+def _act_on_promotion(root: Path) -> None:
+    """Undo what an unpublished promotion created, before anything else happens at `root` (Part 05 §6).
+
+    Where the record's version is already published the record is stale and the listed paths are
+    the packet's, so nothing is removed; the staging area is emptied afterwards either way.
+    """
+    record = read_promotion(root)
+    if record is None:
+        return
+    version, paths = record
+    manifest = root / MANIFEST
+    if manifest.is_file() and semver(json.loads(manifest.read_text())["packet_version"]) >= semver(version):
+        return
+    for relative in paths:
+        target = root / relative
+        if target.is_dir() and not target.is_symlink():
+            shutil.rmtree(target)
+        elif target.exists() or target.is_symlink():
+            target.unlink()
+
+
+def _claim(root: Path, paths: Iterable[str]) -> None:
+    """Refuse to promote onto a path that already exists, naming it (Part 05 §6)."""
+    if taken := sorted(p for p in paths if (root / p).exists()):
+        raise FileExistsError(f"{root / taken[0]} already exists, so promotion would overwrite it")
+
+
+def _created(root: Path, relative: str) -> str:
+    """Return the outermost path writing `relative` under `root` would create."""
+    parts = Path(relative).parts
+    for depth in range(1, len(parts) + 1):
+        if not (root / Path(*parts[:depth])).exists():
+            return Path(*parts[:depth]).as_posix()
+    return relative
+
+
 def _bump(version: str) -> str:
     """Return the next packet version.
 
@@ -445,8 +535,9 @@ def _check_reference(resource_id: str, uri: str, source: str | None) -> None:
 def _refuse_occupied(root: Path) -> None:
     """Refuse a root holding a committed manifest or a directory commit would promote into.
 
-    A promoted directory with no manifest is what an interrupted promotion leaves: a stray a writer
-    may not remove (Part 03 §9.5), and moving another into it would nest the new one inside.
+    Called after `_act_on_promotion`, so what remains is a promoted directory no promotion record
+    claims: a stray a writer may not remove (Part 03 §9.5), and moving another into it would nest
+    the new one inside.
     """
     if (root / MANIFEST).exists():
         raise FileExistsError(f"{root} already holds a committed {MANIFEST}")
@@ -1216,13 +1307,12 @@ class PacketWriter:
         """
         self._sources[name] = uri
 
-    def _write_sources(self, root: Path) -> None:
-        """Write Part 04 §5.5's default resolution document, where any resource names a source.
+    def _sources_document(self) -> dict[str, Any] | None:
+        """Return Part 04 §5.5's default resolution document, or None where no resource names a source.
 
-        Before the manifest, because Part 05 §6 makes publishing the manifest what makes a commit
-        visible: everything a reader may look for is in place first. Skipped entirely when no
-        resource names a source, since a document locating nothing is worse than none -- it
-        would answer a lookup the caller meant to answer itself.
+        None rather than an empty document, since a document locating nothing is worse than
+        none -- it would answer a lookup the caller meant to answer itself. Written before the
+        manifest, because Part 05 §6 makes publishing the manifest what makes a commit visible.
 
         Raises
         ------
@@ -1236,7 +1326,7 @@ class PacketWriter:
             if referenced.source is not None and referenced.source in self._sources
         }
         if not located:
-            return
+            return None
         document = {
             "$schema": "https://escapewheel.org/schemas/sources/0.1.0",
             "sources_standard_version": SOURCES_VERSION,
@@ -1245,7 +1335,7 @@ class PacketWriter:
         }
         if problems := check_sources(document):
             raise ValueError(f"the source resolution document would not satisfy its schema: {'; '.join(problems)}")
-        (root / SOURCES).write_text(json.dumps(document, indent=2) + "\n")
+        return document
 
     def stage_at(self, root: str | Path) -> Path:
         """Prepare, empty, the staging area `commit` will use at `root`, and return it.
@@ -1257,8 +1347,11 @@ class PacketWriter:
         ------
         FileExistsError
             If `root` already holds a committed manifest.
+        PromotionRecordUnreadable
+            If the staging area holds a promotion record this writer cannot read.
         """
         root = Path(root)
+        _act_on_promotion(root)
         _refuse_occupied(root)
         self._prepared = None
         staging = self._staging(root)
@@ -1267,7 +1360,7 @@ class PacketWriter:
 
     def _staging(self, root: Path) -> Path:
         """Return the staging area at `root`: the one `stage_at` prepared, or a new empty one."""
-        staging = root / "staging"
+        staging = root / STAGING
         if staging.resolve() != self._prepared:
             if staging.exists():
                 shutil.rmtree(staging)
@@ -1317,8 +1410,11 @@ class PacketWriter:
         CommitRefused
             If validation found errors. Nothing is committed, and staging and the delivery
             workspace are left in place.
+        PromotionRecordUnreadable
+            If the staging area holds a promotion record this writer cannot read.
         """
         root = Path(root)
+        _act_on_promotion(root)
         _refuse_occupied(root)
         # R1 §6 makes the session inventory part of the manifest and the schema requires it
         # non-empty. Refusing here beats letting the staged manifest fail its own schema,
@@ -1386,14 +1482,19 @@ class PacketWriter:
         if not report.passed:
             raise CommitRefused(report, staging)
 
-        # 3. move into final paths, the resolution document first since it alone can still fail
-        self._write_sources(root)
+        # 3. record every path promotion creates, then move into final paths, the resolution
+        #    document first since it alone can still fail
+        sources = self._sources_document()
+        promoted = [name for name in ("tables", "arrays", REGISTRIES) if (staging / name).exists()]
+        creates = [*promoted, *([SOURCES] if sources is not None else []), f"{MANIFEST}.candidate"]
+        _claim(root, creates)
+        _record_promotion(staging, str(self._manifest(entries, registries, None)["packet_version"]), creates)
+        if sources is not None:
+            (root / SOURCES).write_text(json.dumps(sources, indent=2) + "\n")
         for entry in entries:
             entry["validation_state"] = "passed"
-        for name in ("tables", "arrays", REGISTRIES):
-            source = staging / name
-            if source.exists():
-                shutil.move(str(source), str(root / name))
+        for name in promoted:
+            shutil.move(str(staging / name), str(root / name))
 
         # 4. rename the manifest last: until this line the root holds no manifest at all,
         #    so a reader finds nothing rather than a partial import claiming to be valid.
@@ -1448,11 +1549,15 @@ class PacketWriter:
             If the amendment would replace a core resource other than a provenance table, which
             is a new packet rather than a new version of this one (Part 03 §9.2).
         CommitRefused
-            If validation found errors. The packet stays at its previous version.
+            If validation found errors. The packet stays at its previous version, and nothing
+            was written outside the staging area.
+        PromotionRecordUnreadable
+            If the staging area holds a promotion record this writer cannot read.
         """
         root = Path(root)
         if not (root / MANIFEST).is_file():
             raise NotCommitted(f"{root} holds no committed {MANIFEST}; use commit() to create a packet")
+        _act_on_promotion(root)
         superseded = json.loads((root / MANIFEST).read_text())
 
         added = set(self.resources)
@@ -1464,7 +1569,7 @@ class PacketWriter:
 
         self._absorb_provenance(root, superseded)
 
-        staging = root / "staging"
+        staging = root / STAGING
         if staging.exists():
             shutil.rmtree(staging)
         staging.mkdir(parents=True)
@@ -1481,33 +1586,44 @@ class PacketWriter:
 
         # The registries go in before validation, not after: the validator acquires each through
         # the candidate's descriptor (Part 04 §10). A version the packet already stores stays where
-        # it is, so a superseded manifest still binds the bytes it named (Part 03 §9.3); what this
-        # adds is removed again if validation refuses, leaving the packet exactly as it was.
-        candidate["registries"], restore = self._store_registries(root)
-        try:
-            # Both halves of the amendment are bounded by what it writes (R35). Physical order
-            # is re-read only for those files, and only the rules attached to one or naming one
-            # re-run. A file the amendment does not name is byte-identical to one already
-            # verified -- Part 03 §9.2 forbids modifying it and Part 03 §8.1 declares it immutable -- so
-            # its order cannot have changed and a rule reading only it is already answered.
-            written = {e["resource_id"] for e in entries}
-            report = validate(
-                Packet(root, Manifest.from_dict(candidate)),
-                limits=limits,
-                scan=written - self._ordered,
-                recheck=written,
-            )
-            if not report.passed:
-                raise CommitRefused(report, staging)
-        except BaseException:
-            restore()
-            raise
+        # it is, so a superseded manifest still binds the bytes it named (Part 03 §9.3); a new one
+        # is bound under staging/ until it has passed, like the resources.
+        candidate["registries"], added_registries = self._store_registries(root, staging=staging)
+        # Both halves of the amendment are bounded by what it writes (R35). Physical order is
+        # re-read only for those files, and only the rules attached to one or naming one re-run. A
+        # file the amendment does not name is byte-identical to one already verified -- Part 03
+        # §9.2 forbids modifying it and Part 03 §8.1 declares it immutable -- so its order cannot
+        # have changed and a rule reading only it is already answered.
+        written = {e["resource_id"] for e in entries}
+        report = validate(
+            Packet(root, Manifest.from_dict(candidate)),
+            limits=limits,
+            scan=written - self._ordered,
+            recheck=written,
+        )
+        if not report.passed:
+            raise CommitRefused(report, staging)
 
-        for entry in entries:
-            destination = root / entry["uri"]
+        retained = [
+            f"{MANIFESTS}/nwb.packet.{manifest['packet_version']}.json"
+            for manifest in (superseded, candidate)
+            if not (root / MANIFESTS / f"nwb.packet.{manifest['packet_version']}.json").exists()
+        ]
+        creates = {
+            _created(root, relative) for relative in (*(e["uri"] for e in entries), *added_registries, *retained)
+        } | {f"{MANIFEST}.candidate"}
+        _claim(root, creates)
+        _record_promotion(staging, str(candidate["packet_version"]), creates)
+        for relative in (*(e["uri"] for e in entries), *added_registries):
+            destination = root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(staging / entry["uri"]), str(destination))
+            shutil.move(str(staging / relative), str(destination))
+        for entry in entries:
             entry["validation_state"] = "passed"
+        candidate["registries"] = {
+            name: dict(bound, path=str(bound["path"]).removeprefix(f"{STAGING}/"))
+            for name, bound in candidate["registries"].items()
+        }
 
         amended = dict(candidate)
         amended["resources"] = kept + [dict(e) for e in entries]
@@ -1559,9 +1675,14 @@ class PacketWriter:
         versions.mkdir(exist_ok=True)
         for manifest in (superseded, amended):
             path = versions / f"nwb.packet.{manifest['packet_version']}.json"
-            path.write_text(json.dumps(manifest, indent=2) + "\n")
+            # An existing copy is the one an earlier amendment retained, and retained bytes are
+            # not rewritten.
+            if not path.exists():
+                path.write_text(json.dumps(manifest, indent=2) + "\n")
 
-    def _store_registries(self, root: Path) -> tuple[dict[str, dict[str, str]], Callable[[], None]]:
+    def _store_registries(
+        self, root: Path, *, staging: Path | None = None
+    ) -> tuple[dict[str, dict[str, str]], list[str]]:
         """Store core and every extension as Part 03 §3.3 requires, returning their descriptors.
 
         The digest covers the exact serialized bytes (Part 04 §10). A registry ID and version that
@@ -1569,12 +1690,21 @@ class PacketWriter:
         matches and refused where it differs (Part 03 §9.3), so every manifest keeps naming bytes
         that exist.
 
+        Parameters
+        ----------
+        root : Path
+            Where the registries are bound: the staged packet for a commit, the packet for an
+            amendment.
+        staging : Path, optional
+            For an amendment, where a registry the packet does not yet store is written instead,
+            its descriptor pointing there until promotion moves it (Part 05 §6).
+
         Returns
         -------
         dict
             A descriptor per registry ID, for the manifest's `registries`.
-        Callable
-            Removes whatever this call wrote, for an amendment that validation refuses.
+        list of str
+            The root-relative final path of each registry written under `staging`.
         """
         recorded: dict[tuple[str, str], Mapping[str, str]] = {}
         for manifest_path in [root / MANIFEST, *sorted((root / MANIFESTS).glob("*.json"))]:
@@ -1582,7 +1712,7 @@ class PacketWriter:
                 for name, bound in json.loads(manifest_path.read_text()).get("registries", {}).items():
                     recorded.setdefault((name, bound["version"]), bound)
         descriptors: dict[str, dict[str, str]] = {}
-        written: list[Path] = []
+        added: list[str] = []
         for document in (self._registry, *self._extensions.values()):
             registry_id = str(document["registry_id"])
             body = (json.dumps(document, indent=2) + "\n").encode()
@@ -1592,37 +1722,41 @@ class PacketWriter:
             relative = earlier["path"] if earlier else f"{REGISTRIES}/{registry_id}/{version}.json.gz"
             path = root / relative
             stored = hashlib.sha256(gzip_member(path.read_bytes())).hexdigest() if path.is_file() else None
+            bound = relative
             if (earlier is not None and earlier["sha256"] != digest) or stored not in {None, digest}:
                 raise ValueError(
                     f"this packet already binds a different {registry_id} {version} at {relative}; two digests "
                     "under one registry ID and version cannot both be retained (Part 03 §9.3). Bump registry_version."
                 )
             if stored is None:
+                if staging is not None:
+                    path = staging / relative
+                    bound = f"{staging.relative_to(root).as_posix()}/{relative}"
+                    added.append(relative)
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(gzip.compress(body, mtime=0))
-                written.append(path)
             descriptors[registry_id] = {
                 "role": "extension" if "extension_id" in document else "core",
                 "version": version,
-                "path": relative,
+                "path": bound,
                 "sha256": digest,
             }
-
-        def restore() -> None:
-            for path in written:
-                path.unlink(missing_ok=True)
-
-        return descriptors, restore
+        return descriptors, added
 
 
 __all__ = [
     "MANIFEST",
     "MANIFESTS",
     "PROFILE",
+    "PROMOTION",
     "PROVENANCE",
     "REGISTRIES",
+    "STAGING",
     "CommitRefused",
     "ExternalMedia",
     "NotCommitted",
     "PacketWriter",
+    "PromotionRecordUnreadable",
+    "read_promotion",
+    "semver",
 ]

@@ -1,6 +1,6 @@
 # Source inventories
 
-Part 05 Stage 1 requires discovery to produce a source inventory before anything is staged:
+Part 05 §4.1 requires discovery to produce a source inventory before anything is staged:
 what source objects exist, what format they are, and which core resources they are
 candidates for. Nothing is committed on the strength of an inventory — it is what the
 normalization and validation stages are written against.

@@ -1,6 +1,6 @@
 # Aind.Behavior.VrForaging.Packaging — pipeline inventory
 
-Part 05 Stage 1, for a **pipeline** rather than a dataset. Most AIND behaviour data will arrive
+Part 05 §4.1 discovery, for a **pipeline** rather than a dataset. Most AIND behaviour data will arrive
 through this, so what it emits is the import surface that matters. Read at the state of
 2026-08-26; three-version dispatch means these details are versioned and will move.
 

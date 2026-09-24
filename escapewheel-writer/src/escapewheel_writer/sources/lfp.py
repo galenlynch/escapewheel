@@ -435,7 +435,7 @@ class LFPSource(Compensates):
         }
 
     def offers(self) -> dict[str, int]:
-        """Part 05 Stage 1: how many rows of each resource this source can supply.
+        """Part 05 §4.1: how many rows of each resource this source can supply.
 
         `core.array_channels` is counted from each series' electrode region, which is what
         `array_channels` iterates. It is offered whether or not an electrode map was given:

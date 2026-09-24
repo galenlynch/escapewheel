@@ -290,15 +290,16 @@ note = "the packet verdict is the worst of the packet's own, core's, and every b
 
 [clause."R74 §2.1"]
 disposition = "applied"
-where = [{ part = "05", section = "6" }]
+where = [{ part = "05", anchor = "ew-import-commit" }]
+note = "restated by R135 §3.3 with a writer as its actor"
 
 [clause."R74 §2.2"]
 disposition = "applied"
-where = [{ part = "05", section = "6" }]
+where = [{ part = "05", anchor = "ew-import-commit" }]
 
 [clause."R74 §2.3"]
 disposition = "applied"
-where = [{ part = "05", section = "6" }]
+where = [{ part = "05", anchor = "ew-import-commit" }]
 
 [clause."R74 §2.4"]
 disposition = "rationale"
@@ -535,8 +536,8 @@ note = "restored 2026-09-04; the whole-packet baseline R35 bounds was absent"
 
 [clause."R32 §6"]
 disposition = "applied"
-where = [{ part = "03", section = "9.5" }]
-note = "restored 2026-09-04; an amendment deletes nothing"
+where = [{ part = "03", anchor = "ew-packet-cleanup" }]
+note = "restored 2026-09-04; an amendment deletes nothing, narrowed by R135 §3.5 to admit a staging area and the paths a promotion record makes its own"
 
 [clause."R32 §7"]
 disposition = "rationale"
@@ -560,7 +561,8 @@ disposition = "rationale"
 
 [clause."R61 §2.1"]
 disposition = "applied"
-where = [{ part = "03", section = "9.5" }]
+where = [{ part = "03", anchor = "ew-packet-cleanup" }]
+note = "a stray, narrowed by R135 §3.5 to lie outside the staging area and every path an unpublished promotion record lists"
 
 [clause."R61 §2.3"]
 disposition = "rationale"
@@ -709,7 +711,7 @@ note = "the identity field, carried or assigned, on every identifier column"
 
 [clause."R53 §2.5"]
 disposition = "rationale"
-note = "states no requirement and carries no RFC 2119 keyword: that an identifier is stable for the life of a packet is a consequence of R32 §3's ban on an amendment modifying what it did not write (Part 03 §9.1), and that an assigned one is not stable across packets is the cost, whose remedy is §2.3.1's `*_name` (Part 02 §8.2). It was disposed `applied` at Part 05 §8, which is Stage 7: Materialize"
+note = "states no requirement and carries no RFC 2119 keyword: that an identifier is stable for the life of a packet is a consequence of R32 §3's ban on an amendment modifying what it did not write (Part 03 §9.1), and that an assigned one is not stable across packets is the cost, whose remedy is §2.3.1's `*_name` (Part 02 §8.2). It was disposed `applied` at Part 05 §8, which governs materialization"
 
 [clause."R53 §2.6"]
 disposition = "registry"
@@ -2408,7 +2410,7 @@ where = [
     { part = "03", section = "6.2" },
     { part = "03", section = "8.1" },
     { part = "03", section = "9.4" },
-    { part = "03", section = "9.5" },
+    { part = "03", anchor = "ew-packet-cleanup" },
     { part = "03", section = "9.6" },
     { part = "04", section = "5.4" },
     { part = "04", section = "5.5" },
@@ -2416,7 +2418,7 @@ where = [
     { part = "05", section = "3.2" },
     { part = "05", anchor = "ew-source-declarations" },
     { part = "05", anchor = "ew-recipe-check" },
-    { part = "05", section = "4.2" },
+    { part = "05", anchor = "ew-import-delivery" },
     { part = "05", section = "4.3" },
     { part = "05", section = "5.3" },
     { part = "05", section = "5.4" },
@@ -3370,3 +3372,38 @@ note = "an adapter delivers only where a build points it; the build owns each lo
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-protocol-groups" }, { part = "03", anchor = "ew-build-supplied-values" }, { part = "05", anchor = "ew-recipe-check" }, { part = "05", anchor = "ew-in-process-opt-in" }]
 note = "out of process a build reaches an adapter by a protocol it declares, in process by none; a shipped adapter runs in process unless given a delivery; a build supplies only that protocol's terms"
+
+[clause."R135 §3.1"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-import-pipeline" },
+  { part = "05", anchor = "ew-import-validation-principle" },
+  { part = "05", anchor = "ew-import-delivery" },
+  { part = "05", anchor = "ew-import-materialization" },
+]
+note = "one eight-step order in Part 05 §2, promotion only after a passed verdict; §1, §4.2, and §8 state their part of it"
+
+[clause."R135 §3.2"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-import-pipeline" },
+  { part = "03", anchor = "ew-staging-area" },
+  { part = "03", anchor = "ew-build-supplied-values" },
+  { part = "03", anchor = "ew-referenced-resource-delivery" },
+]
+note = "the staging area is the build's or amendment's own and when a writer may empty it; the portable profile's is staging/"
+
+[clause."R135 §3.3"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-import-commit" }]
+note = "commit is promotion then publication of a packet that passed, under a promotion record a retry acts on"
+
+[clause."R135 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-import-provenance" }]
+note = "one core.source_files row per distinct recipe root, as the recipe states it, linked to the import run"
+
+[clause."R135 §3.5"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-packet-cleanup" }]
+note = "a stray lies outside the staging area and every path an unpublished promotion record lists"

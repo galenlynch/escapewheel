@@ -133,7 +133,7 @@ def preassign(tables: dict[str, list[dict]]) -> None:
     Assigning as each table is built would let the order tables happen to be written in decide
     the numbers: `core.sessions` names a `reference_clock_id` and is written before
     `core.clocks`, so the clocks would be numbered by the session's mention of one of them.
-    Part 05 §8 wants two builds of the same sources to produce the same packet, and this is what
+    Part 05 §4.3 wants two builds of the same sources to produce the same packet, and this is what
     makes that hold across tables as well as within one.
     """
     pending: dict[str, set[str]] = {}

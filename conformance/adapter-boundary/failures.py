@@ -39,7 +39,7 @@ class Adapter(fl.FlightServerBase):
         self.mode = mode
 
     def list_flights(self, context, criteria):
-        """Stage 1, carrying a per-resource finding where the mode has one."""
+        """Discovery (Part 05 §4.1), carrying a per-resource finding where the mode has one."""
         meta = json.dumps(FINDING).encode() if self.mode == "findings" else b""
         yield fl.FlightInfo(
             ROWS.schema,
@@ -198,7 +198,7 @@ def main() -> int:
             "**A run that succeeded and has something to say.** Two places carry it in band:"
         )
         print(
-            f"  Stage 1 `app_metadata`, per resource: {len(found['app_metadata'])} bytes, "
+            f"  discovery `app_metadata`, per resource: {len(found['app_metadata'])} bytes, "
             f"level={meta['level']!r}"
         )
         print(

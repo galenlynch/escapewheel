@@ -121,7 +121,7 @@ class HarpSource:
         return [rows[name] for name in sorted(rows)]
 
     def offers(self) -> dict[str, int]:
-        """Part 05 Stage 1: how many rows of each resource this root holds."""
+        """Part 05 §4.1: how many rows of each resource this root holds."""
         return {"core.devices": len(self.devices())}
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
