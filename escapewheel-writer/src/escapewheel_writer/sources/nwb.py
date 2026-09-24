@@ -930,9 +930,9 @@ class NWBSource(Compensates):
             ticks, values = self._signal(name)
             del ticks  # the axis is a clock and its anchors, not an array (R20 §2.1)
             # Measured on this thermistor's 5,881,692 samples: delta takes the signal from
-            # 11.8 MB to 3.47, because it is smooth at 400 Hz. Part 03 §6.4 permits any codec so
-            # long as the manifest names it, which `declared_codecs` does, and Zarr.jl carries
-            # delta -- R3 §1 targets Python and Julia.
+            # 11.8 MB to 3.47, because it is smooth at 400 Hz. Part 03 §6.4 permits any codec, but
+            # delta is outside the v3 reader floor: Zarr.jl, TensorStore, and zarrs cannot read it
+            # (Part 10 §5), and a validator reports the array at `info`.
             staged.append(
                 StagedArray(
                     values=values,

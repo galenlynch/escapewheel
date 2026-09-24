@@ -1,8 +1,9 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-four more conforming packets that record Part 04 §4.3's other digests, and thirty-six variants
-each violating exactly one rule. Together they are the conformance
+four more conforming packets that record Part 04 §4.3's other digests, thirty-seven variants
+each violating exactly one rule, and two conforming packets that each draw a per-resource `info`
+finding. Together they are the conformance
 corpus: expected findings recorded as data, so any implementation can be checked against
 the same evidence rather than against a prose description of what should happen.
 
@@ -64,11 +65,19 @@ description, and is not all of them.
 | `crc_prefix_disagrees` | an external prefix's CRC32C member digest differs from the one its listing value covers | `packet.resource.member_digest` |
 | `member_digest_partial` | a member lacks `digest` beside an entry's | `packet.manifest.schema` |
 | `member_digest_width` | a CRC32C-width member digest under a CRC64NVME entry | `packet.manifest.schema` |
+| `outside_table_floor` | `core.intervals` written as Parquet format 1.0, whose dictionary pages are `PLAIN_DICTIONARY` | `physical.outside_reader_floor` (warning) |
 
 `crc64nvme`, `crc32c`, and `crc32` record every owned resource's digest under that algorithm, and
 `crc_prefix` adds an external prefix whose value is the SHA-256 of its CRC32C member listing; all
 four are clean. `build.py` computes each CRC bit by bit from its polynomial rather than through
 the validator, and `corpus.py` runs `valid` and the CRC packets with checksums.
+
+`outside_array_floor` carries three packet-owned arrays with the reference writer's default,
+sharded, and delta-filtered pipelines; only the delta one is outside the v3 reader floor, so
+`physical.outside_reader_floor` fires once, at `info`. `unresolved_externals` references two
+external arrays and draws one `external.physical_unassessed` per array. Both packets conform,
+and `corpus.py` checks the count; `valid` must draw neither finding (Part 05 §5.3). Each array is
+a `zarr.json` with no chunk written, so no Zarr library is needed to build the corpus.
 
 `bad_vocabulary` uses `good` deliberately: it is Phy's label for a single unit, and the
 one an importer most plausibly forgets to map to `sua` (R11 §3).
@@ -84,7 +93,8 @@ Four, in the validator's own order — what each owes is Part 05 §5's:
    the checks that need only the manifest.
 2. **Each bound registry**, acquired through its descriptor, digest-checked, checked against the
    meta-schema, and compared with its descriptor.
-3. **Physical schema** per resource — column presence and Parquet type.
+3. **Physical schema** per resource — column presence and Parquet type, and each footer's
+   compressions and encodings against the Parquet floor.
 4. **Rules** — Tier 1 generated from structure, Tier 2 carried in the registry.
 
 Physical sort order is checked between 3 and 4, by reading each file in written order.

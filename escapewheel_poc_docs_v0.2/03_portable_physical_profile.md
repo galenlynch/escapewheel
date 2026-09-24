@@ -191,6 +191,11 @@ The descriptor is the exact machine-readable owner of these members and declares
 with floor role `reader_and_packet_writer`. `FileMetaData.version` is not a substitute for checking
 the independent floor features.
 
+A validator assessing a Parquet resource MUST compare each column chunk's footer-reported
+compression and encodings with the floor's `compressions` and `encodings`. It need not read page
+headers or determine data-page types. A validator that does not compare data-page types MUST state
+in its report that it did not assess them.
+
 A writer SHOULD choose the encoding of each integer, float, string, timestamp and date column from
 the column's declarations and from four counts over the rows it holds when it chooses: the rows,
 nulls included; the distinct non-null values; the runs, a run being a maximal sequence of equal
@@ -283,13 +288,63 @@ A writer MAY use any codec permitted by the applicable Zarr specification, subje
 `transpose` prohibition and the regular-grid rule. The resource's own metadata is the sole owner of
 the actual pipeline; the manifest does not repeat it.
 
-The descriptor's v3 reader floor is exactly the ordered sequences `bytes`, `bytes` then `gzip`,
-and `bytes` then `zstd`. Its v2 reader floor is exactly `filters: null` with compressor null,
-compressor `id: zstd`, or compressor `id: blosc` and `cname: zstd`. In a v2 pattern, JSON null
-matches only null, every stated member compares equal, and unmentioned configuration members do
-not participate. The descriptor declares the Zarr interface `materialized`, `logical_values`, and
-`prefix`, with floor role `reader_only`; v3 permits packet and external ownership, while v2 permits
-external ownership only. It does not enumerate optional codecs.
+The v3 reader floor admits exactly these unsharded codec sequences, in pipeline order: `bytes`;
+`bytes` then `gzip`; `bytes` then `zstd`; and `bytes` then `blosc` with `cname` `zstd`. It also
+admits a sharded pipeline whose shard holds one of those sequences, under the rules below. A
+conforming reader MUST expose the logical values of every valid v3 array whose pipeline matches the
+floor. The descriptor's `interfaces.zarr.variants.v3.reader_floor` is exactly:
+
+```json
+{
+  "codec_sequences": [
+    [{"name": "bytes"}],
+    [{"name": "bytes"}, {"name": "gzip"}],
+    [{"name": "bytes"}, {"name": "zstd"}],
+    [{"name": "bytes"}, {"name": "blosc", "configuration": {"cname": "zstd"}}]
+  ],
+  "sharding": {
+    "index_codec_sequences": [[{"name": "bytes"}], [{"name": "bytes"}, {"name": "crc32c"}]],
+    "index_location": "end"
+  }
+}
+```
+
+A reader or validator comparing a v3 array's metadata with the floor MUST apply these rules. A
+codec matches a codec pattern when its `name` equals the pattern's and every configuration member
+the pattern states compares equal. Members the pattern does not state do not participate, and a
+codec stated by its name alone has no configuration members. An unsharded pipeline matches a floor
+sequence when both have the same length and each codec matches the pattern at its position. A
+sharded pipeline matches the floor when:
+
+- the pipeline is exactly one `sharding_indexed` codec;
+- that codec's `codecs` match an entry of `codec_sequences`;
+- its `index_codecs` match an entry of `sharding.index_codec_sequences`; and
+- its `index_location` equals `sharding.index_location`, an absent `index_location` comparing as
+  `end`, the default the sharding-indexed codec specification gives it.
+
+A floor without `sharding` admits no sharded pipeline, and a pipeline matching no entry is outside
+the floor. Metadata the applicable Zarr specification makes invalid, including an invalid
+configuration of a codec the validator implements, is upstream invalidity rather than a floor
+observation. A validator MUST treat a codec name it does not recognize as valid metadata outside
+the floor, because Zarr v3 admits extension codecs.
+
+The v2 reader floor is exactly `filters: null` with compressor null, compressor `id: zstd`, or
+compressor `id: blosc` and `cname: zstd`. In a v2 pattern, JSON null matches only null, every stated
+member compares equal, and unmentioned configuration members do not participate. The descriptor
+declares the Zarr interface `materialized`, `logical_values`, and `prefix`, with floor role
+`reader_only`; v3 permits packet and external ownership, while v2 permits external ownership only.
+It does not enumerate optional codecs.
+
+The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
+`https://escapewheel.org/schemas/physical-profile/0.2.0`, and the portable descriptor's `$schema`
+names it. The schema declares the v3 floor with these definitions:
+
+| definition | shape |
+|---|---|
+| `codec_pattern` | closed object; requires `name`, a string; admits `configuration` only where `name` is `blosc`, and there `configuration` is a closed object requiring `cname`, a string |
+| `codec_sequence` | array of one or more `codec_pattern` |
+| `sharding_floor` | closed object; requires `index_codec_sequences`, an array of one or more distinct `codec_sequence`, and `index_location`, `start` or `end` |
+| `zarr_v3_floor` | closed object; requires `codec_sequences`, an array of one or more distinct `codec_sequence`; admits `sharding`, a `sharding_floor` |
 
 <a id="ew-array-metadata-placement" data-spec-anchor="canonical"></a>
 ### 6.5 What the array declares, and what the tables declare

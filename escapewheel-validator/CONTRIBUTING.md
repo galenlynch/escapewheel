@@ -87,19 +87,23 @@ packet, which is worse than having no check.
 - **An amendment re-runs only the rules its resources implicate** (R35 §5). `validate` takes
   `recheck`; Tier 1 inputs come from declarations, Tier 2 inputs from the parsed base-resource
   set, and shim inputs from their explicit contracts.
-- **Validation does not reach the network by default** (R14 §2.3.2, R15 §4). Three levels:
-  manifest-internal codec consistency always; a packet-owned array's actual Zarr metadata always;
-  an external resource's URI, size and codecs only under `external=True`. Unreachable is a
-  `warning`, since reachability is a property of the reader's situation and not of the packet; a
-  URI that resolves and disagrees is an `error`.
+- **Validation does not reach the network by default** (R14 §2.3.2, R15 §4). A packet-owned
+  resource's own metadata is read always; an external resource's URI, size and Zarr metadata only
+  under `external=True`. Unreachable is a `warning`, since reachability is a property of the
+  reader's situation and not of the packet; a URI that resolves and disagrees is an `error`.
 - **`external` and `checksums` are never one flag** (R36 §2.3). Listing a store and checking sizes
   is 65 ms over a session's twelve LFP arrays. Computing a digest reads every byte: 47 s over
   6.83 GB, and a bill as well as a wait against an object store. A store's full-object checksums
   cost one request per object instead, and a composite one never counts (Part 04 §5.3).
-- **The codec floor is per Zarr version** (R21 §3.3), in `FLOOR`. `gzip` is in R3 §7.2's baseline
-  and Zarr.jl reads it in v3 but not in v2, so readability belongs to the `(version, codec)` pair.
-  Outside the floor is `info`, not an error — such a packet conforms and is simply not portable
-  by default.
+- **Reader floors come from the descriptor, never from a constant here** (R137). Zarr metadata is
+  matched with the reader's `zarr_floor_admits` against the variant its `zarr_format` selects, and
+  a Parquet footer's compressions and encodings against `parquet_floor()`, so a restated floor needs
+  no validator change. `physical.outside_reader_floor` is one finding per resource: `warning` for a
+  packet-owned table, whose writer the Parquet floor also binds, and `info` otherwise, since a
+  reader-only floor leaves a packet conforming and only less portable. An unrecognized codec is
+  valid metadata outside the floor, not invalid metadata. Each external resource with a floor whose
+  metadata no check read draws its own `external.physical_unassessed`, attributed like any
+  resource finding, and `physical.page_types_unassessed` states that page headers were not read.
 - **What the manifest JSON Schema already refuses is not re-checked here.** A packet breaking
   R14 §2.3's "absolute URI implies external" cannot be opened at all, so a second copy in Python
   would never run.

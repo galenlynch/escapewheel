@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-24 |
 | **Based on** | `06b11fb29285fe90890ae84054ca33807bf9abfb` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -160,11 +160,10 @@ The reference validator already reads each packet-owned array's `zarr.json` and 
 footer, so both comparisons use metadata it holds. Every pipeline in the new floor read in all five
 implementations of §2.2.
 
-The digest draft, `every-packet-owned-resource-records-a-named-whole-object-digest.md`, rewrites
-Part 03 §§1, 10, and 11.3, removes the RFC 1952 row from Part 03 §12, and replaces the Part 04 §5.3
-verification levels. This revision cites Part 04 §5.3 only for when a validator may read an
-external resource and changes no Part 03 §12 row, so either order works. R135 retitled Part 05 §5,
-the parent of §5.3, and changed nothing this revision relies on.
+R136 rewrites Part 03 §§1, 10, and 11.3, removes the RFC 1952 row from Part 03 §12, and replaces
+the Part 04 §5.3 verification levels. This revision cites Part 04 §5.3 only for when a validator
+may read an external resource and changes no Part 03 §12 row, so either order works. R135
+retitled Part 05 §5, the parent of §5.3, and changed nothing this revision relies on.
 
 ## 3. Decision
 

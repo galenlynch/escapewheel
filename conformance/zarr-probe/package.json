@@ -1,0 +1,9 @@
+{
+  "name": "zarr-probe",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@zarrita/storage": "^0.2.0",
+    "zarrita": "^0.7.5"
+  }
+}

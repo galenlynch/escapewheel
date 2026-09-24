@@ -1,18 +1,35 @@
 # Zarr cross-language conformance probe
 
 Produces the evidence cited in
-[R3 §7.3](../../revisions/accepted/R3-cross-language-physical-floor.md).
+[R3 §7.3](../../revisions/accepted/R3-cross-language-physical-floor.md) and the reader matrix of
+[Part 10 §5](../../escapewheel_poc_docs_v0.2/10_performance_notes.md#ew-zarr-codec-floor-evidence),
+which [R137](../../revisions/accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md)
+raised the v3 reader floor on.
 
-Writes Zarr arrays from `zarr-python` under a range of codec configurations, then reads
-each back from `Zarr.jl` and verifies values by element sum. Re-run this against newer
-library versions before trusting R3's codec floor.
+Three writers produce array sets, each with an `expected.json` of element sums: `write.py` the
+floor and v2 arrays under `arrays/`, `write_more.py` Blosc shuffle modes and codecs and sharded
+pipelines under `more/`, and `write_writer.py` the reference writer's default, sharded, and delta
+outputs under `writer_arrays/`. Five readers check every set by int64 element sum. Re-run them
+against newer library versions before trusting the floor. From this directory:
 
 ```bash
-uv run --with 'zarr>=3' --with numcodecs --with zstandard python write.py   # writes arrays/
-julia read.jl                                                              # reads them from Julia
-julia dtype.jl                                                             # dtype + axis-order surface
+uv run --no-project --with 'zarr>=3' --with numcodecs --with zstandard python write.py
+uv run --no-project --with 'zarr>=3' --with numcodecs --with zstandard python write_more.py
+uv run --project ../../escapewheel-writer python write_writer.py
+
+uv run --no-project --with 'zarr>=3' --with numcodecs --with zstandard python read_zarr_python.py
+uv run --no-project --with 'zarr>=3' --with tensorstore python read_tensorstore.py
+uv run --no-project --with 'zarr>=3' --with zarrs python read_zarrs.py   # strict: no Python fallback
+julia read_all.jl
+npm ci && node read.mjs                                                   # zarrita
+
+julia read.jl                                                             # R3's original Julia read
+julia dtype.jl                                                            # dtype + axis-order surface
 uv run --with 'zarr>=3' --with numcodecs --with zstandard python realistic.py  # codec sizes on noisy int16
 ```
+
+The Julia scripts use the `zarrtest` environment under `~/.julia/environments`, which needs `Zarr`
+added once.
 
 ## Shard size: AWS's guidance, and the fetch it comes from
 
@@ -60,4 +77,5 @@ silently produces that -- and measured on 6,781 unit waveforms it costs **188 ms
 0.7 ms** to read one unit, with only a `ZarrUserWarning` to say so. Pass `compressors=None`
 and put the compression inside the shard's own `codecs`.
 
-Last run: zarr-python 3.3.0, numcodecs 0.16.5, Zarr.jl 0.10.2, Julia 1.12.0.
+The floor probes last ran (2026-09-24) on zarr-python 3.4.0, numcodecs 0.17.0, Zarr.jl 0.10.2 on Julia 1.12.7,
+TensorStore 0.1.85, zarrs-python 0.2.3, zarrita 0.7.5 on Node 22.22.2.

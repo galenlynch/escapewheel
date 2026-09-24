@@ -2146,6 +2146,11 @@ The descriptor is the exact machine-readable owner of these members and declares
 with floor role `reader_and_packet_writer`. `FileMetaData.version` is not a substitute for checking
 the independent floor features.
 
+A validator assessing a Parquet resource MUST compare each column chunk's footer-reported
+compression and encodings with the floor's `compressions` and `encodings`. It need not read page
+headers or determine data-page types. A validator that does not compare data-page types MUST state
+in its report that it did not assess them.
+
 A writer SHOULD choose the encoding of each integer, float, string, timestamp and date column from
 the column's declarations and from four counts over the rows it holds when it chooses: the rows,
 nulls included; the distinct non-null values; the runs, a run being a maximal sequence of equal
@@ -2238,13 +2243,63 @@ A writer MAY use any codec permitted by the applicable Zarr specification, subje
 `transpose` prohibition and the regular-grid rule. The resource's own metadata is the sole owner of
 the actual pipeline; the manifest does not repeat it.
 
-The descriptor's v3 reader floor is exactly the ordered sequences `bytes`, `bytes` then `gzip`,
-and `bytes` then `zstd`. Its v2 reader floor is exactly `filters: null` with compressor null,
-compressor `id: zstd`, or compressor `id: blosc` and `cname: zstd`. In a v2 pattern, JSON null
-matches only null, every stated member compares equal, and unmentioned configuration members do
-not participate. The descriptor declares the Zarr interface `materialized`, `logical_values`, and
-`prefix`, with floor role `reader_only`; v3 permits packet and external ownership, while v2 permits
-external ownership only. It does not enumerate optional codecs.
+The v3 reader floor admits exactly these unsharded codec sequences, in pipeline order: `bytes`;
+`bytes` then `gzip`; `bytes` then `zstd`; and `bytes` then `blosc` with `cname` `zstd`. It also
+admits a sharded pipeline whose shard holds one of those sequences, under the rules below. A
+conforming reader MUST expose the logical values of every valid v3 array whose pipeline matches the
+floor. The descriptor's `interfaces.zarr.variants.v3.reader_floor` is exactly:
+
+```json
+{
+  "codec_sequences": [
+    [{"name": "bytes"}],
+    [{"name": "bytes"}, {"name": "gzip"}],
+    [{"name": "bytes"}, {"name": "zstd"}],
+    [{"name": "bytes"}, {"name": "blosc", "configuration": {"cname": "zstd"}}]
+  ],
+  "sharding": {
+    "index_codec_sequences": [[{"name": "bytes"}], [{"name": "bytes"}, {"name": "crc32c"}]],
+    "index_location": "end"
+  }
+}
+```
+
+A reader or validator comparing a v3 array's metadata with the floor MUST apply these rules. A
+codec matches a codec pattern when its `name` equals the pattern's and every configuration member
+the pattern states compares equal. Members the pattern does not state do not participate, and a
+codec stated by its name alone has no configuration members. An unsharded pipeline matches a floor
+sequence when both have the same length and each codec matches the pattern at its position. A
+sharded pipeline matches the floor when:
+
+- the pipeline is exactly one `sharding_indexed` codec;
+- that codec's `codecs` match an entry of `codec_sequences`;
+- its `index_codecs` match an entry of `sharding.index_codec_sequences`; and
+- its `index_location` equals `sharding.index_location`, an absent `index_location` comparing as
+  `end`, the default the sharding-indexed codec specification gives it.
+
+A floor without `sharding` admits no sharded pipeline, and a pipeline matching no entry is outside
+the floor. Metadata the applicable Zarr specification makes invalid, including an invalid
+configuration of a codec the validator implements, is upstream invalidity rather than a floor
+observation. A validator MUST treat a codec name it does not recognize as valid metadata outside
+the floor, because Zarr v3 admits extension codecs.
+
+The v2 reader floor is exactly `filters: null` with compressor null, compressor `id: zstd`, or
+compressor `id: blosc` and `cname: zstd`. In a v2 pattern, JSON null matches only null, every stated
+member compares equal, and unmentioned configuration members do not participate. The descriptor
+declares the Zarr interface `materialized`, `logical_values`, and `prefix`, with floor role
+`reader_only`; v3 permits packet and external ownership, while v2 permits external ownership only.
+It does not enumerate optional codecs.
+
+The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
+`https://escapewheel.org/schemas/physical-profile/0.2.0`, and the portable descriptor's `$schema`
+names it. The schema declares the v3 floor with these definitions:
+
+| definition | shape |
+|---|---|
+| `codec_pattern` | closed object; requires `name`, a string; admits `configuration` only where `name` is `blosc`, and there `configuration` is a closed object requiring `cname`, a string |
+| `codec_sequence` | array of one or more `codec_pattern` |
+| `sharding_floor` | closed object; requires `index_codec_sequences`, an array of one or more distinct `codec_sequence`, and `index_location`, `start` or `end` |
+| `zarr_v3_floor` | closed object; requires `codec_sequences`, an array of one or more distinct `codec_sequence`; admits `sharding`, a `sharding_floor` |
 
 <a id="ew-array-metadata-placement" data-spec-anchor="canonical"></a>
 ### 6.5 What the array declares, and what the tables declare
@@ -3273,8 +3328,30 @@ A validator MUST derive the physical interface from the checked logical kind and
 profile, then check available resource-owned metadata: physical order, file presence, Parquet
 types and footer features, Zarr version, rank and codecs, and checksums outside SQL. A query cannot
 observe them, so such a check written as SQL fails silently rather than loudly. Dense-array checks
-obtain the axes table from the resolved declaration. An unavailable external resource is physically
-unassessed. A valid upstream feature outside a reader-only floor is not by itself a profile error.
+obtain the axes table from the resolved declaration.
+
+A validator MUST assess floor membership for every packet-owned resource whose interface declares a
+reader floor, and for every external one whose format-owned metadata it reads under
+[Part 04 §5.3](04_packet_catalog.md#ew-external-resource-verification). Membership is judged under
+[Part 03 §5.5](03_portable_physical_profile.md#ew-parquet-reader-floor) for Parquet and
+[Part 03 §6.4](03_portable_physical_profile.md#ew-array-codecs) for Zarr. For each assessed resource
+using a feature outside its floor, it MUST report one finding under the check ID
+`physical.outside_reader_floor`, naming:
+
+- the resource;
+- its interface and, for Zarr, its variant; and
+- the observed features that matched no floor entry: each outside compression or encoding for
+  Parquet, the whole observed pipeline for Zarr v3, and `filters` and `compressor` for Zarr v2.
+
+The finding's level is `warning` for a packet-owned resource whose interface's floor role is
+`reader_and_packet_writer`, and `info` for every other resource. A validator MUST NOT report it at
+`error`. The finding concerns one resource, so [§9.5](#ew-verdict-composition) attributes it to the
+registry whose declaration the resource's entry names.
+
+A validator MUST report each external resource whose interface declares a reader floor and whose
+format-owned metadata it did not read, one finding per resource, at `info` under the check ID
+`external.physical_unassessed`, naming the resource. [§9.5](#ew-verdict-composition) attributes it
+as it does the outside-floor finding.
 
 The shim MUST compare the manifest's session inventory with `core.sessions.session_name` under the
 check ID `core.sessions.manifest_sessions_match`, at `error`, with the message carried by the
@@ -4407,15 +4484,26 @@ member. No session has yet had a second sorting.
 <a id="ew-zarr-codec-floor-evidence" data-spec-anchor="canonical"></a>
 ## 5. The Zarr codec floor is version-specific
 
-Measured in `conformance/zarr-probe/` against **zarr-python 3.3.0, Zarr.jl 0.10.2 and Julia
-1.12.7** (2026-08-27) — the one measurement here whose toolchain was kept, and the one that
-shows why the others should be:
+Measured in `conformance/zarr-probe/` against **zarr-python 3.4.0 with numcodecs 0.17.0, Zarr.jl
+0.10.2 on Julia 1.12.7, TensorStore 0.1.85, zarrs-python 0.2.3 and zarrita 0.7.5 on Node 22.22.2**
+(2026-09-24) — the one measurement here whose toolchain was kept, and the one that shows why the
+others should be. Each reader checks the int64 element sum of arrays zarr-python and the reference
+writer wrote; zarrs reads through a strict codec pipeline, so no read falls back to Python.
 
-| configuration | zarr-python 3.3.0 | Zarr.jl 0.10.2 |
-|---|---|---|
-| v3 raw, gzip, zstd | reads | reads |
-| v3 blosc-zstd-shuffle, `sharding_indexed` | reads | reads |
-| v2 zstd, v2 blosc-zstd-shuffle | reads | reads |
+| stored v3 pipeline | zarr-python | Zarr.jl | TensorStore | zarrs | zarrita |
+|---|---|---|---|---|---|
+| `bytes`; `bytes`, `gzip`; `bytes`, `zstd` | reads | reads | reads | reads | reads |
+| `bytes`, `blosc` (`zstd`), each of `noshuffle`, `shuffle`, `bitshuffle` | reads | reads | reads | reads | reads |
+| `sharding_indexed` around each sequence of the first row and around `bytes`, `blosc` (`zstd`); index `bytes`, `crc32c`; at `end` | reads | reads | reads | reads | reads |
+| `sharding_indexed` with index `bytes` alone, at `end` | reads | reads | reads | reads | reads |
+| `sharding_indexed` with index at `start` | reads | reads | reads | reads | fails |
+| `bytes`, `blosc` (`lz4`) | reads | reads | reads | reads | reads |
+| the reference writer's `numcodecs.delta`, `bytes`, `blosc` (`zstd`) | reads | fails | fails | fails | reads |
+
+All five also read Zarr v2 zstd and Blosc-Zstd. zarrita fails an index at `start` with
+`RangeError [ERR_OUT_OF_RANGE]`; on the delta pipeline Zarr.jl reports that it does not support the
+delta codec, TensorStore that `numcodecs.delta` is not registered, and zarrs that the metadata is
+unsupported.
 
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
 changing to show it. That is what Part 03 §6.4's per-version reader floor exists to state as a rule,

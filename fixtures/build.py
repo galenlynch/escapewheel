@@ -123,7 +123,10 @@ def number(spec, rows):
             value = str(row[name])
             if named is not None and named in declared and row.get(named) is None:
                 row[named] = value
-            row[name] = within[value] if assigned else int(row[name])
+            if assigned:
+                row[name] = within[value]
+            elif column["type"] != "string":
+                row[name] = int(row[name])
     return rows
 
 
@@ -1057,6 +1060,7 @@ def main():
     print(f"{'missing_column':26s}written")
 
     digest_variants(root)
+    floor_variants(root)
 
 
 #: A prefix's objects as a store would list them, for the manifest-only prefix variants.
@@ -1153,6 +1157,155 @@ def digest_variants(root: Path) -> None:
         write_packet(root / name, content())
         edit_manifest(root / name, change)
         print(f"{name:26s}written")
+
+
+#: The reference writer's default and sharded pipelines, both inside the v3 reader floor, and its
+#: delta-filtered one, outside it (Part 03 §6.4).
+BLOSC = {
+    "name": "blosc",
+    "configuration": {
+        "typesize": 2,
+        "cname": "zstd",
+        "clevel": 5,
+        "shuffle": "shuffle",
+        "blocksize": 0,
+    },
+}
+BYTES = {"name": "bytes", "configuration": {"endian": "little"}}
+PIPELINES = {
+    "default": [BYTES, BLOSC],
+    "sharded": [
+        {
+            "name": "sharding_indexed",
+            "configuration": {
+                "chunk_shape": [1, 3],
+                "codecs": [BYTES, BLOSC],
+                "index_codecs": [BYTES, {"name": "crc32c"}],
+                "index_location": "end",
+            },
+        }
+    ],
+    "delta": [
+        {"name": "numcodecs.delta", "configuration": {"dtype": "int16"}},
+        BYTES,
+        {**BLOSC, "configuration": {**BLOSC["configuration"], "shuffle": "bitshuffle"}},
+    ],
+}
+
+
+def zarr_metadata(codecs: list[dict]) -> bytes:
+    """A Zarr v3 array with no chunk written, so every element is its fill value.
+
+    Its metadata is all a floor assessment reads, and the corpus needs no Zarr library to write it.
+    """
+    document = {
+        "zarr_format": 3,
+        "node_type": "array",
+        "shape": [2, 3],
+        "data_type": "int16",
+        "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [2, 3]}},
+        "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
+        "fill_value": 0,
+        "codecs": codecs,
+        "attributes": {},
+    }
+    return (json.dumps(document, indent=2) + "\n").encode()
+
+
+def catalogue_arrays(tables: dict[str, list[dict]], names: list[str]) -> None:
+    """Catalogue one two-axis array per name, as `core.<name>` (Part 03 §6.3)."""
+    tables["core.array_assets"] = [
+        {"session_id": "s001", "array_asset_id": name, "resource_id": f"core.{name}"}
+        for name in names
+    ]
+    tables["core.array_dimensions"] = [
+        {
+            "session_id": "s001",
+            "array_asset_id": name,
+            "axis_index": axis,
+            "dimension_name": dimension,
+        }
+        for name in names
+        for axis, dimension in enumerate(("unit", "sample"))
+    ]
+
+
+def array_entry(out: Path | None, name: str, pipeline: str) -> dict:
+    """A manifest entry for `core.<name>`; packet-owned and written under `out`, or external where None."""
+    entry = {
+        "resource_id": f"core.{name}",
+        "declaration_id": "core.array_asset_instances",
+        "validation_state": "not_run",
+    }
+    if out is None:
+        return {
+            **entry,
+            "uri": f"s3://example-bucket/session/{name}.zarr",
+            "external": True,
+        }
+    uri = f"arrays/core/{name}.zarr"
+    body = zarr_metadata(PIPELINES[pipeline])
+    (out / uri).mkdir(parents=True)
+    (out / uri / "zarr.json").write_bytes(body)
+    listing = json.dumps(
+        [["zarr.json", len(body), digest("sha256", body)]], separators=(",", ":")
+    ).encode()
+    return {
+        **entry,
+        "uri": uri,
+        "digest": {"algorithm": "sha256", "value": hashlib.sha256(listing).hexdigest()},
+    }
+
+
+def floor_variants(root: Path) -> None:
+    """Part 05 §5.3's outside-floor and unassessed findings, one resource at a time."""
+    arrays = {
+        "default_array": "default",
+        "sharded_array": "sharded",
+        "delta_array": "delta",
+    }
+    c = content()
+    catalogue_arrays(c, list(arrays))
+    write_packet(root / "outside_array_floor", c)
+    edit_manifest(
+        root / "outside_array_floor",
+        lambda m: m["resources"].extend(
+            array_entry(root / "outside_array_floor", name, pipeline)
+            for name, pipeline in arrays.items()
+        ),
+    )
+    print(f"{'outside_array_floor':26s}written")
+
+    # Parquet format version 1.0 writes dictionary pages as PLAIN_DICTIONARY, valid upstream and
+    # outside the writer floor (Part 03 §5.5).
+    out = root / "outside_table_floor"
+    write_packet(out, content())
+    entry_uri = "tables/core/intervals.parquet"
+    pq.write_table(
+        pq.read_table(out / entry_uri),
+        out / entry_uri,
+        compression="zstd",
+        version="1.0",
+    )
+
+    def redigest(manifest):
+        entry = next(e for e in manifest["resources"] if e["uri"] == entry_uri)
+        entry["digest"]["value"] = digest("sha256", (out / entry_uri).read_bytes())
+
+    edit_manifest(out, redigest)
+    print(f"{'outside_table_floor':26s}written")
+
+    names = ["lfp_probe_a", "lfp_probe_b"]
+    c = content()
+    catalogue_arrays(c, names)
+    write_packet(root / "unresolved_externals", c)
+    edit_manifest(
+        root / "unresolved_externals",
+        lambda m: m["resources"].extend(
+            array_entry(None, name, "default") for name in names
+        ),
+    )
+    print(f"{'unresolved_externals':26s}written")
 
 
 if __name__ == "__main__":

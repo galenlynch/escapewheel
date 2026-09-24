@@ -225,7 +225,7 @@ note = "restored 2026-09-04; the converse had been compiled as an implication"
 
 [clause."R21 §3.3"]
 disposition = "applied"
-where = [{ part = "03", section = "6.4" }]
+where = [{ part = "03", anchor = "ew-array-codecs" }]
 note = "restored 2026-09-04; the reader floor table was absent entirely"
 
 [clause."R30 §3.2"]
@@ -347,7 +347,7 @@ note = "restored 2026-09-04; the third presence state, optional, had been droppe
 
 [clause."R3 §2.1"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "restored 2026-09-04; the Parquet compression floor and tick encoding were absent"
 
 [clause."R26 §2"]
@@ -436,13 +436,13 @@ note = "declared: core.preferred_runs"
 
 [clause."R3 §7.2"]
 disposition = "applied"
-where = [{ part = "03", section = "6.4" }]
-note = "the baseline none/gzip/zstd; restored with R21 §3.3's table"
+where = [{ part = "03", anchor = "ew-array-codecs" }]
+note = "the baseline none/gzip/zstd; restored with R21 §3.3's table; R137 §3.1 adds Blosc-Zstd and sharding to the v3 floor"
 
 [clause."R14 §2.1"]
 disposition = "applied"
-where = [{ part = "03", section = "6.4" }]
-note = "the reader floor, restored 2026-09-04 as R21 §3.3's per-version table"
+where = [{ part = "03", anchor = "ew-array-codecs" }]
+note = "the reader floor, restored 2026-09-04 as R21 §3.3's per-version table; R137 §3.1 adds Blosc-Zstd and sharding to the v3 floor"
 
 [clause."R14 §2.3.1"]
 disposition = "applied"
@@ -450,7 +450,7 @@ where = [{ part = "03", section = "8" }]
 
 [clause."R15 §2"]
 disposition = "applied"
-where = [{ part = "03", section = "6.4" }]
+where = [{ part = "03", anchor = "ew-array-codecs" }]
 
 [clause."R15 §3"]
 disposition = "applied"
@@ -472,7 +472,7 @@ note = "restored 2026-09-04; the prohibition and the reader's version check were
 
 [clause."R14 §2.2"]
 disposition = "applied"
-where = [{ part = "03", section = "6.4" }]
+where = [{ part = "03", anchor = "ew-array-codecs" }]
 
 [clause."R14 §2.3.2"]
 disposition = "applied"
@@ -2357,7 +2357,7 @@ note = "a float is judged by repetition under R118 §3.5, taking a dictionary wh
 
 [clause."R110 §3.3"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "a writer MUST be able to override each rule per column and every override MUST record what it measured and on what; a writer SHOULD refuse an exception naming a column no table declares, which is decidable with no packet in hand"
 
 [clause."R110 §3.4"]
@@ -2367,7 +2367,7 @@ note = "a recipe MAY declare a column's encoding in an [encoding] table keyed re
 
 [clause."R110 §3.5"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "a writer SHOULD report at info a column costing more than 1.5x the smallest encoding available to it, over a sample of the rows it wrote. A report and not a refusal, since every encoding is permitted and a packet is conforming whichever it uses"
 
 [clause."R111 §2.1"]
@@ -2408,7 +2408,7 @@ where = [
     { part = "02", section = "8.7" },
     { part = "02", section = "10.3" },
     { part = "03", section = "4" },
-    { part = "03", section = "5.5" },
+    { part = "03", anchor = "ew-parquet-reader-floor" },
     { part = "03", section = "6.2" },
     { part = "03", section = "8.1" },
     { part = "03", section = "9.4" },
@@ -2422,7 +2422,7 @@ where = [
     { part = "05", anchor = "ew-recipe-check" },
     { part = "05", anchor = "ew-import-delivery" },
     { part = "05", section = "4.3" },
-    { part = "05", section = "5.3" },
+    { part = "05", anchor = "ew-validation-shim" },
     { part = "05", section = "5.4" },
     { part = "05", section = "10" },
     { part = "05", anchor = "ew-writer-acceptance-criteria" },
@@ -2688,32 +2688,32 @@ note = "a --sample 2000 build encodes 8 columns differently from its full build,
 
 [clause."R118 §3.1"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "a writer SHOULD choose from declarations and four counts over the rows it holds when it chooses, a streamed table's being the row group about to be written or the first where one encoding is kept for the file; the first of four rules that applies decides"
 
 [clause."R118 §3.2"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "a column in which every row is null SHOULD be written plain"
 
 [clause."R118 §3.3"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "a single-valued column SHOULD take a dictionary from 50,000 rows, and below that delta for an integer and plain otherwise"
 
 [clause."R118 §3.4"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "an integer declared ordered by the _tick suffix, the leading identifier, the structural_index or sequence_position role or assigned identity, or observed never to decrease, SHOULD take delta, and plain where it holds 50 rows a run"
 
 [clause."R118 §3.5"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "any other column, a float included, SHOULD take a dictionary where it holds 50 rows a distinct value and plain otherwise"
 
 [clause."R118 §3.6"]
 disposition = "applied"
-where = [{ part = "03", section = "5.5" }]
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "the report SHOULD measure a column's own chunks and judge a string, timestamp or date column between a dictionary and plain; R110 §3.3's override and R110 §3.4's recipe declaration stand"
 
 [clause."R119 §2.1"]
@@ -3181,7 +3181,7 @@ note = "the Parquet interface is one materialized object with a reader-and-write
 [clause."R129 §3.4"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-array-version" }, { part = "03", anchor = "ew-array-codecs" }]
-note = "Zarr variants and actual codecs derive from format-owned metadata"
+note = "Zarr variants and actual codecs derive from format-owned metadata; R137 §3.1 extends the three v3 name sequences and restates the floor as codec patterns"
 
 [clause."R129 §3.5"]
 disposition = "applied"
@@ -3201,7 +3201,7 @@ note = "ordinary packet access is lazy and requires neither validation receipt n
 [clause."R129 §3.8"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-external-resource-verification" }, { part = "05", anchor = "ew-validation-shim" }]
-note = "physical assessment uses available resource metadata and leaves unreachable external state unassessed"
+note = "physical assessment uses available resource metadata and leaves unreachable external state unassessed; R137 §§3.5 and 3.6 set the finding IDs and levels it deferred"
 
 [clause."R129 §3.9"]
 disposition = "applied"
@@ -3452,3 +3452,33 @@ note = "a digest holds when computed or matched against full-object store checks
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-prefix-resources" }]
 note = "an entity tag is recorded verbatim as `etag` and never read as a digest"
+
+[clause."R137 §3.1"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-codecs" }]
+note = "the v3 reader floor admits bytes alone or with gzip, zstd, or Blosc-Zstd, and a sharded pipeline holding one of those with a bytes or bytes-crc32c index at end"
+
+[clause."R137 §3.2"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-codecs" }]
+note = "a codec matches a pattern by name and stated configuration members; a sharded pipeline is the sharding codec alone, an absent index_location compares as end, and an unrecognized codec is valid metadata outside the floor"
+
+[clause."R137 §3.3"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-codecs" }]
+note = "physical-profile/0.2.0 defines codec_pattern, codec_sequence, sharding_floor and zarr_v3_floor, and the portable descriptor names it"
+
+[clause."R137 §3.4"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
+note = "a validator compares footer-reported compressions and encodings, and states that it did not assess data-page types"
+
+[clause."R137 §3.5"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim" }]
+note = "physical.outside_reader_floor per assessed resource, warning for a packet-owned resource under a reader_and_packet_writer floor and info otherwise, never error, attributed to the declaring registry"
+
+[clause."R137 §3.6"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim" }]
+note = "external.physical_unassessed at info, one per external resource with a floor whose metadata was not read"

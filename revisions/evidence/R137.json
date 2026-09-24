@@ -1,0 +1,449 @@
+{
+  "version": 1,
+  "revision": "R137",
+  "based_on": "06b11fb29285fe90890ae84054ca33807bf9abfb",
+  "clauses": {
+    "R137 \u00a73.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-array-codecs"
+        },
+        {
+          "path": "registry/physical_profiles/escapewheel-portable-v0.1.json",
+          "pointer": "/interfaces/zarr/variants/v3/reader_floor"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_profile.py::test_the_schema_accepts_the_v3_floor_of_patterns_and_sharding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[bytes]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[bytes_gzip]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[bytes_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[blosc_zstd_noshuffle]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[blosc_zstd_shuffle]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[blosc_zstd_bitshuffle]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[shard_bytes]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[shard_gzip]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[shard_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[shard_blosc_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[shard_index_bytes]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[blosc_lz4]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[delta_blosc_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_a_sharded_pipeline_is_the_sharding_codec_alone"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "physical profile satisfies its schema and generic invariants"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "fixtures/build.py",
+          "conformance/zarr-probe/write_more.py",
+          "conformance/zarr-probe/write_writer.py",
+          "conformance/zarr-probe/read_zarr_python.py",
+          "conformance/zarr-probe/read_tensorstore.py",
+          "conformance/zarr-probe/read_zarrs.py",
+          "conformance/zarr-probe/read_all.jl",
+          "conformance/zarr-probe/read.mjs"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "conformance/zarr-probe/README.md",
+          "fixtures/README.md",
+          "escapewheel_poc_docs_v0.2/10_performance_notes.md"
+        ]
+      }
+    },
+    "R137 \u00a73.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-array-codecs"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[shard_index_start]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v3_metadata[delta_blosc_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_reads_an_absent_index_location_as_end_and_nothing_after_a_shard"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_is_compared_with_the_v3_floor[absent_location]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_is_compared_with_the_v3_floor[index_at_start]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_is_compared_with_the_v3_floor[codec_after_shard]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_unrecognized_codec_is_outside_the_floor_and_not_invalid"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/CONTRIBUTING.md"
+        ]
+      }
+    },
+    "R137 \u00a73.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-array-codecs"
+        },
+        {
+          "path": "registry/physical_profile.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/physical_profile.schema.json",
+          "pointer": "/properties/$schema"
+        },
+        {
+          "path": "registry/physical_profile.schema.json",
+          "pointer": "/$defs/codec_pattern"
+        },
+        {
+          "path": "registry/physical_profile.schema.json",
+          "pointer": "/$defs/codec_sequence"
+        },
+        {
+          "path": "registry/physical_profile.schema.json",
+          "pointer": "/$defs/sharding_floor"
+        },
+        {
+          "path": "registry/physical_profile.schema.json",
+          "pointer": "/$defs/zarr_v3_floor"
+        },
+        {
+          "path": "registry/physical_profiles/escapewheel-portable-v0.1.json",
+          "pointer": "/$schema"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-reader/src/escapewheel_reader/schemas/physical_profile.schema.json",
+          "escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_profile.py::test_the_schema_accepts_the_v3_floor_of_patterns_and_sharding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_profile.py::test_the_schema_admits_configuration_only_on_blosc"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_profile.py::test_the_schema_rejects_an_unknown_pattern_member"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_profile.py::test_the_checker_rejects_a_descriptor_naming_the_old_schema"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "physical profile satisfies its schema and generic invariants"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "registry/build.py vendors the schema and descriptor into the reader unchanged, and escapewheel_reader.profile already validates any descriptor against the schema it is given"
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes the descriptor schema's v3 floor shape"
+      }
+    },
+    "R137 \u00a73.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-parquet-reader-floor"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_table_outside_the_parquet_floor_is_a_warning"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_validator_states_that_it_did_not_assess_page_types"
+          },
+          {
+            "kind": "fixture",
+            "packet": "outside_table_floor",
+            "finding": "physical.outside_reader_floor"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel-validator/CONTRIBUTING.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R137 \u00a73.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_is_compared_with_the_v3_floor[delta]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_is_compared_with_the_v3_floor[lz4]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_is_compared_with_the_v3_floor[blosc_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_is_compared_with_the_v3_floor[sharded]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_table_outside_the_parquet_floor_is_a_warning"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_table_outside_the_floor_is_the_extensions_finding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_resolved_external_array_is_assessed_against_its_variant"
+          },
+          {
+            "kind": "fixture",
+            "packet": "outside_array_floor",
+            "finding": "physical.outside_reader_floor"
+          },
+          {
+            "kind": "fixture",
+            "packet": "outside_table_floor",
+            "finding": "physical.outside_reader_floor"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/nwb.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/lfp.py",
+          "escapewheel-writer/src/escapewheel_writer/arrays.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel-validator/CONTRIBUTING.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R137 \u00a73.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_each_unassessed_external_is_its_own_registrys_finding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_external_resource_is_reported_as_unverified_by_default"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_external_resource_with_no_floor_is_not_reported_unassessed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_the_requested_mode_resolves_it"
+          },
+          {
+            "kind": "fixture",
+            "packet": "unresolved_externals",
+            "finding": "external.physical_unassessed"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel-validator/CONTRIBUTING.md",
+          "fixtures/README.md"
+        ]
+      }
+    }
+  }
+}

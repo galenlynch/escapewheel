@@ -1,5 +1,5 @@
 {
-  "$schema": "https://escapewheel.org/schemas/physical-profile/0.1.0",
+  "$schema": "https://escapewheel.org/schemas/physical-profile/0.2.0",
   "id": "escapewheel-portable-v0.1",
   "logical_standard": "escapewheel-logical-v0.1",
   "kind_interfaces": {"table": "parquet", "dense_array": "zarr", "opaque": null},
@@ -20,7 +20,18 @@
       "variants": {
         "v3": {
           "format_version": 3, "ownership": ["packet", "external"],
-          "reader_floor": {"codec_sequences": [["bytes"], ["bytes", "gzip"], ["bytes", "zstd"]]},
+          "reader_floor": {
+            "codec_sequences": [
+              [{"name": "bytes"}],
+              [{"name": "bytes"}, {"name": "gzip"}],
+              [{"name": "bytes"}, {"name": "zstd"}],
+              [{"name": "bytes"}, {"name": "blosc", "configuration": {"cname": "zstd"}}]
+            ],
+            "sharding": {
+              "index_codec_sequences": [[{"name": "bytes"}], [{"name": "bytes"}, {"name": "crc32c"}]],
+              "index_location": "end"
+            }
+          },
           "anchors": ["ew-array-version", "ew-array-codecs"]
         },
         "v2": {

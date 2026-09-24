@@ -287,8 +287,30 @@ A validator MUST derive the physical interface from the checked logical kind and
 profile, then check available resource-owned metadata: physical order, file presence, Parquet
 types and footer features, Zarr version, rank and codecs, and checksums outside SQL. A query cannot
 observe them, so such a check written as SQL fails silently rather than loudly. Dense-array checks
-obtain the axes table from the resolved declaration. An unavailable external resource is physically
-unassessed. A valid upstream feature outside a reader-only floor is not by itself a profile error.
+obtain the axes table from the resolved declaration.
+
+A validator MUST assess floor membership for every packet-owned resource whose interface declares a
+reader floor, and for every external one whose format-owned metadata it reads under
+[Part 04 §5.3](04_packet_catalog.md#ew-external-resource-verification). Membership is judged under
+[Part 03 §5.5](03_portable_physical_profile.md#ew-parquet-reader-floor) for Parquet and
+[Part 03 §6.4](03_portable_physical_profile.md#ew-array-codecs) for Zarr. For each assessed resource
+using a feature outside its floor, it MUST report one finding under the check ID
+`physical.outside_reader_floor`, naming:
+
+- the resource;
+- its interface and, for Zarr, its variant; and
+- the observed features that matched no floor entry: each outside compression or encoding for
+  Parquet, the whole observed pipeline for Zarr v3, and `filters` and `compressor` for Zarr v2.
+
+The finding's level is `warning` for a packet-owned resource whose interface's floor role is
+`reader_and_packet_writer`, and `info` for every other resource. A validator MUST NOT report it at
+`error`. The finding concerns one resource, so [§9.5](#ew-verdict-composition) attributes it to the
+registry whose declaration the resource's entry names.
+
+A validator MUST report each external resource whose interface declares a reader floor and whose
+format-owned metadata it did not read, one finding per resource, at `info` under the check ID
+`external.physical_unassessed`, naming the resource. [§9.5](#ew-verdict-composition) attributes it
+as it does the outside-floor finding.
 
 The shim MUST compare the manifest's session inventory with `core.sessions.session_name` under the
 check ID `core.sessions.manifest_sessions_match`, at `error`, with the message carried by the

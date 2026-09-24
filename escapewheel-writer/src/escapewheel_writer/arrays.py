@@ -46,9 +46,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from .writer import StagedArray
 
 #: Array-to-array codecs, which run before the bytes codec rather than after it. Named as the
-#: store names them -- zarr registers numcodecs codecs under a `numcodecs.` prefix, and Part 04 §5.3
-#: compares the manifest against the store, so `delta` and `numcodecs.delta` are not the same
-#: claim.
+#: store names them -- zarr registers numcodecs codecs under a `numcodecs.` prefix, so `delta`
+#: would name a codec no stored pipeline carries.
 FILTERS = {"numcodecs.delta"}
 
 
@@ -142,13 +141,12 @@ def shard_for(
 
 
 def written_codecs(path: Path) -> tuple[str, ...]:
-    """Return the codec names an array on disk declares, outermost first (Part 03 §11.3).
+    """Return the codec names an array on disk uses, outermost first.
 
     The same list `declared_codecs` derives from a layout, read back from the array instead --
-    which is what a build does for an array an adapter wrote, since every field of the manifest
-    entry for one is in the array or in the build. Descends through a shard, because a shard's
-    compressor sits inside its configuration and a manifest naming only the shard would tell a
-    reader it needs less than it does.
+    which is what a build does for an array an adapter wrote. Descends through a shard, because a
+    shard's compressor sits inside its configuration and naming only the shard would say a reader
+    needs less than it does.
     """
     meta = json.loads((path / "zarr.json").read_text())
 
@@ -172,13 +170,11 @@ def written_profile(path: Path) -> str:
 
 
 def declared_codecs(spec: StagedArray) -> tuple[str, ...]:
-    """Return the codec names a manifest must declare for this array, outermost first (Part 03 §6.4).
+    """Return the codec names this array will be written with, outermost first.
 
     Derived from the layout, not from `codecs` alone, because **sharding is a codec**. An array
-    written with a shard uses `sharding_indexed` whether or not the caller named it, and a
-    manifest omitting it tells a reader it needs less than it does -- which is the claim R15
-    §2 exists to make checkable, and which a reader without sharding support would discover
-    only on opening the array.
+    written with a shard uses `sharding_indexed` whether or not the caller named it. The stored
+    metadata, not this list, is what Part 03 §6.4 compares with the reader floor.
 
     Parameters
     ----------
@@ -195,7 +191,7 @@ def declared_codecs(spec: StagedArray) -> tuple[str, ...]:
 
 
 def _codec(name: str, *, differenced: bool = False) -> Any:
-    """Build one bytes-to-bytes codec by the name a manifest declares (Part 03 §6.4).
+    """Build one bytes-to-bytes codec by the name `StagedArray.codecs` gives it.
 
     `differenced` says a delta filter runs first, which decides blosc's shuffle. Bit shuffle
     wins where the high bits go constant, and differencing a smooth signal is what makes them

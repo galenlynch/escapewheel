@@ -232,7 +232,7 @@ class LFPSource(Compensates):
 
     @staticmethod
     def _codecs(meta: dict[str, Any]) -> tuple[str, ...]:
-        """Name the codecs an array uses, as Part 03 §6.4 requires the manifest to declare them."""
+        """Name the codecs a v2 array's own metadata uses, its filters first (Part 03 §6.4)."""
         names = [str(f["id"]) for f in meta.get("filters") or []]
         if compressor := meta.get("compressor"):
             names.append(str(compressor["id"]))

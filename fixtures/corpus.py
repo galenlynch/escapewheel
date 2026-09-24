@@ -68,6 +68,17 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "crc_prefix_disagrees": ("error", "packet.resource.member_digest"),
     "member_digest_partial": ("error", "packet.manifest.schema"),
     "member_digest_width": ("error", "packet.manifest.schema"),
+    "outside_array_floor": ("info", "physical.outside_reader_floor"),
+    "outside_table_floor": ("warning", "physical.outside_reader_floor"),
+    "unresolved_externals": ("info", "external.physical_unassessed"),
+}
+
+#: Packets whose expected finding is one per resource (Part 05 §5.3), and how many it must fire.
+COUNTS: dict[str, int] = {"outside_array_floor": 1, "unresolved_externals": 2}
+
+#: Checks a packet must not draw at any level.
+ABSENT: dict[str, set[str]] = {
+    "valid": {"physical.outside_reader_floor", "external.physical_unassessed"}
 }
 
 #: Packets whose expected finding belongs to an extension (Part 05 §9.5), which must fail that
@@ -102,18 +113,21 @@ def main() -> int:
             advisory=name in ADVISORY,
             checksums=name in CHECKSUMS,
         )
+        absent = ABSENT.get(name, set())
         if expect is None:
             ok = report.passed and report.warnings == 0
+            ok = ok and not any(f.check in absent for f in report.findings)
             verdict = "clean" if ok else "UNEXPECTED FINDINGS"
         else:
             level, check = expect
             subject = EXTENSION_FINDINGS.get(name)
-            ok = any(
+            fired = sum(
                 f.check == check
                 and f.level == level
                 and (subject is None or f.registry == subject)
                 for f in report.findings
             )
+            ok = fired == COUNTS[name] if name in COUNTS else fired > 0
             if subject is not None:
                 ok = ok and (
                     report.verdict(subject),

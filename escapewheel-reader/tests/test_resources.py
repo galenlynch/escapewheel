@@ -266,7 +266,7 @@ def _v3_array(tmp_path, name, **layout):
     import numpy as np
 
     store = tmp_path / name
-    array = zarr.create_array(store=str(store), shape=(4, 3), chunks=(2, 3), dtype="int16", **layout)
+    array = zarr.create_array(store=str(store), shape=(4, 3), dtype="int16", **{"chunks": (2, 3), **layout})
     array[:] = np.arange(12, dtype="int16").reshape(4, 3)
     return store, _array_resource(store.resolve().as_uri(), tmp_path)
 
@@ -280,11 +280,94 @@ def test_the_pipeline_keeps_bytes_and_an_array_inside_the_floor_opens(array_pack
 
 
 def test_a_sharded_pipeline_is_the_sharding_codec_alone(tmp_path):
-    """Flattened, the shard's `bytes`, `zstd` would read as a floor sequence it is not."""
+    """The shard's `bytes`, `zstd` with index `bytes`, `crc32c` at `end` is inside the floor."""
     _, handle = _v3_array(tmp_path, "sharded.zarr", shards=(4, 3))
     assert handle.codecs == ("sharding_indexed",)
-    assert not handle.within_reader_floor
+    assert handle.within_reader_floor
     assert handle.read()[3, 2] == 11
+
+
+def _shard(inner=(), index=None, location="end"):
+    from zarr.codecs import BytesCodec, Crc32cCodec, ShardingCodec
+
+    index = [BytesCodec(), Crc32cCodec()] if index is None else index
+    codec = ShardingCodec(
+        chunk_shape=(2, 3), codecs=[BytesCodec(), *inner], index_codecs=index, index_location=location
+    )
+    # Without `compressors=None` zarr-python wraps the whole shard in its default compressor.
+    return {"serializer": codec, "chunks": (4, 3), "compressors": None}
+
+
+def _floor_vectors():
+    pytest.importorskip("zarr")
+    from zarr.codecs import BloscCodec, BytesCodec, GzipCodec, ZstdCodec
+    from zarr.codecs.numcodecs import Delta
+
+    blosc = BloscCodec(cname="zstd", shuffle="shuffle")
+    return {
+        "bytes": ({"compressors": None}, True),
+        "bytes_gzip": ({"compressors": GzipCodec()}, True),
+        "bytes_zstd": ({"compressors": ZstdCodec()}, True),
+        **{
+            f"blosc_zstd_{mode}": ({"compressors": BloscCodec(cname="zstd", shuffle=mode)}, True)
+            for mode in ("noshuffle", "shuffle", "bitshuffle")
+        },
+        "shard_bytes": (_shard(), True),
+        "shard_gzip": (_shard([GzipCodec()]), True),
+        "shard_zstd": (_shard([ZstdCodec()]), True),
+        "shard_blosc_zstd": (_shard([blosc]), True),
+        "shard_index_bytes": (_shard([ZstdCodec()], index=[BytesCodec()]), True),
+        "shard_index_start": (_shard([ZstdCodec()], location="start"), False),
+        "blosc_lz4": ({"compressors": BloscCodec(cname="lz4", shuffle="shuffle")}, False),
+        "delta_blosc_zstd": ({"filters": Delta(dtype="int16"), "compressors": blosc}, False),
+    }
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "bytes",
+        "bytes_gzip",
+        "bytes_zstd",
+        "blosc_zstd_noshuffle",
+        "blosc_zstd_shuffle",
+        "blosc_zstd_bitshuffle",
+        "shard_bytes",
+        "shard_gzip",
+        "shard_zstd",
+        "shard_blosc_zstd",
+        "shard_index_bytes",
+        "shard_index_start",
+        "blosc_lz4",
+        "delta_blosc_zstd",
+    ],
+)
+def test_the_descriptor_floor_classifies_written_v3_metadata(tmp_path, name):
+    """Part 03 §6.4 against zarr-python's own `zarr.json` for each pipeline Part 10 §5 measured."""
+    from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_admits
+
+    layout, admitted = _floor_vectors()[name]
+    store, _ = _v3_array(tmp_path, f"{name}.zarr", **layout)
+    assert zarr_floor_admits(_zarr_json(store), variant_for_zarr_format(3)["reader_floor"]) is admitted
+
+
+def test_the_descriptor_floor_reads_an_absent_index_location_as_end_and_nothing_after_a_shard(tmp_path):
+    """Part 03 §6.4: `end` is the sharding codec's default; a codec after the shard leaves the floor."""
+    from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_admits
+
+    floor = variant_for_zarr_format(3)["reader_floor"]
+    store, _ = _v3_array(tmp_path, "sharded.zarr", **_shard([pytest.importorskip("zarr").codecs.ZstdCodec()]))
+    metadata = _zarr_json(store)
+    del metadata["codecs"][0]["configuration"]["index_location"]
+    assert zarr_floor_admits(metadata, floor)
+    metadata["codecs"].append({"name": "zstd"})
+    assert not zarr_floor_admits(metadata, floor)
+    unrecognized = _zarr_json(store)
+    unrecognized["codecs"] = [{"name": "bytes"}, {"name": "example.unknown"}]
+    assert not zarr_floor_admits(unrecognized, floor)
+    bare_blosc = _zarr_json(store)
+    bare_blosc["codecs"] = [{"name": "bytes"}, {"name": "blosc"}]
+    assert not zarr_floor_admits(bare_blosc, floor)
 
 
 def test_a_floor_admitting_sharding_compares_the_shard_as_a_pipeline(tmp_path):

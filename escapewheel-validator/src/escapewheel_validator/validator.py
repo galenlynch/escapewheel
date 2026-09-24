@@ -31,6 +31,7 @@ import pyarrow.parquet as pq
 from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, sql_name
 from escapewheel_reader.location import SOURCES_FILENAME
 from escapewheel_reader.ordering import stored_order
+from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_floor_admits
 
 from .generate import Check, adjacency_settles_uniqueness, concerns, generate
 from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest, named_registries
@@ -621,6 +622,67 @@ def _codec_names(pipeline: Iterable[Any]) -> set[str]:
     return names
 
 
+def _floor_level(resource: Any) -> str:
+    """`warning` only where a packet-owned resource exceeds a floor its writer is also held to (Part 05 §5.3)."""
+    role = physical_profile()["interfaces"][resource.interface]["floor_role"]
+    return "warning" if role == "reader_and_packet_writer" and not resource.is_external else "info"
+
+
+def _check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report) -> None:
+    """Report an array whose own metadata matches no entry of its variant's reader floor (Part 03 §6.4).
+
+    An unrecognized codec is valid metadata outside the floor, so it draws this finding and nothing else;
+    metadata too malformed to compare is upstream invalidity, not a floor observation.
+    """
+    variants = physical_profile()["interfaces"]["zarr"]["variants"]
+    zarr_format = metadata.get("zarr_format")
+    selected = next(((name, v) for name, v in variants.items() if v["format_version"] == zarr_format), None)
+    if selected is None:
+        return
+    variant, entry = selected
+    try:
+        if zarr_floor_admits(metadata, entry["reader_floor"]):
+            return
+    except (AttributeError, KeyError, TypeError):
+        return
+    members = ("codecs",) if zarr_format == 3 else ("filters", "compressor")
+    observed = [(member, json.dumps(metadata.get(member), separators=(",", ":"))) for member in members]
+    report.add(
+        _floor_level(resource),
+        "physical.outside_reader_floor",
+        f"{resource.resource_id}: zarr {variant} "
+        + "; ".join(f"{member} {value}" for member, value in observed)
+        + " is outside the reader floor of Part 03 §6.4",
+        observed,
+        registry=report.resource_owner(resource.resource_id),
+    )
+
+
+def _check_parquet_floor(resource: Any, metadata: Any, report: Report) -> None:
+    """Compare a table's footer-reported compressions and encodings with the Parquet floor (Part 03 §5.5)."""
+    floor = parquet_floor()
+    compressions: set[str] = set()
+    encodings: set[str] = set()
+    for index in range(metadata.num_row_groups):
+        group = metadata.row_group(index)
+        for column in range(group.num_columns):
+            chunk = group.column(column)
+            compressions.add(str(chunk.compression).upper())
+            encodings.update(str(value).upper() for value in chunk.encodings)
+    observed = [("compression", value) for value in sorted(compressions - set(floor["compressions"]))]
+    observed += [("encoding", value) for value in sorted(encodings - set(floor["encodings"]))]
+    if observed:
+        report.add(
+            _floor_level(resource),
+            "physical.outside_reader_floor",
+            f"{resource.resource_id}: parquet "
+            + ", ".join(f"{member} {value}" for member, value in observed)
+            + " is outside the reader floor of Part 03 §5.5",
+            observed,
+            registry=report.resource_owner(resource.resource_id),
+        )
+
+
 def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], report: Report) -> None:
     """Check one packet-owned array against the metadata document in its own store."""
     try:
@@ -653,6 +715,8 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             "order the packet declares them",
             registry=report.resource_owner(resource.resource_id),
         )
+
+    _check_zarr_floor(resource, metadata, report)
 
     if (grid := metadata.get("chunk_grid", {}).get("name")) != "regular":
         report.add(
@@ -705,8 +769,8 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     Always runs, and needs no Zarr: a Zarr array's metadata is a JSON document in the store,
     which `ArrayResource` parses directly. The packet owns these bytes, so an array it
     describes wrongly is a defect in the packet rather than in the reader's situation. An
-    external array is level 3 and stays with the requested mode, where
-    `_check_codec_declarations` already reports it as `info`.
+    external array is level 3 and stays with the requested mode, and `_report_unassessed` reports it
+    where that mode did not read it.
 
     Storage, not values, so the shim and not SQL (R12 §4): no query can see a chunk grid or a codec
     pipeline.
@@ -739,20 +803,28 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         _check_one_array(resource, packet.array_resource(resource.resource_id), extents, report)
 
 
-def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = False) -> None:
-    """Report external physical state as unassessed unless resolution was requested.
+def _report_unassessed(packet: Packet, assessed: Collection[str], report: Report) -> None:
+    """One `info` finding per external resource with a reader floor whose own metadata was not read (Part 05 §5.3)."""
+    for resource in packet.resources():
+        if resource.is_external and resource.interface is not None and resource.resource_id not in assessed:
+            report.add(
+                "info",
+                "external.physical_unassessed",
+                f"{resource.resource_id}: its {resource.interface} metadata was not read, so its physical "
+                "version, codecs, compression and encodings are unassessed",
+                [(resource.resource_id,)],
+                registry=report.resource_owner(resource.resource_id),
+            )
 
-    Parameters
-    ----------
-    resolved : bool, default False
-        Whether level 3 ran, in which case the external claims are not reported as unchecked.
-    """
-    if not resolved and (names := [r.resource_id for r in packet.resources() if r.is_external]):
+
+def _report_page_types_unassessed(tables: int, report: Report) -> None:
+    """Part 03 §5.5: a validator comparing only footers states that it did not assess data-page types."""
+    if tables:
         report.add(
             "info",
-            "external.physical_unassessed",
-            f"{len(names)} external resource(s) not resolved; format-owned physical metadata is unassessed",
-            [(name,) for name in names],
+            "physical.page_types_unassessed",
+            f"{tables} Parquet footer(s) compared with the floor's compressions and encodings; data-page "
+            "types were not assessed, since they are recorded in page headers",
         )
 
 
@@ -890,7 +962,7 @@ def _resolve_external(
     checksums: bool = False,
     store_digests: bool = False,
     store_checksums: bool = True,
-) -> None:
+) -> set[str]:
     """Level 3 (Part 04 §5.3): resolve external URIs and check what was claimed about them.
 
     Requested explicitly, never by default. Part 04 §5.3 keeps structural validation off the
@@ -919,7 +991,13 @@ def _resolve_external(
     store_checksums : bool, default True
         With `checksums`, take the store's full-object checksums in place of reading an object
         where it reports one in the digest's algorithm (Part 04 §5.3).
+
+    Returns
+    -------
+    set of str
+        The external arrays whose own metadata was read and compared with the reader floor.
     """
+    assessed: set[str] = set()
     checked = 0
     compared: Counter[str] = Counter()
     unchecksummed: list[str] = []
@@ -930,7 +1008,9 @@ def _resolve_external(
     for resource in packet.resources():
         if not resource.is_external:
             continue
-        fields = _compare_external(resource, report, checksums, store_digests, extents, store_checksums, routes)
+        fields = _compare_external(
+            resource, report, checksums, store_digests, extents, store_checksums, routes, assessed
+        )
         if fields is None:
             continue
         checked += 1
@@ -954,6 +1034,7 @@ def _resolve_external(
             f"{checked} external resource(s) resolved; compared {did}{established}",
             routes,
         )
+    return assessed
 
 
 def _compare_external(
@@ -964,12 +1045,14 @@ def _compare_external(
     extents: Mapping[str, Any] | None = None,
     store_checksums: bool = True,
     routes: list[tuple[str, str, str]] | None = None,
+    assessed: set[str] | None = None,
 ) -> list[str] | None:
     """Check one external resource, returning the fields actually compared.
 
     None means the store could not be reached, which is already reported and leaves the resource
     out of every count: nothing about it was established either way. Each digest established is
-    appended to `routes` as its resource ID, algorithm, and route.
+    appended to `routes` as its resource ID, algorithm, and route, and an array whose metadata was
+    compared with the reader floor is added to `assessed`.
     """
     entry = resource.entry
     uri = str(entry.get("uri", ""))
@@ -996,8 +1079,12 @@ def _compare_external(
                 f"manifest claims {claimed:,}",
                 registry=report.resource_owner(resource.resource_id),
             )
-    if extents:
-        fields.extend(_compare_shape(resource, uri, found, extents, report))
+    if resource.kind == "dense_array" and (metadata := _stored_metadata(uri, found)) is not None:
+        _check_zarr_floor(resource, metadata, report)
+        if assessed is not None:
+            assessed.add(resource.resource_id)
+        if extents:
+            fields.extend(_compare_shape(resource, metadata, extents, report))
     if checksums and isinstance(claimed := entry.get("digest"), Mapping):
         try:
             found_digest = digest_resource(uri, str(claimed["algorithm"]), store_checksums=store_checksums)
@@ -1210,7 +1297,7 @@ def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:  # no
     return extents
 
 
-def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, Any], report: Report) -> list[str]:
+def _compare_shape(resource: Any, metadata: Mapping[str, Any], extents: Mapping[str, Any], report: Report) -> list[str]:
     """Check an external array's stored shape against what the packet's tables assert (Part 02 §6).
 
     This is the check that catches a change actually invalidating the packet. A re-generated
@@ -1223,8 +1310,7 @@ def _compare_shape(resource: Any, uri: str, found: Any, extents: Mapping[str, An
     """
     if not (declared := extents.get(resource.resource_id)):
         return []
-    metadata = _stored_metadata(uri, found)
-    if metadata is None or not isinstance(shape := metadata.get("shape"), list):
+    if not isinstance(shape := metadata.get("shape"), list):
         return []
     if len(shape) != len(declared):
         report.add(
@@ -1268,6 +1354,12 @@ def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) ->
         present[resource_id] = handle
         for column in spec["columns"]:
             _check_column(resource_id, column, schema, report)
+        path, filesystem = (handle.path, None) if handle.is_local else handle.location.store()
+        try:
+            footer = pq.read_metadata(path, filesystem=filesystem)
+        except (OSError, pa.ArrowException):
+            continue  # an unreadable footer leaves the floor unassessed, not failed (Part 05 §9.4)
+        _check_parquet_floor(handle.resource, footer, report)
     return present
 
 
@@ -2315,9 +2407,7 @@ def validate(
     withheld = set(packet.manifest.extensions) - set(extensions)
     packet = packet.with_declarations(effective, *extensions.values())
     _check_resource_declarations(packet, effective, extensions, withheld, report)
-    _check_codec_declarations(packet, report, resolved=external)
-    if external:
-        _resolve_external(packet, report, checksums, store_digests, store_checksums)
+    assessed = _resolve_external(packet, report, checksums, store_digests, store_checksums) if external else set()
     if checksums:
         _check_owned_digests(packet, report, store_checksums)
     _check_packet_owned_arrays(packet, report)
@@ -2327,6 +2417,8 @@ def validate(
     for document in extensions.values():
         tables.update(_tables(document))
     present = _check_schemas(packet, tables, report)
+    _report_page_types_unassessed(len(present), report)
+    _report_unassessed(packet, assessed | set(present), report)
     unsound = _check_ordering(tables, present, report, scan)
     _check_duplication(present, tables, report)
     _check_unfilled_metadata(present, tables, report)

@@ -100,7 +100,12 @@ relation has no row order, no file layout, no Parquet physical type and no Zarr 
 a storage check written as SQL agrees with itself rather than failing. The shim covers physical
 order (R10), column presence and physical type, manifest-internal consistency, and every
 packet-owned array against its own Zarr metadata (R15 §4 level 2) — the last needing no Zarr,
-because that metadata is JSON. It also parses every unit-column value as a UCUM code (Part 05
+because that metadata is JSON. It compares each array's pipeline and each Parquet footer's
+compressions and encodings with the portable profile's reader floors (Part 03 §§5.5 and 6.4), and
+reports a resource outside one as `physical.outside_reader_floor`: `warning` for a packet-owned
+table, `info` for everything else, never an error. Parquet data-page types are not assessed, and the
+report says so. An external resource whose metadata was not read is reported, one finding each, as
+`external.physical_unassessed`. It also parses every unit-column value as a UCUM code (Part 05
 §5.3): a value check, but one SQL could express only through a UCUM function the rule language
 does not have.
 

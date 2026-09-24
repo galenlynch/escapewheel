@@ -967,9 +967,9 @@ class PacketWriter:
         """Add a dense array, to be written into the packet as Zarr v3.
 
         Packet-owned, so `zarr_v3` (Part 03 §6.1) -- v2 is permitted only for a resource the packet
-        references rather than owns. The codecs it uses are declared per resource (Part 03 §6.4), so
-        a reader checks this array's own list before opening it and must not refuse the packet
-        over a codec used only by something it never touches.
+        references rather than owns. Its own metadata states its codecs (Part 03 §6.4), so a reader
+        checks this array's pipeline before opening it and must not refuse the packet over a codec
+        used only by something it never touches.
 
         Parameters
         ----------
