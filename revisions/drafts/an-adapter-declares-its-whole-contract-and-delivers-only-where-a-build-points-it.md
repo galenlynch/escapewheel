@@ -25,7 +25,8 @@ import it, and
 what a build refuses a declaration for. The document's schema is published but not incorporated,
 and it requires four of the eight members. The prose gives two omissions a meaning and leaves the
 other two without one. The reference writer checks a declaration's shape and refusals only where a
-recipe names a document, so a class declaration escapes both.
+recipe names a document, so a class declaration escapes both, and it runs an independently released
+adapter in process without the protocol Part 03 §11.1 requires it to declare.
 
 [Part 04 §5.5](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-source-resolution) has the
 same gap for the source resolution document a reader follows. Its schema is published and not
@@ -62,7 +63,7 @@ retired.
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | [Part 03 §11](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-reaching-a-source), an adapter reads one source and returns records | extend in place | same section | an adapter delivers through the channels and locations the profile names, listed there | §3.4 |
-| [Part 03 §11.5](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-adapter-declaration-document), a shape published as a schema; readings of a document without `accepts` or `contributes` | replace in place | same section | the schema is incorporated, every member is required, and a class is checked as the document it renders to | §§3.1, 3.2 |
+| [Part 03 §11.5](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-adapter-declaration-document), a shape published as a schema; readings of a document without `accepts` or `contributes` | replace in place | same section | the schema is incorporated, every member is required, and a class is checked as the document holding its facts, which only an adapter a build ships may leave without a protocol | §§3.1, 3.2 |
 | [Part 04 §5.5](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-source-resolution), a shape published as a schema | replace in place | same section | the schema is incorporated, a writer writes a conforming document, a reader may validate one, and a reader does not resolve through an unknown version | §3.3 |
 | [Part 05 §2](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-import-pipeline), a source adapter returns records and writes no files | replace in place | same section | an adapter delivers only where a build points it, and the build owns those locations | §3.4 |
 | [Part 05 §3.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-recipe-check), the declaration refusals | extend in place | same section | adds the refusal of a declaration failing its schema, in either form | §3.2 |
@@ -70,8 +71,9 @@ retired.
 
 ## 2. Background
 
-Section 2 is informative. Every observation was reproduced at `63aa520`, whose code is that of the
-recorded baseline: the two commits between them add only the proposal and three canonical anchors.
+Section 2 is informative. Every observation was reproduced at `63aa520` or `131bcfd`, whose code
+is that of the recorded baseline: the commits between them change only revision documents, status
+records, and three canonical anchors.
 Probes ran in the writer's environment against `registry/logical_schemas.json`, using throwaway
 recipes, adapter classes, and documents under a scratch directory.
 
@@ -109,6 +111,15 @@ group.
 Part 03 §11.5 already makes a class and a document one declaration, so the refusals bind a class
 today and the writer's omission is a defect under the current rule. What the current rule lacks is
 a shape check for a class, which has no JSON to validate until it is rendered.
+
+No adapter class in the writer or the AIND package states a protocol. `escapewheel declare` takes
+one as an argument, defaulting to `stream-v0.1`, and `declaration.of` writes whatever it is given.
+A recipe running the AIND package's `session` adapter, which the `escapewheel.sources` group
+registers, with `in_process = true` drew no protocol refusal from `Recipe.check`. Part 03 §11.1
+requires an adapter released independently of a build to declare a protocol and a build to refuse
+one that declares none, and says the in-process opt-in does not change what an adapter supports, so
+this too is a defect under the current rule. An adapter a build ships need not declare a protocol,
+so the document holding a built-in class's facts lacks a member the schema requires.
 
 `sources.discovered()` loads each registered class and checks nothing about its declarations.
 `escapewheel declare` renders a class with `declaration.of` and writes the result without
@@ -197,13 +208,22 @@ leaves an adapter author unable to tell where a build reads a delivery. Requirin
 its locations after a refusal would discard what a person diagnosing the refusal reads, and once a
 build supplies each location empty, a location kept after a refusal cannot reach a later build.
 
+Requiring every importable declaration to carry a protocol would withdraw Part 03 §11.1's exemption
+for an adapter a build ships, and would check a fact that does not apply: running such an adapter in
+process is what spares its rows a protocol. Checking a class on its other members and leaving the
+writer's protocol gap to a later change would leave the adapters §2.2 names escaping one refusal
+Part 03 §11.1 already requires.
+
 ### 2.7 Feasibility and overlap
 
 No other proposal or draft is open. The writer resolves a declaration through one function,
-`declared`, whether it comes from a class or a document, and `declaration.of` already renders a
-class as a document, so checking a class as its document reuses the existing path. The writer's
-suite has 592 tests, the AIND package's 67, and the reader's 228, all passing at the recorded
-baseline, and the full repository verifier passed its 35 stages at `63aa520`.
+`declared`, whether it comes from a class or a document, and `declaration.of` renders a class as a
+document once it is given a protocol, so checking a class as its document reuses the existing path
+wherever the class states one. A built-in class states none, so its check omits that member alone.
+An independently released class needs a way to state its protocol, which the writer's adapter
+classes do not yet have, and the AIND package's three adapters must use it. The writer's suite has
+592 tests, the AIND package's 67, and the reader's 228, all passing at the recorded baseline, and
+the full repository verifier passed its 35 stages at `63aa520`.
 
 ## 3. Decision
 
@@ -227,7 +247,9 @@ and an empty array declares none. The schema requires all eight.
 A build MUST refuse an adapter's declaration that fails the schema §3.1 incorporates, naming where
 it fails, before it opens any source. A build MUST check an importable declaration as the document
 holding the same facts, so a class and a document are refused for the same defects under the same
-terms.
+terms. The one exception is `protocol`, which an importable declaration of an adapter a build ships
+may omit, as Part 03 §11.1 lets it; the exception does not reach an adapter released independently
+of a build, even where a recipe runs it in process.
 
 ### 3.3 A source resolution document has an incorporated shape a reader need not check
 
@@ -269,7 +291,9 @@ Packet bytes are unchanged, and no packet is rebuilt. An adapter's declaration d
 member is refused until it states that member; the tracked example complies, and a generated document
 complies by construction. A third party's hand-written document must be updated. An importable
 declaration the writer now accepts with an undeclared resource, a term in `accepts`, or a malformed
-name is refused at the recipe check. A resolution document is refused by no conforming reader
+name is refused at the recipe check. An independently released adapter that a recipe runs in
+process and that declares no protocol is refused at the recipe check, as Part 03 §11.1 already
+requires; the AIND package's three adapters declare `stream-v0.1`. A resolution document is refused by no conforming reader
 merely for failing the schema, and a document a conforming writer writes always satisfies it. A
 source name that the schema now refuses becomes resolvable. The schema `$id` versions stay until
 release identifiers are assigned.
@@ -285,12 +309,12 @@ records, and §3.4 leaves that intact for rows. R80 §2.2's version rule gains a
 |---|---|---|
 | semantic prose | Unchanged. No scientific meaning changes. | None required. |
 | logical prose and registry | Unchanged. Neither declares an adapter or a resolution document. | None required. |
-| physical profiles | Part 03 §11 lists the delivery routes; §11.5 incorporates `registry/adapter.schema.json`, requires every member, drops its readings of an absent `accepts` or `contributes`, and checks a class as its document. The schema lists all eight members under `required`, its `$schema` description drops the keyword and the wrong citation, and its `accepts` and `contributes` descriptions drop the absent-member readings. | `evidence/R<N>.json` names the anchors; `registry/check.py` validates the example document and a document missing a member fails. |
+| physical profiles | Part 03 §11 lists the delivery routes; §11.5 incorporates `registry/adapter.schema.json`, requires every member, drops its readings of an absent `accepts` or `contributes`, and checks a class as its document, exempting only a built-in class from `protocol`. The schema lists all eight members under `required`, its `$schema` description drops the keyword and the wrong citation, and its `accepts` and `contributes` descriptions drop the absent-member readings. | `evidence/R<N>.json` names the anchors; `registry/check.py` validates the example document and a document missing a member fails. |
 | packet manifest and JSON Schemas | Part 04 §5.5 incorporates `registry/sources.schema.json`, lets a reader choose whether to validate, and states the version rule. The schema drops its source-name pattern and length limit, and its `$schema` description drops the keyword. The manifest and delivery schemas are unchanged. | `registry/check.py` validates the example and a name with a space. |
 | validation and import | Part 05 §2 states where an adapter delivers and that the build owns those locations; §3.5 adds the refusal of a declaration failing its schema. | The writer tests below. |
-| extensions | Registry content unchanged. The AIND package's generated documents gain any missing members when regenerated. | The AIND suite validates its generated documents against the schema. |
-| reader, writer, validator, adapters | The reader already resolves nothing through a document of unknown version. It validates a caller-supplied document, refusing one that fails with where it fails, and keeps treating a packet root `sources.json` it cannot read as resolving nothing. The writer checks a class declaration as its document at the recipe check, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, empties each delivery location before it supplies it, names array directories by `resource_id`, and binds arrays by catalog row without `_resources.json`. The validator is unchanged. | Reader and writer tests below. |
-| conformance fixtures and tests | Packet fixtures are unchanged, because a validator reads neither document. Writer tests cover a document missing each member, a document of empty arrays, a class with an undeclared resource, a term in `accepts`, or a malformed name refused at the recipe check, `escapewheel declare` output passing the schema, `session.build` refusing a recipe that fails the check, a `sources.json` the writer writes passing the schema, array directories named by `resource_id`, a delivery location supplied empty after a refused run left files in it, and the workspace removed after a commit. Reader tests cover a caller-supplied document failing the schema, one of an unknown version, and a packet root document of an unknown version. | `escapewheel-writer`, `escapewheel-reader`, and `escapewheel-aind` suites. |
+| extensions | Registry content unchanged. The AIND package's three adapters declare `stream-v0.1`, and its generated documents gain any missing members and carry that protocol. | The AIND suite validates its generated documents against the schema. |
+| reader, writer, validator, adapters | The reader already resolves nothing through a document of unknown version. It validates a caller-supplied document, refusing one that fails with where it fails, and keeps treating a packet root `sources.json` it cannot read as resolving nothing. The writer lets an adapter class state its protocol, checks a class declaration as its document at the recipe check, refuses there an adapter another distribution registers that states no protocol, renders a class's own protocol in `escapewheel declare`'s output and takes `--protocol` only for a class stating none, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, empties each delivery location before it supplies it, names array directories by `resource_id`, and binds arrays by catalog row without `_resources.json`. The validator is unchanged. | Reader and writer tests below. |
+| conformance fixtures and tests | Packet fixtures are unchanged, because a validator reads neither document. Writer tests cover a document missing each member, a document of empty arrays, a class with an undeclared resource, a term in `accepts`, or a malformed name refused at the recipe check, an adapter another distribution registers that states no protocol refused at the recipe check while a built-in one passes, `escapewheel declare` output passing the schema, `session.build` refusing a recipe that fails the check, a `sources.json` the writer writes passing the schema, array directories named by `resource_id`, a delivery location supplied empty after a refused run left files in it, and the workspace removed after a commit. Reader tests cover a caller-supplied document failing the schema, one of an unknown version, and a packet root document of an unknown version. | `escapewheel-writer`, `escapewheel-reader`, and `escapewheel-aind` suites. |
 | revision process and tooling | Ordinary ledger and evidence records. The notes of R119 §3.4, R133 §3.2, R117 §3.1, and R80 §2.2 are rewritten. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. The writer and reader READMEs, `registry/README.md`'s incorporation column, the writer's `sources/__init__.py` docstring, and the repository TODO's schema-audit item are updated. | `verify.py`. |
 
@@ -305,14 +329,17 @@ The negative cases distinguish the new rule from the current one:
   refused, naming the member, where the schema now admits it;
 - a class declaring an undeclared resource, a term in `accepts`, or a `produces` entry that fails
   the schema's pattern is refused at the recipe check, where the writer now passes it;
+- an adapter another distribution registers, run in process and declaring no protocol, is refused
+  at the recipe check, naming the group, where the writer now passes it;
 - `session.build` refuses a recipe that fails the check, where it now builds from it;
 - a `files-v0.1` adapter that writes its Parquet outside `delivery_root` delivers nothing, and the
   build reports its resources as not arriving; and
 - a rerun after a refused build, whose adapter no longer writes a resource, reads no file an earlier
   run left under `delivery_root`, where the writer now reads it as that resource's delivery.
 
-The positive cases are a document of all eight members with empty arrays, which is accepted, and a
-resolution document naming a source whose name carries a space, which now satisfies the schema.
+The positive cases are a document of all eight members with empty arrays, which is accepted; a
+built-in adapter declaring no protocol, which passes the recipe check; and a resolution document
+naming a source whose name carries a space, which now satisfies the schema.
 Two reader cases hold the restored and optional rules without distinguishing them from current
 behavior: a resolution document of an unknown version resolves no source, and a caller-supplied
 document failing the schema is refused by the reference reader, naming where it fails.
