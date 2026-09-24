@@ -211,13 +211,40 @@ def test_a_caller_document_wins_over_the_packets_own(packet_root):
     assert dict(packet.location.sources)["raw"] == "/scratch/staged"
 
 
-def test_a_document_of_an_unknown_version_is_refused(packet_root, tmp_path):
-    """Part 04 §5.5: reading it as if it were this version is how a location silently goes wrong."""
-    import json
+def _sources_document(path, version="escapewheel-sources-v0.1", **sources):
+    path.write_text(json.dumps({"sources_standard_version": version, "sources": sources}))
+    return path
 
-    import pytest
 
-    doc = tmp_path / "future.json"
-    doc.write_text(json.dumps({"sources_standard_version": "escapewheel-sources-v9", "sources": {}}))
-    with pytest.raises(ManifestError, match="escapewheel-sources-v0.1"):
+def test_a_reader_refuses_a_caller_document_of_an_unknown_version_by_its_version(packet_root, tmp_path):
+    """Part 04 §5.5 forbids resolving through it whether or not a reader validates.
+
+    The message names the declared version rather than the schema's `const`, so the refusal
+    does not depend on validation.
+    """
+    doc = _sources_document(tmp_path / "future.json", "escapewheel-sources-v9", raw={"uri": "s3://bucket/raw"})
+    with pytest.raises(ManifestError, match="declares 'escapewheel-sources-v9'"):
         open_packet(packet_root, sources=[doc])
+
+
+def test_a_reader_refuses_a_caller_document_failing_the_schema_naming_where(packet_root, tmp_path):
+    """A mistyped member is refused where it is, rather than as a KeyError or a missing source."""
+    doc = _sources_document(tmp_path / "typo.json", raw={"url": "s3://bucket/raw"})
+    with pytest.raises(ManifestError, match=r"\$\.sources\.raw: 'uri' is a required property"):
+        open_packet(packet_root, sources=[doc])
+
+
+def test_a_reader_opens_a_packet_whose_own_document_is_of_an_unknown_version(packet_root):
+    """The default is optional, so one this reader cannot read resolves nothing and stops nothing."""
+    _sources_document(packet_root / "sources.json", "escapewheel-sources-v9", raw={"uri": "s3://bucket/raw"})
+    packet = open_packet(packet_root)
+    assert dict(packet.location.sources) == {}
+    assert packet.table("core.intervals").num_rows == 2
+
+
+def test_a_reader_resolves_a_source_whose_name_has_a_space(packet_root, tmp_path):
+    """A source name is opaque (Part 04 §5.5), so any name an entry's `source` holds is valid."""
+    doc = _sources_document(tmp_path / "mirror.json", **{"raw nwb": {"uri": "s3://bucket/session.nwb"}})
+    packet = open_packet(packet_root, sources=[doc])
+    where = packet.location.resolve("processing/data", "raw nwb")
+    assert where.uri == "s3://bucket/session.nwb/processing/data"

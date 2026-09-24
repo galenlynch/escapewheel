@@ -409,7 +409,14 @@ Verification of external resources is optional and layered (Part 04 §5.3).
 <a id="ew-reaching-a-source" data-spec-anchor="canonical"></a>
 ## 11. Reaching a source
 
-An adapter reads one source and returns records, and a build assembles a packet from several (Part 05 §3.1). This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, and how an adapter declares itself. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes.
+An adapter reads one source and delivers what it read, and a build assembles a packet from several (Part 05 §3.1). An adapter delivers only where a build points it ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline)), and in this profile by these routes:
+
+- rows, returned to the build where it runs the adapter in process, or across the protocol a build reaches the adapter by (§11.1), with a `flight-v0.1` adapter serving them at `socket`;
+- a packet-owned array, written into `array_location` where it crosses a protocol, and in process either written there or handed to the build with its values (§11.3);
+- a `files-v0.1` delivery, written into `delivery_root` (§11.1), with the resource document for any referenced resource it delivers (§11.3); and
+- a report, written at the `report_path` the recipe names (Part 09 §5.8).
+
+This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, and how an adapter declares itself. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes.
 
 An **adapter** here is code that reads one source, whether the reference implementation ships it or a third party does. A clause binding an adapter binds one it does not ship identically.
 
@@ -420,13 +427,15 @@ A profile names a **group** for each way rows cross a process boundary, and the 
 
 | protocol | rows cross as |
 |---|---|
-| `files-v0.1` | Parquet the recipe names, one file per resource |
+| `files-v0.1` | Parquet in `delivery_root`, one file per resource, named by its resource identifier with the suffix `.parquet` |
 | `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
 | `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource |
 
 An adapter **released independently of a build** MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names. The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting such an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
 
 An adapter a build ships with need not declare one, and a build reaches it directly. The test is the release boundary rather than who wrote the code: an adapter inside a build's distribution is upgraded in the commit that changes a dependency, where one released apart is on the far side of a version boundary the build moves without asking, and the protocol is what keeps that move from being an outage. A build MAY serve an adapter it ships over any protocol of the group, which is how one becomes reachable out of process without declaring anything.
+
+A build reaching out of process an adapter that declares its protocols MUST reach it by one of them: the protocol the recipe entry names, or any the adapter declares where the entry names none. A build MUST refuse a recipe entry naming a protocol its adapter does not declare, naming the source and the protocol, before it opens any source. A build reaches an adapter it ships that declares no protocol, where it runs that adapter out of process, over the protocol the entry names or any of the group. A build runs an adapter in the writer's process only as Part 05 §3.9 says, and reaches it there by no protocol, whatever the adapter declares.
 
 A protocol carries its version in its name, semantically versioned from `v0.1`. A profile MUST NOT change what a named protocol means; a protocol that changes how rows cross is a new member of the group, and a build MUST NOT read support for one version as support for another. Retiring a protocol is a change to this profile and not a decision a build makes.
 
@@ -461,7 +470,7 @@ A build MUST refuse a recipe where a term the list carries cannot be filled, nam
 
 A build MUST pass a collection as records carrying its key as columns. A mapping's keys are a type the crossing does not keep: an integer key returns as a string, and a compound key does not cross at all.
 
-Some terms belong to a protocol rather than to an adapter. `flight-v0.1` requires `socket`, the address to serve on; `files-v0.1` requires `delivery_root`, the directory to write the delivery into; both `files-v0.1` and `stream-v0.1` require `report_path` where a report is expected (Part 09 §5.8). A build MUST supply whichever terms its adapter's protocol requires, and an adapter MUST NOT declare one — declaring the protocol is what asks for it.
+Some terms belong to a protocol rather than to an adapter. `flight-v0.1` requires `socket`, the address to serve on; `files-v0.1` requires `delivery_root`, the directory to write the delivery into; both `files-v0.1` and `stream-v0.1` require `report_path` where a report is expected (Part 09 §5.8). A build MUST supply the terms of the protocol it reaches an adapter by (§11.1), and no other protocol's; in process it supplies no protocol's terms. An adapter MUST NOT declare one, because the protocol it is reached by is what asks for it.
 
 What crosses is one JSON object keyed by the term. A build MUST write it to the command's standard input and MUST close that stream when it has, MUST NOT pass it as an argument, and MUST NOT add any argument to the command the recipe carries. An adapter MUST read its standard input to end of file and parse it as that object before it writes any rows, and a build supplies nothing else on that stream. An option appears under `options`, keyed by its name, so no option collides with a term.
 
@@ -479,18 +488,19 @@ An adapter MUST hand over identifiers as the names its source used and never as 
 A resource an adapter owns and has no rows for MUST arrive empty rather than not arriving. An empty delivery states that the source had nothing to say; a resource that does not arrive states that the run failed, and a build that cannot tell them apart cannot report either.
 
 An adapter's arrays MUST NOT cross as rows. A dense array crosses by identity and location. Where
-the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1)
-and the adapter MUST write the array there, so commit moves it by the rename Part 05 §6 already
-performs. Where the array is external (§8.2), a build supplies no location and the producer returns
-the URI its source already has.
+the packet will own the array, a build MUST supply a location under the staging area (Part 05 §1),
+and an adapter reached by a protocol MUST write the array there, so commit moves it by the rename
+Part 05 §6 already performs. An adapter a build runs in process MAY instead hand the build the
+array's values, and the build writes the array there. Where the array is external (§8.2), a build
+supplies no location and the producer returns the URI its source already has.
 
-**A packet-owned array crosses as the bytes themselves.** A build MUST supply `array_location`,
-one directory per source, since two sources may each deliver an asset of one name and a shared
-directory would make them one array. The adapter MUST write each array into it as Zarr v3 (§6.1),
-in a directory named by the catalog row's `resource_id` with the suffix `.zarr`. The build resolves
-the unique catalog-family declaration for that table-and-column pair, uses the row's
-`resource_id` as packet identity, and MUST NOT substitute an assigned row ID or source label. It
-MUST refuse a delivery where bytes and catalog rows do not bind one-to-one.
+**A packet-owned array crosses as the bytes themselves.** A build MUST supply `array_location`, one
+directory per source, since two sources may each deliver an asset of one name and a shared directory
+would make them one array. Whichever of the adapter and the build writes an array into it MUST write
+it as Zarr v3 (§6.1), in a directory named by the catalog row's `resource_id` with the suffix
+`.zarr`. The build resolves the unique catalog-family declaration for that table-and-column pair,
+uses the row's `resource_id` as packet identity, and MUST NOT substitute an assigned row ID or
+source label. It MUST refuse a delivery where bytes and catalog rows do not bind one-to-one.
 
 Nothing else crosses for such an array, and a build MUST NOT require an adapter to restate a Zarr
 version, codec pipeline, layout, or other self-describing physical fact. A build inspects reachable
@@ -498,15 +508,15 @@ output as needed; `size_bytes` and `sha256` come from the packet-owned bytes it 
 §8.1). An adapter delivering an array therefore writes bytes where one delivering rows performs no
 I/O at all, which is the cost of an array not being records.
 
-**A referenced resource crosses as a resource document.** An adapter that delivers one MUST
-deliver that document with it, under the reserved resource identifier `resources` (§11.4): a JSON
-object carrying `resources`, an array with one entry per such resource. Each entry is a manifest
-resource entry as [Part 04 §4.1](04_packet_catalog.md#ew-packet-resource-entry-fields) declares
-one, without the members a build supplies, so it MUST NOT carry `validation_state` or
-`derived_from`. A build preserves that binding, rejects one that does not resolve or admit the
-resource ID, and merges the entry into the manifest. Its shape is the delivery schema §1
-incorporates. A build MUST refuse a document that does not satisfy it before writing a manifest,
-naming what is wrong.
+**A referenced resource crosses as a resource document.** An adapter that delivers one MUST deliver
+that document with it, under the reserved resource identifier `resources` (§11.4), which under
+`files-v0.1` is the file `resources.json` in `delivery_root`: a JSON object carrying `resources`, an
+array with one entry per such resource. Each entry is a manifest resource entry as [Part 04
+§4.1](04_packet_catalog.md#ew-packet-resource-entry-fields) declares one, without the members a
+build supplies, so it MUST NOT carry `validation_state` or `derived_from`. A build preserves that
+binding, rejects one that does not resolve or admit the resource ID, and merges the entry into the
+manifest. Its shape is the delivery schema §1 incorporates. A build MUST refuse a document that does
+not satisfy it before writing a manifest, naming what is wrong.
 
 The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a manifest cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
 
@@ -527,15 +537,15 @@ Where rows travel on standard output they are bytes. An adapter MUST write the s
 
 A build reads what an adapter declares before it opens any source, and for a class it reads that by importing the adapter — which this section forbids requiring. An adapter a build cannot import MUST publish its declarations as a JSON document the recipe names, and a build MUST read that document before it launches anything.
 
-The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocol`, `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. Its shape is published as `registry/adapter.schema.json`.
+The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocols`, `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. This section incorporates `registry/adapter.schema.json`, whose `$id` is `https://escapewheel.org/schemas/adapter/0.1.0`, as the exact shape of the document. The schema owns member names, JSON types, required members, closure, and patterns; this prose owns what each member means and every refusal. The schema's descriptions are informative.
 
-A document carries `accepts` where the adapter names any, as an array of option names in the same form as `needs`, and a build MUST read a document without it as an adapter accepting no option beyond what it needs. A document written before `accepts` existed therefore accepts none, and a recipe setting an option for such an adapter is refused until its document declares one.
-
-A document carries `contributes` where the adapter supplies any resource only in part (Part 05 §3.4), as an array of dotted resource identifiers, and a build MUST read a document without it as declaring none.
+A document MUST carry all eight members, and each member listing names is an array. `protocols` names every protocol the adapter supports, at least one and none twice (§11.1); in any other member, an empty array declares none. `accepts` names options in the same form as `needs` (§11.2), and `contributes` names, as dotted resource identifiers, the resources the adapter supplies only in part (Part 05 §3.4).
 
 A build MUST treat a document and an importable declaration of the same facts as one declaration, and MUST NOT prefer either where both are present. An implementation shipping both MUST generate the document rather than maintain it.
 
-A build MUST refuse a declaration whose `protocol` names no protocol of a group this profile names, whose `produces` names a resource no loaded registry declares, whose `contributes` names a resource its `produces` does not, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option. A build MUST also refuse one whose `accepts` names a term, names an option its `needs` also names, or is not an array of names. None of those need the adapter opened or imported.
+A build MUST check an importable declaration as the document holding the same facts, so a class and a document are refused for the same defects under the same terms. An importable declaration of an adapter a build ships may omit `protocols`, as §11.1 lets it; one of an adapter released independently of a build may not, even where a recipe runs it in process.
+
+A build MUST refuse a declaration that fails the schema, naming where it fails, and one whose `protocols` names a protocol of no group this profile names, whose `produces` names a resource no loaded registry declares, whose `contributes` names a resource its `produces` does not, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option. A build MUST also refuse one whose `accepts` names a term, names an option its `needs` also names, or is not an array of names. None of those need the adapter opened or imported.
 
 `states` names the recipe fields a source can state and the values need the source read, so no static document carries them: they travel under `stated` in the run's report (Part 09 §5.8), keyed by the same `block.field` name. An adapter declaring a non-empty `states` MUST return them. A build MUST read a declared field absent from the report as unstated rather than as disagreeing, since a source stating nothing is a fact and not a mismatch (Part 05 §3.6).
 

@@ -11,7 +11,6 @@ import json
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
 
@@ -23,21 +22,6 @@ MANIFEST_FILENAME = "packet.json"
 
 #: The namespaces the core registry declares; every other namespace is its extension's own.
 CORE_NAMESPACES = frozenset({"core", "analysis"})
-
-
-def sources_schema() -> dict[str, Any]:
-    """Load the bundled JSON Schema for a source resolution document (Part 04 §5.5).
-
-    Vendored from `registry/`, because a wheel cannot read a file from another repository.
-
-    Returns
-    -------
-    dict
-        The parsed schema.
-    """
-    text = importlib_resources.files(__package__).joinpath("schemas/sources.schema.json").read_text()
-    parsed: dict[str, Any] = json.loads(text)
-    return parsed
 
 
 def _unique_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:

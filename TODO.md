@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R133 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R134 accepted. R42 and R73 withdrawn. No proposal or draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 348 columns, 111 references, 76 Tier 2 rules (2 advisory)
@@ -75,11 +75,6 @@ land after the specification release and ownership model identifies its proper o
   Git rather than the registry document, and prove that the migration preserves the released registry bytes or a defined
   canonical form. This is ordinary repository maintenance if the published contract is unchanged;
   any change to the published form returns through the revision process.
-- **Audit the remaining JSON Schemas before incorporating them.** Compare
-  `registry/manifest.schema.json`, `resources.schema.json`, `sources.schema.json`, and
-  `adapter.schema.json` with their owning prose, examples, and fixtures. Incorporate each only
-  after conflicts are resolved; file location or successful validation alone does not make a
-  schema normative.
 
 ## 3. No template scaffolds an extension project
 
@@ -399,10 +394,10 @@ footers, hands back `pq.ParquetFile(path).iter_batches(...)` per resource, and r
 declared file is missing — which is the protocol's definition, Part 05 §4.1's discovery, and
 Part 05 §4.4's completeness test respectively. It is the one adapter needing an exception to every
 adapter rule: `PRODUCES` is empty with a comment saying what it supplies "is not a property of the
-adapter at all", `STATES` is empty, and `records()` returns nothing. So it declares no protocol — a
-build must support `files-v0.1` natively (Part 03 §11.1), and once it does, a source entry naming
-`{resource: path}` with an optional command **is** a delivery and the class goes away. `kind =
-"tables"` can stay as the recipe's spelling for one.
+adapter at all", `STATES` is empty, and `records()` returns nothing. So it declares no protocol.
+`files-v0.1` reads one Parquet file per resource, named by its identifier, from the `delivery_root` a
+build supplies empty (Part 03 §11.1), so the class goes away once its command writes there rather
+than to paths the recipe names. `kind = "tables"` can stay as the recipe's spelling for one.
 
 It delivers in process — the 2026-09-14 rebuild committed all six of its resources, including
 `aind_unit_qc.metrics` at 4,505 rows — so the `extract_qc.py` defect recorded here previously, which

@@ -42,8 +42,8 @@ from .errors import (
     UnresolvedSource,
     UnsupportedCodecError,
 )
-from .location import Location, read_sources
-from .manifest import Manifest, RegistryBinding, Resource, sources_schema
+from .location import Location, check_sources, read_sources, sources_schema
+from .manifest import Manifest, RegistryBinding, Resource
 from .observation import (
     StaleSupport,
     clock_windows,
@@ -101,6 +101,7 @@ __all__ = [
     "aligned_spikes",
     "ambiguities",
     "assigned_spikes",
+    "check_sources",
     "clock_windows",
     "declared",
     "electrode_at",

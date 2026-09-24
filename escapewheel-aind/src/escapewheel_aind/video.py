@@ -51,6 +51,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 import pyarrow as pa
+from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.sources.compensations import Compensates
 from escapewheel_writer.sources.store import source_root
 from escapewheel_writer.writer import ExternalMedia
@@ -90,6 +91,10 @@ class VideoSource(Compensates):
         Absolute base the videos are addressed under. Without one the packet records a `file://`
         URI, which resolves only on the machine that built it.
     """
+
+    #: Part 03 §11.1: released apart from the writer, so it declares its protocols. `escapewheel
+    #: deliver` serves every one; the first is what a build reaches it by when a recipe names none.
+    PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
     PRODUCES = frozenset({"core.media_assets", "core.media_frames"})

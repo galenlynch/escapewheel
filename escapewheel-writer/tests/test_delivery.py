@@ -57,14 +57,14 @@ def supplied(nwb, harp):
 def test_every_shipped_adapter_generates_a_valid_document(kind):
     """Generated rather than maintained (Part 03 §11.5), so this is what an author starts from."""
     jsonschema = pytest.importorskip("jsonschema")
-    document = declaration.of(ADAPTERS[kind], kind, "stream-v0.1")
+    document = declaration.of(ADAPTERS[kind], kind, ["stream-v0.1"])
     assert not list(jsonschema.Draft202012Validator(declaration.schema()).iter_errors(document))
     assert document["kind"] == kind
 
 
 def test_a_generated_document_carries_what_the_adapter_accepts():
     """An option with a default is declarable only here, so `sample` crosses as the adapter's."""
-    document = declaration.of(ADAPTERS["sorter"], "sorter", "stream-v0.1")
+    document = declaration.of(ADAPTERS["sorter"], "sorter", ["stream-v0.1"])
     assert "sample" in document["accepts"]
     assert "sample" not in document["needs"]
 
@@ -97,7 +97,7 @@ def test_ownership_from_the_documents_is_ownership_from_the_classes():
     from_document = {
         resource: kind
         for kind in sorted(ADAPTERS)
-        for resource in declaration.of(ADAPTERS[kind], kind, "stream-v0.1")["produces"]
+        for resource in declaration.of(ADAPTERS[kind], kind, ["stream-v0.1"])["produces"]
     }
     from_class = {resource: kind for kind in sorted(ADAPTERS) for resource in sorted(ADAPTERS[kind].PRODUCES)}
     assert from_document == from_class
@@ -105,15 +105,48 @@ def test_ownership_from_the_documents_is_ownership_from_the_classes():
 
 def test_a_document_round_trips_through_a_file(tmp_path):
     written = tmp_path / "nwb.json"
-    document = declaration.of(ADAPTERS["nwb"], "nwb", "flight-v0.1")
+    document = declaration.of(ADAPTERS["nwb"], "nwb", ["flight-v0.1"])
     written.write_text(json.dumps(document))
     assert declaration.load(written) == document
+
+
+def test_a_shipped_class_generates_no_protocol_unless_given_one():
+    """Only a shipped adapter may state none (Part 03 §11.1), and its document then fails the schema."""
+    bare = declaration.of(ADAPTERS["nwb"], "nwb")
+    assert "protocols" not in bare
+    assert declaration.shape_problems(bare) == ["declaration: 'protocols' is a required property"]
+    assert declaration.shape_problems(bare, shipped=True) == []
+
+
+@pytest.mark.parametrize(
+    "protocols", [[], ["flight-v0.1"], ["files-v0.1", "flight-v0.1"]], ids=["default", "one", "several"]
+)
+def test_declare_writes_a_document_the_schema_accepts(tmp_path, capsys, protocols):
+    from escapewheel_reader.scripts.cli import main
+
+    out = tmp_path / "nwb.json"
+    flags = [flag for protocol in protocols for flag in ("--protocol", protocol)]
+    assert main(["declare", "nwb", *flags, "--out", str(out)]) == 0
+    document = json.loads(out.read_text())
+    assert declaration.shape_problems(document) == []
+    assert document["protocols"] == (protocols or ["stream-v0.1"])
+
+
+def test_declare_refuses_a_protocol_for_a_class_stating_its_own(monkeypatch, capsys):
+    from escapewheel_reader.scripts.cli import main
+
+    from escapewheel_writer import sources
+
+    stating = type("Stating", (NWBSource,), {"PROTOCOLS": ("files-v0.1",)})
+    monkeypatch.setattr(sources, "discovered", lambda: {"stating": stating})
+    assert main(["declare", "stating", "--protocol", "flight-v0.1"]) == 2
+    assert "declares its own protocols" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
     ("broken", "expected"),
     [
-        ({"protocol": "carrier-pigeon-v1"}, "in no group"),
+        ({"protocols": ["carrier-pigeon-v1"]}, "in no group"),
         ({"produces": ["core.tirals"]}, "no loaded registry declares"),
         ({"states": ["subject.sbuject_id"]}, "is no column of"),
         ({"needs": ["open_store"]}, "neither a term nor an option"),
@@ -125,7 +158,7 @@ def test_a_document_round_trips_through_a_file(tmp_path):
 )
 def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected, registry):
     """Part 03 §11.5's checks, each firing on its own and naming what is wrong."""
-    sound = declaration.of(ADAPTERS["nwb"], "nwb", "stream-v0.1")
+    sound = declaration.of(ADAPTERS["nwb"], "nwb", ["stream-v0.1"])
     found = declaration.refusals(
         {**sound, **broken},
         tables={
@@ -140,7 +173,7 @@ def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected,
 
 
 def test_a_sound_declaration_is_refused_for_nothing(registry):
-    sound = declaration.of(ADAPTERS["nwb"], "nwb", "stream-v0.1")
+    sound = declaration.of(ADAPTERS["nwb"], "nwb", ["stream-v0.1"])
     tables = {
         name: resource["table"] for name, resource in registry["resources"].items() if resource["kind"] == "table"
     }
@@ -363,7 +396,7 @@ def test_an_array_with_nowhere_to_go_is_refused_rather_than_half_delivered(tmp_p
 
 
 def test_an_array_crosses_as_the_bytes_the_adapter_wrote(tmp_path):
-    """The adapter writes it where it was told, and a build takes the name as the identity."""
+    """The adapter writes it where it was told, named by its resource, which is all a build reads."""
     import numpy as np
 
     from escapewheel_writer.writer import StagedArray
@@ -386,12 +419,13 @@ def test_an_array_crosses_as_the_bytes_the_adapter_wrote(tmp_path):
     location = tmp_path / "arrays"
     written = io.BytesIO()
     delivery.serve(Stages(), {"array_location": str(location)}, "stream-v0.1", out=written)
-    assert (location / "waveform_mean.zarr/zarr.json").is_file()
+    assert (location / "core.waveform_mean.zarr/zarr.json").is_file()
+    assert sorted(p.name for p in location.iterdir()) == ["core.waveform_mean.zarr"]
 
     got = delivery.Delivered("waveforms", {}, arrays=location)
     (staged,) = got.staged_arrays()
-    assert staged.array_asset_id == "waveform_mean"
-    assert staged.values is None and staged.written == location / "waveform_mean.zarr"
+    assert (staged.resource_id, staged.declaration_id) == ("core.waveform_mean", "")
+    assert staged.values is None and staged.written == location / "core.waveform_mean.zarr"
 
 
 def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp_path, registry):
@@ -460,6 +494,44 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
     assert "codecs" not in entry
     assert entry["size_bytes"] > 0 and entry["sha256"]
     assert not (delivered / "waveform_mean.zarr").exists(), "staging moved it rather than copying"
+
+
+def _array_writer(registry, rows):
+    from escapewheel_writer.writer import PacketWriter
+
+    writer = PacketWriter(registry, packet_id="s001", session="s001")
+    writer.add("core.array_assets", rows)
+    return writer
+
+
+def test_a_delivered_array_binds_to_the_catalog_row_carrying_its_name(registry, tmp_path):
+    """The directory's name is the row's `resource_id`, and the row supplies the rest (Part 03 §11.3)."""
+    from escapewheel_writer.writer import StagedArray
+
+    writer = _array_writer(
+        registry, [{"session_id": "s001", "array_asset_id": "mean", "resource_id": "core.waveform_mean"}]
+    )
+    delivered = StagedArray(
+        values=None,
+        resource_id="core.waveform_mean",
+        declaration_id="",
+        array_asset_id="",
+        written=tmp_path / "core.waveform_mean.zarr",
+    )
+    writer.add_array("core.waveform_mean", delivered)
+    bound = writer._staged_arrays["core.waveform_mean"]
+    assert (bound.declaration_id, bound.array_asset_id) == ("core.array_asset_instances", "mean")
+
+
+def test_a_delivered_array_no_catalog_row_names_is_refused(registry, tmp_path):
+    from escapewheel_writer.writer import StagedArray
+
+    writer = _array_writer(registry, [{"session_id": "s001", "array_asset_id": "mean"}])
+    delivered = StagedArray(
+        values=None, resource_id="core.waveform_mean", declaration_id="", array_asset_id="", written=tmp_path
+    )
+    with pytest.raises(ValueError, match="binds 0 catalog rows"):
+        writer.add_array("core.waveform_mean", delivered)
 
 
 def test_an_unknown_kind_names_what_this_build_ships():
@@ -535,6 +607,68 @@ def test_a_build_reaches_a_delivered_source_through_the_same_construction(tmp_pa
     assert all(built.held(resource) for resource in built.tables)
     assert built.batches() == {}
     assert sorted(built.records()) == sorted(NWBSource.PRODUCES)
+
+
+def test_a_shipped_adapter_whose_entry_names_no_protocol_is_served_over_one(tmp_path, nwb, harp):
+    """Part 03 §11.1: a delivery table takes an adapter this build ships out of process."""
+    from escapewheel_writer.session import _build_source
+
+    said = []
+    context = _context(reference=harp, workspace=tmp_path / "work", say=said.append)
+    built = _build_source(_spec(tmp_path, nwb, protocol=""), None, context)
+    assert isinstance(built, delivery.Delivered)
+    assert any("over stream-v0.1" in line for line in said), said
+
+
+def test_a_rerun_reads_nothing_an_earlier_run_left(tmp_path, supplied):
+    """Part 05 §2: a build supplies each location empty, so a leftover cannot pass for a delivery."""
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    leftover = tmp_path / "work" / "delivery"
+    leftover.mkdir(parents=True)
+    pq.write_table(pa.table({"trial_id": [1]}), leftover / "core.trials.parquet")
+    got = delivery.fetch(
+        "quiet",
+        [sys.executable, "-c", "import sys; sys.stdin.read()"],
+        supplied,
+        protocol="files-v0.1",
+        wanted=[],
+        workspace=tmp_path / "work",
+    )
+    assert got.tables == {}
+
+
+def test_a_file_written_outside_the_delivery_root_is_not_a_delivery(tmp_path, supplied):
+    """Part 05 §2: a build reads a delivery from nowhere but the locations it supplied."""
+    script = tmp_path / "astray.py"
+    script.write_text(
+        "import sys, pyarrow as pa, pyarrow.parquet as pq\nsys.stdin.read()\n"
+        f"pq.write_table(pa.table({{'trial_id': [1]}}), {str(tmp_path / 'core.trials.parquet')!r})\n"
+    )
+    with pytest.raises(SourceDefect, match="never arrived: core.trials"):
+        delivery.fetch(
+            "astray",
+            [sys.executable, str(script)],
+            supplied,
+            protocol="files-v0.1",
+            wanted=["core.trials"],
+            workspace=tmp_path / "work",
+        )
+
+
+def test_an_array_location_is_under_staging_and_supplied_empty(tmp_path):
+    """So an array moves into the packet by rename (Part 03 §11.3), and no leftover binds."""
+    from escapewheel_writer.recipe import SourceSpec
+    from escapewheel_writer.session import _terms
+
+    context = _context(staging=tmp_path / "packet" / "staging")
+    stale = context.staging / "deliveries" / "waveforms" / "core.waveform_mean.zarr"
+    stale.mkdir(parents=True)
+    spec = SourceSpec(kind="waveforms", root=tmp_path, owns=())
+    location = _terms(spec, None, context, ["array_location"])["array_location"]
+    assert location == str(context.staging / "deliveries" / "waveforms")
+    assert not stale.exists() and not stale.parent.exists()
 
 
 def _recipe_declaring(tmp_path, spec, *, subject_id):

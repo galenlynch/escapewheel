@@ -81,11 +81,12 @@ begins; `--registry-result PATH` writes the portable core result for automation.
 
 Part 05 is explicit: *"do not combine source parsing, normalization, validation, and writing into
 one opaque step."* The modules are that decomposition, and the rule that keeps it honest is
-that **an adapter never writes a file** — its return type is records, not a path.
+that **an adapter writes only where the build points it** — its return type is records, not a
+path, and what crosses a process boundary as files lands in a location the build supplies empty.
 
 | Module | Job |
 |---|---|
-| `sources/` | One adapter per source. Returns records; touches no filesystem. |
+| `sources/` | One adapter per source. Returns records; writes only where the build points it. |
 | `recipe` | Parse and check the recipe. Opens nothing. |
 | `session` | Order the sources, run them, keep what each owns. |
 | `writer` | Stage, validate, commit. |

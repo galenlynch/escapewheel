@@ -1044,6 +1044,9 @@ def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | N
     anything. A missing default is not an error -- a packet naming no source needs none, and an
     unresolved one is a fact rather than a defect (Part 04 §5.5).
 
+    A document the caller names is refused if :func:`read_sources` refuses it; the packet's own
+    default then resolves nothing instead, so a broken optional file cannot stop a packet opening.
+
     Parameters
     ----------
     root : Location
@@ -1055,6 +1058,11 @@ def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | N
     -------
     dict
         Source name to URI, earlier entries winning.
+
+    Raises
+    ------
+    ManifestError
+        If a supplied document is unreadable, of an unknown version, or fails the schema.
     """
     found: dict[str, str] = {}
     for one in supplied or ():
@@ -1062,8 +1070,8 @@ def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | N
         for name, uri in located.items():
             found.setdefault(name, str(uri))
     with contextlib.suppress(Exception):
-        # The default is advisory: absent is the common case, and unreadable is the caller's
-        # problem only once something actually asks for a source it would have located.
+        # Absent is the common case, and a defective one is the caller's problem only once
+        # something asks for a source it would have located, which then surfaces as unresolved.
         for name, uri in read_sources(root.join(SOURCES_FILENAME)).items():
             found.setdefault(name, uri)
     return found
@@ -1089,7 +1097,8 @@ def open_packet(
         editing bytes Part 04 §5.1 makes immutable. Longest prefix wins.
     sources : iterable, optional
         Source resolution documents (Part 04 §5.5), as mappings or as paths to read. Consulted
-        before the packet root's own `sources.json`, in the order given.
+        before the packet root's own `sources.json`, in the order given; a path whose document
+        fails the schema or declares an unknown version is refused.
 
     Returns
     -------

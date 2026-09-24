@@ -17,6 +17,7 @@ is refused with what it would take, rather than delivering half of itself.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import threading
@@ -97,8 +98,8 @@ def written_arrays(source: Any, location: str | None) -> int:
     """Write every array this source stages into the location a build supplied (Part 03 §11.3).
 
     The adapter writes, because an array does not cross as rows and a reference to one a build
-    cannot open is no use to it. Each goes in a directory named by its `array_asset_id`, which is
-    what a build takes the asset's identity from.
+    cannot open is no use to it. Each goes in a directory named by its catalog row's `resource_id`,
+    which is all a build binds it by.
     """
     staged = list(getattr(source, "staged_arrays", lambda: ())())
     if not staged:
@@ -113,21 +114,7 @@ def written_arrays(source: Any, location: str | None) -> int:
     root = Path(location)
     root.mkdir(parents=True, exist_ok=True)
     for array in staged:
-        write_zarr(root / f"{array.array_asset_id}.zarr", array)
-    (root / "_resources.json").write_text(
-        json.dumps(
-            [
-                {
-                    "array_asset_id": array.array_asset_id,
-                    "resource_id": array.resource_id,
-                    "declaration_id": array.declaration_id,
-                }
-                for array in staged
-            ],
-            indent=2,
-        )
-        + "\n"
-    )
+        write_zarr(root / f"{array.resource_id}.zarr", array)
     return len(staged)
 
 
@@ -400,25 +387,17 @@ class Delivered:
         """Every array this source wrote, as a reference to what is on disk (Part 03 §11.3).
 
         The bytes are written and their layout is the array's own, so nothing here carries values
-        or a layout to apply: staging moves the directory and reads the manifest entry off it.
+        or a layout to apply: staging moves the directory and reads the manifest entry off it. The
+        directory's name is the only binding, which the writer resolves against the catalog rows.
         """
         from .writer import StagedArray
 
         if self.arrays is None or not self.arrays.is_dir():
             return []
-        metadata = self.arrays / "_resources.json"
-        if not metadata.is_file():
-            raise SourceDefect("delivered arrays have no explicit resource/declaration binding")
-        entries = json.loads(metadata.read_text())
         return [
-            StagedArray(
-                values=None,
-                resource_id=str(entry["resource_id"]),
-                declaration_id=str(entry["declaration_id"]),
-                array_asset_id=str(entry["array_asset_id"]),
-                written=self.arrays / f"{entry['array_asset_id']}.zarr",
-            )
-            for entry in entries
+            StagedArray(values=None, resource_id=path.stem, declaration_id="", array_asset_id="", written=path)
+            for path in sorted(self.arrays.glob("*.zarr"))
+            if path.is_dir()
         ]
 
     def external_arrays(self) -> dict[str, Any]:
@@ -511,8 +490,8 @@ def fetch(
         because a parse is a quoting convention no recipe declared (Part 05 §3.7).
     supplied : Mapping
         The terms the adapter declared, which cross as one JSON object on the command's standard
-        input; the protocol's own terms are added here, since declaring the protocol is what asks
-        for them.
+        input; the terms of the protocol a build reaches the adapter by are added here (Part 03
+        §11.2).
     protocol : str
         Which of Part 03 §11.1's protocols to read.
     wanted : sequence of str
@@ -542,7 +521,15 @@ def fetch(
     if report_path is not None:
         # A file at a path the recipe names is present after any run that ever wrote one.
         report_path.unlink(missing_ok=True)
-    supplied = {**supplied, **_protocol_supplies(protocol, workspace, report_path)}
+    locations = _protocol_supplies(protocol, workspace, report_path)
+    for term in PROTOCOL_TERMS[protocol]:
+        # Supplied empty (Part 05 §2): a build reads a delivery by name, so a file an earlier run
+        # left would pass for this one's.
+        if (leftover := Path(locations[term])).is_dir():
+            shutil.rmtree(leftover)
+        else:
+            leftover.unlink(missing_ok=True)
+    supplied = {**supplied, **locations}
     # On standard input, not in the argument list: an argument has a size no profile can raise,
     # and one term carrying a record per unit passed it on a real session (Part 03 §11.2).
     crossing = json.dumps(supplied, default=str).encode()

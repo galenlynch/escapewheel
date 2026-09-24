@@ -148,6 +148,12 @@ def contributes(kind: str) -> frozenset[str]:
     return frozenset(getattr(adapter, "CONTRIBUTES", ()) if adapter is not None else ())
 
 
+def protocols(kind: str) -> tuple[str, ...]:
+    """Return the protocols an adapter of this kind declares, empty for one this build ships."""
+    adapter = adapter_for(kind)
+    return tuple(getattr(adapter, "PROTOCOLS", ()) if adapter is not None else ())
+
+
 def produces(kind: str) -> frozenset[str]:
     """Return what an adapter of this kind can supply (Part 05 §3.4).
 
@@ -306,12 +312,11 @@ class DeliverySpec:
         The argument list to run, in the source's own root. A list rather than a string because a
         parse is a quoting convention no recipe declared (Part 05 §3.7).
     protocol : str
-        Which of Part 03 §11.1's protocols the rows cross by. The declaration's where there is
-        one, since the adapter is what knows; the recipe's where a build serves an adapter it
-        ships, which declares none.
+        The protocol the recipe names, empty where it names none; :func:`reached_by` settles the
+        one a build uses (Part 03 §11.1).
     declaration : Mapping, optional
         The parsed declaration document, where the recipe names one. Absent for a kind this build
-        can import, whose class declares the same four facts.
+        can import, whose class declares the same facts.
     report_path : Path, optional
         Where the adapter writes its report (Part 09 §5.8). A build removes it before the run.
     """
@@ -399,7 +404,7 @@ def _delivery(block: Mapping[str, Any] | None, resolve: Any) -> DeliverySpec | N
             document = declared_document.load(resolve(str(named)))
         except ValueError as exc:
             document = {"unreadable": str(exc)}
-    protocol = str(block.get("protocol") or (document or {}).get("protocol") or "")
+    protocol = str(block.get("protocol") or "")
     command = block.get("command", ())
     report = block.get("report_path")
     return DeliverySpec(
@@ -422,20 +427,31 @@ def _importable(kind: str) -> bool:
     return adapter_for(kind) is not None
 
 
+def reached_by(spec: SourceSpec) -> str | None:
+    """Return the protocol a build reaches this source by, or None where it runs in process.
+
+    The recipe's where it names one, else the adapter's first declared (Part 03 §11.1). An adapter
+    this build ships declares none, and is served over `stream-v0.1`, which needs no term beyond
+    what the adapter declares.
+    """
+    from .declaration import STREAM
+
+    if spec.delivery is None or spec.in_process:
+        return None
+    return spec.delivery.protocol or next(iter(declared(spec)["protocols"]), STREAM)
+
+
 def declared(spec: SourceSpec) -> dict[str, Any]:
-    """Return one source's six declarations, from the document the recipe names or the class.
+    """Return one source's declarations, from the document the recipe names or the class.
 
     A document and an importable class declaring the same facts are one declaration, and a build
     prefers neither (Part 03 §11.5) -- so everything reading a declaration reads it through here,
     and nothing downstream has to know which form this source took.
-
-    A document written before `accepts` existed carries none, which reads as an adapter accepting
-    no option beyond what it needs (Part 03 §11.5), and one without `contributes` supplies no
-    resource in part.
     """
     document = spec.delivery.declaration if spec.delivery is not None else None
     if document is not None and "unreadable" not in document:
         return {
+            "protocols": tuple(document.get("protocols", ())),
             "produces": frozenset(document.get("produces", ())),
             "contributes": frozenset(document.get("contributes", ())),
             "states": tuple(document.get("states", ())),
@@ -445,6 +461,7 @@ def declared(spec: SourceSpec) -> dict[str, Any]:
             "declares_states": "states" in document,
         }
     return {
+        "protocols": protocols(spec.kind),
         "produces": produces(spec.kind),
         "contributes": contributes(spec.kind),
         "states": tuple(sorted(states(spec.kind))),
@@ -1053,8 +1070,8 @@ class Recipe:
 
         There are three: a `[source.delivery]` block, which carries the command that runs the
         adapter out of process; `in_process`, which is the recipe author saying this machine
-        installs the adapter beside the writer; and being an adapter this build ships, for which
-        in process is the only route and a recipe naming one declares nothing.
+        installs the adapter beside the writer; and being an adapter this build ships, which runs
+        in process unless its entry gives it a delivery, so a recipe need say nothing.
 
         What is left over is a kind another distribution registered and the recipe says nothing
         about. An adapter released independently of a build must declare a protocol (Part 03
@@ -1074,45 +1091,68 @@ class Recipe:
     def _declaration_problems(self, tables: Mapping[str, Any]) -> list[str]:
         """Everything wrong with a source's declaration, knowable with nothing opened.
 
-        Part 03 §11.5's four checks, plus what the recipe itself has to get right for a build to
-        reach the adapter at all. Each fires on its own and names what is wrong, and none of them
-        needs the adapter imported -- which is the point of a declaration a build can read.
+        Part 03 §11.5's checks for every source, whichever route it takes, plus what the recipe has
+        to get right for a build to reach the adapter at all. A class is checked as the document it
+        would generate, so the two forms are refused for the same defects. Each check fires on its
+        own and names what is wrong, and none needs the adapter imported.
         """
         from . import declaration as document
 
         problems = []
         for spec in self.sources:
             delivery = spec.delivery
-            if delivery is None:
+            if delivery is not None:
+                if spec.in_process:
+                    problems.append(
+                        f"{spec.kind} declares both a delivery and in_process; a source is reached one way or "
+                        "the other (Part 05 §3.9)"
+                    )
+                if not delivery.command:
+                    problems.append(f"{spec.kind} declares a delivery and no command to run it with")
+                if delivery.declaration is not None and "unreadable" in delivery.declaration:
+                    problems.append(f"{spec.kind}: {delivery.declaration['unreadable']}")
+                    continue
+            if (delivery is None or delivery.declaration is None) and not _importable(spec.kind):
+                if delivery is not None:
+                    problems.append(
+                        f"{spec.kind} names no declaration and this build cannot import it, so nothing says "
+                        "what it produces"
+                    )
                 continue
-            if spec.in_process:
-                problems.append(
-                    f"{spec.kind} declares both a delivery and in_process; a source is reached one way or "
-                    "the other (Part 05 §3.9)"
-                )
-            if not delivery.command:
-                problems.append(f"{spec.kind} declares a delivery and no command to run it with")
-            if delivery.declaration is not None and "unreadable" in delivery.declaration:
-                problems.append(f"{spec.kind}: {delivery.declaration['unreadable']}")
-                continue
-            if delivery.declaration is None and not _importable(spec.kind):
-                problems.append(
-                    f"{spec.kind} names no declaration and this build cannot import it, so nothing says "
-                    "what it produces"
-                )
             asked = declared(spec)
             stated = {
-                "protocol": delivery.protocol,
+                "kind": spec.kind,
+                **({"protocols": list(asked["protocols"])} if asked["protocols"] else {}),
                 "produces": sorted(asked["produces"]),
                 "contributes": sorted(asked["contributes"]),
                 "states": list(asked["states"]),
                 "needs": list(asked["needs"]),
                 "accepts": list(asked["accepts"]),
+                "consumes": list(asked["consumes"]),
             }
+            if delivery is None or delivery.declaration is None:
+                # A document was shape-checked as it was read; a class is checked here, as one.
+                shipped = _builtin(spec.kind)
+                if not shipped and not asked["protocols"]:
+                    problems.append(
+                        f"{spec.kind} declares no protocol; an adapter released independently of a build "
+                        f"declares at least one of {', '.join(document.PROTOCOLS)} (Part 03 §11.1)"
+                    )
+                problems += [
+                    f"{spec.kind} declaration: {problem}" for problem in document.shape_problems(stated, shipped=True)
+                ]
             problems += [
                 f"{spec.kind} {refusal}"
                 for refusal in document.refusals(stated, tables=tables, options=spec.options, terms=TERMS)
             ]
+            named = delivery.protocol if delivery is not None else ""
+            if named and asked["protocols"] and named not in asked["protocols"]:
+                problems.append(
+                    f"{spec.kind} names protocol {named!r}, which its adapter does not declare "
+                    f"({', '.join(asked['protocols'])})"
+                )
+            elif named and named not in document.PROTOCOLS:
+                problems.append(f"{spec.kind} names protocol {named!r}, which is in no group this profile names")
         return problems
 
     def _option_problems(self) -> list[str]:

@@ -6,14 +6,18 @@
   "type": "object",
   "required": [
     "kind",
-    "protocol",
+    "protocols",
     "produces",
-    "needs"
+    "contributes",
+    "states",
+    "needs",
+    "accepts",
+    "consumes"
   ],
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "This document's meta-schema, by $id. Identity rather than a fetch instruction: a build MUST NOT dereference it and MUST NOT require it (Part 04 §5.4)."
+      "description": "This document's meta-schema, by $id: identity rather than a fetch instruction, so a build neither dereferences nor requires it."
     },
     "kind": {
       "type": "string",
@@ -21,10 +25,15 @@
       "maxLength": 64,
       "description": "The name a recipe's source entry uses for this adapter."
     },
-    "protocol": {
-      "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9-]*-v[0-9]+\\.[0-9]+$",
-      "description": "The protocol this adapter's rows cross by. Membership of a group is the profile's to settle and a build's to refuse (Part 03 §11.1), so the pattern here fixes the shape and not the vocabulary."
+    "protocols": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*-v[0-9]+\\.[0-9]+$"
+      },
+      "description": "Every protocol this adapter supports, any of which a build may reach it by (Part 03 §11.1). Membership of a group is the profile's to settle and a build's to refuse, so the pattern here fixes the shape and not the vocabulary."
     },
     "produces": {
       "type": "array",
@@ -44,7 +53,7 @@
         "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$",
         "description": "A dotted resource ID this adapter also names under `produces`."
       },
-      "description": "The resources whose rows this adapter supplies only in part, such as the clocks of its own streams, which a source entry without `owns` contributes rather than owns (Part 05 §3.4). A document without this key declares none, and a build refuses one naming a resource `produces` does not (Part 03 §11.5)."
+      "description": "The resources whose rows this adapter supplies only in part, such as the clocks of its own streams, which a source entry without `owns` contributes rather than owns (Part 05 §3.4). A build refuses one naming a resource `produces` does not (Part 03 §11.5)."
     },
     "needs": {
       "type": "array",
@@ -54,7 +63,7 @@
         "pattern": "^[a-z0-9][a-z0-9_]*$",
         "maxLength": 64
       },
-      "description": "Every value a build supplies this adapter, each resolving against Part 03 §11.2's terms first and the recipe's options second. A term a protocol requires is not declared here: declaring the protocol is what asks for it."
+      "description": "Every value a build supplies this adapter, each resolving against Part 03 §11.2's terms first and the recipe's options second. A term a protocol requires is not declared here: the protocol a build reaches the adapter by is what asks for it."
     },
     "accepts": {
       "type": "array",
@@ -64,7 +73,7 @@
         "pattern": "^[a-z0-9][a-z0-9_]*$",
         "maxLength": 64
       },
-      "description": "The options this adapter reads and can be constructed without, which a recipe may leave unset (Part 03 §11.2). A name here must be an option and not a term, and must not also appear in `needs`; a document without this key accepts no option beyond what it needs."
+      "description": "The options this adapter reads and can be constructed without, which a recipe may leave unset (Part 03 §11.2). A name here must be an option and not a term, and must not also appear in `needs`."
     },
     "states": {
       "type": "array",

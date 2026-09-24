@@ -1348,8 +1348,8 @@ where = [
 
 [clause."R80 §2.2"]
 disposition = "applied"
-where = [{ part = "04", section = "5.5" }]
-note = "the document's shape is published as registry/sources.schema.json, which the spec names rather than restates"
+where = [{ part = "04", anchor = "ew-source-resolution" }]
+note = "the document's shape is registry/sources.schema.json, which Part 04 §5.5 incorporates, and a reader MUST NOT resolve through a document of a version it does not know (R134 §3.3)"
 
 [clause."R80 §2.3"]
 disposition = "applied"
@@ -2518,10 +2518,10 @@ note = "35 resources produced, 8 contested, 2 needing arbitration, which no adap
 [clause."R115 §3.1"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.2", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
+  { part = "03", anchor = "ew-build-supplied-values", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
   { part = "05", anchor = "ew-source-declarations", note = "the four facts an adapter declares, one of them the values a build supplies" },
 ]
-note = "the supply contract; Part 07 §4 keeps the reference spelling. One sentence of it is gone: R116 §3.1 replaced the channel the object crosses by, and the rest of the clause stands"
+note = "the supply contract; Part 07 §4 keeps the reference spelling. R116 §3.1 replaced the channel the object crosses by, and R134 §3.5 replaced declaring a protocol as what asks for its terms with the protocol a build reaches the adapter by; the rest of the clause stands"
 
 [clause."R115 §3.2"]
 disposition = "applied"
@@ -2530,9 +2530,10 @@ where = [{ part = "05", anchor = "ew-recipe-ownership", note = "a preference is 
 [clause."R115 §3.3"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.1", note = "the group, its three protocols, the asymmetry, and versioning by name" },
+  { part = "03", anchor = "ew-protocol-groups", note = "the group, its three protocols, the asymmetry, and versioning by name" },
   { part = "09", section = "5.7", note = "an extension may deliver over any protocol of the group" },
 ]
+note = "R134 §3.5 adds the build's choice among the protocols an adapter declares, and R134 §3.4 replaces files-v0.1 as Parquet the recipe names with Parquet under delivery_root named by resource identifier"
 
 [clause."R115 §3.4"]
 disposition = "applied"
@@ -2540,7 +2541,8 @@ where = [{ part = "05", section = "3.7", note = "a command is carried as a list 
 
 [clause."R115 §3.5"]
 disposition = "applied"
-where = [{ part = "05", section = "3.9", note = "the in-process opt-in is the recipe author's, and a build that cannot import refuses" }]
+where = [{ part = "05", anchor = "ew-in-process-opt-in", note = "the in-process opt-in is the recipe author's, and a build that cannot import refuses" }]
+note = "R134 §3.5 replaces in process as the only route of an adapter a build ships: it runs in process unless its recipe entry gives it a delivery"
 
 [clause."R115 §3.6"]
 disposition = "applied"
@@ -2623,13 +2625,14 @@ note = "every field of a packet-owned array's manifest entry is in the array or 
 
 [clause."R117 §2.3"]
 disposition = "rationale"
-note = "a row carries a referenced resource's location and cannot carry what the producer learned by opening the store, which is the catalog's and not a table's"
+note = "a row carries a referenced resource's location and cannot carry what the producer learned by opening the store, which is the catalog's and not a table's; R134 §3.1 replaces the protocol key with protocols"
 
 [clause."R117 §3.1"]
 disposition = "applied"
 where = [
   { part = "03", section = "11.3", note = "array_location per source, the name that is the identifier, the rows that must agree with it, and the manifest entry read off the array" },
 ]
+note = "R134 §3.4 replaces the rule that no other adapter writes anything with delivery only where a build points it; the rule for arrays stands"
 
 [clause."R117 §3.2"]
 disposition = "applied"
@@ -2752,7 +2755,7 @@ note = "a build MUST NOT supply an option the adapter names in neither list, inc
 [clause."R119 §3.4"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }]
-note = "the declaration document carries accepts beside needs, a build MUST read a document without it as an adapter accepting no option, and MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four"
+note = "the declaration document carries accepts beside needs, and a build MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four. R134 §3.1 requires the member, replacing the reading of a document without it"
 
 [clause."R120 §3.1"]
 disposition = "applied"
@@ -3319,7 +3322,7 @@ note = "a [preference] entry names a source kind and a reason; the preferred sou
 [clause."R133 §3.2"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }, { part = "03", anchor = "ew-adapter-declaration-document" }]
-note = "an adapter declares the resources it supplies only in part, each one it produces; the document key is contributes"
+note = "an adapter declares the resources it supplies only in part, each one it produces; the document key is contributes, which R134 §3.1 requires, replacing the reading of a document without it"
 
 [clause."R133 §3.3"]
 disposition = "applied"
@@ -3335,3 +3338,35 @@ note = "a recipe is TOML 1.0 whose decoded form satisfies registry/recipe.schema
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-recipe-purpose" }]
 note = "a recipe lists a kind once, and a build names a source by its kind"
+
+[clause."R134 §3.1"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-adapter-declaration-document" }, { part = "07", anchor = "ew-reference-object-model" }]
+note = "Part 03 §11.5 incorporates registry/adapter.schema.json; a declaration document carries all eight members, protocols replacing protocol"
+
+[clause."R134 §3.2"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-recipe-check" }]
+note = "a build refuses a declaration failing the schema and checks a class as its document, a shipped class alone omitting protocols"
+
+[clause."R134 §3.3"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-source-resolution" }]
+note = "Part 04 §5.5 incorporates registry/sources.schema.json; a writer writes a conforming document, a reader may validate, and a source name is any string"
+
+[clause."R134 §3.4"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-import-pipeline" },
+  { part = "03", anchor = "ew-reaching-a-source" },
+  { part = "03", anchor = "ew-protocol-groups" },
+  { part = "03", anchor = "ew-referenced-resource-delivery" },
+  { part = "07", anchor = "ew-reference-object-model" },
+  { part = "09", section = "5.7", note = "files-v0.1 as Parquet under delivery_root" },
+]
+note = "an adapter delivers only where a build points it; the build owns each location and supplies it empty, and Part 03 §11 names the routes"
+
+[clause."R134 §3.5"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-protocol-groups" }, { part = "03", anchor = "ew-build-supplied-values" }, { part = "05", anchor = "ew-recipe-check" }, { part = "05", anchor = "ew-in-process-opt-in" }]
+note = "out of process a build reaches an adapter by a protocol it declares, in process by none; a shipped adapter runs in process unless given a delivery; a build supplies only that protocol's terms"

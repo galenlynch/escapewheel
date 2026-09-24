@@ -19,6 +19,7 @@ import re
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
+from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.sources.nwb import NWBSource, _clean
 
 #: ``Model: <model> - Serial number: <serial>``, which is how `aind-data-schema` renders a probe
@@ -100,6 +101,10 @@ class AindNWBSource(NWBSource):
     REGION_ID: ClassVar[tuple[str, ...]] = ("brain_region_id", "ccf_id")
     #: Where it puts the label. `location` is core NWB's; `ccf_acronym` is this pipeline's.
     REGION_LABEL: ClassVar[tuple[str, ...]] = ("ccf_acronym", "location")
+
+    #: Part 03 §11.1: released apart from the writer, so it declares its protocols. `escapewheel
+    #: deliver` serves every one; the first is what a build reaches it by when a recipe names none.
+    PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
     PRODUCES = NWBSource.PRODUCES | {"core.unit_coordinates", "core.unit_coordinate_values"}
 

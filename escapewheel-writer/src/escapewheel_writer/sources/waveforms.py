@@ -362,6 +362,9 @@ class WaveformSource:
         built = self._read()
         return {
             "array_asset_id": asset_id,
+            # The packet identity `staged_arrays` gives the array, so a delivered one binds to this
+            # row by name alone (Part 03 §11.3).
+            "resource_id": f"core.{asset_id}",
             "session_id": self.session_id,
             "semantic_type": semantic_type,
             # No `array_asset_name`: the numbering fills it from what `array_asset_id` stands for

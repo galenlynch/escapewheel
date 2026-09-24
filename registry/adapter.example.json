@@ -1,7 +1,9 @@
 {
   "$schema": "https://escapewheel.org/schemas/adapter/0.1.0",
   "kind": "thermistor",
-  "protocol": "stream-v0.1",
+  "protocols": [
+    "stream-v0.1"
+  ],
   "produces": [
     "core.array_assets",
     "core.array_dimensions",

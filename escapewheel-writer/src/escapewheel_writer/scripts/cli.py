@@ -426,7 +426,15 @@ def _declare(args: argparse.Namespace) -> int:
         known = ", ".join(sorted({*ADAPTERS, *discovered()}))
         print(f"unknown source kind {args.kind!r}; this build ships {known}", file=sys.stderr)
         return 2
-    document = declaration.of(adapter, args.kind, args.protocol)
+    if args.protocol and getattr(adapter, "PROTOCOLS", ()):
+        print(f"{args.kind} declares its own protocols; --protocol is for an adapter that states none", file=sys.stderr)
+        return 2
+    document = declaration.of(adapter, args.kind, args.protocol or [declaration.STREAM])
+    if problems := declaration.shape_problems(document):
+        for problem in problems:
+            print(f"  {problem}", file=sys.stderr)
+        print(f"{args.kind}: its declaration does not satisfy the schema (Part 03 §11.5)", file=sys.stderr)
+        return 2
     text = json.dumps(document, indent=2) + "\n"
     if args.out is None:
         print(text, end="")
@@ -581,9 +589,9 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     declare.add_argument("kind", help="the source kind, as a recipe entry names it")
     declare.add_argument(
         "--protocol",
-        default="stream-v0.1",
+        action="append",
         choices=declaration_protocols(),
-        help="the protocol this adapter's rows cross by (Part 03 §11.1)",
+        help="a protocol to declare for an adapter stating none, repeatable (default: stream-v0.1; Part 03 §11.1)",
     )
     declare.add_argument("--out", type=Path, help="write here rather than to stdout")
     declare.set_defaults(func=_declare)

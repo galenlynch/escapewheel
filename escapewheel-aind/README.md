@@ -19,7 +19,8 @@ Its kinds register through the `escapewheel.sources` entry-point group, which
 built-in table. A registered kind is constructed exactly as a built-in one is, so nothing here is a
 lesser source — the one difference a recipe sees is that a build will not reach a kind it neither
 ships nor is told how to run, so a recipe naming one of these sets `in_process = true` or gives it
-a `[source.delivery]` command (Part 05 §3.9).
+a `[source.delivery]` command (Part 05 §3.9). Each class declares the protocols `escapewheel
+deliver` serves it over (Part 03 §11.1), so a delivery need not name one.
 
 Writing it this way is what makes moving it to its own repository a packaging change rather than a
 rewrite.

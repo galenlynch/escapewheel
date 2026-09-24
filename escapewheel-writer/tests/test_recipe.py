@@ -713,10 +713,12 @@ def declaration_for(tmp_path, **fields):
 
     document = {
         "kind": "thermistor",
-        "protocol": "stream-v0.1",
+        "protocols": ["stream-v0.1"],
         "produces": ["core.devices"],
-        "needs": ["root", "session_id", "sample_rate_hz"],
+        "contributes": [],
         "states": [],
+        "needs": ["root", "session_id", "sample_rate_hz"],
+        "accepts": [],
         "consumes": [],
         **fields,
     }
@@ -742,8 +744,35 @@ def test_a_delivered_source_carries_how_a_build_reaches_it(tmp_path):
     recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=declaration_for(tmp_path))))
     (spec,) = recipe.sources
     assert spec.delivery.command == ("thermistor-adapter", "--verbose")
-    assert spec.delivery.protocol == "stream-v0.1"
     assert spec.delivery.report_path == tmp_path / "reports/thermistor.json"
+
+
+def test_a_recipe_naming_no_protocol_reaches_the_adapter_by_one_it_declares(tmp_path):
+    """Part 03 §11.1: the adapter's first declared, and only that protocol's terms are supplied."""
+    from escapewheel_writer.delivery import _protocol_supplies
+    from escapewheel_writer.recipe import reached_by
+
+    named = declaration_for(tmp_path, protocols=["flight-v0.1", "files-v0.1"])
+    (spec,) = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named))).sources
+    assert spec.delivery.protocol == ""
+    assert reached_by(spec) == "flight-v0.1"
+    assert set(_protocol_supplies("flight-v0.1", tmp_path, tmp_path / "report.json")) == {"socket"}
+
+
+def test_a_recipe_naming_a_protocol_its_adapter_does_not_declare_is_refused(tmp_path, registry):
+    body = DELIVERED.format(declaration=declaration_for(tmp_path)).replace(
+        "[source.delivery]", '[source.delivery]\nprotocol = "flight-v0.1"'
+    )
+    problems = [p.message for p in Recipe.load(write(tmp_path, body)).check(registry)]
+    assert "thermistor names protocol 'flight-v0.1', which its adapter does not declare (stream-v0.1)" in problems
+
+
+def test_a_source_run_in_process_is_reached_by_no_protocol(tmp_path):
+    """In process there is no boundary, so no protocol and none of its terms (Part 03 §11.2)."""
+    from escapewheel_writer.recipe import reached_by
+
+    (spec,) = Recipe.load(write(tmp_path, '[[source]]\nkind = "sorter"\nroot = "."\n')).sources
+    assert reached_by(spec) is None
 
 
 def test_ownership_defaults_from_a_document_for_a_kind_that_cannot_be_imported(tmp_path, registry):
@@ -773,14 +802,14 @@ def test_a_declaration_contributing_what_it_does_not_produce_is_refused(tmp_path
 
 
 def test_a_declaration_naming_a_protocol_outside_the_group_is_refused(tmp_path, registry):
-    named = declaration_for(tmp_path, protocol="carrier-pigeon-v1.0")
+    named = declaration_for(tmp_path, protocols=["carrier-pigeon-v1.0"])
     recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
     assert any("in no group" in p.message for p in recipe.check(registry))
 
 
 def test_a_declaration_whose_shape_is_wrong_is_reported_where_it_is_wrong(tmp_path, registry):
     """The schema checks the shape; what the declaration says is checked against the registry."""
-    named = declaration_for(tmp_path, protocol="carrier pigeon")
+    named = declaration_for(tmp_path, protocols=["carrier pigeon"])
     recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
     assert any("protocol" in p.message and "thermistor.json" in p.message for p in recipe.check(registry))
 
@@ -823,17 +852,114 @@ def test_an_accepted_name_a_build_cannot_honor_is_refused(tmp_path, registry, ac
     assert any(refusal in p.message for p in recipe.check(registry))
 
 
-def test_a_document_written_before_accepts_accepts_nothing(tmp_path, registry):
-    """R119 §5's break, stated: such a document names no option, so a recipe setting one is refused."""
+@pytest.mark.parametrize(
+    "member", ["kind", "protocols", "produces", "contributes", "states", "needs", "accepts", "consumes"]
+)
+def test_a_document_missing_a_member_is_refused(tmp_path, registry, member):
+    """Part 03 §11.5: all eight are required, so an absent one has no reading to fall back on."""
     import json
 
     named = declaration_for(tmp_path)
-    assert "accepts" not in json.loads((tmp_path / named).read_text())
-    body = DELIVERED.format(declaration=named).replace(
-        "sample_rate_hz = 1000", "sample_rate_hz = 1000\nsmoothing_window = 3"
-    )
+    document = json.loads((tmp_path / named).read_text())
+    del document[member]
+    (tmp_path / named).write_text(json.dumps(document))
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert any(f"'{member}' is a required property" in p.message for p in recipe.check(registry))
+
+
+def test_a_document_carrying_a_single_protocol_is_refused(tmp_path, registry):
+    import json
+
+    named = declaration_for(tmp_path)
+    document = json.loads((tmp_path / named).read_text())
+    document["protocol"] = document.pop("protocols")[0]
+    (tmp_path / named).write_text(json.dumps(document))
+    messages = [p.message for p in Recipe.load(write(tmp_path, DELIVERED.format(declaration=named))).check(registry)]
+    assert any("'protocols' is a required property" in m for m in messages), messages
+
+
+@pytest.mark.parametrize("protocols", [[], ["stream-v0.1", "stream-v0.1"]], ids=["empty", "repeated"])
+def test_a_document_declaring_no_protocol_or_one_twice_is_refused(tmp_path, registry, protocols):
+    named = declaration_for(tmp_path, protocols=protocols)
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert any("thermistor.json: protocols" in p.message for p in recipe.check(registry))
+
+
+def test_a_document_declaring_every_member_empty_is_sound(tmp_path, registry):
+    """An empty array declares none, which is a declaration and not an omission."""
+    named = declaration_for(tmp_path, produces=[], needs=[])
+    body = DELIVERED.format(declaration=named).replace("sample_rate_hz = 1000\n", "")
     recipe = Recipe.load(write(tmp_path, body))
-    assert any("neither as needed nor as accepted" in p.message for p in recipe.check(registry))
+    assert not [p for p in recipe.check(registry) if p.level == "error" and "thermistor" in p.message]
+
+
+class Registered:
+    """An adapter another distribution registers, whose class a build checks as its document."""
+
+    PROTOCOLS = ("stream-v0.1",)
+    PRODUCES = frozenset({"core.devices"})
+    CONTRIBUTES = frozenset({"core.devices"})
+    STATES: ClassVar[dict[str, str]] = {}
+    NEEDS = ("root", "session_id")
+    ACCEPTS: tuple[str, ...] = ()
+    CONSUMES: tuple[str, ...] = ()
+
+
+def _registered(monkeypatch, tmp_path, registry, **attributes):
+    from escapewheel_writer import sources
+
+    adapter = type("Thermistor", (Registered,), attributes)
+    monkeypatch.setattr(sources, "discovered", lambda: {"thermistor": adapter})
+    body = '[[source]]\nkind = "thermistor"\nroot = "."\nin_process = true\n'
+    return [p.message for p in Recipe.load(write(tmp_path, body)).check(registry) if p.level == "error"]
+
+
+def test_a_sound_registered_class_is_refused_for_nothing(monkeypatch, tmp_path, registry):
+    assert not [m for m in _registered(monkeypatch, tmp_path, registry) if m.startswith("thermistor")]
+
+
+def test_a_registered_class_run_in_process_is_reached_by_no_protocol(monkeypatch, tmp_path, registry):
+    """In process there is no boundary, whatever the adapter declares (Part 03 §11.1)."""
+    from escapewheel_writer.recipe import reached_by
+
+    _registered(monkeypatch, tmp_path, registry)
+    (spec,) = Recipe.load(tmp_path / "session.toml").sources
+    assert spec.in_process and reached_by(spec) is None
+
+
+@pytest.mark.parametrize(
+    ("attributes", "refusal"),
+    [
+        ({"PROTOCOLS": ()}, "thermistor declares no protocol; an adapter released independently"),
+        ({"PRODUCES": frozenset({"core.devices", "core.tirals"})}, "no loaded registry declares"),
+        ({"ACCEPTS": ("units",)}, "a term a build fills"),
+        ({"NEEDS": ("root", "session_id", "Sample Rate")}, "thermistor declaration: needs/2"),
+    ],
+    ids=["no-protocol", "undeclared-resource", "term-accepted", "malformed-name"],
+)
+def test_a_registered_class_is_refused_as_its_document_would_be(monkeypatch, tmp_path, registry, attributes, refusal):
+    """Part 03 §11.5: a class run in process is checked, and on the same terms as a document."""
+    assert any(refusal in m for m in _registered(monkeypatch, tmp_path, registry, **attributes))
+
+
+def test_a_shipped_class_may_declare_no_protocol(tmp_path, registry):
+    body = '[[source]]\nkind = "sorter"\nroot = "."\n'
+    problems = Recipe.load(write(tmp_path, body)).check(registry)
+    assert not [p for p in problems if "protocol" in p.message or "declaration:" in p.message]
+
+
+def test_a_shipped_adapter_served_over_a_protocol_outside_the_group_is_refused(tmp_path, registry):
+    body = """
+[[source]]
+kind = "sorter"
+root = "."
+
+[source.delivery]
+protocol = "carrier-pigeon-v1.0"
+command = ["escapewheel", "deliver", "sorter"]
+"""
+    problems = [p.message for p in Recipe.load(write(tmp_path, body)).check(registry)]
+    assert "sorter names protocol 'carrier-pigeon-v1.0', which is in no group this profile names" in problems
 
 
 def test_a_delivery_with_no_command_is_refused(tmp_path, registry):

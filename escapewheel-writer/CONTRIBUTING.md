@@ -77,11 +77,16 @@ reverted on evidence.
 
 ## Adding a source adapter
 
-A row-delivery adapter returns records and leaves packet layout and I/O to the build. A
-packet-owned dense array is the explicit exception: the build supplies a source-specific staging
-`array_location`, the adapter writes the Zarr array there, and it returns the corresponding asset
-record. A referenced array is not copied; the adapter returns its resource declaration. Keep that
-exception narrow so an adapter never chooses final packet paths or commits resources.
+An adapter returns records and leaves packet layout and I/O to the build. A packet-owned dense
+array is handed over as values by `staged_arrays` and written by the build; run out of process,
+`escapewheel deliver` writes it into the `array_location` the build supplies under staging, in a
+directory named by its `core.array_assets` row's `resource_id`, which is all the build binds it by
+— so that row must carry the `resource_id`. A referenced array is not copied; the adapter returns
+its resource declaration. An adapter never chooses final packet paths or commits resources.
+
+An adapter this package ships declares no `PROTOCOLS`; one registered by another distribution
+declares the protocols it supports, since it is released apart from the writer (Part 03 §11.1).
+`Recipe.check` checks every adapter class as the document `escapewheel declare` would generate.
 
 1. **Declare what it owns** in the recipe, and `contributes` only where a resource genuinely has
    more than one supplier. `Recipe.check` is your first test and it needs no data.

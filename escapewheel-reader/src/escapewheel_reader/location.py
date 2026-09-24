@@ -16,9 +16,12 @@ import functools
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from importlib import resources as importlib_resources
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote, urlparse
+
+import jsonschema
 
 from .errors import ManifestError, ResourceUnreadableError, UnresolvedSource
 
@@ -41,8 +44,49 @@ SOURCES_FILENAME = "sources.json"
 SOURCES_VERSION = "escapewheel-sources-v0.1"
 
 
+def sources_schema() -> dict[str, Any]:
+    """Load the bundled JSON Schema for a source resolution document (Part 04 §5.5).
+
+    Vendored from `registry/`, because a wheel cannot read a file from another repository.
+
+    Returns
+    -------
+    dict
+        The parsed schema.
+    """
+    text = importlib_resources.files(__package__).joinpath("schemas/sources.schema.json").read_text()
+    parsed: dict[str, Any] = json.loads(text)
+    return parsed
+
+
+@functools.cache
+def _sources_validator() -> jsonschema.Draft202012Validator:
+    return jsonschema.Draft202012Validator(sources_schema())
+
+
+def check_sources(document: Any) -> tuple[str, ...]:
+    """Return where and how a parsed source resolution document fails its schema (Part 04 §5.5).
+
+    Parameters
+    ----------
+    document : Any
+        The parsed document.
+
+    Returns
+    -------
+    tuple of str
+        One ``<JSON path>: <message>`` per failure, empty when the document satisfies the schema.
+    """
+    failures = sorted(_sources_validator().iter_errors(document), key=lambda error: list(map(str, error.path)))
+    return tuple(f"{error.json_path}: {error.message}" for error in failures)
+
+
 def read_sources(where: Location) -> dict[str, str]:
-    """Parse a source resolution document, returning its name-to-URI mapping.
+    """Parse and validate a source resolution document, returning its name-to-URI mapping.
+
+    The version is checked before the schema: Part 04 §5.5 forbids resolving through an unknown
+    version whether or not a reader validates, so that refusal must not depend on the schema's
+    ``const``.
 
     Parameters
     ----------
@@ -57,18 +101,20 @@ def read_sources(where: Location) -> dict[str, str]:
     Raises
     ------
     ManifestError
-        If the document is unparsable, or declares a version this reader does not know. R80
-        §2.2 makes refusing an unknown version the rule: reading it as if it were this one is
-        how a location silently becomes wrong.
+        If the document is unparsable, declares a version this reader does not know, or fails
+        the schema, naming each place it fails.
     """
     try:
         parsed = json.loads(where.read_bytes())
     except Exception as exc:
         raise ManifestError(f"{where} is not a readable source resolution document: {exc}") from exc
-    declared = parsed.get("sources_standard_version")
+    declared = parsed.get("sources_standard_version") if isinstance(parsed, Mapping) else None
     if declared != SOURCES_VERSION:
         raise ManifestError(f"{where} declares {declared!r}, and this reader knows {SOURCES_VERSION!r}")
-    return {name: str(entry["uri"]) for name, entry in (parsed.get("sources") or {}).items()}
+    failures = check_sources(parsed)
+    if failures:
+        raise ManifestError(f"{where} does not satisfy the source resolution schema: " + "; ".join(failures))
+    return {name: str(entry["uri"]) for name, entry in parsed["sources"].items()}
 
 
 def _scheme(uri: str) -> str:
@@ -295,4 +341,13 @@ class Location:
         return self.uri
 
 
-__all__ = ["SOURCES_FILENAME", "SOURCES_VERSION", "Location", "Rewrite", "Sources", "read_sources"]
+__all__ = [
+    "SOURCES_FILENAME",
+    "SOURCES_VERSION",
+    "Location",
+    "Rewrite",
+    "Sources",
+    "check_sources",
+    "read_sources",
+    "sources_schema",
+]

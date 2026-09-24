@@ -28,11 +28,15 @@ def test_this_distribution_registers_the_kinds_it_ships():
 
 @pytest.mark.parametrize("kind", sorted(KINDS))
 def test_every_registered_adapter_generates_a_valid_document(kind):
-    """Generated rather than maintained (Part 03 §11.5), so this is what an author starts from."""
-    jsonschema = pytest.importorskip("jsonschema")
-    document = declaration.of(KINDS[kind], kind, "stream-v0.1")
-    assert not list(jsonschema.Draft202012Validator(declaration.schema()).iter_errors(document))
+    """Generated rather than maintained (Part 03 §11.5), and complete without a protocol supplied.
+
+    A kind registered by another distribution is released independently of a build, so its class
+    must state its protocols; a build refuses one that states none (Part 03 §11.1).
+    """
+    document = declaration.of(KINDS[kind], kind)
+    assert declaration.shape_problems(document) == []
     assert document["kind"] == kind
+    assert set(document["protocols"]) <= set(declaration.PROTOCOLS)
 
 
 @pytest.mark.parametrize("kind", sorted(KINDS))
@@ -61,9 +65,7 @@ def test_every_option_an_adapter_reads_is_declared(kind):
 def test_ownership_from_the_documents_is_ownership_from_the_classes():
     """The two forms are one declaration, so what a build settles from them cannot differ."""
     from_document = {
-        resource: kind
-        for kind in sorted(KINDS)
-        for resource in declaration.of(KINDS[kind], kind, "stream-v0.1")["produces"]
+        resource: kind for kind in sorted(KINDS) for resource in declaration.of(KINDS[kind], kind)["produces"]
     }
     from_class = {resource: kind for kind in sorted(KINDS) for resource in sorted(KINDS[kind].PRODUCES)}
     assert from_document == from_class

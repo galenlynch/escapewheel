@@ -956,6 +956,9 @@ class NWBSource(Compensates):
                 {
                     "session_id": self.session_id,
                     "array_asset_id": f"{self.prefix}{name}",
+                    # The packet identity `staged_arrays` gives the array, so a delivered one binds
+                    # to this row by name alone (Part 03 §11.3).
+                    "resource_id": f"core.{self.prefix}{name}",
                     # Part 01 §3.17: which instrument made this array. Read from the same description
                     # `_signal_devices` declares the device from, so the two cannot disagree.
                     "device_id": self._signal_device_id(name),

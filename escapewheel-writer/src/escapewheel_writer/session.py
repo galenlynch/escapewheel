@@ -22,6 +22,7 @@ the recipe says it owns, so the resolution is declared in one place a reader can
 from __future__ import annotations
 
 import json
+import shutil
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
@@ -36,7 +37,7 @@ from escapewheel_validator import CheckedRegistryContext, RegistryRejected, chec
 from numpy.typing import NDArray
 
 from .extensions import load_checked as load_extension_context
-from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, declared, redacted
+from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, declared, reached_by, redacted
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .sources.store import cache_directory
@@ -148,6 +149,9 @@ class Context:
     #: rather than inside it, so a delivery lands on the filesystem the packet is going to and a
     #: failed build leaves it where it can be looked at.
     workspace: Path = Path()
+    #: The packet's staging area, prepared before any source runs, so an array a source writes
+    #: there moves into the packet by rename at commit (Part 03 §11.3).
+    staging: Path = Path()
     #: The build's progress reporter, for the stages that happen inside one source rather than
     #: between them -- a delivery being the one that can take minutes on its own.
     say: Callable[[str], None] = lambda _: None
@@ -227,9 +231,12 @@ def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collectio
     if "units" in needed and context.units:
         terms["units"] = context.units
     if "array_location" in needed:
-        # One directory per source (Part 03 §11.3): two sources may each deliver an asset of one
-        # name, and a shared directory would make them one array.
-        terms["array_location"] = str(context.workspace / spec.kind / "arrays")
+        # One directory per source (Part 03 §11.3), since two sources may each deliver an asset of
+        # one name, and supplied empty (Part 05 §2), since a build binds what it finds by name.
+        location = context.staging / "deliveries" / spec.kind
+        if location.exists():
+            shutil.rmtree(location)
+        terms["array_location"] = str(location)
     if "wanted" in needed:
         # Settled before any source is opened (Part 05 §3.4), so a source told what is wanted may
         # extract no more -- and one that is not told produces everything and a build discards.
@@ -299,7 +306,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
 
     supplied = _supplied(spec, recipe, context)
     options = supplied.pop("options")
-    if spec.delivery is not None and not spec.in_process:
+    if (protocol := reached_by(spec)) is not None and spec.delivery is not None:
         # The URI rather than the root this build resolved, and the options that open it beside
         # it: the other process opens the source for itself (Part 03 §11.2), and what it is
         # handed has to be enough to.
@@ -310,7 +317,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
             spec.kind,
             spec.delivery.command,
             {**crossing, "options": options},
-            protocol=spec.delivery.protocol,
+            protocol=protocol,
             wanted=spec.claims,
             states=declared(spec)["states"],
             merged=spec.contributes,
@@ -761,8 +768,8 @@ def build(  # noqa: C901
     Parameters
     ----------
     recipe : Recipe
-        The parsed recipe. Assumed already checked; :meth:`Recipe.check` is the caller's job,
-        because a caller that reports problems is more useful than one that raises on the first.
+        The parsed recipe. Checked here as well as by a caller that reports every problem, since
+        a build MUST refuse an unsound recipe before it opens any source (Part 05 §3.5).
     registry : Mapping
         The registry to write against.
     say : callable, optional
@@ -792,6 +799,9 @@ def build(  # noqa: C901
             document = extension_context.document
             subject = str(document.get("extension_id", "extension")) if isinstance(document, Mapping) else "extension"
             raise RegistryRejected(subject, extension_context)
+    extension_documents = [extension.document for extension in extension_contexts]
+    if errors := [p.message for p in recipe.check(checked_registry, extension_documents) if p.level == "error"]:
+        raise RecipeError(f"{recipe.path}: refused, {len(errors)} error(s): " + "; ".join(errors))
     session_id = str(recipe.session["session_id"])
     # Reported rather than chosen here: `Recipe.load` places it, because a store root is opened
     # through a chained path that carries the location and is built as the recipe parses.
@@ -820,6 +830,7 @@ def build(  # noqa: C901
         encoding_exceptions=_encoding_exceptions(recipe),
         workspace=context.workspace,
     )
+    context.staging = writer.stage_at(recipe.out)
 
     # Part 05 §3.1: the recipe supplies `core.subjects` only where no source owns it, so a packet
     # whose NWB claims the table gets the row that file states rather than a hand-typed one.
@@ -850,7 +861,7 @@ def build(  # noqa: C901
             # shape is what a reader of the log wants before it costs anything to write.
             if staged.values is None:
                 written = sum(f.stat().st_size for f in staged.written.rglob("*") if f.is_file())
-                say(f"  array {staged.array_asset_id} delivered, {written / 1e6:.1f} MB written")
+                say(f"  array {staged.resource_id} delivered, {written / 1e6:.1f} MB written")
             else:
                 say(
                     f"  array {staged.array_asset_id} {staged.values.shape} {staged.values.dtype}, "

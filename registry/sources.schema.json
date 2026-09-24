@@ -11,7 +11,7 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "This document's meta-schema, by $id. Identity rather than a fetch instruction: a reader MUST NOT dereference it and MUST NOT require it."
+      "description": "This document's meta-schema, by $id: identity rather than a fetch instruction, so a reader neither dereferences nor requires it."
     },
     "sources_standard_version": {
       "type": "string",
@@ -26,8 +26,7 @@
       "type": "object",
       "description": "Source name to where that source is. A name is opaque to this specification and matches the `source` field of an external resource entry.",
       "propertyNames": {
-        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]*$",
-        "maxLength": 512
+        "minLength": 1
       },
       "additionalProperties": {
         "type": "object",

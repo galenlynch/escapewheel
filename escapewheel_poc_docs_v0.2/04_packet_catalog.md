@@ -165,9 +165,12 @@ its `uri` is then a path relative to wherever that source is, and neither field 
 entry carrying no `source` keeps the meaning §5.1 gives it.
 
 Where a source is, is stated by a **source resolution document**: a JSON document, conventionally
-`sources.json`, whose shape is published as `https://escapewheel.org/schemas/sources/0.1.0`. It carries
-`sources_standard_version` and a `sources` object mapping each source name to an entry with a
-required `uri`, and both objects are closed.
+`sources.json`, carrying `sources_standard_version` and a `sources` object mapping each source name
+to an entry with a required `uri`. This section incorporates `registry/sources.schema.json`, whose
+`$id` is `https://escapewheel.org/schemas/sources/0.1.0`, as the exact shape of a source resolution
+document. The schema owns member names, JSON types, required members, closure, patterns, and the
+version constant; this prose owns what each member means. The schema's descriptions are
+informative. A source name is any string an external resource entry's `source` can hold.
 
 A resolution document MUST NOT be a packet resource. Immutability (§5.1) does not reach
 it, which is what lets a location be corrected when a mirror moves without rebuilding the packet.
@@ -175,6 +178,10 @@ it, which is what lets a location be corrected when a mirror moves without rebui
 A reader MUST accept one or more resolution documents from its caller, and resolves a `source` in
 this order: the documents the caller supplied, in the order supplied; then `sources.json` at the
 packet root if it is there; then the source is unresolved. A writer SHOULD write that default.
+
+A writer that writes a resolution document MUST write one that satisfies the schema. A reader MAY
+validate a resolution document against the schema, and need not. A reader MUST NOT resolve a source
+through a document whose `sources_standard_version` it does not know.
 
 A reader MUST report an unresolved `source` as unresolved, and a validator MUST NOT fail structural validation for one:
 which mirrors a reader can reach is a property of the reader. Structural validation MUST NOT

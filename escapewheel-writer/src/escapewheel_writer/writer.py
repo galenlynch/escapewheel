@@ -26,7 +26,7 @@ import os
 import shutil
 import time
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from queue import Queue
@@ -35,7 +35,7 @@ from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-from escapewheel_reader import Manifest, Packet, open_packet
+from escapewheel_reader import Manifest, Packet, check_sources, open_packet
 from escapewheel_reader.profile import parquet_floor
 from escapewheel_reader.registries import gunzip_member as gzip_member
 from escapewheel_validator import (
@@ -356,6 +356,7 @@ class StagedArray:
 
     values: Any
     resource_id: str
+    #: Empty for an array delivered by name alone, which `add_array` binds by its catalog row.
     declaration_id: str
     array_asset_id: str
     chunks: tuple[int, ...] = ()
@@ -502,9 +503,9 @@ class PacketWriter:
         encoding_exceptions: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
         workspace: str | Path | None = None,
     ) -> None:
-        #: Where delivered sources handed over their files and arrays, beside the packet rather than
-        #: in it. Removed once a commit promotes, since every array has moved into the packet by then
-        #: and every delivery has been read; kept on a refusal, with staging, as evidence of why.
+        #: Where delivered sources handed over their files, beside the packet rather than in it.
+        #: Removed once a commit promotes, since every delivery has been read by then; kept on a
+        #: refusal, with staging, as evidence of why.
         self._workspace = Path(workspace) if workspace is not None else None
         #: Encoding exceptions an extension supplies for its own tables, keyed list-name to
         #: resource to columns (`encoding.encodings`). Core names no extension table, so this is
@@ -576,6 +577,8 @@ class PacketWriter:
         self._derived: dict[str, list[str]] = {}
         self._ordered: set[str] = set()
         self._staged_arrays: dict[str, StagedArray] = {}
+        #: The staging area `stage_at` prepared, which `commit` keeps rather than clearing.
+        self._prepared: Path | None = None
         self._referenced_arrays: dict[str, ExternalArray] = {}
         self._referenced_media: dict[str, ExternalMedia] = {}
 
@@ -876,9 +879,40 @@ class PacketWriter:
             raise ValueError(f"{resource_id} already has an array staged")
         if array.resource_id != resource_id:
             raise ValueError(f"{resource_id}: staged array declares resource_id {array.resource_id!r}")
+        if not array.declaration_id:
+            array = self._delivered_binding(resource_id, array)
         declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
         self._bind_catalog_row(declaration, resource_id, "array_asset_id", array.array_asset_id)
         self._staged_arrays[resource_id] = array
+
+    def _delivered_binding(self, resource_id: str, array: StagedArray) -> StagedArray:
+        """Bind an array delivered by name to the one catalog row carrying that name (Part 03 §11.3).
+
+        A delivery names an array's directory by the row's `resource_id` and says nothing else, so
+        the row is found among every dense-array catalog, and the array takes that catalog's
+        declaration and the row's own identifier.
+        """
+        matching = []
+        for declaration_id in (
+            *self._registry["resources"],
+            *(d for e in self._extensions.values() for d in e["resources"]),
+        ):
+            declaration = self.declaration(declaration_id)
+            if declaration is None or declaration["kind"] != "dense_array":
+                continue
+            instances = declaration["instances"]
+            if instances["mode"] != "catalog":
+                continue
+            column = str(instances["resource_id_column"])
+            matching += [
+                (declaration_id, row)
+                for row in self._tables.get(str(instances["catalog_resource"]), [])
+                if row.get(column) == resource_id
+            ]
+        if len(matching) != 1:
+            raise ValueError(f"{resource_id}: a delivered array binds {len(matching)} catalog rows, not one")
+        declaration_id, row = matching[0]
+        return replace(array, declaration_id=declaration_id, array_asset_id=str(row["array_asset_id"]))
 
     def reference_array(self, resource_id: str, array: ExternalArray) -> None:
         """Record a dense array the packet references rather than owns (Part 04 §5.1).
@@ -1171,6 +1205,12 @@ class PacketWriter:
         visible: everything a reader may look for is in place first. Skipped entirely when no
         resource names a source, since a document locating nothing is worse than none -- it
         would answer a lookup the caller meant to answer itself.
+
+        Raises
+        ------
+        ValueError
+            If the document would not satisfy its schema, which a writer MUST NOT write (Part 04
+            §5.5). Raised before anything is promoted.
         """
         located = {
             referenced.source: {"uri": self._sources[referenced.source]}
@@ -1185,7 +1225,37 @@ class PacketWriter:
             "description": f"Where {self._packet_id} read its referenced data. Editable: not a packet resource.",
             "sources": dict(sorted(located.items())),
         }
+        if problems := check_sources(document):
+            raise ValueError(f"the source resolution document would not satisfy its schema: {'; '.join(problems)}")
         (root / SOURCES).write_text(json.dumps(document, indent=2) + "\n")
+
+    def stage_at(self, root: str | Path) -> Path:
+        """Prepare, empty, the staging area `commit` will use at `root`, and return it.
+
+        For a build pointing deliveries there before any source runs, so commit moves what they
+        wrote by rename (Part 03 §11.3) and keeps it rather than clearing it.
+
+        Raises
+        ------
+        FileExistsError
+            If `root` already holds a committed manifest.
+        """
+        root = Path(root)
+        if (root / MANIFEST).exists():
+            raise FileExistsError(f"{root} already holds a committed {MANIFEST}")
+        self._prepared = None
+        staging = self._staging(root)
+        self._prepared = staging.resolve()
+        return staging
+
+    def _staging(self, root: Path) -> Path:
+        """Return the staging area at `root`: the one `stage_at` prepared, or a new empty one."""
+        staging = root / "staging"
+        if staging.resolve() != self._prepared:
+            if staging.exists():
+                shutil.rmtree(staging)
+            staging.mkdir(parents=True)
+        return staging
 
     def commit(
         self,
@@ -1240,10 +1310,7 @@ class PacketWriter:
         if not self._tables.get("core.sessions"):
             raise ValueError("a packet declares at least one session; core.sessions is empty (R1 §6)")
 
-        staging = root / "staging"
-        if staging.exists():
-            shutil.rmtree(staging)
-        staging.mkdir(parents=True)
+        staging = self._staging(root)
 
         # 1. staged resources, plus the registry they were written against
         clock = time.perf_counter()
@@ -1303,7 +1370,8 @@ class PacketWriter:
         if not report.passed:
             raise CommitRefused(report, staging)
 
-        # 3. move into final paths
+        # 3. move into final paths, the resolution document first since it alone can still fail
+        self._write_sources(root)
         for entry in entries:
             entry["validation_state"] = "passed"
         for name in ("tables", "arrays", REGISTRIES):
@@ -1313,7 +1381,6 @@ class PacketWriter:
 
         # 4. rename the manifest last: until this line the root holds no manifest at all,
         #    so a reader finds nothing rather than a partial import claiming to be valid.
-        self._write_sources(root)
         candidate = root / f"{MANIFEST}.candidate"
         candidate.write_text(json.dumps(self._manifest(entries, registries, report), indent=2) + "\n")
         os.replace(candidate, root / MANIFEST)

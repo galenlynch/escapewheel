@@ -43,6 +43,7 @@ from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
 from escapewheel_writer.clock import Clock, epoch_from, zone_of
+from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.sources.compensations import Compensates
 from escapewheel_writer.sources.defect import SourceDefect
 from escapewheel_writer.sources.store import source_root
@@ -111,6 +112,10 @@ class SessionSource(Compensates):
     >>> source.records()["core.calibrations"]  # doctest: +SKIP
     >>> source.behavior().start  # doctest: +SKIP
     """
+
+    #: Part 03 §11.1: released apart from the writer, so it declares its protocols. `escapewheel
+    #: deliver` serves every one; the first is what a build reaches it by when a recipe names none.
+    PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
     #: Static, so a recipe check reads it with nothing open -- `offers` counts rows and

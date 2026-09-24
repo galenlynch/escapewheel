@@ -25,7 +25,19 @@ content class or canonicality selected by its declaration; publication is the ga
 | 6 | record provenance |
 | 7 | materialize analysis resources |
 
-A writer MUST NOT combine parsing, normalization, validation, and writing into one opaque step. A source adapter returns records; it MUST NOT write files.
+A writer MUST NOT combine parsing, normalization, validation, and writing into one opaque step.
+
+An adapter MUST deliver only through the channels and locations a build supplies it, and a build
+MUST read a delivery from nowhere else. A build owns each location it chooses for a delivery, and
+may choose the place the delivered bytes will stay, as
+[Part 03 §11.3](03_portable_physical_profile.md#ew-referenced-resource-delivery) has a packet-owned
+array written under the staging area. A build MUST supply each such location empty, a directory
+holding nothing or a path where nothing exists, since a build identifies what an adapter wrote
+there by name and a name an earlier run left would pass for the delivery. An adapter MUST NOT rely
+on what a location held before its run, or on what it writes there remaining after the build. This
+rule governs a delivery and nothing else an adapter writes;
+[Part 03 §11](03_portable_physical_profile.md#ew-reaching-a-source) names the portable profile's
+routes.
 
 ## 3. The session recipe
 
@@ -119,7 +131,9 @@ A build MUST also refuse, on the same terms and before any source is opened:
 
 - an adapter declaring a value Part 03 §11.2 resolves to neither a term nor a recipe option;
 - an adapter declaring a term that list carries and this recipe cannot fill, naming the term and the source;
-- an adapter declaring no protocol of a group the profile names, or one it does not name;
+- an adapter released independently of a build declaring no protocol of a group the profile names, or any adapter declaring one it does not name;
+- a declaration failing the schema Part 03 §11.5 incorporates, whether a document or an importable declaration, naming where it fails;
+- a source entry naming a protocol its adapter does not declare, where the adapter declares any, naming the source and the protocol;
 - a declaration whose resources include one no loaded registry declares;
 - a declaration whose stated fields include one no recipe block carries;
 - a source entry setting an option the adapter names in neither `needs` nor `accepts`, naming the source and the option;
@@ -181,7 +195,7 @@ belongs to the build.
 <a id="ew-in-process-opt-in" data-spec-anchor="canonical"></a>
 ### 3.9 Whether a source runs in the writer's process
 
-A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so. An adapter the build ships with declares none (Part 03 §11.1), so in process is its only route and a recipe naming one declares nothing: a build MUST NOT require a declaration where it offers no choice.
+A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so. A build MUST run an adapter it ships that declares no protocol in process unless its recipe entry gives it a `delivery` table naming a command (§§3.1 and 3.7), and then serves it over a protocol of the group (Part 03 §11.1); a build MUST NOT require a recipe to opt such an adapter into the writer's process.
 
 The recipe declares it because the recipe author chose the environment. One process resolves one dependency closure, so whether a given set of adapters installs together is a fact about one machine on one day rather than a property of any adapter, and the person assembling the recipe is the only party who can find out and the one who carries it when the answer changes.
 

@@ -1,10 +1,10 @@
 """What an adapter declares, as a document a build reads instead of importing it.
 
-A build reads `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes` before it opens
-any source, and for a class it reads them by importing the adapter -- which Part 03 §11.5 forbids
-requiring. So an adapter a build cannot import publishes the same six facts as JSON, and the two
-forms are one declaration: a build treats a document and an importable class alike and prefers
-neither.
+A build reads `protocols`, `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`
+before it opens any source, and for a class it reads them by importing the adapter -- which Part 03
+§11.5 forbids requiring. So an adapter a build cannot import publishes the same facts as JSON, and
+the two forms are one declaration: a build checks a class as the document it would generate, and
+prefers neither.
 
 The document is **generated** here rather than maintained, because every field is read off the class
 with no judgement in it. What it does not carry is anything about the machine -- the command, the
@@ -15,27 +15,31 @@ author's fact and the resources an adapter can supply is not.
 from __future__ import annotations
 
 import json
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 #: Part 03 §11.1's group for `escapewheel-portable-v0.1`: the ways rows cross a process boundary.
 #: A build supports every one of them, so no negotiation can fail; an adapter released
-#: independently of a build supports at least one.
-PROTOCOLS = ("files-v0.1", "stream-v0.1", "flight-v0.1")
+#: independently of a build declares at least one, as a class's `PROTOCOLS` or a document's
+#: `protocols`.
+FILES = "files-v0.1"
+STREAM = "stream-v0.1"
+FLIGHT = "flight-v0.1"
+PROTOCOLS = (FILES, STREAM, FLIGHT)
 
 #: Terms a protocol requires rather than an adapter declares (Part 03 §11.2). A build supplies one
-#: because the adapter speaks that protocol and never because it asked, so an adapter declaring one
-#: is refused as any undeclarable name is.
+#: because it reaches the adapter by that protocol and never because the adapter asked, so an
+#: adapter declaring one is refused as any undeclarable name is.
 PROTOCOL_TERMS = {
-    "files-v0.1": ("delivery_root",),
-    "stream-v0.1": (),
-    "flight-v0.1": ("socket",),
+    FILES: ("delivery_root",),
+    STREAM: (),
+    FLIGHT: ("socket",),
 }
 
 #: Where a report travels as a file, and so where `report_path` is supplied (Part 09 §5.8). Under
 #: `flight-v0.1` the connection carries it and no file outlives the run.
-REPORT_AS_FILE = ("files-v0.1", "stream-v0.1")
+REPORT_AS_FILE = (FILES, STREAM)
 
 #: The recipe block each `states` entry resolves through, to the core table whose columns it names.
 BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
@@ -54,29 +58,32 @@ def schema() -> dict[str, Any]:
     return parsed
 
 
-def of(adapter: Any, kind: str, protocol: str) -> dict[str, Any]:
+def of(adapter: Any, kind: str, protocols: Sequence[str] = ()) -> dict[str, Any]:
     """Return the document for one adapter class, generated from what it already declares.
 
     Parameters
     ----------
     adapter : type
-        The adapter class, carrying `PRODUCES`, `CONTRIBUTES`, `STATES`, `NEEDS`, `ACCEPTS` and
-        `CONSUMES`.
+        The adapter class, carrying `PROTOCOLS`, `PRODUCES`, `CONTRIBUTES`, `STATES`, `NEEDS`,
+        `ACCEPTS` and `CONSUMES`.
     kind : str
         The name a recipe's source entry uses for it.
-    protocol : str
-        The protocol this adapter's rows will cross by.
+    protocols : sequence of str, optional
+        What to declare for a class stating no `PROTOCOLS`, as an adapter a build ships does not
+        (Part 03 §11.1). A class stating its own keeps them.
 
     Returns
     -------
     dict
         The document, ready to write. `states` is the field names alone: which attribute holds
-        each is the implementation's business and no other implementation can use it.
+        each is the implementation's business and no other implementation can use it. Without
+        `protocols` where neither states any, which only a shipped adapter's class may be.
     """
+    stated = list(getattr(adapter, "PROTOCOLS", ()) or protocols)
     return {
         "$schema": schema()["$id"],
         "kind": kind,
-        "protocol": protocol,
+        **({"protocols": stated} if stated else {}),
         "produces": sorted(getattr(adapter, "PRODUCES", ())),
         "contributes": sorted(getattr(adapter, "CONTRIBUTES", ())),
         "states": sorted(getattr(adapter, "STATES", {})),
@@ -86,15 +93,36 @@ def of(adapter: Any, kind: str, protocol: str) -> dict[str, Any]:
     }
 
 
+def shape_problems(document: Any, *, shipped: bool = False) -> list[str]:
+    """Where a declaration fails the schema Part 03 §11.5 incorporates, each as `where: message`.
+
+    One check for a document and for the document a class would generate, so the two are refused
+    for the same defects. `shipped` lifts the one difference: an adapter a build ships may declare
+    no protocol (Part 03 §11.1).
+    """
+    import jsonschema
+
+    shape = schema()
+    if shipped:
+        shape = {**shape, "required": [member for member in shape["required"] if member != "protocols"]}
+    return [
+        f"{'/'.join(str(p) for p in error.absolute_path) or 'declaration'}: {error.message}"
+        for error in sorted(
+            jsonschema.Draft202012Validator(shape).iter_errors(document),
+            key=lambda e: [str(p) for p in e.absolute_path],
+        )
+    ]
+
+
 def load(path: str | Path) -> dict[str, Any]:
     """Read a declaration document and check its shape against the published schema.
 
     Raises
     ------
     ValueError
-        If the file is absent, is not JSON, or does not satisfy `registry/adapter.schema.json`.
-        Shape only: what the declaration *says* is checked against the registry and the recipe by
-        :func:`refusals`, which needs both and neither of which a schema can see.
+        If the file is absent, is not JSON, or does not satisfy `registry/adapter.schema.json`,
+        naming every place it fails. Shape only: what the declaration *says* is checked against
+        the registry and the recipe by :func:`refusals`, which needs both.
     """
     where = Path(path)
     try:
@@ -103,14 +131,8 @@ def load(path: str | Path) -> dict[str, Any]:
         raise ValueError(f"{where}: no adapter declaration to read ({exc.strerror})") from None
     except json.JSONDecodeError as exc:
         raise ValueError(f"{where}: not JSON ({exc})") from None
-    try:
-        import jsonschema
-    except ImportError:  # pragma: no cover - jsonschema is a dependency of the validator
-        return dict(document)
-    problems = sorted(jsonschema.Draft202012Validator(schema()).iter_errors(document), key=lambda e: list(e.path))
-    if problems:
-        first = problems[0]
-        raise ValueError(f"{where}: {'/'.join(str(p) for p in first.path) or 'document'}: {first.message}")
+    if problems := shape_problems(document):
+        raise ValueError(f"{where}: " + "; ".join(problems))
     return dict(document)
 
 
@@ -130,7 +152,7 @@ def refusals(
     Parameters
     ----------
     document : Mapping
-        The declaration, already shape-checked by :func:`load`.
+        The declaration, already shape-checked by :func:`shape_problems`.
     tables : Mapping
         The loaded registries' tables, by resource ID, each carrying its columns.
     options : collection of str
@@ -138,9 +160,11 @@ def refusals(
     terms : collection of str
         Part 03 §11.2's vocabulary, which a declared name resolves against first.
     """
-    found = []
-    if (protocol := document.get("protocol")) not in PROTOCOLS:
-        found.append(f"declares protocol {protocol!r}, which is in no group this profile names")
+    found = [
+        f"declares protocol {protocol!r}, which is in no group this profile names"
+        for protocol in document.get("protocols", ())
+        if protocol not in PROTOCOLS
+    ]
     for resource in document.get("produces", ()):
         if resource not in tables:
             found.append(f"produces {resource}, which no loaded registry declares")
@@ -179,4 +203,17 @@ def _protocol_terms() -> frozenset[str]:
     return frozenset(name for names in PROTOCOL_TERMS.values() for name in names) | {"report_path"}
 
 
-__all__ = ["BLOCKS", "PROTOCOLS", "PROTOCOL_TERMS", "REPORT_AS_FILE", "load", "of", "refusals", "schema"]
+__all__ = [
+    "BLOCKS",
+    "FILES",
+    "FLIGHT",
+    "PROTOCOLS",
+    "PROTOCOL_TERMS",
+    "REPORT_AS_FILE",
+    "STREAM",
+    "load",
+    "of",
+    "refusals",
+    "schema",
+    "shape_problems",
+]

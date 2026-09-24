@@ -1,8 +1,8 @@
 """Source adapters.
 
-An adapter reads one source and returns records. It never writes: the packet is assembled by
-:class:`~escapewheel_writer.writer.PacketWriter`, which validates before it commits. That split
-exists because no single source carries a whole session -- see
+An adapter reads one source and returns records, writing only where a build points it (Part 05
+§2): the packet is assembled by :class:`~escapewheel_writer.writer.PacketWriter`, which validates
+before it commits. That split exists because no single source carries a whole session -- see
 `inventory/nwb-zarr-776259-2025-04-09.md` §6.
 
 What is here reads a **standard** -- SpikeInterface, Open Ephys, Harp, NWB -- because many

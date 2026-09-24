@@ -637,8 +637,21 @@ try:
                 json.loads(_example.read_text())
             )
         ]
-        if _example.exists()
+                if _example.exists()
         else [],
+    )
+    # Part 04 §5.5 lets a source name be any string an entry's `source` can hold.
+    check(
+        "a resolution document naming a source with a space validates",
+        [
+            e.message[:60]
+            for e in jsonschema.Draft202012Validator(_sources).iter_errors(
+                {
+                    "sources_standard_version": "escapewheel-sources-v0.1",
+                    "sources": {"lab archive 2026": {"uri": "s3://bucket/prefix"}},
+                }
+            )
+        ],
     )
     # Part 03 §11.5's declaration document, checked the way the two above are: valid JSON Schema
     # here, vendored by build.py, and an example that must still satisfy it.
@@ -654,8 +667,22 @@ try:
                 json.loads(_declared.read_text())
             )
         ]
-        if _declared.exists()
+                if _declared.exists()
         else [],
+    )
+    # Every member is required and `protocols` names at least one, so each variant must fail.
+    _complete = json.loads(_declared.read_text())
+    _variants = {f"without {member}": {k: v for k, v in _complete.items() if k != member}
+                 for member in _adapter["required"]}
+    _variants["with empty protocols"] = {**_complete, "protocols": []}
+    _variants["with a repeated protocol"] = {**_complete, "protocols": ["stream-v0.1"] * 2}
+    check(
+        "an adapter declaration missing a member or naming no protocol fails",
+        [
+            name
+            for name, variant in _variants.items()
+            if jsonschema.Draft202012Validator(_adapter).is_valid(variant)
+        ],
     )
     # Part 05 §3.1's recipe, checked as the three above are; the example is TOML, validated in
     # its decoded form as a build validates one.

@@ -5,7 +5,7 @@ import json
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-from escapewheel_reader import open_packet
+from escapewheel_reader import check_sources, open_packet
 from escapewheel_validator import RegistryRejected, validate
 
 from escapewheel_writer import CommitRefused, PacketWriter
@@ -1051,6 +1051,7 @@ def test_a_referenced_source_reaches_the_default_document(tmp_path, registry, mi
     writer.commit(root)
 
     document = json.loads((root / "sources.json").read_text())
+    assert not check_sources(document)
     assert document["sources_standard_version"] == "escapewheel-sources-v0.1"
     assert document["sources"]["raw_nwb"]["uri"] == "file:///mnt/Data/ephys/session.nwb"
 

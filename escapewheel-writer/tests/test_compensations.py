@@ -94,12 +94,29 @@ clock_id = "harp"
 name = "HARP"
 tick_rate_num = 31250
 origin = "e"
+[subject]
+subject_id = "m1"
 [[source]]
 kind = "sorter"
 root = "{root}"
-owns = ["core.units"]
+owns = ["core.units", "core.clocks", "core.curation_versions", "core.sorting_runs"]
 """)
     recipe = Recipe.load(path)
     assert build(recipe, registry)  # the same build passes without the flag
     with pytest.raises(RecipeError, match=r"note\(s\) under --strict"):
         build(recipe, registry, strict=True)
+
+
+def test_a_build_refuses_a_recipe_its_check_refuses(tmp_path, registry):
+    """Part 05 §3.5: before any source is opened, whether or not a caller checked it first."""
+    from escapewheel_writer.recipe import Recipe
+    from escapewheel_writer.session import RecipeError, build
+
+    path = tmp_path / "session.toml"
+    path.write_text(
+        '[packet]\nid = "s1"\n[session]\nsession_id = "s1"\n[[source]]\nkind = "sorter"\nroot = "absent"\nwindow = 3\n'
+    )
+    recipe = Recipe.load(path)
+    with pytest.raises(RecipeError, match="sets 'window', which it declares neither"):
+        build(recipe, registry)
+    assert not (recipe.out / "staging").exists(), "refused before anything was prepared"
