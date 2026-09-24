@@ -29,8 +29,9 @@ Writing those entries exposes two further defects:
 - `core.subjects.sex` is closed, and its `enum` includes `hermaphrodite`, which FHIR's value set
   does not define. Read literally, Part 02 §9.3 requires a writer recording a hermaphrodite subject
   to spell the value as FHIR does, which it cannot.
-- NCBI Taxonomy, MGI and RGD are databases whose entries change continually, so Part 00 §10's
-  release rule has no edition to name for them.
+- NCBI Taxonomy, MGI and RGD are databases whose entries change continually. Part 00 §10's release
+  rule would pin each to a dated state, after which a newly registered species or strain has no
+  conforming spelling.
 
 ## 2. Evidence
 
@@ -65,7 +66,7 @@ states that "drawn from is not equal to": the `enum` is the set a validator enfo
 does not carry that distinction, so its spelling sentence applies to `sex` as it does to
 `species`.
 
-### 2.3 NCBI Taxonomy, MGI and RGD change without editions
+### 2.3 NCBI Taxonomy, MGI and RGD publish dated states, not editions
 
 - **NCBI Taxonomy.** `ftp.ncbi.nlm.nih.gov/pub/taxonomy/` published a new `taxdump` on 2026-09-24,
   and no file there carries a version or edition label. `pub/taxonomy/taxdump_archive/` holds dated
@@ -74,11 +75,15 @@ does not carry that distinction, so its spelling sentence applies to `sex` as it
   symbol are published separately as *Guidelines for Nomenclature of Mouse and Rat Strains*,
   revised September 2024 and reviewed annually by the international mouse and rat nomenclature
   committees; the guidelines fix a symbol's form, and the registry records which symbol a strain
-  has. Whether either registry numbers its data releases was not checked.
+  has. On 2026-09-24 MGI's home page read "last database update 09/08/2026, MGI 6.24", a software
+  version and the date of a weekly database update, and RGD's read "RGD Data Snapshot 2026-09-17",
+  with no version number.
 
 Part 00 §10 recognizes two entry kinds. An exact entry names an edition. An unversioned entry
 follows the linked specification during candidate development, and a release must replace it with
-an exact edition. A living registry fits neither, since it has no edition for a release to name.
+an exact edition. Each of the three registries has a nameable dated state, so a release could name
+one, but a strain or species registered after that date would then have no conforming spelling;
+a living registry is followed as it stands, which neither kind admits.
 
 ### 2.4 The framework check covers four parts
 
@@ -168,7 +173,8 @@ place it in `framework.py` or `registry/check.py`.
 1. **HL7 FHIR.** Preferred: no normative entry, because the spelling rule governs open columns and
    `sex` is closed (§4.1). An entry for FHIR R5 would require spelling a value its value set lacks.
 2. **Living-registry kind.** Preferred: Part 00 §10 names it (§4.2), since that part owns reference
-   policy and a living registry otherwise blocks release under its edition rule.
+   policy and its edition rule would otherwise pin a living registry to a dated state that excludes
+   later registrations.
 
 ## 7. Promotion criteria
 
