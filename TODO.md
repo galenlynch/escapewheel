@@ -438,6 +438,14 @@ source's rows, which no resource carries and no report key holds. A delivered sy
 `withheld_first_anchor` and `withheld_last_anchor` null where an imported one fills them, and the
 build says so rather than leaving the packet quietly poorer.
 
+The build cannot recompute the result, because a withheld anchor never reaches the packet. The
+recommended fix, once a recipe delivers sync out of process, is a report key: sync's delivery
+report (Part 09 §5.8) carries the result per clock, and the build stamps it on the clock rows as
+`_declare_withheld` does in process. It needs a revision because it adds a report key. A table of
+sync's own would restate R99's columns, and a general way for one source to contribute columns to
+another's rows is more mechanism than one fact warrants. Nothing needs it while every recipe runs
+sync in process.
+
 **A delivered source that states facts needs a `report_path`.** Without one it states nothing, its
 `STATES` values never cross, and the recipe's declared values stand — which moved
 `core.sessions.session_end_time` by 17 minutes in the trial run. Conforming and not silent: a build
