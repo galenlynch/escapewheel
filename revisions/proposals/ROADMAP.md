@@ -795,7 +795,7 @@ This table prevents a finding from disappearing merely because it was split out 
 | D6 underspecified adapter declarations | P8 |
 | D7 imperative registry replay | P10 |
 | D8 extension non-table assets | P5.1 |
-| D9 cross-language proof | Deferred interoperability hardening; reconsider as a P11 release criterion if independent implementation is required for v0.2 |
+| D9 cross-language proof | Deferred interoperability hardening, including a build-supplied location for an adapter's source cache, which the P8 adapter contract leaves ungoverned but open; reconsider as a P11 release criterion if independent implementation is required for v0.2 |
 | R1–R4 and R6–R7 process gaps | P0 is complete; continue using its gates and evidence artifacts |
 | R5 mutable publication | P11 |
 | R8 historical review labeling | Ordinary documentation maintenance |
