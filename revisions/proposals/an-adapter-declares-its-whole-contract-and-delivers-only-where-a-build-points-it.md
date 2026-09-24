@@ -138,8 +138,8 @@ full repository verifier passes its 35 stages.
 - A build applies one set of checks to a declaration, whichever form it arrives in and whichever
   public route reaches the build.
 - The pipeline rule says where an adapter delivers: only into a location a build supplied for it,
-  which the build creates and removes. Bytes a build never reads, such as a source cache, are
-  outside the rule.
+  which the build creates and removes. It forbids no other write, so a source cache stays outside
+  it and a later revision can still govern one.
 - The change keeps an adapter's source-format knowledge in the adapter and the packet contract in
   the registries and profiles, and it changes no packet bytes.
 
@@ -206,10 +206,15 @@ deliver, so an adapter author still cannot tell which writes a build relies on.
 **Keep the sentence and treat arrays as the exception.** It would leave the files protocol and the
 report unaccounted for.
 
-A source cache stays ungoverned. The rule covers what a build reads and stages, and a cache is
-neither: it holds source bytes an adapter may reuse, and whether an implementation lets adapters
-keep one is its own choice. Governing the cache would oblige the specification to define its
-location, layout, and lifetime, for bytes no build or reader ever consumes.
+A source cache is deferred rather than ruled out. The rule covers what a build reads and stages,
+and a cache is neither: it holds source bytes an adapter may reuse, and whether an implementation
+lets adapters keep one is its own choice for now. Governing it would mean defining at least its
+location and lifetime, and its layout wherever adapters share one. The rule therefore restricts
+where an adapter delivers and forbids no other write, so an adapter may keep and change a cache
+today, and a later revision can add a build-supplied cache location without amending it. Such a
+location would outlive a build, unlike every location Part 03 §11.2 supplies now, and Part 03
+§11.5 lets an adapter name a term only in `needs`, which a build must fill, so that revision would
+also settle the location's lifetime and how an adapter declares it optional.
 
 ### 4.5 Array delivery binding
 
@@ -240,8 +245,9 @@ and binding by catalog row, needs no specification change and belongs with this 
 2. Resolved: a reader need not validate a resolution document and may. Whether to validate is an
    implementation's choice about how clearly it reports a malformed document, as with a registry,
    so the specification requires neither refusing nor skipping one.
-3. Resolved: the source cache is not governed. An implementation may let adapters keep one;
-   governing it would mean defining its structure, for bytes no build reads.
+3. Deferred: the source cache is not governed by this change. An implementation may let adapters
+   keep and change one, and the delivery rule leaves room for a later revision to supply a cache
+   location.
 
 ## 7. Promotion criteria
 
