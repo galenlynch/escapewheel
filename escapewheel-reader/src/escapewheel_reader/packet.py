@@ -241,6 +241,8 @@ class Packet:
             If the manifest declares no such resource.
         ResourceUnreadableError
             If the resource does not resolve to a readable store.
+        UnsupportedCodecError
+            If Zarr cannot decode a codec the array uses; other resources stay readable.
 
         Examples
         --------

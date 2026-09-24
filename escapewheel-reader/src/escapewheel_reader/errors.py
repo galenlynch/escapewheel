@@ -41,7 +41,26 @@ class ResourceUnreadableError(PacketError):
 
 
 class UnsupportedCodecError(PacketError):
-    """The packet requires a codec this reader does not support."""
+    """The reader cannot decode a codec one resource uses (Part 03 §6.1).
+
+    Raised when the resource's values are asked for, never when the packet opens, so only that
+    resource fails.
+
+    Attributes
+    ----------
+    resource_id : str
+        The resource that cannot be read.
+    outside_floor : bool or None
+        Whether the resource lies outside its interface's reader floor (Part 03 §6.4). False means
+        this installation lacks a feature every conforming reader supports, so the installation is
+        what to repair; True means the packet chose a feature beyond the portability guarantee.
+        None where the metadata is reachable only through Zarr, which just failed to read it.
+    """
+
+    def __init__(self, resource_id: str, message: str, *, outside_floor: bool | None) -> None:
+        super().__init__(f"{resource_id}: {message}")
+        self.resource_id = resource_id
+        self.outside_floor = outside_floor
 
 
 class NoTimeOrigin(PacketError):

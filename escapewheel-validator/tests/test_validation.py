@@ -746,6 +746,14 @@ def test_an_irregular_chunk_grid_is_caught(packet_root):
     assert "array.irregular_chunk_grid" in _checks(validate(open_packet(packet_root)))
 
 
+def test_a_transpose_inside_a_shard_is_caught(packet_root):
+    """Part 03 §6.2 bans `transpose` from the whole chain, a shard's own pipeline included."""
+    document = _zarr_v3()
+    document["codecs"][0]["configuration"]["codecs"].insert(0, {"name": "transpose"})
+    _add_array(packet_root, declared=["sharding_indexed", "blosc"], document=document)
+    assert "array.transpose_codec" in _checks(validate(open_packet(packet_root)))
+
+
 def test_a_rank_the_dimensions_do_not_cover_is_caught(packet_root):
     """Part 03 §6.2: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
     _add_array(packet_root, declared=["sharding_indexed", "blosc"], axes=2)

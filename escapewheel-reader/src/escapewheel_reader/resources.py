@@ -12,7 +12,6 @@ DuckDB does behind the `sql` extra.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -20,9 +19,10 @@ import pyarrow as pa
 import pyarrow.dataset as pads
 import pyarrow.parquet as pq
 
-from .errors import ResourceUnreadableError
+from .errors import ResourceUnreadableError, UnsupportedCodecError
 from .location import Location
 from .manifest import Resource
+from .profile import variant_for_zarr_format, zarr_floor_admits
 from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -83,31 +83,17 @@ def _store(resource: Resource, root: Location) -> str:
     return str(_resolve(resource, root))
 
 
-def _codec_names(codecs: Iterable[Mapping[str, Any]]) -> list[str]:
-    """Flatten a Zarr v3 codec pipeline to names, outermost first.
+def _unknown_codec_errors() -> tuple[type[Exception], ...]:
+    """Return what Zarr raises for a codec it has no implementation of, v3 and v2 alike.
 
-    The mandatory `bytes` codec is dropped, matching what a manifest declares (Part 03 §6.4). A
-    sharding codec is reported together with the codecs nested inside it, because reading one
-    chunk needs all of them.
-
-    Parameters
-    ----------
-    codecs : iterable of Mapping
-        The `codecs` array from a Zarr v3 metadata document.
-
-    Returns
-    -------
-    list of str
-        Codec names.
+    Caught by class rather than as any failure to open, so malformed metadata is not reported as a
+    missing codec. zarr-python before 3.1.3 raises a bare `KeyError` instead, which is not caught.
     """
-    names = []
-    for codec in codecs:
-        name = str(codec.get("name", ""))
-        if name and name != "bytes":
-            names.append(name)
-        if nested := codec.get("configuration", {}).get("codecs"):
-            names.extend(_codec_names(nested))
-    return names
+    import numcodecs.errors
+    import zarr.errors
+
+    found = (getattr(zarr.errors, "UnknownCodecError", None), getattr(numcodecs.errors, "UnknownCodecError", None))
+    return tuple(error for error in found if error is not None)
 
 
 class TableResource:
@@ -407,13 +393,18 @@ class ArrayResource:
             The parsed document, read once and kept.
         """
         if self._metadata is None:
-            document = self.location.join(_ZARR_METADATA[self.zarr_format])
-            try:
-                parsed: dict[str, Any] = json.loads(document.read_bytes())
-            except Exception:  # noqa: BLE001 - a store this cannot read is Zarr's problem, not an error
-                parsed = dict(self.open().metadata.to_dict())
-            self._metadata = parsed
+            parsed = self._read_document()
+            self._metadata = parsed if parsed is not None else dict(self.open().metadata.to_dict())
         return self._metadata
+
+    def _read_document(self) -> dict[str, Any] | None:
+        """Parse the metadata document directly, or return None where only Zarr can reach it."""
+        document = self.location.join(_ZARR_METADATA[self.zarr_format])
+        try:
+            parsed: dict[str, Any] = json.loads(document.read_bytes())
+        except Exception:  # noqa: BLE001 - a store this cannot read is Zarr's problem, not an error
+            return None
+        return parsed
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -458,18 +449,31 @@ class ArrayResource:
 
     @property
     def codecs(self) -> tuple[str, ...]:
-        """Every codec the array actually uses, outermost first, excluding ``bytes``.
+        """The codec pipeline by name, in stored order, ``bytes`` included.
 
-        Comparable directly against :attr:`Resource.codecs`, which is what the manifest claims.
+        A sharded v3 array's pipeline is the sharding codec alone; the pipeline inside each shard
+        is part of that codec's configuration in :meth:`metadata`. A v2 array's is its filters,
+        then its compressor.
         """
         meta = self.metadata()
         if self.zarr_format == 3:
-            return tuple(_codec_names(meta.get("codecs", ())))
-        names = []
-        if compressor := meta.get("compressor"):
-            names.append(str(compressor["id"]))
-        names.extend(str(f["id"]) for f in (meta.get("filters") or ()))
-        return tuple(names)
+            return tuple(codec if isinstance(codec, str) else str(codec["name"]) for codec in meta.get("codecs", ()))
+        stages = [*(meta.get("filters") or ()), meta.get("compressor")]
+        return tuple(str(stage["id"]) for stage in stages if stage)
+
+    @property
+    def within_reader_floor(self) -> bool:
+        """Whether the array lies within its Zarr variant's reader floor (Part 03 §6.4).
+
+        Outside it the array is valid but beyond the portability guarantee (Part 03 §2):
+        this reader may decode it, and a conforming one need not.
+        """
+        return self._admitted(self.metadata())
+
+    def _admitted(self, document: dict[str, Any]) -> bool:
+        """Whether the descriptor's floor for this array's Zarr version admits its metadata."""
+        variant = variant_for_zarr_format(self.zarr_format)
+        return variant is not None and zarr_floor_admits(document, variant["reader_floor"])
 
     def open(self) -> Any:
         """Open the array for reading values, once, and keep it open.
@@ -491,6 +495,8 @@ class ArrayResource:
         ------
         ImportError
             If Zarr is not installed.
+        UnsupportedCodecError
+            If Zarr cannot decode a codec the array uses.
         """
         if self._array is None:
             try:
@@ -499,6 +505,14 @@ class ArrayResource:
                 raise ImportError("reading array values requires zarr; install the 'arrays' extra") from exc
             try:
                 self._array = zarr.open_array(self.store, mode="r", zarr_format=self.zarr_format)
+            except _unknown_codec_errors() as exc:
+                # Not `metadata()`: where only Zarr reaches the store it would reopen, and fail, forever.
+                document = self._metadata if self._metadata is not None else self._read_document()
+                outside = None if document is None else not self._admitted(document)
+                floor = {None: "unassessed", True: "outside it", False: "within it"}[outside]
+                raise UnsupportedCodecError(
+                    self.resource_id, f"{exc} (reader floor: {floor})", outside_floor=outside
+                ) from exc
             except ImportError as exc:  # pragma: no cover - depends on which backends are installed
                 scheme = self.location.scheme or "file"
                 raise ImportError(

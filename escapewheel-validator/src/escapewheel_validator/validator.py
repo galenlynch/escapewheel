@@ -607,11 +607,25 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
             )
 
 
+def _codec_names(pipeline: Iterable[Any]) -> set[str]:
+    """Every codec a v3 pipeline names, inside a shard too, where Part 03 §6.2 bans `transpose` as well."""
+    names = set()
+    for codec in pipeline:
+        if isinstance(codec, str):
+            names.add(codec)
+            continue
+        names.add(str(codec.get("name", "")))
+        configuration = codec.get("configuration") or {}
+        for member in ("codecs", "index_codecs"):
+            names |= _codec_names(configuration.get(member) or ())
+    return names
+
+
 def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], report: Report) -> None:
     """Check one packet-owned array against the metadata document in its own store."""
     try:
         metadata = handle.metadata()
-        actual = set(handle.codecs)
+        actual = _codec_names(metadata.get("codecs") or handle.codecs)
         rank = len(handle.shape)
     except (ResourceUnreadableError, OSError, ValueError, KeyError) as exc:
         report.add(

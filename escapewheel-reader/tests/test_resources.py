@@ -249,3 +249,162 @@ def test_a_store_uri_pyarrow_cannot_open_is_reported(packet_root):
     assert not resource.is_local
     with pytest.raises(ResourceUnreadableError, match="cannot reach"):
         resource.schema()
+
+
+# -- Part 03 §§6.1 and 6.4: the reader floor, and a codec this reader cannot decode ---------------
+
+
+def _zarr_json(store):
+    import json
+
+    return json.loads((store / "zarr.json").read_text())
+
+
+def _v3_array(tmp_path, name, **layout):
+    """A two-chunk int16 array written by zarr-python, bound as an external resource."""
+    zarr = pytest.importorskip("zarr")
+    import numpy as np
+
+    store = tmp_path / name
+    array = zarr.create_array(store=str(store), shape=(4, 3), chunks=(2, 3), dtype="int16", **layout)
+    array[:] = np.arange(12, dtype="int16").reshape(4, 3)
+    return store, _array_resource(store.resolve().as_uri(), tmp_path)
+
+
+def test_the_pipeline_keeps_bytes_and_an_array_inside_the_floor_opens(array_packet):
+    """zarr-python's default int16 pipeline, `bytes` then `zstd`, is a floor sequence verbatim."""
+    handle = open_packet(array_packet).array_resource("core.lfp")
+    assert handle.codecs == ("bytes", "zstd")
+    assert handle.within_reader_floor
+    assert handle.read((slice(3, 4), slice(2, 3)))[0, 0] == 11
+
+
+def test_a_sharded_pipeline_is_the_sharding_codec_alone(tmp_path):
+    """Flattened, the shard's `bytes`, `zstd` would read as a floor sequence it is not."""
+    _, handle = _v3_array(tmp_path, "sharded.zarr", shards=(4, 3))
+    assert handle.codecs == ("sharding_indexed",)
+    assert not handle.within_reader_floor
+    assert handle.read()[3, 2] == 11
+
+
+def test_a_floor_admitting_sharding_compares_the_shard_as_a_pipeline(tmp_path):
+    """The descriptor decides; the same comparison reads a floor stated as patterns with sharding."""
+    from escapewheel_reader.profile import zarr_floor_admits
+
+    store, _ = _v3_array(tmp_path, "sharded.zarr", shards=(4, 3))
+    metadata = _zarr_json(store)
+    floor = {
+        "codec_sequences": [[{"name": "bytes"}], [{"name": "bytes"}, {"name": "zstd"}]],
+        "sharding": {"index_codec_sequences": [[{"name": "bytes"}, {"name": "crc32c"}]], "index_location": "end"},
+    }
+    assert zarr_floor_admits(metadata, floor)
+    del metadata["codecs"][0]["configuration"]["index_location"]
+    assert zarr_floor_admits(metadata, floor)
+    metadata["codecs"].append({"name": "zstd"})
+    assert not zarr_floor_admits(metadata, floor)
+    assert not zarr_floor_admits(_zarr_json(store), {"codec_sequences": floor["codec_sequences"]})
+
+
+def test_a_decodable_array_outside_the_floor_still_reads(tmp_path):
+    """Outside the floor is beyond the portability guarantee, not an error (Part 03 §2)."""
+    from zarr.codecs import BloscCodec
+
+    _, handle = _v3_array(tmp_path, "blosc.zarr", compressors=BloscCodec(cname="lz4"))
+    assert handle.codecs == ("bytes", "blosc")
+    assert not handle.within_reader_floor
+    assert handle.read()[3, 2] == 11
+
+
+def test_a_codec_this_reader_lacks_fails_that_array_alone(array_packet):
+    """Part 03 §6.1: the packet opens, the array describes itself, and only its values refuse."""
+    import json
+
+    from escapewheel_reader import UnsupportedCodecError
+
+    store = array_packet / "arrays" / "lfp.zarr"
+    metadata = _zarr_json(store)
+    metadata["codecs"].append({"name": "example.unimplemented"})
+    (store / "zarr.json").write_text(json.dumps(metadata))
+
+    packet = open_packet(array_packet)
+    handle = packet.array_resource("core.lfp")
+    assert handle.codecs == ("bytes", "zstd", "example.unimplemented")
+    assert not handle.within_reader_floor
+    with pytest.raises(UnsupportedCodecError, match="example.unimplemented") as raised:
+        packet.array("core.lfp")
+    assert raised.value.resource_id == "core.lfp"
+    assert raised.value.outside_floor
+    assert packet.table("core.intervals").num_rows == 2
+
+
+def test_a_v2_compressor_this_reader_lacks_fails_that_array(tmp_path):
+    import json
+
+    from escapewheel_reader import UnsupportedCodecError
+
+    zarr = pytest.importorskip("zarr")
+    store = tmp_path / "v2.zarr"
+    zarr.create_array(store=str(store), shape=(4,), chunks=(2,), dtype="int16", zarr_format=2)[:] = 1
+    metadata = json.loads((store / ".zarray").read_text())
+    metadata["compressor"] = {"id": "example_unimplemented"}
+    (store / ".zarray").write_text(json.dumps(metadata))
+
+    handle = _array_resource(store.resolve().as_uri(), tmp_path)
+    assert handle.codecs == ("example_unimplemented",)
+    with pytest.raises(UnsupportedCodecError) as raised:
+        handle.read()
+    assert raised.value.outside_floor
+
+
+def test_a_floor_codec_this_installation_lacks_is_marked_within_the_floor(array_packet, monkeypatch):
+    """The packet is portable here, so the installation is what a user must repair."""
+    zarr = pytest.importorskip("zarr")
+    from zarr.errors import UnknownCodecError
+
+    from escapewheel_reader import UnsupportedCodecError
+
+    def unimplemented(*args, **kwargs):
+        raise UnknownCodecError("zstd")
+
+    monkeypatch.setattr(zarr, "open_array", unimplemented)
+    with pytest.raises(UnsupportedCodecError, match="reader floor: within it") as raised:
+        open_packet(array_packet).array("core.lfp")
+    assert not raised.value.outside_floor
+
+
+@pytest.mark.parametrize(
+    ("filters", "compressor", "admitted"),
+    [
+        (None, None, True),
+        (None, {"id": "zstd", "level": 5}, True),
+        (None, {"id": "blosc", "cname": "zstd", "clevel": 5, "shuffle": 1}, True),
+        (None, {"id": "blosc", "cname": "lz4"}, False),
+        ([], {"id": "zstd"}, False),
+        ([{"id": "delta", "dtype": "<i2"}], {"id": "zstd"}, False),
+    ],
+)
+def test_the_v2_floor_compares_only_the_members_a_pattern_states(filters, compressor, admitted):
+    """Part 03 §6.4: null matches only null, and unmentioned configuration does not participate."""
+    from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_admits
+
+    metadata = {"zarr_format": 2, "shape": [4], "filters": filters, "compressor": compressor}
+    assert zarr_floor_admits(metadata, variant_for_zarr_format(2)["reader_floor"]) is admitted
+
+
+def test_a_store_only_zarr_can_reach_leaves_the_floor_unassessed(array_packet, monkeypatch):
+    """The metadata cannot be compared when the one reader of it is the one that failed."""
+    zarr = pytest.importorskip("zarr")
+    from zarr.errors import UnknownCodecError
+
+    from escapewheel_reader import UnsupportedCodecError
+    from escapewheel_reader.resources import ArrayResource
+
+    def unimplemented(*args, **kwargs):
+        raise UnknownCodecError("example.unimplemented")
+
+    monkeypatch.setattr(zarr, "open_array", unimplemented)
+    monkeypatch.setattr(ArrayResource, "_read_document", lambda self: None)
+    handle = open_packet(array_packet).array_resource("core.lfp")
+    with pytest.raises(UnsupportedCodecError, match="reader floor: unassessed") as raised:
+        handle.metadata()
+    assert raised.value.outside_floor is None

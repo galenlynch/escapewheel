@@ -122,6 +122,6 @@ disallow_incomplete_defs = false
 
 
 [[tool.mypy.overrides]]
-# zarr is the `arrays` extra, absent on a table-only install.
-module = "zarr.*"
+# zarr, and the numcodecs it brings, are the `arrays` extra, absent on a table-only install.
+module = ["zarr.*", "numcodecs.*"]
 ignore_missing_imports = true
