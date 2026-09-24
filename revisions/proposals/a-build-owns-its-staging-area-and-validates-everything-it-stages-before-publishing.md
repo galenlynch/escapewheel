@@ -170,7 +170,7 @@ structural change for no gain in meaning.
 **Keep Part 05 §7's obligation and implement it** (agreed direction). What the obligation covers
 depends on its granularity:
 
-- **One row per source root** (preferred). A build records one `core.source_files` row per
+- **One row per source root** (agreed direction). A build records one `core.source_files` row per
   distinct `root` it supplied, with `uri` the root, and one `core.processing_run_inputs` row linking
   each to the import run. It needs no adapter change and no new delivery field. `size_bytes` and
   `sha256` stay null unless a build knows them without reading the source.
@@ -228,8 +228,8 @@ guarantee that a delivered array reaches its final path by that rename.
 
 ## 6. Open questions
 
-1. **Input granularity.** One `core.source_files` row per source root, or one per file an adapter
-   read? The preference is per root, because per file needs a new delivery field.
+1. **Input granularity.** Settled: one `core.source_files` row per source root, since one per file
+   needs a new delivery field that every out-of-process adapter would have to fill.
 2. **Interrupted promotion.** Does a build also own files it promoted before a failed publication,
    so that a retry may remove them, or do they stay strays that a writer refuses to build over, as
    now? The preference is to keep them strays. They sit at packet paths, and a writer cannot tell
