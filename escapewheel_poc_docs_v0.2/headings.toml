@@ -447,6 +447,12 @@ section = "2.2"
 title = "Authority by concern"
 aliases = []
 
+[anchor.ew-build-supplied-values]
+part = "03"
+section = "11.2"
+title = "What a build supplies"
+aliases = []
+
 [anchor.ew-candidate-consistency]
 part = "00"
 section = "2.3"
@@ -805,6 +811,12 @@ aliases = []
 part = "03"
 section = "2"
 title = "Descriptor and interfaces"
+aliases = []
+
+[anchor.ew-protocol-groups]
+part = "03"
+section = "11.1"
+title = "Protocol groups"
 aliases = []
 
 [anchor.ew-reaching-a-source]
