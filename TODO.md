@@ -534,6 +534,45 @@ natural.
   implementation floor R3 §2.3 also argues. Worth re-deciding before a table next wants a repeated
   value inline.
 
+## 11. Known defects awaiting a fix
+
+Found by the P9 research at `506c14e` and during R130–R134. None needs a contract decision; each is
+fixed as ordinary maintenance with a test, and those marked *unconfirmed* are read off the code and
+reproduced first.
+
+- **Store listing keys use the OS separator.** `stores.listing` builds local member keys with
+  `str(f.relative_to(root))`, where Part 04 §5.4 digests `/`-separated keys.
+- **A single-object external records a member keyed `""`** (*unconfirmed*), which the manifest
+  schema's `minLength: 1` refuses.
+- **The validator CLI calls sha256 recomputation "level 3b"**; Part 04 §5.3 calls it 3c, and its
+  help says it checks only external resources when it also checks packet-owned ones.
+- **Immutability is cited as Part 04 §5.1** in `validator.py:771` and `writer.py:448`; the rule is
+  Part 03 §8.1.
+- **An unresolvable referenced delivery is skipped.** `Delivered._referenced` drops an entry whose
+  `resource_id` matches no catalog row, where Part 03 §11.3 has the build reject it.
+- **A retry after a partial promotion may nest `tables/` inside `tables/`** (*unconfirmed*), since
+  `shutil.move` into an existing directory moves beneath it.
+- **The reader never raises `UnsupportedCodecError`**, so it cannot name missing support as
+  Part 03 §6.1 requires; `resources._codec_names` drops `bytes` and flattens shards, and
+  `validator._stored_codecs` is dead.
+- **The writer's recorded dropped-spike count** was 0 in `df-packet` while 9,398 spikes were
+  missing; whether the current writer still miscounts is unchecked.
+- **A killed download can leave a truncated cache entry** (*unconfirmed*): fsspec's `simplecache`
+  writes into the file it later treats as cached and counts a file as cached if it exists.
+- **`ESCAPEWHEEL_SOURCE_CACHE` and its default** are documented only in `store.py`, not in the
+  writer README.
+- **`test_extensions` fails when run from the repository root**; it resolves a path against the
+  working directory.
+- **Stale comments:** `writer.py` cites "Part 05 stages 8 and 9" (there are seven) and Part 05 §8
+  for identifier assignment (§4.3); its module docstring omits materialization; `arrow.py:213`
+  says Part 03 overrides the order of two tables, which §5.3 does not.
+- **Stale specification text:** Part 03 §11.3 and 15 core-registry descriptions cite Part 05 §8
+  for identifier assignment (§4.3); Part 03 §5.3 speaks of a registry-declared sort that R93
+  removed; Part 03 §5.6 counts "30 of the registry's 330 columns"; Part 10 §5 points at a codec
+  floor in Part 03 §6.1 that is now §6.4; Part 02 §3 says `authority` names one nomenclature where
+  §9.3 allows several; Part 02 §13 repeats Part 00 §10's RFC 3986 entry, which
+  `framework.REFERENCE_ANCHORS` misses because it omits Part 02.
+
 ---
 
 # Measured, for reuse
