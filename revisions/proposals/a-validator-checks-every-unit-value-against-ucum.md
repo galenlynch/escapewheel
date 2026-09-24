@@ -103,8 +103,8 @@ at most two per column in the packets above.
 ### 4.4 How the writer's values become UCUM codes
 
 **Each source maps its own spellings.** The NWB source maps NWB's unit names to UCUM (`volts` to
-`V`), and the sorter and waveform sources write `{adc}` and `{sample}`, which Part 02 §8.4 already
-names as the form for a dimensionless count. A spelling a source cannot map reaches the packet
+`V`), and the sorter and waveform sources write `{adc}` and `{sample}`, curly-brace annotations
+that Part 02 §8.4 already admits as dimensionless UCUM codes. A spelling a source cannot map reaches the packet
 unchanged, fails validation, and the writer refuses to publish. This proposal prefers it: source
 spellings are source-format knowledge, which belongs to the source that reads the format, and
 Part 02 §9.3 already requires a writer to "spell a value as the named nomenclature does".
@@ -131,13 +131,18 @@ That puts a fixed property of a file format into every recipe that reads it.
 | revision lifecycle, ledger, evidence, and process tooling | Unchanged except for the ordinary revision and evidence records. |
 | generated publications and developer documentation | The combined specification regenerates. |
 
-## 6. Open questions
+## 6. Resolved direction
 
-1. **Scan set.** Scan every column declaring the UCUM authority rather than only `unit_from`
-   targets (§4.1)?
-2. **Severity.** Report a non-UCUM value at `error` (§4.2)?
-3. **Normalization.** Have each source map its own spellings to UCUM, with an unmappable value
-   refused through validation (§4.4)?
+1. A validator scans every non-null value of every column whose `authority` includes
+   `https://ucum.org/ucum`, parsing it under the UCUM edition Part 02 §13 selects.
+2. A value that does not parse is an `error`, attributed to the registry declaring the column.
+   Part 02 §9.3's rule against rejecting a value absent from an authority does not apply to UCUM,
+   whose codes a grammar defines rather than a list.
+3. The check is a Part 05 §5.3 shim check. An unavailable UCUM edition or an unreadable table
+   makes the evaluation `incomplete` rather than producing a finding.
+4. Each writer source maps its own spellings to UCUM: `volts` to `V`, `adc` to `{adc}`, and
+   `sample` to `{sample}`. A spelling a source cannot map fails validation, and the writer refuses
+   to publish the packet.
 
 ## 7. Promotion criteria
 
@@ -147,7 +152,7 @@ That puts a fixed property of a file format into every recipe that reads it.
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.

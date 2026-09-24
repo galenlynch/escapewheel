@@ -184,24 +184,28 @@ is a property of validation reporting, and Part 05 §10 and §14.5 already defer
 | revision lifecycle, ledger, evidence, and process tooling | Unchanged except for the ordinary revision and evidence records. |
 | generated publications and developer documentation | The combined specification regenerates; the validator and writer READMEs describe the new report and gate. |
 
-## 6. Open questions
+## 6. Resolved direction
 
-1. **Scope.** Row-valued UCUM checking was scheduled with this work. It adds one check and does
-   not depend on how verdicts compose, so it is split into the separate proposal
+1. Row-valued UCUM checking is a separate decision, carried by
    [A validator checks every unit value against UCUM](a-validator-checks-every-unit-value-against-ucum.md),
-   which uses this proposal's attribution. Keep the split, or merge the two?
-2. **Verdict states.** Adopt `passed`, `failed`, and `incomplete`, with conjunction taking the worst
-   (§4.1)?
-3. **Attribution.** Attribute each finding to the registry whose declaration governs it and
-   otherwise to the packet, with the packet verdict conjoining packet-scope findings, core, and
-   every bound extension (§4.2)?
-4. **Publication.** Refuse to publish anything but a `passed` packet, with no partial-publication
-   mode (§4.4)?
-5. **Report and placement.** Require report content in Part 05 prose without a report schema, and
-   move the composition rule to Part 05 §9 with Part 09 §5.4 citing it (§§4.5–4.6)?
-
-Extension parity (§4.3) follows from Part 09 §5.1 and Part 05 §5.4 as they stand and is not a
-separate question.
+   which depends on this proposal's attribution.
+2. A verdict is `passed`, `failed`, or `incomplete`. A subject with an error-level finding is
+   `failed`; one with none whose required evaluation did not complete, or was withheld, is
+   `incomplete`; any other is `passed`. Conjunction takes the worst in that order. A bound registry
+   whose result is `invalid` fails its subject, and one whose result is `unsupported` or
+   `incomplete` leaves it `incomplete`.
+3. A finding belongs to the bound registry whose declaration governs what it concerns: a binding
+   finding or registry-document outcome to that registry, and a finding about a resource entry to
+   the registry declaring the entry's `declaration_id`. Findings that no single declaration governs
+   belong to the packet. The packet verdict conjoins the packet-scope findings, core's verdict, and
+   every bound extension's verdict.
+4. Every check that core's resources receive reaches an extension's resources too, directed by that
+   extension's checked context and attributed to it.
+5. A writer publishes, by first commit or amendment, only a packet whose verdict is `passed`, and
+   records that verdict as the manifest's `validation.status`. No partial-publication mode exists.
+6. Part 05 §9 owns verdict composition and requires a report to carry the packet verdict, core's
+   verdict, each bound extension's verdict, and each finding's subject. Part 09 §5.4 keeps the
+   extension-specific separation and cites Part 05. No validation-report schema is published.
 
 ## 7. Promotion criteria
 
@@ -211,7 +215,7 @@ separate question.
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
