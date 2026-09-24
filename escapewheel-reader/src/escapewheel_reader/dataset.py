@@ -1,7 +1,7 @@
 """Many packets presented as one relation (R86).
 
 `open_packet` gives one packet's own tables under their own names, which is what a consumer of
-one session wants and what Part 05 §8 makes unsafe to concatenate: an assigned identifier is
+one session wants and what Part 05 §4.3 makes unsafe to concatenate: an assigned identifier is
 unique within its packet and means nothing outside it, so two packets both hold `unit_id` 0 and
 neither value names the other's unit.
 
@@ -94,7 +94,7 @@ class Session:
     ----------
     session_key : int
         The discriminator. Numbered by the dataset as it opened the packets, so it is stable
-        for one dataset and means nothing outside it -- exactly as Part 05 §8 says of every
+        for one dataset and means nothing outside it -- exactly as Part 05 §4.3 says of every
         assigned identifier.
     packet_id : str
         The packet this session was read from.

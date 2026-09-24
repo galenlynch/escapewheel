@@ -111,7 +111,7 @@ def electrode_name(group: Any, channel: Any, prefix: str = "") -> str:
     4,608 rows -- and `channel_name` is per-probe, so the pair is what identifies a contact.
 
     Module-level because every adapter reading one NWB composes it: a writer numbers a name
-    (Part 05 §8), so a second spelling of one contact mints a second electrode, and the packet then
+    (Part 05 §4.3), so a second spelling of one contact mints a second electrode, and the packet then
     references a row that is not there.
     """
     return f"{prefix}{group}.{channel}"
@@ -139,7 +139,7 @@ def contact_columns(store: Any, table: Path) -> dict[str, Any]:
 def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str], str | None]:
     """Name every contact in electrode-table row order, and say if the fallback was needed.
 
-    Three adapters name the same contacts, and a writer numbers a name (Part 05 §8), so a second
+    Three adapters name the same contacts, and a writer numbers a name (Part 05 §4.3), so a second
     spelling of one contact mints a second electrode and the packet then references a row that is
     not there. The rule lives here once rather than in each of them.
     """

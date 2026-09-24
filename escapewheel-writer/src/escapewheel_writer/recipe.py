@@ -510,7 +510,7 @@ def _resolve_ownership(sources: tuple[SourceSpec, ...], preferred: Mapping[str, 
 class MaterializeSpec:
     """An analysis resource to derive once the core resources are staged.
 
-    Part 05 stages 8 and 9 put materialization inside the import pipeline rather than after it, so
+    Part 05 §8 puts materialization inside the import pipeline rather than after it, so
     a recipe declares what to derive and the commit does it: core is staged, the staged packet
     is opened, the resource is derived from it, and everything is validated together before
     anything is promoted. Deriving into a *committed* packet is what `amend` is for, and paying

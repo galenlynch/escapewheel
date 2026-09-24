@@ -105,7 +105,7 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
 
 
 def _clock_id(packet: Any, reference: Any) -> Any:
-    """Resolve a clock a recipe named to the identifier this packet assigned it (Part 05 §8).
+    """Resolve a clock a recipe named to the identifier this packet assigned it (Part 05 §4.3).
 
     A recipe is written before any identifier exists, so it names a clock by name -- as its
     own `[[clock]]` blocks and every `parent_clock_id` do. `reference_clock` returns an id

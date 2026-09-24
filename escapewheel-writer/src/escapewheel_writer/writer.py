@@ -6,14 +6,15 @@ This module is the writer and committer halves of that pipeline. It knows nothin
 SpikeInterface, or any other source -- adapters hand it records, and it turns them into a
 packet or refuses to.
 
-The commit sequence is Part 05 Stage 5's, and its ordering is the whole guarantee:
+The commit sequence is Part 05's, and its ordering is the whole guarantee:
 
 1. write staged resources under ``staging/``;
-2. validate them there;
-3. move them into their final paths;
-4. rename the manifest to ``packet.json`` **last**.
+2. derive the analysis resources the caller asked for from the staged packet (Part 05 §8);
+3. validate the whole staged packet there;
+4. move it into its final paths;
+5. rename the manifest to ``packet.json`` **last**.
 
-Until step 4 the packet root holds no manifest, so a reader finds nothing rather than
+Until step 5 the packet root holds no manifest, so a reader finds nothing rather than
 finding a partial import that claims to be valid.
 """
 
@@ -568,7 +569,7 @@ class PacketWriter:
                 if resource_id in checked_registry["resources"]:
                     raise ValueError(f"{resource_id} redefines a core resource, which Part 09 forbids")
             self._extensions[extension_id] = document
-        #: Assigns the integer every identifier holds (Part 05 §8). One per packet, shared by every
+        #: Assigns the integer every identifier holds (Part 05 §4.3). One per packet, shared by every
         #: adapter, because two sources numbering the same probe differently is a defect no
         #: foreign key can see: both values resolve, to different rows.
         self.keys = Keys()
@@ -1133,7 +1134,7 @@ class PacketWriter:
         return entries
 
     def _preassign(self) -> None:
-        """Assign a number to every name this packet uses, before any table is built (Part 05 §8).
+        """Assign a number to every name this packet uses, before any table is built (Part 05 §4.3).
 
         Numbering as each table is staged would let the order tables happen to be written in
         decide the numbers: `core.sessions` names a `reference_clock_id` and is staged before
@@ -1345,7 +1346,7 @@ class PacketWriter:
         registries, _ = self._store_registries(staging)
 
         # 2. derive whatever the caller asked for from the staged packet, before anything is
-        #    validated or promoted. Part 05 stages 8 and 9 put materialization inside the import
+        #    validated or promoted. Part 05 §8 puts materialization inside the import
         #    pipeline, and a staged packet is already openable -- it needs a manifest, which is
         #    written here anyway. Doing it now costs one validation over the finished packet;
         #    doing it after the commit costs a second manifest, a version bump and a

@@ -6,7 +6,7 @@ do is name an extension's tables: the exception tables below carry `core.*` and 
 and an extension supplying its own passes them to :class:`~escapewheel_writer.writer.PacketWriter`.
 
 That division follows from where the decision has weight. An extension hands the writer Arrow with
-its identifiers as **names**, and Part 05 §8 has the writer mint the integers packet-wide, so the
+its identifiers as **names**, and Part 05 §4.3 has the writer mint the integers packet-wide, so the
 columns where an encoding is worth 37x to 79x do not exist in their final form until the writer
 makes them. What an extension owns is its own measurements, which the rules cover without naming
 anything.

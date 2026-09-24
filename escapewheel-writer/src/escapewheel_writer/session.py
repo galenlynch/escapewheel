@@ -44,7 +44,7 @@ from .sources.store import cache_directory
 from .writer import PacketWriter
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
-#: staged packet. Part 05 stage 8 calls these optional, so a recipe that names none is complete.
+#: staged packet. Part 06 §2 makes these disposable, so a recipe that names none is complete.
 MATERIALIZERS: dict[str, str] = {"analysis.spike_events": "spike_events"}
 
 

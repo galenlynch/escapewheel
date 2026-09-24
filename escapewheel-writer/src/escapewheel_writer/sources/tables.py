@@ -13,7 +13,7 @@ deliberate: `uv run export.py` and `python -m package.export` and `/opt/venv/bin
 all just commands, so isolating an adapter's dependencies is the recipe author's choice rather
 than a tool this package requires anyone to adopt.
 
-Rows arrive as names, not numbers. Part 05 §8 assigns identifiers packet-wide before anything is
+Rows arrive as names, not numbers. Part 05 §4.3 assigns identifiers packet-wide before anything is
 staged, so a process outside this one cannot know them and does not need to: it writes
 `session_id` as `"ecephys_776259"` and the writer turns that into an `int32`.
 """

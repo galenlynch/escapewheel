@@ -622,7 +622,7 @@ class SessionSource(Compensates):
         """`core.calibration_devices`: the devices each calibration covers.
 
         The assembly name is the device name the acquisition chain gives the same probe, and the
-        writer numbers both from that name (Part 05 §8), so the reference resolves without this
+        writer numbers both from that name (Part 05 §4.3), so the reference resolves without this
         adapter seeing `core.devices`. A calibration covering a device the packet does not hold
         gets no row, which is a fact rather than a defect (R89 §2.2) -- which is why the lick
         spouts of a water calibration appear here only if some source built them.
