@@ -683,8 +683,9 @@ Validate row-valued unit codes under the same case-sensitive UCUM edition select
 column's `unit_from` resolves to a packet column. P4.1 proves that the declaration resolves to a
 string column carrying the canonical UCUM authority and validates literal `unit` attributes; P7
 owns the value scan and its contribution to resource, extension, and packet verdicts. The scan
-decides nothing about composition, so it proceeds as a second P7 proposal that depends on the
-first for finding attribution.
+decides nothing about composition, so it proceeds as a second P7 proposal. It covers core's tables,
+where every unit column is declared, and is incorporated before composition, whose extension parity
+then carries it to extension tables.
 
 **Review coverage:** I1, the validity portions of D2/I2/I7, Part 09 consistency, extension finding
 serialization, and the valid/invalid extension portion of I9.

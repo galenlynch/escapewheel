@@ -233,7 +233,8 @@ keeps the extension-specific separation and cites Part 05. This proposal prefers
 
 1. Row-valued UCUM checking is a separate decision, carried by
    [A validator checks every unit value against UCUM](a-validator-checks-every-unit-value-against-ucum.md),
-   which uses this proposal's attribution.
+   which checks core's unit columns and precedes this one. Decision 4 extends that check, with
+   every other, to an extension's resources.
 2. A verdict is `passed`, `failed`, or `incomplete`. A subject with an error-level finding is
    `failed`; one without, whose required evaluation did not complete or was withheld, is
    `incomplete`; any other is `passed`. Conjunction takes the worst in that order. A bound registry

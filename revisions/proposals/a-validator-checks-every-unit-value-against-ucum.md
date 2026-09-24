@@ -24,9 +24,13 @@ appears to forbid such a check, because it bars a validator from rejecting a val
 from a column's authority. The clause does not distinguish an authority that lists its values from
 UCUM, whose codes a grammar of prefixes, atoms, and operators defines.
 
-This decision depends on
+Every column holding a unit is declared by the core registry, and
+[Part 05 §14.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validator-registry-boundary)
+leaves the validation of extension tables' bytes undefined. The check therefore covers core's
+tables, and its findings are core's. The open proposal
 [A packet passes only when its manifest, core, and every bound extension pass](a-packet-passes-only-when-its-manifest-core-and-every-bound-extension-pass.md)
-for the registry a unit finding is attributed to.
+extends every check to an extension's resources, this one included, so neither decision waits on
+the other.
 
 ## 2. Evidence
 
@@ -77,8 +81,8 @@ requires `ucumvert` to supply it. A row check adds no dependency.
 ## 3. Desired outcome and constraints
 
 A packet whose unit column holds a value that is not a UCUM code fails validation, with a finding
-naming the column and the value, attributed to the registry that declares the column. The
-resolution preserves:
+naming the column and the value, reported as core's finding like every other check over core's
+tables. The resolution preserves:
 
 - Part 02 §9.3's rule that an authority names a nomenclature without making an unrecognized value an
   error, for every authority other than UCUM;
@@ -114,7 +118,8 @@ make a nomenclature part of the SQL profile.
 
 **Make it a shim check under
 [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim).** The
-validator reads each distinct non-null value of each scanned column and parses it under the UCUM
+validator reads each distinct non-null value of each scanned column of core's tables, the tables
+its other shim checks reach, and parses it under the UCUM
 edition Part 02 §13 selects, which §2.4 shows is present whenever the check runs. An unreadable
 table makes the evaluation `incomplete` under
 [Part 05 §9.4](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-incomplete-validation)
@@ -142,10 +147,10 @@ declared facts, but every recipe reading a format would then repeat a fixed prop
 | physical profiles | Unchanged. The check reads logical values. |
 | packet manifest and incorporated JSON Schemas | Unchanged. No manifest field carries a unit. |
 | validation and import | Part 05 §5.3 gains one shim check, with a named check ID, at `error`. |
-| extension registries | Unchanged. None declares a UCUM column, and one that does is checked the same way. |
+| extension registries | Unchanged. None declares a UCUM column. A column one declares later is checked once extension tables receive core's checks, which the verdict-composition proposal decides. |
 | reader | Unchanged. A reader does not validate unit values. |
 | writer | The NWB, sorter, and waveform sources emit UCUM codes. |
-| validator | One shim check over the distinct values of every UCUM-authority column, attributed to the declaring registry. |
+| validator | One shim check over the distinct values of every UCUM-authority column of core's tables, reported as a core finding. |
 | adapters and code generation | Out-of-process adapters are unchanged; a value they deliver is checked like any other. |
 | existing packets and migration | Both development packets fail until rebuilt, on 14 and 11 rows. They predate the registry-binding manifest and are rebuilt regardless. Fixtures are regenerated. |
 | conformance fixtures and tests | Add a corpus variant holding `volts` in `core.array_assets.unit`, a passing packet using `V` and `{sample}`, a null unit that produces no finding, and a source test for each mapping. |
@@ -154,11 +159,13 @@ declared facts, but every recipe reading a format would then repeat a fixed prop
 
 ## 6. Resolved direction
 
-1. A validator scans every non-null value of every column whose `authority` includes
-   `https://ucum.org/ucum`, parsing it under the UCUM edition Part 02 §13 selects.
-2. A value that does not parse is an `error`, attributed to the registry declaring the column.
-   Part 02 §9.3's rule against rejecting a value absent from an authority does not apply to UCUM,
-   whose codes a grammar defines rather than a list.
+1. A validator scans every non-null value of every column of core's tables whose `authority`
+   includes `https://ucum.org/ucum`, parsing it under the UCUM edition Part 02 §13 selects. An
+   extension's unit columns are checked once extension tables receive core's checks, which the
+   verdict-composition proposal decides; no current extension declares one.
+2. A value that does not parse is an `error` and a core finding. Part 02 §9.3's rule against
+   rejecting a value absent from an authority does not apply to UCUM, whose codes a grammar defines
+   rather than a list.
 3. The check is a Part 05 §5.3 shim check and uses the UCUM edition that a valid core registry
    has already required. An unreadable table makes the evaluation `incomplete` rather than
    producing a finding.
