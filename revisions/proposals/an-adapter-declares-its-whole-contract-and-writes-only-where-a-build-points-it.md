@@ -163,8 +163,12 @@ their meaning; requiring it now costs nothing further, since the same regenerati
 
 **Incorporate both schemas** (preferred): the declaration schema from Part 03 §11.5, and the
 source resolution schema from Part 04 §5.5, each stating the extent the schema owns, as Part 04's
-opening does for the manifest schema. The reader then refuses a resolution document failing its
-schema, naming where, and the writer validates the document it writes.
+opening does for the manifest schema. The writer validates the resolution document it writes. A
+reader need not validate one, as a reader need not validate a registry for ordinary access
+([Part 02 §2.7](../../escapewheel_poc_docs_v0.2/02_core_logical_schemas.md#ew-resource-provenance-policy)), and
+may validate one to report a malformed document clearly. The reference reader validates a
+caller-supplied document, so a malformed one is refused with the place it fails rather than a
+`KeyError`, and keeps its advisory reading of the packet root's `sources.json`.
 
 **Leave both published and unincorporated.** A build would keep checking a shape that governs
 nothing, and a disagreement between prose and schema would not be an inconsistency the candidate
@@ -217,9 +221,9 @@ and binding by catalog row, needs no specification change and belongs with this 
 | packet manifest and JSON Schemas | `adapter.schema.json` requires all eight members; Part 04 §5.5 incorporates `sources.schema.json`. The manifest and delivery schemas are unchanged. Schema `$id` versions stay until release identifiers are assigned. |
 | validation and import | Part 05 §2 states which writes an adapter makes and that the build owns their locations; §3.5 applies its declaration refusals to every declaration a recipe names. |
 | extensions | Registry content unchanged. The AIND package's generated documents gain any missing members when regenerated. |
-| reader, writer, validator, adapters | The reader validates a resolution document. The writer checks class declarations, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, and names array directories by `resource_id`, binding by catalog row. The validator is unchanged. |
-| existing packets | Unchanged; no packet byte moves. A packet's `sources.json` that fails the schema becomes a reported defect rather than a `KeyError`. |
-| conformance fixtures and tests | Writer tests for a class declaration refused as its document would be, an incomplete document refused, `session.build` refusing an unchecked recipe, and array directories named by `resource_id`; reader tests for a resolution document failing its schema. |
+| reader, writer, validator, adapters | The reference reader validates a caller-supplied resolution document; the specification permits but does not require it. The writer checks class declarations, validates `escapewheel declare`'s output and the `sources.json` it writes, runs the recipe check inside `session.build`, and names array directories by `resource_id`, binding by catalog row. The validator is unchanged. |
+| existing packets | Unchanged; no packet byte moves. A packet's `sources.json` that fails the schema is nonconforming, and a reader may still ignore it as it does now. |
+| conformance fixtures and tests | Writer tests for a class declaration refused as its document would be, an incomplete document refused, `session.build` refusing an unchecked recipe, and array directories named by `resource_id`; reader tests for a caller-supplied resolution document failing its schema. |
 | revision-process tooling | Ordinary ledger and evidence records. Part 04 §5.5 and Part 05 §2 have no canonical anchors, so a structural draft needs an anchor bootstrap first. |
 | documentation | The writer and reader READMEs, `registry/README.md`'s incorporation column, and the writer's `sources/__init__.py` docstring. |
 
@@ -227,10 +231,9 @@ and binding by catalog row, needs no specification change and belongs with this 
 
 1. Does `contributes` join the required members? Recommendation: yes, so that every member is
    stated and one regeneration covers all of them.
-2. Does the reader refuse a caller-supplied resolution document that fails the schema, or skip it
-   and report its sources as unresolved? Recommendation: refuse it, naming where it fails,
-   because the caller supplied it deliberately; treat a failing `sources.json` at the packet root
-   the same way, since Part 04 §5.5 already keeps structural validation independent of it.
+2. Resolved: a reader need not validate a resolution document and may. Whether to validate is an
+   implementation's choice about how clearly it reports a malformed document, as with a registry,
+   so the specification requires neither refusing nor skipping one.
 3. Is the source cache governed? Recommendation: no. The write rule covers what a build reads and
    stages, and the cache is neither.
 
