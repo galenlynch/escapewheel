@@ -316,7 +316,7 @@ def test_a_draft_does_not_validate_until_finished(tmp_path):
 
     from escapewheel_writer.scaffold import draft
 
-    meta = json.loads(Path("../registry/registry.schema.json").read_text())
+    meta = json.loads((Path(__file__).resolve().parents[2] / "registry/registry.schema.json").read_text())
     drafted = draft("vrf", {"sites": _sites(tmp_path)})
     errors = list(jsonschema.Draft202012Validator(meta).iter_errors(drafted.document))
     assert errors, "a draft that validated would be a draft nobody finishes"

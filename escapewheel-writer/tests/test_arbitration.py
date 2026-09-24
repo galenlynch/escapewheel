@@ -124,13 +124,7 @@ def test_a_recipe_supplied_resource_is_declared(resource):
     """The recipe supplies it, so it must be a resource the registry defines."""
     import json
 
-    registry = (
-        json.loads(Path("../registry/logical_schemas.json").resolve().read_text())
-        if Path("../registry/logical_schemas.json").exists()
-        else None
-    )
-    if registry is None:
-        pytest.skip("registry not reachable from this working directory")
+    registry = json.loads((Path(__file__).resolve().parents[2] / "registry/logical_schemas.json").read_text())
     assert resource in registry["resources"]
 
 
