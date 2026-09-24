@@ -65,6 +65,10 @@ R12 §4 splits validation by what a query can see:
 | **SQL** | what the data *says* — values, keys, references, vocabularies, cross-table agreement |
 | **Python shim** | how it is *stored* — column presence, Parquet types, physical order, file existence, Zarr rank and codecs, checksums |
 
+One value check lives in the shim: unit-column values are parsed as UCUM codes (Part 05 §5.3),
+because the rule language has no UCUM grammar and adding one would make a nomenclature part of
+the SQL profile.
+
 **A storage-layer check written as SQL fails silently rather than loudly.** R12 exists because
 one did. Physical order is the example: a query sees a set of rows and cannot see the order they
 were written in, so a rule asserting it passes on a file that violates it.

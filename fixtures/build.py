@@ -784,6 +784,10 @@ def variants():
         # R96 §3.1 moved the unit of measure onto the unit that its spikes belong to.
         c["core.units"][0]["amplitude_unit"] = None
 
+    def non_ucum_unit(c):
+        # Part 02 §8.4: `microvolts` names the unit whose UCUM code is `uV`, and is no code itself.
+        c["core.units"][0]["amplitude_unit"] = "microvolts"
+
     def half_transform(c):
         # By name, not position: which row is which changed when the clocks were reordered into
         # the name order R53 numbers them in, and an index silently picked the wrong clock.
@@ -947,6 +951,7 @@ def variants():
         "unspecialised_interval": unspecialised_interval,
         "stale_summary": stale_summary,
         "missing_amplitude_unit": missing_amplitude_unit,
+        "non_ucum_unit": non_ucum_unit,
         "half_transform": half_transform,
         "unsorted_spikes": unsorted_spikes,
         "inconsistent_projection": inconsistent_projection,

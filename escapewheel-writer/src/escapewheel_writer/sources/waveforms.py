@@ -232,7 +232,8 @@ class WaveformSource:
         if "return_in_uV" not in settings:
             self.notes.append(f"{stream.key}: the analyzer declares no return_in_uV; the unit is left unstated")
             return None
-        return "uV" if settings["return_in_uV"] else "adc"
+        # `{adc}` is a UCUM annotation, a dimensionless count of converter steps (Part 02 §8.4).
+        return "uV" if settings["return_in_uV"] else "{adc}"
 
     # -- reading ------------------------------------------------------------------------
 
@@ -394,7 +395,7 @@ class WaveformSource:
             "dimension_name": "sample",
         }
         if clock_id is None:
-            sample_axis |= {"origin_value": float(start), "step_value": 1.0, "coordinate_unit": "sample"}
+            sample_axis |= {"origin_value": float(start), "step_value": 1.0, "coordinate_unit": "{sample}"}
         else:
             sample_axis |= {"clock_id": clock_id, "origin_tick": start, "step_tick_num": 1}
         return [

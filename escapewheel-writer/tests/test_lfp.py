@@ -154,6 +154,11 @@ def test_conversion_stays_on_the_asset(nwb):
     assert all(r.get("conversion") is None for r in got["core.array_channels"])
 
 
+def test_nwb_volts_is_recorded_as_its_ucum_code(nwb):
+    """Part 02 §8.4: the series says `volts`, which is no UCUM code."""
+    assert _source(nwb).records()["core.array_assets"][0]["unit"] == "V"
+
+
 def test_the_reference_declares_zarr_v2_and_its_codec(nwb):
     """Part 03 §6.1: only an external resource may be v2, and Part 03 §6.4 declares its codecs per resource."""
     array = _source(nwb).external_arrays()["core.45883-1.lfp"]

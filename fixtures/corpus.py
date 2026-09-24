@@ -29,6 +29,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     ),
     "stale_summary": ("error", "core.units.spike_summary_consistent"),
     "missing_amplitude_unit": ("error", "core.units.amplitude_unit_declared"),
+    "non_ucum_unit": ("error", "core.units.amplitude_unit.ucum_code"),
     "half_transform": ("error", "core.clocks.transform_pair_complete"),
     "unsorted_spikes": ("error", "core.spike_events.physical_order"),
     "inconsistent_projection": (

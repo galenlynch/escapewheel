@@ -23,4 +23,3 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
-| 1 | [A Validator Checks Every Unit Value Against UCUM](a-validator-checks-every-unit-value-against-ucum.md) | 2110 | Ready for acceptance; appraised 2026-09-23 against `cd2a612`. Depends on no accepted clause or open draft, and precedes the verdict-composition proposal, whose extension parity carries the check to extension tables. Material finding: every unit column is an `open` vocabulary, so §3.2 also exempts unit codes from the open-vocabulary non-rejection rule; R101 §§3.1 and 3.6 and R107 §3.3 are narrowed, not superseded. Every `volts` row in the development packets comes from the LFP source. | Part 02 §§8.4, 9.3, and 13 and Part 05 §5.3, in place |

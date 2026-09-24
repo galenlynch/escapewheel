@@ -35,8 +35,10 @@ from escapewheel_reader.ordering import stored_order
 from .generate import Check, adjacency_settles_uniqueness, concerns, generate
 from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest
 from .registry_document import (
+    UCUM_URI,
     CheckedRegistryContext,
     RegistryResult,
+    ucum_error,
 )
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
 from .stores import StoreUnreachable, digest, listing, read_member
@@ -1413,6 +1415,34 @@ def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any]
                 )
 
 
+def _check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
+    """Part 05 §5.3. Every non-null value of a unit column is a UCUM code (Part 02 §8.4).
+
+    Only core's tables reach here, which is where every unit column is declared; extension-table
+    byte validation is not defined (Part 05 §14.5). Distinct values are parsed once each.
+    """
+    for resource_id, handle in present.items():
+        for column in tables[resource_id]["columns"]:
+            if not any(entry.get("uri") == UCUM_URI for entry in column.get("authority", ())):
+                continue
+            name = column["name"]
+            check = f"{resource_id}.{name}.ucum_code"
+            try:
+                values = pc.unique(pq.read_table(handle.path, columns=[name]).column(name)).to_pylist()
+            except (OSError, pa.ArrowException, KeyError) as exc:
+                report.record_evaluation("core", "incomplete", rule=check, detail=str(exc).splitlines()[0][:160])
+                continue
+            invalid = sorted(value for value in values if value is not None and ucum_error(value) is not None)
+            if invalid:
+                report.add(
+                    "error",
+                    check,
+                    f"{len(invalid)} value(s) are not UCUM codes: {', '.join(repr(v) for v in invalid[:5])}"
+                    + (" ..." if len(invalid) > 5 else ""),
+                    [(value,) for value in invalid],
+                )
+
+
 def _check_ordering(
     tables: Mapping[str, Any],
     present: Mapping[str, Any],
@@ -2125,6 +2155,7 @@ def validate(
     _check_duplication(present, _tables(effective), report)
     _check_unfilled_metadata(present, _tables(effective), report)
     _check_reserved_values(present, _tables(effective), report)
+    _check_unit_codes(present, _tables(effective), report)
     _run_rules(
         packet,
         core_context,

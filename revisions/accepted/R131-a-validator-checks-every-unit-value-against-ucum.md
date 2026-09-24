@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-23 |
 | **Based on** | `cd2a612ed689c937e76518b2f36c0c0c6f74df18` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -176,7 +176,7 @@ packet validation, which §3.3 supplies.
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. UCUM remains the unit nomenclature. | None required. |
-| logical prose and registry | Part 02 §§8.4, 9.3, and 13 take §§3.1–3.3 in place. Declarations, meta-schema, rules, and the registry contract are unchanged, because the 9 unit columns already carry the authority. | `evidence/R<N>.json` names the three anchors; `columns.py` and the registry build are unchanged. |
+| logical prose and registry | Part 02 §§8.4, 9.3, and 13 take §§3.1–3.3 in place. Declarations, meta-schema, rules, and the registry contract are unchanged, because the 9 unit columns already carry the authority. | `evidence/R131.json` names the three anchors; `columns.py` and the registry build are unchanged. |
 | physical profiles | Unchanged. The check reads logical values. | None required. |
 | packet manifest and JSON Schemas | Unchanged. No manifest field carries a unit. | None required. |
 | validation and import | Part 05 §5.3 gains the unit-code check. | The corpus variant named under conformance fixtures. |

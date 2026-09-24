@@ -39,7 +39,7 @@ import numpy as np
 
 from .compensations import Compensates
 from .defect import SourceDefect
-from .nwb import contact_columns, contact_ids
+from .nwb import contact_columns, contact_ids, ucum_code
 from .store import SourceStore, source_root
 
 #: Where an NWB keeps its LFP series.
@@ -336,7 +336,7 @@ class LFPSource(Compensates):
                     # clock whose rate is declared, so a rate here would be a second, rounded
                     # statement of the same fact (Part 02 §6) -- and the rounded one is the one
                     # this file gets wrong.
-                    "unit": attrs.get("unit"),
+                    "unit": ucum_code(attrs.get("unit")),
                     "conversion": attrs.get("conversion"),
                     "offset": attrs.get("offset"),
                 }

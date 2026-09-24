@@ -25,6 +25,7 @@ SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
 CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.3.json"
 RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
+UCUM_URI = "https://ucum.org/ucum"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
 METADATA_DESCRIPTION = (
     "What the source stated about this row that the standard does not model, carried "
@@ -1359,7 +1360,7 @@ def _context_sources(
                     )
                 if field == "unit_from" and target is not None:
                     authorities = {entry["uri"] for entry in target.get("authority", [])}
-                    if target["type"] != "string" or "https://ucum.org/ucum" not in authorities:
+                    if target["type"] != "string" or UCUM_URI not in authorities:
                         outcomes.append(
                             _invalid(
                                 "registry.context_source.resolves",
@@ -1437,7 +1438,7 @@ def _authority_uris(
                 uri = str(authority["uri"])
                 name = str(authority["name"])
                 valid = _absolute_uri(uri) and uri not in seen
-                valid = valid and ((name == "UCUM") == (uri == "https://ucum.org/ucum"))
+                valid = valid and ((name == "UCUM") == (uri == UCUM_URI))
                 if not valid:
                     outcomes.append(
                         _invalid(
@@ -1577,9 +1578,25 @@ def _external_domains() -> tuple[str, ...]:
     return ("ucum-2.2-2024-06-17",) if _ucum_parser() is not None else ()
 
 
-def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
+def ucum_error(expression: str) -> str | None:
+    """Why `expression` is not a case-sensitive UCUM 2.2 code, or None where it is one (Part 02 §8.4).
+
+    Raises where the exact edition is unavailable; a valid context proves it present.
+    """
     parser = _ucum_parser()
     if parser is None:
+        raise RuntimeError("the exact UCUM 2.2 domain dated 2024-06-17 is unavailable")
+    from ucumvert import InvalidUcumError, parse_ucum  # type: ignore[import-untyped]
+
+    try:
+        parse_ucum(expression, parser=parser)
+    except InvalidUcumError as exc:
+        return str(exc).splitlines()[0]
+    return None
+
+
+def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
+    if _ucum_parser() is None:
         return [
             Outcome(
                 "unsupported",
@@ -1588,22 +1605,19 @@ def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
                 detail="the exact UCUM 2.2 domain dated 2024-06-17 is unavailable",
             )
         ]
-    from ucumvert import InvalidUcumError, parse_ucum  # type: ignore[import-untyped]
-
     outcomes: list[Outcome] = []
     for resource, table in _tables(document).items():
         for index, column in enumerate(table["columns"]):
             if "unit" not in column:
                 continue
-            try:
-                parse_ucum(str(column["unit"]), parser=parser)
-            except InvalidUcumError as exc:
+            error = ucum_error(str(column["unit"]))
+            if error is not None:
                 outcomes.append(
                     _invalid(
                         "registry.unit.ucum_2_2_cs",
                         _pointer(("tables", resource, "columns", index, "unit")),
                         resource,
-                        str(exc).splitlines()[0],
+                        error,
                     )
                 )
     return outcomes

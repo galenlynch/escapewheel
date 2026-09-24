@@ -55,6 +55,46 @@ def test_open_vocabulary_accepts_anything(packet_root):
     assert validate(open_packet(packet_root)).passed
 
 
+def _validate_amplitude_units(packet_root, values):
+    """Declare `core.units.amplitude_unit` a unit column (Part 02 §8.4), write `values`, validate."""
+    registry = read_registry(packet_root)
+    registry["resources"]["core.units"]["table"]["columns"].append(
+        {
+            "name": "amplitude_unit",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "the UCUM code amplitudes are in",
+            "vocabulary": "open",
+            "authority": [{"name": "UCUM", "uri": "https://ucum.org/ucum"}],
+        }
+    )
+    install_registry(packet_root, registry)
+    units = pq.read_table(packet_root / "tables" / "core" / "units.parquet")
+    _rewrite(packet_root, "units", units.append_column("amplitude_unit", pa.array(values, type=pa.string())))
+    return validate(open_packet(packet_root))
+
+
+def test_ucum_codes_and_annotations_pass(packet_root):
+    report = _validate_amplitude_units(packet_root, ["V", "{sample}"])
+    assert report.passed
+    assert not any(f.check.endswith(".ucum_code") for f in report.findings)
+
+
+def test_a_null_unit_is_not_checked_as_a_code(packet_root):
+    report = _validate_amplitude_units(packet_root, [None, "uV"])
+    assert not any(f.check.endswith(".ucum_code") for f in report.findings)
+
+
+def test_a_unit_that_is_not_a_ucum_code_fails_once_per_value(packet_root):
+    """Part 05 §5.3: `volts` names the unit whose code is `V`, and is not itself a code."""
+    report = _validate_amplitude_units(packet_root, ["volts", "volts"])
+    finding = next(f for f in report.findings if f.check == "core.units.amplitude_unit.ucum_code")
+    assert not report.passed
+    assert finding.level == "error"
+    assert finding.rows == (("volts",),)
+
+
 def test_tier_two_rule(packet_root):
     trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
     broken = trials.set_column(3, "stop_tick", pa.array([0, 10000], type=pa.int64()))

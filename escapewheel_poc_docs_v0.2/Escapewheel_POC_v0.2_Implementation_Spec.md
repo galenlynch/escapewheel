@@ -1380,13 +1380,17 @@ A `data` column carrying a physical quantity SHOULD declare its `unit`, or `unit
 `resource.column`. The latter form MUST resolve through exactly one reference the table declares.
 A consumer resolves the source rather than guessing.
 
-`unit` and `unit_from` are mutually exclusive. A `unit_from` target MUST be a string column whose
-authority entries include the canonical UCUM identity `https://ucum.org/ucum`. For a coordinate,
-the clock source is its explicit `clock_from` target where present and otherwise the same table's
-`clock_id`. That source MUST be an identifier participating in a reference to
-`core.clocks.clock_id`. `clock_from` MUST NOT occur on another role.
+A **unit code** is an expression in the case-sensitive syntax of UCUM version 2.2, revision date
+2024-06-17, as §13 identifies it. A **unit column** is a string column whose `authority` entries
+include `https://ucum.org/ucum`. A column's literal `unit` MUST be a unit code, and a packet MUST
+hold a unit code in every non-null value of a unit column. An annotation in curly braces, such as
+`{adc}`, is a unit code and denotes a dimensionless quantity, which is the unit of a quantity
+normalised by something the packet measured.
 
-A column holding a physical unit MUST hold a UCUM code, and a column declaring one MUST declare a UCUM code — an annotation in curly braces is one, and is dimensionless, which is what a quantity normalised by something the packet measured is.
+`unit` and `unit_from` are mutually exclusive. A `unit_from` target MUST be a unit column. For a
+coordinate, the clock source is its explicit `clock_from` target where present and otherwise the
+same table's `clock_id`. That source MUST be an identifier participating in a reference to
+`core.clocks.clock_id`. `clock_from` MUST NOT occur on another role.
 
 A consumer MAY label a quantity with its declared unit, and MUST NOT silently compare or combine two columns whose declared units differ. One vocabulary is what makes that rule run: `volts` and `V` differ while naming one unit, so without it the rule refuses a legitimate comparison exactly as readily as it catches a wrong one.
 
@@ -1484,7 +1488,7 @@ Every `string` column declares a `vocabulary`, whatever its role, except a discr
 | value | what it says |
 |---|---|
 | `closed` | the column also declares `enum`, and a validator MUST reject a value outside it |
-| `open` | the values name kinds of thing, comparable between packets; a validator MUST NOT reject an unrecognized one, and the column MAY declare `reserved_values` |
+| `open` | the values name kinds of thing, comparable between packets; a validator MUST NOT reject an unrecognized one, except as stated below for a unit column, and the column MAY declare `reserved_values` |
 | `free` | not a vocabulary — a name, a description, a URI, a digest, a version string, a person; nothing may be reserved and no report is due |
 
 Four columns are closed:
@@ -1504,7 +1508,10 @@ An `open` column MUST carry a nonempty description stating the form its values t
 column with an open or closed vocabulary MAY declare `authority`, a nonempty array whose entries
 each carry a human-readable `name` and an absolute RFC 3986 `uri`. No URI may occur twice in one
 array. An authority URI is identity rather than a fetch instruction: a validator MUST NOT
-dereference one and MUST NOT reject a value for being absent from it. An entry named `UCUM` MUST
+dereference one when checking a registry or a packet, and MUST NOT reject a value for being absent
+from its column's authority. Neither this rule nor the `open` row above covers a unit column's value
+that is not a unit code, which §8.4 makes nonconforming, because UCUM defines its codes by a grammar
+rather than a list. An entry named `UCUM` MUST
 use `https://ucum.org/ucum`, and an entry using that URI MUST be named `UCUM`. A writer MUST spell
 a value as the named nomenclature does.
 
@@ -1929,13 +1936,14 @@ A coordinate MAY carry values on fewer axes than its frame declares, where its s
 ## 13. Normative references
 
 - [The Unified Code for Units of Measure, version 2.2](https://ucum.org/ucum), revision date
-  2024-06-17. Literal `unit` declarations use its case-sensitive syntax and terminal tables.
+  2024-06-17. Unit codes (§8.4) use its case-sensitive syntax and terminal tables.
 - [RFC 3986, *Uniform Resource Identifier (URI): Generic Syntax*](https://www.rfc-editor.org/rfc/rfc3986).
   Authority identifiers use its absolute-URI syntax.
 
-Registry validation of both lexical domains is offline and MUST NOT dereference an identifier.
-The UCUM grammar applies to literal `unit` declarations; row values selected by `unit_from` are
-validated with packet data rather than as registry declarations.
+Validation of both lexical domains is offline, and §9.3 forbids dereferencing an identifier. A
+registry check parses literal `unit` declarations, and
+[Part 05 §5.3](05_validation_and_import.md#ew-validation-shim) parses the values of a packet's unit
+columns.
 
 <!-- END 02_core_logical_schemas.md -->
 
@@ -3088,6 +3096,13 @@ registry before that check moved here. It reports each non-null table value abse
 manifest, preserving duplicates, and each manifest session absent from every table row. The shim
 declares the packet manifest and `core.sessions` as inputs. No Tier 2 rule may depend on the shim's
 implementation mechanism.
+
+The shim MUST parse each distinct non-null value of each
+[unit column](02_core_logical_schemas.md#ew-unit-and-clock-context) in every table resource whose
+declaration the core registry holds, under the UCUM edition Part 02 §8.4 names. It MUST report each
+value that is not a unit code at `error` under the check ID `<declaration_id>.<column>.ucum_code`,
+such as `core.units.amplitude_unit.ucum_code`, naming that value once. The finding is core's. The
+shim declares each such table as an input.
 
 ### 5.4 Extensions
 

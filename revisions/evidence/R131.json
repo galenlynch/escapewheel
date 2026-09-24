@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "revision": "R131",
+  "based_on": "cd2a612ed689c937e76518b2f36c0c0c6f74df18",
+  "clauses": {
+    "R131 §3.1": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-unit-and-clock-context"},
+        {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-logical-schema-normative-references"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [
+        {"kind": "fixture", "packet": "non_ucum_unit", "finding": "core.units.amplitude_unit.ucum_code"},
+        {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_ucum_codes_and_annotations_pass"},
+        {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_registry_document.py::test_missing_exact_ucum_domain_is_unsupported"},
+        {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_lfp.py::test_nwb_volts_is_recorded_as_its_ucum_code"},
+        {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_nwb_source.py::test_an_nwb_unit_is_mapped_to_ucum_or_left_for_validation[volts-V]"},
+        {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_sorter_source.py::test_adc_counts_are_declared_as_such"},
+        {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_waveforms.py::test_adc_counts_are_a_ucum_annotation"},
+        {"kind": "pytest", "project": "escapewheel-writer", "nodeid": "tests/test_waveforms.py::test_the_sample_axis_begins_where_the_analyzer_says_the_spike_is"}
+      ]},
+      "implementations": {"paths": [
+        "escapewheel-writer/src/escapewheel_writer/sources/nwb.py",
+        "escapewheel-writer/src/escapewheel_writer/sources/lfp.py",
+        "escapewheel-writer/src/escapewheel_writer/sources/sorter.py",
+        "escapewheel-writer/src/escapewheel_writer/sources/waveforms.py"
+      ]},
+      "documentation": {"paths": ["fixtures/README.md"]}
+    },
+    "R131 §3.2": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md", "anchor": "ew-registry-vocabularies"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [
+        {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_open_vocabulary_accepts_anything"},
+        {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_a_unit_that_is_not_a_ucum_code_fails_once_per_value"}
+      ]},
+      "implementations": {"paths": ["escapewheel-validator/src/escapewheel_validator/registry_document.py"]},
+      "documentation": {"unchanged": "developer documentation describes no authority-value rule"}
+    },
+    "R131 §3.3": {
+      "owners": [
+        {"path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md", "anchor": "ew-validation-shim"}
+      ],
+      "projections": {"paths": ["escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+      "conformance": {"evidence": [
+        {"kind": "fixture", "packet": "non_ucum_unit", "finding": "core.units.amplitude_unit.ucum_code"},
+        {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_a_unit_that_is_not_a_ucum_code_fails_once_per_value"},
+        {"kind": "pytest", "project": "escapewheel-validator", "nodeid": "tests/test_validation.py::test_a_null_unit_is_not_checked_as_a_code"}
+      ]},
+      "implementations": {"paths": [
+        "escapewheel-validator/src/escapewheel_validator/validator.py",
+        "escapewheel-validator/src/escapewheel_validator/registry_document.py"
+      ]},
+      "documentation": {"paths": ["escapewheel-validator/README.md", "escapewheel-validator/CONTRIBUTING.md"]}
+    }
+  }
+}

@@ -1,7 +1,7 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-and twenty-five variants each violating exactly one rule. Together they are the conformance
+and twenty-eight variants each violating exactly one rule. Together they are the conformance
 corpus: expected findings recorded as data, so any implementation can be checked against
 the same evidence rather than against a prose description of what should happen.
 
@@ -51,6 +51,7 @@ description, and is not all of them.
 | `bad_interval` | `stop_tick` before `start_tick` | `core.intervals.interval_valid` |
 | `stale_summary` | `n_spikes` disagrees with the spikes | `core.units.spike_summary_consistent` |
 | `missing_amplitude_unit` | amplitudes with no declared unit | `core.sorting_runs.amplitude_unit_declared` |
+| `non_ucum_unit` | `amplitude_unit` is `microvolts`, not a UCUM code | `core.units.amplitude_unit.ucum_code` |
 | `half_transform` | slope without offset | `core.clocks.transform_pair_complete` |
 | `unsorted_spikes` | rows out of declared sort order | `core.spike_events.physical_order` (warning) |
 | `orphan_manifest_session` | manifest disagrees with `core.sessions` | `core.sessions.manifest_sessions_match` |

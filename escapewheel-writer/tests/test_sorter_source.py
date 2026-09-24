@@ -260,7 +260,7 @@ def test_amplitudes_arrive_with_their_unit(source):
 def test_adc_counts_are_declared_as_such(tmp_path):
     sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=[(0, 1)], return_in_uv=False)
     source = SorterSource(tmp_path, session_id=SESSION)
-    assert source.units()[0]["amplitude_unit"] == "adc"
+    assert source.units()[0]["amplitude_unit"] == "{adc}"
 
 
 def test_without_an_analyzer_there_are_no_amplitudes_and_no_unit(tmp_path):

@@ -117,6 +117,16 @@ def electrode_name(group: Any, channel: Any, prefix: str = "") -> str:
     return f"{prefix}{group}.{channel}"
 
 
+#: Part 02 §8.4. NWB spells a unit as a word where a packet records its UCUM code. A spelling not
+#: listed passes through unchanged, so validation rejects it rather than the writer guessing.
+UCUM_CODES: Mapping[str, str] = {"volts": "V"}
+
+
+def ucum_code(stated: str | None) -> str | None:
+    """Return the UCUM code for an NWB `unit` attribute, or None where the file states none."""
+    return UCUM_CODES.get(stated, stated) if stated else None
+
+
 def contact_columns(store: Any, table: Path) -> dict[str, Any]:
     """Read the electrode columns a contact's name is composed from, whichever the file carries."""
     return {
@@ -949,7 +959,7 @@ class NWBSource(Compensates):
                     "format": "zarr_v3",
                     "clock_id": self._dispatch_clock_id(name),
                     "sample_rate_hz": round(rate, 6) if rate else None,
-                    "unit": str(self._attrs(f"acquisition/{name}/data").get("unit") or "") or None,
+                    "unit": ucum_code(str(self._attrs(f"acquisition/{name}/data").get("unit") or "") or None),
                 }
             )
         return rows

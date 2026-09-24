@@ -72,7 +72,9 @@ relation has no row order, no file layout, no Parquet physical type and no Zarr 
 a storage check written as SQL agrees with itself rather than failing. The shim covers physical
 order (R10), column presence and physical type, manifest-internal consistency, and every
 packet-owned array against its own Zarr metadata (R15 §4 level 2) — the last needing no Zarr,
-because that metadata is JSON.
+because that metadata is JSON. It also parses every unit-column value as a UCUM code (Part 05
+§5.3): a value check, but one SQL could express only through a UCUM function the rule language
+does not have.
 
 Tier 2 SQL is not DuckDB's full dialect. The validator parses each rule against the versioned
 portable profile before execution, derives its base-resource dependencies from that parse, exposes

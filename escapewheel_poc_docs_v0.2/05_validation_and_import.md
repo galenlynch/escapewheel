@@ -224,6 +224,13 @@ manifest, preserving duplicates, and each manifest session absent from every tab
 declares the packet manifest and `core.sessions` as inputs. No Tier 2 rule may depend on the shim's
 implementation mechanism.
 
+The shim MUST parse each distinct non-null value of each
+[unit column](02_core_logical_schemas.md#ew-unit-and-clock-context) in every table resource whose
+declaration the core registry holds, under the UCUM edition Part 02 §8.4 names. It MUST report each
+value that is not a unit code at `error` under the check ID `<declaration_id>.<column>.ucum_code`,
+such as `core.units.amplitude_unit.ucum_code`, naming that value once. The finding is core's. The
+shim declares each such table as an input.
+
 ### 5.4 Extensions
 
 Each extension registry present is validated on the same terms as core, and its verdict is reported separately. A validator MUST NOT attribute a core failure to an extension, and MUST NOT let an extension failure invalidate core.

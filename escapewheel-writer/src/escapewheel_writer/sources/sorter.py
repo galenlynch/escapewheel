@@ -635,7 +635,7 @@ class SorterSource:
         return rows
 
     def _amplitude_unit(self, stream: SortedStream) -> str | None:
-        """`uV` or `adc`, from the analyzer's own setting (R11 §2).
+        """`uV` or `{adc}`, from the analyzer's own setting (R11 §2).
 
         Null when no analyzer is present, which is also when no amplitudes are emitted --
         `amplitude_unit_declared` binds only where amplitudes exist.
@@ -647,7 +647,8 @@ class SorterSource:
         if "return_in_uV" not in settings:
             self.notes.append(f"{stream.key}: analyzer declares no return_in_uV; amplitude unit unknown")
             return None
-        return "uV" if settings["return_in_uV"] else "adc"
+        # `{adc}` is a UCUM annotation, a dimensionless count of converter steps (Part 02 §8.4).
+        return "uV" if settings["return_in_uV"] else "{adc}"
 
     def _amplitudes(self, stream: SortedStream, n_spikes: int) -> NDArray[Any] | None:
         """Per-spike amplitudes, in the source's own row order, or None."""

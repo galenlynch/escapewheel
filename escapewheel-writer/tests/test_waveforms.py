@@ -183,7 +183,7 @@ def test_the_sample_axis_begins_where_the_analyzer_says_the_spike_is(asset: Path
     the window is centred, which it is not: 3 ms before and 4 ms after on the measured session."""
     axis = next(a for a in _source(asset).array_dimensions() if a["axis_index"] == 2)
     assert axis["origin_value"] == -float(NBEFORE)
-    assert axis["coordinate_unit"] == "sample"
+    assert axis["coordinate_unit"] == "{sample}"
 
 
 def test_the_values_are_in_what_return_in_uv_declares(asset: Path) -> None:
@@ -191,6 +191,13 @@ def test_the_values_are_in_what_return_in_uv_declares(asset: Path) -> None:
     asset_row = _source(asset).array_assets()[0]
     assert asset_row["unit"] == "uV"
     assert asset_row["sample_rate_hz"] == RATE
+
+
+def test_adc_counts_are_a_ucum_annotation(tmp_path: Path) -> None:
+    """Part 02 §8.4: `adc` is no UCUM code, and `{adc}` is a dimensionless one."""
+    root = build(tmp_path / "sorted")
+    _attrs(root / "postprocessed" / STREAM, settings={"return_in_uV": False})
+    assert _source(root).array_assets()[0]["unit"] == "{adc}"
 
 
 def test_an_analyzer_that_declares_no_unit_says_so(tmp_path: Path) -> None:

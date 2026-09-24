@@ -3263,3 +3263,18 @@ note = "the delivery schema is the manifest entry without validation_state and d
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description" }, { part = "02", anchor = "ew-registry-conformance" }]
 note = "meta-schema, contract, core registry, manifest, and delivery identifiers advance together"
+
+[clause."R131 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-unit-and-clock-context" }, { part = "02", anchor = "ew-logical-schema-normative-references" }]
+note = "a unit column's non-null values and every literal unit are UCUM 2.2 codes"
+
+[clause."R131 §3.2"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
+note = "neither non-rejection rule covers a unit column's non-code; no dereference in registry or packet validation"
+
+[clause."R131 §3.3"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim" }]
+note = "the shim parses core's unit columns and reports <declaration_id>.<column>.ucum_code at error"

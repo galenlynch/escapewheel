@@ -12,7 +12,7 @@ from escapewheel_reader import open_packet
 from escapewheel_writer import Clock, OffGrid, PacketWriter
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.sources import NWBSource, SourceDefect
-from escapewheel_writer.sources.nwb import _sex
+from escapewheel_writer.sources.nwb import _sex, ucum_code
 from tests import nwbfixture
 
 KIND = "task.trials"
@@ -513,3 +513,9 @@ def test_the_session_carries_what_the_trials_no_longer_repeat(source, carrying):
     trial = carrying.records()["core.intervals"][0].get("metadata", {})
     assert not (set(session) & set(trial)), "a key is on the session or on the trial, never both"
     assert "auto_train_stage" in session or "auto_train_stage" in trial
+
+
+@pytest.mark.parametrize(("stated", "code"), [("volts", "V"), ("uV", "uV"), ("furlongs", "furlongs"), (None, None)])
+def test_an_nwb_unit_is_mapped_to_ucum_or_left_for_validation(stated, code):
+    """Part 02 §8.4. An unlisted spelling passes through, so validation rejects it visibly."""
+    assert ucum_code(stated) == code
