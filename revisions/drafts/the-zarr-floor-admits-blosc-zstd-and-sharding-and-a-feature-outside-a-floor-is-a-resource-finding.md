@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `96f5e5809aedadfd827bfd552797876116e4f5a5` |
+| **Based on** | `06b11fb29285fe90890ae84054ca33807bf9abfb` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 03 §§5.5 and 6.4; Part 05 §5.3; Part 10 §5; `registry/physical_profile.schema.json`; `registry/physical_profiles/escapewheel-portable-v0.1.json` |
-| **Depends on** | [R129 §§3.4, 3.5, and 3.8](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md#3-decision) |
+| **Depends on** | R129 §§3.4, 3.5, and 3.8 |
 | **Profile** | `escapewheel-portable-v0.1` |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6 |
 
@@ -18,22 +18,17 @@ Normative keywords follow BCP 14.
 ## 1. Scope
 
 The portable physical profile declares, for each storage interface, a reader floor: the physical
-features every conforming reader supports.
-[Part 03 §6.4](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-array-codecs)
-fixes the Zarr v3 floor at three ordered codec sequences: `bytes`; `bytes` then `gzip`; and `bytes`
-then `zstd`. The Zarr floor binds readers only, so a writer may use any valid codec, and under
-[Part 03 §2](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-portable-profile-technologies)
-a valid feature outside it forfeits the portability guarantee without being an error.
+features every conforming reader supports. Part 03 §6.4 fixes the Zarr v3 floor at three ordered
+codec sequences: `bytes`; `bytes` then `gzip`; and `bytes` then `zstd`. The Zarr floor binds
+readers only, so a writer may use any valid codec, and under Part 03 §2 a valid feature outside it
+forfeits the portability guarantee without being an error.
 
 The reference writer emits no packet-owned array inside that floor. Its default pipeline is `bytes`
 then Blosc, and its sharded arrays wrap that pipeline in `sharding_indexed`, so the guarantee covers
 none of the arrays a reference build produces. A floor entry is a list of bare codec names, and it
-cannot state Blosc's `cname` or the pipeline nested inside a shard.
-[Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim) has a
-validator check each available resource's codecs, but no rule says what the validator reports when
-a resource falls outside a floor:
-[R129 §3.8](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md#38-physical-assessment-uses-available-resource-metadata)
-left the finding IDs and levels to a later revision.
+cannot state Blosc's `cname` or the pipeline nested inside a shard. Part 05 §5.3 has a validator
+check each available resource's codecs, but no rule says what the validator reports when a resource
+falls outside a floor: R129 §3.8 left the finding IDs and levels to a later revision.
 
 This revision admits Blosc-Zstd and sharding over floor pipelines to the v3 floor, restates each
 floor entry as codec patterns that compare exactly with Zarr metadata, and advances the descriptor
@@ -48,15 +43,15 @@ narrower rule beside its replacement.
 
 ### 1.1 Structural crosswalk
 
-Part 03 §§5.5 and 6.4 and Part 05 §5.3 already carry canonical anchors. Part 10 §5 lacks one, so a
-metadata-only anchor bootstrap gives it one before the final appraisal. No section is added, moved,
-or retired.
+Part 03 §§5.5 and 6.4 and Part 05 §5.3 carry the canonical anchors `ew-parquet-reader-floor`,
+`ew-array-codecs`, and `ew-validation-shim`. Commit `06b11fb` added `ew-zarr-codec-floor-evidence`
+to Part 10 §5 and changed nothing else. No section is added, moved, or retired.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
-| [Part 03 §5.5](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-parquet-reader-floor), the Parquet floor and writer ceiling | extend in place with one paragraph after the descriptor paragraph | same section | a validator compares footer-reported compressions and encodings, and reports data-page types it does not compare as unassessed | §3.4 |
-| [Part 03 §6.4](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-array-codecs), the v3 floor is three name sequences, and the v2 matching rule | replace in place | same section | the v3 floor adds Blosc-Zstd and sharding over floor pipelines; entries are codec patterns; sharded matching, unrecognized codecs, and the schema's pattern shape are stated; the v2 floor and its rule are unchanged | §§3.1–3.3 |
-| [Part 05 §5.3](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-validation-shim), an unavailable external resource is physically unassessed, and a valid feature outside a reader-only floor is not by itself a profile error | replace those two sentences in place | same section | defines `physical.outside_reader_floor` and its levels, and makes `external.physical_unassessed` one `info` finding per resource | §§3.5, 3.6 |
+| Part 03 §5.5, the Parquet floor and writer ceiling | extend in place with one paragraph after the descriptor paragraph | same section | a validator compares footer-reported compressions and encodings, and reports data-page types it does not compare as unassessed | §3.4 |
+| Part 03 §6.4, the v3 floor is three name sequences, and the v2 matching rule | replace in place | same section | the v3 floor adds Blosc-Zstd and sharding over floor pipelines; entries are codec patterns; sharded matching, unrecognized codecs, and the schema's pattern shape are stated; the v2 floor and its rule are unchanged | §§3.1–3.3 |
+| Part 05 §5.3, an unavailable external resource is physically unassessed, and a valid feature outside a reader-only floor is not by itself a profile error | replace those two sentences in place | same section | defines `physical.outside_reader_floor` and its levels, and makes `external.physical_unassessed` one `info` finding per resource | §§3.5, 3.6 |
 | Part 10 §5, the two-implementation Zarr table | revise the informative table | same section | carries the five-implementation measurement of §2.2 | none |
 
 ## 2. Background
@@ -73,7 +68,7 @@ The table omits configuration members no alternative in §2.5 turns on.
 | reference-writer output | stored v3 pipeline | current floor | this floor |
 |---|---|---|---|
 | a default array | `bytes`, `blosc` (`cname: zstd`, `shuffle: shuffle`) | outside | inside |
-| a sharded array, as the waveform source writes | `sharding_indexed` holding `bytes`, `blosc` (`cname: zstd`); index `bytes`, `crc32c`; `index_location: end` | outside | inside |
+| a sharded array, as the waveform source writes | `sharding_indexed` holding `bytes`, `blosc` (`cname: zstd`, `shuffle: shuffle`); index `bytes`, `crc32c`; `index_location: end` | outside | inside |
 | a delta-filtered array, as the NWB source writes a signal | `numcodecs.delta`, `bytes`, `blosc` (`cname: zstd`, `shuffle: bitshuffle`) | outside | outside |
 
 The writer's only other route stages an adapter-written array unchanged, and the LFP source's arrays
@@ -83,11 +78,7 @@ are external Zarr v2 whose metadata the source defines.
 
 The repository's Zarr probe, `conformance/zarr-probe/`, writes arrays with zarr-python and reads
 them back with Zarr.jl, checking the int64 element sum. Both read Blosc-Zstd and sharding
-([R3 §7.3](../accepted/R3-cross-language-physical-floor.md#73-evidence)), yet
-[R3 §8](../accepted/R3-cross-language-physical-floor.md#8-rejected-alternatives) declined to raise
-the floor on two implementations, and
-[R14 §2.1](../accepted/R14-codec-floor-and-external-resources.md#21-the-reader-floor-is-unchanged)
-kept it.
+(R3 §7.3), yet R3 §8 declined to raise the floor on two implementations, and R14 §2.1 kept it.
 
 Rerun unchanged, the probe reproduces R3's result. The same element-sum check was extended to three
 further readers: TensorStore; zarrs, through zarrs-python with a strict codec pipeline so that no
@@ -118,29 +109,33 @@ The five readers are written in Python, Julia, C++, Rust, and JavaScript. That a
 Blosc through the c-blosc library or a build of it is an inference, not checked here. If it holds,
 R3 §8's cost stands: a new implementation must bind that library or reimplement it to conform.
 
-### 2.3 No implementation compares a resource with a floor
+### 2.3 No validator compares a resource with a floor
 
 The reference validator reads a packet-owned array's stored codec names only to reject `transpose`,
 and reads neither floor from the descriptor. The reference writer checks each packet-owned table's
 footer against the Parquet floor before committing, but the validator reads Parquet footers only
 for statistics. An unresolved external resource yields one `info` finding,
-`external.physical_unassessed`, listing every such resource and attributed to the packet.
+`external.physical_unassessed`, attributed to the packet and counting every such resource.
+
+The reference reader compares an array's Zarr metadata with the v3 or v2 floor of the descriptor
+vendored in its package, and reports the verdict on the array's handle and in the error it raises
+for a codec it cannot decode. Its matcher already accepts codec patterns with configuration members
+and a `sharding` member with an absent `index_location` read as `end`, so it applies §3.2's rules
+once the vendored descriptor carries §3.1's floor.
 
 A Parquet footer reports each column chunk's compression and encodings. Data-page types are
-recorded in page headers, and PyArrow 25.0.1's footer API does not report them.
+recorded in page headers and optionally in the footer's encoding statistics, and PyArrow 25.0.1's
+footer API exposes neither.
 
 ### 2.4 Levels
 
-[Part 05 §9.1](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#91-findings) defines
-`warning` as conformant but likely not intended, and `info` as recorded, not judged. A packet-owned
-table outside the Parquet floor breaks its writer's ceiling, which fits `warning`;
-[Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes)
-bars reporting a packet non-conforming for an obligation that binds only a writer, so it cannot be
-`error`. A Zarr array outside the reader-only floor is a permitted, deliberate writer choice, which
-fits `info`. A finding about one resource is attributed under
-[Part 05 §9.5](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-verdict-composition)
-to the registry declaring it; a packet-level list of resources from several registries has no one
-registry to belong to.
+Part 05 §9.1 defines `warning` as conformant but likely not intended, and `info` as recorded, not
+judged. A packet-owned table outside the Parquet floor breaks its writer's ceiling, which fits
+`warning`; Part 05 §10 bars reporting a packet non-conforming for an obligation that binds only a
+writer, so it cannot be `error`. A Zarr array outside the reader-only floor is a permitted,
+deliberate writer choice, which fits `info`. A finding about one resource is attributed under
+Part 05 §9.5 to the registry declaring it; a packet-level list of resources from several registries
+has no one registry to belong to.
 
 ### 2.5 Alternatives
 
@@ -165,11 +160,11 @@ The reference validator already reads each packet-owned array's `zarr.json` and 
 footer, so both comparisons use metadata it holds. Every pipeline in the new floor read in all five
 implementations of §2.2.
 
-The digest change, `every-packet-owned-resource-records-a-named-whole-object-digest.md`, rewrites
-Part 03 §§1, 8.1, 10, and 11.3 and the Part 04 §5.3 verification levels. This revision cites
-Part 04 §5.3 only for when a validator may read an external resource, so either order works.
-[R135](../accepted/R135-a-build-owns-its-staging-area-and-validates-everything-it-stages-before-publishing.md#3-decision)
-retitled Part 05 §5, the parent of §5.3, and changed nothing this revision relies on.
+The digest draft, `every-packet-owned-resource-records-a-named-whole-object-digest.md`, rewrites
+Part 03 §§1, 10, and 11.3, removes the RFC 1952 row from Part 03 §12, and replaces the Part 04 §5.3
+verification levels. This revision cites Part 04 §5.3 only for when a validator may read an
+external resource and changes no Part 03 §12 row, so either order works. R135 retitled Part 05 §5,
+the parent of §5.3, and changed nothing this revision relies on.
 
 ## 3. Decision
 
@@ -245,14 +240,13 @@ unchanged:
 
 A validator assessing a Parquet resource MUST compare each column chunk's footer-reported
 compression and encodings with the floor's `compressions` and `encodings`. It need not read page
-headers, which alone record data-page types. A validator that does not compare data-page types MUST
+headers or determine data-page types. A validator that does not compare data-page types MUST
 state in its report that it did not assess them.
 
 ### 3.5 The outside-floor finding
 
 A validator MUST assess floor membership for every packet-owned resource whose interface declares a
-reader floor, and for every external one whose format-owned metadata it reads under
-[Part 04 §5.3](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-external-resource-verification).
+reader floor, and for every external one whose format-owned metadata it reads under Part 04 §5.3.
 For each assessed resource using a feature outside its floor, it MUST report one finding under the
 check ID `physical.outside_reader_floor`, naming:
 
@@ -277,12 +271,9 @@ finding.
 
 The Zarr floor stays reader-only: a writer MAY still use any codec the applicable Zarr
 specification permits, and an array outside the floor stays valid and its packet conforming. A
-reader still fails only the resource it cannot decode, under
-[Part 03 §6.1](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-array-version). An
-encrypted Parquet footer or column that a validator cannot read leaves that table's evaluation
-incomplete under
-[Part 05 §9.4](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-incomplete-validation)
-and draws no outside-floor finding.
+reader still fails only the resource it cannot decode, under Part 03 §6.1. An encrypted Parquet
+footer or column that a validator cannot read leaves that table's evaluation incomplete under
+Part 05 §9.4 and draws no outside-floor finding.
 
 ## 5. Consequence
 
@@ -294,8 +285,9 @@ finding now carries one finding per resource, attributed to each resource's regi
 
 Reader obligations grow. A reader conforming at the baseline may support only the three current
 sequences; it must now decode Blosc-Zstd and parse shard indexes. zarr-python, which the reference
-reader uses, already does. The profile identifier stays `escapewheel-portable-v0.1`, as it has
-through earlier candidate changes to the profile's floors.
+reader uses, already does, and the reference reader's floor verdict admits the reference writer's
+default and sharded arrays once its vendored descriptor regenerates. The profile identifier stays
+`escapewheel-portable-v0.1`, as it has through earlier candidate changes to the profile's floors.
 
 The descriptor schema's v3 floor shape changes incompatibly, so its `$id` advances to 0.2.0, and a
 descriptor naming 0.1.0 fails the checker's `$schema` comparison. The vendored descriptor and schema
@@ -304,9 +296,10 @@ in the reader package regenerate.
 No accepted clause is superseded. R129 §3.4's exact list of three v3 name sequences is extended by
 §3.1 and restated as patterns, and R129 §3.8's deferral of finding IDs and levels is answered by
 §§3.5–3.6; both keep `applied` dispositions, with notes saying so. R3 §7.2 and R14 §2.1 keep
-`applied`, with notes that the floor now includes Blosc-Zstd and sharding. Ledger destinations that
-name Part 03 §5.5 or §6.4 by number move to `ew-parquet-reader-floor` and `ew-array-codecs`: R3
-§§2.1 and 7.2, R14 §§2.1 and 2.2, R15 §2, R21 §3.3, R110 §§3.3 and 3.5, and R118 §§3.1–3.6.
+`applied`, with notes that the floor now includes Blosc-Zstd and sharding. The 16 ledger
+destinations that name Part 03 §5.5 or §6.4 or Part 05 §5.3 by number move to
+`ew-parquet-reader-floor`, `ew-array-codecs`, and `ew-validation-shim`: those of R3 §§2.1 and 7.2,
+R14 §§2.1 and 2.2, R15 §2, R21 §3.3, R110 §§3.3 and 3.5, R111 §3.5, and R118 §§3.1–3.6.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -316,8 +309,8 @@ name Part 03 §5.5 or §6.4 by number move to `ew-parquet-reader-floor` and `ew-
 | packet manifest and JSON Schemas | Unchanged. No packet field is added. | None required. |
 | validation and import | Part 05 §5.3 takes §§3.5 and 3.6. Part 05 §§9.1, 9.5, and 10 are applied, not changed. | The corpus variants below. |
 | extensions | Unchanged. An extension's resources derive their interfaces through the same mapping and draw the same findings, attributed to the extension. | A validator test attributing the finding to an extension. |
-| reader, writer, validator, adapters | The validator reads both floors from the descriptor, matches under §3.2, reports §§3.5 and 3.6, and states that data-page types were not assessed. The reader is unchanged: zarr-python reads the new floor, and Part 03 §6.1 already has a reader report a codec it cannot decode. The writer and adapters are unchanged, since their codec choices stay valid; writer comments that say a manifest declares codecs or that Zarr.jl reads delta are corrected. | Validator and descriptor tests below. |
-| conformance fixtures and tests | Descriptor-schema and checker cases accept §3.1's floor and reject a `configuration` on a non-Blosc pattern, an unknown pattern member, and a 0.1.0 `$schema`. Matcher vectors from real metadata cover every pipeline of §2.2, an absent `index_location`, an index at `start`, a codec after a shard, and an unrecognized codec. Corpus variants: a packet-owned array using `numcodecs.delta` draws the finding at `info`; a packet-owned table using an outside encoding draws it at `warning`; the valid packet draws none; two unresolved external resources draw two `external.physical_unassessed` findings. | `fixtures/corpus.py`, the validator suite, and `escapewheel-reader/tests/test_profile.py`. |
+| reader, writer, validator, adapters | The validator reads both floors from the descriptor, matches under §3.2, reports §§3.5 and 3.6, and states that data-page types were not assessed. The reader's code is unchanged: zarr-python reads the new floor, its floor matcher already applies §3.2, and Part 03 §6.1 already has a reader report a codec it cannot decode; its vendored descriptor and schema regenerate, and its test that places a sharded array with a `bytes`, `crc32c` index outside the floor is inverted. The writer and adapters are unchanged, since their codec choices stay valid; writer comments that say a manifest declares codecs or that Zarr.jl reads delta are corrected. | Validator and descriptor tests below. |
+| conformance fixtures and tests | Descriptor-schema and checker cases accept §3.1's floor and reject a `configuration` on a non-Blosc pattern, an unknown pattern member, and a 0.1.0 `$schema`. Matcher vectors from real metadata cover every pipeline of §2.2, an absent `index_location`, an index at `start`, a codec after a shard, and an unrecognized codec. Corpus variants: a packet-owned array using `numcodecs.delta` draws the finding at `info`; a packet-owned table using an outside encoding draws it at `warning`; the valid packet draws none; two unresolved external resources draw two `external.physical_unassessed` findings. | `fixtures/corpus.py`, the validator suite, and the reader suite. |
 | revision process and tooling | The ledger moves and notes above; otherwise the ordinary revision and evidence records. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | Part 10 §5's table carries §2.2's measurement. The combined specification and heading index regenerate, and the extended probe scripts are committed under `conformance/zarr-probe/`. | `verify.py`. |
 
