@@ -568,11 +568,16 @@ is committed.
   `protocol = "files-v0.1"`, and a declaration document (Part 03 §11.5). Each script reads the
   build's JSON object from standard input and writes `<resource_id>.parquet` into the
   `delivery_root` it names. Then delete `TablesSource`, its tests, and the module docs that steer
-  extension authors to it. `extract_qc.py` declares `consumes = ["sorter"]` and takes the
-  build-supplied units as `waveforms` does, which ends its two-pass build and its packet-assigned
-  integer keys. The work covers the writer, plus scripts and recipes edited in place under
-  `/mnt/Data/776259-packet`, `/mnt/Data/786867-packet` and `/mnt/Data/df-packet`. It is done when
-  786867 builds in one pass with the same extension tables as the current packet.
+  extension authors to it. The work covers the writer, plus `extract.py` and the recipes edited in
+  place under `/mnt/Data/776259-packet`, `/mnt/Data/786867-packet` and `/mnt/Data/df-packet`. It is
+  done when 786867 builds in one pass with the same extension tables as the current packet.
+- **Move `extract_qc.py` into `escapewheel-aind` as the `aind_unit_qc` adapter.** The three
+  per-packet copies are the only source of `aind_unit_qc.metrics`, `waveform_metrics` and
+  `synchrony`, and they have drifted apart. The adapter reads the sorter's analyzer output as
+  `waveforms` does, declares `consumes = ["sorter"]`, and resolves units from the build-supplied
+  `units` term. That ends the two-pass build and the packet-assigned integer keys the script
+  writes. Delete the three scripts and switch the recipes to the new kind. It is done when the
+  three tables match the current packets' and each packet builds in one pass.
 - **Refuse a recipe whose sources disagree on `prefix`.** If any source sets `prefix`, every source
   whose adapter accepts it must set the same value. A build refuses the recipe before opening a
   source, naming each source and its value (§4's coupling). Test one set and one unset, two
