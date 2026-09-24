@@ -113,6 +113,8 @@ REFERENCE_ANCHORS = {
     "11": "ew-rule-language-normative-references",
 }
 
+REFERENCE_SECTION_ANCHOR = re.compile(r'id="(ew-[a-z-]*normative-references)"')
+
 REFERENCE_ROWS = {
     "00": (
         (
@@ -418,6 +420,13 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
         number: _anchored_section(numbered_texts[number], anchor)
         for number, anchor in REFERENCE_ANCHORS.items()
     }
+    # Every part's section, including those with no approved row allocation, so an authority
+    # copied into one of them is still found out of place.
+    every_reference_section = {
+        number: _anchored_section(text, match.group(1))
+        for number, text in numbered_texts.items()
+        if (match := REFERENCE_SECTION_ANCHOR.search(text))
+    } | reference_sections
     for number, references in reference_sections.items():
         if not references:
             found.append(f"Part {number} normative-reference section is missing")
@@ -435,7 +444,7 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
         expected = REFERENCE_OWNERS[name]
         owners = [
             number
-            for number, references in reference_sections.items()
+            for number, references in sorted(every_reference_section.items())
             if marker in references
         ]
         if owners == [expected]:
@@ -455,7 +464,8 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
             found.append(f"Part {number} external-reference invocation is missing")
     for implementation in ("DuckDB", "zarr-python", "Numcodecs"):
         if any(
-            implementation in references for references in reference_sections.values()
+            implementation in references
+            for references in every_reference_section.values()
         ):
             found.append(
                 f"normative references promote implementation {implementation}"

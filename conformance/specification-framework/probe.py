@@ -182,6 +182,15 @@ def main() -> int:
         "Parquet normative reference appears in Parts 03, 04",
     )
     _assert_rejected(
+        "reference copied into an untabled section",
+        _replace(
+            "02_core_logical_schemas.md",
+            "## 13. Normative references\n",
+            "## 13. Normative references\n\n- [RFC 3986](https://www.rfc-editor.org/info/rfc3986)\n",
+        ),
+        "RFC 3986 normative reference appears in Parts 00, 02",
+    )
+    _assert_rejected(
         "changed reference row",
         _replace(
             "03_portable_physical_profile.md",
