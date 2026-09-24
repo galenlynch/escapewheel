@@ -1,0 +1,543 @@
+{
+  "version": 1,
+  "revision": "R136",
+  "based_on": "06b11fb29285fe90890ae84054ca33807bf9abfb",
+  "clauses": {
+    "R136 \u00a73.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-resource-digests"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-normative-references"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/headings.toml"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_each_function_gives_its_check_value_across_blocks[sha256]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_each_function_gives_its_check_value_across_blocks[crc64nvme]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_each_function_gives_its_check_value_across_blocks[crc32c]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_each_function_gives_its_check_value_across_blocks[crc32]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_the_fallbacks_agree_with_the_check_values"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_an_empty_object_has_a_zero_crc_of_full_width[crc64nvme-16]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_an_unadmitted_algorithm_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_packet_owned_digests_are_checked[crc64nvme]"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "RFC 9260"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/stores.py",
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel-validator/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R136 \u00a73.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-resource-digests"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/headings.toml"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_prefix_value_is_the_sha256_of_its_listing[crc32c]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_an_empty_prefix_does_not_exist"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_crc_prefix_digest_is_the_sha256_of_its_listing"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_empty_packet_owned_prefix_is_missing"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_digest_is_the_value_of_its_member_list[crc64nvme-16]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[members_empty]"
+          },
+          {
+            "kind": "fixture",
+            "packet": "crc_prefix_disagrees",
+            "finding": "packet.resource.member_digest"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/stores.py",
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R136 \u00a73.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-resource-entry-fields"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-prefix-resources"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-external-resource-record"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-source-resolution"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-referenced-resource-delivery"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-writer-acceptance-criteria"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$defs/digest"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$defs/resource/properties/digest"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$defs/resource/properties/members/minItems"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$defs/resource/allOf"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$defs/member/properties/digest"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$defs/resource/properties/verified_at/description"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/resources.schema.json",
+          "escapewheel-validator/src/escapewheel_validator/schemas/manifest.schema.json",
+          "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json",
+          "registry/resources.example.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[sha256_in_place_of_digest]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[digest_algorithm_unknown]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[digest_crc32c_width]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[member_digest_without_entry]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[member_digest_partial]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_the_schema_refuses_what_it_does_not_define[member_digest_width]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_digest_is_the_value_of_its_member_list[sha256-64]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivery.py::test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_lfp.py::test_a_digest_also_records_the_members_it_digested"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_verify.py::test_a_digest_records_each_member_beside_the_resource"
+          },
+          {
+            "kind": "fixture",
+            "packet": "member_digest_partial",
+            "finding": "packet.manifest.schema"
+          },
+          {
+            "kind": "fixture",
+            "packet": "member_digest_width",
+            "finding": "packet.manifest.schema"
+          },
+          {
+            "kind": "fixture",
+            "packet": "crc_prefix_disagrees",
+            "finding": "packet.resource.member_digest"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/verify.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/lfp.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/08_example_packet.md",
+          "escapewheel-writer/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R136 \u00a73.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-resource-digests"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-owned-resource-digests"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_packet_owned_entry_records_a_digest"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_an_external_entry_need_not_record_a_digest"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_resource_without_a_digest_fails_the_manifest"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_verify.py::test_a_missing_packet_owned_digest_is_filled_in"
+          },
+          {
+            "kind": "fixture",
+            "packet": "owned_without_digest",
+            "finding": "packet.resource.digest_missing"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/verify.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/08_example_packet.md",
+          "escapewheel-validator/README.md",
+          "escapewheel-writer/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R136 \u00a73.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-external-resource-verification"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_store_checksums_establish_a_digest_without_a_read"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_an_object_the_store_reports_nothing_for_is_read"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_checksum_in_another_algorithm_is_not_taken"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_composite_checksum_does_not_stand_in_for_a_read"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_value_the_store_does_not_report_as_full_object_is_not_taken[composite]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_store_value_converts_from_base64_to_hexadecimal"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_report_names_the_store_route"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_packet_owned_digests_are_checked[sha256]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_file_one_byte_off_is_an_error[crc64nvme]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_file_one_byte_off_is_an_error[crc32c]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_file_one_byte_off_is_an_error[crc32]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_recorded_digest_is_compared[crc64nvme]"
+          },
+          {
+            "kind": "fixture",
+            "packet": "crc64nvme_one_byte_off",
+            "finding": "owned.digest"
+          },
+          {
+            "kind": "fixture",
+            "packet": "crc32c_one_byte_off",
+            "finding": "owned.digest"
+          },
+          {
+            "kind": "fixture",
+            "packet": "crc32_one_byte_off",
+            "finding": "owned.digest"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/stores.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-validator/src/escapewheel_validator/scripts/cli.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel-validator/CONTRIBUTING.md"
+        ]
+      }
+    },
+    "R136 \u00a73.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-prefix-resources"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_multipart_entity_tag_is_recorded_verbatim_as_etag"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_store_digest_that_changed_in_place_is_an_error"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_verify.py::test_a_multipart_entity_tag_is_recorded_as_etag_and_compared"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_lfp.py::test_a_local_store_offers_no_entity_tag"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/stores.py",
+          "escapewheel-writer/src/escapewheel_writer/verify.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/lfp.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    }
+  }
+}

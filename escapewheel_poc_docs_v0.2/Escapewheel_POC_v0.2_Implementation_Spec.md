@@ -87,9 +87,10 @@ Part 04 §§3 and 8 define the manifest fields that record these identifiers.
   lakehouse profile discussed in Part 00.
 
 [Part 00 §10](00_architecture.md#ew-normative-references) defines normative-reference policy and
-lists shared external authorities. References invoked only by the portable profile are in
+lists shared external authorities, among them RFC 1952, which the portable profile and the packet
+manifest both invoke. References invoked only by the portable profile are in
 [Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references), and the
-SHA-256 authority invoked by the packet manifest is in
+SHA-256, CRC64NVME, and CRC32C authorities invoked by the packet manifest are in
 [Part 04 §11](04_packet_catalog.md#ew-packet-catalog-normative-references).
 The SQL and IEEE authorities invoked by the portable Tier 2 language are in
 [Part 11 §9](11_tier_2_rule_language.md#ew-rule-language-normative-references).
@@ -559,6 +560,7 @@ The application column states the extent to which the specification invokes each
 | [RFC 8259](https://www.rfc-editor.org/info/rfc8259) | exact | JSON |
 | [RFC 3986](https://www.rfc-editor.org/info/rfc3986) | exact | URI syntax |
 | [JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core) and [Validation](https://json-schema.org/draft/2020-12/json-schema-validation) | Draft 2020-12 | incorporated JSON Schemas |
+| [RFC 1952](https://www.rfc-editor.org/info/rfc1952) | exact | gzip member format of a bound registry (Part 03 §3.3) and CRC-32 (Part 04 §4.3) |
 
 The missing-authority release block applies currently to any required Zarr codec configuration or
 binary behavior not determined by the authorities in
@@ -1969,21 +1971,23 @@ generic cross-member checker at a packaging or equivalent conformance boundary; 
 MAY cache that result and MUST NOT revalidate an unchanged bundled descriptor for each packet.
 
 This part also incorporates `registry/resources.schema.json`, whose `$id` is
-`https://escapewheel.org/schemas/resources/0.4.0`, as the exact shape of the resource document of
+`https://escapewheel.org/schemas/resources/0.5.0`, as the exact shape of the resource document of
 §11.3. Its closed envelope admits an optional `$schema` string and requires `resources`, an array
 of closed entries. An entry requires `resource_id`, `declaration_id`, and `uri`, and admits
-`external`, `source`, `sha256`, `size_bytes`, `verified_at`, and `members`. The delivery schema
+`external`, `source`, `digest`, `size_bytes`, `verified_at`, and `members`. The delivery schema
 defines each of those members, and the entry's conditional shape, exactly as the manifest schema
 [Part 04 §1](04_packet_catalog.md#ew-packet-catalog-scope) incorporates defines them; a difference
 makes the specification candidate internally inconsistent.
 
 The portable physical profile defined by this part is identified by
-`escapewheel-portable-v0.1`. Its requirements directly invoke the shared JSON and URI authorities
-identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the portable-profile
-authorities identified in [Part 03 §12](#ew-portable-profile-normative-references). The application
-columns in those sections state their extent. The `sha256` field and prefix-resource digest meaning
-belong to Part 04 §4.1 and Part 04 §5.4; this part determines when portable-profile resources record
-and verify that manifest field rather than invoking FIPS 180-4 independently.
+`escapewheel-portable-v0.1`. Its requirements directly invoke the shared JSON, URI, and RFC 1952
+authorities identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the
+portable-profile authorities identified in [Part 03 §12](#ew-portable-profile-normative-references).
+The application columns in those sections state their extent. The `digest` field belongs to
+[Part 04 §4.1](04_packet_catalog.md#ew-packet-resource-entry-fields), and its functions, a prefix's
+value, and when a writer records one to
+[Part 04 §4.3](04_packet_catalog.md#ew-resource-digests); this part determines what a portable
+resource's digest covers rather than invoking a digest authority independently.
 
 This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
@@ -2368,13 +2372,16 @@ A packet MAY declare its own retention, and a writer SHOULD emit one: how many s
 <a id="ew-owned-resource-digests" data-spec-anchor="canonical"></a>
 ## 10. Checksums
 
-A writer records a `sha256` over each packet-owned resource by default. This is the one case where a digest verifies what the packet itself claims, and it is cheap: whole-file, one file per resource.
+In this profile a packet-owned table's `digest` covers its one Parquet file, and a packet-owned
+array's covers its Zarr prefix as
+[Part 04 §4.3](04_packet_catalog.md#ew-resource-digests) defines a prefix's value. Part 04 §4.3
+requires a writer to record one for every packet-owned resource, which is the one case where a
+digest verifies what the packet itself claims.
 
 A digest is whole-file, not per-row-group. Parquet cannot be appended to, so "which pages moved" is not a question the format can be asked, and Parquet's own page CRC32 is a corruption detector that a rewritten file passes.
 
-A packet-owned resource recording no digest is not checked, and a verification report MUST state how many it skipped for that reason. A pass that does not say what it skipped reports clean on resources it never looked at.
-
-Verification of external resources is optional and layered (Part 04 §5.3).
+Verification of packet-owned and external resources is layered
+([Part 04 §5.3](04_packet_catalog.md#ew-external-resource-verification)).
 
 <a id="ew-reaching-a-source" data-spec-anchor="canonical"></a>
 ## 11. Reaching a source
@@ -2474,7 +2481,7 @@ source label. It MUST refuse a delivery where bytes and catalog rows do not bind
 
 Nothing else crosses for such an array, and a build MUST NOT require an adapter to restate a Zarr
 version, codec pipeline, layout, or other self-describing physical fact. A build inspects reachable
-output as needed; `size_bytes` and `sha256` come from the packet-owned bytes it digests (Part 03
+output as needed; `size_bytes` and `digest` come from the packet-owned bytes it digests (Part 03
 §8.1). An adapter delivering an array therefore writes bytes where one delivering rows performs no
 I/O at all, which is the cost of an array not being records.
 
@@ -2541,7 +2548,6 @@ The application column states the extent to which this part invokes each externa
 | [Zarr v3 Zstandard codec specification](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/zstd/) | unversioned | `zstd` codec metadata object and configuration |
 | [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html) | 2.0 | permitted external Zarr v2 arrays |
 | [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | exact | Zstandard framing |
-| [RFC 1952](https://www.rfc-editor.org/info/rfc1952) | exact | gzip member format of a bound registry (§3.3) |
 | [RFC 1951](https://www.rfc-editor.org/info/rfc1951) | exact | DEFLATE compression of a bound registry (§3.3) |
 
 <!-- END 03_portable_physical_profile.md -->
@@ -2560,17 +2566,17 @@ logical declaration in a bound registry and to its location. In the portable pro
 `packet.json` at the packet root.
 
 This part incorporates `registry/manifest.schema.json`, whose `$id` is
-`https://escapewheel.org/schemas/manifest/0.4.0`. The schema owns the manifest's exact local JSON
+`https://escapewheel.org/schemas/manifest/0.5.0`. The schema owns the manifest's exact local JSON
 structure: member names, JSON types, required members, object closure, patterns, enumerations,
 formats, and conditional shape within one entry. This prose owns every field's meaning,
 declaration-selected presence, and the checks of §10. A disagreement between this part and the
 incorporated schema makes the specification candidate internally inconsistent. The field tables in
 §§3, 4.1, 8, and 9 are informative projections of the schema.
 
-Its requirements directly invoke the shared JSON, URI, and JSON Schema authorities identified in
-[Part 00 §10](00_architecture.md#ew-normative-references) and the SHA-256 authority identified in
-[Part 04 §11](#ew-packet-catalog-normative-references). The application columns in those sections
-state their extent.
+Its requirements directly invoke the shared JSON, URI, JSON Schema, and RFC 1952 authorities
+identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the SHA-256, CRC64NVME,
+and CRC32C authorities identified in [Part 04 §11](#ew-packet-catalog-normative-references). The
+application columns in those sections state their extent.
 
 <a id="ew-packet-catalog-principles" data-spec-anchor="canonical"></a>
 ## 2. Principles
@@ -2627,16 +2633,18 @@ member the schema does not declare. Part 03 §9.5 owns the meaning of `retention
 | `validation_state` | string | yes | one of `passed`, `failed`, `not_run` |
 | `external` | boolean | no | — |
 | `source` | string | no | nonempty |
-| `sha256` | string | no | pattern `^[0-9a-f]{64}$` |
+| `digest` | digest (§4.3) | no | — |
 | `size_bytes` | integer | no | at least 0 |
 | `verified_at` | string | no | format `date-time` |
-| `members` | array of member (§5.4) | no | — |
+| `members` | array of member (§5.4) | no | nonempty |
 | `derived_from` | array of string | no | nonempty; unique items; each item pattern `^[a-z][a-z0-9_]*\.[a-z0-9_.-]+$` |
 <!-- END GENERATED MANIFEST FIELDS: resource -->
 
 `derived_from` follows the declaration's lineage policy (§7), `external` and `source` follow §5,
-and `members` follows §5.4. Part 03 §10 owns when a writer
-records `sha256`.
+and `members` follows §5.4. `digest` follows [§4.3](#ew-resource-digests), which states when a
+writer records one, and
+[Part 03 §10](03_portable_physical_profile.md#ew-owned-resource-digests) states what a portable
+resource's digest covers.
 
 <a id="ew-logical-resource-kinds" data-spec-anchor="canonical"></a>
 ### 4.2 Resolved logical facts
@@ -2651,6 +2659,49 @@ catalog row's `resource_id` under Part 02 §2.6. A family entry uses a packet-un
 ID in a namespace its declaration's registry owns. An unknown declaration or inadmissible instance
 binding makes a conformance claim invalid.
 
+<a id="ew-resource-digests" data-spec-anchor="canonical"></a>
+### 4.3 Resource digests
+
+An entry's `digest` records a digest of the resource's bytes and names the function that produced
+it, its **algorithm**, which is one of:
+
+| algorithm | function | authority | single-object width |
+|---|---|---|---|
+| `sha256` | SHA-256 | FIPS 180-4 | 64 digits |
+| `crc64nvme` | the NVMe 64-bit CRC | NVM Express NVM Command Set Specification, §5.3.1.3 | 16 digits |
+| `crc32c` | CRC32C | RFC 9260, Appendix A | 8 digits |
+| `crc32` | the gzip CRC-32 | RFC 1952, §8 | 8 digits |
+
+[Part 04 §11](#ew-packet-catalog-normative-references) identifies the editions of FIPS 180-4, the
+NVM Command Set Specification, and RFC 9260, and
+[Part 00 §10](00_architecture.md#ew-normative-references) that of RFC 1952.
+
+A single object's digest value is the function of the object's bytes, written as lowercase
+hexadecimal of exactly the width above, most significant digit first. For a CRC, the digits are the
+checksum as an unsigned integer. The value of the nine ASCII bytes `123456789` is
+`15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225` under `sha256`,
+`ae8b14860a799888` under `crc64nvme`, `e3069283` under `crc32c`, and `cbf43926` under `crc32`.
+
+A resource whose URI names a prefix holds one or more objects. A prefix holding none does not
+exist, and a validator reports it as it reports a resource that does not exist.
+
+A prefix's digest value is the SHA-256 of the UTF-8 encoding of
+`[["<key>",<size>,"<value>"], ...]`, where each `<value>` is that object's digest value under the
+resource's algorithm. The listing is compact JSON with `,` and `:` separators, no whitespace, and
+ASCII-escaped keys, with one entry per object, `<key>` relative to the resource's URI with `/`
+separators, and entries sorted by `<key>` in byte order. A prefix's value therefore has 64 digits
+under every algorithm. `size_bytes` is the sum of the objects' sizes.
+
+Sorting the keys is what makes the value reproducible without knowing the store, since two
+implementations enumerate an object-store prefix and a local directory in different orders.
+Listing each object's key beside its own value means a chunk moving between keys, which makes a
+different Zarr array, changes the resource's value.
+
+A writer MUST record a `digest` for every resource the packet owns, and MAY record it under any
+admitted algorithm. An external resource's `digest` is optional, and §5.2 states what a writer
+records about a URI it cannot reach. A checker reports `packet.resource.digest_missing` (§10) for
+each entry that does not declare `external: true` and records no `digest`.
+
 ## 5. External resources
 
 ### 5.1 Declaration
@@ -2662,7 +2713,7 @@ Referencing is expected for large resources. Externalizing a table costs more th
 <a id="ew-external-resource-record" data-spec-anchor="canonical"></a>
 ### 5.2 What is recorded
 
-`sha256`, `size_bytes`, and `verified_at` record what was true when the resource was checked. They are not a claim about now.
+`digest`, `size_bytes`, and `verified_at` record what was true when the resource was checked. They are not a claim about now.
 
 A writer that cannot reach a URI MUST record nothing rather than copying a value from a local stand-in.
 
@@ -2674,12 +2725,25 @@ Verification of an external resource is layered, and a report MUST state which l
 | level | establishes |
 |---|---|
 | 1 | the manifest is internally consistent |
-| 2 | packet-owned resources match their recorded digests |
+| 2 | packet-owned resources' recorded digests hold |
 | 3a | the external resource exists and lists |
 | 3b | its recorded per-member store digests still match |
-| 3c | its bytes read and hash to the recorded `sha256` |
+| 3c | its recorded `digest` holds |
 
 Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a requested mode.
+
+A validator establishes that a recorded digest holds by computing it from the bytes under §4.3. A
+validator MAY instead establish it by comparing it with checksums the store reports, object by
+object. A store's checksum counts only where the store reports it as a full-object value in the
+resource's algorithm; a validator MUST NOT compare a composite value, and MUST read any object for
+which the store reports no full-object value. For a single object it compares the store's value,
+converted to §4.3's form, with the recorded value. For a prefix it builds §4.3's listing from those
+values and compares its SHA-256.
+
+A report MUST state, for each digest it establishes, whether the validator computed it, matched the
+store's checksums, or combined the two. Level 2 establishes that packet-owned resources' recorded
+digests hold, and level 3c that an external resource's recorded digest holds, each reached by
+either route. Level 3b remains the comparison of recorded store digests (§5.4).
 When an external resource is unavailable, its physical version, codec pipeline, compression,
 encoding, dtype, shape, and chunking are unassessed; a validator MUST NOT infer them from its URI,
 the packet, an adapter claim, or a stand-in.
@@ -2692,22 +2756,19 @@ resource specifically when support is absent.
 <a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources
 
-Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — `sha256` and `size_bytes` are **defined over its members**, not undefined:
+Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — its `digest` and `size_bytes` are defined over its objects by [§4.3](#ew-resource-digests).
 
-- `sha256` is the SHA-256 of the UTF-8 encoding of `[["<key>",<size>,"<sha256>"], ...]`, serialised as compact JSON with `,` and `:` separators, no whitespace and ASCII-escaped keys, one entry per object, `<key>` relative to the resource's `uri` with `/` separators, sorted by `<key>` in byte order.
-- `size_bytes` is the sum of the members' sizes.
-
-Sorting the keys is what makes the digest reproducible without knowing the store, since two implementations enumerate an object-store prefix and a local directory in different orders. Carrying each member's own digest is what lets a consumer that fetched three chunks verify those three without the other two hundred.
-
-Such a resource MAY additionally declare a `members` array recording what was seen, each member optionally carrying a `store_digest`.
+Such a resource MAY additionally declare a `members` array recording what was seen, one member per object. A member records its object's single-object value as `digest`, a string under its entry's algorithm, and MAY carry a `store_digest`. The incorporated schema requires every member to record `digest` where its entry records one, and forbids a member recording one where its entry does not. Carrying each member's own value is what lets a consumer that fetched three chunks verify those three without the other two hundred.
 
 A member array is a record, not a resolution rule: a reader hands the prefix to the array library and does not enumerate it.
 
-Where `members` accompanies `sha256`, the listing digested MUST be the declared one, so the enumeration and the digest cannot disagree.
+Where `members` accompanies `digest`, the listing digested MUST be the declared one, so the enumeration and the digest cannot disagree.
+
+A member's `store_digest` records evidence that an object changed in place. A writer MUST record a store's entity tag, where it records one, verbatim under the algorithm `etag`, whether the object was uploaded in one part or several and whatever its encryption. A writer MUST NOT record an entity tag under any other algorithm name, and a validator MUST NOT read one as a digest of the object's bytes.
 
 Where a validator is asked to verify content **without reading**, it compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading. A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
 
-A store digest answers whether anything changed in place. It does not verify a recorded `sha256` — they are different functions — is absent for multipart uploads, and is unstable across a copy. A validator MUST report what a verification pass skipped for these reasons, and **MUST NOT** report a store-digest pass as a checksum verification: it establishes something weaker and store-specific, so it gets its own finding.
+A store digest answers whether anything changed in place. It never establishes that a `digest` holds, and it is unstable across a copy. A validator MUST report what a verification pass skipped, and **MUST NOT** report a store-digest pass as a checksum verification: it establishes something weaker and store-specific, so it gets its own finding.
 
 <a id="ew-source-resolution" data-spec-anchor="canonical"></a>
 ### 5.5 Source resolution
@@ -2739,7 +2800,7 @@ A reader MUST report an unresolved `source` as unresolved, and a validator MUST 
 which mirrors a reader can reach is a property of the reader. Structural validation MUST NOT
 require a resolution document.
 
-A consumer MUST NOT read resolution through a different document as invalidating a recorded `sha256`,
+A consumer MUST NOT read resolution through a different document as invalidating a recorded `digest`,
 `size_bytes` or `members`. Where a reader verifies a resolved source and finds a mismatch, it MUST
 report it against the resource entry, and MUST NOT silently prefer either the recorded digest or
 the bytes it found.
@@ -2846,7 +2907,8 @@ owning resource ID or registry ID where one applies.
 | `packet.resource.id_unique` | entries | two entries share a `resource_id` |
 | `packet.resource.member_unique` | entries | two members of one entry share a `key` |
 | `packet.resource.member_size` | entries | an entry with `members` records `size_bytes` unequal to the sum of the members' sizes |
-| `packet.resource.member_digest` | entries | an entry records `sha256` and `members`, every member records `sha256`, and the entry's value differs from the §5.4 digest of that member list |
+| `packet.resource.member_digest` | entries | an entry records `digest` and `members`, and its value differs from the §4.3 value of that member list |
+| `packet.resource.digest_missing` | entries | an entry that does not declare `external: true` records no `digest` |
 | `packet.registry.core_count` | entries | the number of core descriptors differs from one |
 | `packet.registry.path_unique` | entries | two descriptors share a `path` |
 | `packet.registry.missing` | registry_binding | nothing exists at a descriptor's path |
@@ -2915,6 +2977,8 @@ The application column states the extent to which this part invokes the external
 | reference | candidate edition | application |
 |---|---|---|
 | [NIST FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) | exact | SHA-256 |
+| [NVM Express NVM Command Set Specification, Revision 1.2](https://nvmexpress.org/specifications/) | exact | CRC64NVME (§5.3.1.3) |
+| [RFC 9260](https://www.rfc-editor.org/info/rfc9260) | exact | CRC32C (Appendix A) |
 
 <!-- END 04_packet_catalog.md -->
 
@@ -3425,7 +3489,7 @@ Byte-identical output is **not** required and cannot be: a manifest carries `cre
 versions. A writer MAY offer a deterministic-build mode that pins those, and a packet
 a validator MUST NOT judge a packet non-conforming for lacking one.
 
-A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
+A recorded digest therefore says what a packet's bytes **are**, not what a second build would
 produce. Two conforming builds of one dataset may record different digests for the same rows.
 
 ## 12. Alternatives are resolved before a commit
@@ -3895,14 +3959,15 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
       "declaration_id": "core.units",
       "uri": "tables/core/units.parquet",
       "validation_state": "passed",
-      "sha256": "c53fd91e…"
+      "digest": { "algorithm": "sha256", "value": "c53fd91e…" }
     },
     {
       "resource_id": "core.sniff_detector",
       "declaration_id": "core.array_asset_instances",
       "uri": "arrays/core/sniff_detector.zarr",
       "validation_state": "passed",
-      "size_bytes": 3463092, "sha256": "1dadd742…"
+      "size_bytes": 3463092,
+      "digest": { "algorithm": "sha256", "value": "1dadd742…" }
     },
     {
       "resource_id": "core.46101.lfp",
@@ -3917,6 +3982,7 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
       "declaration_id": "analysis.spike_events",
       "uri": "tables/analysis/spike_events.parquet",
       "validation_state": "passed",
+      "digest": { "algorithm": "sha256", "value": "…" },
       "derived_from": ["core.spike_events", "core.clock_anchors", "core.clocks"]
     }
   ],
@@ -3962,7 +4028,7 @@ A packet of this shape is conforming when:
 
 1. the manifest validates against the manifest schema;
 2. every declared resource exists at its URI, or is declared external;
-3. every packet-owned resource matches its recorded `sha256`;
+3. every packet-owned resource records a `digest`, and each holds;
 4. Tier 1 and Tier 2 produce no error;
 5. every table is in its declared physical order;
 6. each bound registry is present, matches its descriptor, and validates on its own terms.

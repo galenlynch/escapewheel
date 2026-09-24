@@ -65,14 +65,15 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
       "declaration_id": "core.units",
       "uri": "tables/core/units.parquet",
       "validation_state": "passed",
-      "sha256": "c53fd91e…"
+      "digest": { "algorithm": "sha256", "value": "c53fd91e…" }
     },
     {
       "resource_id": "core.sniff_detector",
       "declaration_id": "core.array_asset_instances",
       "uri": "arrays/core/sniff_detector.zarr",
       "validation_state": "passed",
-      "size_bytes": 3463092, "sha256": "1dadd742…"
+      "size_bytes": 3463092,
+      "digest": { "algorithm": "sha256", "value": "1dadd742…" }
     },
     {
       "resource_id": "core.46101.lfp",
@@ -87,6 +88,7 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
       "declaration_id": "analysis.spike_events",
       "uri": "tables/analysis/spike_events.parquet",
       "validation_state": "passed",
+      "digest": { "algorithm": "sha256", "value": "…" },
       "derived_from": ["core.spike_events", "core.clock_anchors", "core.clocks"]
     }
   ],
@@ -132,7 +134,7 @@ A packet of this shape is conforming when:
 
 1. the manifest validates against the manifest schema;
 2. every declared resource exists at its URI, or is declared external;
-3. every packet-owned resource matches its recorded `sha256`;
+3. every packet-owned resource records a `digest`, and each holds;
 4. Tier 1 and Tier 2 produce no error;
 5. every table is in its declared physical order;
 6. each bound registry is present, matches its descriptor, and validates on its own terms.

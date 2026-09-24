@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/resources/0.4.0",
+  "$id": "https://escapewheel.org/schemas/resources/0.5.0",
   "title": "Escapewheel resource document",
   "description": "Shape of the document an adapter delivers alongside its rows to describe the resources it references rather than writes (Part 03 \u00a711.3). Generated from the manifest schema by registry/build.py: each entry is a manifest resource entry without the members a build supplies.",
   "type": "object",
@@ -50,8 +50,8 @@
           "type": "string",
           "minLength": 1
         },
-        "sha256": {
-          "$ref": "#/$defs/sha256"
+        "digest": {
+          "$ref": "#/$defs/digest"
         },
         "size_bytes": {
           "description": "As verified at validation time.",
@@ -59,7 +59,7 @@
           "minimum": 0
         },
         "verified_at": {
-          "description": "When sha256 or size_bytes last held. Not a promise about now.",
+          "description": "When digest or size_bytes last held. Not a promise about now.",
           "type": "string",
           "format": "date-time"
         },
@@ -68,7 +68,8 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/member"
-          }
+          },
+          "minItems": 1
         }
       },
       "additionalProperties": false,
@@ -111,6 +112,231 @@
               "external"
             ]
           }
+        },
+        {
+          "if": {
+            "required": [
+              "digest",
+              "members"
+            ]
+          },
+          "then": {
+            "properties": {
+              "members": {
+                "items": {
+                  "required": [
+                    "digest"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "required": [
+                "digest"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "members": {
+                "items": {
+                  "not": {
+                    "required": [
+                      "digest"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "digest"
+            ],
+            "properties": {
+              "digest": {
+                "required": [
+                  "algorithm"
+                ],
+                "properties": {
+                  "algorithm": {
+                    "const": "sha256"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "members": {
+                "items": {
+                  "properties": {
+                    "digest": {
+                      "pattern": "^[0-9a-f]{64}$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "digest"
+            ],
+            "properties": {
+              "digest": {
+                "required": [
+                  "algorithm"
+                ],
+                "properties": {
+                  "algorithm": {
+                    "const": "crc64nvme"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "members": {
+                "items": {
+                  "properties": {
+                    "digest": {
+                      "pattern": "^[0-9a-f]{16}$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "digest"
+            ],
+            "properties": {
+              "digest": {
+                "required": [
+                  "algorithm"
+                ],
+                "properties": {
+                  "algorithm": {
+                    "enum": [
+                      "crc32c",
+                      "crc32"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "members": {
+                "items": {
+                  "properties": {
+                    "digest": {
+                      "pattern": "^[0-9a-f]{8}$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "digest": {
+      "description": "A digest of a resource's bytes under a named function (Part 04 \u00a74.3). A prefix's value is the SHA-256 of its listing under every algorithm.",
+      "type": "object",
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": [
+            "sha256",
+            "crc64nvme",
+            "crc32c",
+            "crc32"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "algorithm"
+            ],
+            "properties": {
+              "algorithm": {
+                "const": "sha256"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "algorithm"
+            ],
+            "properties": {
+              "algorithm": {
+                "const": "crc64nvme"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^(?:[0-9a-f]{16}|[0-9a-f]{64})$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "algorithm"
+            ],
+            "properties": {
+              "algorithm": {
+                "enum": [
+                  "crc32c",
+                  "crc32"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "pattern": "^(?:[0-9a-f]{8}|[0-9a-f]{64})$"
+              }
+            }
+          }
         }
       ]
     },
@@ -130,11 +356,13 @@
           "type": "integer",
           "minimum": 0
         },
-        "sha256": {
-          "$ref": "#/$defs/sha256"
+        "digest": {
+          "description": "This object's single-object value under its entry's algorithm (Part 04 \u00a74.3).",
+          "type": "string",
+          "pattern": "^[0-9a-f]+$"
         },
         "store_digest": {
-          "description": "What the store itself said about this member, in the store's own algorithm. Never a substitute for sha256.",
+          "description": "Evidence that this object changed in place, in the store's own terms; an entity tag is recorded verbatim under `etag` (Part 04 \u00a75.4). Never establishes that a digest holds.",
           "type": "object",
           "required": [
             "algorithm",
@@ -158,10 +386,6 @@
     "resource_id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9_.-]+$"
-    },
-    "sha256": {
-      "type": "string",
-      "pattern": "^[0-9a-f]{64}$"
     }
   }
 }

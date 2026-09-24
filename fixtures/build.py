@@ -669,16 +669,46 @@ def sort_rows(resource: str, rows: list[dict]) -> list[dict]:
     return sorted(rows, key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in keys))
 
 
+def crc(polynomial: int, bits: int, data: bytes) -> int:
+    """A reflected CRC with all-ones initial value and final XOR, bit by bit (Part 04 §4.3).
+
+    Written from the polynomial rather than taken from the implementation under test, so the
+    corpus pins the form a validator must reproduce.
+    """
+    mask = (1 << bits) - 1
+    register = mask
+    for byte in data:
+        register ^= byte
+        for _ in range(8):
+            register = (register >> 1) ^ polynomial if register & 1 else register >> 1
+    return register ^ mask
+
+
+def digest(algorithm: str, data: bytes) -> str:
+    """One object's Part 04 §4.3 value: lowercase hexadecimal of the algorithm's width."""
+    if algorithm == "sha256":
+        return hashlib.sha256(data).hexdigest()
+    if algorithm == "crc64nvme":
+        return f"{crc(0x9A6C9329AC4BC9B5, 64, data):016x}"
+    if algorithm == "crc32c":
+        return f"{crc(0x82F63B78, 32, data):08x}"
+    if algorithm == "crc32":
+        return f"{crc(0xEDB88320, 32, data):08x}"
+    raise ValueError(algorithm)
+
+
 def write_packet(
     out: Path,
     tables: dict[str, list[dict]],
     *,
     raw: dict = None,
     unsorted: frozenset = frozenset(),
+    algorithm: str = "sha256",
 ):
     """Write a packet in 03's portable layout. `raw` supplies pre-built Arrow tables for
     variants that must violate the registry's own schema; `unsorted` names resources
-    written in insertion order, for variants that must violate Part 03 §5.3."""
+    written in insertion order, for variants that must violate Part 03 §5.3. Every resource
+    records its `digest` under `algorithm`."""
     if out.exists():
         shutil.rmtree(out)
     KEYS.clear()
@@ -699,6 +729,10 @@ def write_packet(
                 "declaration_id": resource,
                 "uri": rel,
                 "validation_state": "not_run",
+                "digest": {
+                    "algorithm": algorithm,
+                    "value": digest(algorithm, (out / rel).read_bytes()),
+                },
             }
         )
 
@@ -1021,6 +1055,104 @@ def main():
         root / "missing_column", c, raw={"core.intervals": t.drop_columns(["clock_id"])}
     )
     print(f"{'missing_column':26s}written")
+
+    digest_variants(root)
+
+
+#: A prefix's objects as a store would list them, for the manifest-only prefix variants.
+FRAMES = {"frames/0.png": b"123456789", "frames/1.png": b"frame one"}
+
+
+def edit_manifest(out: Path, change) -> None:
+    manifest = json.loads((out / "packet.json").read_text())
+    change(manifest)
+    (out / "packet.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+
+def prefix_entry(algorithm: str, members: list[dict]) -> dict:
+    """An external image prefix recording `members`, and a `digest` of that listing (Part 04 §4.3).
+
+    Media is declared by catalog, so the entry needs no row; nothing reads the URI.
+    """
+    rows = sorted(
+        ([m["key"], m["size_bytes"], m["digest"]] for m in members if "digest" in m),
+        key=lambda row: row[0].encode(),
+    )
+    listing = json.dumps(rows, separators=(",", ":"), ensure_ascii=True).encode()
+    return {
+        "resource_id": "core.frames",
+        "declaration_id": "core.media_asset_instances",
+        "uri": "s3://example-bucket/session/frames",
+        "external": True,
+        "validation_state": "not_run",
+        "size_bytes": sum(m["size_bytes"] for m in members),
+        "digest": {
+            "algorithm": algorithm,
+            "value": hashlib.sha256(listing).hexdigest(),
+        },
+        "members": members,
+    }
+
+
+def framed(algorithm: str) -> list[dict]:
+    return [
+        {"key": key, "size_bytes": len(body), "digest": digest(algorithm, body)}
+        for key, body in FRAMES.items()
+    ]
+
+
+def digest_variants(root: Path) -> None:
+    """Part 04 §4.3's digests: each admitted algorithm passing, and each way one can be wrong."""
+    for algorithm in ("crc64nvme", "crc32c", "crc32"):
+        write_packet(root / algorithm, content(), algorithm=algorithm)
+        print(f"{algorithm:26s}written")
+        # The recorded value is of the file with one byte flipped; the file itself stays readable.
+        name = f"{algorithm}_one_byte_off"
+        write_packet(root / name, content(), algorithm=algorithm)
+
+        def one_byte_off(manifest, out=root / name, algorithm=algorithm):
+            entry = next(
+                e for e in manifest["resources"] if e["resource_id"] == "core.intervals"
+            )
+            body = bytearray((out / entry["uri"]).read_bytes())
+            body[len(body) // 2] ^= 0x01
+            entry["digest"]["value"] = digest(algorithm, bytes(body))
+
+        edit_manifest(root / name, one_byte_off)
+        print(f"{name:26s}written")
+
+    def without_digest(manifest):
+        del manifest["resources"][0]["digest"]
+
+    def crc_prefix(manifest):
+        manifest["resources"].append(prefix_entry("crc32c", framed("crc32c")))
+
+    def crc_prefix_disagrees(manifest):
+        entry = prefix_entry("crc32c", framed("crc32c"))
+        entry["members"][0]["digest"] = digest("crc32c", b"123456780")
+        manifest["resources"].append(entry)
+
+    def member_digest_partial(manifest):
+        members = framed("sha256")
+        entry = prefix_entry("sha256", members)
+        del members[1]["digest"]
+        manifest["resources"].append(entry)
+
+    def member_digest_width(manifest):
+        entry = prefix_entry("crc64nvme", framed("crc64nvme"))
+        entry["members"][0]["digest"] = digest("crc32c", FRAMES["frames/0.png"])
+        manifest["resources"].append(entry)
+
+    for name, change in {
+        "owned_without_digest": without_digest,
+        "crc_prefix": crc_prefix,
+        "crc_prefix_disagrees": crc_prefix_disagrees,
+        "member_digest_partial": member_digest_partial,
+        "member_digest_width": member_digest_width,
+    }.items():
+        write_packet(root / name, content())
+        edit_manifest(root / name, change)
+        print(f"{name:26s}written")
 
 
 if __name__ == "__main__":

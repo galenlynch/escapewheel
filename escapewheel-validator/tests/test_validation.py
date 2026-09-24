@@ -11,7 +11,7 @@ from escapewheel_validator.generate import Check, concerns
 from escapewheel_validator.generate import _generate as generate
 from escapewheel_validator.validator import check_packet_manifest
 
-from .conftest import install_registry, read_registry
+from .conftest import UNREAD_DIGEST, install_registry, owned_digest, read_registry
 
 
 def _rewrite(root, name, table):
@@ -446,6 +446,7 @@ def _declare(root, **overrides):
         "resource_id": "analysis.test_output",
         "declaration_id": "analysis.test_output",
         "uri": "tables/core/trials.parquet",
+        "digest": owned_digest(root, "tables/core/trials.parquet"),
         "validation_state": "passed",
         "derived_from": ["core.trials"],
         **overrides,
@@ -668,6 +669,7 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
             "resource_id": "core.array_assets",
             "declaration_id": "core.array_assets",
             "uri": "tables/core/array_assets.parquet",
+            "digest": owned_digest(root, "tables/core/array_assets.parquet"),
             "validation_state": "passed",
         }
     )
@@ -687,6 +689,7 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
                 "resource_id": "core.array_dimensions",
                 "declaration_id": "core.array_dimensions",
                 "uri": "tables/core/array_dimensions.parquet",
+                "digest": owned_digest(root, "tables/core/array_dimensions.parquet"),
                 "validation_state": "passed",
             }
         )
@@ -699,6 +702,8 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
     }
     if external:
         entry |= {"external": True, "uri": f"file://{store}"}
+    else:
+        entry["digest"] = owned_digest(root, uri)
     manifest["resources"].append(entry)
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     return root
@@ -1040,35 +1045,38 @@ def test_an_unreachable_resource_is_a_warning_not_an_error(packet_root):
 
 
 def test_a_requested_digest_with_nothing_recorded_says_so(packet_root):
-    """Part 04 §5.2: a packet need not record a sha256, and every packet built so far records none.
+    """Part 04 §4.3: an external resource need not record a digest.
     Asking for checksums and finding nothing to compare must not report a clean verification."""
     report = validate(open_packet(_external(packet_root)), external=True, checksums=True)
     assert report.passed, "a claim the packet never made is not a failure"
     assert "external.no_checksum" in {f.check for f in report.findings}
     verified = next(f for f in report.findings if f.check == "external.verified")
-    assert "sha256" not in verified.message, "it compared none, so it must not claim any"
+    assert "digest" not in verified.message, "it compared none, so it must not claim any"
 
 
-def test_a_recorded_digest_is_compared(packet_root):
+@pytest.mark.parametrize("algorithm", ["sha256", "crc64nvme", "crc32c", "crc32"])
+def test_a_recorded_digest_is_compared(packet_root, algorithm):
     from escapewheel_validator.stores import digest
 
     root = _external(packet_root)
     manifest = json.loads((root / "packet.json").read_text())
     entry = next(r for r in manifest["resources"] if r.get("external"))
-    entry["sha256"] = digest(entry["uri"])
+    entry["digest"] = {"algorithm": algorithm, "value": digest(entry["uri"], algorithm)}
     (root / "packet.json").write_text(json.dumps(manifest))
     report = validate(open_packet(root), external=True, checksums=True)
     assert report.passed
     assert "external.no_checksum" not in {f.check for f in report.findings}
-    assert "1 sha256" in next(f for f in report.findings if f.check == "external.verified").message
+    verified = next(f for f in report.findings if f.check == "external.verified")
+    assert "1 digest" in verified.message and "route: computed for all 1" in verified.message
+    assert verified.rows == (("core.waveform_mean", algorithm, "computed"),)
 
 
 def test_a_digest_that_disagrees_is_an_error(packet_root):
-    root = _external(packet_root, sha256="0" * 64)
+    root = _external(packet_root, digest={"algorithm": "sha256", "value": "0" * 64})
     assert validate(open_packet(root), external=True).passed, "not read without checksums"
     report = validate(open_packet(root), external=True, checksums=True)
     assert not report.passed
-    assert "external.sha256" in {f.check for f in report.findings}
+    assert "external.digest" in {f.check for f in report.findings}
 
 
 def test_the_summary_names_what_it_compared(packet_root):
@@ -1130,7 +1138,7 @@ def test_store_digests_report_what_they_could_not_check(packet_root):
 
 
 def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypatch):
-    """Neither the size nor a recorded sha256 need change for this to fire."""
+    """Neither the size nor a recorded digest need change for this to fire, and a multipart tag compares."""
     from escapewheel_validator import validator as module
     from escapewheel_validator.stores import Listing, Member, StoreDigest, listing
 
@@ -1138,7 +1146,7 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
         found = listing(uri, **kwargs)
         return Listing(
             tuple(
-                Member(m.key, m.size_bytes, StoreDigest("md5", f"{index:032x}"))
+                Member(m.key, m.size_bytes, StoreDigest("etag", f'"{index:032x}-2"'))
                 for index, m in enumerate(found.members)
             ),
             found.size_bytes,
@@ -1151,7 +1159,7 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
             _with_members(
                 root,
                 mutate=lambda e: [
-                    m.update(store_digest={"algorithm": "md5", "value": f"{i:032x}"})
+                    m.update(store_digest={"algorithm": "etag", "value": f'"{i:032x}-2"'})
                     for i, m in enumerate(e["members"])
                 ],
             )
@@ -1166,7 +1174,9 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
         open_packet(
             _with_members(
                 root,
-                mutate=lambda e: [m.update(store_digest={"algorithm": "md5", "value": "f" * 32}) for m in e["members"]],
+                mutate=lambda e: [
+                    m.update(store_digest={"algorithm": "etag", "value": '"' + "f" * 32 + '"'}) for m in e["members"]
+                ],
             )
         ),
         external=True,
@@ -1246,6 +1256,7 @@ def _coordinate_table(root, *, rows, keyed=True):
                 "resource_id": "core.array_channels",
                 "declaration_id": "core.array_channels",
                 "uri": "tables/core/array_channels.parquet",
+                "digest": owned_digest(root, "tables/core/array_channels.parquet"),
                 "validation_state": "passed",
             }
         )
@@ -1332,44 +1343,93 @@ def test_a_packet_owned_arrays_axis_length_is_checked_too(packet_root):
     assert "array.shape_disagrees_with_coordinates" in {f.check for f in report.findings}
 
 
-# -- R52: a packet-owned resource's digest -------------------------------------------------
+# -- Part 04 §4.3 and §5.3: a packet-owned resource's digest ----------------------------------
 
 
-def _record_owned_digests(root, *, corrupt=None):
-    """Record a sha256 per packet-owned resource, as a writer does since R52."""
-    from escapewheel_validator.stores import digest
-
+def _record_owned_digests(root, *, algorithm="sha256", corrupt=None):
+    """Record every packet-owned resource's digest under `algorithm`, one wrong where `corrupt` names it."""
     manifest = json.loads((root / "packet.json").read_text())
     for entry in manifest["resources"]:
         if not entry.get("external"):
-            entry["sha256"] = digest(str(root / entry["uri"]))
+            entry["digest"] = owned_digest(root, entry["uri"], algorithm)
     if corrupt is not None:
-        next(e for e in manifest["resources"] if e["resource_id"] == corrupt)["sha256"] = "0" * 64
+        target = next(e for e in manifest["resources"] if e["resource_id"] == corrupt)
+        target["digest"]["value"] = "0" * len(target["digest"]["value"])
     (root / "packet.json").write_text(json.dumps(manifest))
     return root
 
 
-def test_packet_owned_digests_are_checked(packet_root):
-    report = validate(open_packet(_record_owned_digests(packet_root)), checksums=True)
+@pytest.mark.parametrize("algorithm", ["sha256", "crc64nvme", "crc32c", "crc32"])
+def test_packet_owned_digests_are_checked(packet_root, algorithm):
+    report = validate(open_packet(_record_owned_digests(packet_root, algorithm=algorithm)), checksums=True)
     assert report.passed
-    assert "owned.verified" in {f.check for f in report.findings}
-    assert "owned.no_checksum" not in {f.check for f in report.findings}
+    verified = next(f for f in report.findings if f.check == "owned.verified")
+    assert verified.message.startswith("6 of 6") and verified.message.endswith("route: computed for all 6")
+    assert {row[1:] for row in verified.rows} == {(algorithm, "computed")}, "each digest names its route"
 
 
-def test_a_packet_owned_file_that_changed_is_an_error(packet_root):
-    """Part 03 §9.4 bounds revalidation on immutability. This is what checks the premise."""
-    root = _record_owned_digests(packet_root, corrupt="core.trials")
-    assert validate(open_packet(root)).passed, "not read without checksums"
+@pytest.mark.parametrize("algorithm", ["sha256", "crc64nvme", "crc32c", "crc32"])
+def test_a_packet_owned_file_one_byte_off_is_an_error(packet_root, algorithm):
+    """Part 03 §9.4 bounds revalidation on immutability. This is what checks the premise.
+
+    The recorded value is of the file with one byte flipped, so the file itself stays readable.
+    """
+    from escapewheel_validator.stores import hasher
+
+    root = _record_owned_digests(packet_root, algorithm=algorithm)
+    body = bytearray((root / "tables" / "core" / "trials.parquet").read_bytes())
+    body[len(body) // 2] ^= 0x01
+    function = hasher(algorithm)
+    function.update(bytes(body))
+    manifest = json.loads((root / "packet.json").read_text())
+    trials = next(e for e in manifest["resources"] if e["resource_id"] == "core.trials")
+    trials["digest"]["value"] = function.hexdigest()
+    (root / "packet.json").write_text(json.dumps(manifest))
     report = validate(open_packet(root), checksums=True)
     assert not report.passed
-    assert "owned.sha256" in {f.check for f in report.findings}
+    assert [f.message.split(":")[0] for f in report.findings if f.check == "owned.digest"] == ["core.trials"]
 
 
-def test_a_packet_recording_no_owned_digest_says_so(packet_root):
-    """Every packet built before R52 records none; that is a warning, not a silent pass."""
-    report = validate(open_packet(packet_root), checksums=True)
-    assert report.passed
-    assert "owned.no_checksum" in {f.check for f in report.findings}
+def test_a_recorded_digest_is_not_read_without_checksums(packet_root):
+    root = _record_owned_digests(packet_root, corrupt="core.trials")
+    assert validate(open_packet(root)).passed, "not read without checksums"
+    assert "owned.digest" in {f.check for f in validate(open_packet(root), checksums=True).findings}
+
+
+def test_a_packet_owned_resource_without_a_digest_fails_the_manifest(packet_root):
+    """Part 04 §4.3: a writer records one for every resource the packet owns."""
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    del manifest["resources"][1]["digest"]
+    (packet_root / "packet.json").write_text(json.dumps(manifest))
+    report = validate(open_packet(packet_root))
+    assert [(f.level, f.check) for f in report.findings] == [("error", "packet.resource.digest_missing")]
+
+
+def test_a_crc_prefix_digest_is_the_sha256_of_its_listing(packet_root):
+    """Part 04 §4.3: under a CRC the members' values are CRCs and the prefix value is 64 digits."""
+    from escapewheel_validator.stores import digest, listing, listing_digest
+
+    root = _add_array(packet_root, declared=["zstd"], axes=3)
+    (root / "arrays/core/wf.zarr/c/0/0/0").parent.mkdir(parents=True)
+    (root / "arrays/core/wf.zarr/c/0/0/0").write_bytes(b"chunk")
+    uri = str(root / "arrays/core/wf.zarr")
+    rows = [(m.key, m.size_bytes, digest(f"{uri}/{m.key}", "crc32c")) for m in listing(uri).members]
+    assert [len(value) for _, _, value in rows] == [8, 8]
+    assert digest(uri, "crc32c") == listing_digest(rows)
+    _record_owned_digests(root, algorithm="crc32c")
+    report = validate(open_packet(root), checksums=True)
+    assert "owned.digest" not in {f.check for f in report.findings}
+    verified = next(f for f in report.findings if f.check == "owned.verified")
+    assert verified.message.startswith("9 of 9") and verified.message.endswith("route: computed for all 9")
+
+
+def test_an_empty_packet_owned_prefix_is_missing(packet_root):
+    """Part 04 §4.3: a prefix holding no object does not exist."""
+    root = _add_array(packet_root, declared=["zstd"], axes=3)
+    (root / "arrays/core/wf.zarr/zarr.json").unlink()
+    report = validate(open_packet(root))
+    assert ("error", "resource.missing") in {(f.level, f.check) for f in report.findings}
+    assert "array.unreadable" not in {f.check for f in report.findings}
 
 
 # -- R17: an extension is a registry, validated by the same machinery ----------------------
@@ -1452,6 +1512,7 @@ def _extension(root, *, tables=None, mutate=None):
             "resource_id": "task.trials",
             "declaration_id": "task.trials",
             "uri": "tables/task/trials.parquet",
+            "digest": owned_digest(root, "tables/task/trials.parquet"),
             "validation_state": "passed",
         }
     )
@@ -1677,6 +1738,7 @@ def _required_extension(root, extension_id):
             "resource_id": f"{extension_id}.marks",
             "declaration_id": f"{extension_id}.marks",
             "uri": f"tables/{extension_id}/marks.parquet",
+            "digest": owned_digest(root, f"tables/{extension_id}/marks.parquet"),
             "validation_state": "passed",
         }
     )
@@ -1849,6 +1911,7 @@ def test_declaring_the_resolution_document_as_a_resource_is_refused(packet_root)
             "resource_id": "core.sources_document",
             "declaration_id": "core.test_docs",
             "uri": "sources.json",
+            "digest": UNREAD_DIGEST,
             "validation_state": "passed",
         }
     )

@@ -8,7 +8,6 @@ later phase never indexes into a document an earlier one rejected.
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections import Counter
 from collections.abc import Iterator, Mapping, Sequence
@@ -21,6 +20,7 @@ from escapewheel_reader import Location, RegistryBinding, RegistryUnavailable
 from escapewheel_reader.registries import acquire
 
 from .registry_document import CheckedRegistryContext, check_registry_context_bytes
+from .stores import listing_digest
 
 MANIFEST_FILENAME = "packet.json"
 
@@ -156,13 +156,8 @@ def check_shape(document: Any, issues: list[Issue]) -> bool:
 
 
 def prefix_digest(members: Sequence[Mapping[str, Any]]) -> str:
-    """Part 04 §5.4's digest of a member list: compact JSON rows sorted by key in byte order."""
-    rows = sorted(
-        ([str(m["key"]), m["size_bytes"], str(m["sha256"])] for m in members),
-        key=lambda row: row[0].encode(),
-    )
-    canonical = json.dumps(rows, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    """Part 04 §4.3's value of a member list: SHA-256 of its compact JSON listing, sorted by key bytes."""
+    return listing_digest((str(m["key"]), m["size_bytes"], str(m["digest"])) for m in members)
 
 
 def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
@@ -179,6 +174,13 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
     for resource_id in sorted(name for name, count in counts.items() if count > 1):
         issues.append(Issue("packet.resource.id_unique", f"{resource_id}: {counts[resource_id]} entries share this ID"))
     for entry in resources:
+        if entry.get("external") is not True and "digest" not in entry:
+            issues.append(
+                Issue(
+                    "packet.resource.digest_missing",
+                    f"{entry['resource_id']}: the packet owns this resource and records no digest (Part 04 §4.3)",
+                )
+            )
         members = entry.get("members")
         if members is None:
             continue
@@ -195,12 +197,12 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
                     f"{entry['resource_id']}: size_bytes {entry['size_bytes']} differs from its members' {total}",
                 )
             )
-        digested = "sha256" in entry and members and all("sha256" in member for member in members)
-        if digested and prefix_digest(members) != entry["sha256"]:
+        # The schema requires every member's digest where the entry records one.
+        if "digest" in entry and prefix_digest(members) != entry["digest"]["value"]:
             issues.append(
                 Issue(
                     "packet.resource.member_digest",
-                    f"{entry['resource_id']}: sha256 is not the Part 04 §5.4 digest of its member list",
+                    f"{entry['resource_id']}: digest is not the Part 04 §4.3 value of its member list",
                 )
             )
     registries: Mapping[str, Mapping[str, Any]] = document["registries"]

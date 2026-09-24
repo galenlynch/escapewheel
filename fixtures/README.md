@@ -1,7 +1,8 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-and twenty-nine variants each violating exactly one rule. Together they are the conformance
+four more conforming packets that record Part 04 §4.3's other digests, and thirty-six variants
+each violating exactly one rule. Together they are the conformance
 corpus: expected findings recorded as data, so any implementation can be checked against
 the same evidence rather than against a prose description of what should happen.
 
@@ -58,6 +59,16 @@ description, and is not all of them.
 | `bad_type` | `start_tick` written as int32 | `schema.column_type` |
 | `extension_bad_type` | the extension's `trial_id` written as float64 | `schema.column_type`, filed under `dynamic_foraging`, which fails while core passes |
 | `missing_column` | required column absent from the file | `schema.column_absent` |
+| `owned_without_digest` | a packet-owned resource records no `digest` | `packet.resource.digest_missing` |
+| `crc64nvme_one_byte_off`, `crc32c_one_byte_off`, `crc32_one_byte_off` | a recorded CRC is of the file with one byte flipped | `owned.digest`, with checksums |
+| `crc_prefix_disagrees` | an external prefix's CRC32C member digest differs from the one its listing value covers | `packet.resource.member_digest` |
+| `member_digest_partial` | a member lacks `digest` beside an entry's | `packet.manifest.schema` |
+| `member_digest_width` | a CRC32C-width member digest under a CRC64NVME entry | `packet.manifest.schema` |
+
+`crc64nvme`, `crc32c`, and `crc32` record every owned resource's digest under that algorithm, and
+`crc_prefix` adds an external prefix whose value is the SHA-256 of its CRC32C member listing; all
+four are clean. `build.py` computes each CRC bit by bit from its polynomial rather than through
+the validator, and `corpus.py` runs `valid` and the CRC packets with checksums.
 
 `bad_vocabulary` uses `good` deliberately: it is Phy's label for a single unit, and the
 one an importer most plausibly forgets to map to `sua` (R11 §3).

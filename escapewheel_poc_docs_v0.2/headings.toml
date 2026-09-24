@@ -186,6 +186,7 @@
 "4" = "Resource entries"
 "4.1" = "Common fields"
 "4.2" = "Resolved logical facts"
+"4.3" = "Resource digests"
 "5" = "External resources"
 "5.1" = "Declaration"
 "5.2" = "What is recorded"
@@ -1046,6 +1047,12 @@ aliases = []
 part = "02"
 section = "2.2"
 title = "Content class and canonicality"
+aliases = []
+
+[anchor.ew-resource-digests]
+part = "04"
+section = "4.3"
+title = "Resource digests"
 aliases = []
 
 [anchor.ew-resource-identity]

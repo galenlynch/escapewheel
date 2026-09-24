@@ -203,8 +203,8 @@ def main() -> int:
         "missing Part 03 invocation",
         _replace(
             "03_portable_physical_profile.md",
-            "Its requirements directly invoke the shared JSON and URI authorities",
-            "Its requirements use the shared JSON and URI authorities",
+            "Its requirements directly invoke the shared JSON, URI, and RFC 1952",
+            "Its requirements use the shared JSON, URI, and RFC 1952",
         ),
         "Part 03 external-reference invocation is missing",
     )
@@ -212,8 +212,8 @@ def main() -> int:
         "missing Part 04 invocation",
         _replace(
             "04_packet_catalog.md",
-            "Its requirements directly invoke the shared JSON, URI, and JSON Schema authorities",
-            "Its requirements use the shared JSON, URI, and JSON Schema authorities",
+            "Its requirements directly invoke the shared JSON, URI, JSON Schema, and RFC 1952",
+            "Its requirements use the shared JSON, URI, JSON Schema, and RFC 1952",
         ),
         "Part 04 external-reference invocation is missing",
     )

@@ -13,7 +13,7 @@ return what was true when they looked, which is what `verified_at` records besid
 
 This lives with the validator rather than the reader because **no read path uses it**. A table
 resolves to a local path or is handed to DuckDB as a URI; a Zarr array is handed its URI and its
-own library opens it. What needs a store client is R36's verification -- list a prefix, and hash
+own library opens it. What needs a store client is Part 04 §4.3's digest -- list a prefix, and hash
 its members -- and both users of it are on that side: this package checks what a manifest claims,
 and `escapewheel-writer` establishes it in the first place through its `verify` setting. The writer
 depends on this package already, because Part 05's commit is validate-then-rename.
@@ -25,9 +25,12 @@ of this package -- the `remote` extra brings it, and a backend for the scheme is
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import json
-from collections.abc import Mapping
+import zlib
+from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,6 +44,10 @@ BLOCK = 1 << 22
 
 class StoreUnreachable(Exception):
     """A store could not be reached, which says nothing about whether the packet is valid."""
+
+
+class ResourceMissing(StoreUnreachable):
+    """The store was reached and holds nothing under the URI."""
 
 
 def is_local(uri: str) -> bool:
@@ -81,12 +88,103 @@ def _filesystem(uri: str) -> tuple[Any, str]:
     return filesystem, path
 
 
+#: Each admitted digest function and the hexadecimal width of a single object's value (Part 04 §4.3).
+#: A prefix's value is a SHA-256 under every algorithm, so it is always 64 digits.
+ALGORITHMS: Mapping[str, int] = {"sha256": 64, "crc64nvme": 16, "crc32c": 8, "crc32": 8}
+
+#: How a route establishes a digest (Part 04 §5.3): read every byte, take the store's full-object
+#: checksums, or both across a prefix's objects.
+ROUTES = ("computed", "store", "combined")
+
+
+def _reflected_table(polynomial: int) -> tuple[int, ...]:
+    table = []
+    for byte in range(256):
+        value = byte
+        for _ in range(8):
+            value = (value >> 1) ^ polynomial if value & 1 else value >> 1
+        table.append(value)
+    return tuple(table)
+
+
+def _reflected_crc(polynomial: int, bits: int) -> Callable[[int, bytes], int]:
+    """Build a reflected CRC with all-ones initial value and final XOR, continued from a previous value."""
+    table, mask = _reflected_table(polynomial), (1 << bits) - 1
+
+    def extend(previous: int, block: bytes) -> int:
+        register = previous ^ mask
+        for byte in block:
+            register = table[(register ^ byte) & 0xFF] ^ (register >> 8)
+        return register ^ mask
+
+    return extend
+
+
+#: Pure-Python fallbacks, used only where the native library is not installed; they run at a few
+#: MB/s, where `awscrt` and `google-crc32c` run at the speed of memory.
+crc64nvme_python = _reflected_crc(0x9A6C9329AC4BC9B5, 64)
+crc32c_python = _reflected_crc(0x82F63B78, 32)
+
+
+def _crc64nvme() -> Callable[[int, bytes], int]:
+    try:
+        from awscrt.checksums import crc64nvme  # type: ignore[import-not-found]  # optional
+    except ImportError:
+        return crc64nvme_python
+    return lambda previous, block: int(crc64nvme(block, previous))
+
+
+def _crc32c() -> Callable[[int, bytes], int]:
+    try:
+        import google_crc32c  # type: ignore[import-not-found]  # optional; zarr brings it
+    except ImportError:
+        return crc32c_python
+    return lambda previous, block: int(google_crc32c.extend(previous, block))
+
+
+class _Crc:
+    def __init__(self, extend: Callable[[int, bytes], int], digits: int) -> None:
+        self._extend, self._digits, self._value = extend, digits, 0
+
+    def update(self, block: bytes) -> None:
+        self._value = self._extend(self._value, block)
+
+    def hexdigest(self) -> str:
+        return f"{self._value:0{self._digits}x}"
+
+
+def hasher(algorithm: str) -> Any:
+    """Return a streaming hasher for one admitted algorithm, with `update` and `hexdigest`.
+
+    Raises
+    ------
+    ValueError
+        If the algorithm is not one Part 04 §4.3 admits.
+    """
+    if algorithm == "sha256":
+        return hashlib.sha256()
+    if algorithm == "crc64nvme":
+        return _Crc(_crc64nvme(), 16)
+    if algorithm == "crc32c":
+        return _Crc(_crc32c(), 8)
+    if algorithm == "crc32":
+        return _Crc(lambda previous, block: zlib.crc32(block, previous), 8)
+    raise ValueError(f"{algorithm!r} is not an admitted digest algorithm; expected one of {', '.join(ALGORITHMS)}")
+
+
+def listing_digest(rows: Iterable[tuple[str, int, str]]) -> str:
+    """Part 04 §4.3's prefix value: SHA-256 of the compact JSON listing, sorted by key bytes."""
+    ordered = sorted(((str(key), int(size), str(value)) for key, size, value in rows), key=lambda row: row[0].encode())
+    canonical = json.dumps([list(row) for row in ordered], separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
 @dataclass(frozen=True)
 class StoreDigest:
-    """A content hash the store computed itself, in the store's own algorithm (Part 04 §5.4).
+    """What a store says about an object, recorded as evidence of change in place (Part 04 §5.4).
 
-    Never a substitute for sha256: it answers whether anything changed in place, not whether
-    these are the bytes a manifest describes.
+    Never a digest of the object's bytes: an entity tag is recorded verbatim under `etag`, and it
+    answers whether anything changed in place, not whether these are the bytes a manifest describes.
     """
 
     algorithm: str
@@ -104,8 +202,7 @@ class Member:
     size_bytes : int
         What the store reports.
     store_digest : StoreDigest or None
-        Present only where the store hands one over with the listing and it is a content hash
-        of the whole object. A local filesystem offers none.
+        The store's entity tag where the listing carries one. A local filesystem offers none.
     """
 
     key: str
@@ -136,7 +233,7 @@ class Listing:
 
     @property
     def digested_by_store(self) -> int:
-        """How many members the store offered a usable content hash for."""
+        """How many members the store offered an entity tag for."""
         return sum(1 for member in self.members if member.store_digest is not None)
 
 
@@ -149,15 +246,18 @@ def listing(uri: str) -> Listing:
 
     Raises
     ------
+    ResourceMissing
+        If the URI names nothing, or a prefix holding no object, which Part 04 §4.3 reads as the
+        same thing.
     StoreUnreachable
-        If the store cannot be reached or the URI holds nothing.
+        If the store cannot be reached.
     """
     if is_local(uri):
         root = local_path(uri)
         if root.is_file():
             return Listing((Member("", root.stat().st_size),), root.stat().st_size)
         if not root.is_dir():
-            raise StoreUnreachable(f"{uri} does not exist")
+            raise ResourceMissing(f"{uri} does not exist")
         found = [Member(f.relative_to(root).as_posix(), f.stat().st_size) for f in root.rglob("*") if f.is_file()]
     else:
         filesystem, path = _filesystem(uri)
@@ -167,7 +267,7 @@ def listing(uri: str) -> Listing:
                 return Listing((Member("", int(info["size"]), store_digest(info)),), int(info["size"]))
             entries = filesystem.find(path, detail=True)
         except FileNotFoundError as exc:
-            raise StoreUnreachable(f"{uri} does not exist") from exc
+            raise ResourceMissing(f"{uri} does not exist") from exc
         except Exception as exc:
             raise StoreUnreachable(f"{uri}: {exc}") from exc
         found = [
@@ -176,75 +276,178 @@ def listing(uri: str) -> Listing:
             if info.get("type") == "file"
         ]
     if not found:
-        raise StoreUnreachable(f"{uri} holds nothing")
-    found.sort(key=lambda member: member.key)
+        raise ResourceMissing(f"{uri} holds no object, so it does not exist (Part 04 §4.3)")
+    found.sort(key=lambda member: member.key.encode())
     return Listing(tuple(found), sum(member.size_bytes for member in found))
 
 
 def store_digest(info: Mapping[str, Any]) -> StoreDigest | None:
-    """Return what a listing entry says about its own content, or None where it says nothing.
+    """Return a listing entry's entity tag, verbatim under `etag`, or None where it has none.
 
-    S3 hands an ETag back with the listing at no extra request, and for a **single-part** object
-    that ETag is the MD5 of its content. Three things disqualify one (R51 §1.1):
-
-    - A multipart ETag is a hash of part hashes with the part count appended, so the same bytes
-      uploaded with a different part size give a different value. It says nothing portable and
-      MUST NOT be recorded.
-    - Anything that is not 32 hex digits is not an MD5, whatever the store called it.
-    - A store that offers no ETag at all -- every local filesystem -- offers nothing to record.
+    Part 04 §5.4 records an entity tag whatever produced it -- a multipart upload, an encrypted
+    object -- because it is compared only with itself, never read as the bytes' digest.
     """
     raw = info.get("ETag") or info.get("etag")
-    if not isinstance(raw, str):
+    return StoreDigest("etag", raw) if isinstance(raw, str) and raw else None
+
+
+#: S3's checksum members, by the algorithm each carries.
+_S3_CHECKSUMS = {
+    "ChecksumSHA256": "sha256",
+    "ChecksumCRC64NVME": "crc64nvme",
+    "ChecksumCRC32C": "crc32c",
+    "ChecksumCRC32": "crc32",
+}
+
+
+def store_checksums(info: Mapping[str, Any]) -> dict[str, str]:
+    """Return the full-object checksums a store response reports, in Part 04 §4.3's form.
+
+    S3 reports a value as full-object only under `ChecksumType: FULL_OBJECT`; a composite value,
+    derived from the parts, is never returned. Google Cloud Storage's `crc32c` always covers the
+    whole object. Each value is base64 of the checksum's big-endian bytes, and one that does not
+    decode to its algorithm's width is dropped rather than guessed at.
+    """
+    reported: dict[str, str] = {}
+    if info.get("ChecksumType") == "FULL_OBJECT":
+        for member, algorithm in _S3_CHECKSUMS.items():
+            if isinstance(value := info.get(member), str):
+                reported[algorithm] = value
+    if isinstance(value := info.get("crc32c"), str):
+        reported.setdefault("crc32c", value)
+    converted = {}
+    for algorithm, value in reported.items():
+        try:
+            raw = base64.b64decode(value, validate=True)
+        except (binascii.Error, ValueError):
+            continue
+        if len(raw) * 2 == ALGORITHMS[algorithm]:
+            converted[algorithm] = raw.hex()
+    return converted
+
+
+def reported_checksum(uri: str, key: str, algorithm: str) -> str | None:
+    """Return the store's full-object value for one object under `algorithm`, or None.
+
+    One request per object: S3's listing names a checksum's algorithm but not its value, so this
+    asks `HeadObject` with checksums enabled where the backend is s3fs, and otherwise takes what
+    the backend's `info` reports. A local filesystem keeps no checksum.
+    """
+    if is_local(uri):
         return None
-    value = raw.strip('"')
-    if len(value) != 32 or any(character not in "0123456789abcdef" for character in value.lower()):
+    filesystem, path = _filesystem(uri)
+    target = f"{path}/{key}" if key else path
+    info: Mapping[str, Any] | None = None
+    try:
+        if hasattr(filesystem, "call_s3") and hasattr(filesystem, "split_path"):
+            bucket, name, version = filesystem.split_path(target)
+            info = filesystem.call_s3(
+                "head_object",
+                Bucket=bucket,
+                Key=name,
+                ChecksumMode="ENABLED",
+                **({"VersionId": version} if version else {}),
+            )
+        else:
+            info = filesystem.info(target)
+    except Exception:  # noqa: BLE001 - a store that will not say is read instead
         return None
-    return StoreDigest("md5", value.lower())
+    return store_checksums(info or {}).get(algorithm)
 
 
-def digest(uri: str, *, workers: int = WORKERS) -> str:
-    """Return the sha256 a packet may record for what this URI holds.
+@dataclass(frozen=True)
+class Digested:
+    """A resource's digest, and how it was established.
 
-    A single object is its own bytes, which is what every other format means by a checksum.
+    Attributes
+    ----------
+    algorithm : str
+        The function, one of :data:`ALGORITHMS`.
+    value : str
+        The resource's value: the object's own for a single object, the listing's for a prefix.
+    members : tuple of str
+        Each object's single-object value, in `found.members` order.
+    found : Listing
+        The listing the value covers.
+    route : str
+        One of :data:`ROUTES`.
+    """
 
-    A **prefix is not one object**, so a digest over it has to be defined rather than assumed:
-    this is sha256 over a canonical JSON listing of ``[key, size, sha256]`` per member, sorted
-    by key. Reproducible without knowing how the store enumerates, independent of chunk
-    ordering, and each member stays independently checkable. See R36.
+    algorithm: str
+    value: str
+    members: tuple[str, ...]
+    found: Listing
+    route: str
+
+
+def digest_resource(
+    uri: str, algorithm: str = "sha256", *, workers: int = WORKERS, store_checksums: bool = False
+) -> Digested:
+    """Establish the Part 04 §4.3 digest of what a URI holds.
 
     Reading every byte is the cost -- 6.8 GB for a session's LFP -- which is why nothing calls
-    this unless asked.
+    this unless asked. With `store_checksums`, an object whose store reports a full-object value in
+    `algorithm` is not read (Part 04 §5.3); one whose store reports none still is.
 
-    Members are digested concurrently. An object store rewards that far more than any choice of
+    Objects are digested concurrently. An object store rewards that far more than any choice of
     client does: one LFP array of 208 objects reads at 15.7 MB/s one at a time and 94 MB/s across
-    eight, where swapping the client for another changes it by a quarter. A local store is not
-    hurt by it.
+    eight. A local store is not hurt by it.
 
     Parameters
     ----------
     uri : str
         What to digest.
+    algorithm : str, default "sha256"
+        One of :data:`ALGORITHMS`.
     workers : int, optional
-        How many members to read at once. One reads sequentially.
+        How many objects to handle at once. One is sequential.
+    store_checksums : bool, default False
+        Take the store's full-object checksums where it reports them.
 
     Raises
     ------
+    ResourceMissing
+        If the URI names nothing, or an empty prefix.
+    StoreUnreachable
+        If the store cannot be reached.
+    ValueError
+        If `algorithm` is not admitted.
+    """
+    hasher(algorithm)
+    found = listing(uri)
+    keys = [member.key for member in found.members]
+
+    def one(key: str) -> tuple[str, bool]:
+        if store_checksums and (reported := reported_checksum(uri, key, algorithm)) is not None:
+            return reported, True
+        return _member_digest(uri, key, algorithm), False
+
+    if workers > 1 and len(keys) > 1:
+        # `map` preserves order, which pairs each value with its member.
+        with ThreadPoolExecutor(min(workers, len(keys))) as pool:
+            results = list(pool.map(one, keys))
+    else:
+        results = [one(key) for key in keys]
+    values = tuple(value for value, _ in results)
+    from_store = sum(1 for _, stored in results if stored)
+    route = "store" if from_store == len(results) else "computed" if from_store == 0 else "combined"
+    if found.is_single_object:
+        return Digested(algorithm, values[0], (), found, route)
+    rows = [(member.key, member.size_bytes, value) for member, value in zip(found.members, values, strict=True)]
+    return Digested(algorithm, listing_digest(rows), values, found, route)
+
+
+def digest(uri: str, algorithm: str = "sha256", *, workers: int = WORKERS) -> str:
+    """Return the Part 04 §4.3 value a packet may record for what this URI holds, reading every byte.
+
+    Raises
+    ------
+    ResourceMissing
+        If the URI names nothing, or an empty prefix.
     StoreUnreachable
         If the store cannot be reached.
     """
-    found = listing(uri)
-    if found.is_single_object:
-        return _member_digest(uri, "")
-    keys = [member.key for member in found.members]
-    if workers > 1 and len(keys) > 1:
-        # `map` preserves order, which the canonical listing depends on.
-        with ThreadPoolExecutor(min(workers, len(keys))) as pool:
-            digested = list(pool.map(lambda key: _member_digest(uri, key), keys))
-    else:
-        digested = [_member_digest(uri, key) for key in keys]
-    rows = [[m.key, m.size_bytes, sha] for m, sha in zip(found.members, digested, strict=True)]
-    canonical = json.dumps(rows, separators=(",", ":"), sort_keys=False, ensure_ascii=True)
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    return digest_resource(uri, algorithm, workers=workers).value
 
 
 def read_member(uri: str, key: str) -> bytes:
@@ -268,33 +471,42 @@ def read_member(uri: str, key: str) -> bytes:
         raise StoreUnreachable(f"{uri}/{key}: {exc}") from exc
 
 
-def _member_digest(uri: str, key: str) -> str:
-    """sha256 of one member, streamed so a large chunk is never held whole."""
-    digested = hashlib.sha256()
+def _member_digest(uri: str, key: str, algorithm: str = "sha256") -> str:
+    """One object's single-object value, streamed so a large chunk is never held whole."""
+    digested = hasher(algorithm)
     if is_local(uri):
         target = local_path(uri) / key if key else local_path(uri)
         with target.open("rb") as handle:
             while block := handle.read(BLOCK):
                 digested.update(block)
-        return digested.hexdigest()
+        return str(digested.hexdigest())
     filesystem, path = _filesystem(uri)
     with filesystem.open(f"{path}/{key}" if key else path, "rb") as handle:
         while block := handle.read(BLOCK):
             digested.update(block)
-    return digested.hexdigest()
+    return str(digested.hexdigest())
 
 
 __all__ = [
+    "ALGORITHMS",
     "BLOCK",
+    "ROUTES",
     "WORKERS",
+    "Digested",
     "Listing",
     "Member",
+    "ResourceMissing",
     "StoreDigest",
     "StoreUnreachable",
     "digest",
+    "digest_resource",
+    "hasher",
     "is_local",
     "listing",
+    "listing_digest",
     "local_path",
     "read_member",
+    "reported_checksum",
+    "store_checksums",
     "store_digest",
 ]

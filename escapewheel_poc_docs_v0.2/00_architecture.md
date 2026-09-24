@@ -457,6 +457,7 @@ The application column states the extent to which the specification invokes each
 | [RFC 8259](https://www.rfc-editor.org/info/rfc8259) | exact | JSON |
 | [RFC 3986](https://www.rfc-editor.org/info/rfc3986) | exact | URI syntax |
 | [JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core) and [Validation](https://json-schema.org/draft/2020-12/json-schema-validation) | Draft 2020-12 | incorporated JSON Schemas |
+| [RFC 1952](https://www.rfc-editor.org/info/rfc1952) | exact | gzip member format of a bound registry (Part 03 §3.3) and CRC-32 (Part 04 §4.3) |
 
 The missing-authority release block applies currently to any required Zarr codec configuration or
 binary behavior not determined by the authorities in

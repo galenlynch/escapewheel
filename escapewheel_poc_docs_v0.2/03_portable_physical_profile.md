@@ -16,21 +16,23 @@ generic cross-member checker at a packaging or equivalent conformance boundary; 
 MAY cache that result and MUST NOT revalidate an unchanged bundled descriptor for each packet.
 
 This part also incorporates `registry/resources.schema.json`, whose `$id` is
-`https://escapewheel.org/schemas/resources/0.4.0`, as the exact shape of the resource document of
+`https://escapewheel.org/schemas/resources/0.5.0`, as the exact shape of the resource document of
 §11.3. Its closed envelope admits an optional `$schema` string and requires `resources`, an array
 of closed entries. An entry requires `resource_id`, `declaration_id`, and `uri`, and admits
-`external`, `source`, `sha256`, `size_bytes`, `verified_at`, and `members`. The delivery schema
+`external`, `source`, `digest`, `size_bytes`, `verified_at`, and `members`. The delivery schema
 defines each of those members, and the entry's conditional shape, exactly as the manifest schema
 [Part 04 §1](04_packet_catalog.md#ew-packet-catalog-scope) incorporates defines them; a difference
 makes the specification candidate internally inconsistent.
 
 The portable physical profile defined by this part is identified by
-`escapewheel-portable-v0.1`. Its requirements directly invoke the shared JSON and URI authorities
-identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the portable-profile
-authorities identified in [Part 03 §12](#ew-portable-profile-normative-references). The application
-columns in those sections state their extent. The `sha256` field and prefix-resource digest meaning
-belong to Part 04 §4.1 and Part 04 §5.4; this part determines when portable-profile resources record
-and verify that manifest field rather than invoking FIPS 180-4 independently.
+`escapewheel-portable-v0.1`. Its requirements directly invoke the shared JSON, URI, and RFC 1952
+authorities identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the
+portable-profile authorities identified in [Part 03 §12](#ew-portable-profile-normative-references).
+The application columns in those sections state their extent. The `digest` field belongs to
+[Part 04 §4.1](04_packet_catalog.md#ew-packet-resource-entry-fields), and its functions, a prefix's
+value, and when a writer records one to
+[Part 04 §4.3](04_packet_catalog.md#ew-resource-digests); this part determines what a portable
+resource's digest covers rather than invoking a digest authority independently.
 
 This part is normative for a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and binds no other packet. It is the only part whose rules may depend on a storage technology. Where a number here supports a rule rather than stating one, the rule stays and the number is Part 10's.
 
@@ -415,13 +417,16 @@ A packet MAY declare its own retention, and a writer SHOULD emit one: how many s
 <a id="ew-owned-resource-digests" data-spec-anchor="canonical"></a>
 ## 10. Checksums
 
-A writer records a `sha256` over each packet-owned resource by default. This is the one case where a digest verifies what the packet itself claims, and it is cheap: whole-file, one file per resource.
+In this profile a packet-owned table's `digest` covers its one Parquet file, and a packet-owned
+array's covers its Zarr prefix as
+[Part 04 §4.3](04_packet_catalog.md#ew-resource-digests) defines a prefix's value. Part 04 §4.3
+requires a writer to record one for every packet-owned resource, which is the one case where a
+digest verifies what the packet itself claims.
 
 A digest is whole-file, not per-row-group. Parquet cannot be appended to, so "which pages moved" is not a question the format can be asked, and Parquet's own page CRC32 is a corruption detector that a rewritten file passes.
 
-A packet-owned resource recording no digest is not checked, and a verification report MUST state how many it skipped for that reason. A pass that does not say what it skipped reports clean on resources it never looked at.
-
-Verification of external resources is optional and layered (Part 04 §5.3).
+Verification of packet-owned and external resources is layered
+([Part 04 §5.3](04_packet_catalog.md#ew-external-resource-verification)).
 
 <a id="ew-reaching-a-source" data-spec-anchor="canonical"></a>
 ## 11. Reaching a source
@@ -521,7 +526,7 @@ source label. It MUST refuse a delivery where bytes and catalog rows do not bind
 
 Nothing else crosses for such an array, and a build MUST NOT require an adapter to restate a Zarr
 version, codec pipeline, layout, or other self-describing physical fact. A build inspects reachable
-output as needed; `size_bytes` and `sha256` come from the packet-owned bytes it digests (Part 03
+output as needed; `size_bytes` and `digest` come from the packet-owned bytes it digests (Part 03
 §8.1). An adapter delivering an array therefore writes bytes where one delivering rows performs no
 I/O at all, which is the cost of an array not being records.
 
@@ -588,5 +593,4 @@ The application column states the extent to which this part invokes each externa
 | [Zarr v3 Zstandard codec specification](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/zstd/) | unversioned | `zstd` codec metadata object and configuration |
 | [Zarr v2 storage specification](https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html) | 2.0 | permitted external Zarr v2 arrays |
 | [RFC 8878](https://www.rfc-editor.org/info/rfc8878) | exact | Zstandard framing |
-| [RFC 1952](https://www.rfc-editor.org/info/rfc1952) | exact | gzip member format of a bound registry (§3.3) |
 | [RFC 1951](https://www.rfc-editor.org/info/rfc1951) | exact | DEFLATE compression of a bound registry (§3.3) |

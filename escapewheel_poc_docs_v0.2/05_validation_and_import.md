@@ -503,7 +503,7 @@ Byte-identical output is **not** required and cannot be: a manifest carries `cre
 versions. A writer MAY offer a deterministic-build mode that pins those, and a packet
 a validator MUST NOT judge a packet non-conforming for lacking one.
 
-A recorded `sha256` therefore says what a packet's bytes **are**, not what a second build would
+A recorded digest therefore says what a packet's bytes **are**, not what a second build would
 produce. Two conforming builds of one dataset may record different digests for the same rows.
 
 ## 12. Alternatives are resolved before a commit

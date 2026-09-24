@@ -93,8 +93,9 @@ packet, which is worse than having no check.
   `warning`, since reachability is a property of the reader's situation and not of the packet; a
   URI that resolves and disagrees is an `error`.
 - **`external` and `checksums` are never one flag** (R36 §2.3). Listing a store and checking sizes
-  is 65 ms over a session's twelve LFP arrays. Recomputing `sha256` reads every byte: 47 s over
-  6.83 GB, and a bill as well as a wait against an object store.
+  is 65 ms over a session's twelve LFP arrays. Computing a digest reads every byte: 47 s over
+  6.83 GB, and a bill as well as a wait against an object store. A store's full-object checksums
+  cost one request per object instead, and a composite one never counts (Part 04 §5.3).
 - **The codec floor is per Zarr version** (R21 §3.3), in `FLOOR`. `gzip` is in R3 §7.2's baseline
   and Zarr.jl reads it in v3 but not in v2, so readability belongs to the `(version, codec)` pair.
   Outside the floor is `info`, not an error — such a packet conforms and is simply not portable

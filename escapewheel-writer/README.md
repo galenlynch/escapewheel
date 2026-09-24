@@ -118,6 +118,22 @@ every path it will create. A retry after an interruption removes those paths and
 promoted directory with no record, or a record it cannot read, is refused and nothing is removed
 (Part 05 §6). `escapewheel prune` reports `staging/` and those paths apart from strays.
 
+## Digests, and `escapewheel verify`
+
+Every resource the packet owns records a SHA-256 `digest`, `{"algorithm": "sha256", "value": …}`,
+as Part 04 §4.3 requires; a Zarr prefix's value is the SHA-256 of its member listing. A build
+records nothing it could not reach about a referenced resource (Part 04 §5.2), so
+`escapewheel verify` records it once the bytes have landed, as a new packet version:
+
+```bash
+escapewheel verify packet/                   # sizes, and each prefix member with its entity tag
+escapewheel verify packet/ --level sha256    # also a digest, and each member's beside it
+```
+
+A store's entity tag is recorded verbatim under `etag`, a multipart one included, and is compared
+only with itself; it never stands in for a digest. The LFP source's `verify` setting records the
+same levels at build time.
+
 ## Installation
 
 If you choose to clone the repository, you can install the package by running the following command from the root directory of the repository:

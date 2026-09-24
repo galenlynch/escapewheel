@@ -52,6 +52,25 @@ report.verdict(), report.verdict("core")       # "passed", "failed", or "incompl
 report.registries  # complete, role-labelled registry-document results
 ```
 
+## Resource digests
+
+Every resource the packet owns records a `digest` naming its algorithm: `sha256`, `crc64nvme`,
+`crc32c`, or `crc32` (Part 04 §4.3). An entry without one is `packet.resource.digest_missing`,
+an `entries` finding that withholds the declaration phases. A prefix's value is the SHA-256 of its
+member listing under every algorithm.
+
+```bash
+escapewheel validate packet/ --checksums                       # establish every recorded digest
+escapewheel validate packet/ --checksums --no-store-checksums  # and read every byte to do it
+```
+
+`--checksums` checks packet-owned digests and, since it implies `--external`, referenced ones.
+Where an object store reports a full-object checksum in the digest's algorithm, the validator
+takes it in place of reading the object (Part 04 §5.3). It never takes a composite value, and it
+reads any object the store reports nothing for. `owned.verified` and `external.verified` name each
+digest's route: `computed`, `store`, or `combined`. The CRCs use `awscrt` and `google-crc32c`
+where they are installed and a pure-Python implementation otherwise.
+
 ## What runs
 
 Most of what runs is generated rather than written. The registry the packet embeds decides how

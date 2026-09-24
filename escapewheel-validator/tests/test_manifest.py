@@ -86,7 +86,7 @@ def test_a_repeated_member_is_refused_before_the_schema_runs(packet_root):
         ),
         pytest.param(
             lambda m: _members(
-                m, [{"key": "a", "size_bytes": 1, "store_digest": {"algorithm": "md5", "value": "x", "extra": 1}}]
+                m, [{"key": "a", "size_bytes": 1, "store_digest": {"algorithm": "etag", "value": "x", "extra": 1}}]
             ),
             id="store_digest_unknown",
         ),
@@ -97,6 +97,34 @@ def test_a_repeated_member_is_refused_before_the_schema_runs(packet_root):
         pytest.param(lambda m: m["resources"][0].update(uri="s3://b/k"), id="absolute_uri_not_external"),
         pytest.param(lambda m: m["resources"][0].update(source="raw"), id="source_not_external"),
         pytest.param(lambda m: m.update(registries={}), id="no_registries"),
+        pytest.param(lambda m: m["resources"][0].update(sha256="0" * 64), id="sha256_in_place_of_digest"),
+        pytest.param(lambda m: m["resources"][0]["digest"].update(algorithm="md5"), id="digest_algorithm_unknown"),
+        pytest.param(lambda m: m["resources"][0]["digest"].update(value="0" * 16), id="digest_sha256_width"),
+        pytest.param(
+            lambda m: m["resources"][0].update(digest={"algorithm": "crc32c", "value": "0" * 16}),
+            id="digest_crc32c_width",
+        ),
+        pytest.param(lambda m: m["resources"][0]["digest"].update(extra=1), id="digest_unknown"),
+        pytest.param(lambda m: _members(m, []), id="members_empty"),
+        pytest.param(
+            lambda m: _members(m, [{"key": "a", "size_bytes": 1, "digest": "1" * 8}]), id="member_digest_without_entry"
+        ),
+        pytest.param(
+            lambda m: _members(
+                m,
+                [{"key": "a", "size_bytes": 1, "digest": "1" * 64}, {"key": "b", "size_bytes": 1}],
+                digest={"algorithm": "sha256", "value": "0" * 64},
+            ),
+            id="member_digest_partial",
+        ),
+        pytest.param(
+            lambda m: _members(
+                m,
+                [{"key": "a", "size_bytes": 1, "digest": "1" * 64}],
+                digest={"algorithm": "crc64nvme", "value": "0" * 64},
+            ),
+            id="member_digest_width",
+        ),
     ],
 )
 def test_the_schema_refuses_what_it_does_not_define(packet_root, change):
@@ -187,17 +215,27 @@ def test_size_bytes_is_the_sum_of_the_members(packet_root):
     assert _checks(packet_root) == ["packet.resource.member_size"]
 
 
-def test_sha256_is_the_digest_of_a_fully_digested_member_list(packet_root):
-    members = [{"key": "b", "size_bytes": 1, "sha256": "1" * 64}, {"key": "a", "size_bytes": 2, "sha256": "2" * 64}]
-    _edit(packet_root, lambda m: _members(m, members, sha256=prefix_digest(members)))
+@pytest.mark.parametrize(("algorithm", "width"), [("sha256", 64), ("crc64nvme", 16), ("crc32c", 8), ("crc32", 8)])
+def test_digest_is_the_value_of_its_member_list(packet_root, algorithm, width):
+    """Part 04 §4.3: the members carry values under the entry's algorithm, and the entry the listing's SHA-256."""
+    members = [
+        {"key": "b", "size_bytes": 1, "digest": "1" * width},
+        {"key": "a", "size_bytes": 2, "digest": "2" * width},
+    ]
+    listed = {"algorithm": algorithm, "value": prefix_digest(members)}
+    _edit(packet_root, lambda m: _members(m, members, digest=listed))
     assert _checks(packet_root) == []
-    _edit(packet_root, lambda m: m["resources"][-1].update(sha256="0" * 64))
+    _edit(packet_root, lambda m: m["resources"][-1].update(digest={"algorithm": algorithm, "value": "0" * 64}))
     assert _checks(packet_root) == ["packet.resource.member_digest"]
 
 
-def test_a_partly_digested_member_list_is_not_compared(packet_root):
-    members = [{"key": "a", "size_bytes": 1, "sha256": "1" * 64}, {"key": "b", "size_bytes": 1}]
-    _edit(packet_root, lambda m: _members(m, members, sha256="0" * 64))
+def test_a_packet_owned_entry_records_a_digest(packet_root):
+    _edit(packet_root, lambda m: m["resources"][0].pop("digest"))
+    assert _checks(packet_root) == ["packet.resource.digest_missing"]
+
+
+def test_an_external_entry_need_not_record_a_digest(packet_root):
+    _edit(packet_root, lambda m: _members(m, [{"key": "a", "size_bytes": 1}]))
     assert _checks(packet_root) == []
 
 

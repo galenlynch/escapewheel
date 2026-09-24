@@ -469,13 +469,15 @@ class ExternalArray:
     compression -- 5.8 GB of LFP across twelve probes, against three integers per series once
     R20 replaces its timestamps.
 
-    `sha256`, `size_bytes`, `members` and `verified_at` record what was true when someone
+    `digest`, `size_bytes`, `members` and `verified_at` record what was true when someone
     looked, not a promise about now: immutability covers packet-owned bytes only (Part 03 §8),
-    and an external array may change or vanish without the packet changing at all.
+    and an external array may change or vanish without the packet changing at all. `digest` is
+    Part 04 §4.3's `{"algorithm", "value"}` object.
 
-    `members` is Part 04 §5.4's record of what the prefix held, each entry carrying whatever the
-    store said about itself. It is a record and not a resolution rule -- a reader hands the URI
-    to Zarr, which addresses chunks by key and never enumerates.
+    `members` is Part 04 §5.4's record of what the prefix held, each entry carrying its own digest
+    where the resource records one and the store's entity tag where it offered one. It is a record
+    and not a resolution rule -- a reader hands the URI to Zarr, which addresses chunks by key and
+    never enumerates.
     """
 
     array_asset_id: str
@@ -487,7 +489,7 @@ class ExternalArray:
     source: str | None = None
     physical_profile: str = "zarr_v3"
     codecs: tuple[str, ...] = ()
-    sha256: str | None = None
+    digest: Mapping[str, str] | None = None
     size_bytes: int | None = None
     verified_at: str | None = None
     members: tuple[dict[str, Any], ...] | None = None
@@ -503,8 +505,8 @@ class ExternalMedia:
     in `core.media_frames`, on a declared clock -- which is what makes the video addressable and
     is the part no player can supply.
 
-    `sha256`, `size_bytes` and `verified_at` record what was true when someone looked (R14
-    §2.3.1), not a promise about now.
+    `digest`, `size_bytes` and `verified_at` record what was true when someone looked, not a
+    promise about now (Part 04 §5.2).
     """
 
     media_asset_id: str
@@ -513,7 +515,7 @@ class ExternalMedia:
     format: str = ""
     #: Part 04 §5.5, as on `ExternalArray`.
     source: str | None = None
-    sha256: str | None = None
+    digest: Mapping[str, str] | None = None
     size_bytes: int | None = None
     verified_at: str | None = None
 
@@ -548,20 +550,20 @@ def _refuse_occupied(root: Path) -> None:
         )
 
 
-def _digest(path: Path) -> str:
-    """Part 04 §5.4: what the packet says its own bytes are.
+def _digest(path: Path) -> dict[str, str]:
+    """Part 04 §4.3: what the packet says its own bytes are, under SHA-256.
 
-    Recorded for every packet-owned resource and not optional, because the promise it makes
-    checkable is not optional either: Part 03 §8.1 declares these bytes immutable and Part 03 §9.4 spends
-    that, bounding revalidation after an amendment to what the amendment wrote. Costs 0.5% of a
-    build -- the bytes were just written, so they are in page cache and hash at ~2 GB/s.
+    Required of every packet-owned resource, because the promise it makes checkable is not optional
+    either: Part 03 §8.1 declares these bytes immutable and Part 03 §9.4 spends that, bounding
+    revalidation after an amendment to what the amendment wrote. Costs 0.5% of a build -- the bytes
+    were just written, so they are in page cache and hash at ~2 GB/s.
 
-    A prefix goes through Part 04 §5.4's canonical listing, a single file is its own bytes; `digest`
-    already distinguishes them.
+    A prefix goes through Part 04 §4.3's listing, a single file is its own bytes; `digest` already
+    distinguishes them.
     """
     from escapewheel_validator.stores import digest
 
-    return digest(str(path))
+    return {"algorithm": "sha256", "value": digest(str(path))}
 
 
 class CommitRefused(Exception):
@@ -674,7 +676,7 @@ class PacketWriter:
         self._retention: dict[str, Any] = {"keep_versions": 1}
         #: Part 04 §5.5: where each named source was read from, written to `sources.json` at commit.
         #: A record of where the writer looked, never a resolution rule binding a later reader --
-        #: the same standing Part 03 §8 gives `sha256` and `verified_at`.
+        #: the same standing Part 03 §8 gives `digest` and `verified_at`.
         self._sources: dict[str, str] = {}
         #: Rows each resource was written with, filled as `_stage` writes them. A streamed
         #: table has no count until then, so anything reported earlier is the source's estimate.
@@ -1107,7 +1109,7 @@ class PacketWriter:
                     "uri": relative,
                     "validation_state": "not_run",
                     "size_bytes": size,
-                    "sha256": _digest(path),
+                    "digest": _digest(path),
                 }
             )
         return entries
@@ -1124,9 +1126,9 @@ class PacketWriter:
                 "validation_state": "not_run",
                 "external": True,
             }
-            for name in ("source", "sha256", "size_bytes", "verified_at"):
+            for name in ("source", "digest", "size_bytes", "verified_at"):
                 if (value := getattr(media, name)) is not None:
-                    entry[name] = value
+                    entry[name] = dict(value) if name == "digest" else value
             entries.append(entry)
         return entries
 
@@ -1142,9 +1144,9 @@ class PacketWriter:
                 "validation_state": "not_run",
                 "external": True,
             }
-            for name in ("source", "sha256", "size_bytes", "verified_at"):
+            for name in ("source", "digest", "size_bytes", "verified_at"):
                 if (value := getattr(array, name)) is not None:
-                    entry[name] = value
+                    entry[name] = dict(value) if name == "digest" else value
             if array.members is not None:
                 entry["members"] = [dict(member) for member in array.members]
             entries.append(entry)
@@ -1214,13 +1216,13 @@ class PacketWriter:
                     )
                 )
             _check_parquet_floor(path)
-            entry = {
+            entry: dict[str, Any] = {
                 "resource_id": resource_id,
                 "declaration_id": resource_id,
                 "uri": relative,
                 "validation_state": "not_run",
             }
-            entry["sha256"] = _digest(path)
+            entry["digest"] = _digest(path)
             if lineage := self._derived.get(resource_id):
                 entry["derived_from"] = lineage
             entries.append(entry)
@@ -1668,8 +1670,8 @@ class PacketWriter:
         """Keep every manifest a packet has had (Part 03 §9.3).
 
         A superseded file is only interpretable if the manifest that named it still exists;
-        without these, an orphan and a stray are indistinguishable and a `sha256` recorded
-        under R14 points at a state nothing can reconstruct.
+        without these, an orphan and a stray are indistinguishable and a recorded `digest` points
+        at a state nothing can reconstruct.
         """
         versions = root / MANIFESTS
         versions.mkdir(exist_ok=True)

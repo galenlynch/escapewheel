@@ -492,7 +492,7 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
     )
     assert "physical_profile" not in entry
     assert "codecs" not in entry
-    assert entry["size_bytes"] > 0 and entry["sha256"]
+    assert entry["size_bytes"] > 0 and entry["digest"]["algorithm"] == "sha256"
     assert not (delivered / "waveform_mean.zarr").exists(), "staging moved it rather than copying"
 
 

@@ -79,9 +79,10 @@ Part 04 §§3 and 8 define the manifest fields that record these identifiers.
   lakehouse profile discussed in Part 00.
 
 [Part 00 §10](00_architecture.md#ew-normative-references) defines normative-reference policy and
-lists shared external authorities. References invoked only by the portable profile are in
+lists shared external authorities, among them RFC 1952, which the portable profile and the packet
+manifest both invoke. References invoked only by the portable profile are in
 [Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references), and the
-SHA-256 authority invoked by the packet manifest is in
+SHA-256, CRC64NVME, and CRC32C authorities invoked by the packet manifest are in
 [Part 04 §11](04_packet_catalog.md#ew-packet-catalog-normative-references).
 The SQL and IEEE authorities invoked by the portable Tier 2 language are in
 [Part 11 §9](11_tier_2_rule_language.md#ew-rule-language-normative-references).

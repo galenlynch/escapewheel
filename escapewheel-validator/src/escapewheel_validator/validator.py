@@ -41,7 +41,7 @@ from .registry_document import (
     ucum_error,
 )
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
-from .stores import StoreUnreachable, digest, listing, read_member
+from .stores import ROUTES, ResourceMissing, StoreUnreachable, digest_resource, listing, read_member
 
 #: Registry column type -> the Arrow type a conforming writer must emit (Part 03 §5.5).
 ARROW_TYPES = {
@@ -724,6 +724,18 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
             f"{len(owned)} packet-owned array(s) but no declaration-selected axes rows were resolved",
         )
     for resource in owned:
+        try:
+            listing(_owned_uri(packet, resource.entry))
+        except ResourceMissing as exc:
+            report.add(
+                "error",
+                "resource.missing",
+                f"{resource.resource_id}: {exc}",
+                registry=report.resource_owner(resource.resource_id),
+            )
+            continue
+        except StoreUnreachable:
+            pass  # `_check_one_array` reports what it cannot read
         _check_one_array(resource, packet.array_resource(resource.resource_id), extents, report)
 
 
@@ -744,27 +756,28 @@ def _check_codec_declarations(packet: Packet, report: Report, resolved: bool = F
         )
 
 
-def _check_owned_digests(packet: Packet, report: Report) -> None:
-    """Part 03 §10: recompute the digest of every packet-owned resource that records one.
+def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool = True) -> None:
+    """Part 04 §5.3, level 2: every packet-owned resource's recorded digest holds.
 
     A disagreement is an **error**, where the external equivalent is one too but means something
     weaker. An external resource that changed is the world moving under a packet that never
     promised otherwise (Part 03 §8); a packet-owned file that changed is the packet being wrong
     about itself, and it is the premise Part 03 §9.4 spends to bound revalidation.
 
-    A resource recording no digest is not checked, and the count is reported rather than passed
-    over -- every packet built before R52 records none.
+    An entry recording no digest is `packet.resource.digest_missing`, which the `entries` phase
+    reports and which withholds this one. `owned.verified` names each digest's route.
     """
-    checked, matched, skipped = 0, 0, []
+    checked, matched, routes = 0, 0, []
     for resource in packet.resources():
         if resource.is_external:
             continue
         entry = resource.entry
-        if (claimed := entry.get("sha256")) is None:
-            skipped.append(resource.resource_id)
+        if not isinstance(claimed := entry.get("digest"), Mapping):
             continue
         try:
-            actual = digest(str(packet.root / str(entry.get("uri", ""))))
+            found = digest_resource(
+                _owned_uri(packet, entry), str(claimed["algorithm"]), store_checksums=store_checksums
+            )
         except StoreUnreachable as exc:
             report.add(
                 "error",
@@ -774,30 +787,43 @@ def _check_owned_digests(packet: Packet, report: Report) -> None:
             )
             continue
         checked += 1
-        if actual == claimed:
+        routes.append((resource.resource_id, found.algorithm, found.route))
+        if found.value == claimed["value"]:
             matched += 1
         else:
             report.add(
                 "error",
-                "owned.sha256",
-                f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed[:16]}… — "
-                "a packet-owned file is immutable (Part 03 §8.1) and Part 03 §9.4 bounds revalidation on that",
+                "owned.digest",
+                f"{resource.resource_id}: {found.algorithm} gives {found.value[:16]}…, manifest records "
+                f"{str(claimed['value'])[:16]}… — a packet-owned resource is immutable (Part 03 §8.1) and "
+                "Part 03 §9.4 bounds revalidation on that",
                 registry=report.resource_owner(resource.resource_id),
             )
-    if skipped:
-        report.add(
-            "warning",
-            "owned.no_checksum",
-            f"{len(skipped)} packet-owned resource(s) record no sha256, so immutability was not "
-            "checked for them (Part 03 §10)",
-            [(name,) for name in skipped[:20]],
-        )
     if checked:
         report.add(
             "info",
             "owned.verified",
-            f"{matched} of {checked} packet-owned resource(s) digested to what the manifest records",
+            f"{matched} of {checked} packet-owned resource(s) hold their recorded digest; {_routes(routes)}",
+            routes,
         )
+
+
+def _owned_uri(packet: Packet, entry: Mapping[str, Any]) -> str:
+    """Where a packet-owned entry's bytes are, under the packet's own location."""
+    return packet.location.resolve(str(entry.get("uri", ""))).uri
+
+
+def _routes(routes: Sequence[tuple[str, str, str]]) -> str:
+    """Name how each digest was established (Part 04 §5.3), by resource where the routes differ.
+
+    A finding keeps five rows, so the message carries the route of every digest.
+    """
+    taken = [route for route in ROUTES if any(row[2] == route for row in routes)]
+    if len(taken) == 1:
+        return f"route: {taken[0]} for all {len(routes)}"
+    return "route: " + "; ".join(
+        f"{route} for {', '.join(name for name, _, used in routes if used == route)}" for route in taken
+    )
 
 
 def _check_sources(packet: Packet, report: Report) -> None:
@@ -858,7 +884,13 @@ def _check_sources(packet: Packet, report: Report) -> None:
         )
 
 
-def _resolve_external(packet: Packet, report: Report, checksums: bool = False, store_digests: bool = False) -> None:
+def _resolve_external(
+    packet: Packet,
+    report: Report,
+    checksums: bool = False,
+    store_digests: bool = False,
+    store_checksums: bool = True,
+) -> None:
     """Level 3 (Part 04 §5.3): resolve external URIs and check what was claimed about them.
 
     Requested explicitly, never by default. Part 04 §5.3 keeps structural validation off the
@@ -870,48 +902,58 @@ def _resolve_external(packet: Packet, report: Report, checksums: bool = False, s
     default mode gives it, while a claim that resolved and *disagrees* is an error.
 
     **A check with nothing to compare against is reported, not counted as a pass.** A manifest
-    need not record `sha256` or `size_bytes`, so either can be absent on a resource that resolves
+    need not record `digest` or `size_bytes`, so either can be absent on a resource that resolves
     cleanly. `external.verified` therefore names what it compared rather than asserting a resource
     was "checked", and a requested digest with nothing to compare gets its own finding.
 
     Parameters
     ----------
     checksums : bool, default False
-        Also recompute `sha256`, which reads every byte -- 6.8 GB for a session's LFP, 75 s from
-        local disk and 88 s from S3 -- where the rest of this mode is a list operation. Off
-        separately for that reason.
+        Also establish each recorded `digest` (level 3c). Reading every byte costs 6.8 GB for a
+        session's LFP, 75 s from local disk and 88 s from S3, where the rest of this mode is a list
+        operation; off separately for that reason.
     store_digests : bool, default False
         Also compare each declared member's `store_digest` against what the store reports now
         (Part 04 §5.4). The listing already performed carries the values, so this is the same 1.31 s
         the level below it costs, and it answers a weaker question than `checksums` does.
+    store_checksums : bool, default True
+        With `checksums`, take the store's full-object checksums in place of reading an object
+        where it reports one in the digest's algorithm (Part 04 §5.3).
     """
     checked = 0
     compared: Counter[str] = Counter()
     unchecksummed: list[str] = []
+    routes: list[tuple[str, str, str]] = []
     # Only read core.array_dimensions where an external array would use it.
     external_arrays = [r for r in packet.resources(kind="dense_array") if r.is_external]
     extents = _declared_extents(packet) if external_arrays else {}
     for resource in packet.resources():
         if not resource.is_external:
             continue
-        fields = _compare_external(resource, report, checksums, store_digests, extents)
+        fields = _compare_external(resource, report, checksums, store_digests, extents, store_checksums, routes)
         if fields is None:
             continue
         checked += 1
         compared.update(fields)
-        if checksums and "sha256" not in fields:
+        if checksums and "digest" not in fields:
             unchecksummed.append(resource.resource_id)
     if unchecksummed:
         report.add(
             "warning",
             "external.no_checksum",
-            f"{len(unchecksummed)} of {checked} resolved resource(s) record no sha256, so a digest "
+            f"{len(unchecksummed)} of {checked} resolved resource(s) record no digest, so a digest "
             "was asked for and nothing was compared against (Part 04 §5.2)",
             [(name,) for name in unchecksummed],
         )
     if checked:
         did = ", ".join(f"{count} {field}" for field, count in sorted(compared.items())) or "nothing"
-        report.add("info", "external.verified", f"{checked} external resource(s) resolved; compared {did}")
+        established = f"; digest {_routes(routes)}" if routes else ""
+        report.add(
+            "info",
+            "external.verified",
+            f"{checked} external resource(s) resolved; compared {did}{established}",
+            routes,
+        )
 
 
 def _compare_external(
@@ -920,11 +962,14 @@ def _compare_external(
     checksums: bool,
     store_digests: bool = False,
     extents: Mapping[str, Any] | None = None,
+    store_checksums: bool = True,
+    routes: list[tuple[str, str, str]] | None = None,
 ) -> list[str] | None:
     """Check one external resource, returning the fields actually compared.
 
     None means the store could not be reached, which is already reported and leaves the resource
-    out of every count: nothing about it was established either way.
+    out of every count: nothing about it was established either way. Each digest established is
+    appended to `routes` as its resource ID, algorithm, and route.
     """
     entry = resource.entry
     uri = str(entry.get("uri", ""))
@@ -953,9 +998,9 @@ def _compare_external(
             )
     if extents:
         fields.extend(_compare_shape(resource, uri, found, extents, report))
-    if checksums and (claimed_sha := entry.get("sha256")) is not None:
+    if checksums and isinstance(claimed := entry.get("digest"), Mapping):
         try:
-            actual = digest(uri)
+            found_digest = digest_resource(uri, str(claimed["algorithm"]), store_checksums=store_checksums)
         except StoreUnreachable as exc:
             report.add(
                 "warning",
@@ -964,12 +1009,15 @@ def _compare_external(
                 registry=report.resource_owner(resource.resource_id),
             )
             return None
-        fields.append("sha256")
-        if actual != claimed_sha:
+        fields.append("digest")
+        if routes is not None:
+            routes.append((resource.resource_id, found_digest.algorithm, found_digest.route))
+        if found_digest.value != claimed["value"]:
             report.add(
                 "error",
-                "external.sha256",
-                f"{resource.resource_id}: digests to {actual[:16]}…, manifest claims {claimed_sha[:16]}…",
+                "external.digest",
+                f"{resource.resource_id}: {found_digest.algorithm} gives {found_digest.value[:16]}…, "
+                f"manifest records {str(claimed['value'])[:16]}…",
                 registry=report.resource_owner(resource.resource_id),
             )
     return fields
@@ -981,8 +1029,8 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
     This is what makes level 3a per-member rather than aggregate: `size_bytes` on the resource is
     a total, so two members changing in opposite directions leave it correct. It is also what
     enforces Part 04 §5.4's rule that a digested listing is the declared one -- where the declared
-    members and the store agree, Part 04 §5.4's canonical listing is the same either way, so `sha256`
-    and `members` cannot describe different things.
+    members and the store agree, Part 04 §4.3's listing is the same either way, so `digest` and
+    `members` cannot describe different things.
     """
     fields = ["members"]
     held = {member.key: member for member in found.members}
@@ -2187,6 +2235,7 @@ def validate(
     external: bool = False,
     checksums: bool = False,
     store_digests: bool = False,
+    store_checksums: bool = True,
 ) -> Report:
     """Validate a packet against the registries it binds.
 
@@ -2220,21 +2269,26 @@ def validate(
         modifying anything else and Part 03 §8.1 declares those bytes immutable, so a rule reading
         only them is already answered.
     external : bool, default False
-        Resolve external URIs and check the `sha256`, `size_bytes` and `members` claimed for
+        Resolve external URIs and check the `digest`, `size_bytes` and `members` claimed for
         them (Part 04 §5.3, level 3). Off by default because Part 04 §5.3 forbids structural validation
         reaching for a resource the packet does not own: whether one is reachable is a property
         of the reader's situation, not of the packet. An unreachable resource is a warning; one
         that resolves and disagrees with its claim is an error.
     checksums : bool, default False
-        Recompute every recorded `sha256`: each packet-owned resource (Part 03 §10), and with
-        `external`, each external one too. Separate because it reads every byte -- 0.60 s for the
-        1,209 MB a packet owns, against 75 s for the 6.8 GB of LFP it merely references.
+        Establish every recorded `digest`: each packet-owned resource (Part 04 §5.3, level 2), and
+        with `external`, each external one too (level 3c). Separate because reading costs every
+        byte -- 0.60 s for the 1,209 MB a packet owns, against 75 s for the 6.8 GB of LFP it merely
+        references. The report names each digest's route.
     store_digests : bool, default False
         With `external`, also compare each member's recorded `store_digest` against what the
         store reports now (Part 04 §5.4). This is the level between the other two: it costs the
         listing already performed, and it answers "has anything changed in place" rather than
         "are these the bytes". A member with nothing recorded, or a store offering nothing, is
         not checked, and the report says how many were skipped.
+    store_checksums : bool, default True
+        With `checksums`, take a store's full-object checksums in the digest's algorithm in place
+        of reading those objects (Part 04 §5.3). A composite value is never taken, an object the
+        store reports nothing for is read, and a local packet has no store checksums to take.
 
     Returns
     -------
@@ -2263,9 +2317,9 @@ def validate(
     _check_resource_declarations(packet, effective, extensions, withheld, report)
     _check_codec_declarations(packet, report, resolved=external)
     if external:
-        _resolve_external(packet, report, checksums, store_digests)
+        _resolve_external(packet, report, checksums, store_digests, store_checksums)
     if checksums:
-        _check_owned_digests(packet, report)
+        _check_owned_digests(packet, report, store_checksums)
     _check_packet_owned_arrays(packet, report)
     _check_time_origin(packet, report)
     # Every directing registry's tables receive the same storage checks (Part 05 §5.4).

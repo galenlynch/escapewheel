@@ -75,11 +75,12 @@ class LFPSource(Compensates):
 
         - `none` records no claim.
         - `size` lists the store and records the total.
-        - `members` also records Part 04 §5.4's per-member listing, carrying whatever content hash
-          the store handed over with it. Same request, so it costs what `size` costs; what it
-          buys is a per-member check where the total hides two members changing in opposite
-          directions, and `validate --store-digests` to see whether anything changed in place.
-        - `sha256` also digests every byte.
+        - `members` also records Part 04 §5.4's per-member listing, carrying the entity tag the
+          store handed over with it. Same request, so it costs what `size` costs; what it buys is
+          a per-member check where the total hides two members changing in opposite directions,
+          and `validate --store-digests` to see whether anything changed in place.
+        - `sha256` also digests every byte, recording the prefix's SHA-256 `digest` and each
+          member's own beside it (Part 04 §4.3).
 
         A remote base needs `escapewheel-validator[remote]` and a backend for its scheme;
         unreachable leaves the claim unmade rather than guessed.
@@ -287,27 +288,28 @@ class LFPSource(Compensates):
         `size_bytes` is the whole prefix, metadata documents included, because a dense array
         asset is a prefix of many objects and its `.zarray` is part of what it is (Part 04 §5.4).
         """
-        from escapewheel_validator.stores import StoreUnreachable, digest, listing
+        from escapewheel_validator.stores import StoreUnreachable, digest_resource, listing
 
         from ..writer import ExternalArray
 
         if self.verify == "none":
             return array
         try:
-            found = listing(array.uri)
-            # A prefix has no natural digest, so Part 04 §5.4 defines one. It reads every byte --
-            # 3.9 s an array here -- which is why it is asked for separately.
-            checksum = digest(array.uri) if self.verify == "sha256" else None
+            # A prefix's digest reads every byte -- 3.9 s an array here -- which is why it is asked
+            # for separately. Its members' values are kept, so a consumer can check one chunk.
+            digested = digest_resource(array.uri) if self.verify == "sha256" else None
+            found = listing(array.uri) if digested is None else digested.found
         except StoreUnreachable as exc:
             self.notes.append(f"{array.array_asset_id}: nothing verified, {exc}")
             return array
         members = None
         if self.verify in {"members", "sha256"}:
-            members = tuple(_member_entry(member) for member in found.members)
+            values = digested.members if digested is not None else (None,) * len(found.members)
+            members = tuple(_member_entry(member, value) for member, value in zip(found.members, values, strict=True))
             if not found.digested_by_store:
                 self.notes.append(
-                    f"{array.array_asset_id}: the store offered no content hash for any of its "
-                    f"{len(found.members)} members, so they record size only"
+                    f"{array.array_asset_id}: the store offered no entity tag for any of its "
+                    f"{len(found.members)} members, so none records a store digest"
                 )
         return ExternalArray(
             array_asset_id=array.array_asset_id,
@@ -315,7 +317,7 @@ class LFPSource(Compensates):
             uri=array.uri,
             physical_profile=array.physical_profile,
             codecs=array.codecs,
-            sha256=checksum,
+            digest=None if digested is None else {"algorithm": digested.algorithm, "value": digested.value},
             size_bytes=found.size_bytes,
             verified_at=datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
             members=members,
@@ -450,9 +452,11 @@ class LFPSource(Compensates):
         }
 
 
-def _member_entry(member: Any) -> dict[str, Any]:
-    """One Part 04 §5.4 member entry, omitting what the store said nothing about."""
+def _member_entry(member: Any, digest: str | None = None) -> dict[str, Any]:
+    """One Part 04 §5.4 member entry, omitting what was not established."""
     entry: dict[str, Any] = {"key": member.key, "size_bytes": member.size_bytes}
+    if digest is not None:
+        entry["digest"] = digest
     if member.store_digest is not None:
         entry["store_digest"] = {
             "algorithm": member.store_digest.algorithm,

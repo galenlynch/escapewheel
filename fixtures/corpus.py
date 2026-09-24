@@ -57,6 +57,17 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
         "core.electrode_coordinate_values."
         "session_id_coordinate_frame_axis_index_resolves",
     ),
+    "crc64nvme": None,
+    "crc32c": None,
+    "crc32": None,
+    "crc64nvme_one_byte_off": ("error", "owned.digest"),
+    "crc32c_one_byte_off": ("error", "owned.digest"),
+    "crc32_one_byte_off": ("error", "owned.digest"),
+    "owned_without_digest": ("error", "packet.resource.digest_missing"),
+    "crc_prefix": None,
+    "crc_prefix_disagrees": ("error", "packet.resource.member_digest"),
+    "member_digest_partial": ("error", "packet.manifest.schema"),
+    "member_digest_width": ("error", "packet.manifest.schema"),
 }
 
 #: Packets whose expected finding belongs to an extension (Part 05 §9.5), which must fail that
@@ -69,6 +80,17 @@ EXTENSION_FINDINGS: dict[str, str] = {"extension_bad_type": "dynamic_foraging"}
 #: R82 §2 made both mandatory errors, so nothing here needs the advisory pass any more.
 ADVISORY: set[str] = set()
 
+#: Packets run with checksums, which establishes every packet-owned digest (Part 04 §5.3, level 2).
+CHECKSUMS: set[str] = {
+    "valid",
+    "crc64nvme",
+    "crc32c",
+    "crc32",
+    "crc64nvme_one_byte_off",
+    "crc32c_one_byte_off",
+    "crc32_one_byte_off",
+}
+
 
 def main() -> int:
     failures = []
@@ -76,7 +98,9 @@ def main() -> int:
     print("-" * 80)
     for name, expect in EXPECTED.items():
         report = validate(
-            open_packet(HERE / "packets" / name), advisory=name in ADVISORY
+            open_packet(HERE / "packets" / name),
+            advisory=name in ADVISORY,
+            checksums=name in CHECKSUMS,
         )
         if expect is None:
             ok = report.passed and report.warnings == 0

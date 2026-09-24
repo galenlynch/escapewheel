@@ -6,6 +6,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
+from escapewheel_validator.stores import digest
+
 TS = pa.timestamp("us", tz="UTC")
 METADATA_DESCRIPTION = (
     "What the source stated about this row that the standard does not model, carried "
@@ -54,6 +56,15 @@ def _write(root, name, table):
     path.mkdir(parents=True, exist_ok=True)
     pq.write_table(table, path / f"{name}.parquet", compression="zstd")
     return f"tables/core/{name}.parquet"
+
+
+def owned_digest(root, uri, algorithm="sha256"):
+    """The `digest` a writer records for a packet-owned resource under `root` (Part 04 §4.3)."""
+    return {"algorithm": algorithm, "value": digest(str(root / uri), algorithm)}
+
+
+#: A well-formed digest for an entry whose bytes a test never reads.
+UNREAD_DIGEST = {"algorithm": "sha256", "value": "0" * 64}
 
 
 def _resource(resource_id, uri, **extra):
@@ -279,12 +290,14 @@ def packet_root(tmp_path):
         }
     )
     resources = [
-        _resource("core.sessions", _write(root, "sessions", sessions)),
-        _resource("core.trials", _write(root, "trials", trials)),
-        _resource("core.units", _write(root, "units", units)),
-        _resource("core.events", _write(root, "events", events)),
-        _resource("core.spike_events", _write(root, "spike_events", spike_events)),
-        _resource("core.clocks", _write(root, "clocks", clocks)),
+        _resource("core.sessions", uri := _write(root, "sessions", sessions), digest=owned_digest(root, uri)),
+        _resource("core.trials", uri := _write(root, "trials", trials), digest=owned_digest(root, uri)),
+        _resource("core.units", uri := _write(root, "units", units), digest=owned_digest(root, uri)),
+        _resource("core.events", uri := _write(root, "events", events), digest=owned_digest(root, uri)),
+        _resource(
+            "core.spike_events", uri := _write(root, "spike_events", spike_events), digest=owned_digest(root, uri)
+        ),
+        _resource("core.clocks", uri := _write(root, "clocks", clocks), digest=owned_digest(root, uri)),
     ]
 
     core = install_registry(root, _registry())

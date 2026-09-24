@@ -33,6 +33,7 @@ def _validate(args: argparse.Namespace) -> int:
             external=args.external or args.checksums or args.store_digests,
             checksums=args.checksums,
             store_digests=args.store_digests,
+            store_checksums=args.store_checksums,
         )
     for finding in report.findings:
         where = f"[{finding.registry}] " if finding.registry else ""
@@ -89,8 +90,15 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     parser.add_argument(
         "--checksums",
         action="store_true",
-        help="also recompute every recorded sha256, reading every byte: external resources at "
-        "Part 04 §5.3 level 3c and packet-owned ones at level 2; implies --external, and reports "
-        "the resources that recorded no digest to compare",
+        help="also establish every recorded digest: external resources at Part 04 §5.3 level 3c "
+        "and packet-owned ones at level 2, from a store's full-object checksums where it reports "
+        "them and otherwise by reading every byte; implies --external, and the report names each "
+        "digest's route",
+    )
+    parser.add_argument(
+        "--no-store-checksums",
+        dest="store_checksums",
+        action="store_false",
+        help="with --checksums, read every byte rather than take a store's full-object checksums",
     )
     parser.set_defaults(func=_validate)

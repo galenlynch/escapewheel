@@ -38,12 +38,12 @@ note = "a column, key or reference the registry declares"
 
 [clause."R36 §2.2"]
 disposition = "applied"
-where = [{ part = "04", section = "5.4" }]
-note = "restored 2026-09-04; Part 04 §5.4 had declared it undefined"
+where = [{ part = "04", anchor = "ew-resource-digests" }]
+note = "restored 2026-09-04; Part 04 §5.4 had declared it undefined. R136 §3.2 generalizes the construction to every admitted algorithm and moves it to Part 04 §4.3"
 
 [clause."R36 §2.4"]
 disposition = "applied"
-where = [{ part = "04", section = "5.2" }]
+where = [{ part = "04", anchor = "ew-external-resource-record" }]
 
 [clause."R38 §2.3"]
 disposition = "applied"
@@ -97,12 +97,13 @@ note = "a column, key or reference the registry declares"
 
 [clause."R52 §2.1"]
 disposition = "applied"
-where = [{ part = "04", section = "4.1" }]
-note = "restored 2026-09-04; compiled as MUST where R52 §2.1 says SHOULD"
+where = [{ part = "04", anchor = "ew-resource-digests" }]
+note = "restored 2026-09-04; compiled as MUST where R52 §2.1 says SHOULD, which R136 §3.4 now states in Part 04 §4.3"
 
 [clause."R52 §2.3"]
 disposition = "applied"
-where = [{ part = "03", section = "10" }]
+where = [{ part = "03", anchor = "ew-owned-resource-digests" }, { part = "04", anchor = "ew-external-resource-verification" }]
+note = "level 2 of Part 04 §5.3 checks owned digests; the skip count lapses, since R136 §3.4 requires a digest of every packet-owned resource"
 
 [clause."R53 §2.1"]
 disposition = "registry"
@@ -307,15 +308,15 @@ note = "restates that 05's staging discipline is unchanged"
 
 [clause."R75 §2.1"]
 disposition = "applied"
-where = [{ part = "05", section = "11" }]
+where = [{ part = "05", anchor = "ew-writer-acceptance-criteria" }]
 
 [clause."R75 §2.2"]
 disposition = "applied"
-where = [{ part = "05", section = "11" }]
+where = [{ part = "05", anchor = "ew-writer-acceptance-criteria" }]
 
 [clause."R75 §2.3"]
 disposition = "applied"
-where = [{ part = "05", section = "11" }]
+where = [{ part = "05", anchor = "ew-writer-acceptance-criteria" }]
 
 [clause."R76 §2.1"]
 disposition = "applied"
@@ -475,7 +476,7 @@ where = [{ part = "03", section = "6.4" }]
 
 [clause."R14 §2.3.2"]
 disposition = "applied"
-where = [{ part = "04", section = "5.3" }]
+where = [{ part = "04", anchor = "ew-external-resource-verification" }]
 
 [clause."R14 §2.4"]
 disposition = "rationale"
@@ -492,30 +493,31 @@ note = "restored 2026-09-04; the guarantee was present only as an explanation"
 
 [clause."R36 §2.1"]
 disposition = "applied"
-where = [{ part = "04", section = "5.4" }]
+where = [{ part = "04", anchor = "ew-prefix-resources" }]
 note = "size_bytes as the sum of member sizes, restored with R36 §2.2"
 
 [clause."R36 §2.3"]
 disposition = "applied"
-where = [{ part = "04", section = "5.3" }]
+where = [{ part = "04", anchor = "ew-external-resource-verification" }]
 
 [clause."R51 §2.1"]
 disposition = "applied"
-where = [{ part = "04", section = "5.4" }]
+where = [{ part = "04", anchor = "ew-prefix-resources" }]
 note = "restored 2026-09-04; the members-equal-the-digested-listing rule was absent"
 
 [clause."R51 §2.2"]
 disposition = "applied"
-where = [{ part = "04", section = "5.4" }]
+where = [{ part = "04", anchor = "ew-prefix-resources" }]
+note = "the open `algorithm` string stands; R136 §3.6 replaces the rule that a writer record only a single-part content-hash ETag with recording every entity tag verbatim as `etag`"
 
 [clause."R51 §2.3"]
 disposition = "applied"
-where = [{ part = "04", section = "5.4" }]
+where = [{ part = "04", anchor = "ew-prefix-resources" }]
 note = "restored 2026-09-04; the third verification level was absent"
 
 [clause."R51 §2.4"]
 disposition = "applied"
-where = [{ part = "04", section = "5.4" }]
+where = [{ part = "04", anchor = "ew-prefix-resources" }]
 note = "restored 2026-09-04; a store-digest pass must not be called a checksum verification"
 
 [clause."R51 §4"]
@@ -1161,7 +1163,7 @@ note = "the dangling exception struck"
 
 [clause."R15 §4"]
 disposition = "applied"
-where = [{ part = "04", section = "5.3" }]
+where = [{ part = "04", anchor = "ew-external-resource-verification" }]
 note = "the levels, as R36 §2.3's finer 1/2/3a/3b/3c"
 
 [clause."R15 §5"]
@@ -1343,8 +1345,8 @@ where = [{ part = "05", section = "10" }]
 [clause."R80 §2.1"]
 disposition = "applied"
 where = [
-    { part = "04", section = "4.1" },
-    { part = "04", section = "5.5" },
+    { part = "04", anchor = "ew-packet-resource-entry-fields" },
+    { part = "04", anchor = "ew-source-resolution" },
     { part = "03", section = "4" },
 ]
 
@@ -1355,15 +1357,15 @@ note = "the document's shape is registry/sources.schema.json, which Part 04 §5.
 
 [clause."R80 §2.3"]
 disposition = "applied"
-where = [{ part = "04", section = "5.5" }]
+where = [{ part = "04", anchor = "ew-source-resolution" }]
 
 [clause."R80 §2.4"]
 disposition = "applied"
-where = [{ part = "04", section = "5.5" }]
+where = [{ part = "04", anchor = "ew-source-resolution" }]
 
 [clause."R80 §2.5"]
 disposition = "applied"
-where = [{ part = "04", section = "5.5" }]
+where = [{ part = "04", anchor = "ew-source-resolution" }]
 
 [clause."R80 §2.6"]
 disposition = "rationale"
@@ -1464,15 +1466,15 @@ where = [
 disposition = "applied"
 where = [
     { part = "00", anchor = "ew-physical-profile", note = "the portable profile identifier" },
-    { part = "03", section = "1", note = "the same, as the `profile_id` a manifest declares" },
+    { part = "03", anchor = "ew-portable-profile-scope", note = "the same, as the `profile_id` a manifest declares" },
     { part = "04", section = "3", note = "the two standard version fields" },
-    { part = "04", section = "5.5", note = "the source resolution document's schema URI" },
+    { part = "04", anchor = "ew-source-resolution", note = "the source resolution document's schema URI" },
 ]
 note = "an extension's `extends` value and the published $ids are the registry's, read from registry/*.schema.json"
 
 [clause."R84 §2.3"]
 disposition = "applied"
-where = [{ part = "04", section = "1" }]
+where = [{ part = "04", anchor = "ew-packet-catalog-scope" }]
 
 [clause."R84 §2.4"]
 disposition = "rationale"
@@ -1725,7 +1727,7 @@ disposition = "applied"
 where = [
     { part = "00", anchor = "ew-physical-profile" },
     { part = "00", section = "7.3" },
-    { part = "03", section = "1" },
+    { part = "03", anchor = "ew-portable-profile-scope" },
 ]
 note = "what a profile is, what a second one must satisfy, and that no Part 01 or 02 clause may depend on one"
 
@@ -2412,8 +2414,8 @@ where = [
     { part = "03", section = "9.4" },
     { part = "03", anchor = "ew-packet-cleanup" },
     { part = "03", section = "9.6" },
-    { part = "04", section = "5.4" },
-    { part = "04", section = "5.5" },
+    { part = "04", anchor = "ew-prefix-resources" },
+    { part = "04", anchor = "ew-source-resolution" },
     { part = "05", section = "2" },
     { part = "05", section = "3.2" },
     { part = "05", anchor = "ew-source-declarations" },
@@ -2423,7 +2425,7 @@ where = [
     { part = "05", section = "5.3" },
     { part = "05", section = "5.4" },
     { part = "05", section = "10" },
-    { part = "05", section = "11" },
+    { part = "05", anchor = "ew-writer-acceptance-criteria" },
     { part = "06", section = "2" },
     { part = "06", section = "4" },
     { part = "09", section = "5.2" },
@@ -2549,17 +2551,17 @@ note = "R134 §3.5 replaces in process as the only route of an adapter a build s
 [clause."R115 §3.6"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.3", note = "a delivery's column set is a statement, and what a build settles on arrival" },
+  { part = "03", anchor = "ew-referenced-resource-delivery", note = "a delivery's column set is a statement, and what a build settles on arrival" },
   { part = "07", anchor = "ew-reference-object-model", note = "the return type stays records, and the conversion that keeps a column" },
 ]
 
 [clause."R115 §3.7"]
 disposition = "applied"
-where = [{ part = "03", section = "11.3", note = "identifiers cross as the names the source used" }]
+where = [{ part = "03", anchor = "ew-referenced-resource-delivery", note = "identifiers cross as the names the source used" }]
 
 [clause."R115 §3.8"]
 disposition = "applied"
-where = [{ part = "03", section = "11.3", note = "an array crosses as a reference to a location the build supplied" }]
+where = [{ part = "03", anchor = "ew-referenced-resource-delivery", note = "an array crosses as a reference to a location the build supplied" }]
 
 [clause."R115 §3.9"]
 disposition = "applied"
@@ -2632,21 +2634,21 @@ note = "a row carries a referenced resource's location and cannot carry what the
 [clause."R117 §3.1"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.3", note = "array_location per source, the name that is the identifier, the rows that must agree with it, and the manifest entry read off the array" },
+  { part = "03", anchor = "ew-referenced-resource-delivery", note = "array_location per source, the name that is the identifier, the rows that must agree with it, and the manifest entry read off the array" },
 ]
 note = "R134 §3.4 replaces the rule that no other adapter writes anything with delivery only where a build points it; the rule for arrays stands"
 
 [clause."R117 §3.2"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.3", note = "the resource document, what a build requires of an entry, and why it is a delivery rather than a report" },
+  { part = "03", anchor = "ew-referenced-resource-delivery", note = "the resource document, what a build requires of an entry, and why it is a delivery rather than a report" },
   { part = "03", section = "11.4", note = "`resources` as the second reserved resource identifier, and the single-row table it travels as" },
 ]
 
 [clause."R117 §3.3"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.3", note = "the published shape, and a build refusing a document that does not satisfy it" },
+  { part = "03", anchor = "ew-referenced-resource-delivery", note = "the published shape, and a build refusing a document that does not satisfy it" },
 ]
 
 [clause."R118 §2.1"]
@@ -3407,3 +3409,46 @@ note = "one core.source_files row per distinct recipe root, as the recipe states
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-packet-cleanup" }]
 note = "a stray lies outside the staging area and every path an unpublished promotion record lists"
+
+[clause."R136 §3.1"]
+disposition = "applied"
+where = [
+  { part = "04", anchor = "ew-resource-digests" },
+  { part = "04", anchor = "ew-packet-catalog-normative-references" },
+  { part = "00", anchor = "ew-normative-references" },
+]
+note = "four admitted algorithms, each single-object value's width and check value; the NVMe and RFC 9260 rows in Part 04 §11, RFC 1952 shared in Part 00 §10"
+
+[clause."R136 §3.2"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-resource-digests" }]
+note = "a prefix holds one or more objects, and its value is the SHA-256 of its listing under every algorithm"
+
+[clause."R136 §3.3"]
+disposition = "applied"
+where = [
+  { part = "04", anchor = "ew-packet-catalog-scope" },
+  { part = "04", anchor = "ew-packet-resource-entry-fields" },
+  { part = "04", anchor = "ew-prefix-resources" },
+  { part = "04", anchor = "ew-packet-manifest-conformance" },
+]
+note = "manifest/0.5.0 and resources/0.5.0 record `digest` objects and member `digest` strings, all or none; member_digest compares the listing value"
+
+[clause."R136 §3.4"]
+disposition = "applied"
+where = [
+  { part = "04", anchor = "ew-resource-digests" },
+  { part = "04", anchor = "ew-packet-manifest-conformance" },
+  { part = "03", anchor = "ew-owned-resource-digests" },
+]
+note = "every packet-owned resource records a digest, and packet.resource.digest_missing reports one that does not"
+
+[clause."R136 §3.5"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-external-resource-verification" }]
+note = "a digest holds when computed or matched against full-object store checksums, never composite ones, and a report names the route"
+
+[clause."R136 §3.6"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-prefix-resources" }]
+note = "an entity tag is recorded verbatim as `etag` and never read as a digest"

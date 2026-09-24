@@ -21,39 +21,53 @@ from typing import Any
 
 from escapewheel_reader import Manifest, Packet
 from escapewheel_validator import Report, validate
-from escapewheel_validator.stores import StoreUnreachable, digest, listing
+from escapewheel_validator.stores import StoreUnreachable, digest, digest_resource, listing
 
 from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
-#: records a prefix's Part 04 §5.4 per-member listing with whatever content hash the store handed
-#: over, and `sha256` also digests every byte. `members` is the default because it is the strongest
-#: thing available for the price of the listing.
+#: records a prefix's Part 04 §5.4 per-member listing with the entity tag the store handed over,
+#: and `sha256` also digests every byte, recording a SHA-256 `digest` and each member's beside it.
+#: `members` is the default because it is the strongest thing available for the price of the listing.
 LEVELS = ("size", "members", "sha256")
 
 
-def _member_entry(member: Any) -> dict[str, Any]:
+def _member_entry(member: Any, digest: str | None) -> dict[str, Any]:
     entry: dict[str, Any] = {"key": member.key, "size_bytes": member.size_bytes}
+    if digest is not None:
+        entry["digest"] = digest
     if member.store_digest is not None:
         entry["store_digest"] = {"algorithm": member.store_digest.algorithm, "value": member.store_digest.value}
     return entry
 
 
 def _measure(entry: dict[str, Any], level: str, notes: list[str]) -> bool:
-    """Record what the store holds for one external resource. False where it could not be read."""
+    """Record what the store holds for one external resource. False where it could not be read.
+
+    Below `sha256` a recorded digest is kept, and its member values are carried by key; where the
+    listing gained an object no recorded value covers, the digest no longer describes it and goes.
+    """
     uri = str(entry.get("uri", ""))
     try:
-        found = listing(uri)
-        checksum = digest(uri) if level == "sha256" else None
+        digested = digest_resource(uri) if level == "sha256" else None
+        found = listing(uri) if digested is None else digested.found
     except StoreUnreachable as exc:
         notes.append(f"{entry['resource_id']}: unchanged, {exc}")
         return False
     entry["size_bytes"] = found.size_bytes
     entry["verified_at"] = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    if digested is not None:
+        entry["digest"] = {"algorithm": digested.algorithm, "value": digested.value}
+        values: tuple[str | None, ...] = digested.members
+    else:
+        recorded = {str(m.get("key")): m.get("digest") for m in entry.get("members") or ()}
+        values = tuple(recorded.get(m.key) for m in found.members)
+        if "digest" in entry and not found.is_single_object and None in values:
+            del entry["digest"]
+        if "digest" not in entry:
+            values = (None,) * len(found.members)
     if level in {"members", "sha256"} and not found.is_single_object:
-        entry["members"] = [_member_entry(m) for m in found.members]
-    if checksum is not None:
-        entry["sha256"] = checksum
+        entry["members"] = [_member_entry(m, value) for m, value in zip(found.members, values, strict=True)]
     return True
 
 
@@ -71,7 +85,8 @@ def verify(
         A packet root holding a committed manifest.
     level : {"size", "members", "sha256"}, default "members"
         How much to establish. `sha256` reads every byte -- 88 s for a session's LFP against
-        S3 -- which is the cost Part 04 §5.2 puts here rather than in a build.
+        S3 -- which is the cost Part 04 §5.2 puts here rather than in a build, and records each
+        prefix member's digest beside the resource's (Part 04 §5.4).
     packet_version : str, optional
         The new version. Defaults to bumping the patch component, as an amendment does.
 
@@ -100,11 +115,11 @@ def verify(
     for entry in candidate["resources"]:
         if entry.get("external"):
             reached += _measure(entry, level, notes)
-        elif entry.get("sha256") is None:
-            # A packet committed before R52 records none. Filling it in is the same act as the
-            # rest of this command -- write down what is true now -- and costs 0.5% of a build.
+        elif "digest" not in entry:
+            # Part 04 §4.3 requires one. Filling it in is the same act as the rest of this
+            # command -- write down what is true now -- and costs 0.5% of a build.
             try:
-                entry["sha256"] = digest(str(root / str(entry.get("uri", ""))))
+                entry["digest"] = {"algorithm": "sha256", "value": digest(str(root / str(entry.get("uri", ""))))}
             except StoreUnreachable as exc:
                 notes.append(f"{entry['resource_id']}: no digest recorded, {exc}")
 

@@ -93,6 +93,7 @@ _DEF_LABELS = {
     "registry": "registry descriptor (§8)",
     "validation": "validation block (§9)",
     "member": "member (§5.4)",
+    "digest": "digest (§4.3)",
 }
 
 
@@ -209,7 +210,7 @@ def delivery_schema(manifest: dict) -> dict:
             pending.extend(node)
     return {
         "$schema": manifest["$schema"],
-        "$id": "https://escapewheel.org/schemas/resources/0.4.0",
+        "$id": "https://escapewheel.org/schemas/resources/0.5.0",
         "title": "Escapewheel resource document",
         "description": (
             "Shape of the document an adapter delivers alongside its rows to describe the "

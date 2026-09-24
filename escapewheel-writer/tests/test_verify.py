@@ -115,9 +115,78 @@ def test_sha256_is_asked_for_separately(tmp_path, registry, minimal):
     _external(root, _zarr(tmp_path).resolve().as_uri())
 
     _, cheap = verify(root)
-    assert next(r for r in cheap["resources"] if r.get("external")).get("sha256") is None
+    assert "digest" not in next(r for r in cheap["resources"] if r.get("external"))
     _, dear = verify(root, level="sha256")
-    assert next(r for r in dear["resources"] if r.get("external"))["sha256"] is not None
+    assert next(r for r in dear["resources"] if r.get("external"))["digest"]["algorithm"] == "sha256"
+
+
+def test_a_digest_records_each_member_beside_the_resource(tmp_path, registry, minimal):
+    """Part 04 §5.4: a member's own value lets a consumer check one chunk without the rest."""
+    from escapewheel_validator.stores import digest, listing_digest
+
+    root = tmp_path / "s001"
+    _commit(root, registry, minimal)
+    store = _zarr(tmp_path)
+    _external(root, store.resolve().as_uri())
+
+    report, manifest = verify(root, level="sha256")
+    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    entry = next(r for r in manifest["resources"] if r.get("external"))
+    assert {m["key"]: m["digest"] for m in entry["members"]} == {
+        key: digest(str(store / key)) for key in (".zarray", "0.0")
+    }
+    rows = [(m["key"], m["size_bytes"], m["digest"]) for m in entry["members"]]
+    assert entry["digest"] == {"algorithm": "sha256", "value": listing_digest(rows)}
+
+    # A later listing-only pass keeps both, since the schema admits member digests only beside one.
+    report, manifest = verify(root)
+    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    again = next(r for r in manifest["resources"] if r.get("external"))
+    assert again["digest"] == entry["digest"] and again["members"] == entry["members"]
+
+
+def test_a_listing_that_gained_an_object_drops_a_digest_it_no_longer_describes(tmp_path, registry, minimal):
+    root = tmp_path / "s001"
+    _commit(root, registry, minimal)
+    store = _zarr(tmp_path)
+    _external(root, store.resolve().as_uri())
+    verify(root, level="sha256")
+    (store / "1.0").write_bytes(b"y" * 10)
+
+    report, manifest = verify(root)
+    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    entry = next(r for r in manifest["resources"] if r.get("external"))
+    assert "digest" not in entry and all("digest" not in m for m in entry["members"])
+
+
+def test_a_multipart_entity_tag_is_recorded_as_etag_and_compared(tmp_path, registry, minimal, monkeypatch):
+    """Part 04 §5.4: an entity tag is recorded verbatim under `etag`, a multipart one included."""
+    import importlib
+
+    from escapewheel_validator import validator as validating
+    from escapewheel_validator.stores import Listing, Member, listing, store_digest
+
+    verifying = importlib.import_module("escapewheel_writer.verify")  # the package exports a function by that name
+
+    def tagged(uri):
+        found = listing(uri)
+        members = (Member(m.key, m.size_bytes, store_digest({"ETag": f'"{m.key}-3"'})) for m in found.members)
+        return Listing(tuple(members), found.size_bytes)
+
+    monkeypatch.setattr(verifying, "listing", tagged)
+    monkeypatch.setattr(validating, "listing", tagged)
+    root = tmp_path / "s001"
+    _commit(root, registry, minimal)
+    _external(root, _zarr(tmp_path).resolve().as_uri())
+
+    report, manifest = verify(root)
+    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    entry = next(r for r in manifest["resources"] if r.get("external"))
+    assert [m["store_digest"] for m in entry["members"]] == [
+        {"algorithm": "etag", "value": '".zarray-3"'},
+        {"algorithm": "etag", "value": '"0.0-3"'},
+    ]
+    assert "1 store_digest" in next(f for f in report.findings if f.check == "external.verified").message
 
 
 def test_an_unreachable_store_leaves_the_claim_unmade(tmp_path, registry, minimal):
@@ -132,19 +201,19 @@ def test_an_unreachable_store_leaves_the_claim_unmade(tmp_path, registry, minima
     assert "verify.unreachable" in {f.check for f in report.findings}
 
 
-def test_a_packet_owned_digest_missing_since_before_r52_is_filled_in(tmp_path, registry, minimal):
+def test_a_missing_packet_owned_digest_is_filled_in(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     _commit(root, registry, minimal)
     path = root / "packet.json"
     manifest = json.loads(path.read_text())
     for entry in manifest["resources"]:
-        entry.pop("sha256", None)
+        entry.pop("digest", None)
     path.write_text(json.dumps(manifest))
     _external(root, _zarr(tmp_path).resolve().as_uri())
 
     _, recorded = verify(root)
     owned = [r for r in recorded["resources"] if not r.get("external")]
-    assert owned and all(r.get("sha256") for r in owned)
+    assert owned and all(r["digest"]["algorithm"] == "sha256" for r in owned)
 
 
 def test_an_uncommitted_root_is_refused(tmp_path):

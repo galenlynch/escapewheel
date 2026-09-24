@@ -65,6 +65,8 @@ REFERENCE_MARKERS = {
     "RFC 1952": "https://www.rfc-editor.org/info/rfc1952",
     "RFC 1951": "https://www.rfc-editor.org/info/rfc1951",
     "FIPS 180-4": "csrc.nist.gov/pubs/fips/180-4",
+    "NVM Command Set": "NVM Express NVM Command Set Specification, Revision 1.2",
+    "RFC 9260": "https://www.rfc-editor.org/info/rfc9260",
     "ISO/IEC 9075-1:2023": "https://www.iso.org/standard/76583.html",
     "ISO/IEC 9075-1:2023/Cor 1:2026": "https://www.iso.org/standard/93690.html",
     "ISO/IEC 9075-2:2023": "https://www.iso.org/standard/76584.html",
@@ -96,9 +98,11 @@ REFERENCE_OWNERS = {
     "Zarr Zstandard": "03",
     "Zarr v2": "03",
     "RFC 8878": "03",
-    "RFC 1952": "03",
+    "RFC 1952": "00",
     "RFC 1951": "03",
     "FIPS 180-4": "04",
+    "NVM Command Set": "04",
+    "RFC 9260": "04",
     "ISO/IEC 9075-1:2023": "11",
     "ISO/IEC 9075-1:2023/Cor 1:2026": "11",
     "ISO/IEC 9075-2:2023": "11",
@@ -136,6 +140,11 @@ REFERENCE_ROWS = {
             "[JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core) and [Validation](https://json-schema.org/draft/2020-12/json-schema-validation)",
             "Draft 2020-12",
             "incorporated JSON Schemas",
+        ),
+        (
+            "[RFC 1952](https://www.rfc-editor.org/info/rfc1952)",
+            "exact",
+            "gzip member format of a bound registry (Part 03 §3.3) and CRC-32 (Part 04 §4.3)",
         ),
     ),
     "03": (
@@ -175,11 +184,6 @@ REFERENCE_ROWS = {
             "Zstandard framing",
         ),
         (
-            "[RFC 1952](https://www.rfc-editor.org/info/rfc1952)",
-            "exact",
-            "gzip member format of a bound registry (§3.3)",
-        ),
-        (
             "[RFC 1951](https://www.rfc-editor.org/info/rfc1951)",
             "exact",
             "DEFLATE compression of a bound registry (§3.3)",
@@ -190,6 +194,16 @@ REFERENCE_ROWS = {
             "[NIST FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final)",
             "exact",
             "SHA-256",
+        ),
+        (
+            "[NVM Express NVM Command Set Specification, Revision 1.2](https://nvmexpress.org/specifications/)",
+            "exact",
+            "CRC64NVME (§5.3.1.3)",
+        ),
+        (
+            "[RFC 9260](https://www.rfc-editor.org/info/rfc9260)",
+            "exact",
+            "CRC32C (Appendix A)",
         ),
     ),
     "11": (
@@ -223,8 +237,8 @@ REFERENCE_ROWS = {
 
 REFERENCE_INVOCATIONS = {
     "00": "Normative prose invokes an external authority **directly**",
-    "03": "Its requirements directly invoke the shared JSON and URI authorities",
-    "04": "Its requirements directly invoke the shared JSON, URI, and JSON Schema authorities",
+    "03": "Its requirements directly invoke the shared JSON, URI, and RFC 1952",
+    "04": "Its requirements directly invoke the shared JSON, URI, JSON Schema, and RFC 1952",
     "11": "SQL/Foundation editions, corrigenda, and IEEE floating-point edition identified in §9",
 }
 

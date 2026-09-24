@@ -177,7 +177,7 @@ def test_an_unreachable_store_leaves_the_claim_unmade(nwb):
     cannot reach records nothing rather than what it measured of a local copy."""
     source = _source(nwb, uri_base="s3://bucket/s.nwb")
     array = source.external_arrays()["core.45883-1.lfp"]
-    assert (array.size_bytes, array.sha256, array.verified_at) == (None, None, None)
+    assert (array.size_bytes, array.digest, array.verified_at) == (None, None, None)
     assert any("nothing verified" in n for n in source.notes)
 
 
@@ -191,19 +191,19 @@ def test_a_reachable_store_is_sized_whole(nwb):
     )
     assert array.size_bytes == on_disk
     assert array.verified_at is not None
-    assert array.sha256 is None, "a digest reads every byte and is asked for separately"
+    assert array.digest is None, "a digest reads every byte and is asked for separately"
 
 
 def test_a_digest_is_recorded_when_asked(nwb):
     from escapewheel_validator.stores import digest
 
     array = _source(nwb, verify="sha256").external_arrays()["core.45883-1.lfp"]
-    assert array.sha256 == digest(array.uri)
+    assert array.digest == {"algorithm": "sha256", "value": digest(array.uri)}
 
 
 def test_verify_none_records_nothing(nwb):
     array = _source(nwb, verify="none").external_arrays()["core.45883-1.lfp"]
-    assert (array.size_bytes, array.sha256, array.verified_at) == (None, None, None)
+    assert (array.size_bytes, array.digest, array.verified_at) == (None, None, None)
 
 
 def test_an_unknown_verify_mode_is_refused(nwb):
@@ -267,12 +267,12 @@ def test_members_records_what_the_prefix_held(nwb):
     assert sum(m["size_bytes"] for m in array.members) == array.size_bytes
 
 
-def test_a_local_store_offers_no_content_hash(nwb):
-    """A filesystem has no ETag, so members record size only and the source says so."""
+def test_a_local_store_offers_no_entity_tag(nwb):
+    """A filesystem has no ETag, so no member records a store digest and the source says so."""
     source = _source(nwb, verify="members")
     array = source.external_arrays()["core.45883-1.lfp"]
-    assert all("store_digest" not in m for m in array.members)
-    assert any("offered no content hash" in note for note in source.notes)
+    assert all("store_digest" not in m and "digest" not in m for m in array.members)
+    assert any("offered no entity tag" in note for note in source.notes)
 
 
 def test_size_records_no_members(nwb):
@@ -281,6 +281,11 @@ def test_size_records_no_members(nwb):
 
 
 def test_a_digest_also_records_the_members_it_digested(nwb):
-    """Part 04 §5.4: where both are present the digested listing must be the declared one."""
+    """Part 04 §5.4: the digested listing is the declared one, and each member carries its own value."""
+    from escapewheel_validator.stores import digest, listing_digest
+
     array = _source(nwb, verify="sha256").external_arrays()["core.45883-1.lfp"]
-    assert array.sha256 is not None and array.members is not None
+    assert array.members is not None
+    assert all(m["digest"] == digest(f"{array.uri}/{m['key']}") for m in array.members)
+    rows = [(m["key"], m["size_bytes"], m["digest"]) for m in array.members]
+    assert array.digest == {"algorithm": "sha256", "value": listing_digest(rows)}
