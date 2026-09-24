@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from collections import Counter
 from pathlib import Path
 
@@ -299,7 +300,7 @@ INTEGERS = {"int32", "int64"}
 #: inferred: a baseline absorbing whatever exists today would have absorbed `step_ticks` too.
 #: Removing a column here without renaming it fails the run, which is the point.
 NAMING_EXCEPTIONS = {
-    "core.array_assets.resource_id": "R128 §3.6 packet identity is a carried string before row numbering",
+    "core.array_assets.resource_id": "Part 02 §2.6: packet identity is a carried string before row numbering",
     "analysis.array_assets.resource_id": "as core.array_assets.resource_id",
     "core.media_assets.resource_id": "as core.array_assets.resource_id",
     "core.array_assets.offset": "NWB-standard name; the reserved word is handled by unconditional quoting (R50 §4)",
@@ -654,6 +655,23 @@ try:
             )
         ]
         if _declared.exists()
+        else [],
+    )
+    # Part 05 §3.1's recipe, checked as the three above are; the example is TOML, validated in
+    # its decoded form as a build validates one.
+    _recipe = json.loads((HERE / "recipe.schema.json").read_text())
+    jsonschema.Draft202012Validator.check_schema(_recipe)
+    check("recipe schema is valid JSON Schema", [])
+    _recipe_example = HERE / "recipe.example.toml"
+    check(
+        "the example recipe validates against it",
+        [
+            f"{list(e.path)[:4]} {e.message[:60]}"
+            for e in jsonschema.Draft202012Validator(_recipe).iter_errors(
+                tomllib.loads(_recipe_example.read_text())
+            )
+        ]
+        if _recipe_example.exists()
         else [],
     )
     # Part 03 §11.3's resource document, checked as the three above are.

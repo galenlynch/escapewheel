@@ -36,7 +36,7 @@ from escapewheel_validator import CheckedRegistryContext, RegistryRejected, chec
 from numpy.typing import NDArray
 
 from .extensions import load_checked as load_extension_context
-from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, arbitrated, declared, preferences, redacted
+from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, declared, redacted
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .sources.store import cache_directory
@@ -110,10 +110,9 @@ class Context:
         `.nwb`; sharing the store means they cannot disagree about what is in it, and stops the
         electrode table being parsed once per adapter.
     stated : dict
-        Resource to source kind to the rows that kind produced, for the resources a preference
-        arbitrates. Held so Part 05 §3.4 can compare the winner's row against the one it displaced;
-        bounded to those resources, because a preference may only name one more than one source
-        produces (Part 05 §3.3) and every such resource is metadata-scale.
+        Resource to source kind to the rows that kind produced, for the resources the recipe
+        declares a preference for. Held so Part 05 §3.4 can compare the winner's row against the
+        one it displaced, and bounded to those resources.
     """
 
     session_id: str
@@ -840,9 +839,9 @@ def build(  # noqa: C901
         records = source.records()
         _harvest(spec, source, context, recipe, _rows(source, records))
 
-        produced = _add_records(writer, spec, records, context, counts)
+        produced = _add_records(writer, spec, records, context, counts, arbitrated=frozenset(recipe.preferred))
         produced.update(_add_batches(writer, spec, source, counts, staged=set(produced)))
-        _note_unclaimed(spec, source, produced)
+        _note_unclaimed(spec, source, produced, frozenset(recipe.preferred))
         # Any adapter may stage arrays, not only the waveform one. A source that has them says
         # so by defining `staged_arrays`; the kind it happens to be is not the question.
         for staged in getattr(source, "staged_arrays", lambda: ())():
@@ -968,8 +967,13 @@ def _add_records(
     records: Mapping[str, list[dict[str, Any]]],
     context: Context,
     counts: dict[str, int],
+    *,
+    arbitrated: frozenset[str] = frozenset(),
 ) -> dict[str, int]:
     """Add every table a source owns to the writer, counting the rows.
+
+    `arbitrated` is the resources the recipe declares a preference for, whose rows every source
+    produced are kept so Part 05 §3.4 can compare them.
 
     Returns
     -------
@@ -977,10 +981,9 @@ def _add_records(
         Rows the source produced per resource, claimed or not, for `_unclaimed` to report.
     """
     produced: dict[str, int] = {}
-    arbitrating = arbitrated()
     for resource, rows in {**records, **_composed(spec, context)}.items():
         produced[resource] = len(rows)
-        if resource in arbitrating:
+        if resource in arbitrated:
             # Kept rather than counted, so Part 05 §3.4 can compare what the winner staged against
             # what the source it displaced stated. Only where a preference arbitrates, which is
             # what keeps this bounded.
@@ -1028,14 +1031,14 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
     """
     kinds = {spec.kind for spec in recipe.sources}
     lost: list[str] = []
-    preferred = preferences()
+    preferred = recipe.preferred
     for resource, by_kind in sorted(context.stated.items()):
         table = writer.spec(resource)
         if table is None or len(by_kind) < 2:
             continue
         # The preference names the winner. Reading it off whoever claims the resource is wrong for
         # a contributed one, where every claimant is a legitimate supplier of different rows.
-        winner = preferred[resource]
+        winner = preferred.get(resource)
         if winner not in kinds:
             continue
         kept = by_kind.get(winner, [])
@@ -1066,7 +1069,9 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
         )
 
 
-def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) -> None:
+def _note_unclaimed(
+    spec: SourceSpec, source: Any, produced: Mapping[str, int], preferred: frozenset[str] = frozenset()
+) -> None:
     """Note what a source produced that nothing in the recipe claims.
 
     `owns` is exclusive and discards in silence, so rows every source produces and none claims
@@ -1076,20 +1081,18 @@ def _note_unclaimed(spec: SourceSpec, source: Any, produced: Mapping[str, int]) 
     (`Recipe.check`); this one needs the source to say what it holds, so it is a note, and
     `--strict` refuses on it.
 
-    A resource some *other* source claims is reported unless a preference names the winner (R98
-    §3.3). `PREFERRED` exists because two sources offer the same rows and the one that knows more
-    about them wins, which makes the loser's copy discarded by design; without one they are
-    producing *different* rows, which is how twelve of thirteen clocks lost their observation
-    window to a recipe that said `owns`.
+    A resource some *other* source claims is reported unless it is in `preferred`, the resources
+    the recipe names a winner for (Part 05 §3.4). A preference says two sources offer the same rows
+    and the one that knows more wins, which makes the loser's copy discarded by design; without one
+    they are producing *different* rows.
 
-    A `SHARED` resource needs no exemption of its own. Where this source contributes one it is in
-    `claims` already, and where a narrowed source produced one it does not claim, the rows really
-    are discarded -- which is R98's own case, twelve of thirteen clock windows lost to a recipe
-    that said `owns`. Adding `SHARED` here silenced exactly that.
+    A resource an adapter supplies in part needs no exemption of its own. Where this source
+    contributes one it is in `claims` already, and where a narrowed source produced one it does not
+    claim, the rows really are discarded.
     """
     # Discarded by design: the recipe writes these itself, or a preference names the winner.
     # Everything else this source produced and does not claim is discarded by omission.
-    by_design = set(RECIPE_SUPPLIES) | {r for r in produced if preferences().get(r) is not None}
+    by_design = set(RECIPE_SUPPLIES) | {r for r in produced if r in preferred}
     dropped = {
         resource: rows
         for resource, rows in produced.items()

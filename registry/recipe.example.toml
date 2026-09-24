@@ -1,0 +1,46 @@
+# A recipe exercising every top-level member of recipe.schema.json; registry/check.py validates it.
+
+[packet]
+id = "ecephys_000000_2026-01-01_00-00-00"
+out = "packets/ecephys_000000_2026-01-01_00-00-00"
+registry = "logical_schemas.json"
+
+[session]
+session_id = "ecephys_000000_2026-01-01_00-00-00"
+reference_clock_id = "harp"
+session_start_time = 2026-01-01T00:00:00Z
+
+[subject]
+subject_id = "000000"
+date_of_birth = 2025-06-01
+
+[overrides]
+"subject.date_of_birth" = "the colony record corrects the date the acquisition metadata states"
+
+[encoding]
+"core.spike_events.t_tick" = { encoding = "delta", reason = "ascending within a unit" }
+
+[[clock]]
+clock_id = "harp"
+name = "harp"
+tick_rate_num = 31250
+origin = "harp_counter"
+
+[[source]]
+kind = "sorter"
+root = "sorted"
+
+[[source]]
+kind = "nwb"
+root = "session.nwb"
+zone = "UTC"
+
+[preference."core.probes"]
+source = "nwb"
+reason = "the NWB states a probe's type and manufacturer where the sorter knows only the stream"
+
+[[materialize]]
+resource = "analysis.spike_events"
+
+[commit]
+memory_budget = "4GB"

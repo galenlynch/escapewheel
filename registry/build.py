@@ -52,6 +52,8 @@ VENDORED = {
     / "escapewheel-writer/src/escapewheel_writer/schemas/adapter.schema.json",
     "resources.schema.json": HERE.parent
     / "escapewheel-writer/src/escapewheel_writer/schemas/resources.schema.json",
+    "recipe.schema.json": HERE.parent
+    / "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json",
 }
 RULES = HERE / "rules.json"
 
@@ -3476,7 +3478,7 @@ def build() -> dict:
     }.items():
         amend(_resource, _name, description=_text)
 
-    # R128 §3.6: location and encoding are packet and physical-profile facts, not catalog facts.
+    # Part 02 §2.6: location and encoding are packet and physical-profile facts, not catalog facts.
     for _resource in (
         "core.array_assets",
         "analysis.array_assets",

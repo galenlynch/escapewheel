@@ -132,6 +132,15 @@ class SessionSource(Compensates):
         }
     )
 
+    #: Part 05 §3.4: what of `PRODUCES` this adapter supplies only part of, which a source entry
+    #: without `owns` contributes rather than owns.
+    CONTRIBUTES = frozenset(
+        {
+            "core.clock_observation_intervals",
+            "core.clocks",
+        }
+    )
+
     #: Part 05 §3.4: `session.json` names the subject and `subject.json` describes it, and the recipe
     #: may declare either by hand. A build compares each against what the recipe says and refuses
     #: only on `subject.subject_id`, which is the one fact a reader resolves across packets.

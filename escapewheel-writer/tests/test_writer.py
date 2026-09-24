@@ -1075,9 +1075,7 @@ def test_every_encoding_exception_names_a_column_that_exists(registry):
 
     `_delta_columns` picks a Parquet encoding from two rules and two lists of exceptions, each
     declared with the measurement that justifies it. `check.py` applies the same discipline to
-    `NAMING_EXCEPTIONS` — declared with a reason, and checked to still be needed — and the list
-    that went stale unnoticed was `recipe.PREFERRED`'s `core.unit_electrodes`, which arbitrated
-    nothing until R108 §3.4 struck it.
+    `NAMING_EXCEPTIONS` — declared with a reason, and checked to still be needed.
 
     Whether the encoding is the *better* one needs real values, which
     `conformance/parquet-probe/alternatives.py` measures against a built packet. That the column

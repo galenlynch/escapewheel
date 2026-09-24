@@ -31,7 +31,7 @@ from escapewheel_validator import RegistryRejected, check_registry_context_bytes
 
 from .. import compare
 from ..extensions import load_checked as load_extension_context
-from ..recipe import RECIPE_SUPPLIES, SHARED, Recipe, preferences
+from ..recipe import RECIPE_SUPPLIES, Recipe, contributes, produces
 from ..session import build, materializers
 from ..writer import CommitRefused
 
@@ -111,11 +111,11 @@ def _init(args: argparse.Namespace) -> int:
             raise SystemExit(f"error: --source takes kind=path, with kind one of {', '.join(KINDS)}")
         offers[kind] = _open(kind, Path(root), args.session_id).offers()
 
-    contested = {r: sorted(k for k in offers if r in offers[k]) for r in {r for o in offers.values() for r in o}}
     lines = [
         "# Drafted by `escapewheel init` from what each source reported holding.",
-        "# Review the ownership below: a contested resource is noted where it was passed over,",
-        "# and every line marked GUESS is one nothing inspected could settle.",
+        "# Each source owns by default what its adapter can supply. A resource two of them can own is",
+        "# refused until a [preference] at the end names one, and every line marked GUESS is one",
+        "# nothing inspected could settle.",
         "",
         "[packet]",
         f'id = "{args.session_id}"',
@@ -140,28 +140,40 @@ def _init(args: argparse.Namespace) -> int:
         f'origin = "harp_counter"{GUESSED}',
         "",
     ]
-    for kind, root in (p.split("=", 1) for p in args.source):
-        # The recipe supplies these itself, so handing one to a source is a conflict the
-        # checker then reports (recipe.RECIPE_SUPPLIES).
-        # SHARED wins over RECIPE_SUPPLIES: the recipe writes one core.processing_runs row for
-        # its own import and the sorter writes one per sorting, so both belong and neither owns.
-        supplies = frozenset(RECIPE_SUPPLIES) - SHARED
-        mine = {r for r in offers[kind] if r not in supplies}
-        owned = [r for r, kinds in sorted(contested.items()) if r in mine and r not in SHARED and _wins(kind, kinds)]
-        shared = [r for r in sorted(mine & SHARED)]
-        passed = [
-            r for r, kinds in sorted(contested.items()) if r in mine and r not in SHARED and not _wins(kind, kinds)
-        ]
+    listed = [p.split("=", 1) for p in args.source]
+    # The recipe supplies these itself, so handing one to a source is a conflict the checker then
+    # reports (recipe.RECIPE_SUPPLIES).
+    supplies = frozenset(RECIPE_SUPPLIES)
+    # What each entry without `owns` would own (Part 05 §3.4), which is where a build finds a
+    # contest. Read from the declarations rather than the offers, since those are what it reads.
+    defaults = {kind: produces(kind) - contributes(kind) - supplies for kind, _ in listed}
+    contested = {
+        resource: kinds
+        for resource in sorted(set().union(*defaults.values()))
+        if len(kinds := sorted(k for k in defaults if resource in defaults[k])) > 1
+    }
+    for kind, root in listed:
         lines += ["[[source]]", f'kind = "{kind}"', f'root = "{root}"']
-        lines += [f"contributes = [{', '.join(chr(34) + r + chr(34) for r in shared)}]"] if shared else []
-        lines += ["owns = ["]
-        lines += [f'  "{r}",' for r in owned]
-        lines += ["]"]
         for option, value, why in REQUIRED.get(kind, ()):
             lines += [f"# {why}", f"{option} = {value}{GUESSED}"]
-        lines += [f"# also offers {r}, owned here by {preferences().get(r, 'another source')}" for r in passed]
+        lines += [
+            f"# can own {r}, as can {', '.join(k for k in contested[r] if k != kind)}"
+            for r in sorted(defaults[kind])
+            if r in contested
+        ]
         lines += [f"# supplies {r}, which the recipe declares itself" for r in sorted(set(offers[kind]) & supplies)]
         lines += [*HINTS.get(kind, ()), ""]
+    if contested:
+        # A candidate and not a choice: which source knows more is the author's to say (Part 05
+        # §3.3), so the draft is refused until they uncomment one.
+        lines += ["# Uncomment one preference per resource, naming the source that knows more and why."]
+        for resource, kinds in contested.items():
+            lines += [
+                f'# [preference."{resource}"]',
+                f'# source = "{kinds[0]}"  # or {", ".join(kinds[1:])}',
+                '# reason = ""',
+                "",
+            ]
 
     text = "\n".join(lines)
     if args.out is None:
@@ -183,21 +195,6 @@ HINTS = {
         '# verify = "sha256"                 # digest every byte too: 75 s here, 88 s from S3',
     ),
 }
-
-
-def _wins(kind: str, offering: list[str]) -> bool:
-    """Whether this kind owns a resource several sources offer.
-
-    Uncontested resources go to their only source. A contested one goes to :data:`PREFERRED`,
-    and where that says nothing, to the first kind alphabetically -- which is arbitrary, and
-    meant to be: the draft notes the choice so a human overrules it rather than a default
-    quietly standing in for a decision.
-    """
-    if len(offering) == 1:
-        return True
-    preferred = preferences()
-    resource_owner = next((r for r, k in preferred.items() if k == kind and kind in offering), None)
-    return kind == preferred.get(resource_owner or "", offering[0]) if resource_owner else kind == offering[0]
 
 
 def _import(args: argparse.Namespace) -> int:  # noqa: C901

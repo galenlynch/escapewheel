@@ -7,6 +7,11 @@
     "core.array_dimensions",
     "core.devices"
   ],
+  "contributes": [
+    "core.array_assets",
+    "core.array_dimensions",
+    "core.devices"
+  ],
   "needs": [
     "root",
     "session_id",

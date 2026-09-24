@@ -1,9 +1,10 @@
 """What an adapter declares, as a document a build reads instead of importing it.
 
-A build reads `produces`, `states`, `needs`, `accepts` and `consumes` before it opens any source, and
-for a class it reads them by importing the adapter -- which Part 03 §11.5 forbids requiring. So an
-adapter a build cannot import publishes the same five facts as JSON, and the two forms are one
-declaration: a build treats a document and an importable class alike and prefers neither.
+A build reads `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes` before it opens
+any source, and for a class it reads them by importing the adapter -- which Part 03 §11.5 forbids
+requiring. So an adapter a build cannot import publishes the same six facts as JSON, and the two
+forms are one declaration: a build treats a document and an importable class alike and prefers
+neither.
 
 The document is **generated** here rather than maintained, because every field is read off the class
 with no judgement in it. What it does not carry is anything about the machine -- the command, the
@@ -59,7 +60,8 @@ def of(adapter: Any, kind: str, protocol: str) -> dict[str, Any]:
     Parameters
     ----------
     adapter : type
-        The adapter class, carrying `PRODUCES`, `STATES`, `NEEDS`, `ACCEPTS` and `CONSUMES`.
+        The adapter class, carrying `PRODUCES`, `CONTRIBUTES`, `STATES`, `NEEDS`, `ACCEPTS` and
+        `CONSUMES`.
     kind : str
         The name a recipe's source entry uses for it.
     protocol : str
@@ -76,6 +78,7 @@ def of(adapter: Any, kind: str, protocol: str) -> dict[str, Any]:
         "kind": kind,
         "protocol": protocol,
         "produces": sorted(getattr(adapter, "PRODUCES", ())),
+        "contributes": sorted(getattr(adapter, "CONTRIBUTES", ())),
         "states": sorted(getattr(adapter, "STATES", {})),
         "needs": list(getattr(adapter, "NEEDS", ())),
         "accepts": list(getattr(adapter, "ACCEPTS", ())),
@@ -120,7 +123,7 @@ def refusals(
 ) -> list[str]:
     """Return what a build refuses this declaration for, reading it, the registry and the recipe.
 
-    Part 03 §11.5's four checks, each firing on its own and naming what is wrong. None of them
+    Part 03 §11.5's checks, each firing on its own and naming what is wrong. None of them
     needs the adapter opened or imported, which is the point: a declaration is checked against
     what a build holds and never against the thing it describes.
 
@@ -141,6 +144,12 @@ def refusals(
     for resource in document.get("produces", ()):
         if resource not in tables:
             found.append(f"produces {resource}, which no loaded registry declares")
+    produced = set(document.get("produces", ()))
+    found += [
+        f"contributes {resource}, which its produces does not name"
+        for resource in document.get("contributes", ())
+        if resource not in produced
+    ]
     for field in document.get("states", ()):
         block, _, column = field.partition(".")
         if (resource := BLOCKS.get(block)) is None:

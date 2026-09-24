@@ -271,6 +271,18 @@ class NWBSource(Compensates):
     #: here: every column core 2.9.0 declares is either mapped or unread, so nothing is left over.
     CARRIED_ELECTRODE: ClassVar[tuple[str, ...]] = ()
 
+    #: Part 05 §3.4: what of `PRODUCES` this adapter supplies only part of, which a source entry
+    #: without `owns` contributes rather than owns.
+    CONTRIBUTES = frozenset(
+        {
+            "core.array_assets",
+            "core.array_dimensions",
+            "core.clock_anchors",
+            "core.clocks",
+            "core.devices",
+        }
+    )
+
     #: Part 05 §3.4: every column of `core.subjects` this file states. The recipe declares four of
     #: them by hand, and until R87 §2.8 the row built from these was discarded unread.
     STATES: ClassVar[dict[str, str]] = {

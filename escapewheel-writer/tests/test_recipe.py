@@ -6,7 +6,7 @@ from typing import ClassVar
 
 import pytest
 
-from escapewheel_writer.recipe import RECIPE_SUPPLIES, SHARED, Recipe, arbitrated, preferences, produces
+from escapewheel_writer.recipe import RECIPE_SUPPLIES, Recipe
 from escapewheel_writer.session import (
     Context,
     RecipeError,
@@ -15,7 +15,7 @@ from escapewheel_writer.session import (
     _refuse_a_discarded_fact,
     order,
 )
-from escapewheel_writer.sources import ADAPTERS, SourceDefect, discovered
+from escapewheel_writer.sources import ADAPTERS, SourceDefect
 
 BASE = """
 [packet]
@@ -47,6 +47,15 @@ def write(tmp_path, body, name="session.toml"):
 def levels(problems):
     """The messages, keyed by level, for asserting on one kind at a time."""
     return {p.level: [q.message for q in problems if q.level == p.level] for p in problems}
+
+
+#: The NWB states a probe's type and manufacturer where the sorter knows only the stream, so a
+#: recipe listing both prefers it.
+PREFER_NWB = """
+[preference."core.probes"]
+source = "nwb"
+reason = "the NWB states a probe's type and manufacturer; the sorter knows only the stream"
+"""
 
 
 def test_a_recipe_parses_its_declarations(tmp_path):
@@ -276,17 +285,29 @@ def test_a_produced_resource_no_source_claims_is_noted(tmp_path):
     assert "discarded" in source.notes[0]
 
 
-def test_a_resource_another_source_claims_is_not_noted(tmp_path):
+def test_a_resource_the_recipe_prefers_another_source_for_is_not_noted(tmp_path):
+    body = (
+        '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'
+        '\n[[source]]\nkind = "nwb"\nroot = "n"\nowns = ["core.probes"]\n' + PREFER_NWB
+    )
+    recipe = Recipe.load(write(tmp_path, body))
+    source = Noted()
+    # The sorter offers core.probes too; the recipe gives it to the NWB, so losing it here is the
+    # design rather than an omission.
+    _note_unclaimed(recipe.sources[0], source, {"core.units": 4, "core.probes": 10}, frozenset(recipe.preferred))
+    assert source.notes == []
+
+
+def test_a_resource_another_source_owns_is_noted_where_the_recipe_prefers_none(tmp_path):
+    """Part 05 §3.4: without a preference the two sources are producing different rows."""
     body = (
         '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'
         '\n[[source]]\nkind = "nwb"\nroot = "n"\nowns = ["core.probes"]\n'
     )
     recipe = Recipe.load(write(tmp_path, body))
     source = Noted()
-    # The sorter offers core.probes too; cli.PREFERRED gives it to the NWB, so losing it here
-    # is the design rather than an omission.
-    _note_unclaimed(recipe.sources[0], source, {"core.units": 4, "core.probes": 10})
-    assert source.notes == []
+    _note_unclaimed(recipe.sources[0], source, {"core.units": 4, "core.probes": 10}, frozenset(recipe.preferred))
+    assert any("core.probes (10 rows)" in n for n in source.notes)
 
 
 def test_an_empty_unclaimed_resource_is_not_noted(tmp_path):
@@ -320,43 +341,18 @@ def test_rows_another_source_owns_are_noted_without_a_preference(tmp_path):
     assert any("core.clock_observation_intervals" in n for n in source.notes)
 
 
-def test_a_preference_is_what_makes_a_discard_silent(tmp_path):
-    """The other side: `core.probes` names a winner, so the loser's copy is redundant by design.
-
-    This was written against `core.clocks`, whose preference was never consulted -- SHARED is
-    checked first and returns -- so the silence came from a dead entry rather than from a
-    preference. `core.probes` is the preference that arbitrates.
-    """
-    recipe = Recipe.load(
-        write(
-            tmp_path,
-            '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
-            'owns = ["core.units"]\n'
-            '\n[[source]]\nkind = "nwb"\nroot = "y"\n'
-            'owns = ["core.probes"]\n',
-        )
-    )
-    source = Noted()
-    _note_unclaimed(recipe.sources[0], source, {"core.probes": 12})
-    assert source.notes == []
-
-
 def test_a_preferred_resource_draws_a_refusal_rather_than_a_note(tmp_path):
     """Part 05 §3.4 replaces the note for a preferred resource with something stronger.
 
     A preference exempts a resource from Part 05 §3.4's report. What makes that sound is not the
     silence but the refusal: `_refuse_a_discarded_fact` fails the build where the displaced source
     stated a value the preferred one did not, which a note only mentioned.
-
-    Checked on `core.probes`, which this package both prefers and produces from two kinds. The
-    other case, `core.subjects`, is declared by the distribution shipping the `session` kind and is
-    checked there, since a preference is kept honest by whoever can see both producers.
     """
-    recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
+    recipe = _contest(tmp_path)
+    sorter = next(spec for spec in recipe.sources if spec.kind == "sorter")
     source = Noted()
-    _note_unclaimed(recipe.sources[0], source, {"core.probes": 1})
+    _note_unclaimed(sorter, source, {"core.probes": 1}, frozenset(recipe.preferred))
     assert source.notes == []
-    assert preferences()["core.probes"] == "nwb"
 
 
 # -- R108: a preference discards no stated fact --------------------------------------------
@@ -374,41 +370,37 @@ class _Registry:
 
 
 def _contest(tmp_path):
-    """A recipe where the NWB claims `core.probes` and the sorter also produces it."""
+    """A recipe preferring the NWB for `core.probes`, which the sorter also produces."""
     return Recipe.load(
         write(
             tmp_path,
             '\n[[source]]\nkind = "nwb"\nroot = "n"\n'
             'owns = ["core.probes"]\n'
             '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
-            'owns = ["core.units"]\n',
+            'owns = ["core.units"]\n' + PREFER_NWB,
         )
     )
 
 
-def test_a_preference_names_a_resource_more_than_one_source_produces(tmp_path):
-    """Part 05 §3.3: an uncontested entry arbitrates nothing and exempts a report never due.
+def test_a_preference_names_a_resource_more_than_one_source_produces(tmp_path, registry):
+    """Part 05 §3.3: an uncontested entry arbitrates nothing and exempts a report never due."""
+    body = '\n[[source]]\nkind = "nwb"\nroot = "n"\nzone = "UTC"\n' + PREFER_NWB
+    problems = [p.message for p in Recipe.load(write(tmp_path, body)).check(registry)]
+    assert any("core.probes arbitrates nothing: only nwb" in m for m in problems), problems
 
-    `core.unit_electrodes` sat here until the sorter stopped producing that table, and nothing
-    noticed. This is Part 02 §4's discipline for a declared naming exception, one table over.
+
+def test_a_resource_the_recipe_prefers_nothing_for_is_not_compared(tmp_path, registry):
+    """Where the rows are disjoint there is no passed-over row to weigh (Part 05 §3.4).
+
+    A sync source's reference clock and a sorter's probe clocks are different rows of one table,
+    so comparing them would report a loss that is not one.
     """
-    uncontested = {
-        resource: [kind for kind in sorted({**ADAPTERS, **discovered()}) if resource in produces(kind)]
-        for resource in sorted(preferences())
+    context = Context(session_id="s001")
+    context.stated["core.clocks"] = {
+        "sync": [{"clock_id": "harp", "tick_rate_num": 31250}],
+        "sorter": [{"clock_id": "probeA", "tick_rate_num": 30000}],
     }
-    assert {r: k for r, k in uncontested.items() if len(k) < 2} == {}
-
-
-def test_a_shared_resource_is_not_compared(tmp_path, registry):
-    """R108 §4: where the rows are disjoint there is no passed-over row to weigh.
-
-    `core.clocks` and both array tables sit in `PREFERRED` *and* `SHARED`, and
-    `_resolve_ownership` checks `SHARED` first, so the preference arbitrates nothing there. A real
-    build refused on exactly these: the sync source's reference clock read as a loss against the
-    sorter's twelve probe clocks, which are different rows and not a displaced copy.
-    """
-    assert "core.probes" in arbitrated()
-    assert not arbitrated() & SHARED
+    _refuse_a_discarded_fact(_Registry(registry), context, _contest(tmp_path))
 
 
 def test_a_preference_that_discards_a_stated_fact_is_refused(tmp_path, registry):
@@ -474,17 +466,96 @@ def test_a_defaulted_source_does_not_take_what_another_explicitly_owns(tmp_path,
     assert "core.probes" not in sorter.owns
 
 
+TWO_DEFAULTED = '\n[[source]]\nkind = "sorter"\nroot = "s"\n\n[[source]]\nkind = "nwb"\nroot = "n"\nzone = "UTC"\n'
+
+
 def test_a_preference_settles_a_resource_two_adapters_produce(tmp_path, registry):
-    """Both produce core.probes; PREFERRED gives it to the NWB, so neither owns it twice."""
-    body = '\n[[source]]\nkind = "sorter"\nroot = "s"\n\n[[source]]\nkind = "nwb"\nroot = "n"\nzone = "UTC"\n'
-    recipe = Recipe.load(write(tmp_path, body))
+    """Both produce core.probes; the recipe gives it to the NWB, so neither owns it twice."""
+    recipe = Recipe.load(write(tmp_path, TWO_DEFAULTED + PREFER_NWB))
     owners = {s.kind: set(s.owns) for s in recipe.sources}
     assert "core.probes" in owners["nwb"] and "core.probes" not in owners["sorter"]
     assert not [p for p in recipe.check(registry) if p.level == "error"]
 
 
-def test_a_shared_resource_is_contributed_not_owned(tmp_path, registry):
-    """core.clocks has two legitimate suppliers, so a default contributes rather than owns."""
+def test_a_resource_two_defaulted_sources_produce_is_refused_without_a_preference(tmp_path, registry):
+    """Part 05 §3.4: a build holds no winner of its own, so the recipe must name one."""
+    recipe = Recipe.load(write(tmp_path, TWO_DEFAULTED))
+    errors = levels(recipe.check(registry)).get("error", [])
+    assert any(m.startswith("core.probes is owned by 2 sources (nwb, sorter); declare a [preference]") for m in errors)
+
+
+def test_a_preferred_source_owns_its_resource_whatever_its_entry_declares(tmp_path, registry):
+    """Part 05 §3.3: a preference declares ownership, so a narrowed entry gains the resource."""
+    body = TWO_DEFAULTED.replace('zone = "UTC"', 'zone = "UTC"\nowns = ["core.electrodes"]')
+    recipe = Recipe.load(write(tmp_path, body + PREFER_NWB))
+    nwb = next(s for s in recipe.sources if s.kind == "nwb")
+    assert set(nwb.owns) == {"core.electrodes", "core.probes"}
+
+
+@pytest.mark.parametrize(
+    ("preference", "refusal"),
+    [
+        (
+            '[preference."core.probes"]\nsource = "waveforms"\nreason = "r"\n',
+            "waveforms, which this recipe does not list",
+        ),
+        (
+            '[preference."core.units"]\nsource = "nwb"\nreason = "r"\n',
+            "whose adapter does not declare it can supply it",
+        ),
+    ],
+    ids=["unlisted", "cannot-supply"],
+)
+def test_a_preference_naming_a_source_that_cannot_own_it_is_refused(tmp_path, registry, preference, refusal):
+    """Part 05 §3.3: an absent source, or one whose adapter cannot supply the resource, owns nothing."""
+    recipe = Recipe.load(write(tmp_path, TWO_DEFAULTED + "\n" + preference))
+    assert any(refusal in p.message for p in recipe.check(registry))
+
+
+@pytest.mark.parametrize("declared", ["owns", "contributes"])
+def test_a_preference_another_entry_contradicts_is_refused(tmp_path, registry, declared):
+    """A preference says one source knows more; another entry's own claim says it supplies the resource."""
+    body = TWO_DEFAULTED.replace('root = "s"', f'root = "s"\n{declared} = ["core.probes"]')
+    recipe = Recipe.load(write(tmp_path, body + PREFER_NWB))
+    assert any("source sorter declares it under owns or contributes" in p.message for p in recipe.check(registry))
+
+
+def test_a_kind_listed_twice_is_refused(tmp_path, registry):
+    """Part 05 §3.1: a source is named by its kind, so two entries of one kind are indistinguishable."""
+    body = '\n[[source]]\nkind = "harp"\nroot = "a"\n\n[[source]]\nkind = "harp"\nroot = "b"\n'
+    recipe = Recipe.load(write(tmp_path, body))
+    assert any(p.message.startswith("source harp is listed 2 times") for p in recipe.check(registry))
+
+
+@pytest.mark.parametrize(
+    ("body", "where"),
+    [
+        ("\n[bogus]\nx = 1\n", "Additional properties are not allowed ('bogus'"),
+        (
+            '\n[[source]]\nkind = "sorter"\nroot = "s"\n[source.delivery]\ncommand = "run it"\n',
+            "source/0/delivery/command",
+        ),
+        ('\n[preference."core.probes"]\nsource = "nwb"\n', "'reason' is a required property"),
+        ('\n[preference."core.probes"]\nsource = "nwb"\nreason = " "\n', "preference/core.probes/reason"),
+    ],
+    ids=["unknown-block", "string-command", "no-reason", "blank-reason"],
+)
+def test_a_recipe_failing_the_schema_is_refused_on_load(tmp_path, body, where):
+    """Part 05 §3.1: a misspelled block is refused rather than dropped, before any source opens."""
+    with pytest.raises(ValueError, match="not a recipe") as refused:
+        Recipe.load(write(tmp_path, body))
+    assert where in str(refused.value)
+
+
+def test_a_defaulted_entry_contributes_and_does_not_own_what_it_lists_under_contributes(tmp_path, registry):
+    """Part 05 §3.4: an entry's own `contributes` is a contribution, whatever the default reads."""
+    body = '\n[[source]]\nkind = "sorter"\nroot = "s"\ncontributes = ["core.units"]\n'
+    spec = Recipe.load(write(tmp_path, body)).sources[0]
+    assert "core.units" in spec.contributes and "core.units" not in spec.owns
+
+
+def test_a_partly_supplied_resource_is_contributed_not_owned(tmp_path, registry):
+    """The sorter declares core.clocks as supplied in part, so a default contributes rather than owns."""
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'))
     spec = recipe.sources[0]
     assert "core.clocks" in spec.contributes and "core.clocks" not in spec.owns
@@ -528,11 +599,11 @@ def test_an_override_is_recorded_rather_than_warned(tmp_path, registry):
     assert not any("subject.subject_id is declared and nwb" in m for m in problems.get("warning", []))
 
 
-def test_an_override_with_no_reason_is_refused(tmp_path, registry):
+def test_an_override_with_no_reason_is_refused(tmp_path):
     """Part 05 §3.6: a bare marker would silence a difference without saying why."""
     body = '\n[overrides]\n"subject.subject_id" = "   "\n' + NWB
-    problems = levels(Recipe.load(write(tmp_path, body)).check(registry))
-    assert any("carries no reason" in m for m in problems.get("error", []))
+    with pytest.raises(ValueError, match="overrides/subject.subject_id"):
+        Recipe.load(write(tmp_path, body))
 
 
 def test_an_override_of_a_fact_nothing_states_is_reported_not_refused(tmp_path, registry):
@@ -571,35 +642,52 @@ def test_a_stated_fact_with_no_accessor_is_refused(tmp_path, registry, monkeypat
     assert any("which its adapter does not expose" in m for m in problems.get("error", []))
 
 
+def test_an_adapter_contributing_what_it_does_not_produce_is_refused(tmp_path, registry, monkeypatch):
+    """Part 05 §3.4: a partly supplied resource is one the adapter supplies at all."""
+    from escapewheel_writer import sources
+
+    class Overreaching:
+        PRODUCES = frozenset({"core.units"})
+        CONTRIBUTES = frozenset({"core.clocks"})
+        STATES: ClassVar[dict[str, str]] = {}
+
+    monkeypatch.setitem(sources.ADAPTERS, "sorter", Overreaching)
+    problems = levels(Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n')).check(registry))
+    assert "sorter contributes core.clocks, which its produces does not name" in problems.get("error", [])
+
+
 # -- an extension declares an encoding where the writer can read it without importing it ------
 
 
-def test_an_encoding_declaration_needs_a_choice_and_a_reason(tmp_path):
+@pytest.mark.parametrize(
+    "entry",
+    ['{ encoding = "sideways", reason = "no such thing" }', '{ encoding = "plain", reason = "" }'],
+    ids=["unknown-choice", "empty-reason"],
+)
+def test_an_encoding_declaration_needs_a_choice_and_a_reason(tmp_path, entry):
     """An extension reaches the writer across a file, so it declares in the recipe, with a reason.
 
     The reason is what makes the entry re-judgeable: an encoding is a fact about one packet's
     values, so a bare choice cannot be checked against the next session's data.
     """
+    with pytest.raises(ValueError, match="encoding/aind_unit_qc.metrics.silhouette"):
+        Recipe.load(write(tmp_path, f'\n[encoding]\n"aind_unit_qc.metrics.silhouette" = {entry}\n'))
+
+
+def test_an_encoding_declaration_names_a_declared_column(tmp_path):
+    """The registries are what know the columns, so this waits for them rather than for the schema."""
     recipe = Recipe.load(
         write(
             tmp_path,
             """
 [encoding]
 "aind_unit_qc.metrics.num_spikes_used" = { encoding = "delta", reason = "climbs with the spike count; 1.7x" }
-"aind_unit_qc.metrics.presence_ratio" = { encoding = "sideways", reason = "no such thing" }
-"aind_unit_qc.metrics.silhouette" = { encoding = "plain", reason = "" }
+"aind_unit_qc.metrics.presence" = { encoding = "plain", reason = "r" }
 """,
         )
     )
-    tables = {
-        "aind_unit_qc.metrics": {
-            "columns": [{"name": "num_spikes_used"}, {"name": "presence_ratio"}, {"name": "silhouette"}]
-        }
-    }
-    found = recipe.encoding_problems(tables)
-    assert any("sideways" in e for e in found)
-    assert any("silhouette" in e and "no reason" in e for e in found)
-    assert not any("num_spikes_used" in e for e in found)
+    found = recipe.encoding_problems({"aind_unit_qc.metrics": {"columns": [{"name": "num_spikes_used"}]}})
+    assert found == ["[encoding] aind_unit_qc.metrics.presence names no column of aind_unit_qc.metrics"]
 
 
 def test_an_encoding_declaration_reaches_the_writer(tmp_path):
@@ -675,6 +763,13 @@ def test_a_declaration_naming_a_resource_no_registry_declares_is_refused(tmp_pat
     named = declaration_for(tmp_path, produces=["core.tirals"])
     recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
     assert any("no loaded registry declares" in p.message for p in recipe.check(registry))
+
+
+def test_a_declaration_contributing_what_it_does_not_produce_is_refused(tmp_path, registry):
+    """Part 03 §11.5: the document form of the sixth fact is checked as the class form is."""
+    named = declaration_for(tmp_path, contributes=["core.clocks"])
+    recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
+    assert any("contributes core.clocks, which its produces does not name" in p.message for p in recipe.check(registry))
 
 
 def test_a_declaration_naming_a_protocol_outside_the_group_is_refused(tmp_path, registry):

@@ -8,10 +8,12 @@ the whole cost of registering a source instead of shipping it: nothing upstream 
 from __future__ import annotations
 
 import inspect
+import json
+from pathlib import Path
 
 import pytest
 from escapewheel_writer import declaration
-from escapewheel_writer.recipe import TERMS
+from escapewheel_writer.recipe import TERMS, Recipe
 from escapewheel_writer.sources import discovered
 
 #: The kinds this distribution registers, read back through the same discovery a build uses rather
@@ -67,14 +69,52 @@ def test_ownership_from_the_documents_is_ownership_from_the_classes():
     assert from_document == from_class
 
 
-def test_a_preference_this_distribution_declares_names_a_kind_it_ships():
-    """A preference is kept honest by whoever can see both producers (Part 05 §3.4).
+#: A session whose acquisition metadata and NWB both describe the subject: the contest a recipe
+#: settles for these kinds, since `session` and `aind_nwb` or `nwb` each produce `core.subjects`.
+CONTESTED = """
+[packet]
+id = "p"
 
-    The writer cannot check this one: it neither imports `session` nor sees it produce
-    `core.subjects`, which is why the declaration moved here with the adapter.
-    """
-    from escapewheel_aind.preferences import PREFERRED
+[session]
+session_id = "s"
 
-    for resource, winner in sorted(PREFERRED.items()):
-        assert winner in KINDS, f"{resource} prefers {winner}, which this distribution does not ship"
-        assert resource in KINDS[winner].PRODUCES, f"{resource} prefers {winner}, which does not produce it"
+[[source]]
+kind = "session"
+root = "."
+in_process = true
+
+[[source]]
+kind = "nwb"
+root = "."
+zone = "UTC"
+"""
+
+#: `subject.json` is the record `general/subject` projects, carrying a `background_strain` key the
+#: projection lacks, which is the reason a recipe gives for preferring it.
+PREFER_SESSION = """
+[preference."core.subjects"]
+source = "session"
+reason = "subject.json is the record the NWB's subject group projects"
+"""
+
+
+def _checked(tmp_path, text):
+    registry = json.loads((Path(__file__).parents[2] / "registry/logical_schemas.json").read_text())
+    path = tmp_path / "recipe.toml"
+    path.write_text(text)
+    recipe = Recipe.load(path)
+    return recipe, [p.message for p in recipe.check(registry) if p.level == "error"]
+
+
+def test_a_subject_both_sources_describe_is_refused_until_the_recipe_prefers_one(tmp_path):
+    """No distribution holds a preference for a build (Part 05 §3.3), so the recipe must name one."""
+    _, errors = _checked(tmp_path, CONTESTED)
+    assert any(e.startswith("core.subjects is owned by 2 sources (nwb, session)") for e in errors), errors
+
+
+def test_a_recipe_preferring_the_session_source_gives_it_the_subject(tmp_path):
+    recipe, errors = _checked(tmp_path, CONTESTED + PREFER_SESSION)
+    owners = {spec.kind: set(spec.owns) for spec in recipe.sources}
+    assert "core.subjects" in owners["session"]
+    assert "core.subjects" not in owners["nwb"]
+    assert not [e for e in errors if "core.subjects" in e], errors

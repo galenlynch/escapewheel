@@ -203,6 +203,15 @@ class SorterSource:
         }
     )
 
+    #: Part 05 §3.4: what of `PRODUCES` this adapter supplies only part of, which a source entry
+    #: without `owns` contributes rather than owns.
+    CONTRIBUTES = frozenset(
+        {
+            "core.clock_observation_intervals",
+            "core.clocks",
+        }
+    )
+
     #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}

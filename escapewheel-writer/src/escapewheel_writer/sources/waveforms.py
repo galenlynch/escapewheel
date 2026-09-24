@@ -125,6 +125,15 @@ class WaveformSource:
         }
     )
 
+    #: Part 05 §3.4: what of `PRODUCES` this adapter supplies only part of, which a source entry
+    #: without `owns` contributes rather than owns.
+    CONTRIBUTES = frozenset(
+        {
+            "core.array_assets",
+            "core.array_dimensions",
+        }
+    )
+
     #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}

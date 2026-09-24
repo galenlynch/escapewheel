@@ -1,0 +1,340 @@
+{
+  "version": 1,
+  "revision": "R133",
+  "based_on": "18c6ba66661674dd77022b4fe8b2c09a2e925b22",
+  "clauses": {
+    "R133 \u00a73.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-ownership"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-source-declarations"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_preference_settles_a_resource_two_adapters_produce"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_preferred_source_owns_its_resource_whatever_its_entry_declares"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_preference_naming_a_source_that_cannot_own_it_is_refused[unlisted]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_preference_naming_a_source_that_cannot_own_it_is_refused[cannot-supply]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_preference_another_entry_contradicts_is_refused[owns]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_preference_another_entry_contradicts_is_refused[contributes]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_preference_that_discards_a_stated_fact_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_resource_the_recipe_prefers_another_source_for_is_not_noted"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_arbitration.py::test_the_writer_holds_no_preference_of_its_own"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_declaration.py::test_a_recipe_preferring_the_session_source_gives_it_the_subject"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/scripts/cli.py",
+          "escapewheel-aind/pyproject.toml"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R133 \u00a73.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-source-declarations"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-adapter-declaration-document"
+        },
+        {
+          "path": "registry/adapter.schema.json",
+          "pointer": "/properties/contributes"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-writer/src/escapewheel_writer/schemas/adapter.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_arbitration.py::test_an_adapter_contributes_only_what_it_produces[nwb]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_arbitration.py::test_an_adapter_contributes_only_what_it_produces[sorter]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_arbitration.py::test_an_adapter_contributes_only_what_it_produces[sync]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_arbitration.py::test_a_partly_supplied_resource_is_partly_supplied_by_every_producer[core.clocks]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_arbitration.py::test_a_partly_supplied_resource_is_partly_supplied_by_every_producer[core.devices]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_adapter_contributing_what_it_does_not_produce_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_declaration_contributing_what_it_does_not_produce_is_refused"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/declaration.py",
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/harp.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/lfp.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/nwb.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/openephys.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/sorter.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/sync.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/waveforms.py",
+          "escapewheel-aind/src/escapewheel_aind/session.py",
+          "registry/adapter.example.json"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "escapewheel_poc_docs_v0.2/07_reference_implementation.md"
+        ]
+      }
+    },
+    "R133 \u00a73.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-source-declarations"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_partly_supplied_resource_is_contributed_not_owned"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_defaulted_entry_contributes_and_does_not_own_what_it_lists_under_contributes"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_resource_two_defaulted_sources_produce_is_refused_without_a_preference"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_declaration.py::test_a_subject_both_sources_describe_is_refused_until_the_recipe_prefers_one"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/scripts/cli.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R133 \u00a73.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-normative-references"
+        },
+        {
+          "path": "registry/recipe.schema.json",
+          "pointer": "/properties"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_recipe_failing_the_schema_is_refused_on_load[unknown-block]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_recipe_failing_the_schema_is_refused_on_load[string-command]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_recipe_failing_the_schema_is_refused_on_load[no-reason]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_recipe_failing_the_schema_is_refused_on_load[blank-reason]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_with_no_reason_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_encoding_declaration_needs_a_choice_and_a_reason[unknown-choice]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_encoding_declaration_needs_a_choice_and_a_reason[empty-reason]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "registry/build.py",
+          "registry/check.py",
+          "registry/recipe.example.toml"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "registry/README.md"
+        ]
+      }
+    },
+    "R133 \u00a73.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_kind_listed_twice_is_refused"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    }
+  }
+}

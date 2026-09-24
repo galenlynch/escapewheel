@@ -244,6 +244,7 @@
 "14.4" = "Producer and authoring reactions"
 "14.5" = "Validator reactions"
 "14.6" = "Portable reporting"
+"15" = "Normative references"
 
 ["06"]
 "1" = "Scope"
@@ -1128,6 +1129,12 @@ aliases = ["ew-unit-identity-architecture"]
 part = "05"
 section = "5.4"
 title = "Extensions"
+aliases = []
+
+[anchor.ew-validation-normative-references]
+part = "05"
+section = "15"
+title = "Normative references"
 aliases = []
 
 [anchor.ew-validation-shim]

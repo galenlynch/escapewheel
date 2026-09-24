@@ -18,7 +18,7 @@ recipe lands in `core.processing_runs.parameters`, so a committed packet says wh
 escapewheel inspect sorter /data/session_sorted        # what a source offers (05 Stage 1)
 escapewheel init --session-id s001 \
   --source sorter=/data/session_sorted \
-  --source nwb=/data/session.nwb > session.toml     # a draft, contested resources flagged
+  --source nwb=/data/session.nwb > session.toml     # a draft; contested resources await a [preference]
 escapewheel import session.toml --check                # everything wrong, before any I/O
 escapewheel import session.toml                        # stage, validate, commit
 ```
@@ -40,21 +40,36 @@ clock_id = "harp"; name = "HARP"; tick_rate_num = 31250; origin = "HARP epoch"
 [[source]]
 kind = "sorter"
 root = "/data/session_sorted"
-owns        = ["core.units", "core.spike_events", "core.sorting_runs"]
-contributes = ["core.clocks"]        # one clock per probe stream
 
 [[source]]
-kind = "sync"
-root = "/data/session_raw/ecephys/ecephys_clipped"
-owns        = ["core.clock_anchors"]
-contributes = ["core.clocks"]        # the rig clock the streams anchor to
+kind = "nwb"
+root = "/data/session.nwb"
+zone = "UTC"
+
+[preference."core.probes"]
+source = "nwb"
+reason = "the NWB states a probe's type and manufacturer; the sorter knows only the stream"
 ```
+
+A recipe is TOML 1.0 whose decoded form satisfies `schemas/recipe.schema.json`, vendored from
+`registry/recipe.schema.json` (Part 05 §3.1). Its top-level blocks are closed, so a misspelled
+block is refused on load rather than dropped; `registry/recipe.example.toml` uses every one. A
+source kind appears once, and every report names a source by its kind.
 
 `owns` is exclusive and `contributes` is additive. That distinction is load-bearing: several
 adapters can produce `core.probes`, and without a declared owner the last one to run wins
-silently. `escapewheel import --check` refuses a recipe where two sources own one resource, or
-where an owned table's required foreign key points at a table nothing produces — both knowable
-from the recipe and the registry, with no data in hand.
+silently. An entry without `owns` owns what its adapter can supply and no other entry owns,
+except the resources the adapter declares under `CONTRIBUTES` — the clocks of its own streams,
+its own devices and arrays — which it contributes. Where two such entries would own one
+resource, the recipe names the winner in `[preference]`, with the reason it knows more; the
+writer holds no winner of its own (Part 05 §3.3).
+
+`escapewheel import --check` refuses a recipe where two sources own one resource, where a
+preference names a source that is not listed, cannot supply the resource or contradicts another
+entry's `owns`, or where an owned table's required foreign key points at a table nothing
+produces — all knowable from the recipe and the registry, with no data in hand. `escapewheel
+init` leaves each contested resource to no source and writes a commented-out `[preference]`
+naming the candidates, so its draft is refused until one is chosen.
 
 Before recipe checking or source I/O, the importer checks the exact core registry bytes and binds
 the complete result to an in-process checked context. Extension registries are checked against

@@ -1,12 +1,10 @@
-"""What the arbitration tables imply about each other, asserted rather than assumed.
+"""What the ownership declarations imply about each other, asserted rather than assumed.
 
-`PREFERRED`, `SHARED`, `RECIPE_SUPPLIES` and each adapter's `PRODUCES` are four lists consulted in
-one order by `recipe._resolve_ownership`, in another by `session`, and in a third by the
-scaffolder. Nothing compared them, so an entry could stop arbitrating and say nothing: R108 §2.2
-measured that class and R108 §3.4 struck one entry, leaving three.
-
-These are the shape `registry/check.py` applies to `NAMING_EXCEPTIONS` — an exception is declared
-with a reason and is checked to still be needed — turned on the writer's own tables.
+Each adapter's `PRODUCES` and `CONTRIBUTES` and the writer's `RECIPE_SUPPLIES` are consulted in one
+order by `recipe._resolve_ownership`, in another by `session`, and in a third by the scaffolder, so
+an entry could stop meaning anything and say nothing. These are the shape `registry/check.py`
+applies to `NAMING_EXCEPTIONS` -- a declaration is checked to still be needed -- turned on the
+adapters' own.
 """
 
 from __future__ import annotations
@@ -16,51 +14,56 @@ from pathlib import Path
 
 import pytest
 
-from escapewheel_writer.recipe import RECIPE_SUPPLIES, SHARED, preferences, produces
+from escapewheel_writer import recipe
+from escapewheel_writer.recipe import RECIPE_SUPPLIES, contributes, produces
 from escapewheel_writer.scripts.cli import KINDS
 from escapewheel_writer.sources import ADAPTERS, discovered
 
+#: Every kind a build accepts. Registered kinds count, because a build resolves ownership over
+#: everything it can reach, and a check reading only the built-in table would pass a declaration
+#: that another distribution's adapter contradicts.
+EVERY_KIND = sorted({**ADAPTERS, **discovered()})
+
 
 def _by_resource() -> dict[str, list[str]]:
-    """Which adapters can produce each resource, over every kind a build accepts.
-
-    Registered kinds count, because a preference may name one: a build resolves ownership over
-    everything it can reach, so a check reading only the built-in table would pass a preference
-    that arbitrates nothing wherever the other producer ships elsewhere.
-    """
+    """Which adapters can produce each resource, over every kind a build accepts."""
     found: dict[str, list[str]] = {}
-    for kind in {**ADAPTERS, **discovered()}:
+    for kind in EVERY_KIND:
         for resource in produces(kind):
             found.setdefault(resource, []).append(kind)
     return found
 
 
-@pytest.mark.parametrize("resource,winner", sorted(preferences().items()))
-def test_a_preference_arbitrates_something(resource, winner):
-    """A preference names the winner among several producers, so there must be several.
+@pytest.mark.parametrize("kind", EVERY_KIND)
+def test_an_adapter_contributes_only_what_it_produces(kind):
+    """Part 03 §11.5: a resource supplied in part is still one the adapter declares it can supply."""
+    assert contributes(kind) <= produces(kind), f"{kind} contributes {sorted(contributes(kind) - produces(kind))}"
 
-    `_resolve_ownership` checks `SHARED` first and returns, so a preference for a shared resource
-    is never read: three sat there unnoticed until this test.
+
+@pytest.mark.parametrize("resource", sorted({r for kind in EVERY_KIND for r in contributes(kind)}))
+def test_a_partly_supplied_resource_is_partly_supplied_by_every_producer(resource):
+    """Sharing is for a resource several sources each supply part of (Part 05 §3.3).
+
+    One producer contributing and another owning by default is a recipe refused for a resource
+    "owned by one source but also supplied by another", which no author asked for.
     """
-    producers = _by_resource().get(resource, [])
-    assert resource not in SHARED, f"{resource} is SHARED, so its preference is never consulted"
-    assert len(producers) > 1, f"{resource} is produced only by {producers}, so nothing is contested"
-    assert winner in producers, f"{resource} prefers {winner}, which does not produce it"
+    producers = _by_resource()[resource]
+    assert len(producers) > 1, f"{resource} is contributed but only {producers} produces it"
+    owning = [kind for kind in producers if resource not in contributes(kind)]
+    assert owning == [], f"{resource} is contributed by some producers and owned by default by {owning}"
 
 
-@pytest.mark.parametrize("resource", sorted(SHARED))
-def test_a_shared_resource_has_several_contributors(resource):
-    """Sharing is for a resource several sources each supply part of (R98 §2.1)."""
-    producers = _by_resource().get(resource, [])
-    assert len(producers) > 1, f"{resource} is SHARED but only {producers} produces it"
+def test_the_writer_holds_no_preference_of_its_own():
+    """Part 05 §3.3: a build applies the recipe's preferences and holds none of its own."""
+    for name in ("PREFERRED", "PREFERENCE_GROUP", "SHARED", "preferences", "arbitrated"):
+        assert not hasattr(recipe, name), f"recipe.{name} is a winner no recipe can see"
+    sources = Path(recipe.__file__).parent
+    for path in sorted(sources.rglob("*.py")):
+        assert "escapewheel.preferences" not in path.read_text(), f"{path.name} reads a registered preference"
 
 
 def test_the_scaffolder_names_only_kinds_a_build_knows():
-    """A draft and a build resolve alike only if they agree about what a kind is.
-
-    `PREFERRED`'s docstring gives that as the reason it is held in `recipe` rather than in the
-    scaffolder, and the two lists had drifted to 5 kinds against 10.
-    """
+    """A draft and a build resolve alike only if they agree about what a kind is."""
     assert set(KINDS) <= set(ADAPTERS), f"scaffolder names {sorted(set(KINDS) - set(ADAPTERS))}"
 
 

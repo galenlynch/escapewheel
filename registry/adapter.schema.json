@@ -36,6 +36,16 @@
       },
       "description": "What this adapter can supply, whatever a given root happens to hold. A build settles ownership from it before any source is opened (Part 05 §3.4)."
     },
+    "contributes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$",
+        "description": "A dotted resource ID this adapter also names under `produces`."
+      },
+      "description": "The resources whose rows this adapter supplies only in part, such as the clocks of its own streams, which a source entry without `owns` contributes rather than owns (Part 05 §3.4). A document without this key declares none, and a build refuses one naming a resource `produces` does not (Part 03 §11.5)."
+    },
     "needs": {
       "type": "array",
       "uniqueItems": true,

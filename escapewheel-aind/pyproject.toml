@@ -40,12 +40,6 @@ aind_nwb = "escapewheel_aind.nwb:AindNWBSource"
 [project.entry-points."escapewheel.compensations"]
 aind = "escapewheel_aind.compensations:COMPENSATIONS"
 
-# Which resources these kinds win where a build has more than one producer (Part 05 §3.4).
-# Declared here rather than in the writer, which can neither import these adapters nor see that
-# they produce the resource, and so could not keep the preference honest.
-[project.entry-points."escapewheel.preferences"]
-aind = "escapewheel_aind.preferences:PREFERRED"
-
 [project.urls]
 Repository = "https://github.com/AllenNeuralDynamics/escapewheel-aind/"
 Issues = "https://github.com/AllenNeuralDynamics/escapewheel-aind/issues"

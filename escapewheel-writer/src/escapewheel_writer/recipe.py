@@ -22,10 +22,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
@@ -62,94 +60,6 @@ TERMS = frozenset(
 #: RECIPE_SUPPLIES because the NWB states every column of it and the row was built and discarded;
 #: a `[subject]` block is now the fallback for a packet whose sources name no subject.
 RECIPE_MAY_SUPPLY = ("core.subjects",)
-
-#: Where a resource goes when more than one adapter can produce it (Part 05 §3.4). The winner is the
-#: source that knows most about it: the NWB knows a probe's type and manufacturer where the sorter
-#: knows only the stream, and the waveform source is the only one that can see a unit's channel
-#: support. Held here rather than in the scaffolder, so a draft and a build resolve alike.
-PREFERRED = {
-    "core.probes": "nwb",
-}
-
-#: Entry-point group a distribution registers its own preferences under, loading to a mapping of
-#: resource to the kind that wins it, or to a callable returning one.
-#:
-#: A preference names a **kind**, so one naming a registered kind cannot live here: this package
-#: can neither import that adapter nor see that it produces the resource, and a preference it
-#: cannot check is one nothing keeps honest. The distribution shipping the kind declares it
-#: instead, which is where the knowledge is -- `escapewheel-aind` declares `core.subjects`,
-#: because `subject.json` is the record `general/subject` is a projection of and carries a
-#: `background_strain` key the projection lacks.
-PREFERENCE_GROUP = "escapewheel.preferences"
-# `core.clocks`, `core.array_assets` and `core.array_dimensions` were declared here and struck:
-# `_resolve_ownership` checks `SHARED` first and returns, so a preference for a shared resource is
-# never consulted. R108 §3.4 struck `core.unit_electrodes` for arbitrating nothing; these three
-# arbitrated nothing for the other reason, and `test_arbitration.py` now refuses both shapes.
-
-#: Resources several sources each supply *part* of, which `owns` refuses and `contributes` is for.
-#: A defaulted source contributes to these rather than owning them.
-SHARED = frozenset(
-    {
-        "core.clocks",
-        "core.clock_anchors",
-        "core.clock_observation_intervals",
-        "core.array_assets",
-        "core.array_dimensions",
-        "core.devices",
-    }
-)
-
-
-def _preferences(loaded: Any, source: str) -> dict[str, str]:
-    """Coerce whatever an entry point loaded into a mapping of resource to the kind that wins it."""
-    if callable(loaded) and not isinstance(loaded, type):
-        loaded = loaded()
-    if not isinstance(loaded, dict):
-        raise TypeError(f"{source} loaded {type(loaded).__name__}, not a mapping of preferences")
-    for resource, kind in loaded.items():
-        if not isinstance(resource, str) or not isinstance(kind, str):
-            raise TypeError(f"{source} maps {resource!r} to {kind!r}; both must be strings")
-    return dict(loaded)
-
-
-def preferences() -> dict[str, str]:
-    """Where a resource goes when more than one adapter produces it: this package's, plus registered.
-
-    Computed rather than held, because a distribution registering a kind registers its preferences
-    with it. A module constant would be read once at import and never see them.
-
-    A registered preference never replaces a built-in one, and a distribution that fails to load is
-    skipped with its reason rather than raised -- the same terms `compensations.registered` sets,
-    for the same reason: one bad install must not silently re-arbitrate ownership in a packet this
-    writer builds.
-    """
-    found = dict(PREFERRED)
-    for entry in entry_points(group=PREFERENCE_GROUP):
-        try:
-            loaded = _preferences(entry.load(), f"preferences {entry.name!r}")
-        except Exception as exc:  # noqa: BLE001 - one broken package is one distribution, not all
-            warnings.warn(f"preferences {entry.name!r} could not be loaded: {exc}", stacklevel=2)
-            continue
-        for resource, kind in loaded.items():
-            if resource in found:
-                warnings.warn(
-                    f"preferences {entry.name!r} redefines {resource!r}, which is kept as declared here",
-                    stacklevel=2,
-                )
-                continue
-            found[resource] = kind
-    return found
-
-
-def arbitrated() -> frozenset[str]:
-    """Resources a preference actually decides (Part 05 §3.4).
-
-    Not every resource a preference names: `_resolve_ownership` checks `SHARED` first and returns,
-    so for a resource in both tables the preference decides nothing and the sources hold
-    *different* rows (R108 §4). Comparing those would report a probe clock against a reference
-    clock and call the difference a loss.
-    """
-    return frozenset(preferences()) - SHARED
 
 
 def adapter_for(kind: str) -> Any:
@@ -225,6 +135,17 @@ def consumes(kind: str) -> tuple[str, ...]:
     """Return the kinds whose output an adapter of this kind reads (Part 05 §3.4)."""
     adapter = adapter_for(kind)
     return tuple(getattr(adapter, "CONSUMES", ()) if adapter is not None else ())
+
+
+def contributes(kind: str) -> frozenset[str]:
+    """Return the resources an adapter of this kind supplies only part of (Part 05 §3.4).
+
+    A source entry without `owns` contributes these rather than owning them, because every such
+    adapter supplies its own streams' clocks or its own arrays and devices, and another source
+    supplies the rest.
+    """
+    adapter = adapter_for(kind)
+    return frozenset(getattr(adapter, "CONTRIBUTES", ()) if adapter is not None else ())
 
 
 def produces(kind: str) -> frozenset[str]:
@@ -502,19 +423,21 @@ def _importable(kind: str) -> bool:
 
 
 def declared(spec: SourceSpec) -> dict[str, Any]:
-    """Return one source's five declarations, from the document the recipe names or the class.
+    """Return one source's six declarations, from the document the recipe names or the class.
 
     A document and an importable class declaring the same facts are one declaration, and a build
     prefers neither (Part 03 §11.5) -- so everything reading a declaration reads it through here,
     and nothing downstream has to know which form this source took.
 
     A document written before `accepts` existed carries none, which reads as an adapter accepting
-    no option beyond what it needs (Part 03 §11.5).
+    no option beyond what it needs (Part 03 §11.5), and one without `contributes` supplies no
+    resource in part.
     """
     document = spec.delivery.declaration if spec.delivery is not None else None
     if document is not None and "unreadable" not in document:
         return {
             "produces": frozenset(document.get("produces", ())),
+            "contributes": frozenset(document.get("contributes", ())),
             "states": tuple(document.get("states", ())),
             "needs": tuple(document.get("needs", ())),
             "accepts": tuple(document.get("accepts", ())),
@@ -523,6 +446,7 @@ def declared(spec: SourceSpec) -> dict[str, Any]:
         }
     return {
         "produces": produces(spec.kind),
+        "contributes": contributes(spec.kind),
         "states": tuple(sorted(states(spec.kind))),
         "needs": needs(spec.kind),
         "accepts": accepts(spec.kind),
@@ -531,35 +455,37 @@ def declared(spec: SourceSpec) -> dict[str, Any]:
     }
 
 
-def _resolve_ownership(sources: tuple[SourceSpec, ...]) -> tuple[SourceSpec, ...]:
-    """Fill in `owns` for entries that declared none (Part 05 §3.4).
+def _resolve_ownership(sources: tuple[SourceSpec, ...], preferred: Mapping[str, str]) -> tuple[SourceSpec, ...]:
+    """Fill in `owns` and `contributes` from the entries, the declarations and the preferences.
 
-    Silence means the whole of that adapter's `PRODUCES`, less what an explicitly narrowed source
-    already owns, less what the recipe itself writes, and less what a preference gives to another
-    kind this recipe lists. A shared resource becomes a `contributes` rather than an `owns`,
-    because several sources each supply part of it.
+    A preferred source owns its resource whatever its entry declares (Part 05 §3.3). An entry that
+    declared no `owns` takes, of what its adapter can supply, everything no narrowed entry owns and
+    no preference gives to another source: the resources its adapter supplies in part as
+    contributions, and the rest as its own (Part 05 §3.4). What the entry itself lists under
+    `contributes` it contributes and does not own.
 
-    Where two defaulted sources are left owning one resource, both keep it and `check` refuses the
+    Where two defaulted entries are left owning one resource, both keep it and `check` refuses the
     recipe naming both -- a silent winner is what `owns` was introduced to prevent.
     """
     narrowed = {resource for spec in sources if spec.narrowed for resource in spec.owns}
-    supplies, kinds = frozenset(RECIPE_SUPPLIES), {spec.kind for spec in sources}
+    supplies = frozenset(RECIPE_SUPPLIES)
     resolved = []
     for spec in sources:
+        mine = {resource for resource, kind in preferred.items() if kind == spec.kind}
+        contributed = [resource for resource in spec.contributes if resource not in mine]
         if spec.narrowed:
-            resolved.append(spec)
-            continue
-        owns, contributes = [], list(spec.contributes)
-        for resource in sorted(declared(spec)["produces"] - narrowed - supplies):
-            if resource in SHARED:
-                if resource not in contributes:
-                    contributes.append(resource)
-                continue
-            preferred = PREFERRED.get(resource)
-            if preferred is not None and preferred != spec.kind and preferred in kinds:
-                continue
-            owns.append(resource)
-        resolved.append(replace(spec, owns=tuple(owns), contributes=tuple(contributes)))
+            owns = [*spec.owns, *sorted(mine - set(spec.owns))]
+        else:
+            asked = declared(spec)
+            elsewhere = {resource for resource, kind in preferred.items() if kind != spec.kind}
+            owns = []
+            for resource in sorted(asked["produces"] - narrowed - supplies - elsewhere - set(spec.contributes)):
+                if resource in asked["contributes"] and resource not in mine:
+                    contributed.append(resource)
+                else:
+                    owns.append(resource)
+            owns += sorted(mine - set(owns))
+        resolved.append(replace(spec, owns=tuple(owns), contributes=tuple(contributed)))
     return tuple(resolved)
 
 
@@ -586,6 +512,31 @@ class MaterializeSpec:
 
     resource: str
     options: Mapping[str, Any] = field(default_factory=dict)
+
+
+def schema() -> dict[str, Any]:
+    """Load the bundled JSON Schema for a recipe (Part 05 §3.1), vendored from `registry/`."""
+    from importlib import resources
+
+    parsed: dict[str, Any] = json.loads(resources.files(__package__).joinpath("schemas/recipe.schema.json").read_text())
+    return parsed
+
+
+def shape_problems(document: Mapping[str, Any]) -> list[str]:
+    """Where a decoded recipe fails `registry/recipe.schema.json`, each as `path: message`.
+
+    Every failure rather than the first, since an author fixing a recipe wants the whole list; an
+    unknown top-level block is one of them, where it would otherwise be dropped unread.
+    """
+    import jsonschema
+
+    return [
+        f"{'/'.join(str(p) for p in error.absolute_path) or 'recipe'}: {error.message}"
+        for error in sorted(
+            jsonschema.Draft202012Validator(schema()).iter_errors(document),
+            key=lambda e: [str(p) for p in e.absolute_path],
+        )
+    ]
 
 
 @dataclass(frozen=True)
@@ -633,6 +584,9 @@ class Recipe:
     sources: tuple[SourceSpec, ...]
     materialize: tuple[MaterializeSpec, ...]
     limits: Mapping[str, Any]
+    #: Part 05 §3.3: resource to `{source, reason}`, the source kind that owns a resource several
+    #: listed sources produce. The only preferences a build applies.
+    preferences: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: str | Path, *, out: str | Path | None = None) -> Recipe:
@@ -657,7 +611,7 @@ class Recipe:
         Raises
         ------
         ValueError
-            If the file is not valid TOML, or declares no packet ID.
+            If the file is not valid TOML, declares no packet ID, or fails the recipe schema.
         """
         path = Path(path)
         raw = path.read_bytes()
@@ -669,6 +623,8 @@ class Recipe:
         packet = document.get("packet", {})
         if not packet.get("id"):
             raise ValueError(f"{path}: [packet] declares no id")
+        if problems := shape_problems(document):
+            raise ValueError(f"{path}: not a recipe (Part 05 §3.1):\n  " + "\n  ".join(problems))
 
         here = path.parent
 
@@ -745,7 +701,8 @@ class Recipe:
                         in_process=bool(s.get("in_process", packet.get("in_process", False))),
                     )
                     for s in document.get("source", [])
-                )
+                ),
+                {resource: str(entry["source"]) for resource, entry in document.get("preference", {}).items()},
             ),
             materialize=tuple(
                 MaterializeSpec(
@@ -755,6 +712,7 @@ class Recipe:
                 for m in document.get("materialize", [])
             ),
             limits=document.get("commit", {}),
+            preferences=document.get("preference", {}),
         )
 
     def with_sample(self, sample: int) -> Recipe:
@@ -799,6 +757,11 @@ class Recipe:
         """
         budget: int | str = self.limits.get("memory_budget", 0)
         return budget
+
+    @property
+    def preferred(self) -> dict[str, str]:
+        """Resource ID to the source kind the recipe prefers for it (Part 05 §3.3)."""
+        return {resource: str(entry["source"]) for resource, entry in self.preferences.items()}
 
     @property
     def owners(self) -> dict[str, list[str]]:
@@ -872,12 +835,14 @@ class Recipe:
         for resource, kinds in sorted(owners.items()):
             if len(kinds) > 1:
                 errors.append(
-                    f"{resource} is owned by {len(kinds)} sources ({', '.join(sorted(kinds))}); use contributes"
+                    f"{resource} is owned by {len(kinds)} sources ({', '.join(sorted(kinds))}); declare a "
+                    f"[preference] naming the one that knows more, or contributes where each holds part"
                 )
             elif len(claimants.get(resource, ())) > 1:
                 others = sorted(set(claimants[resource]) - set(kinds))
                 errors.append(f"{resource} is owned by {kinds[0]} but also supplied by {', '.join(others)}")
 
+        errors.extend(self._arbitration_problems())
         warnings.extend(self._unclaimed())
         errors.extend(self._dangling_references(tables, claimants, warnings))
         errors.extend(self._clock_problems())
@@ -896,6 +861,56 @@ class Recipe:
             + [Problem("warning", m) for m in sorted(set(warnings))]
             + [Problem("info", m) for m in sorted(set(notes))]
         )
+
+    def _arbitration_problems(self) -> list[str]:
+        """Report a repeated kind, an unsound preference, and a class contributing what it cannot produce.
+
+        A source is named by its kind throughout, so a kind listed twice leaves a preference and
+        every report unable to say which entry they mean (Part 05 §3.1). A preference declares
+        ownership (Part 05 §3.3), so one naming a source that is absent, cannot supply the resource,
+        or contradicts another entry's own `owns` or `contributes` has no sound reading. A delivered
+        adapter's `contributes` is refused with the rest of its document (Part 03 §11.5); an
+        imported one's is refused here.
+        """
+        problems = []
+        kinds = [spec.kind for spec in self.sources]
+        problems += [
+            f"source {kind} is listed {kinds.count(kind)} times; a recipe lists a kind once, since everything "
+            "names a source by its kind (Part 05 §3.1)"
+            for kind in sorted({k for k in kinds if kinds.count(k) > 1})
+        ]
+        by_kind = {spec.kind: spec for spec in self.sources}
+        for resource, kind in sorted(self.preferred.items()):
+            chosen = by_kind.get(kind)
+            if chosen is None:
+                problems.append(f"[preference] {resource} names {kind}, which this recipe does not list")
+                continue
+            if resource not in declared(chosen)["produces"]:
+                problems.append(
+                    f"[preference] {resource} names {kind}, whose adapter does not declare it can supply it"
+                )
+            for entry in self.document.get("source", []):
+                other = str(entry.get("kind"))
+                if other != kind and resource in (*entry.get("owns", ()), *entry.get("contributes", ())):
+                    problems.append(
+                        f"[preference] {resource} names {kind}, and source {other} declares it under owns or "
+                        "contributes; a preference says one source knows more, so the other supplies none of it"
+                    )
+            producers = sorted({spec.kind for spec in self.sources if resource in declared(spec)["produces"]})
+            if len(producers) < 2:
+                problems.append(
+                    f"[preference] {resource} arbitrates nothing: only {', '.join(producers) or 'no source'} in this "
+                    "recipe produces it (Part 05 §3.3)"
+                )
+        for spec in self.sources:
+            if spec.delivery is not None:
+                continue
+            asked = declared(spec)
+            problems += [
+                f"{spec.kind} contributes {resource}, which its produces does not name"
+                for resource in sorted(asked["contributes"] - asked["produces"])
+            ]
+        return problems
 
     def _states_problems(self) -> list[str]:
         """Adapters a build cannot ask which recipe fields they state (Part 05 §3.4).
@@ -932,24 +947,14 @@ class Recipe:
         return by_field
 
     def encoding_problems(self, tables: Mapping[str, Any]) -> list[str]:
-        """Everything wrong with the `[encoding]` block, knowable with no source read.
+        """Every `[encoding]` entry naming no declared column, knowable with no source read.
 
         An extension reaches the writer across a file or a subprocess, so what it says about its
-        own columns arrives here rather than as a Python object it hands over. Each entry names a
-        `resource.column`, one of three encodings, and the reason it was chosen -- a measurement,
-        since an encoding is a fact about one packet's values and a bare choice cannot be
-        re-judged against the next session's.
+        own columns arrives here rather than as a Python object it hands over. The choice and its
+        reason are the schema's to check on load; the columns need the registries.
         """
         found: list[str] = []
-        for name, declared in sorted(self.encoding.items()):
-            chosen = str(declared.get("encoding", "")).strip()
-            if chosen not in {"delta", "plain", "dictionary"}:
-                found.append(f"[encoding] {name} declares {chosen!r}; one of delta, plain, dictionary")
-            if not str(declared.get("reason", "")).strip():
-                found.append(
-                    f"[encoding] {name} carries no reason; a measurement is what makes an "
-                    "entry re-judgeable when the data changes"
-                )
+        for name in sorted(self.encoding):
             resource, _, column = name.rpartition(".")
             if name.count(".") < 2 or resource not in tables:
                 found.append(f"[encoding] {name} names no declared table")
@@ -960,7 +965,7 @@ class Recipe:
     def _declared_fact_problems(self) -> tuple[list[str], list[str], list[str]]:
         """Errors, warnings and notes about declared facts and their overrides (Part 05 §3.5, §2.5).
 
-        Only an empty override reason is an error. A field a source states is a warning because
+        An empty override reason never loads (Part 05 §3.1). A field a source states is a warning because
         agreement is the likely case and only the build can tell, and a stale override costs a
         line rather than a build because it leaves the packet correct.
         """
@@ -969,8 +974,6 @@ class Recipe:
         warnings: list[str] = []
         notes: list[str] = []
         for fact, reason in sorted(self.overrides.items()):
-            if not str(reason).strip():
-                errors.append(f"[overrides] {fact} carries no reason; an override must say why (Part 05 §3.6)")
             if fact not in stated:
                 warnings.append(f"[overrides] {fact} overrides nothing; no source in this recipe states it")
             elif fact not in declared:
@@ -1101,6 +1104,7 @@ class Recipe:
             stated = {
                 "protocol": delivery.protocol,
                 "produces": sorted(asked["produces"]),
+                "contributes": sorted(asked["contributes"]),
                 "states": list(asked["states"]),
                 "needs": list(asked["needs"]),
                 "accepts": list(asked["accepts"]),

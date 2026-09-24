@@ -37,6 +37,7 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 LEDGER = ROOT / "revisions" / "applied.toml"
+HEADINGS = ROOT / "escapewheel_poc_docs_v0.2" / "headings.toml"
 
 #: `R92 §2.2`. The same spelling `check_citations.py` resolves.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
@@ -70,11 +71,6 @@ REASONING: tuple[tuple[str, str, str], ...] = (
         "the measurement that a scalar projection beats a join, not the rule it justified",
     ),
     (
-        "escapewheel-writer/src/escapewheel_writer/recipe.py",
-        "R108 §3.4",
-        "which preference was struck and why, which no part records",
-    ),
-    (
         "escapewheel-writer/src/escapewheel_writer/sources/nwb.py",
         "R87 §2.8",
         "what the adapter did before the clause landed",
@@ -88,16 +84,6 @@ REASONING: tuple[tuple[str, str, str], ...] = (
         "escapewheel-writer/src/escapewheel_writer/sources/sync.py",
         "R37 §3.2",
         "the revision's own terminal-anchor test, which is the measurement rather than the rule",
-    ),
-    (
-        "escapewheel-writer/tests/test_arbitration.py",
-        "R108 §3.4",
-        "the count that class held before and after the entry was struck",
-    ),
-    (
-        "escapewheel-writer/tests/test_writer.py",
-        "R108 §3.4",
-        "the same, at the site the struck entry used to reach",
     ),
     (
         "registry/build.py",
@@ -147,13 +133,27 @@ REASONING: tuple[tuple[str, str, str], ...] = (
 )
 
 
-def cited(entry: dict) -> list[str]:
-    """Each numeric part target of an applied entry, in current citation form."""
-    return [
-        f"Part {target['part']} §{target['section']}"
-        for target in entry.get("where", [])
-        if "part" in target and "section" in target
-    ]
+def anchors() -> dict[str, dict]:
+    """Each canonical anchor's current part and section, as `headings.py` records them."""
+    return tomllib.loads(HEADINGS.read_text()).get("anchor", {})
+
+
+def cited(entry: dict, located: dict[str, dict] | None = None) -> list[str]:
+    """Each part target of an applied entry, in current citation form.
+
+    An anchor target resolves to the section it now heads; skipping it would exempt every citation
+    of a clause whose landing moved to an anchor.
+    """
+    located = anchors() if located is None else located
+    out = []
+    for target in entry.get("where", []):
+        if "part" not in target:
+            continue
+        if "section" in target:
+            out.append(f"Part {target['part']} §{target['section']}")
+        elif (where := located.get(target.get("anchor", ""))) is not None:
+            out.append(f"Part {where['part']} §{where['section']}")
+    return out
 
 
 def rollup(clauses: dict[str, dict]) -> dict[str, list[str]]:
@@ -163,13 +163,14 @@ def rollup(clauses: dict[str, dict]) -> dict[str, list[str]]:
     ledger holds `R40 §2.1` -- matched no entry and passed unchecked. 29 citations were that shape.
     """
     out: dict[str, list[str]] = {}
+    located = anchors()
     for key, entry in clauses.items():
         if entry.get("disposition") != "applied":
             continue
         parent = key.split(".")[0] if "." in key.split("§")[1] else None
         if parent is None:
             continue
-        for candidate in cited(entry):
+        for candidate in cited(entry, located):
             if candidate not in out.setdefault(parent, []):
                 out[parent].append(candidate)
     return {k: v for k, v in out.items() if k not in clauses and v}
@@ -184,11 +185,12 @@ def ledger() -> dict[str, list[str]]:
     citation passed unseen, because a single-match pattern read the field as naming nothing.
     """
     clauses = tomllib.loads(LEDGER.read_text())["clause"]
+    located = anchors()
     out = {}
     for key, entry in clauses.items():
         if entry.get("disposition") != "applied":
             continue
-        found = cited(entry)
+        found = cited(entry, located)
         if found:
             out[key] = found
     out.update({k: v for k, v in rollup(clauses).items() if k not in out})

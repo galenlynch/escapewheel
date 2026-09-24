@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://escapewheel.org/schemas/recipe/0.1.0",
+  "title": "Escapewheel session recipe",
+  "description": "Shape of a session recipe, per Part 05 §3.1: a TOML 1.0 document, validated in its decoded form. Top-level members are closed, so a misspelled block is refused rather than dropped; a source entry and a materialization are open, because every key they do not name is an option or a parameter their adapter or materializer checks. Fact values under `session` and `subject` are untyped here: TOML dates and times decode to values JSON Schema has no type for, and a build types a fact when it normalizes it (Part 05 §3.6).",
+  "type": "object",
+  "required": [
+    "packet"
+  ],
+  "properties": {
+    "packet": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The packet this recipe builds."
+        },
+        "out": {
+          "type": "string",
+          "description": "Where the packet is written, relative to the recipe."
+        },
+        "registry": {
+          "type": "string",
+          "description": "The core registry to write against, relative to the recipe."
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Extension registries the packet binds, each a path or an installed registry's id."
+        },
+        "description": {
+          "type": "string"
+        },
+        "in_process": {
+          "type": "boolean",
+          "description": "Whether every source runs in the writer's process unless its entry says otherwise (Part 05 §3.9)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "session": {
+      "type": "object",
+      "description": "Session facts, keyed by field name."
+    },
+    "subject": {
+      "type": "object",
+      "description": "Subject facts, keyed by field name."
+    },
+    "overrides": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9_]+$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "\\S",
+        "description": "Why the recipe's value supersedes the source's (Part 05 §3.6)."
+      },
+      "description": "Declared facts that supersede a source's, keyed `block.field`."
+    },
+    "encoding": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "encoding",
+          "reason"
+        ],
+        "properties": {
+          "encoding": {
+            "enum": [
+              "delta",
+              "plain",
+              "dictionary"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Parquet encodings this build forces, keyed `resource.column` (Part 05 §3.8)."
+    },
+    "clock": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "clock_id",
+          "name",
+          "tick_rate_num",
+          "origin"
+        ],
+        "properties": {
+          "clock_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "tick_rate_num": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tick_rate_den": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "origin": {
+            "type": "string"
+          },
+          "parent_clock_id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "The clocks the packet declares, and their parents."
+    },
+    "source": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "maxLength": 64,
+            "description": "The adapter this entry reads with. A recipe lists a kind once (Part 05 §3.1)."
+          },
+          "root": {
+            "type": "string",
+            "description": "A local directory, relative to the recipe, or a store URI."
+          },
+          "owns": {
+            "$ref": "#/$defs/resources",
+            "description": "Resources this source alone supplies. Omitted, the build reads the entry's default (Part 05 §3.4)."
+          },
+          "contributes": {
+            "$ref": "#/$defs/resources",
+            "description": "Resources this source adds rows to alongside others."
+          },
+          "storage_options": {
+            "type": "object",
+            "description": "How to open a store root."
+          },
+          "in_process": {
+            "type": "boolean"
+          },
+          "delivery": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The argument list that runs the adapter; never a string to split (Part 05 §3.7)."
+              },
+              "protocol": {
+                "type": "string"
+              },
+              "declaration": {
+                "type": "string",
+                "description": "The adapter's declaration document (Part 03 §11.5), relative to the recipe."
+              },
+              "report_path": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "The sources the packet is built from. Every key an entry does not name here is an option, checked against its adapter's `needs` and `accepts`."
+    },
+    "preference": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/resource"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "source",
+          "reason"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "description": "The kind of the source that owns the resource."
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Why that source knows more."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Which source owns a resource more than one listed source produces, keyed by resource (Part 05 §3.3)."
+    },
+    "materialize": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "resource"
+        ],
+        "properties": {
+          "resource": {
+            "$ref": "#/$defs/resource"
+          }
+        },
+        "additionalProperties": true
+      },
+      "description": "Analysis resources to derive once the core resources are staged. Every other key is a parameter."
+    },
+    "commit": {
+      "type": "object",
+      "description": "The build's own limits, such as `memory_budget`; their names are the implementation's."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "resource": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+$"
+    },
+    "resources": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/resource"
+      }
+    }
+  }
+}

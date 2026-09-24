@@ -35,13 +35,30 @@ One source is rarely sufficient: integer sample indices come from a sorter, task
 
 A recipe declares, for one packet:
 
-- each source: its kind, its root, and its options;
+- each source, once per kind: its kind, its root, and its options;
 - which resources each source supplies;
+- which source owns a resource more than one listed source can supply (§3.3);
 - the clocks the packet declares, and their parents;
 - what to materialize;
 - session facts no source carries.
 
 A recipe MAY declare a fact a source it reads also states; §3.6 says which of the two the packet gets. `core.subjects` is not a resource the recipe supplies unconditionally: a source that states a subject MAY own it, arbitrated as any other resource two sources can produce, and the recipe's `[subject]` block supplies the table only where no source owns it.
+
+A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `registry/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.1.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` untyped, and §3.6 types each when it normalizes it. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
+
+| member | form | constraint |
+|---|---|---|
+| `packet` | table | requires `id`; admits `out`, `registry`, `extensions`, `description`, and `in_process` |
+| `session`, `subject` | table | keys are field names; values are untyped |
+| `overrides` | table | keys are `block.field` names; each value a non-empty string (§3.6) |
+| `encoding` | table | keys are `resource.column` names; each entry carries exactly `encoding`, one of `delta`, `plain`, or `dictionary`, and a non-empty `reason` (§3.8) |
+| `clock` | array of tables | each requires `clock_id`, `name`, `tick_rate_num`, and `origin`, and admits `tick_rate_den` and `parent_clock_id` |
+| `source` | array of tables | each requires `kind`; `owns` and `contributes` are arrays of dotted resource identifiers, `storage_options` a table, `in_process` a boolean (§3.9), and `delivery` a table admitting `command`, an array of strings (§3.7), and `protocol`, `declaration`, and `report_path`; every other key is an option |
+| `preference` | table | keys are dotted resource identifiers; each entry is §3.3's |
+| `materialize` | array of tables | each requires `resource`; every other key is a parameter |
+| `commit` | table | members are a build's own limits |
+
+A recipe MUST NOT list a source kind in more than one `source` entry, and a build MUST refuse one that does, naming the kind. A preference, an ownership refusal, and a build's reports name a source by its kind.
 
 ### 3.2 The recipe is the provenance record
 
@@ -61,7 +78,9 @@ Each source declares its resources as `owns` or `contributes`.
 
 A recipe MUST NOT declare `owns` for a resource that more than one of its sources produces rows for, unless it declares a preference between them. Exclusivity is for a resource one source is responsible for; where two sources each hold part, `owns` discards the part the owner does not hold, and no check sees it because the resource is claimed.
 
-A preference is declared in the recipe, in a table keyed by resource, each entry naming the source that owns it and the reason that source knows more. A build MUST apply a declared preference and MUST NOT hold a preference of its own for any resource a recipe does not name: a built-in winner is one no recipe can see, and a recipe that has not heard of a new contest is better refused than silently arbitrated.
+A recipe declares each preference as an entry of its top-level `preference` table, keyed by the resource's dotted identifier. The entry carries `source`, the kind of the source the recipe prefers, and `reason`, a non-empty statement of why that source knows more, and nothing else.
+
+A preference declares ownership. A build MUST read the preferred source as owning the resource whatever its entry declares, and MUST discard every other source's rows for it, subject to §3.4's refusal of a discarded stated value. A build MUST apply each declared preference, and MUST NOT hold a preference of its own or accept one from any artifact other than the recipe: a built-in winner is one no recipe can see, and a recipe that has not heard of a new contest is better refused than silently arbitrated.
 
 A preference MUST NOT name a resource only one source produces. Such an entry arbitrates nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes stale the moment the second producer stops producing.
 
@@ -70,11 +89,11 @@ A preference MUST NOT name a resource only one source produces. Such an entry ar
 
 Every source adapter MUST declare the set of resource identifiers it can supply. It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-An adapter declares five such facts, all read before any source is opened: the resources it can supply, the recipe fields it can state (§3.6), the values a build must supply it (Part 03 §11.2), the options it reads and can run without (Part 03 §11.2), and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
+An adapter declares six such facts, all read before any source is opened: the resources it can supply; those of them whose rows it supplies only in part, such as the clocks of its own streams; the recipe fields it can state (§3.6); the values a build must supply it (Part 03 §11.2); the options it reads and can run without (Part 03 §11.2); and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
 
-A build MUST read a source entry that declares no `owns` as owning every resource its adapter declares it can supply and no other source owns. **A recipe states what it narrows; silence means the whole.**
+A build MUST read a source entry that declares no `owns` as follows. Of the resources its adapter declares it can supply, leaving out any another entry declares under `owns` and any a preference gives to another source, the entry contributes those its adapter supplies only in part and owns the rest. It also contributes every resource its own `contributes` names, and owns none of those. An entry that declares `owns` owns exactly what it names and contributes what its `contributes` names. **A recipe states what it narrows; silence means the whole.**
 
-Where two sources default to the same resource and no preference is declared, a build MUST refuse the recipe naming both.
+A build MUST refuse a recipe in which two entries without `owns` are left owning one resource, naming both sources and the resource.
 
 A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them. That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. The neighbouring case, a resource *no* source claims, is reported as a warning before a byte is read.
 
@@ -103,7 +122,13 @@ A build MUST also refuse, on the same terms and before any source is opened:
 - a declaration whose resources include one no loaded registry declares;
 - a declaration whose stated fields include one no recipe block carries;
 - a source entry setting an option the adapter names in neither `needs` nor `accepts`, naming the source and the option;
-- a declaration whose accepted options include a term, or one its `needs` also names.
+- a declaration whose accepted options include a term, or one its `needs` also names;
+- a declaration naming a resource it supplies only in part that is not one it declares it can supply, naming the adapter and the resource;
+- a preference whose `source` names a kind the recipe does not list, naming the resource;
+- a preference whose `source` names a kind whose adapter does not declare that it can supply the resource, naming the resource;
+- a preference for a resource another entry declares under `owns` or `contributes`, naming the resource and that entry's kind, since the recipe then says both that one source knows more and that the other supplies the resource.
+
+A build MUST refuse a recipe that is not TOML 1.0 or whose decoded form fails the schema §3.1 incorporates, naming where it fails, before it opens any source.
 
 A build MUST report as a **warning**:
 
@@ -574,3 +599,12 @@ invalid-finding list. Human rendering may differ. Diagnostic `detail` is not int
 identity. The result schema begins at version 0.1.0; this boundary and reporting change does not by
 itself change a registry meta-schema, core registry, extension registry, packet manifest, or their
 version identifiers.
+
+<a id="ew-validation-normative-references" data-spec-anchor="canonical"></a>
+## 15. Normative references
+
+The application column states the extent to which this part invokes the external authority:
+
+| reference | candidate edition | application |
+|---|---|---|
+| [TOML v1.0.0](https://toml.io/en/v1.0.0) | exact | a session recipe's syntax and decoded values (§3.1) |

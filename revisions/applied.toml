@@ -145,7 +145,7 @@ note = "restored 2026-09-04; the default survived, the declaration did not"
 
 [clause."R63 §2.3"]
 disposition = "applied"
-where = [{ part = "05", section = "3.5" }]
+where = [{ part = "05", anchor = "ew-recipe-check" }]
 
 [clause."R64 §2.1"]
 disposition = "applied"
@@ -1253,11 +1253,11 @@ where = [{ part = "04", section = "3" }]
 
 [clause."R63 §2.1"]
 disposition = "applied"
-where = [{ part = "05", section = "3.4" }]
+where = [{ part = "05", anchor = "ew-source-declarations" }]
 
 [clause."R63 §2.2"]
 disposition = "applied"
-where = [{ part = "05", section = "3.4" }]
+where = [{ part = "05", anchor = "ew-source-declarations" }]
 
 [clause."R63 §2.4"]
 disposition = "rationale"
@@ -1523,12 +1523,12 @@ where = [{ part = "05", section = "3.6" }]
 
 [clause."R87 §2.2"]
 disposition = "applied"
-where = [{ part = "05", section = "3.4" }]
+where = [{ part = "05", anchor = "ew-source-declarations" }]
 note = "the spelling is 07 §4's; 05 requires only what a build can determine"
 
 [clause."R87 §2.3"]
 disposition = "applied"
-where = [{ part = "05", section = "3.5" }]
+where = [{ part = "05", anchor = "ew-recipe-check" }]
 
 [clause."R87 §2.4"]
 disposition = "applied"
@@ -1548,7 +1548,7 @@ where = [{ part = "05", section = "3.6" }]
 
 [clause."R87 §2.8"]
 disposition = "applied"
-where = [{ part = "05", section = "3.1" }]
+where = [{ part = "05", anchor = "ew-recipe-purpose" }]
 
 [clause."R88 §2.1"]
 disposition = "applied"
@@ -1783,7 +1783,7 @@ note = "core.clocks.tick_rate_one_form refuses both forms; the writer emits the 
 
 [clause."R95 §3.3"]
 disposition = "applied"
-where = [{ part = "07", section = "4" }]
+where = [{ part = "07", anchor = "ew-reference-object-model" }]
 note = "at info, bounded by row-group statistics"
 
 [clause."R96 §2.1"]
@@ -1875,12 +1875,12 @@ note = "core.clocks.observation_declared checks the anchored and reference branc
 
 [clause."R98 §3.2"]
 disposition = "applied"
-where = [{ part = "05", section = "3.3" }]
-note = "recipe.SHARED gains core.clock_observation_intervals and core.clock_anchors, and both recipes declare the first under contributes"
+where = [{ part = "05", anchor = "ew-recipe-ownership" }]
+note = "every adapter producing core.clock_observation_intervals or core.clock_anchors declares it supplied in part, so a defaulted entry contributes it (R133 §3.3)"
 
 [clause."R98 §3.3"]
 disposition = "applied"
-where = [{ part = "05", section = "3.4" }]
+where = [{ part = "05", anchor = "ew-source-declarations" }]
 note = "session._note_unclaimed compares against declared preferences rather than against every source's claims"
 
 [clause."R99 §2.1"]
@@ -2243,23 +2243,23 @@ note = "the NWB and subject.json agree on every declared column for both animals
 
 [clause."R108 §3.1"]
 disposition = "applied"
-where = [{ part = "05", section = "3.4" }]
+where = [{ part = "05", anchor = "ew-source-declarations" }]
 note = "a build refuses where a passed-over row holds a non-null value in a column the preferred row leaves null, or the preferred source stages nothing; over declared columns only, metadata being schemaless. Bounded by §3.4: every preferred resource is metadata-scale, and core.clock_anchors at 754,222 rows carries no preference"
 
 [clause."R108 §3.2"]
 disposition = "applied"
-where = [{ part = "05", section = "3.4" }]
+where = [{ part = "05", anchor = "ew-source-declarations" }]
 note = "a build MUST NOT compose a row from more than one source; the merged row would be a fact no source stated, which is the inference R83 §2.2, R67 §2.4 and R105 §3.4 each refuse"
 
 [clause."R108 §3.3"]
 disposition = "applied"
-where = [{ part = "05", section = "3.4" }]
+where = [{ part = "05", anchor = "ew-source-declarations" }]
 note = "an [overrides] entry silences §3.1's refusal for the fact it names, a second use of R87 §2.5's table: there the recipe is authoritative over a source, here the preferred source over the one it displaced. Per fact, which is the granularity §3.1's refusal names"
 
 [clause."R108 §3.4"]
 disposition = "applied"
-where = [{ part = "05", section = "3.3" }]
-note = "a preference MUST NOT name a resource only one source produces; core.unit_electrodes is struck from recipe.PREFERRED, five entries becoming four, and one test enumerates the table against every adapter's PRODUCES so it cannot go stale again"
+where = [{ part = "05", anchor = "ew-recipe-ownership" }]
+note = "a preference MUST NOT name a resource only one source produces; a build refuses a recipe [preference] entry that arbitrates nothing, and holds none of its own (R133 §3.1)"
 
 [clause."R109 §2.1"]
 disposition = "rationale"
@@ -2414,8 +2414,8 @@ where = [
     { part = "04", section = "5.5" },
     { part = "05", section = "2" },
     { part = "05", section = "3.2" },
-    { part = "05", section = "3.4" },
-    { part = "05", section = "3.5" },
+    { part = "05", anchor = "ew-source-declarations" },
+    { part = "05", anchor = "ew-recipe-check" },
     { part = "05", section = "4.2" },
     { part = "05", section = "4.3" },
     { part = "05", section = "5.3" },
@@ -2519,13 +2519,13 @@ note = "35 resources produced, 8 contested, 2 needing arbitration, which no adap
 disposition = "applied"
 where = [
   { part = "03", section = "11.2", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
-  { part = "05", section = "3.4", note = "the four facts an adapter declares, one of them the values a build supplies" },
+  { part = "05", anchor = "ew-source-declarations", note = "the four facts an adapter declares, one of them the values a build supplies" },
 ]
 note = "the supply contract; Part 07 §4 keeps the reference spelling. One sentence of it is gone: R116 §3.1 replaced the channel the object crosses by, and the rest of the clause stands"
 
 [clause."R115 §3.2"]
 disposition = "applied"
-where = [{ part = "05", section = "3.3", note = "a preference is declared in the recipe and a build holds none of its own" }]
+where = [{ part = "05", anchor = "ew-recipe-ownership", note = "a preference is declared in the recipe and a build holds none of its own" }]
 
 [clause."R115 §3.3"]
 disposition = "applied"
@@ -2546,7 +2546,7 @@ where = [{ part = "05", section = "3.9", note = "the in-process opt-in is the re
 disposition = "applied"
 where = [
   { part = "03", section = "11.3", note = "a delivery's column set is a statement, and what a build settles on arrival" },
-  { part = "07", section = "4", note = "the return type stays records, and the conversion that keeps a column" },
+  { part = "07", anchor = "ew-reference-object-model", note = "the return type stays records, and the conversion that keeps a column" },
 ]
 
 [clause."R115 §3.7"]
@@ -2561,7 +2561,7 @@ where = [{ part = "03", section = "11.3", note = "an array crosses as a referenc
 disposition = "applied"
 where = [
   { part = "03", section = "11.6", note = "the retry rendezvous, and that an adapter binds only when it can answer" },
-  { part = "07", section = "4", note = "a protocol is named by a constant the implementation exports" },
+  { part = "07", anchor = "ew-reference-object-model", note = "a protocol is named by a constant the implementation exports" },
 ]
 note = "that a writer ships each end and that using it is nobody's condition of conformance is Part 03 §11.1's group plus this"
 
@@ -2583,9 +2583,9 @@ where = [
 [clause."R115 §3.12"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.5", note = "the declaration document, its keys, and what a build refuses one for" },
-  { part = "05", section = "3.4", note = "the four facts, and that an adapter a build cannot import publishes them" },
-  { part = "05", section = "3.5", note = "the refusals a recipe check makes against a declaration" },
+  { part = "03", anchor = "ew-adapter-declaration-document", note = "the declaration document, its keys, and what a build refuses one for" },
+  { part = "05", anchor = "ew-source-declarations", note = "the four facts, and that an adapter a build cannot import publishes them" },
+  { part = "05", anchor = "ew-recipe-check", note = "the refusals a recipe check makes against a declaration" },
   { part = "09", section = "5.8", note = "`stated` carries the values behind the fields a source declares it states" },
 ]
 
@@ -2736,12 +2736,12 @@ note = "waveforms needs an option naming the sorter's label column and base NWB 
 
 [clause."R119 §3.1"]
 disposition = "applied"
-where = [{ part = "03", section = "11.2" }, { part = "07", section = "4" }]
+where = [{ part = "03", section = "11.2" }, { part = "07", anchor = "ew-reference-object-model" }]
 note = "an adapter MUST declare in accepts every option it reads and can be constructed without and in needs every value it cannot, MUST NOT name one option in both or a term in accepts, and MUST apply its own default where the recipe sets no value; Part 07 §4 carries the reference spelling ACCEPTS"
 
 [clause."R119 §3.2"]
 disposition = "applied"
-where = [{ part = "03", section = "11.2" }, { part = "05", section = "3.5" }]
+where = [{ part = "03", section = "11.2" }, { part = "05", anchor = "ew-recipe-check" }]
 note = "a build MUST supply an option the recipe sets and the adapter names in either list, MUST refuse a recipe setting an option the adapter names in neither, naming the source and the option, before any source is opened, and MUST NOT require a recipe to set one named in accepts"
 
 [clause."R119 §3.3"]
@@ -2751,7 +2751,7 @@ note = "a build MUST NOT supply an option the adapter names in neither list, inc
 
 [clause."R119 §3.4"]
 disposition = "applied"
-where = [{ part = "03", section = "11.5" }, { part = "05", section = "3.4" }, { part = "05", section = "3.5" }]
+where = [{ part = "03", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }]
 note = "the declaration document carries accepts beside needs, a build MUST read a document without it as an adapter accepting no option, and MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four"
 
 [clause."R120 §3.1"]
@@ -3310,3 +3310,28 @@ note = "a report states every verdict and each finding's subject; no report sche
 disposition = "applied"
 where = [{ part = "09", anchor = "ew-extension-verdicts" }]
 note = "an extension's findings never change core's verdict; a consumer may read core from a packet whose extension fails"
+
+[clause."R133 §3.1"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-ownership" }, { part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }]
+note = "a [preference] entry names a source kind and a reason; the preferred source owns the resource, and a build holds no preference of its own"
+
+[clause."R133 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }, { part = "03", anchor = "ew-adapter-declaration-document" }]
+note = "an adapter declares the resources it supplies only in part, each one it produces; the document key is contributes"
+
+[clause."R133 §3.3"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-source-declarations" }]
+note = "an entry without owns contributes what its adapter supplies in part and owns the rest no owns or preference places elsewhere"
+
+[clause."R133 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-purpose" }, { part = "05", anchor = "ew-recipe-check" }, { part = "05", anchor = "ew-validation-normative-references" }]
+note = "a recipe is TOML 1.0 whose decoded form satisfies registry/recipe.schema.json, refused before any source opens where it fails"
+
+[clause."R133 §3.5"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-purpose" }]
+note = "a recipe lists a kind once, and a build names a source by its kind"
