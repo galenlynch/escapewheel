@@ -158,7 +158,7 @@ def listing(uri: str) -> Listing:
             return Listing((Member("", root.stat().st_size),), root.stat().st_size)
         if not root.is_dir():
             raise StoreUnreachable(f"{uri} does not exist")
-        found = [Member(str(f.relative_to(root)), f.stat().st_size) for f in root.rglob("*") if f.is_file()]
+        found = [Member(f.relative_to(root).as_posix(), f.stat().st_size) for f in root.rglob("*") if f.is_file()]
     else:
         filesystem, path = _filesystem(uri)
         try:
