@@ -1130,7 +1130,7 @@ other fields the column requires or permits.
 | `enum` | for closed vocabularies | §9.3 |
 | `resolves`, `discriminates`, `positions_in`, `discriminates_via` | as applicable for discriminators | §8.3 |
 | `unit`, `unit_from`, `clock_from` | where applicable | §8.4 |
-| `authority` | where one nomenclature covers the column | §9.3 |
+| `authority` | where named nomenclatures cover the column | §9.3 |
 | `description` | for an open vocabulary | §9.3 |
 
 A description MUST NOT contradict or override a machine declaration. Concise, non-duplicative
@@ -2095,7 +2095,7 @@ selection and cross-file ordering; the present `parquet` interface is one object
 
 ### 5.3 Ordering
 
-A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where the registry declares no sort for a table, the order required is its primary key's. A validator MUST report a departure as an **error**.
+A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where §5.4 gives no order for a table, the order required is its primary key's. A validator MUST report a departure as an **error**.
 
 Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means Part 02 §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (Part 02 §10.3).
 
@@ -2105,7 +2105,7 @@ Where the scan finds a departure, uniqueness MUST be settled by aggregate rather
 
 A reader MUST NOT depend on stored order for correctness. Establishing the order is the validator's work, and a reader that assumed it would be trusting a property of the profile rather than of the logical standard.
 
-One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST`; Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes exactly as the old override did.
+One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST`; Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes.
 
 ### 5.4 The overriding orders
 
@@ -2121,8 +2121,8 @@ A writer **SHOULD** start a new row group at each bucket boundary. A group cut a
 ### 5.5 The Parquet floor
 
 A reader MUST support footer-reported compressions `UNCOMPRESSED`, `SNAPPY`, `GZIP`, and `ZSTD`;
-encodings `PLAIN`, `RLE`, `RLE_DICTIONARY`, and `DELTA_BINARY_PACKED`; data-page types `DATA_PAGE`
-and `DATA_PAGE_V2`; and no Parquet modular encryption. A packet writer MUST keep every written
+encodings `PLAIN`, `RLE`, `RLE_DICTIONARY`, and `DELTA_BINARY_PACKED`; and data-page types
+`DATA_PAGE` and `DATA_PAGE_V2`, in a file whose footer and columns are not encrypted. A packet writer MUST keep every written
 table within that same floor and SHOULD use Zstd. It MUST configure its page type and absence of
 encryption before writing, inspect the footer afterwards, and refuse an outside-floor compression
 or encoding. `PLAIN_DICTIONARY` is valid upstream but outside this writer floor.
@@ -2176,7 +2176,7 @@ precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE
 
 Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null.
 
-NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches 30 of the registry's 330 columns and none of the rest, and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
+NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches the registry's float columns and none of the rest, and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
 
 A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null. Where the reason for the absence matters, core records the fact that distinguishes it rather than encoding the reason in the value: a run's `scope` distinguishes an undeterminable scope from an unambiguous one, and `normalized_label` is null where a source's label has no honest projection.
 
@@ -2435,7 +2435,7 @@ The wanted set is a term a build supplies and an adapter MAY act on. A build set
 
 A delivery carries one table per resource asked for. Which columns that table holds is a statement: an adapter MUST deliver a column wherever any row of that resource carries a value, and an absent column says the source produced no value for it in any row, which is Part 02 §5's presence and nothing else. A build MUST NOT read an absent column as saying anything more.
 
-An adapter MUST hand over identifiers as the names its source used and never as numbers, because a writer mints every assigned identifier packet-wide and the numbers do not exist until it has (Part 05 §8). Types, column order, numbering and the declared sort are the build's: it holds the registry and settles all four on arrival.
+An adapter MUST hand over identifiers as the names its source used and never as numbers, because a writer mints every assigned identifier packet-wide and the numbers do not exist until it has (Part 05 §4.3). Types, column order, numbering and the declared sort are the build's: it holds the registry and settles all four on arrival.
 
 A resource an adapter owns and has no rows for MUST arrive empty rather than not arriving. An empty delivery states that the source had nothing to say; a resource that does not arrive states that the run failed, and a build that cannot tell them apart cannot report either.
 
@@ -4265,7 +4265,7 @@ shows why the others should be:
 | v2 zstd, v2 blosc-zstd-shuffle | reads | reads |
 
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
-changing to show it. That is what Part 03 §6.1's per-version codec floor exists to state as a rule,
+changing to show it. That is what Part 03 §6.4's per-version reader floor exists to state as a rule,
 and what this table exists to explain.
 
 <!-- END 10_performance_notes.md -->

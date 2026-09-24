@@ -209,5 +209,5 @@ shows why the others should be:
 | v2 zstd, v2 blosc-zstd-shuffle | reads | reads |
 
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
-changing to show it. That is what Part 03 §6.1's per-version codec floor exists to state as a rule,
+changing to show it. That is what Part 03 §6.4's per-version reader floor exists to state as a rule,
 and what this table exists to explain.

@@ -26,7 +26,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `session_id` | int32 | **required** | — | Session ID. |
 | `array_asset_id` | int32 | **required** | — | Stable array asset ID. |
 | `resource_id` | string | **required** | free | The packet resource ID of the catalogued payload. |
-| `array_asset_name` | string | **required** | free | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `array_asset_name` | string | **required** | free | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `semantic_type` | string | nullable | open | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 §3.17). |
 | `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
 | `clock_id` | int32 | nullable | — | Clock for time axis. |
@@ -111,7 +111,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `session_id` | int32 | **required** | — | Session ID. |
 | `array_asset_id` | int32 | **required** | — | Stable array asset ID. |
 | `resource_id` | string | **required** | free | The packet resource ID of the catalogued payload. |
-| `array_asset_name` | string | **required** | free | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `array_asset_name` | string | **required** | free | What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `semantic_type` | string | nullable | open | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 §3.17). |
 | `band` | string | nullable | open; reserving `wideband`, `ap`, `lfp` | Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split. |
 | `clock_id` | int32 | nullable | — | Clock for time axis. |
@@ -337,7 +337,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `clock_id` | int32 | **required** | — | Stable clock ID. |
-| `clock_name` | string | **required** | free | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `clock_name` | string | **required** | free | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `tick_rate_hz` | float64 | nullable | — | Tick rate as float, required unless exact tick rate provided. |
 | `tick_rate_num` | int64 | nullable | — | Exact rational numerator. |
 | `tick_rate_den` | int64 | nullable | — | Exact rational denominator. |
@@ -416,7 +416,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `curation_id` | int32 | **required** | — | Stable curation ID. |
-| `curation_name` | string | nullable | free | What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `curation_name` | string | nullable | free | What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `sorting_run_id` | int32 | **required** | — | Sorting run ID. |
 | `curator` | string | nullable | free | Curator. |
 | `curation_tool` | string | nullable | free | Tool. |
@@ -442,7 +442,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session if device record is session-scoped. |
 | `device_id` | int32 | **required** | — | Stable device ID. |
-| `device_name` | string | **required** | free | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `device_name` | string | **required** | free | What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `manufacturer` | string | nullable | open | The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers. |
 | `model` | string | nullable | free | Model. |
 | `firmware_version` | string | nullable | free | The firmware the instrument was running, verbatim as its source stated it. |
@@ -511,7 +511,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `electrode_id` | int32 | **required** | — | Stable electrode ID. |
-| `electrode_name` | string | nullable | free | What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `electrode_name` | string | nullable | free | What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `probe_id` | int32 | nullable | — | Probe ID. |
 | `local_electrode_label` | string | nullable | free | Opaque source label; undefined base, not an offset. |
 | `local_channel_label` | string | nullable | free | Opaque source label; undefined base, not an offset. |
@@ -552,7 +552,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `event_stream_id` | int32 | **required** | — | Stable ID. |
-| `event_stream_name` | string | **required** | free | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `event_stream_name` | string | **required** | free | What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `event_type` | string | **required** | open | What kind of event this stream emits. A stream emits one kind, so a source emitting several on one channel is written as several streams. |
 | `detail_kind` | string | nullable | resolves optional | A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (Part 02 §8.3). Resolved against `core.events`' key by Part 02 §8.3's shared key, through the reference `discriminates_via` names. |
 | `device_id` | int32 | nullable | — | The device that produced it, where one is identified. |
@@ -624,7 +624,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `session_id` | int32 | **required** | — | Session ID. |
 | `media_asset_id` | int32 | **required** | — | Stable media asset ID. |
 | `resource_id` | string | **required** | free | The packet resource ID of the catalogued payload. |
-| `media_asset_name` | string | **required** | free | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `media_asset_name` | string | **required** | free | What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `semantic_type` | string | nullable | open | What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 §3.17). |
 | `device_id` | int32 | nullable | — | The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (Part 01 §3.5). |
 | `pts_rate_num` | int64 | nullable | — | Presentation timestamps per second in this asset's container: numerator. |
@@ -702,7 +702,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `probe_id` | int32 | **required** | — | Stable probe ID. |
-| `probe_name` | string | nullable | free | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `probe_name` | string | nullable | free | What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `device_id` | int32 | nullable | — | Associated device. |
 | `probe_type` | string | nullable | open | The probe's model, as the manufacturer names it: `Neuropixels 1.0`. |
 | `manufacturer` | string | nullable | open | The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers. |
@@ -740,7 +740,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID if session-scoped. |
 | `processing_run_id` | int32 | **required** | — | Stable processing run ID. |
-| `processing_run_name` | string | nullable | free | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `processing_run_name` | string | nullable | free | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `activity_type` | string | **required** | open | What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. A pipeline names its own. |
 | `scope` | string | nullable | free | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Read only with the `scope_kind` beside it, which names the table the value keys into. |
 | `scope_kind` | string | nullable | resolves optional | The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
@@ -789,7 +789,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | Column | Type | Presence | Declares | Description |
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Stable session ID. |
-| `session_name` | string | nullable | free | What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `session_name` | string | nullable | free | What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `subject_id` | int32 | **required** | — | Subject ID. |
 | `session_start_time` | timestamp | **required** | — | Session start time if known; if unknown use explicit null only in non-strict test packets. |
 | `session_end_time` | timestamp | nullable | — | When the session ended, UTC. Metadata, not derived from the tables. |
@@ -844,7 +844,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `sorting_run_id` | int32 | **required** | — | Stable sorting run ID. |
-| `sorting_run_name` | string | nullable | free | What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `sorting_run_name` | string | nullable | free | What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `probe_id` | int32 | nullable | — | Probe ID. |
 | `sorter_name` | string | nullable | free | Sorter name. |
 | `sorter_version` | string | nullable | free | Sorter version. |
@@ -869,7 +869,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | Column | Type | Presence | Declares | Description |
 |---|---|:---:|---|---|
 | `source_file_id` | int32 | **required** | — | Stable source file ID. |
-| `source_file_name` | string | nullable | free | What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `source_file_name` | string | nullable | free | What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `uri` | string | **required** | free | Source URI/path. |
 | `format` | string | nullable | open | The file's format in the producer's own terms, which this specification does not constrain. |
 | `sha256` | string | nullable | free | Checksum. |
@@ -905,7 +905,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | Column | Type | Presence | Declares | Description |
 |---|---|:---:|---|---|
 | `subject_id` | int32 | **required** | — | Stable subject ID. |
-| `subject_name` | string | nullable | free | What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `subject_name` | string | nullable | free | What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `species` | string | nullable | open; [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- Part 01 §3.4 admits a preparation, and a phantom or a simulation has no species. |
 | `strain` | string | nullable | open; [MGI](https://www.informatics.jax.org/), [RGD](https://rgd.mcw.edu/) | The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`. |
 | `sex` | string | nullable | closed: `male`, `female`, `hermaphrodite`, `other`; [HL7 FHIR administrative gender](https://hl7.org/fhir/valueset-administrative-gender.html) | The subject's sex. Null where the source states none, states it unknown, or describes a preparation that has none. |
@@ -1028,7 +1028,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `unit_id` | int32 | **required** | — | Stable unit ID. |
-| `unit_name` | string | nullable | free | What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (Part 05 §8). |
+| `unit_name` | string | nullable | free | What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `probe_id` | int32 | nullable | — | Probe ID. |
 | `sorting_run_id` | int32 | **required** | — | Sorting run ID. |
 | `curation_id` | int32 | **required** | — | Curation ID. |

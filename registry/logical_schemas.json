@@ -61,7 +61,7 @@
             "type": "string",
             "presence": "required",
             "role": "data",
-            "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -538,7 +538,7 @@
             "type": "string",
             "presence": "required",
             "role": "data",
-            "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -1658,7 +1658,7 @@
             "type": "string",
             "presence": "required",
             "role": "data",
-            "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -2046,7 +2046,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -2196,7 +2196,7 @@
             "type": "string",
             "presence": "required",
             "role": "data",
-            "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -2563,7 +2563,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -2748,7 +2748,7 @@
             "type": "string",
             "presence": "required",
             "role": "data",
-            "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -3089,7 +3089,7 @@
             "type": "string",
             "presence": "required",
             "role": "data",
-            "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -3453,7 +3453,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -3642,7 +3642,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -3883,7 +3883,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -4148,7 +4148,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `sorting_run_id` stands for: the identifier a source or an earlier packet used for this sorting run. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -4288,7 +4288,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -4454,7 +4454,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {
@@ -5086,7 +5086,7 @@
             "type": "string",
             "presence": "nullable",
             "role": "data",
-            "description": "What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (Part 05 \u00a78).",
+            "description": "What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
             "vocabulary": "free"
           },
           {

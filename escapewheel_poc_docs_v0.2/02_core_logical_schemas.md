@@ -203,7 +203,7 @@ other fields the column requires or permits.
 | `enum` | for closed vocabularies | §9.3 |
 | `resolves`, `discriminates`, `positions_in`, `discriminates_via` | as applicable for discriminators | §8.3 |
 | `unit`, `unit_from`, `clock_from` | where applicable | §8.4 |
-| `authority` | where one nomenclature covers the column | §9.3 |
+| `authority` | where named nomenclatures cover the column | §9.3 |
 | `description` | for an open vocabulary | §9.3 |
 
 A description MUST NOT contradict or override a machine declaration. Concise, non-duplicative

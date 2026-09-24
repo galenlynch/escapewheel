@@ -2368,7 +2368,7 @@ def build() -> dict:
                 "nullable",
                 f"What `{column['name']}` stands for: the identifier a source or an earlier "
                 f"packet used for this {base.replace('_', ' ')}. The only bridge between two "
-                "packets that numbered it differently (Part 05 §8).",
+                "packets that numbered it differently (Part 05 §4.3).",
             )
             spec["columns"].insert(spec["columns"].index(column) + 1, entry)
 
@@ -2792,7 +2792,7 @@ def build() -> dict:
         "clock_from"
     ] = "core.event_streams.clock_id"
 
-    # One name column per table. The generated `<base>_name` keeps Part 05 §8's meaning and takes
+    # One name column per table. The generated `<base>_name` keeps Part 05 §4.3's meaning and takes
     # the literal `name` column's presence before the literal column is removed.
     for resource, spec in tables.items():
         target = merged_name_target(resource, spec)
