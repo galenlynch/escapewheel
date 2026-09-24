@@ -196,6 +196,7 @@ disk, so it is scan parallelism rather than skipped round trips.
 The write side is the other way: a re-sorting rewrites the whole file where partitioning writes one
 member. No session has yet had a second sorting.
 
+<a id="ew-zarr-codec-floor-evidence" data-spec-anchor="canonical"></a>
 ## 5. The Zarr codec floor is version-specific
 
 Measured in `conformance/zarr-probe/` against **zarr-python 3.3.0, Zarr.jl 0.10.2 and Julia

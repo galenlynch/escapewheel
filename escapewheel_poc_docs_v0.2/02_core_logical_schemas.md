@@ -769,6 +769,7 @@ the descriptor ID is null.
 
 ## 10. Validation rules
 
+<a id="ew-tier-1-rules" data-spec-anchor="canonical"></a>
 ### 10.1 Tier 1: generated from structure
 
 A validator MUST generate, from the declaration alone: required-column non-null checks, foreign-key anti-joins, and closed-vocabulary membership. A nullable foreign key is guarded with a null test.

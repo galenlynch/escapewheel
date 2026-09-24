@@ -109,6 +109,7 @@ A resource the packet does not own MUST set `external: true`. A resource whose `
 
 Referencing is expected for large resources. Externalizing a table costs more than externalizing an array: its validation rules cannot run at all while it is unreachable.
 
+<a id="ew-external-resource-record" data-spec-anchor="canonical"></a>
 ### 5.2 What is recorded
 
 `sha256`, `size_bytes`, and `verified_at` record what was true when the resource was checked. They are not a claim about now.
@@ -138,6 +139,7 @@ require a validation receipt or physical inspection of every resource. Before ex
 values, a reader inspects only the metadata needed for the selected resource and fails that
 resource specifically when support is absent.
 
+<a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources
 
 Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — `sha256` and `size_bytes` are **defined over its members**, not undefined:

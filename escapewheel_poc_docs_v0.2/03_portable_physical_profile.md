@@ -229,6 +229,7 @@ packet is conforming whichever it uses.
 Wall-clock timestamps MUST be Parquet `TIMESTAMP` with `isAdjustedToUTC=true` and `MICROS`
 precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE`, int32 days since the Unix epoch.
 
+<a id="ew-one-null" data-spec-anchor="canonical"></a>
 ### 5.6 One null
 
 Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null.
@@ -411,6 +412,7 @@ A packet MAY declare its own retention, and a writer SHOULD emit one: how many s
 
 `packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile.
 
+<a id="ew-owned-resource-digests" data-spec-anchor="canonical"></a>
 ## 10. Checksums
 
 A writer records a `sha256` over each packet-owned resource by default. This is the one case where a digest verifies what the packet itself claims, and it is cheap: whole-file, one file per resource.

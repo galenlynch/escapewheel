@@ -262,6 +262,7 @@ A build MUST report everything the protocol it used carries about a failure — 
 <a id="ew-import-validation" data-spec-anchor="canonical"></a>
 ## 5. Validate
 
+<a id="ew-tier-1-validation" data-spec-anchor="canonical"></a>
 ### 5.1 Tier 1
 
 Generated from structure (Part 02 §10.1): required-column non-null, primary-key uniqueness, foreign-key anti-joins, closed-vocabulary membership.
@@ -481,6 +482,7 @@ registry is the data-driven route for a resource core does not define.
 
 A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only a writer. Where it also checks writer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately, as it already does for core and extension verdicts.
 
+<a id="ew-writer-acceptance-criteria" data-spec-anchor="canonical"></a>
 ## 11. Minimum acceptance criteria
 
 A writer conforms when it:

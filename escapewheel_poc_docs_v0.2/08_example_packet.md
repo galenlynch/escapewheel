@@ -125,6 +125,7 @@ SELECT count(*) FROM analysis_spike_events
 WHERE t_tick BETWEEN ? AND ?;
 ```
 
+<a id="ew-example-acceptance-checklist" data-spec-anchor="canonical"></a>
 ## 5. Acceptance checklist
 
 A packet of this shape is conforming when:
