@@ -6,7 +6,7 @@
 | **Opened** | 2026-09-24 |
 | **Based on** | `cc6209e572d48f3b1e86a4895b64264fd7dc6d34` |
 | **Decision domain** | specification |
-| **Affects** | Part 03 §6.4; the physical-profile descriptor's `zarr.v3.reader_floor` and its schema; Part 05 §5.3; Part 10 §5; the reader's array codec reporting and `UnsupportedCodecError`; the validator's physical checks; the writer's residual codec-name helpers |
+| **Affects** | Part 03 §6.4; the physical-profile descriptor's `zarr.v3.reader_floor` and its schema; Part 05 §5.3; Part 10 §5; the validator's physical checks |
 
 ## 1. Problem
 
@@ -27,11 +27,6 @@ floor would distinguish nothing.
 validator check each available resource's codecs, but no implementation compares them with a floor,
 and [R129 §3.8](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md#38-physical-assessment-uses-available-resource-metadata)
 left the comparison's finding IDs and severity to a later revision.
-
-[Part 03 §6.1](../../escapewheel_poc_docs_v0.2/03_portable_physical_profile.md#ew-array-version)
-has a reader report missing support for the one resource it cannot decode, and the reference reader
-lets a library exception escape instead. Its codec listing also discards the order and nesting a
-floor comparison needs.
 
 The floor cannot admit either feature the writer uses in its current shape. A floor entry is a list
 of bare codec names, so it cannot state Blosc's `cname` or the pipeline nested inside a shard.
@@ -96,31 +91,14 @@ cost stands: a new implementation must bind that library or reimplement it to co
 
 ### 2.3 No implementation compares a resource with a floor
 
-- The validator's `_check_one_array` reads the stored codec names only to reject `transpose`. No
-  validator code reads either floor from the descriptor. The reader's profile module offers
-  `parquet_floor()` and no Zarr floor accessor.
+- The reference validator reads stored codec names only to reject `transpose`, and reads neither
+  floor from the descriptor.
 - The writer checks each packet-owned table's footer against the Parquet floor before committing.
   The validator reads Parquet footers only for statistics.
 - An unresolved external resource yields one `info` finding, `external.physical_unassessed`, listing
   every such resource and attributed to the packet.
 - PyArrow 25.0.1's footer API reports each column chunk's compression and encodings, but not its
   data-page types.
-
-### 2.4 The reader's codec reporting drops the resource and the pipeline's shape
-
-- `UnsupportedCodecError` is exported and never raised.
-- `ArrayResource.open` catches only `ImportError`. For a pipeline naming an unregistered codec,
-  zarr-python 3.3.0 raises `zarr.errors.UnknownCodecError: Unknown codec: 'example.unknown'` when
-  the array opens, so the caller receives a library exception that does not name the resource.
-- `ArrayResource.codecs` and `resources._codec_names` drop `bytes`, flatten a shard's inner
-  pipeline, and omit its index pipeline. For v2 they list the compressor before the filters, the
-  reverse of the encoding order the v3 listing follows. The property's docstring calls the listing
-  comparable with "what the manifest claims", although
-  [Part 04 §6](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-packet-codecs) no longer
-  lets a manifest carry codecs.
-- The writer's `declared_codecs` and `written_codecs` still derive manifest-style name lists, and
-  only tests call them. `ExternalArray` still carries `physical_profile` and `codecs`; the LFP
-  adapter fills them, and the delivery serializer drops them.
 
 ## 3. Desired outcome and constraints
 
@@ -136,9 +114,7 @@ A successful resolution:
   with no portability verdict of its own;
 - has a validator report a packet-owned table outside the Parquet writer floor as a warning, since
   [Part 05 §10](../../escapewheel_poc_docs_v0.2/05_validation_and_import.md#ew-conformance-classes)
-  bars reporting a packet non-conforming for an obligation that binds only a writer; and
-- has a reader fail one selected resource by naming the codec it cannot decode, whatever the floor
-  says.
+  bars reporting a packet non-conforming for an obligation that binds only a writer.
 
 A resolution also preserves:
 
@@ -234,24 +210,6 @@ Under this direction, a validator:
   requested resolution mode of
   [Part 04 §5.3](../../escapewheel_poc_docs_v0.2/04_packet_catalog.md#ew-external-resource-verification).
 
-### 4.4 Reader reporting
-
-**Keep the name tuple and fix it** by retaining `bytes` and nesting. Rejected: the tuple would still
-lose the configuration the preferred floor discriminates on.
-
-**Expose the stored pipeline, and share one matcher (preferred direction).**
-
-- `ArrayResource` returns the format-owned pipeline unchanged: v3 `codecs`, or v2 `filters` and
-  `compressor`.
-- The reader's profile module offers one floor matcher, which the validator and any other caller
-  use.
-- `open` raises `UnsupportedCodecError`, naming the resource and the codec, when the Zarr library
-  cannot build the pipeline.
-- The reader never refuses or warns over floor membership alone, since it may support more.
-
-With the pipeline exposed, the writer's `declared_codecs`, `written_codecs`, and the `ExternalArray`
-fields of §2.4 have no consumer left and can be removed.
-
 ## 5. Impact sketch
 
 | surface | effect |
@@ -262,11 +220,11 @@ fields of §2.4 have no consumer left and can be removed.
 | packet manifest and schemas | Unchanged; no packet field is added. |
 | validation and import | Affected: Part 05 §5.3 names the finding and its levels. Part 05 §9.1, Part 05 §9.5, and Part 05 §10 are applied, not changed. |
 | extension registries | Unchanged; extension resources derive interfaces through the same mapping. |
-| reader, writer, validator, adapters | Affected: the reader and validator change as §§4.3–4.4 describe, and the writer loses its stale helpers. Writer output is unchanged, and adapters are unchanged because their codec choices stay valid. |
+| reader, writer, validator, adapters | Affected: the reference validator reports the finding of §4.3. A reader's obligations are unchanged: it may support more than the floor, and Part 03 §6.1 already has it report the codec it cannot decode. Writer output and adapters are unchanged, because their codec choices stay valid. |
 | existing packets | Unchanged; the writer's default and sharded arrays fall inside the new floor, and arrays using `numcodecs.delta` draw an `info` finding. |
-| conformance fixtures and tests | Affected: descriptor-schema and checker cases for the new shape; matcher vectors from real v2 and v3 metadata, including every §2.2 pipeline; validator findings for each level and ownership; per-resource reader failure. |
+| conformance fixtures and tests | Affected: descriptor-schema and checker cases for the new shape; matcher vectors from real v2 and v3 metadata, including every §2.2 pipeline; validator findings for each level and ownership. |
 | revision tooling | Unchanged; the ledger and evidence tools already cover a specification change to Part 03 and Part 05. |
-| publications and documentation | Affected: Part 10 §5's table gains the five-implementation measurement, the added probe scripts are committed under `conformance/zarr-probe/`, and the TODO entry on reader codec reporting closes. |
+| publications and documentation | Affected: Part 10 §5's table gains the five-implementation measurement, the added probe scripts are committed under `conformance/zarr-probe/`. |
 
 Two open changes touch neighbouring text without conflict: the build-order draft retitles Part 05
 §5, the parent of Part 05 §5.3, and the digest proposal rewrites the Part 04 §5.3 levels this
