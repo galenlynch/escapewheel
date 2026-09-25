@@ -91,6 +91,11 @@ dense array:
 | task log | raw `behavior/…/behavior/python_gui_log.txt` | 1 | 7,572,344 |
 | rig and session snapshots | raw `metadata-dir/`, `ecephys_clipped/metadata/` | JSON | 5,780 to 36,970 each |
 
+Their names carry what no catalog column records: `QC.pdf` names a report, and the sorting figures
+sit in one directory per probe. No such name is a resource ID, which Part 04's manifest-entry table
+constrains to `^[a-z][a-z0-9_]*\.[a-z0-9_.-]+$`, a namespace and a dot with no capitals or spaces,
+so a packet could bind a payload by its name only after renaming it.
+
 No registry declares any of them. A QC figure is not a media asset in Part 01 §3.18's sense, an
 image or video whose timing is carried in tables, and asserts no fact, so the fitting declaration is
 an extension's opaque catalog family with `content_class: "documentation"`, which Part 02 §2.6
@@ -133,6 +138,8 @@ preserves the following:
 - **The declaration decides opacity.** The build learns that a resource is opaque from the
   checked declaration its catalog row resolves to. A file name, suffix or directory never selects
   a kind or an interface (Part 03 §2).
+- **Names kept.** A payload's file or directory name, and every name inside a directory, reaches
+  the packet as the source spelled it, since it may carry meaning no catalog column records.
 - **Staging before publication.** The bytes land in a location under the staging area that the
   build supplies empty (Part 05 §2), are validated with the whole staged packet, and are promoted
   by a rename within one filesystem only after a `passed` verdict and under the promotion record
@@ -199,43 +206,57 @@ waveform adapter's alone. This is open question 1.
 
 ### 4.4 Binding and naming
 
-**One entry per resource, named by the catalog row's `resource_id`, optionally followed by a
-suffix** (preferred direction). An entry is either one regular file, which is a single object, or
-one directory of regular files, which is a prefix. The suffix, such as `.mp4`, keeps the name usable
-by tools that go by extension and carries no meaning to a build or reader. A resource ID may itself
-contain dots, so the build binds an entry to the row whose `resource_id` equals its name or is
-followed in it by `.`, and refuses an entry that could bind two rows.
+**A directory named exactly by the catalog row's `resource_id`, holding the payload under its own
+name** (preferred direction). The adapter creates `<resource_id>/` in the location and places in it
+one entry: a regular file, which is a single-object resource, or a directory of regular files, which
+is a prefix. The build binds the entry to the row whose `resource_id` equals the directory's name,
+and the packet holds it at `opaque/<resource_id>/<name>`. The manifest URI names the entry itself,
+with its name percent-encoded under RFC 3986, so a single object keeps its single-object digest
+rather than becoming a one-member prefix. The binding reads only a path segment that the
+resource-ID grammar already makes safe on every filesystem and object store, the payload's name is
+never parsed, and the binding crosses every protocol because it lies in the location rather than
+the stream.
 
-**The exact resource ID with no suffix.** Unambiguous, and leaves a packet holding
-`core.bottom_camera` where every tool expects `.mp4`. This is open question 2.
+**An entry named by the resource ID, optionally followed by a suffix.** Rejected: it renames every
+payload whose name carries meaning (§2.3), and a resource ID may contain dots, so a suffix needs a
+rule refusing an entry that could bind two rows.
 
-**A directory named by the resource ID holding the payload under any name.** Rejected: every
-single-object payload would become a one-member prefix, changing its digest form and its URI.
+**A mapping from resource ID to path, carried in the resource document or a new channel.**
+Rejected: the resource document describes referenced resources (§4.7), and a new channel would have
+to cross each protocol, where a directory name states the same mapping with nothing new crossing.
 
 Under the preferred direction, the build refuses:
 
-- an entry binding no catalog row;
+- anything in the location other than a directory whose name is a catalog row's `resource_id`;
+- a per-resource directory holding no entry, or more than one;
 - a catalog row bound by no entry and no referenced resource, or by more than one;
 - an entry whose row resolves to a declaration that is not opaque;
-- a symbolic link, or a directory holding one, since the packet would then own a pointer rather than
-  bytes; and
-- an empty directory, which is a prefix that does not exist (Part 04 §4.3).
+- a symbolic link anywhere in an entry, since the packet would then own a pointer rather than
+  bytes;
+- an entry directory holding no regular file, which is a prefix that does not exist (Part 04 §4.3);
+  and
+- a name that cannot be reproduced on another filesystem or object store, under open question 2.
 
-Each source writes into its own directory, as for arrays, so two sources delivering one name reach
-the build as two entries binding one row, which the second refusal catches.
+Each source writes into its own directory, as for arrays, so two sources delivering one resource ID
+reach the build as two entries binding one row, which the third refusal catches.
+
+Part 03 §3.1's `media/<media_asset_id>.<ext>` line becomes `opaque/<resource_id>/<name>`: an owned
+QC report is not media, and an assigned ID contradicts §11.3's binding by `resource_id`.
 
 ### 4.5 Digest, form and ownership
 
 **Part 03 §10 gains the opaque case** (preferred direction): a packet-owned opaque resource's
-`digest` covers its one object where it is a file, and its objects under Part 04 §4.3's prefix
-construction where it is a directory. The profile states in prose that an opaque resource may be
-packet-owned or external, which the descriptor cannot state for a kind with no interface.
+`digest` covers its one object where the entry is a file, and its objects under Part 04 §4.3's
+prefix construction, keyed relative to the entry, where the entry is a directory. The profile
+states in prose that an opaque resource may be packet-owned or external, which the descriptor cannot
+state for a kind with no interface.
 
 ### 4.6 In process
 
-**An adapter run in process may hand the build the payload's bytes instead of writing them, and the
-build writes them into the location** (preferred direction), as Part 03 §11.3 lets it hand an
-array's values over. Forbidding it would impose a write for a process boundary that is not there.
+**An adapter run in process may hand the build the payload's name and bytes, or for a prefix each
+object's relative key and bytes, instead of writing them, and the build writes them into the
+location under the same naming and refusals** (preferred direction), as Part 03 §11.3 lets it hand
+an array's values over. Forbidding it would impose a write for a process boundary that is not there.
 
 ### 4.7 What the resource document describes
 
@@ -249,8 +270,8 @@ schema's admission of an unmarked entry gains a stated consequence. An entry may
 **Record none** (preferred direction). A container identifies itself by its own bytes, Part 04 §6
 keeps self-describing physical facts out of the manifest, and R129 §3.9 keeps formats out of the
 profile. The cost is that a consumer learns a payload's format only by opening it or reading the
-suffix. Adding an IANA media type member to the manifest would change its schema and its version
-and give a writer a claim no validator checks against the bytes. This is open question 3.
+suffix its kept name carries. Adding an IANA media type member to the manifest would change its
+schema and its version and give a writer a claim no validator checks against the bytes. This is open question 3.
 
 ### 4.9 Family instances
 
@@ -266,25 +287,30 @@ declaration exists. This is open question 4.
 |---|---|
 | semantic prose | Unchanged; Part 01 §3.18's media asset keeps its meaning whoever owns the bytes. |
 | logical prose, registry declarations, rules | Unchanged; the route reads the existing `kind` and catalog binding, and no declaration changes. |
-| physical profiles | Affected: Part 03 §11's route list gains the owned opaque route; §11.2 gains the location term, or widens `array_location` under open question 1; §11.3 states the binding, naming, refusals and in-process hand-over; §10 states what an opaque digest covers; §2 says an opaque resource may be packet-owned; §3.1's `media/` line, like its `arrays/` line, names an entry by an assigned asset ID where §11.3 binds by `resource_id`. The descriptor and its schema are unchanged. |
+| physical profiles | Affected: Part 03 §11's route list gains the owned opaque route; §11.2 gains the location term, or widens `array_location` under open question 1; §11.3 states the binding, naming, refusals and in-process hand-over; §10 states what an opaque digest covers; §2 says an opaque resource may be packet-owned; §3.1's `media/` line becomes `opaque/<resource_id>/<name>`, and its `arrays/` line, which names an entry by an assigned asset ID where §11.3 binds by `resource_id`, is corrected with it. The descriptor and its schema are unchanged. |
 | packet manifest and schemas | The manifest schema is unchanged under §4.8. The delivery schema is generated from it, so refusing an unmarked resource-document entry is a Part 03 §11.3 rule the build applies, or a generator change requiring `external: true`. |
 | validation and import | Part 05 §2's delivery-location rule and §6's promotion already cover a new location; unchanged unless the draft cites the route. |
 | extension registries | Unchanged; an extension that declares an opaque catalog family gains the route without registry change. Part 09 §5.7's statement of how an extension's rows reach a build gains the owned opaque case. |
 | reader | Unchanged; R129 §3.9's listing of identity and location applies, and an owned entry's URI resolves under the packet root. |
-| writer | Affected: supply the new location, bind entries to catalog rows, apply the refusals, stage and digest owned opaque resources, accept bytes in process, refuse an unmarked resource-document entry. |
+| writer | Affected: supply the new location, bind entries to catalog rows by directory name, percent-encode kept names in URIs, apply the refusals, stage and digest owned opaque resources, accept bytes in process, refuse an unmarked resource-document entry. |
 | validator | Unchanged; §2.4's generic checks cover an owned opaque entry. |
 | adapters | The AIND `video` adapter can own a resource it now references, such as the clip, where a recipe option tells it to; its default stays referencing. |
 | existing packets | Unchanged in shape. The three built packets predate R128 and are rebuilt anyway; a rebuild may own media only where the recipe asks. |
-| conformance fixtures and tests | Affected: writer tests for each refusal in §4.4, a single-object and a prefix entry, each protocol and in process, and an unmarked resource-document entry; a packet fixture with an owned opaque single object and one with an owned opaque prefix, each checked for binding and digest. |
+| conformance fixtures and tests | Affected: writer tests for each refusal in §4.4, a single-object and a prefix entry, a name holding a space and capitals, each protocol and in process, and an unmarked resource-document entry; a packet fixture with an owned opaque single object and one with an owned opaque prefix, each checked for binding and digest. |
 | revision tooling | Unchanged. |
 | documentation | Affected: Part 07 §4's informative description of what an adapter writes, the writer's README, and the AIND `video` adapter's module text. |
 
 These cases distinguish the proposed rule from the current one:
 
-- an adapter writing `core.clip.mp4` into the location, with a `core.media_assets` row whose
-  `resource_id` is `core.clip`, yields a packet-owned entry whose digest is the file's single-object
-  value, where the current build ignores the file;
-- a directory of two PNG frames yields a prefix entry whose digest follows Part 04 §4.3;
+- an adapter writing `core.clip/clip.mp4` into the location, with a `core.media_assets` row whose
+  `resource_id` is `core.clip`, yields a packet-owned entry at `opaque/core.clip/clip.mp4` whose
+  digest is the file's single-object value, where the current build ignores the file;
+- an entry named `QC report.pdf` keeps that name on disk and records the URI
+  `opaque/<resource_id>/QC%20report.pdf`;
+- a directory of two PNG frames yields a prefix entry whose digest follows Part 04 §4.3, keyed by the
+  frames' names;
+- a file written directly into the location, or a per-resource directory holding two files, is
+  refused;
 - the same payload delivered over each protocol and in process yields the same entry;
 - the build refuses each case §4.4 lists, and an entry whose row names a dense-array catalog;
 - a resource-document entry without `external: true` is refused, where the current writer records
@@ -296,9 +322,12 @@ These cases distinguish the proposed rule from the current one:
    changes and an adapter declares only what it writes. The alternative, one widened and renamed
    term for every owned non-row resource, costs one term fewer and changes every declaration that
    names `array_location`.
-2. **Entry name.** Preferred: the resource ID, optionally followed by a suffix beginning with `.`,
-   with an entry that could bind two rows refused. The alternative, the exact resource ID, removes
-   the ambiguity rule and leaves files without the suffix tools expect.
+2. **Name restrictions.** Preferred: refuse only a name that cannot be reproduced elsewhere: one
+   that is not valid UTF-8, contains NUL or `/`, or is `.` or `..`, and two names in one directory
+   that differ only in case, which collide on a case-insensitive filesystem. Every other name,
+   spaces and non-ASCII included, is kept and percent-encoded in the URI. The alternative, a
+   portable character set such as POSIX's portable filename characters, renames any payload whose
+   name uses a space or a character outside it, which the names-kept constraint forbids.
 3. **Media type.** Preferred: none recorded; the payload describes itself. Recording one would add a
    manifest member and a schema version, and a claim nothing checks.
 4. **Family instances.** Preferred: out of this decision, since no declaration is a family and a
