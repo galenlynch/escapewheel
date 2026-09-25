@@ -450,6 +450,7 @@ unreachable external resource's physical state remains unassessed.
 Externalizing a table costs more than externalizing an array, because a table's validation rules
 cannot run at all while it is unreachable.
 
+<a id="ew-later-physical-profiles" data-spec-anchor="canonical"></a>
 ### 7.3 Iceberg later
 
 Iceberg is a later table-management profile, useful for table snapshots, schema and partition

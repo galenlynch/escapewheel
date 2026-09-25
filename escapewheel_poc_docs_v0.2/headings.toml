@@ -727,6 +727,12 @@ section = "9.4"
 title = "Scope of revalidation"
 aliases = []
 
+[anchor.ew-later-physical-profiles]
+part = "00"
+section = "7.3"
+title = "Iceberg later"
+aliases = []
+
 [anchor.ew-logical-column-naming]
 part = "02"
 section = "4"
