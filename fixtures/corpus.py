@@ -73,6 +73,8 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "outside_array_floor": ("info", "physical.outside_reader_floor"),
     "outside_table_floor": ("warning", "physical.outside_reader_floor"),
     "unresolved_externals": ("info", "external.physical_unassessed"),
+    "no_extracellular": None,
+    "sessions_only": None,
 }
 
 #: Packets whose expected finding is one per resource (Part 05 §5.3), and how many it must fire.

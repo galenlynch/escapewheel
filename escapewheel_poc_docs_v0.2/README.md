@@ -4,13 +4,14 @@ Informational entry point.
 
 ## 1. Orientation
 
-This document set describes a proof-of-principle portable representation of extracellular
-electrophysiology data as a small semantic and logical standard over commodity storage formats.
+This document set describes a proof-of-principle portable data packet: a small semantic and logical
+standard over commodity storage formats, whose packet mechanism confines no packet to a recording
+modality and whose core vocabulary targets extracellular electrophysiology.
 [Part 00 §1](00_architecture.md#ew-architecture-scope) defines its scope, and
 [Part 00 §9](00_architecture.md#ew-numbered-part-ownership) assigns the subject and status of
 every numbered part.
 
-The design tests whether neurophysiology data can be represented over commodity substrates:
+The design tests whether recorded data can be represented over commodity substrates:
 Parquet for tables, Zarr for dense arrays, standard media containers for media, and JSON for the
 manifest. **Escapewheel** is a placeholder name. The project does not require an NWB, HDMF, or PyNWB
 runtime; Part 00 defines the exact scope and exclusions.

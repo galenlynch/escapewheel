@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "revision": "R141",
+  "based_on": "3d124a9630793af9916e91a6bbd07e739fb36553",
+  "clauses": {
+    "R141 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-architecture-scope"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "no_extracellular"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "sessions_only"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "no reader, writer, validator, or adapter source or test reads or quotes the specification's scope or a content class's meaning"
+      },
+      "documentation": {
+        "paths": [
+          "README.md",
+          "escapewheel_poc_docs_v0.2/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R141 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-architecture-scope"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "no_extracellular"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "sessions_only"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "no reader, writer, validator, or adapter source or test reads or quotes the specification's scope or a content class's meaning"
+      },
+      "documentation": {
+        "paths": [
+          "README.md",
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    },
+    "R141 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-architecture-scope"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "the clause binds no actor and changes no verdict; where another modality's vocabulary is declared is checked by review of Part 00 §1"
+      },
+      "implementations": {
+        "unchanged": "no reader, writer, validator, or adapter source or test reads or quotes the specification's scope or a content class's meaning"
+      },
+      "documentation": {
+        "unchanged": "Part 09 and the extension guides already describe declaring an extension registry, and name no modality"
+      }
+    },
+    "R141 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-packet-content-classes"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-resource-content-class"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no content_class value or declaration changes, and no tool reads either table's meaning column, so the two rows are compared by review"
+      },
+      "implementations": {
+        "unchanged": "no reader, writer, validator, or adapter source or test reads or quotes the specification's scope or a content class's meaning"
+      },
+      "documentation": {
+        "unchanged": "registry/registry.schema.json enumerates the content_class values without stating their meanings, and no guide outside the specification quotes the core row"
+      }
+    }
+  }
+}

@@ -2,8 +2,8 @@
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
 four more conforming packets that record Part 04 §4.3's other digests, thirty-nine variants
-each violating exactly one rule, and two conforming packets that each draw a per-resource `info`
-finding. Together they are the conformance
+each violating exactly one rule, two conforming packets that each draw a per-resource `info`
+finding, and two conforming packets that carry no extracellular data. Together they are the conformance
 corpus: expected findings recorded as data, so any implementation can be checked against
 the same evidence rather than against a prose description of what should happen.
 
@@ -80,6 +80,11 @@ sharded, and delta-filtered pipelines; only the delta one is outside the v3 read
 external arrays and draws one `external.physical_unassessed` per array. Both packets conform,
 and `corpus.py` checks the count; `valid` must draw neither finding (Part 05 §5.3). Each array is
 a `zarr.json` with no chunk written, so no Zarr library is needed to build the corpus.
+
+`no_extracellular` is `valid` without its fourteen core tables specific to extracellular
+electrophysiology, and `sessions_only` keeps only `core.sessions` and `core.subjects`, its session
+naming no reference clock. Both are clean, since the packet mechanism confines no packet to a
+recording modality ([Part 00 §1](../escapewheel_poc_docs_v0.2/00_architecture.md#ew-architecture-scope)).
 
 `bad_vocabulary` uses `good` deliberately: it is Phy's label for a single unit, and the
 one an importer most plausibly forgets to map to `sua` (R11 §3).

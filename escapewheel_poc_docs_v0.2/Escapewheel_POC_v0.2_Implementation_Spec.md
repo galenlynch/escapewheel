@@ -12,13 +12,14 @@ Informational entry point.
 
 ## 1. Orientation
 
-This document set describes a proof-of-principle portable representation of extracellular
-electrophysiology data as a small semantic and logical standard over commodity storage formats.
+This document set describes a proof-of-principle portable data packet: a small semantic and logical
+standard over commodity storage formats, whose packet mechanism confines no packet to a recording
+modality and whose core vocabulary targets extracellular electrophysiology.
 [Part 00 §1](00_architecture.md#ew-architecture-scope) defines its scope, and
 [Part 00 §9](00_architecture.md#ew-numbered-part-ownership) assigns the subject and status of
 every numbered part.
 
-The design tests whether neurophysiology data can be represented over commodity substrates:
+The design tests whether recorded data can be represented over commodity substrates:
 Parquet for tables, Zarr for dense arrays, standard media containers for media, and JSON for the
 manifest. **Escapewheel** is a placeholder name. The project does not require an NWB, HDMF, or PyNWB
 runtime; Part 00 defines the exact scope and exclusions.
@@ -114,10 +115,24 @@ also states the cross-cutting architecture of an Escapewheel packet. Detailed co
 logical declarations, physical encodings, manifest fields, and construction and validation rules
 belong to the subject-owning parts listed in §9.
 
-This specification defines a portable representation of extracellular electrophysiology data as a
-small semantic and logical standard over commodity storage formats. It does not define a storage
-engine, a PyNWB-compatible object model, an NWB exporter, a distributed-compute model, or ontology
-machinery. It has no runtime dependency on NWB, HDMF, or PyNWB, and conformance does not require a
+This specification defines a portable data packet as a small semantic and logical standard over
+commodity storage formats. Its packet mechanism comprises the packet manifest (Part 04), the logical
+declaration and registry model (Part 02 §§2–10), the physical profile (Part 03), validation and
+import (Part 05), extensions (Part 09), and the Tier 2 rule language (Part 11), and it confines no
+packet to a recording modality. Which resources a packet carries is decided by the registries it
+binds and their presence policies (Part 02 §2.5).
+
+The **core vocabulary** comprises the concepts Part 01 defines and the declarations of the core
+registry that Part 02 incorporates. It targets extracellular electrophysiology and the session it
+was recorded in. The target states what the vocabulary was designed to represent and requires no
+resource of any packet. Another recording modality declares the concepts and resources it needs
+beyond the core vocabulary in an extension registry under Part 09 (Part 01 §2.7). They enter the
+core vocabulary only through a revision of this specification under Part 09 §7. Data of another
+modality that a core declaration already represents, such as a sampled quantity held as an array
+asset (Part 01 §3.17), needs no extension.
+
+The specification does not define a storage engine, a PyNWB-compatible object model, an NWB
+exporter, a distributed-compute model, or ontology machinery. It has no runtime dependency on NWB, HDMF, or PyNWB, and conformance does not require a
 compatibility projection into NWB.
 
 The design objectives are that a packet be fast to query, straightforward to produce from existing
@@ -292,7 +307,7 @@ class**.
 
 | serialized value | contents | canonical | required by class |
 |---|---|:---:|:---:|
-| `core` | domain-general normalized facts | yes | no |
+| `core` | normalized facts of the core vocabulary | yes | no |
 | `extension` | typed facts a domain owns (Part 09) | yes | no |
 | `analysis` | products reproducible from canonical resources | no | no |
 | `compatibility_projection` | a projection into another representation | no | no |
@@ -996,7 +1011,7 @@ The `content_class` vocabulary and its consequences are:
 
 | value | meaning | canonical | required by class |
 |---|---|:---:|:---:|
-| `core` | domain-general normalized facts | yes | no |
+| `core` | normalized facts of the core vocabulary | yes | no |
 | `extension` | typed facts owned by a domain | yes | no |
 | `analysis` | products reproducible from canonical resources | no | no |
 | `compatibility_projection` | a projection into another representation | no | no |

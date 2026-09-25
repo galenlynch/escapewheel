@@ -3108,7 +3108,7 @@ where = [
   { part = "00", anchor = "ew-packet-content-classes" },
   { part = "02", anchor = "ew-resource-content-class" },
 ]
-note = "the five content classes determine canonicality and declaration eligibility"
+note = "the five content classes determine canonicality and declaration eligibility; R141 §3.4 replaces the core row's domain-general normalized facts with normalized facts of the core vocabulary"
 
 [clause."R128 §3.3"]
 disposition = "applied"
@@ -3545,3 +3545,26 @@ note = "UCUM 2.2 exact and NCBI Taxonomy, MGI and RGD as living registries in th
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-logical-schema-normative-references" }]
 note = "every authority URI on an open core or analysis column is an entry's link; framework.py compares them, and extension registries are outside it"
+
+[clause."R141 §3.1"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-architecture-scope" }]
+note = "the specification defines a portable data packet; its packet mechanism, Parts 04, 02 §§2–10, 03, 05, 09 and 11, confines no packet to a recording modality"
+
+[clause."R141 §3.2"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-architecture-scope" }]
+note = "the core vocabulary, Part 01's concepts and the core registry's declarations, targets extracellular electrophysiology and requires no resource of any packet"
+
+[clause."R141 §3.3"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-architecture-scope" }]
+note = "another modality's vocabulary is an extension under Part 09 and reaches core only by a revision under Part 09 §7"
+
+[clause."R141 §3.4"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-packet-content-classes" },
+  { part = "02", anchor = "ew-resource-content-class" },
+]
+note = "both core rows read normalized facts of the core vocabulary"

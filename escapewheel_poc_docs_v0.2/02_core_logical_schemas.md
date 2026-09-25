@@ -57,7 +57,7 @@ The `content_class` vocabulary and its consequences are:
 
 | value | meaning | canonical | required by class |
 |---|---|:---:|:---:|
-| `core` | domain-general normalized facts | yes | no |
+| `core` | normalized facts of the core vocabulary | yes | no |
 | `extension` | typed facts owned by a domain | yes | no |
 | `analysis` | products reproducible from canonical resources | no | no |
 | `compatibility_projection` | a projection into another representation | no | no |

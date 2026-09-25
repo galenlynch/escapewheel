@@ -784,6 +784,25 @@ def bind(out, document):
     }
 
 
+#: The valid packet's core tables specific to extracellular electrophysiology.
+EXTRACELLULAR = (
+    "core.probes",
+    "core.electrodes",
+    "core.electrode_coordinates",
+    "core.electrode_coordinate_values",
+    "core.sorting_runs",
+    "core.sorting_run_channels",
+    "core.curation_versions",
+    "core.units",
+    "core.spike_events",
+    "core.unit_quality_labels",
+    "core.unit_electrodes",
+    "core.unit_coordinates",
+    "core.unit_coordinate_values",
+    "core.unit_observation_intervals",
+)
+
+
 # Each variant violates exactly one rule, so the corpus demonstrates that each check fires.
 def child(tables):
     """The clock that declares a parent, which is what the alignment variants are about."""
@@ -1068,6 +1087,19 @@ def main():
         root / "missing_column", c, raw={"core.intervals": t.drop_columns(["clock_id"])}
     )
     print(f"{'missing_column':26s}written")
+
+    # Part 00 §1: the packet mechanism confines no packet to extracellular data, so both conform.
+    c = content()
+    for resource in EXTRACELLULAR:
+        del c[resource]
+    write_packet(root / "no_extracellular", c)
+    print(f"{'no_extracellular':26s}written")
+
+    c = {resource: content()[resource] for resource in ("core.sessions", "core.subjects")}
+    for session in c["core.sessions"]:
+        session["reference_clock_id"] = None  # a named clock would bring core.clocks
+    write_packet(root / "sessions_only", c)
+    print(f"{'sessions_only':26s}written")
 
     digest_variants(root)
     floor_variants(root)

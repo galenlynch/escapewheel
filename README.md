@@ -1,7 +1,7 @@
 # Escapewheel
 
-An extracellular-electrophysiology data-lake format built on **Parquet, Zarr v3 and a JSON
-manifest**, with no runtime dependency on NWB, HDMF or PyNWB. A packet is a directory you can
+A data-lake format built on **Parquet, Zarr v3 and a JSON manifest**, whose core vocabulary
+targets extracellular electrophysiology, with no runtime dependency on NWB, HDMF or PyNWB. A packet is a directory you can
 open with any Parquet reader; the format's meaning lives in the files and in a machine-readable
 schema registry, never in a reader library.
 

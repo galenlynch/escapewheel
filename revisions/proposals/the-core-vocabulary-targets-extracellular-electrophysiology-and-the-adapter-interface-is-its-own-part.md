@@ -363,7 +363,7 @@ delivery to Part 03 §5.5's writer floor, which binds no delivery today, and so 
 ## 6. Open questions
 
 1. **Split.** Resolved 2026-09-24: the scope wording of §4.1 and question 2 is promoted to the
-   draft `the-core-vocabulary-targets-extracellular-electrophysiology.md`, and this proposal
+   draft accepted as R141, and this proposal
    continues for the relocation alone, which question 7 orders after the opaque-delivery and
    source-cache items. The scope draft is structural in form, because it replaces text inside
    existing sections. The two share no clause.
