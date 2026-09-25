@@ -191,8 +191,14 @@ source presents.
 Fixing an entry's name as a function of URI and tag would let two implementations share entries, at
 the cost of a layout every implementation keeps; without it, adapters of two implementations sharing
 a location miss each other's entries and never misread them. A lock per entry or per location would
-outlive a killed build, where publishing by rename needs none. Permitting other persistent caches
-would leave the environment variable and the tmpfs fallback §2.4 found in use conforming. Recording
+outlive a killed build, where publishing without replacement needs none. Letting the last of two
+concurrent publications replace the first is equally correct under a strong tag, since both hold the
+same bytes, but it swaps a file under a reader: on NFS another host reading the replaced file can
+fail with a stale handle, and on Windows a rename onto a file another process holds open fails.
+Publishing only where no entry stands, as Git publishes a loose object by linking it into place and
+treating an existing object as success, leaves a readable entry unchanged. Permitting other
+persistent caches would leave the environment variable and the tmpfs fallback §2.4 found in use
+conforming. Recording
 which version of each object a build read would need a `core.source_files` row per object, which
 R135 §2.5 rejected for requiring a delivery field every out-of-process adapter fills.
 
@@ -201,13 +207,18 @@ R135 §2.5 rejected for requiring a delivery field every out-of-process adapter 
 Every store-reading adapter in both packages already resolves its root through one function, and the
 writer already builds the input object Part 03 §11.2 defines, so the location travels as one more
 member of it. Obtaining an object's current entity tag costs one request per object per run, which
-§2.5 prices at about 50 s for one build's 2,617 objects sequentially. A writer publishing entries by
-rename within the location needs no lock.
+§2.5 prices at about 50 s for one build's 2,617 objects sequentially. A writer publishing an entry
+by a hard link, or a move that refuses to replace, within the location needs no lock; both fail
+where an entry already stands, which tells the later writer to discard its copy. Filesystems differ
+in which they offer: on this workstation's data disk, an NTFS volume mounted through FUSE, `link(2)`
+publishes a new name and fails with `EEXIST` onto an existing one, while `renameat2` with
+`RENAME_NOREPLACE` fails with `EINVAL` even onto a new name, so a writer there publishes by hard
+link.
 
-The other open draft, on the core vocabulary's scope, amends Part 00 §§1 and 3.2 and Part 02 §2.2 and
-shares no text with this one. Of the open proposals, the one on packet-owned opaque delivery adds a
-location term under the staging area to Part 03 §11.2's table and amends §11.3; each draft appends a
-row and neither location can serve for the other. The proposal to move Part 03 §11 into a part of its
+R141, on the core vocabulary's scope, amended Part 00 §§1 and 3.2 and Part 02 §2.2 and shares no
+text with this one. The open draft on packet-owned opaque delivery adds a location term under the
+staging area to Part 03 §11.2's table and amends §11.3; each draft appends a row and neither
+location can serve for the other. The proposal to move Part 03 §11 into a part of its
 own would carry the new subsection with it, and its preferred direction incorporates this change
 first. R135 §7's two builds at one packet root remain outside this decision, which concerns builds
 at different roots sharing a cache. A reverse-citation query for the five amended sections lists 368
@@ -270,10 +281,11 @@ obligations; an implementation's own tests are their evidence.
 
 ### 3.4 An entry is published whole and then left in place
 
-An adapter MUST make an entry readable only once all its bytes are in place. Once an entry is
-readable, an adapter MUST NOT change or remove it, except by publishing in its place another entry
-for the same URI and entity tag, which holds the bytes the store reported under that tag. No build
-or validator verifies these obligations.
+An adapter MUST make an entry readable only once all its bytes are in place, and MUST NOT make it
+readable where it would replace a readable entry; an adapter that finds its entry already published
+discards its own copy. Once an entry is readable, an adapter MUST NOT change, replace, or remove it.
+The first entry published for a URI and entity tag therefore stands, and a reader never sees the
+entry it opened replaced. No build or validator verifies these obligations.
 
 ### 3.5 An adapter keeps source bytes across builds only as entries
 
@@ -315,7 +327,7 @@ Part 03 §11.2 by number, from R116 §3.1 and R119 §§3.1–3.3, move to `ew-bu
 | packet manifest and JSON Schemas | Manifest, delivery, and recipe schemas unchanged, since no packet or recipe names the location. `registry/adapter.schema.json` keeps its shape, which already admits any name in `accepts`; its `accepts` description, which says a name there is never a term, names the exception, and the vendored copies regenerate. | `registry/check.py` and the vendoring check. |
 | validation and import | Part 05 §3.4's description of `accepts` names the one term, and Part 05 §3.5's refusals of an unfillable term and of a declaration accepting a term gain the exception and the refusal of `needs` naming it. Part 05 §2 is unchanged, since its delivery rule governs a delivery only. | The writer tests below. |
 | extensions | Registry content unchanged. The AIND package's `session`, `video`, and `aind_unit_qc` adapters declare `source_cache` in `accepts`, and their generated declaration documents carry it. | The AIND suite, whose declaration tests validate its generated documents. |
-| reader, writer, validator, adapters | The writer takes the location from its own configuration and supplies it in the input object; the `ESCAPEWHEEL_SOURCE_CACHE` variable and its `TMPDIR` fallback go; entries are keyed by URI and entity tag and revalidated once per object per run; every fetch route publishes by rename; a store-reading adapter declares the term and reads through where it is absent; and the build refuses `needs` naming it. The reader and validator are unchanged, since neither caches. | Writer and AIND tests below. |
+| reader, writer, validator, adapters | The writer takes the location from its own configuration and supplies it in the input object; the `ESCAPEWHEEL_SOURCE_CACHE` variable and its `TMPDIR` fallback go; entries are keyed by URI and entity tag and revalidated once per object per run; every fetch route publishes an entry only where none stands, and a later copy is discarded; a store-reading adapter declares the term and reads through where it is absent; and the build refuses `needs` naming it. The reader and validator are unchanged, since neither caches. | Writer and AIND tests below. |
 | conformance fixtures and tests | No packet fixture, since a validator cannot observe a cache. Writer tests cover the cases in §6. | `escapewheel-writer` and `escapewheel-aind` suites. |
 | revision process and tooling | Ordinary ledger and evidence records, with the notes and destination moves stated above. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. Part 07 §4's `ACCEPTS` description names the term. The writer README's section saying the specification governs none of this is rewritten, and the writer's code comment citing Part 03 §11.2 and the repository TODO's cache item are revised. | `verify.py`. |
@@ -337,8 +349,9 @@ Writer tests distinguish the new rules from the current ones:
 - a build with a warm location and one with a cold location publish packets with identical rows,
   `core.source_files` included;
 - an object whose store double reports no entity tag is read through and leaves no entry;
-- two processes fetching one object leave one whole entry, and a fetch killed before publication,
-  by any fetch route, leaves nothing readable as an entry;
+- two processes fetching one object leave the entry the first published, unchanged, and no copy
+  of the second's, and a fetch killed before publication, by any fetch route, leaves nothing
+  readable as an entry;
 - the location and every entry remain after a published build and after a refused one;
 - a configured location inside the packet root or a delivery location is supplied to no adapter,
   and the build proceeds as one with no location; and
