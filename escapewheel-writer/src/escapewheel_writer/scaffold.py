@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from escapewheel_validator.validator import registry_meta_schema
 
@@ -91,6 +92,16 @@ def _column(table: pa.Table, name: str, resource: str, decisions: list[str]) -> 
         "presence": "required" if table.column(name).null_count == 0 else "nullable",
         "description": "",
     }
+    if declared in ("float32", "float64"):
+        # Part 02 §5.4 gives `finite` no default. `false` claims nothing, as the null key does: a
+        # column free of NaN in one session need not be in the next, and `true` is enforced.
+        entry["finite"] = False
+        values = table.column(name)
+        non_finite = pc.count(values.filter(pc.invert(pc.is_finite(values)))).as_py()
+        decisions.append(
+            f"{resource}.{name}: finite is false, admitting NaN and infinities; declare true if it never "
+            f"holds one (Part 02 §5.4); this data holds {non_finite} non-finite value(s)"
+        )
     # No role is written, deliberately. R48 §2.2 refuses a default because a forgotten
     # classification would look deliberate, and a *generated* file is where a forgotten one
     # hides best: a draft that validated is a draft nobody finishes. So the hint is reported and

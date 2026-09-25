@@ -322,6 +322,48 @@ def test_a_draft_does_not_validate_until_finished(tmp_path):
     assert errors, "a draft that validated would be a draft nobody finishes"
 
 
+def test_a_finished_draft_with_float_columns_passes_the_registry_check(tmp_path):
+    """Part 02 §5.4 requires `finite` on every float column, so the draft writes one and reports
+    it; supplying only the reported decisions leaves a document the registry check accepts."""
+    import pyarrow.parquet as pq
+    from escapewheel_validator import check_registry_context
+
+    from escapewheel_writer.scaffold import draft
+
+    from .conftest import REGISTRY, REGISTRY_CONTEXT
+
+    path = tmp_path / "doses.parquet"
+    pq.write_table(
+        pa.table(
+            {
+                "dose_id": pa.array([0, 1], type=pa.int32()),
+                "volume": pa.array([0.5, None]),
+                "rate": pa.array([1.0, float("nan")], type=pa.float32()),
+            }
+        ),
+        path,
+    )
+    drafted = draft("vrf", {"doses": path})
+    table = drafted.document["resources"]["vrf.doses"]["table"]
+    columns = {c["name"]: c for c in table["columns"]}
+    assert (columns["volume"]["finite"], columns["rate"]["finite"]) == (False, False)
+    assert "finite" not in columns["dose_id"]
+    reported = " ".join(drafted.decisions)
+    assert "vrf.doses.volume: finite is false" in reported
+    assert "vrf.doses.rate: finite is false" in reported and "this data holds 1 non-finite" in reported
+
+    columns["dose_id"].update(role="identifier", identity="carried")
+    for column in table["columns"]:
+        column.setdefault("role", "data")
+        column["description"] = f"The {column['name']}."
+    table["primary_key"] = ["dose_id"]
+    table["columns"].append(
+        next(c for c in REGISTRY["resources"]["core.units"]["table"]["columns"] if c["name"] == "metadata")
+    )
+    result = check_registry_context(drafted.document, core=REGISTRY_CONTEXT).result
+    assert result.state == "valid", [(o.id, o.instance) for p in result.phases for o in p.outcomes]
+
+
 def test_the_namespace_is_the_extension_id(tmp_path):
     from escapewheel_writer.scaffold import draft
 
