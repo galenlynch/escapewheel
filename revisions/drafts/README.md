@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [The Core Vocabulary Targets Extracellular Electrophysiology](the-core-vocabulary-targets-extracellular-electrophysiology.md) | 2295 | Not yet appraised; promoted 2026-09-24 from the proposal as committed at `782dbf8`, which stays open for the relocation of Part 03 §11 and records the split among its open questions. The draft is structural in form because it replaces text in place; no anchor bootstrap is needed. | Part 00 §§1 and 3.2 and Part 02 §2.2 in place |

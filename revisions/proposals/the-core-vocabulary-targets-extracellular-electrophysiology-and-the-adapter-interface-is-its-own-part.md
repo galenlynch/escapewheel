@@ -362,9 +362,11 @@ delivery to Part 03 §5.5's writer floor, which binds no delivery today, and so 
 
 ## 6. Open questions
 
-1. **Split.** Preferred: promote two drafts, an ordinary one for the scope wording and a structural
-   one for the relocation, so the relocation's anchor bootstrap and ordering do not hold up the
-   wording. The two share no clause.
+1. **Split.** Resolved 2026-09-24: the scope wording of §4.1 and question 2 is promoted to the
+   draft `the-core-vocabulary-targets-extracellular-electrophysiology.md`, and this proposal
+   continues for the relocation alone, which question 7 orders after the opaque-delivery and
+   source-cache items. The scope draft is structural in form, because it replaces text inside
+   existing sections. The two share no clause.
 2. **The `core` row.** Preferred: replace "domain-general normalized facts" with a phrase that
    claims no generality across modalities, such as "normalized facts of the core vocabulary",
    stated identically in Part 00 §3.2 and Part 02 §2.2. Keeping "domain-general" and defining
