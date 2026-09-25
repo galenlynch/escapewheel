@@ -315,10 +315,10 @@ Part 03 §11.2 by number, from R116 §3.1 and R119 §§3.1–3.3, move to `ew-bu
 | packet manifest and JSON Schemas | Manifest, delivery, and recipe schemas unchanged, since no packet or recipe names the location. `registry/adapter.schema.json` keeps its shape, which already admits any name in `accepts`; its `accepts` description, which says a name there is never a term, names the exception, and the vendored copies regenerate. | `registry/check.py` and the vendoring check. |
 | validation and import | Part 05 §3.4's description of `accepts` names the one term, and Part 05 §3.5's refusals of an unfillable term and of a declaration accepting a term gain the exception and the refusal of `needs` naming it. Part 05 §2 is unchanged, since its delivery rule governs a delivery only. | The writer tests below. |
 | extensions | Registry content unchanged. The AIND package's `session`, `video`, and `aind_unit_qc` adapters declare `source_cache` in `accepts`, and their generated declaration documents carry it. | The AIND suite, whose declaration tests validate its generated documents. |
-| reader, writer, validator, adapters | The writer takes the location from its own configuration and supplies it in the input object; `cache_beside`, `cache_directory`, `ESCAPEWHEEL_SOURCE_CACHE`, and the `TMPDIR` fallback go; entries are keyed by URI and entity tag and revalidated once per object per run; every fetch route, `cat` included, publishes by rename; a store-reading adapter declares the term and reads through where it is absent; and the build refuses `needs` naming it. The reader and validator are unchanged, since neither caches. | Writer and AIND tests below. |
+| reader, writer, validator, adapters | The writer takes the location from its own configuration and supplies it in the input object; the `ESCAPEWHEEL_SOURCE_CACHE` variable and its `TMPDIR` fallback go; entries are keyed by URI and entity tag and revalidated once per object per run; every fetch route publishes by rename; a store-reading adapter declares the term and reads through where it is absent; and the build refuses `needs` naming it. The reader and validator are unchanged, since neither caches. | Writer and AIND tests below. |
 | conformance fixtures and tests | No packet fixture, since a validator cannot observe a cache. Writer tests cover the cases in §6. | `escapewheel-writer` and `escapewheel-aind` suites. |
 | revision process and tooling | Ordinary ledger and evidence records, with the notes and destination moves stated above. | `ledger.py` and `evidence.py`. |
-| generated publications and developer documentation | The combined specification and heading index regenerate. Part 07 §4's `ACCEPTS` description names the term. The writer README's section saying the specification governs none of this is rewritten, and the comment in `store.py` citing Part 03 §11.2 and the repository TODO's cache item are revised. | `verify.py`. |
+| generated publications and developer documentation | The combined specification and heading index regenerate. Part 07 §4's `ACCEPTS` description names the term. The writer README's section saying the specification governs none of this is rewritten, and the writer's code comment citing Part 03 §11.2 and the repository TODO's cache item are revised. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
@@ -338,7 +338,7 @@ Writer tests distinguish the new rules from the current ones:
   `core.source_files` included;
 - an object whose store double reports no entity tag is read through and leaves no entry;
 - two processes fetching one object leave one whole entry, and a fetch killed before publication,
-  through `open` or `cat`, leaves nothing readable as an entry;
+  by any fetch route, leaves nothing readable as an entry;
 - the location and every entry remain after a published build and after a refused one;
 - a configured location inside the packet root or a delivery location is supplied to no adapter,
   and the build proceeds as one with no location; and
