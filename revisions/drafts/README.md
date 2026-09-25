@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [The Adapter Interface Is Its Own Part at the Physical Level](the-adapter-interface-is-its-own-part-at-the-physical-level.md) | 3691 | Drafted 2026-09-25 on `be9d1a1`, the anchor bootstrap for Part 03 §§11.4 and 11.6 and Part 09 §5.8; not yet appraised. No other proposal or draft is open, and R142 and R143, which amended the moved text, are incorporated. | Part 03 §11 and Part 09 §5.8 move to a new Part 12; Part 00 §§1, 3.1.3, 9, and 10 and Part 03 §§1 and 12 in place |

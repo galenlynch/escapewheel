@@ -343,6 +343,12 @@ section = "11.5"
 title = "The declaration document"
 aliases = []
 
+[anchor.ew-adapter-run-report]
+part = "09"
+section = "5.8"
+title = "What an extension may state about its own run"
+aliases = []
+
 [anchor.ew-analysis-content-class]
 part = "00"
 section = "5"
@@ -443,6 +449,12 @@ aliases = []
 part = "03"
 section = "6.1"
 title = "Version"
+aliases = []
+
+[anchor.ew-arrow-ipc-floor]
+part = "03"
+section = "11.4"
+title = "The Arrow IPC floor"
 aliases = []
 
 [anchor.ew-authority-by-concern]
@@ -917,6 +929,12 @@ aliases = []
 part = "03"
 section = "11.1"
 title = "Protocol groups"
+aliases = []
+
+[anchor.ew-reaching-a-running-adapter]
+part = "03"
+section = "11.6"
+title = "Reaching an adapter that must be running"
 aliases = []
 
 [anchor.ew-reaching-a-source]
