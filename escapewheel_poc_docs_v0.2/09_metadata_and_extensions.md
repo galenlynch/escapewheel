@@ -102,6 +102,7 @@ How the registry document is produced is the extension's business, but an extens
 
 An extension's command MUST produce the same rows from the same inputs, and MUST NOT let wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it writes. Which program the command resolves to is the recipe author's: pinning library versions so two runs agree byte for byte is a build property, and a validator MUST NOT judge a packet non-conforming for lacking one. An extension that cannot be a function of its inputs delivers a file produced beforehand rather than a command the build runs.
 
+<a id="ew-adapter-run-report" data-spec-anchor="canonical"></a>
 ### 5.8 What an extension may state about its own run
 
 An extension MAY validate its own tables before returning them, against its own registry document and on the same terms a validator applies to core. A build MUST NOT rely on its having done so; its own validation runs over every staged resource whatever produced it.
