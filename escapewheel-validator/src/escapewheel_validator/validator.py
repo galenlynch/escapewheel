@@ -2115,9 +2115,7 @@ def _run_checks(
                 detail=f"unreadable input(s): {', '.join(missing)}",
             )
             continue
-        if check.optional_column is not None and check.optional_column not in _relation_columns(
-            connection, check.resource
-        ):
+        if check.optional_columns and not check.optional_columns <= set(_relation_columns(connection, check.resource)):
             continue
         try:
             rows = _offending(connection, check.sql)

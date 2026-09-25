@@ -138,6 +138,68 @@ def test_an_absent_optional_finite_column_reports_nothing(packet_root):
     assert not any(f.check.endswith(".finite") for f in report.findings)
 
 
+def _validate_optional_event_column(packet_root, column, reference, values):
+    """Declare `column` optional on `core.events` with `reference`, write `values` unless None, validate."""
+    registry = read_registry(packet_root)
+    table = registry["resources"]["core.events"]["table"]
+    table["columns"].append(column)
+    if reference is not None:
+        table["references"].append(reference)
+    install_registry(packet_root, registry)
+    if values is not None:
+        events = pq.read_table(packet_root / "tables" / "core" / "events.parquet")
+        _rewrite(packet_root, "events", events.append_column(column["name"], values))
+    return validate(open_packet(packet_root))
+
+
+CUE_SIDE = {
+    "name": "cue_side",
+    "type": "string",
+    "presence": "optional",
+    "role": "data",
+    "description": "side the cue came from",
+    "vocabulary": "closed",
+    "enum": ["left", "right"],
+}
+TRIAL_ID = {
+    "name": "trial_id",
+    "type": "int32",
+    "presence": "optional",
+    "role": "identifier",
+    "identity": "assigned",
+    "description": "the trial an event fell in",
+}
+IN_TRIAL = {
+    "columns": ["session_id", "trial_id"],
+    "resource": "core.trials",
+    "resource_columns": ["session_id", "trial_id"],
+}
+
+
+def test_an_absent_optional_closed_vocabulary_column_reports_nothing(packet_root):
+    """Part 02 §6 lets a table omit an optional column, which leaves no value to test."""
+    report = _validate_optional_event_column(packet_root, CUE_SIDE, None, None)
+    assert report.passed, [(f.check, f.message) for f in report.findings]
+
+
+def test_a_present_optional_closed_vocabulary_column_is_checked(packet_root):
+    report = _validate_optional_event_column(packet_root, CUE_SIDE, None, pa.array(["left", None, "up"]))
+    finding = next(f for f in report.findings if f.check == "core.events.cue_side.in_vocabulary")
+    assert finding.rows == (("up",),)
+
+
+def test_an_absent_optional_foreign_key_column_reports_nothing(packet_root):
+    report = _validate_optional_event_column(packet_root, TRIAL_ID, IN_TRIAL, None)
+    assert report.passed, [(f.check, f.message) for f in report.findings]
+
+
+def test_a_present_optional_foreign_key_column_is_checked(packet_root):
+    """An optional column may be null where present (Part 02 §6), so only the 9 fails to resolve."""
+    report = _validate_optional_event_column(packet_root, TRIAL_ID, IN_TRIAL, pa.array([1, None, 9], pa.int32()))
+    finding = next(f for f in report.findings if f.check == "core.events.session_id_trial_id_resolves")
+    assert finding.rows == (("1", "9"),)
+
+
 def test_tier_two_rule(packet_root):
     trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
     broken = trials.set_column(3, "stop_tick", pa.array([0, 10000], type=pa.int64()))

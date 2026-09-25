@@ -35,9 +35,9 @@ class Check:
         A query returning offending rows.
     resource : str
         The resource the check is declared on. Not necessarily the only one its query reads.
-    optional_column : str, optional
-        An `optional` column the query reads. A table omitting it leaves nothing to check, so the
-        runner skips the check rather than reporting a query that cannot bind (Part 02 §10.1).
+    optional_columns : frozenset of str
+        The `optional` columns the query reads. A table omitting one leaves nothing to check, so the
+        runner skips the check rather than reporting a query that cannot bind (Part 02 §§6, 10.1).
     """
 
     id: str
@@ -47,7 +47,7 @@ class Check:
     resource: str
     tier: int = 1
     dependencies: frozenset[str] = frozenset()
-    optional_column: str | None = None
+    optional_columns: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         """Default a generated check's inputs to its attached resource."""
@@ -296,6 +296,7 @@ def _generate(
             continue
         name = resource
         presence = {c["name"]: c["presence"] for c in table["columns"]}
+        optional = {column for column, state in presence.items() if state == "optional"}
 
         for column in table["columns"]:
             if column["presence"] == "required":
@@ -317,7 +318,7 @@ def _generate(
                         f"{column['name']} holds NaN or an infinity",
                         f"SELECT * FROM {name} WHERE NOT isfinite({quote(column['name'])})",
                         resource,
-                        optional_column=column["name"] if column["presence"] == "optional" else None,
+                        optional_columns=frozenset({column["name"]}) & optional,
                     )
                 )
             if values := column.get("enum"):
@@ -330,6 +331,7 @@ def _generate(
                         f"{column['name']} carries a value outside its closed vocabulary",
                         f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({allowed})",
                         resource,
+                        optional_columns=frozenset({column["name"]}) & optional,
                     )
                 )
 
@@ -356,9 +358,9 @@ def _generate(
                 continue
             parent = ref["resource"]
             on = " AND ".join(f"c.{quote(a)} = p.{quote(b)}" for a, b in zip(ref["columns"], ref["resource_columns"]))
-            # A nullable foreign key constrains only its non-null values; without this
+            # A foreign key that may be null constrains only its non-null values; without this
             # guard every legitimately absent value reports as a violation.
-            guards = [f"c.{quote(a)} IS NOT NULL" for a in ref["columns"] if presence.get(a) == "nullable"]
+            guards = [f"c.{quote(a)} IS NOT NULL" for a in ref["columns"] if presence.get(a) != "required"]
             where = " AND ".join([f"p.{quote(ref['resource_columns'][0])} IS NULL", *guards])
             selected = ", ".join("c." + quote(a) for a in ref["columns"])
             checks.append(
@@ -369,6 +371,7 @@ def _generate(
                     f"SELECT DISTINCT {selected} FROM {name} c LEFT JOIN {parent} p ON {on} WHERE {where}",
                     resource,
                     dependencies=frozenset({resource, ref["resource"]}),
+                    optional_columns=frozenset(ref["columns"]) & optional,
                 )
             )
 

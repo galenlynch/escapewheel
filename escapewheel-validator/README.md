@@ -87,12 +87,15 @@ gets its own.
 | | Comes from |
 |---|---|
 | required-column non-null | `presence: required` |
-| foreign-key anti-join | `references`, with a null guard where the column is nullable |
+| foreign-key anti-join | `references`, with a null guard where a column is not required |
 | primary-key uniqueness | `primary_key`, and only where a streaming scan does not already settle it |
 | closed vocabulary | `enum` |
-| finite value | `finite: true`, skipped where an `optional` column is absent |
+| finite value | `finite: true` |
 | discriminator | `role: discriminator`, two checks each (R55 §2.4) |
 | Tier 2 | statically checked `escapewheel-rule-sql-v0.1` queries the structure cannot imply, authored in `registry/rules.json` |
+
+A generated check reading an `optional` column is skipped where a table omits that column, which
+leaves it nothing to test (Part 02 §6).
 
 ## SQL and the shim
 

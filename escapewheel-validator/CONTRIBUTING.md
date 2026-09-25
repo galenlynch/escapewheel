@@ -82,8 +82,10 @@ packet, which is worse than having no check.
   §8), and Part 05 §14.5 forbids a caller-supplied one. A packet must keep validating against its
   bound registries when the reference registry moves on. A bundled or supplied copy would let
   this package's idea of the schema silently overrule the packet's own.
-- **A nullable foreign key needs an `IS NOT NULL` guard.** Without it every null row reports as an
-  unresolved reference.
+- **A foreign key that may be null needs an `IS NOT NULL` guard**, nullable or optional alike.
+  Without it every null row reports as an unresolved reference.
+- **A generated check reading an `optional` column declares it in `optional_columns`.** A table may
+  omit the column (Part 02 §6), and the query would then fail to bind rather than find nothing.
 - **An amendment re-runs only the rules its resources implicate** (R35 §5). `validate` takes
   `recheck`; Tier 1 inputs come from declarations, Tier 2 inputs from the parsed base-resource
   set, and shim inputs from their explicit contracts.
