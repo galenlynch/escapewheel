@@ -178,6 +178,7 @@
 "11.4" = "The Arrow IPC floor"
 "11.5" = "The declaration document"
 "11.6" = "Reaching an adapter that must be running"
+"11.7" = "The source cache"
 "12" = "Normative references"
 
 ["04"]
@@ -1126,6 +1127,12 @@ aliases = []
 part = "02"
 section = "7.1"
 title = "Session scope"
+aliases = []
+
+[anchor.ew-source-cache]
+part = "03"
+section = "11.7"
+title = "The source cache"
 aliases = []
 
 [anchor.ew-source-declarations]

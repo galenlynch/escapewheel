@@ -136,7 +136,7 @@ A preference MUST NOT name a resource only one source produces. Such an entry ar
 
 Every source adapter MUST declare the set of resource identifiers it can supply. It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-An adapter declares six such facts, all read before any source is opened: the resources it can supply; those of them whose rows it supplies only in part, such as the clocks of its own streams; the recipe fields it can state (§3.6); the values a build must supply it (Part 03 §11.2); the options it reads and can run without (Part 03 §11.2); and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
+An adapter declares six such facts, all read before any source is opened: the resources it can supply; those of them whose rows it supplies only in part, such as the clocks of its own streams; the recipe fields it can state (§3.6); the values a build must supply it (Part 03 §11.2); the options it reads and can run without, and the one term it may accept, `source_cache` (Part 03 §11.2); and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
 
 A build MUST read a source entry that declares no `owns` as follows. Of the resources its adapter declares it can supply, leaving out any another entry declares under `owns` and any a preference gives to another source, the entry contributes those its adapter supplies only in part and owns the rest. It also contributes every resource its own `contributes` names, and owns none of those. An entry that declares `owns` owns exactly what it names and contributes what its `contributes` names. **A recipe states what it narrows; silence means the whole.**
 
@@ -164,14 +164,15 @@ A build MUST check a recipe against the registry before it opens any source. A b
 A build MUST also refuse, on the same terms and before any source is opened:
 
 - an adapter declaring a value Part 03 §11.2 resolves to neither a term nor a recipe option;
-- an adapter declaring a term that list carries and this recipe cannot fill, naming the term and the source;
+- an adapter declaring a term that list carries, other than `source_cache`, that this recipe cannot fill, naming the term and the source;
 - an adapter released independently of a build declaring no protocol of a group the profile names, or any adapter declaring one it does not name;
 - a declaration failing the schema Part 03 §11.5 incorporates, whether a document or an importable declaration, naming where it fails;
 - a source entry naming a protocol its adapter does not declare, where the adapter declares any, naming the source and the protocol;
 - a declaration whose resources include one no loaded registry declares;
 - a declaration whose stated fields include one no recipe block carries;
 - a source entry setting an option the adapter names in neither `needs` nor `accepts`, naming the source and the option;
-- a declaration whose accepted options include a term, or one its `needs` also names;
+- a declaration whose accepted options include a term other than `source_cache`, or one its `needs` also names;
+- a declaration whose `needs` names `source_cache`, naming the adapter;
 - a declaration naming a resource it supplies only in part that is not one it declares it can supply, naming the adapter and the resource;
 - a preference whose `source` names a kind the recipe does not list, naming the resource;
 - a preference whose `source` names a kind whose adapter does not declare that it can supply the resource, naming the resource;

@@ -2610,7 +2610,7 @@ note = "standard input is free under all three protocols, is unbounded, and is t
 [clause."R116 §3.1"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.2", note = "the object crosses on standard input, an adapter reads it to end of file, and no argument is added" },
+  { part = "03", anchor = "ew-build-supplied-values", note = "the object crosses on standard input, an adapter reads it to end of file, and no argument is added" },
 ]
 
 [clause."R116 §3.2"]
@@ -2743,23 +2743,23 @@ note = "waveforms needs an option naming the sorter's label column and base NWB 
 
 [clause."R119 §3.1"]
 disposition = "applied"
-where = [{ part = "03", section = "11.2" }, { part = "07", anchor = "ew-reference-object-model" }]
-note = "an adapter MUST declare in accepts every option it reads and can be constructed without and in needs every value it cannot, MUST NOT name one option in both or a term in accepts, and MUST apply its own default where the recipe sets no value; Part 07 §4 carries the reference spelling ACCEPTS"
+where = [{ part = "03", anchor = "ew-build-supplied-values" }, { part = "07", anchor = "ew-reference-object-model" }]
+note = "an adapter MUST declare in accepts every option it reads and can be constructed without and in needs every value it cannot, MUST NOT name one option in both or a term in accepts, and MUST apply its own default where the recipe sets no value; Part 07 §4 carries the reference spelling ACCEPTS. R142 §3.1 lets accepts name the one term source_cache and bars it from needs"
 
 [clause."R119 §3.2"]
 disposition = "applied"
-where = [{ part = "03", section = "11.2" }, { part = "05", anchor = "ew-recipe-check" }]
+where = [{ part = "03", anchor = "ew-build-supplied-values" }, { part = "05", anchor = "ew-recipe-check" }]
 note = "a build MUST supply an option the recipe sets and the adapter names in either list, MUST refuse a recipe setting an option the adapter names in neither, naming the source and the option, before any source is opened, and MUST NOT require a recipe to set one named in accepts"
 
 [clause."R119 §3.3"]
 disposition = "applied"
-where = [{ part = "03", section = "11.2" }]
+where = [{ part = "03", anchor = "ew-build-supplied-values" }]
 note = "a build MUST NOT supply an option the adapter names in neither list, including one it adds itself rather than reading from the recipe, and MUST NOT apply a facility of its own to an adapter that does not name the option carrying it"
 
 [clause."R119 §3.4"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }]
-note = "the declaration document carries accepts beside needs, and a build MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four. R134 §3.1 requires the member, replacing the reading of a document without it"
+note = "the declaration document carries accepts beside needs, and a build MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four. R134 §3.1 requires the member, replacing the reading of a document without it. R142 §3.1 excepts source_cache from the refusal of a term in accepts and refuses a declaration whose needs names it"
 
 [clause."R120 §3.1"]
 disposition = "applied"
@@ -3568,3 +3568,28 @@ where = [
   { part = "02", anchor = "ew-resource-content-class" },
 ]
 note = "both core rows read normalized facts of the core vocabulary"
+
+[clause."R142 §3.1"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-build-supplied-values", note = "the source_cache term, the one term accepts may name and needs may not, supplied to every accepting adapter where a build has a location and to none where it has none, and exempt from the unfillable-term refusal" },
+  { part = "03", anchor = "ew-adapter-declaration-document", note = "a declaration whose accepts names source_cache is not refused, and one whose needs names it is, naming the adapter" },
+  { part = "05", anchor = "ew-source-declarations", note = "the accepted options include the one term source_cache" },
+  { part = "05", anchor = "ew-recipe-check", note = "the unfillable-term and accepted-term refusals except source_cache, and a declaration whose needs names it is refused" },
+  { part = "07", anchor = "ew-reference-object-model", note = "ACCEPTS may carry source_cache" },
+]
+
+[clause."R142 §3.2"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-source-cache" }]
+note = "a build takes its source-cache location from its configuration, supplies only a writable directory outside the packet root and every delivery location, creates it where absent, and never empties it or removes anything in it; builds at different packet roots may share one"
+
+[clause."R142 §3.3"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-source-cache" }]
+note = "an adapter uses source data kept from before a run only after confirming in that run, by an entity tag, full-object checksum, or version identifier and never a modification time, that the source still holds it, or where the URI names immutable content; unchecked by any build or validator"
+
+[clause."R142 §3.4"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-source-cache" }]
+note = "each storage format keeps to one subdirectory named by an identifier its implementation controls, cache-v names are reserved, data becomes readable to another run only when complete, and naming, publication, replacement, and eviction are the format's own; unchecked by any build or validator"

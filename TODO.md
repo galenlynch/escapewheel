@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R141 accepted. R42 and R73 withdrawn. 1 proposal and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R142 accepted. R42 and R73 withdrawn. 1 proposal and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 348 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -208,6 +208,15 @@ accepts `prefix`.
   meta-schema requires one, so a finished draft with string columns fails until the author finds
   out.
 - **The writer refuses a relative external URI without `source`,** which Part 04 §5.1 permits.
+- **The source cache does not meet R142** (Part 03 §11.7). The writer should take the location from
+  its own configuration and supply it only as `source_cache` in the input object, dropping
+  `ESCAPEWHEEL_SOURCE_CACHE`, its `TMPDIR` fallback, and `cache_beside`'s process-wide variable;
+  keep entries under its own subdirectory, keyed by URI and entity tag, and confirm each object with
+  the store once per run before using it; fetch to a unique temporary name and publish only complete
+  data on every fetch route, `cat` included; refuse a declaration whose `needs` names the term and
+  admit one whose `accepts` does; have `session`, `video`, and `aind_unit_qc` declare it in
+  `accepts`; and add a command that prunes the location. The writer README's cache section and the
+  comment in `sources/store.py` citing Part 03 §11.2 change with it. R142 §6 lists the tests.
 - **`fixtures/packets/` holds stale directories** (`stream_clock_mismatch`, `undetected_default`),
   and `fixtures/README.md` still lists one.
 

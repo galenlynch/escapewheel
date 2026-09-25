@@ -190,10 +190,9 @@ renames it into place (Part 03 §3.4). Digesting the four videos of §2.2 costs 
 and 0.6 s under CRC64NVME at R136 §2's in-memory throughputs of 2.4 and 18.5 GB/s; copying them
 costs more and is paid once.
 
-The source-cache draft, `a-build-supplies-an-adapter-a-persistent-source-cache.md`, also appends a
-row to Part 03 §11.2's table and adds a last subsection to Part 03 §11. This draft adds no
-subsection, so the two share only that table, and their rows land in the order the drafts are
-incorporated. Its location lies outside the staging area and outlives a build, where
+R142, on the source cache, also appends a row to Part 03 §11.2's table and adds a last subsection
+to Part 03 §11. This draft adds no subsection, so the two share only that table, and their rows
+land in the order the drafts are incorporated. Its location lies outside the staging area and outlives a build, where
 `opaque_location` lies inside it and does not, so neither term can serve for the other. The
 core-vocabulary draft shares no section with this one. The later relocation of Part 03 §11 into its
 own part moves §§11, 11.2, and 11.3 as both drafts leave them, and follows both. A reverse-citation

@@ -105,8 +105,12 @@ A source root on an object store is opened through fsspec's `simplecache`, so ea
 fetched once and read locally. The cache lives in `.escapewheel-source-cache/` in the packet's
 parent directory, on the filesystem that will hold the packet, and a rebuild into a new directory
 reuses what the last one fetched. Setting `ESCAPEWHEEL_SOURCE_CACHE` names another directory; the
-variable is also how the location reaches an adapter run out of process. The specification governs
-none of this: bytes in the cache never reach a delivery.
+variable is also how the location reaches an adapter run out of process.
+
+Part 03 §11.7 governs source data kept across builds, and this cache does not yet meet it: an entry
+is keyed on the object's path alone and used without asking the store whether the object changed,
+and its location reaches adapters outside the `source_cache` term. Until that is reworked, clear the
+cache after replacing an object at a store root a recipe names.
 
 ## Commit is atomic
 

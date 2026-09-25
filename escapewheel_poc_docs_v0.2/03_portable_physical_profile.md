@@ -494,7 +494,7 @@ An adapter reads one source and delivers what it read, and a build assembles a p
 - a `files-v0.1` delivery, written into `delivery_root` (§11.1), with the resource document for any referenced resource it delivers (§11.3); and
 - a report, written at the `report_path` the recipe names (Part 09 §5.8).
 
-This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, and how an adapter declares itself. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes.
+This section is what passes between them: the protocols rows may cross by, what a build supplies an adapter, what a delivery states, how an adapter declares itself, and where an adapter may keep what it reads from a source for later builds. It is the profile's rather than the pipeline's because every rule in it would change if the profile changed, and because an adapter is the first thing an implementation in another language writes.
 
 An **adapter** here is code that reads one source, whether the reference implementation ships it or a third party does. A clause binding an adapter binds one it does not ship identically.
 
@@ -536,15 +536,18 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 | `units` | one record per unit: the source's label for it, and the identifier assigned |
 | `wanted` | the resource IDs the recipe leaves this source owning, so it produces no more |
 | `array_location` | a location under the build's staging area ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline)) to write an array to (§11.3) |
+| `source_cache` | the absolute path of the build's **source-cache location**, a directory in which an adapter may keep what it reads from a source for later builds (§11.7) |
 | an option, by its name | the value the recipe carries under it — a `zone`, an `interval_kind` |
 
 A build MUST resolve each declared name against that list first and the recipe's options second, and MUST refuse a recipe where a name resolves to neither. A profile adding a term amends this section.
 
-An adapter MUST declare in `accepts` every option it reads and can be constructed without, and in `needs` every value it cannot; it MUST NOT name one option in both, and MUST NOT name in `accepts` a term of the list above or a term a protocol requires. Declaring a name in `needs` is what makes a recipe carry it, so an option holding a default is declarable only as an accepted one. An adapter MUST apply its own default where the recipe sets no value, so what an omitted option means is the adapter's statement rather than a value the build invents.
+An adapter MUST declare in `accepts` every option it reads and can be constructed without, and in `needs` every value it cannot; it MUST NOT name one option in both. `source_cache` is the one term `accepts` may name: an adapter MUST NOT name any other term of the list above, or a term a protocol requires, in `accepts`, and MUST NOT name `source_cache` in `needs`. An adapter that keeps source data in the source-cache location names the term in `accepts`, since a build supplies it to no other adapter. Declaring a name in `needs` is what makes a recipe carry it, so an option holding a default is declarable only as an accepted one. An adapter MUST apply its own default where the recipe sets no value, so what an omitted option means is the adapter's statement rather than a value the build invents.
 
 A build MUST supply an option the recipe sets and the adapter names in either list, and MUST NOT require a recipe to set one named in `accepts`. A build MUST refuse a recipe whose source entry sets an option the adapter names in neither, naming the source and the option, before any source is opened. A build MUST NOT supply an option the adapter names in neither list, including one it adds itself rather than reading from the recipe, and MUST NOT apply a facility of its own to an adapter that does not name the option carrying it.
 
-A build MUST refuse a recipe where a term the list carries cannot be filled, naming the term and the source, and MUST NOT pass such a term absent or empty: `first_samples` needs a source that states them and `units` one that produced them, and an adapter cannot tell a term nobody filled from one whose value is legitimately empty.
+A build MUST refuse a recipe where a term the list carries, other than `source_cache`, cannot be filled, naming the term and the source, and MUST NOT pass such a term absent or empty: `first_samples` needs a source that states them and `units` one that produced them, and an adapter cannot tell a term nobody filled from one whose value is legitimately empty.
+
+A build that has a source-cache location MUST supply it as `source_cache` to every adapter naming the term in `accepts`. A build that has none supplies the term to no adapter and MUST NOT refuse a recipe for lacking one. An adapter supplied no `source_cache` reads its source or keeps data elsewhere, under §11.7.
 
 A build MUST pass a collection as records carrying its key as columns. A mapping's keys are a type the crossing does not keep: an integer key returns as a string, and a compound key does not cross at all.
 
@@ -617,13 +620,13 @@ A build reads what an adapter declares before it opens any source, and for a cla
 
 The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocols`, `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. This section incorporates `registry/adapter.schema.json`, whose `$id` is `https://escapewheel.org/schemas/adapter/0.1.0`, as the exact shape of the document. The schema owns member names, JSON types, required members, closure, and patterns; this prose owns what each member means and every refusal. The schema's descriptions are informative.
 
-A document MUST carry all eight members, and each member listing names is an array. `protocols` names every protocol the adapter supports, at least one and none twice (§11.1); in any other member, an empty array declares none. `accepts` names options in the same form as `needs` (§11.2), and `contributes` names, as dotted resource identifiers, the resources the adapter supplies only in part (Part 05 §3.4).
+A document MUST carry all eight members, and each member listing names is an array. `protocols` names every protocol the adapter supports, at least one and none twice (§11.1); in any other member, an empty array declares none. `accepts` names options, and the one term §11.2 lets it name, in the same form as `needs` (§11.2), and `contributes` names, as dotted resource identifiers, the resources the adapter supplies only in part (Part 05 §3.4).
 
 A build MUST treat a document and an importable declaration of the same facts as one declaration, and MUST NOT prefer either where both are present. An implementation shipping both MUST generate the document rather than maintain it.
 
 A build MUST check an importable declaration as the document holding the same facts, so a class and a document are refused for the same defects under the same terms. An importable declaration of an adapter a build ships may omit `protocols`, as §11.1 lets it; one of an adapter released independently of a build may not, even where a recipe runs it in process.
 
-A build MUST refuse a declaration that fails the schema, naming where it fails, and one whose `protocols` names a protocol of no group this profile names, whose `produces` names a resource no loaded registry declares, whose `contributes` names a resource its `produces` does not, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option. A build MUST also refuse one whose `accepts` names a term, names an option its `needs` also names, or is not an array of names. None of those need the adapter opened or imported.
+A build MUST refuse a declaration that fails the schema, naming where it fails, and one whose `protocols` names a protocol of no group this profile names, whose `produces` names a resource no loaded registry declares, whose `contributes` names a resource its `produces` does not, whose `states` names a field no recipe block carries, or whose `needs` names what §11.2 resolves to neither a term nor an option. A build MUST also refuse one whose `accepts` names a term other than `source_cache`, names an option its `needs` also names, or is not an array of names, and one whose `needs` names `source_cache`, naming the adapter. None of those need the adapter opened or imported.
 
 `states` names the recipe fields a source can state and the values need the source read, so no static document carries them: they travel under `stated` in the run's report (Part 09 §5.8), keyed by the same `block.field` name. An adapter declaring a non-empty `states` MUST return them. A build MUST read a declared field absent from the report as unstated rather than as disagreeing, since a source stating nothing is a fact and not a mismatch (Part 05 §3.6).
 
@@ -634,6 +637,52 @@ Where a protocol needs the adapter running — `flight-v0.1` does, `files-v0.1` 
 The retry puts one obligation on the adapter: it MUST NOT bind before it can answer `ListFlights`. A build's first call arrives as soon as the socket answers, so an adapter that binds and then extracts serves discovery from a half-built server.
 
 A build that started a process owns it and terminates it once it holds the rows and the report, so an adapter MUST NOT rely on running code after its last response.
+
+<a id="ew-source-cache" data-spec-anchor="canonical"></a>
+### 11.7 The source cache
+
+A build takes its source-cache location, which it supplies as `source_cache` (§11.2), from its own
+configuration. A build MUST supply as `source_cache` only a directory the adapter can write that
+lies outside the root of the packet being built and outside every location the build supplies for a
+delivery ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline)), and MUST create the
+directory where it is absent. A build whose configuration names no such directory has no
+source-cache location. A build MUST NOT empty or remove the location or remove anything in it,
+whether the build publishes, refuses, or fails.
+
+The location is not a delivery location: a build reads no delivery from it, and Part 05 §2's rules
+that a build supplies a delivery location empty and that an adapter does not rely on what one held
+do not govern it. Builds at different packet roots MAY share one location. Removing what the
+location holds outside any build, to bound its size, is an implementation's matter.
+
+An adapter's **run** is its execution for one build. **Kept source data** is anything an adapter
+uses in a run, in place of reading its source, that holds bytes read from a source before the run
+began or is derived from such bytes, wherever it is kept and whatever keeps it.
+
+An adapter MUST NOT use kept source data in a run unless, during that run, it has confirmed that the
+source still holds the bytes the data holds or was derived from, or the URI those bytes were read
+from names content that cannot change, such as an object version a store identifies. An adapter
+confirms that a source still holds bytes only by comparing a value the source reports for the
+object now, an entity tag, a full-object checksum, or a version identifier, with the same value
+recorded when the bytes were read; a modification time, with or without a size, confirms nothing.
+An adapter relying on an entity tag relies on the source to change the tag when the bytes change.
+An adapter that cannot confirm reads its source, and within a run it MAY reuse what it read in that
+run wherever it keeps it. No build or validator verifies this obligation, since neither observes
+what an adapter keeps; an adapter complies in every case by reading its source.
+
+A **storage format** is the layout in which an implementation keeps data in a source-cache location.
+An adapter MUST keep what it stores in a source-cache location under one subdirectory of it, named
+by an identifier of its storage format that the format's implementation controls, such as a package
+or domain name it holds, and MUST NOT change or remove anything outside that subdirectory. A name
+beginning `cache-v` is reserved for a storage format this specification defines, and an adapter MUST
+NOT use one for any other. An adapter MUST NOT make data it stores there readable to another run
+until the data is complete.
+
+An adapter SHOULD keep the source data it keeps across builds only in the source-cache location the
+build supplied it. Before using kept bytes, it SHOULD compare their size, and their full-object
+checksum where the source reports one, with the source's, and it MAY remove from its own
+subdirectory data that fails that comparison. How a storage format names, publishes, replaces, and
+evicts what it keeps is the format's own. No build or validator verifies these obligations, since
+neither observes the location's contents.
 
 <a id="ew-portable-profile-normative-references" data-spec-anchor="canonical"></a>
 ## 12. Normative references

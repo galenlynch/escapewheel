@@ -73,7 +73,7 @@
         "pattern": "^[a-z0-9][a-z0-9_]*$",
         "maxLength": 64
       },
-      "description": "The options this adapter reads and can be constructed without, which a recipe may leave unset (Part 03 §11.2). A name here must be an option and not a term, and must not also appear in `needs`."
+      "description": "The options this adapter reads and can be constructed without, which a recipe may leave unset, and `source_cache` where the adapter keeps source data in the build's source-cache location (Part 03 §11.2). No other term may appear here, and no name here may also appear in `needs`."
     },
     "states": {
       "type": "array",
