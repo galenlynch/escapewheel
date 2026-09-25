@@ -204,7 +204,7 @@ member of it. Obtaining an object's current entity tag costs one request per obj
 §2.5 prices at about 50 s for one build's 2,617 objects sequentially. A writer publishing entries by
 rename within the location needs no lock.
 
-The one open draft, on the core vocabulary's scope, amends Part 00 §§1 and 3.2 and Part 02 §2.2 and
+The other open draft, on the core vocabulary's scope, amends Part 00 §§1 and 3.2 and Part 02 §2.2 and
 shares no text with this one. Of the open proposals, the one on packet-owned opaque delivery adds a
 location term under the staging area to Part 03 §11.2's table and amends §11.3; each draft appends a
 row and neither location can serve for the other. The proposal to move Part 03 §11 into a part of its
@@ -246,8 +246,8 @@ A build takes its source-cache location from its own configuration. A build MUST
 `source_cache` only a directory the adapter can write that lies outside the root of the packet being
 built and outside every location the build supplies for a delivery (Part 05 §2), and MUST create
 the directory where it is absent. A build whose configuration names no such directory has no
-source-cache location. A build MUST NOT empty or remove the location
-or remove an entry from it, whether the build publishes, refuses, or fails.
+source-cache location. A build MUST NOT empty or remove the location or remove an entry from it,
+whether the build publishes, refuses, or fails.
 
 The location is not a delivery location: a build reads no delivery from it, and Part 05 §2's rules
 that a build supplies a delivery location empty and that an adapter does not rely on what one held
@@ -262,18 +262,18 @@ URI and the entity tag the store reported in the response that carried those byt
 implementation's own, and one implementation need not find another's entries.
 
 An adapter MUST NOT write an entry for an object whose response carried no entity tag. Before it
-first reads an entry in a run, an adapter MUST obtain the object's current entity tag from the
-store, and it MUST read an entry only in place of an object whose URI and current entity tag equal
-the entry's. An adapter that cannot obtain a current entity tag reads no entry for that object.
+first reads an object's entry in a run, an adapter MUST obtain that object's current entity tag from
+the store, and it MUST read an entry only in place of an object whose URI and current entity tag
+equal the entry's. An adapter that cannot obtain a current entity tag reads no entry for that object.
 Neither a build nor a validator observes an entry, so no build or validator verifies these
 obligations; an implementation's own tests are their evidence.
 
 ### 3.4 An entry is published whole and then left in place
 
-An adapter MUST make an entry readable only once all its bytes are in place, and MUST NOT change
-or remove an entry once it is readable. Where two adapters write an entry for one URI and entity tag, either copy may remain,
-since both hold the bytes the store reported under that tag. No build or validator verifies these
-obligations.
+An adapter MUST make an entry readable only once all its bytes are in place. Once an entry is
+readable, an adapter MUST NOT change or remove it, except by publishing in its place another entry
+for the same URI and entity tag, which holds the bytes the store reported under that tag. No build
+or validator verifies these obligations.
 
 ### 3.5 An adapter keeps source bytes across builds only as entries
 
@@ -339,13 +339,14 @@ Writer tests distinguish the new rules from the current ones:
 - an object whose store double reports no entity tag is read through and leaves no entry;
 - two processes fetching one object leave one whole entry, and a fetch killed before publication,
   through `open` or `cat`, leaves nothing readable as an entry;
-- the location and every entry remain after a published build and after a refused one; and
+- the location and every entry remain after a published build and after a refused one;
+- a configured location inside the packet root or a delivery location is supplied to no adapter,
+  and the build proceeds as one with no location; and
 - a build with no location, run twice against one store double, fetches every object both times,
   where the current writer reads the second build's objects from `TMPDIR`.
 
 The positive case beside them is an adapter naming no `source_cache`, which reads through and is
 refused nothing, as today. §3.5 has no negative case a tool can run, because no tool observes where
 an adapter keeps what it reads; the last writer test checks only the reference writer's own
-fallback.
-§§3.3 and 3.4 are checked by the reference implementation's tests against a store double, since the
-entry layout is its own.
+fallback. §§3.3 and 3.4 are checked by the reference implementation's tests against a store double,
+since the entry layout is its own.
