@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `b8bf7c10b0942eb1e2a675976493e94f2fe3e12b` |
+| **Based on** | `d1d10eeaef3f737f1ebef784ed455368e31b876c` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 03 §§2, 3.1, 4, 10, 11, 11.2, and 11.3; Part 04 §5.4; Part 05 §§2, 5.3, and 15; Part 07 §4 |
@@ -190,15 +190,15 @@ renames it into place (Part 03 §3.4). Digesting the four videos of §2.2 costs 
 and 0.6 s under CRC64NVME at R136 §2's in-memory throughputs of 2.4 and 18.5 GB/s; copying them
 costs more and is paid once.
 
-R142, on the source cache, also appends a row to Part 03 §11.2's table and adds a last subsection
-to Part 03 §11. This draft adds no subsection, so the two share only that table, and their rows
-land in the order the drafts are incorporated. Its location lies outside the staging area and outlives a build, where
-`opaque_location` lies inside it and does not, so neither term can serve for the other. The
-core-vocabulary draft shares no section with this one. The later relocation of Part 03 §11 into its
-own part moves §§11, 11.2, and 11.3 as both drafts leave them, and follows both. A reverse-citation
-query for the eight amended sections lists 336 citations, 163 of them outside the revision records;
-incorporation reads those in Parts 04, 05, 07, and 09, the adapter and manifest schemas, the writer,
-the validator, and the AIND package.
+R142 appended `source_cache` to Part 03 §11.2's table and added §11.7 as the last subsection of
+Part 03 §11. This draft appends its row after R142's and adds no subsection. The source-cache
+location lies outside the staging area and outlives a build, where `opaque_location` lies inside it
+and does not, so neither term can serve for the other. R141 shares no section with this draft. The
+later relocation of Part 03 §11 into its own part moves §§11, 11.2, and 11.3 as R142 and this draft
+leave them. A reverse-citation query for the twelve amended sections lists 425 citations outside
+this draft, 199 of them outside the revision records; incorporation reads those in Parts 02, 03, 04,
+05, 07, and 09, the adapter and manifest schemas, the fixture and adapter-boundary tooling, the
+writer, the validator, the reader, and the AIND package.
 
 ## 3. Decision
 
