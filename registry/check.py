@@ -100,12 +100,12 @@ check(
     ],
 )
 check(
-    "registry meta-schema identity is 0.6.0",
-    [] if META_ID == "https://escapewheel.org/schemas/registry/0.6.0" else [META_ID],
+    "registry meta-schema identity is 0.7.0",
+    [] if META_ID == "https://escapewheel.org/schemas/registry/0.7.0" else [META_ID],
 )
 check(
-    "core registry version is 0.6.0",
-    [] if REG.get("registry_version") == "0.6.0" else [REG.get("registry_version")],
+    "core registry version is 0.7.0",
+    [] if REG.get("registry_version") == "0.7.0" else [REG.get("registry_version")],
 )
 check(
     "every shipped registry selects the incorporated rule language",
@@ -588,7 +588,7 @@ try:
     jsonschema.Draft202012Validator.check_schema(_contract_schema)
     _contract = json.loads(
         (
-            HERE / "registry_contracts/escapewheel-registry-contract-v0.3.json"
+            HERE / "registry_contracts/escapewheel-registry-contract-v0.4.json"
         ).read_text()
     )
     _contract_errors = list(

@@ -830,6 +830,14 @@ def variants():
         # the name order R53 numbers them in, and an index silently picked the wrong clock.
         child(c)["transform_offset"] = None
 
+    def non_finite_rate(c):
+        # Part 02 §5.4. NaN orders above every number, so `tick_rate_positive` passes it.
+        child(c)["tick_rate_hz"] = float("nan")
+
+    def negative_slope(c):
+        # Part 02 §5.4 leaves -1 to a rule: it is finite, and only its sign is wrong.
+        child(c)["transform_slope"] = -1.0
+
     def unsorted_spikes(c):
         s = c["core.spike_events"]
         s[3], s[4] = s[4], s[3]
@@ -990,6 +998,8 @@ def variants():
         "missing_amplitude_unit": missing_amplitude_unit,
         "non_ucum_unit": non_ucum_unit,
         "half_transform": half_transform,
+        "non_finite_rate": non_finite_rate,
+        "negative_slope": negative_slope,
         "unsorted_spikes": unsorted_spikes,
         "inconsistent_projection": inconsistent_projection,
         "spike_outside_window": spike_outside_window,

@@ -206,6 +206,12 @@
         "level": "error",
         "message": "a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it",
         "sql": "SELECT c.session_id, c.clock_id FROM core.clocks AS c WHERE (c.withheld_first_anchor IS NOT NULL OR c.withheld_last_anchor IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM core.clock_anchors AS a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id)"
+      },
+      {
+        "id": "core.clocks.transform_slope_positive",
+        "level": "error",
+        "message": "transform_slope is not positive",
+        "sql": "SELECT clock_id, transform_slope FROM core.clocks WHERE transform_slope <= 0"
       }
     ],
     "core.devices": [

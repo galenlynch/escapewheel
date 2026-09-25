@@ -241,7 +241,7 @@ precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE
 
 Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null.
 
-NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches the registry's float columns and none of the rest, and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
+NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches only a float column declaring `finite: false` under [Part 02 §5.4](02_core_logical_schemas.md#ew-finite-values), and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
 
 A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null. Where the reason for the absence matters, core records the fact that distinguishes it rather than encoding the reason in the value: a run's `scope` distinguishes an undeterminable scope from an unambiguous one, and `normalized_label` is null where a source's label has no honest projection.
 

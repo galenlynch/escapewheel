@@ -94,6 +94,7 @@
 "5.1" = "Permitted types"
 "5.2" = "No nested types"
 "5.3" = "Fixed representations"
+"5.4" = "Finite values"
 "6" = "Presence"
 "7" = "References"
 "7.1" = "Session scope"
@@ -609,6 +610,12 @@ aliases = []
 part = "04"
 section = "5.3"
 title = "Verification levels"
+aliases = []
+
+[anchor.ew-finite-values]
+part = "02"
+section = "5.4"
+title = "Finite values"
 aliases = []
 
 [anchor.ew-free-form-metadata]

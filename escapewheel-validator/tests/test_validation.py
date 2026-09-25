@@ -96,6 +96,48 @@ def test_a_unit_that_is_not_a_ucum_code_fails_once_per_value(packet_root):
     assert finding.rows == (("volts",),)
 
 
+def _validate_tick_rates(packet_root, values, *, presence="nullable"):
+    """Declare a finite `core.clocks.tick_rate_hz` (Part 02 §5.4), write `values` unless None, validate."""
+    registry = read_registry(packet_root)
+    registry["resources"]["core.clocks"]["table"]["columns"].append(
+        {
+            "name": "tick_rate_hz",
+            "type": "float64",
+            "presence": presence,
+            "role": "data",
+            "description": "ticks per second",
+            "finite": True,
+        }
+    )
+    install_registry(packet_root, registry)
+    if values is not None:
+        clocks = pq.read_table(packet_root / "tables" / "core" / "clocks.parquet")
+        _rewrite(packet_root, "clocks", clocks.append_column("tick_rate_hz", pa.array(values, type=pa.float64())))
+    return validate(open_packet(packet_root))
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_a_non_finite_value_in_a_finite_column_fails(packet_root, value):
+    """Part 02 §10.1: each non-finite value is an error; the null beside it is presence's concern alone."""
+    report = _validate_tick_rates(packet_root, [value, None])
+    finding = next(f for f in report.findings if f.check == "core.clocks.tick_rate_hz.finite")
+    assert not report.passed
+    assert finding.level == "error" and finding.registry == "core"
+    assert [row[0] for row in finding.rows] == ["1"]
+
+
+def test_finite_values_and_nulls_pass_a_finite_column(packet_root):
+    report = _validate_tick_rates(packet_root, [30_000.0, None])
+    assert report.passed
+    assert not any(f.check.endswith(".finite") for f in report.findings)
+
+
+def test_an_absent_optional_finite_column_reports_nothing(packet_root):
+    report = _validate_tick_rates(packet_root, None, presence="optional")
+    assert report.passed
+    assert not any(f.check.endswith(".finite") for f in report.findings)
+
+
 def test_tier_two_rule(packet_root):
     trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
     broken = trials.set_column(3, "stop_tick", pa.array([0, 10000], type=pa.int64()))
@@ -1438,7 +1480,7 @@ def test_an_empty_packet_owned_prefix_is_missing(packet_root):
 def _extension(root, *, tables=None, mutate=None):
     """Give the packet an extension registry and a table conforming to it."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
         "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -1539,6 +1581,31 @@ def test_an_extension_reference_into_core_resolves(packet_root):
     root = _extension(packet_root, mutate=lambda r: r["trial_id"].__setitem__(0, 999))
     report = validate(open_packet(root))
     assert any(f.check.endswith("_resolves") and f.registry == "task" for f in report.findings)
+
+
+def test_an_extension_non_finite_value_is_attributed_to_it(packet_root):
+    """Part 05 §5.4 applies the finiteness check to an extension's columns, filed under it (§9.5)."""
+    root = _extension(packet_root)
+    document = read_registry(root, "task")
+    document["resources"]["task.trials"]["table"]["columns"].append(
+        {
+            "name": "reward_volume",
+            "type": "float64",
+            "presence": "nullable",
+            "role": "data",
+            "description": "Reward volume.",
+            "finite": True,
+        }
+    )
+    install_registry(root, document)
+    table = pq.read_table(root / "tables" / "task" / "trials.parquet")
+    pq.write_table(
+        table.append_column("reward_volume", pa.array([float("nan"), 2.0])), root / "tables" / "task" / "trials.parquet"
+    )
+    report = validate(open_packet(root))
+    finding = next(f for f in report.findings if f.check == "task.trials.reward_volume.finite")
+    assert finding.registry == "task" and finding.level == "error"
+    assert _verdicts(report, "core", "task") == ("failed", "passed", "failed")
 
 
 def _verdicts(report, *registries):
@@ -1710,7 +1777,7 @@ def _required_extension(root, extension_id):
     install_registry(
         root,
         {
-            "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+            "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
             "registry_id": extension_id,
             "registry_version": "0.1.0",
             "logical_standard_version": "escapewheel-logical-v0.1",

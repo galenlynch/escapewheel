@@ -1,7 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
   "registry_id": "core",
-  "registry_version": "0.6.0",
+  "registry_version": "0.7.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
@@ -43,7 +43,8 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "unit": "Hz"
+            "unit": "Hz",
+            "finite": true
           },
           {
             "name": "origin",

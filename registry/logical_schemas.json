@@ -1,7 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
   "registry_id": "core",
-  "registry_version": "0.6.0",
+  "registry_version": "0.7.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
@@ -115,7 +115,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Sample rate if regularly sampled.",
-            "unit": "Hz"
+            "unit": "Hz",
+            "finite": true
           },
           {
             "name": "unit",
@@ -136,7 +137,8 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Multiply stored values by this before offset."
+            "description": "Multiply stored values by this before offset.",
+            "finite": true
           },
           {
             "name": "offset",
@@ -144,7 +146,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Add after conversion.",
-            "unit_from": "unit"
+            "unit_from": "unit",
+            "finite": true
           },
           {
             "name": "metadata",
@@ -285,7 +288,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Increment per position.",
-            "unit_from": "coordinate_unit"
+            "unit_from": "coordinate_unit",
+            "finite": true
           },
           {
             "name": "origin_value",
@@ -293,7 +297,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Value at position 0 (regular numeric axis).",
-            "unit_from": "coordinate_unit"
+            "unit_from": "coordinate_unit",
+            "finite": true
           },
           {
             "name": "step_tick_num",
@@ -592,7 +597,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Sample rate if regularly sampled.",
-            "unit": "Hz"
+            "unit": "Hz",
+            "finite": true
           },
           {
             "name": "unit",
@@ -613,7 +619,8 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Multiply stored values by this before offset."
+            "description": "Multiply stored values by this before offset.",
+            "finite": true
           },
           {
             "name": "offset",
@@ -621,7 +628,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Add after conversion.",
-            "unit_from": "unit"
+            "unit_from": "unit",
+            "finite": true
           },
           {
             "name": "metadata",
@@ -750,7 +758,8 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Acquisition time offset within one sample period, in sample periods."
+            "description": "Acquisition time offset within one sample period, in sample periods.",
+            "finite": true
           },
           {
             "name": "unit",
@@ -772,14 +781,16 @@
             "presence": "nullable",
             "role": "data",
             "description": "Add after conversion.",
-            "unit_from": "unit"
+            "unit_from": "unit",
+            "finite": true
           },
           {
             "name": "conversion",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Multiply stored values by this before offset."
+            "description": "Multiply stored values by this before offset.",
+            "finite": true
           }
         ],
         "primary_key": [
@@ -914,7 +925,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Increment per position.",
-            "unit_from": "coordinate_unit"
+            "unit_from": "coordinate_unit",
+            "finite": true
           },
           {
             "name": "origin_value",
@@ -922,7 +934,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Value at position 0 (regular numeric axis).",
-            "unit_from": "coordinate_unit"
+            "unit_from": "coordinate_unit",
+            "finite": true
           },
           {
             "name": "step_tick_num",
@@ -1160,7 +1173,8 @@
             "presence": "required",
             "role": "data",
             "description": "The setting the point was measured at.",
-            "unit_from": "core.calibrations.input_unit"
+            "unit_from": "core.calibrations.input_unit",
+            "finite": true
           },
           {
             "name": "output_value",
@@ -1168,7 +1182,8 @@
             "presence": "required",
             "role": "data",
             "description": "What the instrument then delivered.",
-            "unit_from": "core.calibrations.output_unit"
+            "unit_from": "core.calibrations.output_unit",
+            "finite": true
           }
         ],
         "primary_key": [
@@ -1580,7 +1595,8 @@
             "presence": "required",
             "role": "data",
             "description": "How far the parent's phase moved. Signed.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "anchor_interval_span",
@@ -1667,7 +1683,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Tick rate as float, required unless exact tick rate provided.",
-            "unit": "Hz"
+            "unit": "Hz",
+            "finite": true
           },
           {
             "name": "tick_rate_num",
@@ -1711,14 +1728,16 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Parent ticks per this clock's tick, as measured."
+            "description": "Parent ticks per this clock's tick, as measured.",
+            "finite": true
           },
           {
             "name": "transform_offset",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Parent-clock tick at this clock's tick 0."
+            "description": "Parent-clock tick at this clock's tick 0.",
+            "finite": true
           },
           {
             "name": "transform_to_parent",
@@ -1838,6 +1857,12 @@
             "level": "error",
             "message": "a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it",
             "sql": "SELECT c.session_id, c.clock_id FROM core.clocks AS c WHERE (c.withheld_first_anchor IS NOT NULL OR c.withheld_last_anchor IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM core.clock_anchors AS a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id)"
+          },
+          {
+            "id": "core.clocks.transform_slope_positive",
+            "level": "error",
+            "message": "transform_slope is not positive",
+            "sql": "SELECT clock_id, transform_slope FROM core.clocks WHERE transform_slope <= 0"
           }
         ]
       }
@@ -2366,7 +2391,8 @@
             "presence": "required",
             "role": "data",
             "description": "The value, in the axis's unit.",
-            "unit_from": "core.coordinate_frame_axes.unit"
+            "unit_from": "core.coordinate_frame_axes.unit",
+            "finite": true
           }
         ],
         "primary_key": [
@@ -2596,7 +2622,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Impedance.",
-            "unit": "Ohm"
+            "unit": "Ohm",
+            "finite": true
           },
           {
             "name": "metadata",
@@ -3969,7 +3996,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "How far past its anchors the writer mapped, in median anchor intervals (Part 01 \u00a73.9). Null means the default of one.",
-            "unit": "{median_anchor_interval}"
+            "unit": "{median_anchor_interval}",
+            "finite": true
           }
         ],
         "primary_key": [
@@ -4386,7 +4414,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Spike amplitude if available.",
-            "unit_from": "core.units.amplitude_unit"
+            "unit_from": "core.units.amplitude_unit",
+            "finite": true
           }
         ],
         "primary_key": [
@@ -4595,7 +4624,8 @@
             "presence": "required",
             "role": "data",
             "description": "The value, in the axis's unit.",
-            "unit_from": "core.coordinate_frame_axes.unit"
+            "unit_from": "core.coordinate_frame_axes.unit",
+            "finite": true
           }
         ],
         "primary_key": [
@@ -5016,7 +5046,8 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "The source's confidence, where it reports one."
+            "description": "The source's confidence, where it reports one.",
+            "finite": true
           }
         ],
         "primary_key": [
@@ -5162,7 +5193,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Firing rate if known.",
-            "unit": "Hz"
+            "unit": "Hz",
+            "finite": true
           },
           {
             "name": "n_spikes",

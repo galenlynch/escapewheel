@@ -72,11 +72,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.6.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.7.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.6.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.7.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -1130,6 +1130,7 @@ other fields the column requires or permits.
 | `presence` | yes | §6 |
 | `role` | yes | §8.1 |
 | `identity` | for identifiers | §8.2 |
+| `finite` | for `float32` and `float64` columns | §5.4 |
 | `enum` | for closed vocabularies | §9.3 |
 | `resolves`, `discriminates`, `positions_in`, `discriminates_via` | as applicable for discriminators | §8.3 |
 | `unit`, `unit_from`, `clock_from` | where applicable | §8.4 |
@@ -1188,6 +1189,25 @@ UTC. Identifier columns MUST be `int32`, except where the number of distinct val
 `int32`, where the column MUST be `int64`, and except the catalog `resource_id` defined by §2.6.
 No core table is near the integer bound; an extension declaring an integer identifier over more
 than 2^31 rows declares `int64` for it.
+
+<a id="ew-finite-values" data-spec-anchor="canonical"></a>
+### 5.4 Finite values
+
+A value of a `float32` or `float64` column is **non-finite** when it is NaN, positive infinity, or
+negative infinity. Every other non-null value of those types is finite, and null is neither.
+
+Every column whose type is `float32` or `float64` MUST declare `finite`, a boolean, and a column of
+any other type MUST NOT declare it. There is no default, so an absent declaration is a defect
+rather than a claim.
+
+- `finite: true` declares that the column holds no non-finite value. A packet MUST NOT hold a
+  non-finite value in such a column.
+- `finite: false` admits non-finite values. A Tier 2 rule reading such a column sees them in the
+  order [Part 11 §5](11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics) defines.
+
+A NaN is therefore a value only of a float column declaring `finite: false`. An absent value remains
+null under [Part 03 §5.6](03_portable_physical_profile.md#ew-one-null), so a source's NaN or
+infinity meaning that a value was not recorded or not computable becomes null in any float column.
 
 ## 6. Presence
 
@@ -1469,16 +1489,19 @@ A packet binds each registry that declares its resources under
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.6.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.7.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.6.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.7.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.1`.
 
 An extension's `registry_version` identifies that extension registry and advances independently of
 the core registry's version. An extension conforming to the incorporated meta-schema MUST carry
 the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
-The core specification does not assign an extension's version.
+The core specification does not assign an extension's version. An extension registry migrated to
+meta-schema 0.7.0 MUST carry a `registry_version` different from the one it carried under 0.6.0.
+No checker verifies this, since a checker reads only the document before it and not the version
+that document replaced.
 
 A checker selects schemas and contracts only from local artifacts and MUST NOT dereference an
 identifier. An old registry document MUST NOT be silently interpreted under the new meta-schema
@@ -1533,8 +1556,10 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.3` and selects the 0.6.0
-meta-schema. A checker MUST evaluate its
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.4` and selects the 0.7.0
+meta-schema. That meta-schema MUST declare `finite` as a boolean member of a column, require it
+where `type` is `float32` or `float64`, and forbid it otherwise; the `shape` phase therefore decides
+§5.4's declaration rule, and the descriptor adds no invariant for it. A checker MUST evaluate its
 phases in this order:
 
 1. `json`;
@@ -1703,6 +1728,15 @@ the descriptor ID is null.
 ### 10.1 Tier 1: generated from structure
 
 A validator MUST generate, from the declaration alone: required-column non-null checks, foreign-key anti-joins, and closed-vocabulary membership. A nullable foreign key is guarded with a null test.
+
+A validator MUST also generate, from the declaration alone, for every column declaring
+`finite: true`, a check that reports each row holding a non-finite value (§5.4) in that column, at
+level `error`, under the check ID `<declaration_id>.<column>.finite`, such as
+`core.clocks.tick_rate_hz.finite`. Where the column is `optional` and a table omits it, the check
+reports nothing. The finding belongs to the registry holding the declaration under
+[Part 05 §9.5](05_validation_and_import.md#ew-verdict-composition), and
+[Part 05 §5.4](05_validation_and_import.md#ew-validation-extensions) applies the check to the columns
+an extension declares.
 
 A validator MUST establish that a table's primary key is unique, by query or by any means a physical profile defines as establishing it. That a key is unique holds under any profile and is this part's; how a validator may establish it depends on how rows are stored, and is the profile's.
 
@@ -2196,7 +2230,7 @@ precision; A wall-clock column MUST NOT use `INT96`. Dates MUST be Parquet `DATE
 
 Under `escapewheel-portable-v0.1` a column value is present or null and there is no second marker. Parquet's definition level carries one bit and Arrow's validity bitmap carries one, so a value that is inapplicable, one that was never recorded, and one a source recorded as unknown all arrive as the same null.
 
-NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches the registry's float columns and none of the rest, and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
+NaN is not the exception it looks like. It is a value of a float column rather than an absent one, so it reaches only a float column declaring `finite: false` under [Part 02 §5.4](02_core_logical_schemas.md#ew-finite-values), and Parquet's statistics exclude it from a page's bounds — a page holding only NaN publishes no minimum and no maximum.
 
 A writer MUST NOT adopt a sentinel value meaning absent; an absent value is null. Where the reason for the absence matters, core records the fact that distinguishes it rather than encoding the reason in the value: a run's `scope` distinguishes an undeterminable scope from an unambiguous one, and `normalized_label` is null where a source's label has no honest projection.
 
@@ -3318,7 +3352,7 @@ A build MUST report everything the protocol it used carries about a failure — 
 <a id="ew-tier-1-validation" data-spec-anchor="canonical"></a>
 ### 5.1 Tier 1
 
-Generated from structure (Part 02 §10.1): required-column non-null, primary-key uniqueness, foreign-key anti-joins, closed-vocabulary membership.
+Generated from structure (Part 02 §10.1): required-column non-null, primary-key uniqueness, foreign-key anti-joins, closed-vocabulary membership, and the finiteness of every column declaring `finite: true`.
 
 <a id="ew-tier-2-validation" data-spec-anchor="canonical"></a>
 ### 5.2 Tier 2
@@ -4007,7 +4041,7 @@ Two files are 99.3% of what the packet owns: `core.spike_events` at 232 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.6.0.json.gz
+    core/             0.7.0.json.gz
     dynamic_foraging/ 0.7.0.json.gz
     aind_unit_qc/     0.5.0.json.gz
   tables/
@@ -4034,8 +4068,8 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": { "role": "core", "version": "0.6.0",
-              "path": "registries/core/0.6.0.json.gz", "sha256": "…" },
+    "core": { "role": "core", "version": "0.7.0",
+              "path": "registries/core/0.7.0.json.gz", "sha256": "…" },
     "dynamic_foraging": { "role": "extension", "version": "0.7.0",
                           "path": "registries/dynamic_foraging/0.7.0.json.gz", "sha256": "…" },
     "aind_unit_qc": { "role": "extension", "version": "0.5.0",

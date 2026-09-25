@@ -78,10 +78,10 @@ much, so the counts below are the current reference registry's and a packet carr
 gets its own.
 
 <!-- BEGIN facts: registry -->
-43 tables, 348 columns, 111 references, 76 Tier 2 rules (2 advisory)
+43 tables, 348 columns, 111 references, 77 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: tier1 -->
-164 not-null, 111 foreign-key, 4 closed-vocabulary and 16 discriminator checks, plus one uniqueness check per table whose sort does not begin with its primary key
+164 not-null, 111 foreign-key, 4 closed-vocabulary, 26 finite-value and 16 discriminator checks, plus one uniqueness check per table whose sort does not begin with its primary key
 <!-- END facts: tier1 -->
 
 | | Comes from |
@@ -90,6 +90,7 @@ gets its own.
 | foreign-key anti-join | `references`, with a null guard where the column is nullable |
 | primary-key uniqueness | `primary_key`, and only where a streaming scan does not already settle it |
 | closed vocabulary | `enum` |
+| finite value | `finite: true`, skipped where an `optional` column is absent |
 | discriminator | `role: discriminator`, two checks each (R55 §2.4) |
 | Tier 2 | statically checked `escapewheel-rule-sql-v0.1` queries the structure cannot imply, authored in `registry/rules.json` |
 

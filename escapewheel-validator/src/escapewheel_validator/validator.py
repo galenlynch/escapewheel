@@ -2115,6 +2115,10 @@ def _run_checks(
                 detail=f"unreadable input(s): {', '.join(missing)}",
             )
             continue
+        if check.optional_column is not None and check.optional_column not in _relation_columns(
+            connection, check.resource
+        ):
+            continue
         try:
             rows = _offending(connection, check.sql)
         except Exception as exc:  # noqa: BLE001 - converted to the layer-owned outcome below
@@ -2315,6 +2319,11 @@ def _offending(connection: Any, sql: str) -> list[tuple[Any, ...]]:
     """
     table = connection.sql(sql).arrow().read_all()
     return list(zip(*[column.to_pylist() for column in table.columns], strict=True))
+
+
+def _relation_columns(connection: Any, relation: str) -> list[str]:
+    """Return the column names an installed packet relation carries."""
+    return list(connection.sql(f"SELECT * FROM {relation} LIMIT 0").columns)
 
 
 def validate(

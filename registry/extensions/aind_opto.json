@@ -1,7 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
   "registry_id": "aind_opto",
-  "registry_version": "0.6.0",
+  "registry_version": "0.7.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "aind_opto",
@@ -47,7 +47,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Power delivered by this emitter.",
-            "unit": "mW"
+            "unit": "mW",
+            "finite": true
           },
           {
             "name": "wavelength_nm",
@@ -55,7 +56,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Wavelength of this emitter.",
-            "unit": "nm"
+            "unit": "nm",
+            "finite": true
           },
           {
             "name": "location",
@@ -137,7 +139,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "How long the light was on.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "pulse_duration_s",
@@ -145,7 +148,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "One pulse, where the protocol pulses.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "frequency_hz",
@@ -153,7 +157,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Pulse frequency, where the protocol pulses.",
-            "unit": "Hz"
+            "unit": "Hz",
+            "finite": true
           },
           {
             "name": "ramping_down_s",
@@ -161,7 +166,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Ramp-down time, where the protocol ramps.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "start_offset_s",
@@ -169,7 +175,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Onset relative to the interval's start.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "end_offset_s",
@@ -177,7 +184,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Offset relative to the interval's end.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "condition",
@@ -192,14 +200,16 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "How often this condition was drawn."
+            "description": "How often this condition was drawn.",
+            "finite": true
           },
           {
             "name": "on_probability",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "How often the light was on at all."
+            "description": "How often the light was on at all.",
+            "finite": true
           },
           {
             "name": "metadata",

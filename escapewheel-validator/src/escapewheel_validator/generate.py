@@ -1,8 +1,8 @@
 """Generate Tier 1 validation checks from a registry.
 
-Tier 1 follows from structure alone (R2 §7.1): required columns, primary keys, foreign
-keys, closed vocabularies. Nothing here is written per table. Tier 2 rules carried in the
-registry are passed through unchanged.
+Tier 1 follows from structure alone (Part 02 §10.1): required columns, primary keys, foreign
+keys, closed vocabularies, finite values. Nothing here is written per table. Tier 2 rules carried
+in the registry are passed through unchanged.
 
 Every check is SQL returning offending rows; an empty result is a pass (R2 §7.3).
 """
@@ -35,6 +35,9 @@ class Check:
         A query returning offending rows.
     resource : str
         The resource the check is declared on. Not necessarily the only one its query reads.
+    optional_column : str, optional
+        An `optional` column the query reads. A table omitting it leaves nothing to check, so the
+        runner skips the check rather than reporting a query that cannot bind (Part 02 §10.1).
     """
 
     id: str
@@ -44,6 +47,7 @@ class Check:
     resource: str
     tier: int = 1
     dependencies: frozenset[str] = frozenset()
+    optional_column: str | None = None
 
     def __post_init__(self) -> None:
         """Default a generated check's inputs to its attached resource."""
@@ -302,6 +306,18 @@ def _generate(
                         f"required column {column['name']} contains nulls",
                         f"SELECT * FROM {name} WHERE {quote(column['name'])} IS NULL",
                         resource,
+                    )
+                )
+            if column.get("finite") is True:
+                # `isfinite` is null for null, so a null stays presence's concern alone.
+                checks.append(
+                    Check(
+                        f"{resource}.{column['name']}.finite",
+                        "error",
+                        f"{column['name']} holds NaN or an infinity",
+                        f"SELECT * FROM {name} WHERE NOT isfinite({quote(column['name'])})",
+                        resource,
+                        optional_column=column["name"] if column["presence"] == "optional" else None,
                     )
                 )
             if values := column.get("enum"):

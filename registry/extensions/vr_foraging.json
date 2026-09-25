@@ -1,7 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
   "registry_id": "vr_foraging",
-  "registry_version": "0.6.0",
+  "registry_version": "0.7.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "vr_foraging",
@@ -143,7 +143,8 @@
             "presence": "required",
             "role": "data",
             "description": "Concentration commanded on this channel. Zero where the channel was not used: the source emits one value per channel whether or not an odor is on it, so a missing row is a missing channel rather than a silent one.",
-            "unit": "%"
+            "unit": "%",
+            "finite": true
           }
         ],
         "primary_key": [
@@ -243,7 +244,8 @@
             "presence": "required",
             "role": "data",
             "description": "Where the site begins along the virtual corridor.",
-            "unit": "cm"
+            "unit": "cm",
+            "finite": true
           },
           {
             "name": "length",
@@ -251,7 +253,8 @@
             "presence": "required",
             "role": "data",
             "description": "How far the site extends.",
-            "unit": "cm"
+            "unit": "cm",
+            "finite": true
           },
           {
             "name": "friction",
@@ -259,7 +262,8 @@
             "presence": "required",
             "role": "data",
             "description": "Friction in force over the site, carried forward from the last friction change.",
-            "unit": "%"
+            "unit": "%",
+            "finite": true
           },
           {
             "name": "odor_onset_tick",
@@ -299,14 +303,16 @@
             "presence": "nullable",
             "role": "data",
             "description": "Water delivered.",
-            "unit": "mL"
+            "unit": "mL",
+            "finite": true
           },
           {
             "name": "reward_probability",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Reward probability at delivery. Null where the reward was not sampled. No unit is declared: the model says percentage for a field named probability, and which of 0-1 or 0-100 is stored has not been checked against data."
+            "description": "Reward probability at delivery. Null where the reward was not sampled. No unit is declared: the model says percentage for a field named probability, and which of 0-1 or 0-100 is stored has not been checked against data.",
+            "finite": true
           },
           {
             "name": "reward_available",
@@ -314,7 +320,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Water left in the patch at delivery. Null where the reward was not sampled.",
-            "unit": "mL"
+            "unit": "mL",
+            "finite": true
           },
           {
             "name": "has_forced_rewards",
@@ -336,7 +343,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Velocity at the sample closest to last_stop_tick. Null where that is null.",
-            "unit": "cm/s"
+            "unit": "cm/s",
+            "finite": true
           },
           {
             "name": "patch_index",

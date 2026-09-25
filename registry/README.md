@@ -7,7 +7,7 @@ Part 03 §3.3).
 
 <!-- BEGIN generated: counts -->
 ```
-46 resources, 43 tables, 348 columns, 111 references, 76 Tier 2 rules
+46 resources, 43 tables, 348 columns, 111 references, 77 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -21,7 +21,7 @@ history and rationale but are not current normative owners.
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
 | `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
-| `registry_contracts/escapewheel-registry-contract-v0.3.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
+| `registry_contracts/escapewheel-registry-contract-v0.4.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.1.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | Incorporated closed schema for `packet.json` (Part 04). |
@@ -110,6 +110,7 @@ declares, and therefore what a generator has to work with:
 111 reference, resolves
 43  primary key, unique
 4   closed vocabulary, member of
+26  finite column, no NaN or infinity
 8   discriminator, resolvable
 ```
 <!-- END generated: structure -->
@@ -132,11 +133,11 @@ selects `escapewheel-rule-sql-v0.1`; individual rules cannot override it. Inline
 table's whole logical contract readable in one declaration.
 
 <!-- BEGIN generated: rules -->
-76 rules over 27 tables: 67 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
+77 rules over 27 tables: 68 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
-| `core.clocks` | 11 |
+| `core.clocks` | 12 |
 | `core.array_dimensions` | 8 |
 | `core.processing_runs` | 7 |
 | `core.units` | 5 |

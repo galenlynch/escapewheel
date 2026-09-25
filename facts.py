@@ -58,7 +58,7 @@ def documents() -> list[Path]:
 #: their algorithms; the shared checker implements them and `registry/check.py` consumes one
 #: complete result.
 REGISTRY_CONTRACT = (
-    "registry/registry_contracts/escapewheel-registry-contract-v0.3.json"
+    "registry/registry_contracts/escapewheel-registry-contract-v0.4.json"
 )
 
 
@@ -149,6 +149,7 @@ def facts() -> dict[str, str]:
     # Tier 1 is derived from structure, so its shape is countable without the validator.
     not_null = sum(1 for c in columns if c["presence"] == "required")
     vocabulary = sum(1 for c in columns if c.get("enum"))
+    finite = sum(1 for c in columns if c.get("finite") is True)
     discriminators = sum(1 for c in columns if c.get("role") == "discriminator")
 
     accepted, withdrawn, proposed = set(), set(), set()
@@ -200,8 +201,8 @@ def facts() -> dict[str, str]:
             )
         ),
         "tier1": (
-            f"{not_null} not-null, {references} foreign-key, {vocabulary} closed-vocabulary "
-            f"and {2 * discriminators} discriminator checks, plus one uniqueness check per "
+            f"{not_null} not-null, {references} foreign-key, {vocabulary} closed-vocabulary, "
+            f"{finite} finite-value and {2 * discriminators} discriminator checks, plus one uniqueness check per "
             f"table whose sort does not begin with its primary key"
         ),
         "extensions": f"{len(extensions)} extension registries: {', '.join(extensions)}",

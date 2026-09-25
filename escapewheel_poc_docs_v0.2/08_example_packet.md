@@ -24,7 +24,7 @@ Two files are 99.3% of what the packet owns: `core.spike_events` at 232 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.6.0.json.gz
+    core/             0.7.0.json.gz
     dynamic_foraging/ 0.7.0.json.gz
     aind_unit_qc/     0.5.0.json.gz
   tables/
@@ -51,8 +51,8 @@ The LFP is referenced rather than copied: ten entries instantiating the dense-ar
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": { "role": "core", "version": "0.6.0",
-              "path": "registries/core/0.6.0.json.gz", "sha256": "…" },
+    "core": { "role": "core", "version": "0.7.0",
+              "path": "registries/core/0.7.0.json.gz", "sha256": "…" },
     "dynamic_foraging": { "role": "extension", "version": "0.7.0",
                           "path": "registries/dynamic_foraging/0.7.0.json.gz", "sha256": "…" },
     "aind_unit_qc": { "role": "extension", "version": "0.5.0",

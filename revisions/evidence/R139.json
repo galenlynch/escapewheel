@@ -1,0 +1,432 @@
+{
+  "version": 1,
+  "revision": "R139",
+  "based_on": "bca96ae475c220f7b8329ab47b42e6a07e6a51b2",
+  "clauses": {
+    "R139 \u00a73.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-finite-values"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-column-declaration"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-one-null"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_meta_schema_owns_each_local_conditional[float_finite]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_meta_schema_owns_each_local_conditional[string_finite]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_finite_values_and_nulls_pass_a_finite_column"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-aind",
+            "nodeid": "tests/test_unit_qc.py::test_an_infinite_metric_is_null"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every extension validates against the same meta-schema"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the registry-codegen prototype's document validates against the meta-schema"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/extensions/aind_opto.json",
+          "registry/extensions/aind_unit_qc.json",
+          "registry/extensions/dynamic_foraging.json",
+          "registry/extensions/vr_foraging.json",
+          "prototype/registry-codegen/registry.json",
+          "conformance/interval-kinds/probe.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes which values a float column admits"
+      }
+    },
+    "R139 \u00a73.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-tier-1-rules"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-tier-1-validation"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_non_finite_value_in_a_finite_column_fails[nan]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_non_finite_value_in_a_finite_column_fails[inf]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_non_finite_value_in_a_finite_column_fails[-inf]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_finite_values_and_nulls_pass_a_finite_column"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_absent_optional_finite_column_reports_nothing"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_extension_non_finite_value_is_attributed_to_it"
+          },
+          {
+            "kind": "fixture",
+            "packet": "non_finite_rate",
+            "finding": "core.clocks.tick_rate_hz.finite"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/generate.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py",
+          "facts.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel-validator/CONTRIBUTING.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R139 \u00a73.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$defs/column/properties/finite"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.4.json",
+          "pointer": "/id"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.4.json",
+          "pointer": "/registry_schema"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.4.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "registry meta-schema identity is 0.7.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "core registry version is 0.7.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every shipped registry names the current meta-schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_reference_registry_has_one_complete_valid_result"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_registry_naming_the_superseded_meta_schema_is_unsupported"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_meta_schema_owns_each_local_conditional[float_finite]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_meta_schema_owns_each_local_conditional[string_finite]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "facts.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md",
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    },
+    "R139 \u00a73.4": {
+      "owners": [
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_assets/table/columns/9/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_assets/table/columns/11/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_assets/table/columns/12/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/columns/8/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/columns/9/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_assets/table/columns/9/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_assets/table/columns/11/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_assets/table/columns/12/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_channels/table/columns/6/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_channels/table/columns/8/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_channels/table/columns/9/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/columns/8/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/columns/9/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.calibration_points/table/columns/3/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.calibration_points/table/columns/4/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.clock_phase_steps/table/columns/4/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.clocks/table/columns/3/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.clocks/table/columns/9/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.clocks/table/columns/10/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.electrode_coordinate_values/table/columns/5/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.electrodes/table/columns/6/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.sessions/table/columns/12/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.spike_events/table/columns/3/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.unit_coordinate_values/table/columns/5/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.unit_quality_labels/table/columns/5/finite"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.units/table/columns/10/finite"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "registry/tables.md",
+          "registry/README.md",
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "registry validates against its meta-schema"
+          },
+          {
+            "kind": "fixture",
+            "packet": "non_finite_rate",
+            "finding": "core.clocks.tick_rate_hz.finite"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "registry/render.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md"
+        ]
+      }
+    },
+    "R139 \u00a73.5": {
+      "owners": [
+        {
+          "path": "registry/rules.json",
+          "pointer": "/rules/core.clocks/11"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "registry/logical_schemas.json",
+          "registry/tables.md",
+          "registry/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_the_transform_slope_rule_flags_every_slope_that_is_not_positive"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_every_shipped_rule_passes_static_profile_check"
+          },
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "122 shipped rules statically check, bind, and execute empty"
+          },
+          {
+            "kind": "fixture",
+            "packet": "negative_slope",
+            "finding": "core.clocks.transform_slope_positive"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "fixtures/build.py",
+          "fixtures/corpus.py",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    }
+  }
+}

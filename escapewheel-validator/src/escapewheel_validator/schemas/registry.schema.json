@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/registry/0.6.0",
+  "$id": "https://escapewheel.org/schemas/registry/0.7.0",
   "title": "Escapewheel schema registry",
   "description": "Local shape of an Escapewheel core or extension registry document.",
   "type": "object",
@@ -149,6 +149,7 @@
         "presence": {"enum": ["required", "nullable", "optional"]},
         "role": {"enum": ["data", "identifier", "coordinate", "structural_index", "sequence_position", "discriminator"]},
         "identity": {"enum": ["carried", "assigned"]},
+        "finite": {"type": "boolean"},
         "resolves": {"enum": ["required", "optional"]},
         "discriminates": {"$ref": "#/$defs/name"},
         "positions_in": {"$ref": "#/$defs/name"},
@@ -172,6 +173,11 @@
         {
           "if": {"properties": {"role": {"const": "coordinate"}}, "required": ["role"]},
           "then": {"properties": {"type": {"const": "int64"}}}
+        },
+        {
+          "if": {"properties": {"type": {"enum": ["float32", "float64"]}}, "required": ["type"]},
+          "then": {"required": ["finite"]},
+          "else": {"not": {"required": ["finite"]}}
         },
         {
           "if": {"properties": {"role": {"const": "discriminator"}}, "required": ["role"]},

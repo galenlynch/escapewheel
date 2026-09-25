@@ -195,8 +195,8 @@ def shipped_rule_defects() -> list[str]:
                         connection.sql(rule["sql"]).fetchall()
                     except Exception as exc:  # noqa: BLE001 - each defect is reported together
                         defects.append(f"{rule['id']}: {str(exc).splitlines()[0]}")
-        if count != 121:
-            defects.append(f"shipped rule count is {count}, expected 121")
+        if count != 122:
+            defects.append(f"shipped rule count is {count}, expected 122")
     finally:
         connection.close()
     return defects
@@ -207,7 +207,7 @@ def main() -> int:
     groups = {
         "incorporated profile and anchors": profile_defects(),
         "machine-readable rule-language vectors": vector_defects(),
-        "121 shipped rules statically check, bind, and execute empty": shipped_rule_defects(),
+        "122 shipped rules statically check, bind, and execute empty": shipped_rule_defects(),
     }
     for label, defects in groups.items():
         print(

@@ -31,6 +31,8 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "missing_amplitude_unit": ("error", "core.units.amplitude_unit_declared"),
     "non_ucum_unit": ("error", "core.units.amplitude_unit.ucum_code"),
     "half_transform": ("error", "core.clocks.transform_pair_complete"),
+    "non_finite_rate": ("error", "core.clocks.tick_rate_hz.finite"),
+    "negative_slope": ("error", "core.clocks.transform_slope_positive"),
     "unsorted_spikes": ("error", "core.spike_events.physical_order"),
     "inconsistent_projection": (
         "error",

@@ -40,20 +40,23 @@ def _frame(path: Path, **columns) -> None:
         array(path / name, np.asarray(values))
 
 
-def stream(root: Path, name: str, *, template: bool = True, labels=LABELS) -> Path:
-    """Write one stream's analyzer under `postprocessed/`."""
+def stream(root: Path, name: str, *, template: bool = True, labels=LABELS, **quality) -> Path:
+    """Write one stream's analyzer under `postprocessed/`, `quality` replacing quality metric columns."""
     analyzer = group(root / "postprocessed" / f"{name}.zarr")
     _frame(
         analyzer / "extensions/quality_metrics/metrics",
-        index=np.asarray(labels, dtype=np.int64),
-        num_spikes=np.asarray([100, 200, 300], dtype=np.int64),
-        snr=np.asarray([5.0, np.nan, 7.5]),
-        rp_violations=np.asarray([0, 1, 2], dtype=np.int64),
-        amplitude_median=np.asarray([np.nan, 40.0, np.nan]),
-        amplitude_cutoff=np.asarray([0.01, 0.02, np.nan]),
-        sync_spike_2=np.asarray([0.2, 0.3, 0.4]),
-        sync_spike_16=np.asarray([0.0, 0.0, np.nan]),
-        sync_spike_4=np.asarray([0.1, 0.2, 0.3]),
+        **{
+            "index": np.asarray(labels, dtype=np.int64),
+            "num_spikes": np.asarray([100, 200, 300], dtype=np.int64),
+            "snr": np.asarray([5.0, np.nan, 7.5]),
+            "rp_violations": np.asarray([0, 1, 2], dtype=np.int64),
+            "amplitude_median": np.asarray([np.nan, 40.0, np.nan]),
+            "amplitude_cutoff": np.asarray([0.01, 0.02, np.nan]),
+            "sync_spike_2": np.asarray([0.2, 0.3, 0.4]),
+            "sync_spike_16": np.asarray([0.0, 0.0, np.nan]),
+            "sync_spike_4": np.asarray([0.1, 0.2, 0.3]),
+        }
+        | quality,
     )
     if template:
         _frame(
@@ -126,6 +129,17 @@ def test_a_metric_keeps_its_name_except_num_spikes_and_a_nan_is_null(asset: Path
     }
     assert metrics["exp1.A:0"]["snr"] == 5.0
     assert "num_spikes" not in metrics["exp1.A:0"]
+
+
+def test_an_infinite_metric_is_null(tmp_path: Path) -> None:
+    """Part 02 §5.4: every `aind_unit_qc` float column is declared finite, so an infinity is not carried."""
+    root = stream(
+        tmp_path / "sorted",
+        "experiment1_Record Node 109#Neuropix-PXI-100.A_recording1",
+        snr=np.asarray([np.inf, 1.0, -np.inf]),
+    )
+    metrics = _by_unit(UnitQCSource(root, session_id="s1", units=UNITS).records()["aind_unit_qc.metrics"])
+    assert metrics["exp1.A:0"]["snr"] is None and metrics["exp1.A:5"]["snr"] is None
 
 
 def test_synchrony_is_one_row_per_size_in_numeric_order(asset: Path) -> None:

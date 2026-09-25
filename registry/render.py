@@ -31,7 +31,7 @@ def _code(names: Any) -> str:
 
 
 def _declares(column: dict[str, Any]) -> str:
-    """Render every declaration a column carries about its values (Part 02 §9.3).
+    """Render every declaration a column carries about its values (Part 02 §§5.4 and 9.3).
 
     The descriptions used to say these, because this table showed none of them and it is what a
     person reads. Generated from the field, so the two cannot disagree.
@@ -47,6 +47,8 @@ def _declares(column: dict[str, Any]) -> str:
         said.append(f"resolves {resolves}")
     if authority := column.get("authority"):
         said.append(", ".join(f"[{a['name']}]({a['uri']})" for a in authority))
+    if "finite" in column:
+        said.append("finite" if column["finite"] else "admits non-finite")
     return "; ".join(said) or "—"
 
 
@@ -176,6 +178,7 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
         (sum(len(t["references"]) for t in tables.values()), "reference, resolves"),
         (sum(1 for t in tables.values() if t["primary_key"]), "primary key, unique"),
         (sum(1 for c in columns if c.get("enum")), "closed vocabulary, member of"),
+        (sum(1 for c in columns if c.get("finite") is True), "finite column, no NaN or infinity"),
         (
             sum(1 for c in columns if c.get("role") == "discriminator"),
             "discriminator, resolvable",

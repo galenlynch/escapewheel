@@ -127,7 +127,7 @@ def detail(extension_id, table, extra, *, based):
             }
         )
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
         "registry_id": extension_id,
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -158,7 +158,7 @@ TASK_COLUMNS = [
 ]
 OPTO_COLUMNS = [
     col("wavelength_nm", "int32", "nullable", "data"),
-    col("power_mw", "float64", "nullable", "data"),
+    col("power_mw", "float64", "nullable", "data", finite=True),
 ]
 
 

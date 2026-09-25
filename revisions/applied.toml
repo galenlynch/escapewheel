@@ -367,7 +367,7 @@ note = "restored 2026-09-04; only the second of the two re-run conditions had su
 
 [clause."R57 §2.2"]
 disposition = "applied"
-where = [{ part = "02", section = "9.2" }]
+where = [{ part = "02", anchor = "ew-registry-self-description" }]
 note = "restored 2026-09-04; the info finding for an unheld meta-schema was absent"
 
 [clause."R77 §2.1"]
@@ -1061,11 +1061,11 @@ note = "why the rules are SQL rather than code"
 
 [clause."R2 §8"]
 disposition = "applied"
-where = [{ part = "02", section = "9.2" }]
+where = [{ part = "02", anchor = "ew-registry-self-description" }]
 
 [clause."R2 §9"]
 disposition = "applied"
-where = [{ part = "02", section = "9.2" }]
+where = [{ part = "02", anchor = "ew-registry-self-description" }]
 
 [clause."R7 §2"]
 disposition = "applied"
@@ -1086,7 +1086,7 @@ note = "separate verdicts for core and each extension; moved from Part 05 §5.4 
 
 [clause."R57 §2.1"]
 disposition = "applied"
-where = [{ part = "02", section = "9.2" }]
+where = [{ part = "02", anchor = "ew-registry-self-description" }]
 
 [clause."R57 §2.3"]
 disposition = "rationale"
@@ -1691,7 +1691,7 @@ note = "what the restructure leaves alone; its MUST NOT cites §3.3's clause rat
 
 [clause."R92 §2.1"]
 disposition = "applied"
-where = [{ part = "02", section = "10.1" }]
+where = [{ part = "02", anchor = "ew-tier-1-rules" }]
 note = "uniqueness leaves the generated list and becomes an obligation about the fact; the physical condition is struck"
 
 [clause."R92 §2.2"]
@@ -1995,8 +1995,8 @@ note = "enum male/female/hermaphrodite/other with FHIR as authority, unknown car
 
 [clause."R101 §3.10"]
 disposition = "applied"
-where = [{ part = "03", section = "5.6" }]
-note = "one null and no second marker, NaN a value rather than an absence on 30 of 330 columns, and no sentinel meaning absent"
+where = [{ part = "03", anchor = "ew-one-null" }]
+note = "one null and no second marker, NaN a value rather than an absence on 30 of 330 columns, and no sentinel meaning absent; R139 §3.1 narrows NaN to a float column declaring finite: false"
 
 [clause."R101 §3.11"]
 disposition = "applied"
@@ -2203,7 +2203,7 @@ note = "R56 §1 opens on the same defect one field over -- R48 gave a column a r
 
 [clause."R107 §3.1"]
 disposition = "applied"
-where = [{ part = "02", section = "3" }]
+where = [{ part = "02", anchor = "ew-column-declaration" }]
 note = "one MUST NOT replaces R101 §3.5's second and third sentences and R48 §2.5, enforced by one new check.py invariant taking the structural checks from 29 to 30 and reaching `vocabulary`, `resolves` and `enum` exactly; naming a declared value is not restating one where the description says what that value means, which is why core.array_assets.band keeps `wideband`, `ap` and `lfp` and core.processing_runs.status loses its three"
 
 [clause."R107 §3.2"]
@@ -3492,3 +3492,36 @@ note = "each [packet].extensions entry names one extension registry the build bi
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-recipe-purpose" }]
 note = "a recipe lists an extension in one entry, compared by the extension_id each entry resolves to, and a build refuses otherwise before opening a source, naming the extension_id and each entry"
+
+[clause."R139 §3.1"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-finite-values" },
+  { part = "02", anchor = "ew-column-declaration" },
+  { part = "03", anchor = "ew-one-null" },
+]
+note = "every float32 or float64 column declares a boolean finite and no other column does; finite: true forbids NaN and both infinities, and an absent value stays null"
+
+[clause."R139 §3.2"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-tier-1-rules" },
+  { part = "05", anchor = "ew-tier-1-validation" },
+]
+note = "a generated <declaration_id>.<column>.finite check at error for each finite: true column, silent where an optional column is absent, attributed to the declaring registry"
+
+[clause."R139 §3.3"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-registry-self-description" },
+  { part = "02", anchor = "ew-registry-conformance" },
+]
+note = "meta-schema 0.7.0 requires finite on float columns and forbids it elsewhere, descriptor escapewheel-registry-contract-v0.4 selects it, core registry_version 0.7.0, and a migrated extension changes its registry_version"
+
+[clause."R139 §3.4"]
+disposition = "registry"
+note = "finite: true on the 26 core and analysis float columns, and on no other column"
+
+[clause."R139 §3.5"]
+disposition = "registry"
+note = "core.clocks.transform_slope_positive flags a transform_slope of zero or below"

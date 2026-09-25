@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See the repository
 [authority model](../README.md#authority) for the sources that bind.
 
 ```text
-46 resources, 43 tables, 348 columns, 111 references, 76 Tier 2 rules
-registry 0.6.0   logical standard escapewheel-logical-v0.1
+46 resources, 43 tables, 348 columns, 111 references, 77 Tier 2 rules
+registry 0.7.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -32,10 +32,10 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `clock_id` | int32 | nullable | — | Clock for time axis. |
 | `device_id` | int32 | nullable | — | The device that produced this array. |
 | `processing_run_id` | int32 | nullable | — | The run that produced this array. Null means it was acquired rather than computed. |
-| `sample_rate_hz` | float64 | nullable | — | Sample rate if regularly sampled. |
+| `sample_rate_hz` | float64 | nullable | finite | Sample rate if regularly sampled. |
 | `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the array's values, as a UCUM code. |
-| `conversion` | float64 | nullable | — | Multiply stored values by this before offset. |
-| `offset` | float64 | nullable | — | Add after conversion. |
+| `conversion` | float64 | nullable | finite | Multiply stored values by this before offset. |
+| `offset` | float64 | nullable | finite | Add after conversion. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `array_asset_id`  
@@ -59,8 +59,8 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `coordinate_resource` | string | nullable | resolves required | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`. |
 | `coordinate_array_asset_id` | int32 | nullable | — | A 1-D array holding one value per position (irregular axis). |
 | `coordinate_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of this axis's coordinate values, as a UCUM code. |
-| `step_value` | float64 | nullable | — | Increment per position. |
-| `origin_value` | float64 | nullable | — | Value at position 0 (regular numeric axis). |
+| `step_value` | float64 | nullable | finite | Increment per position. |
+| `origin_value` | float64 | nullable | finite | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | — | Ticks advanced per position (numerator). |
 | `step_tick_den` | int64 | nullable | — | Denominator of the step, in ticks. Absent means 1. |
 | `origin_tick` | int64 | nullable | — | Tick at position 0. |
@@ -117,10 +117,10 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `clock_id` | int32 | nullable | — | Clock for time axis. |
 | `device_id` | int32 | nullable | — | The device that produced this array. |
 | `processing_run_id` | int32 | nullable | — | The run that produced this array. Null means it was acquired rather than computed. |
-| `sample_rate_hz` | float64 | nullable | — | Sample rate if regularly sampled. |
+| `sample_rate_hz` | float64 | nullable | finite | Sample rate if regularly sampled. |
 | `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the array's values, as a UCUM code. |
-| `conversion` | float64 | nullable | — | Multiply stored values by this before offset. |
-| `offset` | float64 | nullable | — | Add after conversion. |
+| `conversion` | float64 | nullable | finite | Multiply stored values by this before offset. |
+| `offset` | float64 | nullable | finite | Add after conversion. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `array_asset_id`  
@@ -147,10 +147,10 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `channel_index` | int64 | **required** | — | Channel dimension index. |
 | `electrode_id` | int32 | nullable | — | Electrode ID. |
 | `channel_label` | string | nullable | free | Human-readable channel label. |
-| `inter_sample_shift` | float64 | nullable | — | Acquisition time offset within one sample period, in sample periods. |
+| `inter_sample_shift` | float64 | nullable | finite | Acquisition time offset within one sample period, in sample periods. |
 | `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the converted value, as a UCUM code. |
-| `offset` | float64 | nullable | — | Add after conversion. |
-| `conversion` | float64 | nullable | — | Multiply stored values by this before offset. |
+| `offset` | float64 | nullable | finite | Add after conversion. |
+| `conversion` | float64 | nullable | finite | Multiply stored values by this before offset. |
 
 **Primary key** — `array_asset_id`, `channel_index`  
 
@@ -176,8 +176,8 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `coordinate_resource` | string | nullable | resolves required | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`. |
 | `coordinate_array_asset_id` | int32 | nullable | — | A 1-D array holding one value per position (irregular axis). |
 | `coordinate_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of this axis's coordinate values, as a UCUM code. |
-| `step_value` | float64 | nullable | — | Increment per position. |
-| `origin_value` | float64 | nullable | — | Value at position 0 (regular numeric axis). |
+| `step_value` | float64 | nullable | finite | Increment per position. |
+| `origin_value` | float64 | nullable | finite | Value at position 0 (regular numeric axis). |
 | `step_tick_num` | int64 | nullable | — | Ticks advanced per position (numerator). |
 | `step_tick_den` | int64 | nullable | — | Denominator of the step, in ticks. Absent means 1. |
 | `origin_tick` | int64 | nullable | — | Tick at position 0. |
@@ -226,8 +226,8 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `session_id` | int32 | **required** | — | Session ID. |
 | `calibration_id` | int32 | **required** | — | The calibration this point belongs to. |
 | `point_index` | int64 | **required** | — | 0-based position in the curve's own order. The key is not `input_value` even though the inputs are distinct: an equality join on a float64 is not safe, so the key uses an explicit sequence position. |
-| `input_value` | float64 | **required** | — | The setting the point was measured at. |
-| `output_value` | float64 | **required** | — | What the instrument then delivered. |
+| `input_value` | float64 | **required** | finite | The setting the point was measured at. |
+| `output_value` | float64 | **required** | finite | What the instrument then delivered. |
 
 **Primary key** — `calibration_id`, `point_index`  
 
@@ -317,7 +317,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `clock_id` | int32 | **required** | — | The clock whose alignment stepped. |
 | `t_tick` | int64 | **required** | — | Where the step is, on `clock_id`. |
 | `parent_tick` | int64 | **required** | — | The same instant on the parent clock. |
-| `shift_seconds` | float64 | **required** | — | How far the parent's phase moved. Signed. |
+| `shift_seconds` | float64 | **required** | finite | How far the parent's phase moved. Signed. |
 | `anchor_interval_span` | int32 | **required** | — | How many consecutive anchor intervals the step spans. |
 
 **Primary key** — `session_id`, `clock_id`, `t_tick`  
@@ -338,14 +338,14 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `session_id` | int32 | **required** | — | Session ID. |
 | `clock_id` | int32 | **required** | — | Stable clock ID. |
 | `clock_name` | string | **required** | free | What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
-| `tick_rate_hz` | float64 | nullable | — | Tick rate as float, required unless exact tick rate provided. |
+| `tick_rate_hz` | float64 | nullable | finite | Tick rate as float, required unless exact tick rate provided. |
 | `tick_rate_num` | int64 | nullable | — | Exact rational numerator. |
 | `tick_rate_den` | int64 | nullable | — | Exact rational denominator. |
 | `origin` | string | **required** | open | Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (Part 01 §2.2). |
 | `tick_zero_utc` | timestamp | nullable | — | Wall-clock instant of tick 0 on this clock. |
 | `parent_clock_id` | int32 | nullable | — | Parent/reference clock. |
-| `transform_slope` | float64 | nullable | — | Parent ticks per this clock's tick, as measured. |
-| `transform_offset` | float64 | nullable | — | Parent-clock tick at this clock's tick 0. |
+| `transform_slope` | float64 | nullable | finite | Parent ticks per this clock's tick, as measured. |
+| `transform_offset` | float64 | nullable | finite | Parent-clock tick at this clock's tick 0. |
 | `transform_to_parent` | json_string | optional | — | Clock alignment transform. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 | `withheld_first_anchor` | bool | nullable | — | Whether Part 02 §12.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run. |
@@ -358,7 +358,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `parent_clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 11
+**Tier 2 rules** — 12
 
 - `core.clocks.tick_rate_declared` — error: neither tick_rate_hz nor an exact rational rate is present
 - `core.clocks.tick_rate_one_form` — error: a clock declares both a float rate and a rational one
@@ -371,6 +371,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 - `core.clocks.alignment_declared_for_conversion` — error: a non-reference clock declares no alignment, so it cannot be converted
 - `core.clocks.observation_declared` — error: a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit
 - `core.clocks.withheld_needs_anchors` — error: a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it
+- `core.clocks.transform_slope_positive` — error: transform_slope is not positive
 
 ### `core.coordinate_frame_axes`
 
@@ -474,7 +475,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `coordinate_frame` | string | **required** | open | The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key. |
 | `coordinate_basis` | string | **required** | open | What the coordinate asserts (Part 01 §3.8). |
 | `axis_index` | int64 | **required** | — | Which of the frame's axes this value is on. |
-| `axis_value` | float64 | **required** | — | The value, in the axis's unit. |
+| `axis_value` | float64 | **required** | finite | The value, in the axis's unit. |
 
 **Primary key** — `electrode_id`, `coordinate_frame`, `coordinate_basis`, `axis_index`  
 
@@ -515,7 +516,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `probe_id` | int32 | nullable | — | Probe ID. |
 | `local_electrode_label` | string | nullable | free | Opaque source label; undefined base, not an offset. |
 | `local_channel_label` | string | nullable | free | Opaque source label; undefined base, not an offset. |
-| `impedance_ohm` | float64 | nullable | — | Impedance. |
+| `impedance_ohm` | float64 | nullable | finite | Impedance. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `electrode_id`  
@@ -800,7 +801,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `source_session_id` | int32 | nullable | — | Source-system session ID if different. |
 | `t_zero_tick` | int64 | nullable | — | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
-| `alignment_bound` | float64 | nullable | — | How far past its anchors the writer mapped, in median anchor intervals (Part 01 §3.9). Null means the default of one. |
+| `alignment_bound` | float64 | nullable | finite | How far past its anchors the writer mapped, in median anchor intervals (Part 01 §3.9). Null means the default of one. |
 
 **Primary key** — `session_id`  
 
@@ -886,7 +887,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `session_id` | int32 | **required** | — | Session ID. |
 | `unit_id` | int32 | **required** | — | Unit ID. |
 | `t_tick` | int64 | **required** | — | Spike tick. |
-| `amplitude` | float32 | nullable | — | Spike amplitude if available. |
+| `amplitude` | float32 | nullable | finite | Spike amplitude if available. |
 
 **Primary key** — `session_id`, `unit_id`, `t_tick`  
 
@@ -924,7 +925,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `coordinate_frame` | string | **required** | open | The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key. |
 | `coordinate_basis` | string | **required** | open | What the coordinate asserts (Part 01 §3.8). |
 | `axis_index` | int64 | **required** | — | Which of the frame's axes this value is on. |
-| `axis_value` | float64 | **required** | — | The value, in the axis's unit. |
+| `axis_value` | float64 | **required** | finite | The value, in the axis's unit. |
 
 **Primary key** — `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`, `axis_index`  
 
@@ -1009,7 +1010,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `source` | string | **required** | open | What produced the label, e.g. kilosort, decoder, bombcell. |
 | `label` | string | **required** | open | The source's own label, verbatim. |
 | `normalized_label` | string | nullable | closed: `sua`, `mua`, `noise` | Declared projection onto the closed set. Null where the source's label does not project. |
-| `confidence` | float64 | nullable | — | The source's confidence, where it reports one. |
+| `confidence` | float64 | nullable | finite | The source's confidence, where it reports one. |
 
 **Primary key** — `session_id`, `unit_id`, `source`  
 
@@ -1036,7 +1037,7 @@ registry 0.6.0   logical standard escapewheel-logical-v0.1
 | `quality_label` | string | nullable | closed: `sua`, `mua`, `noise` | Quality label. |
 | `amplitude_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts. |
 | `quality_label_source` | string | nullable | open | Which core.unit_quality_labels source the designated label came from. |
-| `firing_rate_hz` | float64 | nullable | — | Firing rate if known. |
+| `firing_rate_hz` | float64 | nullable | finite | Firing rate if known. |
 | `n_spikes` | int64 | nullable | — | Total spikes for this unit in this context. |
 | `first_spike_tick` | int64 | nullable | — | Lowest t_tick for this unit. |
 | `last_spike_tick` | int64 | nullable | — | Highest t_tick for this unit. |

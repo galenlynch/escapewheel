@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry-contract/0.1.0",
-  "id": "escapewheel-registry-contract-v0.3",
-  "registry_schema": "https://escapewheel.org/schemas/registry/0.6.0",
+  "id": "escapewheel-registry-contract-v0.4",
+  "registry_schema": "https://escapewheel.org/schemas/registry/0.7.0",
   "semantic_standard": "escapewheel-semantic-v0.1",
   "logical_standard": "escapewheel-logical-v0.1",
   "rule_languages": ["escapewheel-rule-sql-v0.1"],

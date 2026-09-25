@@ -49,7 +49,25 @@ def test_every_shipped_rule_passes_static_profile_check():
         for table in [declaration["table"]]
         for rule in table["rules"]
     ]
-    assert len(checked) == 121
+    assert len(checked) == 122
+
+
+def test_the_transform_slope_rule_flags_every_slope_that_is_not_positive():
+    """Part 11 §5 orders NaN above infinity, so NaN and +inf pass here and draw the finiteness check."""
+    import duckdb
+
+    core = json.loads((ROOT / "registry/logical_schemas.json").read_text())
+    rule = next(
+        r
+        for r in core["resources"]["core.clocks"]["table"]["rules"]
+        if r["id"] == "core.clocks.transform_slope_positive"
+    )
+    slopes = [0.0, -0.0, -1.0, float("-inf"), 1.0, None, float("nan"), float("inf")]
+    connection = duckdb.connect()
+    connection.sql("CREATE SCHEMA core")
+    connection.sql("CREATE TABLE core.clocks (clock_id INTEGER, transform_slope DOUBLE)")
+    connection.executemany("INSERT INTO core.clocks VALUES (?, ?)", list(enumerate(slopes)))
+    assert sorted(row[0] for row in connection.sql(rule["sql"]).fetchall()) == [0, 1, 2, 3]
 
 
 def test_invalid_rule_is_not_executed_or_reported_as_a_packet_finding(packet_root):

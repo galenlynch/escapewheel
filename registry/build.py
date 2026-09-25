@@ -31,8 +31,8 @@ VENDORED = {
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
     "registry_contract.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json",
-    "registry_contracts/escapewheel-registry-contract-v0.3.json": HERE.parent
-    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.3.json",
+    "registry_contracts/escapewheel-registry-contract-v0.4.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.4.json",
     "rule_language.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/rule_language.schema.json",
     "rule_languages/escapewheel-rule-sql-v0.1.json": HERE.parent
@@ -3488,6 +3488,41 @@ def build() -> dict:
         drop_col(_resource, "uri")
         drop_col(_resource, "format")
 
+    # ---- R139 §3.4 : every float column holds only finite values ---------------------------
+    # Named rather than applied to every float column, so a float column a later block adds
+    # stops the build until its own declaration is decided.
+    _finite = {
+        "core.array_assets": ("sample_rate_hz", "conversion", "offset"),
+        "core.array_channels": ("inter_sample_shift", "offset", "conversion"),
+        "core.array_dimensions": ("step_value", "origin_value"),
+        "core.calibration_points": ("input_value", "output_value"),
+        "core.clock_phase_steps": ("shift_seconds",),
+        "core.clocks": ("tick_rate_hz", "transform_slope", "transform_offset"),
+        "core.electrode_coordinate_values": ("axis_value",),
+        "core.electrodes": ("impedance_ohm",),
+        "core.sessions": ("alignment_bound",),
+        "core.spike_events": ("amplitude",),
+        "core.unit_coordinate_values": ("axis_value",),
+        "core.unit_quality_labels": ("confidence",),
+        "core.units": ("firing_rate_hz",),
+        "analysis.array_assets": ("sample_rate_hz", "conversion", "offset"),
+        "analysis.array_dimensions": ("step_value", "origin_value"),
+    }
+    _floats = {
+        (_resource, _c["name"])
+        for _resource, _spec in tables.items()
+        for _c in _spec["columns"]
+        if _c["type"] in ("float32", "float64")
+    }
+    _named = {(_resource, _name) for _resource, _names in _finite.items() for _name in _names}
+    if _floats != _named:
+        raise SystemExit(
+            "float columns without a finite declaration: "
+            f"{sorted(_floats - _named)}; declared on no float column: {sorted(_named - _floats)}"
+        )
+    for _resource, _name in sorted(_named):
+        amend(_resource, _name, finite=True)
+
     # ---- a table carrying `session_id` leads with it -----------------------------------------
     # A convention of this registry and not a conformance requirement: a validator resolves a column
     # by name and no clause of Part 02 or Part 03 states an order, so no revision mandates this and the
@@ -3597,7 +3632,7 @@ def build() -> dict:
     return {
         "$schema": json.loads((HERE / "registry.schema.json").read_text())["$id"],
         "registry_id": "core",
-        "registry_version": "0.6.0",
+        "registry_version": "0.7.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
         "rule_language": "escapewheel-rule-sql-v0.1",

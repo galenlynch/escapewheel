@@ -1,7 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
   "registry_id": "dynamic_foraging",
-  "registry_version": "0.7.0",
+  "registry_version": "0.8.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "dynamic_foraging",
@@ -71,7 +71,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Left reward probability across the block.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "reward_probability_right",
@@ -79,7 +80,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Right reward probability across the block.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "metadata",
@@ -160,7 +162,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "The two ports' probabilities sum to this.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "block_beta",
@@ -168,28 +171,32 @@
             "presence": "nullable",
             "role": "data",
             "description": "Exponential parameter the block length is drawn from.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "block_min",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Shortest block, in trials."
+            "description": "Shortest block, in trials.",
+            "finite": true
           },
           {
             "name": "block_max",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Longest block, in trials."
+            "description": "Longest block, in trials.",
+            "finite": true
           },
           {
             "name": "min_reward_each_block",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Rewards a block must deliver before it may end."
+            "description": "Rewards a block must deliver before it may end.",
+            "finite": true
           },
           {
             "name": "delay_beta",
@@ -197,7 +204,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Exponential parameter the delay is drawn from. Zero fixes it.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "delay_min",
@@ -205,7 +213,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Shortest delay.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "delay_max",
@@ -213,7 +222,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Longest delay.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "iti_beta",
@@ -221,7 +231,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Exponential parameter the inter-trial interval is drawn from.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "iti_min",
@@ -229,7 +240,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Shortest inter-trial interval.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "iti_max",
@@ -237,7 +249,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Longest inter-trial interval.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "response_duration",
@@ -245,7 +258,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "How long a response is accepted for.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "reward_consumption_duration",
@@ -253,7 +267,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "How long the animal is given to drink.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "reward_delay",
@@ -261,7 +276,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Delay between a correct response and delivery.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "left_valve_open_time",
@@ -269,7 +285,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Calibrated open time for the left valve.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "right_valve_open_time",
@@ -277,7 +294,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Calibrated open time for the right valve.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "reward_size_left",
@@ -285,7 +303,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Volume one left reward delivers.",
-            "unit": "uL"
+            "unit": "uL",
+            "finite": true
           },
           {
             "name": "reward_size_right",
@@ -293,7 +312,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Volume one right reward delivers.",
-            "unit": "uL"
+            "unit": "uL",
+            "finite": true
           },
           {
             "name": "minimum_opto_interval",
@@ -301,7 +321,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Shortest gap between optogenetic trials.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "fraction_of_session",
@@ -309,7 +330,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Fraction of the session the schedule applies to.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "session_wide_control",
@@ -502,7 +524,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Left reward probability in force. Constant within a block, which is what blocks are derived from.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "reward_probability_right",
@@ -510,7 +533,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Right reward probability in force.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "reward_random_number_left",
@@ -518,7 +542,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "The draw the left outcome was decided by, so a reanalysis can reproduce it.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "reward_random_number_right",
@@ -526,7 +551,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "The draw the right outcome was decided by.",
-            "unit": "1"
+            "unit": "1",
+            "finite": true
           },
           {
             "name": "delay_start_tick",
@@ -558,7 +584,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "The delay this trial drew. Constant where the session's delay_beta is zero.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "iti_duration",
@@ -566,7 +593,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "The inter-trial interval this trial drew.",
-            "unit": "s"
+            "unit": "s",
+            "finite": true
           },
           {
             "name": "auto_water_left",
@@ -588,7 +616,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Lickspout position.",
-            "unit": "um"
+            "unit": "um",
+            "finite": true
           },
           {
             "name": "lickspout_position_y",
@@ -596,7 +625,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Lickspout position.",
-            "unit": "um"
+            "unit": "um",
+            "finite": true
           },
           {
             "name": "lickspout_position_z",
@@ -604,7 +634,8 @@
             "presence": "nullable",
             "role": "data",
             "description": "Lickspout position.",
-            "unit": "um"
+            "unit": "um",
+            "finite": true
           }
         ],
         "primary_key": [

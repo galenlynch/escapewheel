@@ -1,7 +1,7 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-four more conforming packets that record Part 04 §4.3's other digests, thirty-seven variants
+four more conforming packets that record Part 04 §4.3's other digests, thirty-nine variants
 each violating exactly one rule, and two conforming packets that each draw a per-resource `info`
 finding. Together they are the conformance
 corpus: expected findings recorded as data, so any implementation can be checked against
@@ -55,6 +55,8 @@ description, and is not all of them.
 | `missing_amplitude_unit` | amplitudes with no declared unit | `core.sorting_runs.amplitude_unit_declared` |
 | `non_ucum_unit` | `amplitude_unit` is `microvolts`, not a UCUM code | `core.units.amplitude_unit.ucum_code` |
 | `half_transform` | slope without offset | `core.clocks.transform_pair_complete` |
+| `non_finite_rate` | a clock's `tick_rate_hz` is NaN | `core.clocks.tick_rate_hz.finite` |
+| `negative_slope` | a child clock's `transform_slope` is -1 | `core.clocks.transform_slope_positive` |
 | `unsorted_spikes` | rows out of declared sort order | `core.spike_events.physical_order` (warning) |
 | `orphan_manifest_session` | manifest disagrees with `core.sessions` | `core.sessions.manifest_sessions_match` |
 | `bad_type` | `start_tick` written as int32 | `schema.column_type` |

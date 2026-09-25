@@ -34,8 +34,8 @@ package belongs in the registry, and the design is what makes that true.
 **Rules are data, not code** (R2 §7).
 
 - **Tier 1 is generated** from structure — required-column presence, primary keys, foreign keys,
-  closed vocabularies, none of them hand-written. If your check is one of
-  those four shapes, it already exists the moment the registry declares the column.
+  closed vocabularies, finite values, none of them hand-written. If your check is one of
+  those five shapes, it already exists the moment the registry declares the column.
 - **Tier 2 is hand-written portable-profile SQL**, and it lives in `../registry/rules.json`, **not here**. Adding
   one is editing a JSON file in the registry and running `build.py`. Nothing in this package
   needs to change.

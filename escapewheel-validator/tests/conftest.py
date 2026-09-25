@@ -94,13 +94,15 @@ def _col(name, type_, presence, **extra):
         # fixture declares an `enum`, and otherwise `free` -- a fixture's strings are names and
         # labels, and one meaning to be a vocabulary says so.
         entry.setdefault("vocabulary", "closed" if "enum" in entry else "free")
+    if type_ in {"float32", "float64"}:
+        entry.setdefault("finite", True)
     return entry
 
 
 def _registry():
     """A registry describing exactly the tables the fixture writes."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.6.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
         "registry_id": "core",
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
