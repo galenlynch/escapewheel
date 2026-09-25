@@ -141,8 +141,9 @@ declares `external: true`.
 The validator's owned-digest check, `packet.resource.digest_missing`, and
 `packet.resource.catalog_row_binding` apply to every packet-owned entry whatever its kind, so an
 owned opaque resource is checked for presence, digest, and binding by existing rules. The validator
-resolves a packet-owned URI without decoding percent-encoding, which no current packet-owned URI
-contains.
+and the reader decode percent-encoding in a `file` URI but join a relative packet-owned URI to the
+packet root as spelled, which is correct only while no packet-owned URI contains percent-encoding,
+as none now does.
 
 ### 2.5 Alternatives
 
@@ -234,9 +235,9 @@ path, where:
 - a name within a payload, the payload's own included, is not reproducible (§3.3).
 
 A build MUST refuse, before it validates the staged packet, where a resource directory is named by
-no catalog row of an opaque catalog family, or where those rows and the payloads and
-resource-document entries binding them do not match one-to-one, naming each such directory and each
-`resource_id` bound twice or not at all.
+no catalog row of an opaque catalog family, or where those rows and the payloads and referenced
+resources binding them do not match one-to-one, naming each such directory and each `resource_id`
+bound twice or not at all.
 
 Nothing else crosses for a payload. A build MUST NOT require an adapter to state a payload's format,
 media type, size, or digest; it takes `size_bytes` and `digest` from the staged bytes (§3.4) and
@@ -259,7 +260,9 @@ A build MUST publish each payload under its name, and every file and directory w
 theirs, and MUST NOT rename, normalize, or case-fold any of them. It MUST publish each payload in a
 directory under the packet root that holds nothing else, since two payloads may share a name. Part
 03 §3.1's recommended layout places that directory at `opaque/<resource_id>/`, so a payload lies at
-`opaque/<resource_id>/<name>`, in place of `media/<media_asset_id>.<ext>`.
+`opaque/<resource_id>/<name>`, in place of `media/<media_asset_id>.<ext>`. No validator checks that
+a payload kept its names, since a packet does not record them as the source spelled them; a build's
+own tests are the evidence.
 
 A payload's manifest `uri` is relative to the packet root and names the payload itself: the file
 where the payload is one, and otherwise the directory. A build MUST write each segment of a
