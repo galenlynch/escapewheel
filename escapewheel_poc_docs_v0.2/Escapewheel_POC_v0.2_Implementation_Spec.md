@@ -2092,11 +2092,13 @@ directory placement MUST NOT act as an alternative selector.
 <!-- END GENERATED PHYSICAL PROFILE -->
 
 The descriptor's mapping keys MUST equal the logical standard's complete kind vocabulary. Every
-non-null mapped interface MUST exist exactly once, and every declared interface MUST be mapped.
-An opaque resource has no generic value interface: a generic reader lists its identity and
-location but need not retrieve, parse, decode, or render it. Unknown opaque representations do not
-invalidate a packet. Every current interface is `materialized`; ownership is not a realization
-kind, and a view requires a separately specified language and evaluation contract.
+non-null mapped interface MUST exist exactly once, and every declared interface MUST be mapped. An
+opaque resource has no generic value interface: a generic reader lists its identity and location but
+need not retrieve, parse, decode, or render it. Unknown opaque representations do not invalidate a
+packet. The descriptor states ownership per interface and maps `opaque` to none, so this section
+states it: an opaque resource MAY be packet-owned or external (§11.3). Every current interface is
+`materialized`; ownership is not a realization kind, and a view requires a separately specified
+language and evaluation contract.
 
 An interface's `reader_floor` states what every conforming reader supports for logical-value
 access. `reader_and_packet_writer` also bounds packet-owned writer output; `reader_only` does not.
@@ -2121,7 +2123,8 @@ packet_root/
     core/           <array_asset_id>.zarr/
     analysis/       <array_asset_id>.zarr/
 
-  media/            <media_asset_id>.<ext>
+  opaque/
+    <resource_id>/  <name>                  a packet-owned opaque resource under its own name
 
   registries/
     <registry_id>/  <version>.json.gz       bound registries (§3.3)
@@ -2167,6 +2170,23 @@ and a cleanup tell a staging area from a directory this specification does not g
 ## 4. URI rules
 
 A URI in the manifest or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
+
+A manifest entry's `uri` is **absolute** where it begins with a scheme under RFC 3986, Section 3.1,
+followed by `://`. Every other `uri` is a **relative reference**: one or more segments under RFC
+3986, Section 3.3, separated by `/`, with no leading `/`, each of which decodes to a representable
+name (§11.3). A segment decodes by replacing each percent-encoded octet of RFC 3986, Section 2.1,
+with that octet and reading the octets as UTF-8. A reader or validator MUST resolve a relative
+reference by appending its decoded names, in order, to the packet root, or, where the entry names a
+`source`, to that source's location ([Part 04 §5.5](04_packet_catalog.md#ew-source-resolution)), as
+path components or object-key segments; it MUST NOT resolve one by RFC 3986, Section 5.
+
+A writer MUST write each segment of a relative reference in one form: every unreserved character of
+RFC 3986, Section 2.3, as itself, and every other octet of the name's UTF-8 encoding as a
+percent-encoded octet with uppercase hexadecimal digits. A checker MUST report an entry whose `uri`
+is not absolute and is not a relative reference in that form, at `error` in
+[Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance)'s `entries` phase, under the
+check ID `packet.resource.uri_form`, naming the entry's `resource_id`. This section governs a
+manifest entry's `uri`; a URI a table holds keeps the spelling its producer gave it.
 
 An absolute URI MAY name an external asset. A manifest entry for an external asset MUST declare it external (Part 04 §5).
 
@@ -2515,7 +2535,10 @@ A packet MAY declare its own retention, and a writer SHOULD emit one: how many s
 
 In this profile a packet-owned table's `digest` covers its one Parquet file, and a packet-owned
 array's covers its Zarr prefix as
-[Part 04 §4.3](04_packet_catalog.md#ew-resource-digests) defines a prefix's value. Part 04 §4.3
+[Part 04 §4.3](04_packet_catalog.md#ew-resource-digests) defines a prefix's value. A packet-owned
+opaque resource's `digest` covers its payload (§11.3): the one object where the payload is a file,
+and otherwise its files, as Part 04 §4.3 defines a prefix's value, with each file's key its path
+relative to the payload. `size_bytes` covers the same bytes. Part 04 §4.3
 requires a writer to record one for every packet-owned resource, which is the one case where a
 digest verifies what the packet itself claims.
 
@@ -2531,6 +2554,7 @@ An adapter reads one source and delivers what it read, and a build assembles a p
 
 - rows, returned to the build where it runs the adapter in process, or across the protocol a build reaches the adapter by (§11.1), with a `flight-v0.1` adapter serving them at `socket`;
 - a packet-owned array, written into `array_location` where it crosses a protocol, and in process either written there or handed to the build with its values (§11.3);
+- a packet-owned opaque resource, written into `opaque_location` where it crosses a protocol, and in process either written there or handed to the build with its bytes (§11.3);
 - a `files-v0.1` delivery, written into `delivery_root` (§11.1), with the resource document for any referenced resource it delivers (§11.3); and
 - a report, written at the `report_path` the recipe names (Part 09 §5.8).
 
@@ -2576,6 +2600,7 @@ The vocabulary is closed. Each term names one value and the form it takes, so an
 | `units` | one record per unit: the source's label for it, and the identifier assigned |
 | `wanted` | the resource IDs the recipe leaves this source owning, so it produces no more |
 | `array_location` | a location under the build's staging area ([Part 05 §2](05_validation_and_import.md#ew-import-pipeline)) to write an array to (§11.3) |
+| `opaque_location` | a location under the build's staging area to write packet-owned opaque resources to (§11.3) |
 | `source_cache` | the absolute path of the build's **source-cache location**, a directory in which an adapter may keep what it reads from a source for later builds (§11.7) |
 | an option, by its name | the value the recipe carries under it — a `zone`, an `interval_kind` |
 
@@ -2629,6 +2654,67 @@ output as needed; `size_bytes` and `digest` come from the packet-owned bytes it 
 §8.1). An adapter delivering an array therefore writes bytes where one delivering rows performs no
 I/O at all, which is the cost of an array not being records.
 
+**A packet-owned opaque resource crosses as a payload**: one regular file, or one directory whose
+every member is a regular file or a directory. An adapter that delivers one declares
+`opaque_location` in `needs`, and a build MUST supply it one directory per source, since two sources
+may each deliver a resource of one resource ID and a shared directory would make them one. An
+adapter reached by a protocol MUST place each payload, under its own name, alone in a **resource
+directory**: a directory directly in `opaque_location` named exactly by the resource's
+`resource_id`. A payload that is a file is a single object, and one that is a directory is a prefix
+([Part 04 §5.4](04_packet_catalog.md#ew-prefix-resources)).
+
+A build binds each payload to the opaque resource its resource directory names: the catalog row of
+an opaque catalog family whose `resource_id` equals the directory's name, whose declaration it
+resolves under [Part 02 §2.6](02_core_logical_schemas.md#ew-resource-catalog-binding), or otherwise
+the opaque singleton declaration whose ID equals it (Part 02 §2.4). It MUST NOT bind a payload by
+its name, suffix, or contents. A build MUST refuse a delivery, naming the source and the path,
+where:
+
+- `opaque_location` holds anything other than directories;
+- a resource directory holds no payload, or more than one;
+- a payload holds anything other than regular files and directories, such as a symbolic link, since
+  the packet would then own a pointer rather than bytes;
+- a directory within a payload, the payload included, holds nothing, since a prefix consists of
+  objects and an empty directory does not survive a copy to an object store; or
+- a name within a payload, the payload's own included, is not representable.
+
+A build MUST refuse, before it validates the staged packet, naming each such directory and resource
+ID, where a resource directory's name is the `resource_id` of no catalog row of an opaque catalog
+family and the ID of no opaque singleton declaration a loaded registry declares, or is both; where a
+catalog row of an opaque catalog family is bound by no payload or referenced resource; or where one
+resource ID is bound by more than one payload or referenced resource. A build MUST also refuse a
+payload bound to an opaque singleton declaration that
+[Part 05 §3.4](05_validation_and_import.md#ew-source-declarations) does not leave the delivering
+source owning, naming the source and the declaration.
+
+Nothing else crosses for a payload. A build MUST NOT require an adapter to state a payload's format,
+media type, size, or digest; it takes `size_bytes` and `digest` from the staged bytes (§10) and
+records no format. A payload in `opaque_location` is staged by its delivery, as a packet-owned array
+in `array_location` is (Part 05 §2), and promotion moves it to its final path by a rename within one
+filesystem (§3.4).
+
+An adapter a build runs in process MAY instead hand the build each payload's resource ID, name, and
+bytes, or for a directory the path of each file relative to it and that file's bytes. The build then
+writes the payload into `opaque_location` as an adapter reached by a protocol would, and the
+refusals above apply to what it writes.
+
+**A payload keeps its names.** A name is **representable** where it is nonempty, is valid UTF-8,
+contains neither NUL nor `/`, and is neither `.` nor `..`. Nothing else about a name is refused: a
+name need not be in any Unicode normalization form, and two names in one directory may differ only
+in case.
+
+A build MUST publish each payload under its name, and every file and directory within it under
+theirs, and MUST NOT rename, normalize, or case-fold any of them. It MUST publish each payload in a
+directory under the packet root that holds nothing else, since two payloads may share a name. §3.1's
+recommended layout places that directory at `opaque/<resource_id>/`, so a payload lies at
+`opaque/<resource_id>/<name>`. No validator checks that a payload kept its names or has its
+directory to itself, since a packet records neither the names as the source spelled them nor which
+files a build placed; a build's own tests are the evidence. A payload's manifest `uri` names the
+payload itself, the file where the payload is one and otherwise the directory, as a relative
+reference (§4). A validator warns of names that would not survive a copy to a filesystem that folds
+case or normalization or that Windows governs
+([Part 05 §5.3](05_validation_and_import.md#ew-validation-shim)).
+
 **A referenced resource crosses as a resource document.** An adapter that delivers one MUST deliver
 that document with it, under the reserved resource identifier `resources` (§11.4), which under
 `files-v0.1` is the file `resources.json` in `delivery_root`: a JSON object carrying `resources`, an
@@ -2638,6 +2724,13 @@ build supplies, so it MUST NOT carry `validation_state` or `derived_from`. A bui
 binding, rejects one that does not resolve or admit the resource ID, and merges the entry into the
 manifest. Its shape is the delivery schema §1 incorporates. A build MUST refuse a document that does
 not satisfy it before writing a manifest, naming what is wrong.
+
+A build MUST record every resource-document entry as external, and MUST refuse one that declares
+`external: false`, naming the source and the entry's `resource_id`; a packet-owned opaque resource
+crosses only as a payload. An adapter MUST write an entry's `uri` that is not absolute as a relative
+reference (§4), in any form RFC 3986 admits for its segments. A build MUST refuse an entry whose
+`uri` is neither, naming the source and the entry's `resource_id`, and MUST record each entry it
+accepts with its `uri` rewritten in §4's one form.
 
 The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (Part 09 §5.8), so a fact a manifest cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
 
@@ -2863,7 +2956,7 @@ it, its **algorithm**, which is one of:
 | `crc32` | the gzip CRC-32 | RFC 1952, §8 | 8 digits |
 
 [Part 04 §11](#ew-packet-catalog-normative-references) identifies the editions of FIPS 180-4, the
-NVM Command Set Specification, and RFC 9260, and
+NVM Command Set Specification, RFC 9260, and RFC 8785, and
 [Part 00 §10](00_architecture.md#ew-normative-references) that of RFC 1952.
 
 A single object's digest value is the function of the object's bytes, written as lowercase
@@ -2877,10 +2970,16 @@ exist, and a validator reports it as it reports a resource that does not exist.
 
 A prefix's digest value is the SHA-256 of the UTF-8 encoding of
 `[["<key>",<size>,"<value>"], ...]`, where each `<value>` is that object's digest value under the
-resource's algorithm. The listing is compact JSON with `,` and `:` separators, no whitespace, and
-ASCII-escaped keys, with one entry per object, `<key>` relative to the resource's URI with `/`
-separators, and entries sorted by `<key>` in byte order. A prefix's value therefore has 64 digits
-under every algorithm. `size_bytes` is the sum of the objects' sizes.
+resource's algorithm. The listing is compact JSON with `,` and `:` separators and no whitespace,
+with one entry per object, sorted by the bytes of each key's UTF-8 encoding. A key, and a member's
+`key` (§5.4), is the object's path relative to the resource's location: its names as they are,
+joined by `/`, and never percent-encoded. Each key is a string serialized under RFC 8785, Section
+3.2.2.2: `"` and `\` as `\"` and `\\`; U+0008, U+0009, U+000A, U+000C, and U+000D as `\b`, `\t`,
+`\n`, `\f`, and `\r`; every other code point from U+0000 through U+001F as `\u` followed by four
+lowercase hexadecimal digits; and every other code point as itself. Each size is a JSON integer with
+no sign, fraction, or exponent, and no leading zero unless the size is zero, which is written `0`. A
+prefix's value therefore has 64 digits under every algorithm. `size_bytes` is the sum of the
+objects' sizes.
 
 Sorting the keys is what makes the value reproducible without knowing the store, since two
 implementations enumerate an object-store prefix and a local directory in different orders.
@@ -2946,7 +3045,7 @@ resource specifically when support is absent.
 <a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources
 
-Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — its `digest` and `size_bytes` are defined over its objects by [§4.3](#ew-resource-digests).
+Where a resource is a prefix rather than a single object — an external store, a packet-owned Zarr array, or a packet-owned opaque resource whose payload is a directory ([Part 03 §11.3](03_portable_physical_profile.md#ew-referenced-resource-delivery)) — its `digest` and `size_bytes` are defined over its objects by [§4.3](#ew-resource-digests).
 
 Such a resource MAY additionally declare a `members` array recording what was seen, one member per object. A member records its object's single-object value as `digest`, a string under its entry's algorithm, and MAY carry a `store_digest`. The incorporated schema requires every member to record `digest` where its entry records one, and forbids a member recording one where its entry does not. Carrying each member's own value is what lets a consumer that fetched three chunks verify those three without the other two hundred.
 
@@ -2964,7 +3063,9 @@ A store digest answers whether anything changed in place. It never establishes t
 ### 5.5 Source resolution
 
 An external resource entry MAY carry `source`, an identifier naming the body of data it belongs to;
-its `uri` is then a path relative to wherever that source is, and neither field is a location. An
+its `uri` is then a relative reference resolved against wherever that source is
+([Part 03 §4](03_portable_physical_profile.md#ew-portable-uri-rules)), and neither field is a
+location. An
 entry carrying no `source` keeps the meaning §5.1 gives it.
 
 Where a source is, is stated by a **source resolution document**: a JSON document, conventionally
@@ -3099,6 +3200,7 @@ owning resource ID or registry ID where one applies.
 | `packet.resource.member_size` | entries | an entry with `members` records `size_bytes` unequal to the sum of the members' sizes |
 | `packet.resource.member_digest` | entries | an entry records `digest` and `members`, and its value differs from the §4.3 value of that member list |
 | `packet.resource.digest_missing` | entries | an entry that does not declare `external: true` records no `digest` |
+| `packet.resource.uri_form` | entries | an entry's `uri` is neither absolute nor a relative reference in the one form of [Part 03 §4](03_portable_physical_profile.md#ew-portable-uri-rules) |
 | `packet.registry.core_count` | entries | the number of core descriptors differs from one |
 | `packet.registry.path_unique` | entries | two descriptors share a `path` |
 | `packet.registry.missing` | registry_binding | nothing exists at a descriptor's path |
@@ -3162,13 +3264,14 @@ manifest. A writer MUST NOT publish a manifest with a finding in the `json`, `sh
 <a id="ew-packet-catalog-normative-references" data-spec-anchor="canonical"></a>
 ## 11. Normative references
 
-The application column states the extent to which this part invokes the external authority:
+The application column states the extent to which this part invokes each external authority:
 
 | reference | candidate edition | application |
 |---|---|---|
 | [NIST FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) | exact | SHA-256 |
 | [NVM Express NVM Command Set Specification, Revision 1.2](https://nvmexpress.org/specifications/) | exact | CRC64NVME (§5.3.1.3) |
 | [RFC 9260](https://www.rfc-editor.org/info/rfc9260) | exact | CRC32C (Appendix A) |
+| [RFC 8785](https://www.rfc-editor.org/info/rfc8785) | exact | the serialization of a prefix listing's keys (§4.3), Section 3.2.2.2 |
 
 <!-- END 04_packet_catalog.md -->
 
@@ -3204,7 +3307,8 @@ A build MUST perform these steps in this order:
 8. publish the packet manifest (§6).
 
 A build MAY interleave steps 1 to 3 across sources, within the constraints §4.3 places on
-normalization, and a packet-owned array delivered into the staging area is staged by its delivery.
+normalization, and a packet-owned array or opaque payload delivered into the staging area is staged
+by its delivery.
 A build MUST finish steps 4 and 5 before it begins step 6, MUST NOT begin step 7 until step 6 has
 returned a packet verdict of `passed` ([§9.5](#ew-verdict-composition)), and MUST NOT begin step 8
 until step 7 has finished.
@@ -3495,6 +3599,25 @@ The finding's level is `warning` for a packet-owned resource whose interface's f
 `reader_and_packet_writer`, and `info` for every other resource. A validator MUST NOT report it at
 `error`. The finding concerns one resource, so [§9.5](#ew-verdict-composition) attributes it to the
 registry whose declaration the resource's entry names.
+
+Two names in one directory of a packet-owned opaque payload
+([Part 03 §11.3](03_portable_physical_profile.md#ew-referenced-resource-delivery)) **collide** where
+they differ and are a canonical caseless match under the Unicode Standard, Section 3.13, definition
+D145, which equates names differing only in case, only in normalization form, or in both. A name
+within such a payload, or a decoded segment of the payload's `uri`, is **unportable to Windows**
+where it contains a code point from U+0001 through U+001F or any of `"`, `*`, `:`, `<`, `>`, `?`,
+`\`, and `|`; ends in a full stop or a space; or, compared without regard to ASCII case, is `CON`,
+`PRN`, `AUX`, `NUL`, or `COM` or `LPT` followed by one of the digits `1` through `9` or the
+superscripts `¹`, `²`, and `³`, whether alone or followed by a full stop and anything else.
+
+A validator MUST report each set of colliding names and each name unportable to Windows, one finding
+per set and one per name, at `warning` under the check ID `physical.opaque_name_portability`, naming
+the resource, the path under the packet root of the directory holding the names, and the names. The
+packet is conformant: each name holds its own file under the packet root, and it fails only on a
+copy to a filesystem that folds case or normalization or that Windows governs. The finding concerns
+one resource, so [§9.5](#ew-verdict-composition) attributes it to the registry whose declaration the
+resource's entry names. §15 identifies the Unicode Standard, Version 15.0.0, as an exact reference
+for canonical caseless matching.
 
 A validator MUST report each external resource whose interface declares a reader floor and whose
 format-owned metadata it did not read, one finding per resource, at `info` under the check ID
@@ -3895,11 +4018,12 @@ version identifiers.
 <a id="ew-validation-normative-references" data-spec-anchor="canonical"></a>
 ## 15. Normative references
 
-The application column states the extent to which this part invokes the external authority:
+The application column states the extent to which this part invokes each external authority:
 
 | reference | candidate edition | application |
 |---|---|---|
 | [TOML v1.0.0](https://toml.io/en/v1.0.0) | exact | a session recipe's syntax and decoded values (§3.1) |
+| [The Unicode Standard, Version 15.0.0](https://www.unicode.org/versions/Unicode15.0.0/) | exact | canonical caseless matching of payload names, Section 3.13, definition D145 (§5.3) |
 
 <!-- END 05_validation_and_import.md -->
 
@@ -4064,7 +4188,7 @@ escapewheel prune <packet>             remove what the packet no longer names (0
 | `Validator` | run the generated and declared checks; return a report |
 | `PacketWriter` | accumulate records; stage, validate, commit |
 
-An adapter returns its rows as records, not a path, and they stay records whichever route delivers them. That is what lets an adapter be tested without a filesystem and stops normalization decisions leaking into I/O code. Out of process the transport carries a table and the receiving end returns records again, so nothing downstream of the boundary knows which route was taken. A packet-owned array crossing a protocol and a report are written where the build points (Part 05 §2).
+An adapter returns its rows as records, not a path, and they stay records whichever route delivers them. That is what lets an adapter be tested without a filesystem and stops normalization decisions leaking into I/O code. Out of process the transport carries a table and the receiving end returns records again, so nothing downstream of the boundary knows which route was taken. A packet-owned array or opaque payload crossing a protocol and a report are written where the build points (Part 05 §2).
 
 An adapter carries six static declarations, all readable with nothing open: `PRODUCES`, the resource identifiers it can supply (Part 05 §3.4); `CONTRIBUTES`, those of them whose rows it supplies only in part, such as the clocks of its own streams (Part 05 §3.4); `STATES`, the recipe fields it can state, as `block.field` names such as `subject.subject_id` (Part 05 §3.4); `NEEDS`, the values a build must supply it, drawn from Part 03 §11.2's terms and the recipe's options; `ACCEPTS`, the options it reads and can run without, which a recipe may leave unset, and `source_cache` where it keeps source data in the build's source-cache location (Part 03 §11.2); and `CONSUMES`, the kinds whose output it reads, which is what orders a build. For each name in `STATES` the adapter exposes the value it holds. All six are class attributes here, and Part 03 §11.5's document is the same facts for an adapter a build cannot import; the requirements in Part 05 and Part 03 are on what a build can determine, not on how an implementation stores it.
 
@@ -4072,7 +4196,7 @@ An adapter released independently of the writer declares its protocols by naming
 
 Converting records to a table takes the column set from every row and not from the first. `pyarrow.Table.from_pylist` infers its schema from the leading row and silently drops what later rows carry, which loses a column a source populates for some rows only — measured, one of thirteen resources of the NWB adapter. The rule it implements is Part 03 §11.3's, stated about what a delivery says rather than about how a table is built, because an adapter declaring its schema up front meets it by construction.
 
-An adapter that produces a dense array across a protocol writes it to the location the build supplied and returns the reference (Part 03 §11.3). An adapter the writer runs in process may instead hand the array's values over, and the writer writes them to that location.
+An adapter that produces a dense array across a protocol writes it to the location the build supplied and returns the reference (Part 03 §11.3). An adapter the writer runs in process may instead hand the array's values over, and the writer writes them to that location. An adapter delivering a packet-owned opaque resource writes the file or directory under its own name into a directory, named by the resource ID, in the location the build supplied, or hands the writer its bytes in process.
 
 A build reports a `metadata` key whose value equals a column of the same row, which is how Part 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the same duplicate-value comparison used between two columns, applied to a key and a column; three keys in the packaged sessions restated a column.
 

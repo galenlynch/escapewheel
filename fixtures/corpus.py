@@ -75,14 +75,35 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "unresolved_externals": ("info", "external.physical_unassessed"),
     "no_extracellular": None,
     "sessions_only": None,
+    "owned_opaque_object": None,
+    "owned_opaque_prefix": None,
+    "owned_opaque_singleton": None,
+    "owned_opaque_encoded_name": None,
+    "owned_opaque_one_byte_off": ("error", "owned.digest"),
+    "opaque_name_portability": ("warning", "physical.opaque_name_portability"),
+    "listing_key_spelling": ("warning", "physical.opaque_name_portability"),
+    "uri_raw_space": ("error", "packet.resource.uri_form"),
+    "uri_lowercase_hex": ("error", "packet.resource.uri_form"),
+    "uri_encoded_unreserved": ("error", "packet.resource.uri_form"),
+    "uri_dot_segment": ("error", "packet.resource.uri_form"),
 }
 
 #: Packets whose expected finding is one per resource (Part 05 §5.3), and how many it must fire.
-COUNTS: dict[str, int] = {"outside_array_floor": 1, "unresolved_externals": 2}
+COUNTS: dict[str, int] = {
+    "outside_array_floor": 1,
+    "unresolved_externals": 2,
+    "opaque_name_portability": 2,
+    "listing_key_spelling": 3,
+}
+
+#: Packets whose expected finding is a warning that leaves them conformant, so they must still pass.
+CONFORMING: set[str] = {"opaque_name_portability", "listing_key_spelling"}
 
 #: Checks a packet must not draw at any level.
 ABSENT: dict[str, set[str]] = {
-    "valid": {"physical.outside_reader_floor", "external.physical_unassessed"}
+    "valid": {"physical.outside_reader_floor", "external.physical_unassessed"},
+    # Its digest is over keys in raw UTF-8, and a reader that escaped or encoded them would disagree.
+    "listing_key_spelling": {"owned.digest", "packet.resource.member_digest"},
 }
 
 #: Packets whose expected finding belongs to an extension (Part 05 §9.5), which must fail that
@@ -104,6 +125,13 @@ CHECKSUMS: set[str] = {
     "crc64nvme_one_byte_off",
     "crc32c_one_byte_off",
     "crc32_one_byte_off",
+    "owned_opaque_object",
+    "owned_opaque_prefix",
+    "owned_opaque_singleton",
+    "owned_opaque_encoded_name",
+    "owned_opaque_one_byte_off",
+    "opaque_name_portability",
+    "listing_key_spelling",
 }
 
 
@@ -120,7 +148,6 @@ def main() -> int:
         absent = ABSENT.get(name, set())
         if expect is None:
             ok = report.passed and report.warnings == 0
-            ok = ok and not any(f.check in absent for f in report.findings)
             verdict = "clean" if ok else "UNEXPECTED FINDINGS"
         else:
             level, check = expect
@@ -138,7 +165,11 @@ def main() -> int:
                     report.verdict("core"),
                     report.verdict(),
                 ) == ("failed", "passed", "failed")
+            if name in CONFORMING:
+                ok = ok and report.passed
             verdict = "caught" if ok else f"MISSED {check}"
+        if any(f.check in absent for f in report.findings):
+            ok, verdict = False, "DREW AN ABSENT CHECK"
         if not ok:
             failures.append((name, verdict, sorted({f.check for f in report.findings})))
         expected_level = "clean" if expect is None else expect[0]

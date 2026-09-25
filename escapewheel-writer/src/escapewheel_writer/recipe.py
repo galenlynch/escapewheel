@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -53,6 +53,7 @@ TERMS = frozenset(
         "units",
         "wanted",
         "array_location",
+        "opaque_location",
     }
 )
 
@@ -60,6 +61,20 @@ TERMS = frozenset(
 #: RECIPE_SUPPLIES because the NWB states every column of it and the row was built and discarded;
 #: a `[subject]` block is now the fallback for a packet whose sources name no subject.
 RECIPE_MAY_SUPPLY = ("core.subjects",)
+
+
+def payloads(registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()) -> frozenset[str]:
+    """Return the loaded registries' opaque singleton declarations, which a source owns as it owns a table.
+
+    Each is one resource whose ID is its declaration's, so a recipe can name it and a source deliver
+    it as a payload (Part 03 §11.3).
+    """
+    return frozenset(
+        declaration_id
+        for document in (registry, *extensions)
+        for declaration_id, declaration in document["resources"].items()
+        if declaration["kind"] == "opaque" and declaration["instances"]["mode"] == "singleton"
+    )
 
 
 def adapter_for(kind: str) -> Any:
@@ -843,12 +858,15 @@ class Recipe:
                     if declaration["kind"] == "table"
                 }
             )
+        # A source may own an opaque singleton, whose payload it delivers under the declaration's ID
+        # (Part 03 §11.3); catalog instances are bound by the rows of the table it owns instead.
+        singletons = payloads(registry, extensions)
         owners, claimants = self.owners, self.claimants
         errors: list[str] = []
         warnings: list[str] = []
 
         for resource, kinds in sorted(claimants.items()):
-            if resource not in tables:
+            if resource not in tables and resource not in singletons:
                 errors.append(f"{kinds[0]} supplies {resource}, which the registry does not define")
         for resource, kinds in sorted(owners.items()):
             if len(kinds) > 1:
@@ -869,7 +887,7 @@ class Recipe:
         errors.extend(self._prefix_problems())
         errors.extend(self._storage_problems())
         errors.extend(self._delivery_problems())
-        errors.extend(self._declaration_problems(tables))
+        errors.extend(self._declaration_problems(tables, singletons))
         errors.extend(self._states_problems())
         errors.extend(self.encoding_problems(tables))
         fact_errors, fact_warnings, notes = self._declared_fact_problems()
@@ -1113,7 +1131,7 @@ class Recipe:
             )
         return problems
 
-    def _declaration_problems(self, tables: Mapping[str, Any]) -> list[str]:
+    def _declaration_problems(self, tables: Mapping[str, Any], singletons: Collection[str] = ()) -> list[str]:
         """Everything wrong with a source's declaration, knowable with nothing opened.
 
         Part 03 §11.5's checks for every source, whichever route it takes, plus what the recipe has
@@ -1168,7 +1186,9 @@ class Recipe:
                 ]
             problems += [
                 f"{spec.kind} {refusal}"
-                for refusal in document.refusals(stated, tables=tables, options=spec.options, terms=TERMS)
+                for refusal in document.refusals(
+                    stated, tables=tables, options=spec.options, terms=TERMS, payloads=singletons
+                )
             ]
             named = delivery.protocol if delivery is not None else ""
             if named and asked["protocols"] and named not in asked["protocols"]:

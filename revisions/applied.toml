@@ -1347,8 +1347,9 @@ disposition = "applied"
 where = [
     { part = "04", anchor = "ew-packet-resource-entry-fields" },
     { part = "04", anchor = "ew-source-resolution" },
-    { part = "03", section = "4" },
+    { part = "03", anchor = "ew-portable-uri-rules" },
 ]
+note = "R143 §3.4 makes a source-relative `uri` a relative reference, resolved by appending its decoded names to the source's location"
 
 [clause."R80 §2.2"]
 disposition = "applied"
@@ -2636,7 +2637,7 @@ disposition = "applied"
 where = [
   { part = "03", anchor = "ew-referenced-resource-delivery", note = "array_location per source, the name that is the identifier, the rows that must agree with it, and the manifest entry read off the array" },
 ]
-note = "R134 §3.4 replaces the rule that no other adapter writes anything with delivery only where a build points it; the rule for arrays stands"
+note = "R134 §3.4 replaces the rule that no other adapter writes anything with delivery only where a build points it; the rule for arrays stands, and R143 §3.1 adds the packet-owned opaque route beside it"
 
 [clause."R117 §3.2"]
 disposition = "applied"
@@ -2644,6 +2645,7 @@ where = [
   { part = "03", anchor = "ew-referenced-resource-delivery", note = "the resource document, what a build requires of an entry, and why it is a delivery rather than a report" },
   { part = "03", section = "11.4", note = "`resources` as the second reserved resource identifier, and the single-row table it travels as" },
 ]
+note = "R143 §3.7 restates in Part 03 §11.3 that a build records every entry as external, and adds the refusals of an entry declaring `external: false` and, under R143 §3.4, of a malformed relative `uri`"
 
 [clause."R117 §3.3"]
 disposition = "applied"
@@ -3422,7 +3424,7 @@ note = "four admitted algorithms, each single-object value's width and check val
 [clause."R136 §3.2"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-resource-digests" }]
-note = "a prefix holds one or more objects, and its value is the SHA-256 of its listing under every algorithm"
+note = "a prefix holds one or more objects, and its value is the SHA-256 of its listing under every algorithm; R143 §3.6 spells each key in UTF-8 under RFC 8785 rather than ASCII-escaped"
 
 [clause."R136 §3.3"]
 disposition = "applied"
@@ -3593,3 +3595,57 @@ note = "an adapter uses source data kept from before a run only after confirming
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-source-cache" }]
 note = "each storage format keeps to one subdirectory named by an identifier its implementation controls, cache-v names are reserved, data becomes readable to another run only when complete, and naming, publication, replacement, and eviction are the format's own; unchecked by any build or validator"
+
+[clause."R143 §3.1"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-portable-profile-technologies", note = "an opaque resource may be packet-owned or external" },
+  { part = "03", anchor = "ew-reaching-a-source", note = "the packet-owned opaque route" },
+  { part = "03", anchor = "ew-build-supplied-values", note = "the opaque_location term" },
+  { part = "03", anchor = "ew-referenced-resource-delivery", note = "an adapter declares opaque_location in needs, and a build supplies one directory per source" },
+]
+
+[clause."R143 §3.2"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-referenced-resource-delivery", note = "a payload in a resource directory, its binding to an opaque catalog row or singleton declaration, the refusals, and the in-process hand-over" },
+  { part = "05", anchor = "ew-import-pipeline", note = "a payload is staged by its delivery" },
+  { part = "07", anchor = "ew-reference-object-model", note = "the adapter writes a payload where the build points" },
+]
+
+[clause."R143 §3.3"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-referenced-resource-delivery", note = "representable names, publication under them in a directory of its own, and the unchecked-by-validator statement" },
+  { part = "03", anchor = "ew-portable-packet-layout", note = "opaque/<resource_id>/<name> replaces media/" },
+  { part = "05", anchor = "ew-validation-shim", note = "colliding and Windows-unportable names, and the physical.opaque_name_portability warning" },
+  { part = "05", anchor = "ew-validation-normative-references", note = "the Unicode Standard, Version 15.0.0" },
+]
+
+[clause."R143 §3.4"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-portable-uri-rules", note = "absolute and relative-reference URIs, decoding and resolution by appending names, the writer's one form, and packet.resource.uri_form" },
+  { part = "04", anchor = "ew-source-resolution", note = "a source-relative uri is a relative reference" },
+  { part = "04", anchor = "ew-packet-manifest-conformance", note = "the packet.resource.uri_form row" },
+  { part = "03", anchor = "ew-referenced-resource-delivery", note = "a resource-document uri in any RFC 3986 form, refused where malformed and rewritten in the one form" },
+]
+
+[clause."R143 §3.5"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-owned-resource-digests", note = "a packet-owned opaque resource's digest and size cover its payload" },
+  { part = "04", anchor = "ew-prefix-resources", note = "a packet-owned opaque directory is a prefix" },
+]
+
+[clause."R143 §3.6"]
+disposition = "applied"
+where = [
+  { part = "04", anchor = "ew-resource-digests", note = "unencoded keys serialized under RFC 8785, sorted by UTF-8 bytes, and plain decimal sizes" },
+  { part = "04", anchor = "ew-packet-catalog-normative-references", note = "RFC 8785" },
+]
+
+[clause."R143 §3.7"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-referenced-resource-delivery" }]
+note = "a build records every resource-document entry as external and refuses one declaring external: false"

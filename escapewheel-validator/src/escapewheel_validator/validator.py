@@ -28,13 +28,15 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, sql_name
+from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, UnresolvedSource, sql_name
 from escapewheel_reader.location import SOURCES_FILENAME
 from escapewheel_reader.ordering import stored_order
 from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_floor_admits
+from escapewheel_reader.uri import decode
 
 from .generate import Check, adjacency_settles_uniqueness, concerns, generate
 from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest, named_registries
+from .opaque import describe, findings
 from .registry_document import (
     UCUM_URI,
     CheckedRegistryContext,
@@ -803,6 +805,38 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         _check_one_array(resource, packet.array_resource(resource.resource_id), extents, report)
 
 
+def _check_packet_owned_opaque(packet: Packet, report: Report) -> None:
+    """Every packet-owned opaque payload is present, and its names survive a copy (Part 05 §5.3).
+
+    A payload is one file or a directory of them (Part 03 §11.3), so its listing is all either check
+    reads. Its names draw `physical.opaque_name_portability` at `warning` and never fail the packet.
+    """
+    for resource in packet.resources(kind="opaque"):
+        if resource.is_external or resource.source is not None:
+            continue
+        try:
+            found = listing(_owned_uri(packet, resource.entry))
+        except ResourceMissing as exc:
+            report.add(
+                "error",
+                "resource.missing",
+                f"{resource.resource_id}: {exc}",
+                registry=report.resource_owner(resource.resource_id),
+            )
+            continue
+        except StoreUnreachable:
+            continue  # a remote packet this validator cannot reach; its digest check reports that
+        keys = () if found.is_single_object else [member.key for member in found.members]
+        for directory, names, reason in findings(decode(resource.uri), keys):
+            report.add(
+                "warning",
+                "physical.opaque_name_portability",
+                describe(resource.resource_id, directory, names, reason),
+                [(resource.resource_id, directory, *names)],
+                registry=report.resource_owner(resource.resource_id),
+            )
+
+
 def _report_unassessed(packet: Packet, assessed: Collection[str], report: Report) -> None:
     """One `info` finding per external resource with a reader floor whose own metadata was not read (Part 05 §5.3)."""
     for resource in packet.resources():
@@ -1008,8 +1042,19 @@ def _resolve_external(
     for resource in packet.resources():
         if not resource.is_external:
             continue
+        try:
+            uri = packet.location.resolve(resource.uri, resource.source).uri
+        except UnresolvedSource as exc:
+            # Which sources resolve is the reader's situation (Part 04 §5.5): unreachable, not wrong.
+            report.add(
+                "warning",
+                "external.unreachable",
+                f"{resource.resource_id}: {exc}",
+                registry=report.resource_owner(resource.resource_id),
+            )
+            continue
         fields = _compare_external(
-            resource, report, checksums, store_digests, extents, store_checksums, routes, assessed
+            resource, uri, report, checksums, store_digests, extents, store_checksums, routes, assessed
         )
         if fields is None:
             continue
@@ -1039,6 +1084,7 @@ def _resolve_external(
 
 def _compare_external(
     resource: Any,
+    uri: str,
     report: Report,
     checksums: bool,
     store_digests: bool = False,
@@ -1047,7 +1093,7 @@ def _compare_external(
     routes: list[tuple[str, str, str]] | None = None,
     assessed: set[str] | None = None,
 ) -> list[str] | None:
-    """Check one external resource, returning the fields actually compared.
+    """Check one external resource, resolved to `uri`, returning the fields actually compared.
 
     None means the store could not be reached, which is already reported and leaves the resource
     out of every count: nothing about it was established either way. Each digest established is
@@ -1055,7 +1101,6 @@ def _compare_external(
     compared with the reader floor is added to `assessed`.
     """
     entry = resource.entry
-    uri = str(entry.get("uri", ""))
     try:
         found = listing(uri)
     except StoreUnreachable as exc:
@@ -2418,6 +2463,7 @@ def validate(
     if checksums:
         _check_owned_digests(packet, report, store_checksums)
     _check_packet_owned_arrays(packet, report)
+    _check_packet_owned_opaque(packet, report)
     _check_time_origin(packet, report)
     # Every directing registry's tables receive the same storage checks (Part 05 §5.4).
     tables = _tables(effective)

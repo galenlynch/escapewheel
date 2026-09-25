@@ -968,22 +968,33 @@ def test_a_referenced_array_is_declared_external_and_copied_nowhere(tmp_path, re
     assert not (root / "arrays").exists(), "nothing was copied"
 
 
-def test_a_relative_reference_is_refused(tmp_path, registry):
-    """A relative URI resolves against a packet the bytes do not live in."""
+@pytest.mark.parametrize("uri", ["../lfp", "arrays/l fp", "arrays%2Flfp"])
+def test_a_reference_neither_absolute_nor_relative_is_refused(tmp_path, registry, uri):
+    """Part 03 §4: a uri without a scheme is a relative reference, and one no reader could decode is refused."""
     from escapewheel_writer.writer import ExternalArray
 
     writer = PacketWriter(registry, packet_id="s001")
     for resource_id, records in _array_tables("probe.lfp").items():
         writer.add(resource_id, records)
-    with pytest.raises(ValueError, match="not absolute"):
+    with pytest.raises(ValueError, match="neither absolute nor a relative reference"):
         writer.reference_array(
             "core.probe.lfp",
-            ExternalArray(
-                array_asset_id="probe.lfp",
-                declaration_id="core.array_asset_instances",
-                uri="arrays/lfp",
-            ),
+            ExternalArray(array_asset_id="probe.lfp", declaration_id="core.array_asset_instances", uri=uri),
         )
+
+
+def test_an_external_reference_may_resolve_under_the_packet_root(tmp_path, registry):
+    """Part 04 §5.1: external says who owns the bytes, not where they resolve, so a relative uri is kept."""
+    from escapewheel_writer.writer import ExternalArray
+
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource_id, records in _array_tables("probe.lfp").items():
+        writer.add(resource_id, records)
+    writer.reference_array(
+        "core.probe.lfp",
+        ExternalArray(array_asset_id="probe.lfp", declaration_id="core.array_asset_instances", uri="beside/l%c3%a9"),
+    )
+    assert writer._referenced_arrays["core.probe.lfp"].uri == "beside/l%C3%A9"
 
 
 def test_a_referenced_codec_is_not_projected_into_the_manifest(tmp_path, registry, minimal):

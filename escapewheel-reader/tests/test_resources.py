@@ -165,11 +165,12 @@ def test_an_unreachable_external_array_has_no_inferred_zarr_version():
 def test_a_windows_drive_is_not_a_scheme(tmp_path):
     """A single letter before a colon is a drive letter, not a URI scheme.
 
-    It is treated as a path, so it fails for not existing rather than for being remote.
+    Nor is it a relative reference (Part 03 §4), so it fails as naming no place rather than for
+    being remote.
     """
     from escapewheel_reader import ResourceUnreadableError
 
-    with pytest.raises(ResourceUnreadableError, match="does not resolve under"):
+    with pytest.raises(ResourceUnreadableError, match="neither absolute nor a relative reference"):
         assert _array_resource("C:/data/lfp.zarr").store
 
 
@@ -249,6 +250,56 @@ def test_a_store_uri_pyarrow_cannot_open_is_reported(packet_root):
     assert not resource.is_local
     with pytest.raises(ResourceUnreadableError, match="cannot reach"):
         resource.schema()
+
+
+# -- Part 03 §4: a packet-owned opaque payload under a name a URI must encode -------------------
+
+
+def _owned_payload(root, uri):
+    """Declare an opaque family and add one packet-owned entry at `uri`; nothing reads its digest."""
+    import json
+
+    registry = read_registry(root)
+    registry["resources"]["core.test_payloads"] = {
+        "content_class": "core",
+        "kind": "opaque",
+        "instances": {"mode": "family"},
+        "requires": [],
+        "lineage": "optional",
+    }
+    install_registry(root, registry)
+    manifest = json.loads((root / "packet.json").read_text())
+    manifest["resources"].append(
+        {
+            "resource_id": "core.qc_report",
+            "declaration_id": "core.test_payloads",
+            "uri": uri,
+            "validation_state": "not_run",
+            "digest": {"algorithm": "sha256", "value": "0" * 64},
+        }
+    )
+    (root / "packet.json").write_text(json.dumps(manifest))
+    return open_packet(root)
+
+
+def test_a_payload_whose_name_needs_encoding_opens_under_its_own_name(packet_root):
+    """The URI is percent-encoded and the file keeps its name, space and `é` included."""
+    payload = packet_root / "opaque" / "core.qc_report" / "QC report é.pdf"
+    payload.parent.mkdir(parents=True)
+    payload.write_bytes(b"%PDF-1.7 report")
+    packet = _owned_payload(packet_root, "opaque/core.qc_report/QC%20report%20%C3%A9.pdf")
+    assert packet.resource("core.qc_report").kind == "opaque"
+    assert packet.path("core.qc_report") == payload
+    assert packet.path("core.qc_report").read_bytes() == b"%PDF-1.7 report"
+
+
+@pytest.mark.parametrize("uri", ["/opaque/core.qc_report/QC.pdf", "opaque/../QC.pdf"])
+def test_a_uri_that_is_no_relative_reference_is_unreadable_naming_the_entry(packet_root, uri):
+    """The packet still opens; the one resource fails, naming itself."""
+    packet = _owned_payload(packet_root, uri)
+    with pytest.raises(ResourceUnreadableError, match=r"^core\.qc_report: .*neither absolute nor a relative reference"):
+        _ = packet.path("core.qc_report")
+    assert packet.table("core.intervals").num_rows == 2
 
 
 # -- Part 03 §§6.1 and 6.4: the reader floor, and a codec this reader cannot decode ---------------

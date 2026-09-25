@@ -117,7 +117,7 @@ it, its **algorithm**, which is one of:
 | `crc32` | the gzip CRC-32 | RFC 1952, §8 | 8 digits |
 
 [Part 04 §11](#ew-packet-catalog-normative-references) identifies the editions of FIPS 180-4, the
-NVM Command Set Specification, and RFC 9260, and
+NVM Command Set Specification, RFC 9260, and RFC 8785, and
 [Part 00 §10](00_architecture.md#ew-normative-references) that of RFC 1952.
 
 A single object's digest value is the function of the object's bytes, written as lowercase
@@ -131,10 +131,16 @@ exist, and a validator reports it as it reports a resource that does not exist.
 
 A prefix's digest value is the SHA-256 of the UTF-8 encoding of
 `[["<key>",<size>,"<value>"], ...]`, where each `<value>` is that object's digest value under the
-resource's algorithm. The listing is compact JSON with `,` and `:` separators, no whitespace, and
-ASCII-escaped keys, with one entry per object, `<key>` relative to the resource's URI with `/`
-separators, and entries sorted by `<key>` in byte order. A prefix's value therefore has 64 digits
-under every algorithm. `size_bytes` is the sum of the objects' sizes.
+resource's algorithm. The listing is compact JSON with `,` and `:` separators and no whitespace,
+with one entry per object, sorted by the bytes of each key's UTF-8 encoding. A key, and a member's
+`key` (§5.4), is the object's path relative to the resource's location: its names as they are,
+joined by `/`, and never percent-encoded. Each key is a string serialized under RFC 8785, Section
+3.2.2.2: `"` and `\` as `\"` and `\\`; U+0008, U+0009, U+000A, U+000C, and U+000D as `\b`, `\t`,
+`\n`, `\f`, and `\r`; every other code point from U+0000 through U+001F as `\u` followed by four
+lowercase hexadecimal digits; and every other code point as itself. Each size is a JSON integer with
+no sign, fraction, or exponent, and no leading zero unless the size is zero, which is written `0`. A
+prefix's value therefore has 64 digits under every algorithm. `size_bytes` is the sum of the
+objects' sizes.
 
 Sorting the keys is what makes the value reproducible without knowing the store, since two
 implementations enumerate an object-store prefix and a local directory in different orders.
@@ -200,7 +206,7 @@ resource specifically when support is absent.
 <a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources
 
-Where a resource is a prefix rather than a single object — an external store, or a packet-owned Zarr array — its `digest` and `size_bytes` are defined over its objects by [§4.3](#ew-resource-digests).
+Where a resource is a prefix rather than a single object — an external store, a packet-owned Zarr array, or a packet-owned opaque resource whose payload is a directory ([Part 03 §11.3](03_portable_physical_profile.md#ew-referenced-resource-delivery)) — its `digest` and `size_bytes` are defined over its objects by [§4.3](#ew-resource-digests).
 
 Such a resource MAY additionally declare a `members` array recording what was seen, one member per object. A member records its object's single-object value as `digest`, a string under its entry's algorithm, and MAY carry a `store_digest`. The incorporated schema requires every member to record `digest` where its entry records one, and forbids a member recording one where its entry does not. Carrying each member's own value is what lets a consumer that fetched three chunks verify those three without the other two hundred.
 
@@ -218,7 +224,9 @@ A store digest answers whether anything changed in place. It never establishes t
 ### 5.5 Source resolution
 
 An external resource entry MAY carry `source`, an identifier naming the body of data it belongs to;
-its `uri` is then a path relative to wherever that source is, and neither field is a location. An
+its `uri` is then a relative reference resolved against wherever that source is
+([Part 03 §4](03_portable_physical_profile.md#ew-portable-uri-rules)), and neither field is a
+location. An
 entry carrying no `source` keeps the meaning §5.1 gives it.
 
 Where a source is, is stated by a **source resolution document**: a JSON document, conventionally
@@ -353,6 +361,7 @@ owning resource ID or registry ID where one applies.
 | `packet.resource.member_size` | entries | an entry with `members` records `size_bytes` unequal to the sum of the members' sizes |
 | `packet.resource.member_digest` | entries | an entry records `digest` and `members`, and its value differs from the §4.3 value of that member list |
 | `packet.resource.digest_missing` | entries | an entry that does not declare `external: true` records no `digest` |
+| `packet.resource.uri_form` | entries | an entry's `uri` is neither absolute nor a relative reference in the one form of [Part 03 §4](03_portable_physical_profile.md#ew-portable-uri-rules) |
 | `packet.registry.core_count` | entries | the number of core descriptors differs from one |
 | `packet.registry.path_unique` | entries | two descriptors share a `path` |
 | `packet.registry.missing` | registry_binding | nothing exists at a descriptor's path |
@@ -416,10 +425,11 @@ manifest. A writer MUST NOT publish a manifest with a finding in the `json`, `sh
 <a id="ew-packet-catalog-normative-references" data-spec-anchor="canonical"></a>
 ## 11. Normative references
 
-The application column states the extent to which this part invokes the external authority:
+The application column states the extent to which this part invokes each external authority:
 
 | reference | candidate edition | application |
 |---|---|---|
 | [NIST FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) | exact | SHA-256 |
 | [NVM Express NVM Command Set Specification, Revision 1.2](https://nvmexpress.org/specifications/) | exact | CRC64NVME (§5.3.1.3) |
 | [RFC 9260](https://www.rfc-editor.org/info/rfc9260) | exact | CRC32C (Appendix A) |
+| [RFC 8785](https://www.rfc-editor.org/info/rfc8785) | exact | the serialization of a prefix listing's keys (§4.3), Section 3.2.2.2 |

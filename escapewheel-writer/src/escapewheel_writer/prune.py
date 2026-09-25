@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from escapewheel_reader.uri import decode, is_absolute
+
 from .writer import MANIFEST, MANIFESTS, STAGING, NotCommitted, PromotionRecordUnreadable, read_promotion, semver
 
 #: Part 03 §9.3. One superseded manifest, and no age limit: a packet is an archival artifact where a
@@ -86,19 +88,30 @@ def _stamp(manifest: Mapping[str, Any]) -> datetime | None:
 
 
 def _names(manifest: Mapping[str, Any]) -> set[str]:
-    """Packet-relative paths one manifest names.
+    """Packet-relative paths one manifest names, a prefix's as its directory.
 
     An external resource is not named: Part 04 §5.1 puts its bytes outside the packet, so cleanup has
-    no standing over them. Each bound registry is named, because a retained manifest is
-    uninterpretable without the registries its descriptors bind (Part 03 §9.3).
+    no standing over them. A relative `uri` is decoded to the names it appends (Part 03 §4). Each
+    bound registry is named, because a retained manifest is uninterpretable without the registries
+    its descriptors bind (Part 03 §9.3).
     """
-    named = {
-        resource["uri"]
-        for resource in manifest.get("resources", [])
-        if not resource.get("external") and not str(resource.get("uri", "")).startswith(("s3://", "gs://", "http"))
-    }
+    named = set()
+    for resource in manifest.get("resources", []):
+        uri = str(resource.get("uri", ""))
+        if resource.get("external") or is_absolute(uri):
+            continue
+        try:
+            named.add("/".join(decode(uri)))
+        except ValueError:
+            named.add(uri)
     named.update(descriptor["path"] for descriptor in (manifest.get("registries") or {}).values())
     return named
+
+
+def _covered(name: str, named: set[str]) -> bool:
+    """Whether a file is named, itself or as a member of a prefix a name covers."""
+    parts = name.split("/")
+    return any("/".join(parts[:depth]) in named for depth in range(1, len(parts) + 1))
 
 
 def _files(root: Path) -> Iterator[Path]:
@@ -192,8 +205,16 @@ def prune(
     if record is not None and semver(record[0]) > semver(current.get("packet_version", "")):
         listed = record[1]
         claimed = {n for n in present if any(n == p or n.startswith(f"{p}/") for p in listed)}
-    orphans = tuple(sorted(path for name, path in present.items() if name in named_ever - surviving))
-    strays = tuple(sorted(path for name, path in present.items() if name not in named_ever | staged | claimed))
+    orphans = tuple(
+        sorted(path for name, path in present.items() if _covered(name, named_ever) and not _covered(name, surviving))
+    )
+    strays = tuple(
+        sorted(
+            path
+            for name, path in present.items()
+            if not _covered(name, named_ever) and name not in staged and name not in claimed
+        )
+    )
 
     plan = Plan(
         orphans,

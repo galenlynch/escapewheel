@@ -40,6 +40,7 @@ import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet, check_sources, open_packet
 from escapewheel_reader.profile import parquet_floor
 from escapewheel_reader.registries import gunzip_member as gzip_member
+from escapewheel_reader.uri import canonical, encode, is_absolute
 from escapewheel_validator import (
     CheckedRegistryContext,
     RegistryRejected,
@@ -51,6 +52,7 @@ from escapewheel_validator import (
 from escapewheel_validator.generate import adjacency_settles_uniqueness
 from escapewheel_validator.validator import OrderViolation
 
+from . import opaque
 from .arrow import build, number_batch, schema, sort_key
 from .encoding import encodings, inefficient
 from .keys import Keys
@@ -87,6 +89,10 @@ SOURCES_VERSION = "escapewheel-sources-v0.1"
 #: Where the portable profile stores each bound registry, as `<registry_id>/<version>.json.gz`
 #: (Part 03 §3.3).
 REGISTRIES = "registries"
+
+#: The directories under the packet root a commit promotes from its staging area, which a root holding
+#: any of them without a committed manifest cannot take another commit into.
+PROMOTED = ("tables", "arrays", opaque.ROOT, REGISTRIES)
 
 #: Part 03's portable profile.
 PROFILE = "escapewheel-portable-v0.1"
@@ -520,18 +526,24 @@ class ExternalMedia:
     verified_at: str | None = None
 
 
-def _check_reference(resource_id: str, uri: str, source: str | None) -> None:
-    """Refuse a referenced URI that does not match how it will be resolved (Part 04 §5.1, Part 04 §5.5).
+def _check_reference(resource_id: str, uri: str, source: str | None) -> str:
+    """Return a referenced URI as the manifest records it, refusing one no reader could resolve.
 
-    Absolute where the entry names no source, because a relative one would resolve against a
-    packet the bytes do not live in. Relative where it names one, because the source supplies
-    the part in front and an absolute URI there would ignore it.
+    Relative where the entry names a source, because the source supplies the part in front and an
+    absolute URI there would ignore it (Part 04 §5.5). A relative one is a relative reference, which
+    the manifest spells in one form (Part 03 §4); without a source it resolves under the packet root,
+    which an external resource may (Part 04 §5.1).
     """
-    if source is None:
-        if "://" not in uri:
-            raise ValueError(f"{resource_id}: {uri!r} is not absolute, so it cannot resolve without the packet")
-    elif "://" in uri:
-        raise ValueError(f"{resource_id}: {uri!r} is absolute, so naming source {source!r} would have no effect")
+    if is_absolute(uri):
+        if source is not None:
+            raise ValueError(f"{resource_id}: {uri!r} is absolute, so naming source {source!r} would have no effect")
+        return uri
+    try:
+        return canonical(uri)
+    except ValueError as exc:
+        raise ValueError(
+            f"{resource_id}: uri is neither absolute nor a relative reference: {exc} (Part 03 §4)"
+        ) from None
 
 
 def _refuse_occupied(root: Path) -> None:
@@ -543,7 +555,7 @@ def _refuse_occupied(root: Path) -> None:
     """
     if (root / MANIFEST).exists():
         raise FileExistsError(f"{root} already holds a committed {MANIFEST}")
-    if occupied := [name for name in ("tables", "arrays", REGISTRIES) if (root / name).exists()]:
+    if occupied := [name for name in PROMOTED if (root / name).exists()]:
         raise FileExistsError(
             f"{root} holds {', '.join(occupied)} but no committed {MANIFEST}, as an interrupted promotion "
             "leaves it; remove them or commit elsewhere"
@@ -696,6 +708,9 @@ class PacketWriter:
         self._prepared: Path | None = None
         self._referenced_arrays: dict[str, ExternalArray] = {}
         self._referenced_media: dict[str, ExternalMedia] = {}
+        #: Packet-owned opaque resources as each source delivered them, bound at commit, once every
+        #: source's catalog rows are in (Part 03 §11.3).
+        self._payloads: list[opaque.StagedPayload] = []
 
     def declaration(self, declaration_id: str) -> Mapping[str, Any] | None:
         """Return one logical declaration from core or the owning extension."""
@@ -1051,7 +1066,7 @@ class PacketWriter:
         """
         if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
             raise ValueError(f"{resource_id} already has an array")
-        _check_reference(resource_id, array.uri, array.source)
+        array = replace(array, uri=_check_reference(resource_id, array.uri, array.source))
         declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
         self._bind_catalog_row(declaration, resource_id, "array_asset_id", array.array_asset_id)
         self._referenced_arrays[resource_id] = array
@@ -1077,10 +1092,137 @@ class PacketWriter:
         """
         if resource_id in self._referenced_media:
             raise ValueError(f"{resource_id} already has media")
-        _check_reference(resource_id, media.uri, media.source)
+        media = replace(media, uri=_check_reference(resource_id, media.uri, media.source))
         declaration = self._family_declaration(media.declaration_id, resource_id, "opaque")
         self._bind_catalog_row(declaration, resource_id, "media_asset_id", media.media_asset_id)
         self._referenced_media[resource_id] = media
+
+    def add_payloads(
+        self, source: str, location: str | Path, *, owned: Collection[str] | None = None
+    ) -> list[opaque.StagedPayload]:
+        """Take every packet-owned opaque resource one source placed in its `opaque_location` (Part 03 §11.3).
+
+        Bound at commit rather than here, since the catalog row a payload binds to may come from a
+        source that runs later.
+
+        Parameters
+        ----------
+        source : str
+            The delivering source, which every refusal names.
+        location : str or Path
+            The `opaque_location` the build supplied that source.
+        owned : collection of str, optional
+            The resources the recipe leaves this source owning (Part 05 §3.4). Given, a payload for
+            a singleton declaration outside it is refused at commit.
+
+        Returns
+        -------
+        list of StagedPayload
+            The payloads found, one per resource directory.
+
+        Raises
+        ------
+        PayloadRefused
+            If the location holds anything but resource directories each holding one payload of
+            regular files and nonempty directories under representable names.
+        """
+        found = opaque.read(source, location, owned)
+        self._payloads.extend(found)
+        return found
+
+    def _opaque_declarations(self) -> tuple[dict[str, tuple[str, str]], set[str]]:
+        """Every loaded opaque catalog family, to its catalog and column, and every opaque singleton."""
+        families: dict[str, tuple[str, str]] = {}
+        singletons: set[str] = set()
+        for document in (self._registry, *self._extensions.values()):
+            for declaration_id, declaration in document["resources"].items():
+                if declaration["kind"] != "opaque":
+                    continue
+                instances = declaration["instances"]
+                if instances["mode"] == "catalog":
+                    catalog, column = str(instances["catalog_resource"]), str(instances["resource_id_column"])
+                    families[declaration_id] = (catalog, column)
+                elif instances["mode"] == "singleton":
+                    singletons.add(declaration_id)
+        return families, singletons
+
+    def _bind_payloads(self) -> list[tuple[opaque.StagedPayload, str]]:
+        """Bind each payload by its resource directory's name, refusing before anything is validated.
+
+        A name binds the catalog row of an opaque catalog family carrying it, or otherwise the opaque
+        singleton declaration it names (Part 03 §11.3). Every opaque catalog row must be bound, and
+        no resource ID twice, whether by two payloads or by a payload and a referenced resource.
+
+        Returns
+        -------
+        list of tuple
+            Each payload and the declaration ID it binds to.
+
+        Raises
+        ------
+        PayloadRefused
+            Naming each directory and resource ID that binds no resource, binds two, is bound twice,
+            or is a singleton the recipe does not leave its source owning.
+        """
+        families, singletons = self._opaque_declarations()
+        rows: dict[str, list[str]] = {}
+        unbound: list[str] = []
+        for declaration_id, (catalog, column) in sorted(families.items()):
+            for row in self._tables.get(catalog, []):
+                value = row.get(column)
+                if value is None:
+                    shown = {k: v for k, v in row.items() if k != "metadata"}
+                    unbound.append(f"a {catalog} row carries no {column}, so nothing binds it: {shown}")
+                    continue
+                rows.setdefault(str(value), []).append(declaration_id)
+        referenced = {*self._referenced_media, *self._referenced_arrays}
+        problems: list[str] = []
+        bound: list[tuple[opaque.StagedPayload, str]] = []
+        by_id: dict[str, list[opaque.StagedPayload]] = {}
+        for payload in self._payloads:
+            resource_id, where = payload.resource_id, opaque.shown(payload.path.parent)
+            by_id.setdefault(resource_id, []).append(payload)
+            matched, singleton = rows.get(resource_id, []), resource_id in singletons
+            if matched and singleton:
+                problems.append(
+                    f"{payload.source}: {where} names {resource_id}, which is both a catalog row's resource_id "
+                    "and an opaque singleton declaration"
+                )
+            elif singleton:
+                if payload.owned is not None and resource_id not in payload.owned:
+                    problems.append(
+                        f"{payload.source}: delivers a payload for opaque singleton {resource_id}, which the "
+                        f"recipe does not leave {payload.source} owning (Part 05 §3.4)"
+                    )
+                bound.append((payload, resource_id))
+            elif len(matched) == 1:
+                bound.append((payload, matched[0]))
+            elif matched:
+                problems.append(
+                    f"{payload.source}: {where} names {resource_id}, which {len(matched)} catalog rows carry"
+                )
+            else:
+                problems.append(
+                    f"{payload.source}: {where} names {resource_id}, which is the resource_id of no catalog row of "
+                    "an opaque catalog family and the ID of no opaque singleton declaration"
+                )
+        for resource_id, payloads in sorted(by_id.items()):
+            places = ", ".join(f"{p.source} at {opaque.shown(p.path.parent)}" for p in payloads)
+            if len(payloads) > 1:
+                problems.append(f"{resource_id} is delivered as a payload {len(payloads)} times: {places}")
+            if resource_id in referenced:
+                problems.append(f"{resource_id} is delivered both as a payload ({places}) and as a referenced resource")
+        delivered = set(by_id) | referenced
+        unbound += [
+            f"{families[declaration_id][0]} row with resource_id {resource_id} is bound by no payload or "
+            "referenced resource"
+            for resource_id, declarations in sorted(rows.items())
+            for declaration_id in declarations
+            if resource_id not in delivered
+        ]
+        if problems or unbound:
+            raise opaque.PayloadRefused("; ".join([*problems, *unbound]) + " (Part 03 §11.3)")
+        return bound
 
     @property
     def resources(self) -> list[str]:
@@ -1112,10 +1254,34 @@ class PacketWriter:
                 {
                     "resource_id": resource_id,
                     "declaration_id": declaration_id,
-                    "uri": relative,
+                    "uri": encode(relative.split("/")),
                     "validation_state": "not_run",
                     "size_bytes": size,
                     "digest": _digest(path),
+                }
+            )
+        return entries
+
+    def _stage_payloads(self, staging: Path, bound: Sequence[tuple[opaque.StagedPayload, str]]) -> list[dict[str, Any]]:
+        """Move each bound payload's resource directory under `staging` and return its manifest entries.
+
+        The directory holds its payload alone, so moving it whole publishes the payload under its own
+        name in a directory holding nothing else (Part 03 §11.3), and promotion is then one rename.
+        """
+        entries = []
+        for payload, declaration_id in bound:
+            directory = staging / opaque.ROOT / payload.resource_id
+            directory.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(payload.path.parent), str(directory))
+            staged = directory / payload.path.name
+            entries.append(
+                {
+                    "resource_id": payload.resource_id,
+                    "declaration_id": declaration_id,
+                    "uri": encode((opaque.ROOT, payload.resource_id, payload.path.name)),
+                    "validation_state": "not_run",
+                    "size_bytes": opaque.size(staged),
+                    "digest": _digest(staged),
                 }
             )
         return entries
@@ -1225,7 +1391,7 @@ class PacketWriter:
             entry: dict[str, Any] = {
                 "resource_id": resource_id,
                 "declaration_id": resource_id,
-                "uri": relative,
+                "uri": encode(relative.split("/")),
                 "validation_state": "not_run",
             }
             entry["digest"] = _digest(path)
@@ -1430,6 +1596,8 @@ class PacketWriter:
         if not self._tables.get("core.sessions"):
             raise ValueError("a packet declares at least one session; core.sessions is empty (R1 §6)")
 
+        # Before anything is written, since binding needs only the rows and refuses outright.
+        payloads = self._bind_payloads()
         staging = self._staging(root)
 
         # 1. staged resources, plus the registry they were written against
@@ -1437,6 +1605,7 @@ class PacketWriter:
         entries = [
             *self._stage(staging),
             *self._stage_arrays(staging),
+            *self._stage_payloads(staging, payloads),
             *self._reference_arrays(),
             *self._reference_media(),
         ]
@@ -1493,7 +1662,7 @@ class PacketWriter:
         # 3. record every path promotion creates, then move into final paths, the resolution
         #    document first since it alone can still fail
         sources = self._sources_document()
-        promoted = [name for name in ("tables", "arrays", REGISTRIES) if (staging / name).exists()]
+        promoted = [name for name in PROMOTED if (staging / name).exists()]
         creates = [*promoted, *([SOURCES] if sources is not None else []), f"{MANIFEST}.candidate"]
         _claim(root, creates)
         _record_promotion(staging, str(self._manifest(entries, registries, None)["packet_version"]), creates)

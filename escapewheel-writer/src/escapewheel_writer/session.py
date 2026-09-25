@@ -36,8 +36,9 @@ from escapewheel_reader.clocks import BOUND, align
 from escapewheel_validator import CheckedRegistryContext, RegistryRejected, check_registry_context
 from numpy.typing import NDArray
 
+from . import opaque
 from .extensions import load_checked as load_extension_context
-from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, declared, reached_by, redacted
+from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, declared, payloads, reached_by, redacted
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .sources.store import cache_directory
@@ -160,6 +161,11 @@ class Context:
     #: Part 05 §3.6: `block.field` to the registry type the packet stores it as, so a declared
     #: value and a stated one are compared after both are normalized, not as they were written.
     fact_types: dict[str, str] = field(default_factory=dict)
+    #: Source kind to the `opaque_location` supplied it, which the build reads back once it has run.
+    opaque_locations: dict[str, Path] = field(default_factory=dict)
+    #: The loaded registries' opaque singletons, which a source owns and delivers as a payload
+    #: rather than as rows (Part 03 §11.3), so no table for one is asked for or staged.
+    payloads: frozenset[str] = frozenset()
 
     def alignment(self) -> tuple[dict[str, Any], float]:
         """Return the anchors and the bound to map at, measured once and kept.
@@ -237,6 +243,14 @@ def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collectio
         if location.exists():
             shutil.rmtree(location)
         terms["array_location"] = str(location)
+    if "opaque_location" in needed:
+        # One directory per source for the same reason, apart from `array_location`'s so neither
+        # delivery can pass for the other (Part 03 §11.3).
+        location = context.staging / opaque.DELIVERIES / spec.kind
+        if location.exists():
+            shutil.rmtree(location)
+        context.opaque_locations[spec.kind] = location
+        terms["opaque_location"] = str(location)
     if "wanted" in needed:
         # Settled before any source is opened (Part 05 §3.4), so a source told what is wanted may
         # extract no more -- and one that is not told produces everything and a build discards.
@@ -318,7 +332,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
             spec.delivery.command,
             {**crossing, "options": options},
             protocol=protocol,
-            wanted=spec.claims,
+            wanted=[resource for resource in spec.claims if resource not in context.payloads],
             states=declared(spec)["states"],
             merged=spec.contributes,
             report_path=spec.delivery.report_path,
@@ -811,6 +825,7 @@ def build(  # noqa: C901
         fact_types=_fact_types(checked_registry),
         workspace=Path(f"{recipe.out}.deliveries"),
         say=say,
+        payloads=payloads(checked_registry, extension_documents),
     )
     if recipe.session.get("reference_clock_id"):
         context.reference = _reference_clock(recipe, context)
@@ -879,6 +894,13 @@ def build(  # noqa: C901
             writer.reference_media(resource_id, media)
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
             say(f"  referenced {resource_id}{size}")
+        # An adapter in this process may hand its payloads over as bytes, which the build writes where
+        # a protocol adapter would have, so both are read back and refused the same way (Part 03 §11.3).
+        location = context.opaque_locations.get(spec.kind)
+        opaque.write(getattr(source, "staged_payloads", lambda: ())(), location, spec.kind)
+        if location is not None:
+            for payload in writer.add_payloads(spec.kind, location, owned=spec.owns):
+                say(f"  payload {payload.resource_id}: {opaque.shown(Path(payload.path.name))}")
 
         drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
         applied.extend(getattr(source, "compensations", []))
@@ -1020,7 +1042,7 @@ def _add_records(
             # what the source it displaced stated. Only where a preference arbitrates, which is
             # what keeps this bounded.
             context.stated.setdefault(resource, {})[spec.kind] = rows
-        if resource not in spec.claims:
+        if resource not in spec.claims or resource in context.payloads:
             continue
         if resource == "core.clock_observation_intervals":
             # R39's origin is a minimum across every clock, and no adapter sees them all.

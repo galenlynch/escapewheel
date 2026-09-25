@@ -94,6 +94,14 @@ path, and what crosses a process boundary as files lands in a location the build
 | `session` | Order the sources, run them, keep what each owns. |
 | `writer` | Stage, validate, commit. |
 | `arrays` | Zarr v3 layout: chunk for the question, shard for the object. |
+| `opaque` | Read and refuse what a source placed in its `opaque_location`. |
+
+An adapter that owns a video, figure, or report declares `opaque_location` and writes each payload,
+a file or a directory of files under its own name, into a directory named by its resource ID; in
+process it returns `opaque.Payload` bytes from `staged_payloads()` instead. The directory name binds
+it to the opaque catalog row carrying that `resource_id`, or to the opaque singleton of that ID, and
+the payload is published at `opaque/<resource_id>/<name>` with nothing read from its name or
+contents (Part 03 §11.3).
 
 Ordering comes from the adapters, not the registry: a foreign key constrains validity, not
 write order, and what actually sequences a build is data-flow — the NWB source needs the
@@ -128,7 +136,8 @@ promoted directory with no record, or a record it cannot read, is refused and no
 ## Digests, and `escapewheel verify`
 
 Every resource the packet owns records a SHA-256 `digest`, `{"algorithm": "sha256", "value": …}`,
-as Part 04 §4.3 requires; a Zarr prefix's value is the SHA-256 of its member listing. A build
+as Part 04 §4.3 requires; a Zarr prefix's or a payload directory's value is the SHA-256 of its
+member listing. A build
 records nothing it could not reach about a referenced resource (Part 04 §5.2), so
 `escapewheel verify` records it once the bytes have landed, as a new packet version:
 

@@ -18,6 +18,7 @@ from typing import Any
 import jsonschema
 from escapewheel_reader import Location, RegistryBinding, RegistryUnavailable
 from escapewheel_reader.registries import acquire
+from escapewheel_reader.uri import in_one_form
 
 from .registry_document import CheckedRegistryContext, check_registry_context_bytes
 from .stores import listing_digest
@@ -179,6 +180,15 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
                 Issue(
                     "packet.resource.digest_missing",
                     f"{entry['resource_id']}: the packet owns this resource and records no digest (Part 04 §4.3)",
+                )
+            )
+        if not in_one_form(entry["uri"]):
+            issues.append(
+                Issue(
+                    "packet.resource.uri_form",
+                    f"{entry['resource_id']}: uri {entry['uri']!r} is neither absolute nor a relative reference "
+                    "in Part 03 §4's one form",
+                    ((entry["resource_id"], entry["uri"]),),
                 )
             )
         members = entry.get("members")

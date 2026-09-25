@@ -56,8 +56,9 @@ report.registries  # complete, role-labelled registry-document results
 
 Every resource the packet owns records a `digest` naming its algorithm: `sha256`, `crc64nvme`,
 `crc32c`, or `crc32` (Part 04 §4.3). An entry without one is `packet.resource.digest_missing`,
-an `entries` finding that withholds the declaration phases. A prefix's value is the SHA-256 of its
-member listing under every algorithm.
+an `entries` finding that withholds the declaration phases, as is a `uri` neither absolute nor a
+relative reference in Part 03 §4's one form (`packet.resource.uri_form`). A prefix's value is the
+SHA-256 of its member listing under every algorithm, each key its names in UTF-8 as they are.
 
 ```bash
 escapewheel validate packet/ --checksums                       # establish every recorded digest
@@ -109,9 +110,11 @@ compressions and encodings with the portable profile's reader floors (Part 03 §
 reports a resource outside one as `physical.outside_reader_floor`: `warning` for a packet-owned
 table, `info` for everything else, never an error. Parquet data-page types are not assessed, and the
 report says so. An external resource whose metadata was not read is reported, one finding each, as
-`external.physical_unassessed`. It also parses every unit-column value as a UCUM code (Part 05
-§5.3): a value check, but one SQL could express only through a UCUM function the rule language
-does not have.
+`external.physical_unassessed`. A packet-owned opaque payload's names, and the decoded segments of
+its `uri`, draw `physical.opaque_name_portability` at `warning` for each set a filesystem folding
+case or normalization would merge and each name Windows cannot hold (Part 05 §5.3); the packet
+still conforms. It also parses every unit-column value as a UCUM code (Part 05 §5.3): a value
+check, but one SQL could express only through a UCUM function the rule language does not have.
 
 Tier 2 SQL is not DuckDB's full dialect. The validator parses each rule against the versioned
 portable profile before execution, derives its base-resource dependencies from that parse, exposes

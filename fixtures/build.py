@@ -11,6 +11,7 @@ import json
 import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -704,14 +705,16 @@ def write_packet(
     out: Path,
     tables: dict[str, list[dict]],
     *,
-    raw: dict = None,
+    raw: dict | None = None,
     unsorted: frozenset = frozenset(),
     algorithm: str = "sha256",
+    extensions: tuple = (),
 ):
     """Write a packet in 03's portable layout. `raw` supplies pre-built Arrow tables for
     variants that must violate the registry's own schema; `unsorted` names resources
     written in insertion order, for variants that must violate Part 03 §5.3. Every resource
-    records its `digest` under `algorithm`."""
+    records its `digest` under `algorithm`. `extensions` are registry documents bound beside
+    core and `dynamic_foraging`."""
     if out.exists():
         shutil.rmtree(out)
     KEYS.clear()
@@ -740,7 +743,8 @@ def write_packet(
         )
 
     registries = {
-        document["registry_id"]: bind(out, document) for document in (REGISTRY, EXTENSION)
+        document["registry_id"]: bind(out, document)
+        for document in (REGISTRY, EXTENSION, *extensions)
     }
 
     sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
@@ -773,7 +777,9 @@ def write_packet(
 def bind(out, document):
     """Store a registry as Part 03 §3.3 requires and return its manifest descriptor."""
     body = (json.dumps(document, indent=2) + "\n").encode()
-    relative = f"registries/{document['registry_id']}/{document['registry_version']}.json.gz"
+    relative = (
+        f"registries/{document['registry_id']}/{document['registry_version']}.json.gz"
+    )
     (out / relative).parent.mkdir(parents=True, exist_ok=True)
     (out / relative).write_bytes(gzip.compress(body, mtime=0))
     return {
@@ -1095,7 +1101,9 @@ def main():
     write_packet(root / "no_extracellular", c)
     print(f"{'no_extracellular':26s}written")
 
-    c = {resource: content()[resource] for resource in ("core.sessions", "core.subjects")}
+    c = {
+        resource: content()[resource] for resource in ("core.sessions", "core.subjects")
+    }
     for session in c["core.sessions"]:
         session["reference_clock_id"] = None  # a named clock would bring core.clocks
     write_packet(root / "sessions_only", c)
@@ -1103,6 +1111,7 @@ def main():
 
     digest_variants(root)
     floor_variants(root)
+    opaque_variants(root)
 
 
 #: A prefix's objects as a store would list them, for the manifest-only prefix variants.
@@ -1115,16 +1124,23 @@ def edit_manifest(out: Path, change) -> None:
     (out / "packet.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
+def listing(rows) -> bytes:
+    """Part 04 §4.3's listing of `(key, size_bytes, digest)` rows: sorted by the key's UTF-8, and
+    RFC 8785's JSON, which `ensure_ascii=False` matches and whose keys are therefore raw UTF-8."""
+    ordered = sorted((list(row) for row in rows), key=lambda row: row[0].encode())
+    return json.dumps(ordered, separators=(",", ":"), ensure_ascii=False).encode(
+        "utf-8"
+    )
+
+
 def prefix_entry(algorithm: str, members: list[dict]) -> dict:
     """An external image prefix recording `members`, and a `digest` of that listing (Part 04 §4.3).
 
     Media is declared by catalog, so the entry needs no row; nothing reads the URI.
     """
-    rows = sorted(
-        ([m["key"], m["size_bytes"], m["digest"]] for m in members if "digest" in m),
-        key=lambda row: row[0].encode(),
+    body = listing(
+        (m["key"], m["size_bytes"], m["digest"]) for m in members if "digest" in m
     )
-    listing = json.dumps(rows, separators=(",", ":"), ensure_ascii=True).encode()
     return {
         "resource_id": "core.frames",
         "declaration_id": "core.media_asset_instances",
@@ -1134,7 +1150,7 @@ def prefix_entry(algorithm: str, members: list[dict]) -> dict:
         "size_bytes": sum(m["size_bytes"] for m in members),
         "digest": {
             "algorithm": algorithm,
-            "value": hashlib.sha256(listing).hexdigest(),
+            "value": hashlib.sha256(body).hexdigest(),
         },
         "members": members,
     }
@@ -1289,13 +1305,14 @@ def array_entry(out: Path | None, name: str, pipeline: str) -> dict:
     body = zarr_metadata(PIPELINES[pipeline])
     (out / uri).mkdir(parents=True)
     (out / uri / "zarr.json").write_bytes(body)
-    listing = json.dumps(
-        [["zarr.json", len(body), digest("sha256", body)]], separators=(",", ":")
-    ).encode()
+    rows = [("zarr.json", len(body), digest("sha256", body))]
     return {
         **entry,
         "uri": uri,
-        "digest": {"algorithm": "sha256", "value": hashlib.sha256(listing).hexdigest()},
+        "digest": {
+            "algorithm": "sha256",
+            "value": hashlib.sha256(listing(rows)).hexdigest(),
+        },
     }
 
 
@@ -1348,6 +1365,167 @@ def floor_variants(root: Path) -> None:
         ),
     )
     print(f"{'unresolved_externals':26s}written")
+
+
+#: A fixture-local extension declaring an opaque singleton, which core does not.
+QC_EXTENSION = {
+    "$schema": EXTENSION["$schema"],
+    "registry_id": "qc_documents",
+    "registry_version": "0.1.0",
+    "logical_standard_version": EXTENSION["logical_standard_version"],
+    "rule_language": EXTENSION["rule_language"],
+    "extension_id": "qc_documents",
+    "resources": {
+        "qc_documents.report": {
+            "content_class": "extension",
+            "kind": "opaque",
+            "instances": {"mode": "singleton", "presence": "optional"},
+            "requires": [],
+            "lineage": "optional",
+        }
+    },
+}
+
+#: The keys of `listing_key_spelling`'s payload: each character RFC 8785 escapes differently from
+#: a percent-encoder or from `ensure_ascii`, and one below a directory.
+SPELLED_KEYS = ['"', "\\", "\n", "\x7f", "\u00e9", "more/\U0001f600"]
+
+#: That payload's listing, written out by hand: RFC 8785's `\"`, `\\`, and `\n`; U+007F, `é`, and
+#: U+1F600 as their UTF-8; each digest the CRC32C of the key's own UTF-8.
+SPELLED_LISTING = (
+    b'[["\\n",1,"399f7b69"],'
+    b'["\\"",1,"93fbad78"],'
+    b'["\\\\",1,"4e1b4652"],'
+    b'["more/\xf0\x9f\x98\x80",9,"bd6a29c1"],'
+    b'["\x7f",1,"7df63b78"],'
+    b'["\xc3\xa9",2,"1bab8ddc"]]'
+)
+
+
+def owned_opaque(
+    out: Path,
+    resource_id: str,
+    name: str,
+    payload,
+    *,
+    algorithm: str = "sha256",
+    declaration_id: str = "core.media_asset_instances",
+) -> dict:
+    """Publish a payload at `opaque/<resource_id>/<name>` as a build does (Part 03 §11.3), and
+    return its entry.
+
+    `payload` is the bytes of a payload that is one file, or a mapping from each file's path
+    within it to its bytes. The `uri` percent-encodes every octet but the unreserved ones in
+    uppercase (Part 03 §4), which is what `quote` does with nothing marked safe.
+    """
+    where = out / "opaque" / resource_id / name
+    if isinstance(payload, bytes):
+        where.parent.mkdir(parents=True, exist_ok=True)
+        where.write_bytes(payload)
+        value, size = digest(algorithm, payload), len(payload)
+    else:
+        for key, body in payload.items():
+            (where / key).parent.mkdir(parents=True, exist_ok=True)
+            (where / key).write_bytes(body)
+        rows = [
+            (key, len(body), digest(algorithm, body)) for key, body in payload.items()
+        ]
+        value = hashlib.sha256(listing(rows)).hexdigest()
+        size = sum(len(body) for body in payload.values())
+    return {
+        "resource_id": resource_id,
+        "declaration_id": declaration_id,
+        "uri": "/".join(("opaque", quote(resource_id, safe=""), quote(name, safe=""))),
+        "validation_state": "not_run",
+        "size_bytes": size,
+        "digest": {"algorithm": algorithm, "value": value},
+    }
+
+
+def opaque_variants(root: Path) -> None:
+    """Packet-owned opaque payloads (Part 03 §11.3): kept names, their `uri`, and their digest."""
+
+    def owned(name, *payloads, extensions=()):
+        """Write `valid` plus each `(resource_id, name, payload, options)` payload."""
+        out = root / name
+        write_packet(out, content(), extensions=extensions)
+        entries = [
+            owned_opaque(out, rid, file, body, **options)
+            for rid, file, body, options in payloads
+        ]
+        edit_manifest(out, lambda m: m["resources"].extend(entries))
+        print(f"{name:26s}written")
+        return entries
+
+    owned(
+        "owned_opaque_object",
+        ("core.clip", "clip.mp4", b"\x00\x00\x00\x18ftypmp42", {}),
+    )
+    owned(
+        "owned_opaque_prefix",
+        (
+            "core.frames",
+            "frames",
+            {k.removeprefix("frames/"): v for k, v in FRAMES.items()},
+            {},
+        ),
+    )
+    owned(
+        "owned_opaque_singleton",
+        (
+            "qc_documents.report",
+            "QC.pdf",
+            b"%PDF-1.7",
+            {"declaration_id": "qc_documents.report"},
+        ),
+        extensions=(QC_EXTENSION,),
+    )
+    (entry,) = owned(
+        "owned_opaque_encoded_name",
+        ("core.qc_report", "QC report \u00e9.pdf", b"%PDF-1.7", {}),
+    )
+    assert entry["uri"] == "opaque/core.qc_report/QC%20report%20%C3%A9.pdf", entry[
+        "uri"
+    ]
+
+    (entry,) = owned(
+        "owned_opaque_one_byte_off",
+        ("core.clip", "clip.mp4", b"\x00\x00\x00\x18ftypmp42", {}),
+    )
+    edit_manifest(
+        root / "owned_opaque_one_byte_off",
+        lambda m: m["resources"][-1]["digest"].update(
+            value=digest("sha256", b"\x00\x00\x00\x18ftypmp43")
+        ),
+    )
+
+    # `é` in NFC and `É` in NFD are one name folded; `12:00:00.png` is one Windows refuses.
+    portability = {"\u00e9.png": b"a", "E\u0301.png": b"b", "12:00:00.png": b"c"}
+    owned("opaque_name_portability", ("core.frames", "frames", portability, {}))
+
+    spelled = {key: key.encode("utf-8") for key in SPELLED_KEYS}
+    owned(
+        "listing_key_spelling",
+        ("core.keys", "keys", spelled, {"algorithm": "crc32c"}),
+    )
+    rows = [(key, len(body), digest("crc32c", body)) for key, body in spelled.items()]
+    assert listing(rows) == SPELLED_LISTING, listing(rows)
+
+    # Part 03 §4's one form, broken one way each; the file is where the `uri` decodes to, if anywhere.
+    for name, file, uri in (
+        ("uri_raw_space", "cam 1.mp4", "opaque/core.clip/cam 1.mp4"),
+        (
+            "uri_lowercase_hex",
+            "QC report \u00e9.pdf",
+            "opaque/core.clip/QC%20report%20%c3%a9.pdf",
+        ),
+        ("uri_encoded_unreserved", "A.mp4", "opaque/core.clip/%41.mp4"),
+        ("uri_dot_segment", "clip.mp4", "opaque/core.clip/../core.clip/clip.mp4"),
+    ):
+        (entry,) = owned(name, ("core.clip", file, b"clip", {}))
+        edit_manifest(
+            root / name, lambda m, uri=uri: m["resources"][-1].update(uri=uri)
+        )
 
 
 if __name__ == "__main__":

@@ -97,3 +97,46 @@ def test_an_entry_naming_no_source_is_unchanged(tmp_path):
     """Part 04 §5.5: silence keeps today's meaning, so every existing packet still resolves."""
     root = Location.of(tmp_path, sources={"raw_nwb": "s3://bucket/x"})
     assert root.resolve("tables/core/units.parquet").path == Path(tmp_path) / "tables/core/units.parquet"
+
+
+# -- a relative reference is decoded and its names appended (Part 03 §4) ------------------------
+
+
+def test_a_relative_reference_is_decoded_before_it_is_appended():
+    where = Location.of("/data/packet").resolve("opaque/core.qc_report/QC%20report%20%C3%A9.pdf")
+    assert where.path == Path("/data/packet/opaque/core.qc_report/QC report é.pdf")
+
+
+def test_a_store_root_takes_the_decoded_names_as_key_segments(monkeypatch):
+    """Object-key segments, not a URI: a `?` or `#` a name holds stays in the key."""
+    from escapewheel_reader import location
+
+    monkeypatch.setattr(location, "_filesystem", lambda store: (store, ""))
+    where = Location.of("s3://bucket/prefix").resolve("opaque/core.x/a%3Fb%23c%20%C3%A9.png")
+    assert where.uri == "s3://bucket/prefix/opaque/core.x/a?b#c é.png"
+    assert where.store() == ("bucket/prefix/opaque/core.x/a?b#c é.png", "s3://bucket")
+
+
+def test_a_source_relative_reference_is_decoded_too():
+    """Part 04 §5.5: appended to the source's location, so its last segment is kept."""
+    root = Location.of("/data/packet", sources={"raw": "s3://bucket/session.nwb"})
+    assert root.resolve("videos/cam%201.mp4", "raw").uri == "s3://bucket/session.nwb/videos/cam 1.mp4"
+
+
+def test_lowercase_hex_resolves_where_uppercase_does():
+    """A reader decodes any spelling; only a checker insists on one (Part 03 §4)."""
+    root = Location.of("/data/packet")
+    assert root.resolve("r%c3%a9sum%c3%a9.pdf") == root.resolve("r%C3%A9sum%C3%A9.pdf")
+
+
+@pytest.mark.parametrize("declared", ["/mnt/elsewhere/x.parquet", "../x.parquet", "a//b", "cam 1.mp4", "a%2Fb"])
+def test_a_uri_neither_absolute_nor_a_relative_reference_is_unreadable(declared):
+    """A leading `/` or a `..` segment would reach outside the root, so it resolves nowhere."""
+    with pytest.raises(ResourceUnreadableError, match="neither absolute nor a relative reference"):
+        Location.of("/data/packet").resolve(declared)
+
+
+def test_a_substituted_uri_is_taken_as_the_caller_wrote_it():
+    """A rewrite is the caller's location, not the packet's reference, so it is not decoded."""
+    root = Location.of("/data/packet", {"s3://old/": "/mnt/mirror dir/"})
+    assert root.resolve("s3://old/a%20b").uri == "/mnt/mirror dir/a%20b"

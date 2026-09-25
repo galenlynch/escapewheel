@@ -1,6 +1,7 @@
 """Part 04 §4.3's digest functions and Part 04 §5.3's store-checksum route."""
 
 import base64
+import hashlib
 import json
 from typing import ClassVar
 
@@ -106,6 +107,49 @@ def test_a_prefix_value_is_the_sha256_of_its_listing(tmp_path, algorithm):
     assert found.members == (empty, CHECK[algorithm]), "in key order, `c/0` before `zarr.json`"
     assert found.value == listing_digest([("zarr.json", 9, CHECK[algorithm]), ("c/0", 0, empty)])
     assert len(found.value) == 64 and found.route == "computed"
+
+
+#: Part 04 §4.3's listing, written out by hand: RFC 8785, Section 3.2.2.2's escapes for a newline,
+#: U+001F, `"`, and `\`; U+007F, `é`, and U+1F600 as their UTF-8; keys sorted by those bytes; sizes as
+#: plain integers.
+PINNED_LISTING = (
+    b'[["a\\nb",1,"11"],'
+    b'["a\\u001fb",0,"00"],'
+    b'["a\\"b",2,"22"],'
+    b'["a\\\\b",3,"33"],'
+    b'["a\x7fb",4,"44"],'
+    b'["dir/\xc3\xa9",1234567890123,"55"],'
+    b'["\xf0\x9f\x98\x80",6,"66"]]'
+)
+
+
+def test_a_listing_writes_its_keys_in_utf8_under_rfc_8785():
+    """Part 04 §4.3: a key is its names as they are, never ASCII-escaped or percent-encoded."""
+    rows = [
+        ("\U0001f600", 6, "66"),
+        ("dir/é", 1234567890123, "55"),
+        ("a\x7fb", 4, "44"),
+        ("a\\b", 3, "33"),
+        ('a"b', 2, "22"),
+        ("a\x1fb", 0, "00"),
+        ("a\nb", 1, "11"),
+    ]
+    assert hashlib.sha256(PINNED_LISTING).hexdigest() == (
+        "4964ea1545c95fea542d2227a1909468728bab0397c49c30d2f338535d873b86"
+    )
+    assert listing_digest(rows) == "4964ea1545c95fea542d2227a1909468728bab0397c49c30d2f338535d873b86"
+
+
+def test_a_local_prefix_lists_its_keys_by_name_as_they_are(tmp_path):
+    """No percent-encoding and no normalization: an NFC and an NFD name are two keys."""
+    store = tmp_path / "payload"
+    (store / "dir").mkdir(parents=True)
+    names = {"a\nb", "a\x1fb", 'a"b', "a\\b", "a\x7fb", "dir/é", "dir/e\u0301", "\U0001f600", "QC report.pdf"}
+    for name in names:
+        (store / name).write_bytes(b"x")
+    keys = [member.key for member in listing(str(store)).members]
+    assert keys == sorted(keys, key=str.encode)
+    assert set(keys) == names
 
 
 class ChecksumMemory(MemoryFileSystem):

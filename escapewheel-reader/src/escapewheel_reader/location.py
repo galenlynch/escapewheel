@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import functools
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
 from pathlib import Path, PurePosixPath
@@ -24,6 +24,7 @@ from urllib.parse import unquote, urlparse
 import jsonschema
 
 from .errors import ManifestError, ResourceUnreadableError, UnresolvedSource
+from .uri import decode, is_absolute
 
 #: A substitution a caller supplies at open time: declared URI prefix to replacement.
 #:
@@ -231,13 +232,32 @@ class Location:
             return Location(str(Path(self.uri) / relative), self.rewrite, self.sources)
         return Location(f"{self.uri.rstrip('/')}/{relative.lstrip('/')}", self.rewrite, self.sources)
 
+    def append(self, names: Sequence[str]) -> Location:
+        """Place names under this location, each as one path component or object-key segment.
+
+        Parameters
+        ----------
+        names : sequence of str
+            Decoded names, as :func:`escapewheel_reader.uri.decode` returns them.
+
+        Returns
+        -------
+        Location
+            The named place.
+        """
+        if self.is_local:
+            return Location(str(Path(self.uri).joinpath(*names)), self.rewrite, self.sources)
+        return Location("/".join((self.uri.rstrip("/"), *names)), self.rewrite, self.sources)
+
     def resolve(self, declared: str, source: str | None = None) -> Location:
         """Where a manifest's declared URI points from here.
 
         Substitution comes first, so a caller may redirect an absolute URI as well as a
-        relative one. A resource naming a `source` (Part 04 §5.5) is then relative to wherever that
-        source resolves; one that does not is relative to this root where it has no scheme,
-        which is what makes a packet portable (Part 03 §4).
+        relative one, and what it substitutes is taken as written. A resource naming a `source`
+        (Part 04 §5.5) is then relative to wherever that source resolves; one that does not is
+        relative to this root unless absolute, which is what makes a packet portable. A relative
+        reference is decoded and its names appended, never merged under RFC 3986, Section 5
+        (Part 03 §4).
 
         Parameters
         ----------
@@ -255,6 +275,9 @@ class Location:
         ------
         UnresolvedSource
             If `source` is named and no resolution document locates it (Part 04 §5.5).
+        ResourceUnreadableError
+            If `declared` is neither absolute nor a relative reference, such as a path beginning
+            with `/` or one with a `..` segment, so it names no place under the root.
         """
         if source is not None:
             located = dict(self.sources).get(source)
@@ -264,18 +287,27 @@ class Location:
             return Location(located, self.rewrite, self.sources).resolve(declared)
         for prefix, replacement in self.rewrite:
             if declared.startswith(prefix):
-                declared = replacement + declared[len(prefix) :]
-                break
-        scheme = _scheme(declared)
+                return self._substituted(replacement + declared[len(prefix) :])
+        if is_absolute(declared):
+            return self._substituted(declared)
+        try:
+            names = decode(declared)
+        except ValueError as exc:
+            raise ResourceUnreadableError(f"{declared!r} is neither absolute nor a relative reference: {exc}") from exc
+        return self.append(names)
+
+    def _substituted(self, where: str) -> Location:
+        """Resolve an absolute URI, or what a caller's substitution produced, as spelled."""
+        scheme = _scheme(where)
         if scheme == "file":
-            return Location(str(Path(unquote(urlparse(declared).path))), self.rewrite, self.sources)
+            return Location(str(Path(unquote(urlparse(where).path))), self.rewrite, self.sources)
         if scheme:
-            return Location(declared, self.rewrite, self.sources)
-        if PurePosixPath(declared).is_absolute():
+            return Location(where, self.rewrite, self.sources)
+        if PurePosixPath(where).is_absolute():
             # An absolute path is where it says, not somewhere under the root -- which matters
             # most for a packet in a store, where joining would produce `s3://bucket//mnt/...`.
-            return Location(declared, self.rewrite, self.sources)
-        return self.join(declared)
+            return Location(where, self.rewrite, self.sources)
+        return self.join(where)
 
     def store(self) -> tuple[str, Any]:
         """Return what every PyArrow entry point takes: a path and the filesystem reaching it.
@@ -295,13 +327,14 @@ class Location:
         """
         if self.is_local:
             return self.uri, None
-        head, _, _ = self.uri.partition("://")
-        netloc = urlparse(self.uri).netloc
+        # Everything after the scheme is the key, so a `?` or `#` a decoded name holds stays in it.
+        head, _, key = self.uri.partition("://")
+        netloc = key.partition("/")[0]
         try:
             filesystem, _ = _filesystem(f"{head}://{netloc}")
         except Exception as exc:
             raise ResourceUnreadableError(f"cannot reach {self.uri}: {exc}") from exc
-        return f"{netloc}{urlparse(self.uri).path}", filesystem
+        return key, filesystem
 
     def exists(self) -> bool:
         """Whether anything is here.

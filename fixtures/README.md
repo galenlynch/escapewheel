@@ -1,11 +1,13 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-four more conforming packets that record Part 04 §4.3's other digests, thirty-nine variants
+four more conforming packets that record Part 04 §4.3's other digests, forty-four variants
 each violating exactly one rule, two conforming packets that each draw a per-resource `info`
-finding, and two conforming packets that carry no extracellular data. Together they are the conformance
-corpus: expected findings recorded as data, so any implementation can be checked against
-the same evidence rather than against a prose description of what should happen.
+finding, two conforming packets that carry no extracellular data, four conforming packets that
+each own an opaque payload, and two conforming packets whose payload names draw warnings.
+Together they are the conformance corpus: expected findings recorded as data, so any
+implementation can be checked against the same evidence rather than against a prose description
+of what should happen.
 
 ```bash
 uv run --with pyarrow python build.py                            # writes packets/
@@ -67,6 +69,8 @@ description, and is not all of them.
 | `crc_prefix_disagrees` | an external prefix's CRC32C member digest differs from the one its listing value covers | `packet.resource.member_digest` |
 | `member_digest_partial` | a member lacks `digest` beside an entry's | `packet.manifest.schema` |
 | `member_digest_width` | a CRC32C-width member digest under a CRC64NVME entry | `packet.manifest.schema` |
+| `owned_opaque_one_byte_off` | a packet-owned opaque file's recorded SHA-256 is of other bytes | `owned.digest`, with checksums |
+| `uri_raw_space`, `uri_lowercase_hex`, `uri_encoded_unreserved`, `uri_dot_segment` | a `uri` outside Part 03 §4's one form: a raw space, `%c3%a9`, `%41`, a `..` segment | `packet.resource.uri_form` |
 | `outside_table_floor` | `core.intervals` written as Parquet format 1.0, whose dictionary pages are `PLAIN_DICTIONARY` | `physical.outside_reader_floor` (warning) |
 
 `crc64nvme`, `crc32c`, and `crc32` record every owned resource's digest under that algorithm, and
@@ -80,6 +84,21 @@ sharded, and delta-filtered pipelines; only the delta one is outside the v3 read
 external arrays and draws one `external.physical_unassessed` per array. Both packets conform,
 and `corpus.py` checks the count; `valid` must draw neither finding (Part 05 §5.3). Each array is
 a `zarr.json` with no chunk written, so no Zarr library is needed to build the corpus.
+
+Four packets each add one packet-owned opaque payload at `opaque/<resource_id>/<name>` (Part 03
+§11.3), and are clean with checksums: `owned_opaque_object` a single file, `owned_opaque_prefix` a
+directory digested as a prefix, `owned_opaque_singleton` a file bound to an opaque singleton of
+the fixture-local extension `qc_documents`, since core declares none, and
+`owned_opaque_encoded_name` the file `QC report é.pdf` at the `uri`
+`opaque/core.qc_report/QC%20report%20%C3%A9.pdf`. Core's payloads are catalog-family instances
+with no `core.media_assets` row, so catalog binding is not exercised.
+
+`opaque_name_portability` holds `é.png` in NFC, `É.png` in NFD, and `12:00:00.png`, and
+`listing_key_spelling` holds files named `"`, `\`, a newline, U+007F, `é`, and `more/` followed by U+1F600 under
+CRC32C. Each passes with checksums while drawing `physical.opaque_name_portability` at `warning`,
+two and three times, which `corpus.py` counts (Part 05 §5.3). `build.py` checks the second's
+listing against its bytes written out by hand, so its digest holds only for a validator writing
+keys as Part 04 §4.3's raw UTF-8, and `corpus.py` requires that it draw no `owned.digest`.
 
 `no_extracellular` is `valid` without its fourteen core tables specific to extracellular
 electrophysiology, and `sessions_only` keeps only `core.sessions` and `core.subjects`, its session

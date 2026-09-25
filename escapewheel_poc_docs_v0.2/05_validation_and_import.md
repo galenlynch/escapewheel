@@ -28,7 +28,8 @@ A build MUST perform these steps in this order:
 8. publish the packet manifest (§6).
 
 A build MAY interleave steps 1 to 3 across sources, within the constraints §4.3 places on
-normalization, and a packet-owned array delivered into the staging area is staged by its delivery.
+normalization, and a packet-owned array or opaque payload delivered into the staging area is staged
+by its delivery.
 A build MUST finish steps 4 and 5 before it begins step 6, MUST NOT begin step 7 until step 6 has
 returned a packet verdict of `passed` ([§9.5](#ew-verdict-composition)), and MUST NOT begin step 8
 until step 7 has finished.
@@ -319,6 +320,25 @@ The finding's level is `warning` for a packet-owned resource whose interface's f
 `reader_and_packet_writer`, and `info` for every other resource. A validator MUST NOT report it at
 `error`. The finding concerns one resource, so [§9.5](#ew-verdict-composition) attributes it to the
 registry whose declaration the resource's entry names.
+
+Two names in one directory of a packet-owned opaque payload
+([Part 03 §11.3](03_portable_physical_profile.md#ew-referenced-resource-delivery)) **collide** where
+they differ and are a canonical caseless match under the Unicode Standard, Section 3.13, definition
+D145, which equates names differing only in case, only in normalization form, or in both. A name
+within such a payload, or a decoded segment of the payload's `uri`, is **unportable to Windows**
+where it contains a code point from U+0001 through U+001F or any of `"`, `*`, `:`, `<`, `>`, `?`,
+`\`, and `|`; ends in a full stop or a space; or, compared without regard to ASCII case, is `CON`,
+`PRN`, `AUX`, `NUL`, or `COM` or `LPT` followed by one of the digits `1` through `9` or the
+superscripts `¹`, `²`, and `³`, whether alone or followed by a full stop and anything else.
+
+A validator MUST report each set of colliding names and each name unportable to Windows, one finding
+per set and one per name, at `warning` under the check ID `physical.opaque_name_portability`, naming
+the resource, the path under the packet root of the directory holding the names, and the names. The
+packet is conformant: each name holds its own file under the packet root, and it fails only on a
+copy to a filesystem that folds case or normalization or that Windows governs. The finding concerns
+one resource, so [§9.5](#ew-verdict-composition) attributes it to the registry whose declaration the
+resource's entry names. §15 identifies the Unicode Standard, Version 15.0.0, as an exact reference
+for canonical caseless matching.
 
 A validator MUST report each external resource whose interface declares a reader floor and whose
 format-owned metadata it did not read, one finding per resource, at `info` under the check ID
@@ -719,8 +739,9 @@ version identifiers.
 <a id="ew-validation-normative-references" data-spec-anchor="canonical"></a>
 ## 15. Normative references
 
-The application column states the extent to which this part invokes the external authority:
+The application column states the extent to which this part invokes each external authority:
 
 | reference | candidate edition | application |
 |---|---|---|
 | [TOML v1.0.0](https://toml.io/en/v1.0.0) | exact | a session recipe's syntax and decoded values (§3.1) |
+| [The Unicode Standard, Version 15.0.0](https://www.unicode.org/versions/Unicode15.0.0/) | exact | canonical caseless matching of payload names, Section 3.13, definition D145 (§5.3) |

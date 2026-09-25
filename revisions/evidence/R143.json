@@ -1,0 +1,551 @@
+{
+  "version": 1,
+  "revision": "R143",
+  "based_on": "c5b8e501c4c29faf300ed9d73592dc36effa775e",
+  "clauses": {
+    "R143 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-technologies"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-reaching-a-source"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-build-supplied-values"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-referenced-resource-delivery"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_opaque_location_is_supplied_empty_under_staging_one_per_source"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_opaque_location_is_supplied_only_where_declared"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_an_adapter_declaring_no_opaque_location_is_given_none"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_an_adapter_handing_over_bytes_without_declaring_where_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_one_payload_yields_one_entry_whatever_the_route[flight-v0.1]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/delivery.py",
+          "escapewheel-writer/src/escapewheel_writer/opaque.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R143 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-referenced-resource-delivery"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-import-pipeline"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/07_reference_implementation.md",
+          "anchor": "ew-reference-object-model"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_file_directly_in_the_location_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_resource_directory_holding_two_payloads_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_resource_directory_holding_none_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_symbolic_link_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_an_empty_directory_within_a_payload_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_name_that_is_not_utf8_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_directory_binding_nothing_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_directory_named_by_a_dense_array_row_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_resource_id_delivered_by_two_sources_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_resource_id_delivered_as_a_payload_and_referenced_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_an_opaque_catalog_row_nothing_binds_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_directory_naming_a_row_and_a_singleton_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_singleton_another_source_owns_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_two_sources_delivering_one_resource_id_are_both_seen_and_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_build_refuses_a_singleton_the_recipe_leaves_another_source_owning"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_build_binds_an_owned_singleton"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_handed_over_bytes_land_as_a_protocol_adapter_would_write_them"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_hand_over_with_nowhere_to_go_is_refused_over_a_protocol"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/opaque.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/declaration.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "escapewheel-aind/src/escapewheel_aind/video.py"
+        ]
+      }
+    },
+    "R143 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-referenced-resource-delivery"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-packet-layout"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "opaque_name_portability",
+            "finding": "physical.opaque_name_portability"
+          },
+          {
+            "kind": "fixture",
+            "packet": "listing_key_spelling",
+            "finding": "physical.opaque_name_portability"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_colliding_and_windows_names_warn_once_each_and_the_packet_passes"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_a_uri_segment_windows_cannot_hold_is_named_in_its_own_directory"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_names_collide_differing_in_case_normalization_or_both"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_a_name_windows_cannot_hold[COM\\xb9]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_an_external_payload_is_not_assessed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_payload_file_is_published_under_its_resource_directory"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_name_needing_encoding_is_published_as_it_is_and_read_back"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_every_name_is_kept_and_a_fragile_one_warned_of"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_an_occupied_opaque_directory_refuses_a_commit"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/opaque.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/prune.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "escapewheel-validator/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R143 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-uri-rules"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-source-resolution"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-referenced-resource-delivery"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "uri_raw_space",
+            "finding": "packet.resource.uri_form"
+          },
+          {
+            "kind": "fixture",
+            "packet": "uri_lowercase_hex",
+            "finding": "packet.resource.uri_form"
+          },
+          {
+            "kind": "fixture",
+            "packet": "uri_encoded_unreserved",
+            "finding": "packet.resource.uri_form"
+          },
+          {
+            "kind": "fixture",
+            "packet": "uri_dot_segment",
+            "finding": "packet.resource.uri_form"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_manifest.py::test_a_uri_in_the_one_form_passes[encoded_utf8]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_a_payload_whose_name_needs_encoding_is_found_by_its_decoded_name"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_a_source_relative_reference_is_decoded_under_the_sources_location"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_location.py::test_a_relative_reference_is_decoded_before_it_is_appended"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_location.py::test_a_store_root_takes_the_decoded_names_as_key_segments"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_location.py::test_a_source_relative_reference_is_decoded_too"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_location.py::test_a_uri_neither_absolute_nor_a_relative_reference_is_unreadable[../x.parquet]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_resource_document_uri_is_recorded_in_one_form"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_source_relative_uri_is_resolved_by_the_reader"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_the_writer_spells_its_own_relative_uris_in_one_form"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/uri.py",
+          "escapewheel-reader/src/escapewheel_reader/location.py",
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-writer/src/escapewheel_writer/delivery.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-reader/README.md",
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R143 §3.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-owned-resource-digests"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-prefix-resources"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "owned_opaque_one_byte_off",
+            "finding": "owned.digest"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_an_owned_opaque_file_is_present_and_its_digest_holds"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_an_owned_opaque_directory_is_digested_as_a_prefix"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_opaque.py::test_an_owned_opaque_digest_that_disagrees_is_an_error"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_payload_directory_is_a_prefix_listed_under_its_own_keys"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R143 §3.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-resource-digests"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_listing_writes_its_keys_in_utf8_under_rfc_8785"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_stores.py::test_a_local_prefix_lists_its_keys_by_name_as_they_are"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/stores.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R143 §3.7": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-referenced-resource-delivery"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_resource_document_entry_declaring_itself_owned_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_opaque.py::test_a_resource_document_entry_declaring_nothing_is_recorded_as_external"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/delivery.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the writer README already says a referenced resource crosses as a resource document; no document describes the external flag"
+      }
+    }
+  }
+}

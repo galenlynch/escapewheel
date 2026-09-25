@@ -17,6 +17,10 @@ reading needs (Part 04 §10): the manifest decodes, repeats no member or resourc
 members it reads at their JSON types; and a bound registry, acquired only when a declaration is
 needed, matches its descriptor's digest.
 
+A relative `uri` is percent-decoded and its names appended to the packet root, or to its source's
+location, in any spelling RFC 3986 admits (Part 03 §4). One that is neither absolute nor a relative
+reference leaves the packet open and that resource unreadable, the error naming its ID.
+
 Reading is deliberately not a validation boundary. Opening a packet, resolving references and
 discriminators, correlating sessions, and extension-aware analysis require neither a validation
 receipt nor the validator package. These operations interpret declarations without claiming that

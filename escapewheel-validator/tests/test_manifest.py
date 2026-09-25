@@ -239,6 +239,45 @@ def test_an_external_entry_need_not_record_a_digest(packet_root):
     assert _checks(packet_root) == []
 
 
+@pytest.mark.parametrize(
+    "uri",
+    [
+        pytest.param("tables/core/trials%20one.parquet", id="encoded_space"),
+        pytest.param("opaque/core.qc_report/QC%20report%20%C3%A9.pdf", id="encoded_utf8"),
+        pytest.param("s3://bucket/QC report é.pdf", id="absolute"),
+    ],
+)
+def test_a_uri_in_the_one_form_passes(packet_root, uri):
+    """Part 03 §4: absolute, or a relative reference with only unreserved characters left bare."""
+    _edit(packet_root, lambda m: m["resources"][1].update(uri=uri, external=True))
+    assert _checks(packet_root) == []
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        pytest.param("tables/core/trials one.parquet", id="raw_space"),
+        pytest.param("tables/core/r%c3%a9sum%c3%a9.parquet", id="lowercase_hex"),
+        pytest.param("tables/core/%41.parquet", id="encoded_unreserved"),
+        pytest.param("tables/../tables/core/trials.parquet", id="dot_dot_segment"),
+        pytest.param("tables/./core/trials.parquet", id="dot_segment"),
+        pytest.param("/tables/core/trials.parquet", id="leading_slash"),
+        pytest.param("tables//core/trials.parquet", id="empty_segment"),
+        pytest.param("tables/a%2Fb.parquet", id="encoded_slash"),
+        pytest.param("tables/%FF.parquet", id="not_utf8"),
+        pytest.param("c:/tables/core/trials.parquet", id="windows_drive"),
+    ],
+)
+def test_a_uri_not_in_the_one_form_is_an_entries_finding(packet_root, uri):
+    """Part 04 §10: `packet.resource.uri_form` at `error`, naming the entry, and nothing later runs."""
+    _edit(packet_root, lambda m: m["resources"][1].update(uri=uri))
+    report, bound = check_packet_manifest(packet_root)
+    assert [(f.level, f.check) for f in report.findings] == [("error", "packet.resource.uri_form")]
+    assert report.findings[0].rows == (("core.trials", uri),)
+    assert report.findings[0].message.startswith("core.trials: ")
+    assert bound is None
+
+
 def test_exactly_one_core_descriptor(packet_root):
     _edit(packet_root, lambda m: m["registries"]["core"].update(role="extension"))
     assert _checks(packet_root) == ["packet.registry.core_count"]

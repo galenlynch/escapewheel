@@ -173,10 +173,16 @@ def hasher(algorithm: str) -> Any:
 
 
 def listing_digest(rows: Iterable[tuple[str, int, str]]) -> str:
-    """Part 04 §4.3's prefix value: SHA-256 of the compact JSON listing, sorted by key bytes."""
+    r"""Part 04 §4.3's prefix value: SHA-256 of the compact JSON listing, sorted by key bytes.
+
+    Each key is the object's path relative to the resource, never percent-encoded. Python's encoder
+    without ASCII escaping writes a string exactly as RFC 8785, Section 3.2.2.2 does: `\"`, `\\`,
+    the five short escapes, `\u00xx` in lowercase for the rest of U+0000 to U+001F, and every other
+    code point as its UTF-8.
+    """
     ordered = sorted(((str(key), int(size), str(value)) for key, size, value in rows), key=lambda row: row[0].encode())
-    canonical = json.dumps([list(row) for row in ordered], separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    canonical = json.dumps([list(row) for row in ordered], separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True)

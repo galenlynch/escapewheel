@@ -36,6 +36,14 @@ if TYPE_CHECKING:  # pragma: no cover
 _ZARR_METADATA: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
 
 
+def _locate(resource: Resource, root: Location) -> Location:
+    """Where a declared resource's bytes are, naming the resource when its URI names no place."""
+    try:
+        return root.resolve(resource.uri, resource.source)
+    except ResourceUnreadableError as exc:
+        raise ResourceUnreadableError(f"{resource.resource_id}: {exc}") from exc
+
+
 def _resolve(resource: Resource, root: Location) -> Path:
     """Resolve a declared URI to a local filesystem path.
 
@@ -56,7 +64,7 @@ def _resolve(resource: Resource, root: Location) -> Path:
     ResourceUnreadableError
         If the URI names a store this cannot open locally, or the path does not exist.
     """
-    where = root.resolve(resource.uri, resource.source)
+    where = _locate(resource, root)
     if not where.is_local:
         # A store only a library with that backend can open, which `store` hands over as the
         # URI itself.
@@ -77,7 +85,7 @@ def _store(resource: Resource, root: Location) -> str:
     an object store rather than a filesystem. Zarr opens such a URI directly given a backend
     for it, so resolving to a `Path` first would be the thing that made it unopenable.
     """
-    where = root.resolve(resource.uri, resource.source)
+    where = _locate(resource, root)
     if not where.is_local:
         return where.uri
     return str(_resolve(resource, root))
@@ -123,7 +131,7 @@ class TableResource:
     @property
     def location(self) -> Location:
         """Where this resource's bytes are, after the root, any source, and any substitution."""
-        return self._root.resolve(self._resource.uri, self._resource.source)
+        return _locate(self._resource, self._root)
 
     @property
     def resource_id(self) -> str:
@@ -305,7 +313,7 @@ class ArrayResource:
     @property
     def location(self) -> Location:
         """Where this array's bytes are, after the root, any source, and any substitution."""
-        return self._root.resolve(self._resource.uri, self._resource.source)
+        return _locate(self._resource, self._root)
 
     @property
     def resource(self) -> Resource:

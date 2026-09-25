@@ -142,6 +142,7 @@ def refusals(
     tables: Mapping[str, Any],
     options: Collection[str],
     terms: Collection[str],
+    payloads: Collection[str] = (),
 ) -> list[str]:
     """Return what a build refuses this declaration for, reading it, the registry and the recipe.
 
@@ -159,6 +160,9 @@ def refusals(
         The option names the recipe's entry for this source sets.
     terms : collection of str
         Part 03 §11.2's vocabulary, which a declared name resolves against first.
+    payloads : collection of str
+        The loaded registries' opaque singleton declarations, which an adapter may produce as a
+        payload rather than as rows (Part 03 §11.3).
     """
     found = [
         f"declares protocol {protocol!r}, which is in no group this profile names"
@@ -166,7 +170,7 @@ def refusals(
         if protocol not in PROTOCOLS
     ]
     for resource in document.get("produces", ()):
-        if resource not in tables:
+        if resource not in tables and resource not in payloads:
             found.append(f"produces {resource}, which no loaded registry declares")
     produced = set(document.get("produces", ()))
     found += [

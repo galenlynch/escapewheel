@@ -9,9 +9,9 @@ to reach for where a source is large: the delivery is Parquet on disk, so a buil
 at a time the way it streams any other file. `stream-v0.1` and `flight-v0.1` hold each resource as
 it arrives, because a build consumes resources in its own order and a pipe cannot be rewound.
 
-An adapter's arrays do not cross here. Part 03 §11.3 has a dense array cross as a reference to a
-location a build supplies, which is a different act from delivering rows; a source that stages one
-is refused with what it would take, rather than delivering half of itself.
+An adapter's arrays and opaque payloads do not cross here. Part 03 §11.3 has each cross as bytes
+in a location a build supplies, which is a different act from delivering rows; a source that stages
+one is refused with what it would take, rather than delivering half of itself.
 """
 
 from __future__ import annotations
@@ -29,7 +29,9 @@ from typing import Any, cast
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+from escapewheel_reader.uri import canonical, is_absolute
 
+from . import opaque
 from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE
 from .sources import SourceDefect
 
@@ -203,6 +205,8 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
         platform translating a line ending corrupts the stream (Part 03 §11.4).
     """
     written_arrays(source, supplied.get("array_location"))
+    handed = getattr(source, "staged_payloads", lambda: ())()
+    opaque.write(handed, supplied.get("opaque_location"), type(source).__name__)
     delivering = offered(source)
     # A resource this source has nothing for arrives empty rather than not arriving, so a build
     # reads absence as the run having failed and never as the source having had nothing to say
@@ -604,9 +608,46 @@ def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[str
         document = json.loads(text or "{}")
     except json.JSONDecodeError as exc:
         return [], [f"the resource document is not JSON ({exc})"]
+    # Before the shape, which also refuses `external: false` where an entry's uri is absolute or it
+    # names a source, but without naming the entry.
+    if problems := _entry_refusals(document):
+        return [], problems
     if problem := _refuses(document):
         return [], [f"the resource document {problem}"]
-    return list(document.get("resources", ())), []
+    return [_as_recorded(entry) for entry in document.get("resources", ())], []
+
+
+def _entry_refusals(document: Any) -> list[str]:
+    """Each entry declaring itself packet-owned, or whose uri no reader could resolve, by its `resource_id`.
+
+    A resource document describes only a referenced resource, and a packet-owned opaque resource
+    crosses as a payload (Part 03 §11.3). A uri that is not absolute is a relative reference in any
+    spelling RFC 3986 admits for its segments (Part 03 §4).
+    """
+    entries = document.get("resources") if isinstance(document, Mapping) else None
+    found = []
+    for entry in entries if isinstance(entries, list) else ():
+        if not isinstance(entry, Mapping):
+            continue
+        resource_id = entry.get("resource_id")
+        if entry.get("external") is False:
+            found.append(
+                f"{resource_id}: declares external: false; a resource document describes only a referenced "
+                "resource, and a packet-owned opaque resource crosses as a payload (Part 03 §11.3)"
+            )
+        uri = entry.get("uri")
+        if isinstance(uri, str) and not is_absolute(uri):
+            try:
+                canonical(uri)
+            except ValueError as exc:
+                found.append(f"{resource_id}: uri is neither absolute nor a relative reference: {exc} (Part 03 §4)")
+    return found
+
+
+def _as_recorded(entry: Mapping[str, Any]) -> dict[str, Any]:
+    """Record an entry as external, with a relative uri in Part 03 §4's one form."""
+    uri = str(entry["uri"])
+    return {**entry, "external": True, "uri": uri if is_absolute(uri) else canonical(uri)}
 
 
 def _refuses(document: Mapping[str, Any]) -> str | None:

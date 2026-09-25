@@ -20,7 +20,8 @@ replaces.
 Three cameras of one session are 10 GB as MP4 and 80 GB as the AVI they were encoded from, so a
 packet that copied them would be mostly video (Part 04 §5.1). What it owns instead is one row per
 frame on a declared clock, which is the part no player can supply: an MP4 knows its own
-presentation timestamps and nothing about the rig's clock.
+presentation timestamps and nothing about the rig's clock. It could own a video instead by declaring
+`opaque_location` and delivering the file as a payload (Part 03 §11.3).
 
 Each camera writes a CSV beside its video, one line per frame and three columns:
 
