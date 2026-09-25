@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative coordination record |
-| **Updated** | 2026-09-23 |
+| **Updated** | 2026-09-25 |
 | **Review baseline** | `8d3a9c8598dd0152930ee0aab4de9a19a5496f22` |
 | **Objective** | Reconcile the data-driven contract, then publish one internally consistent and immutable v0.2 specification release |
 
@@ -288,7 +288,13 @@ P1 authority framework
         +---- P9 remaining reconciliations
                       |
                       v
-        P10 identifiers and source cleanup
+        P10.1 registry source and integration matrix
+                      |
+                      v
+        P10.2 release-candidate field test
+                      |
+                      v
+        P10.3 final identifiers
                       |
                       v
         P11 immutable v0.2 publication
@@ -311,7 +317,9 @@ P1 authority framework
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | [R131](../accepted/R131-a-validator-checks-every-unit-value-against-ucum.md); [R132](../accepted/R132-a-packet-passes-only-when-its-manifest-core-and-every-bound-extension-pass.md) |
 | P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | [R133](../accepted/R133-a-build-decides-ownership-only-from-the-recipe-and-adapter-declarations.md); [R134](../accepted/R134-an-adapter-declares-its-whole-contract-and-delivers-only-where-a-build-points-it.md) |
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | Proposal family; split before promotion |
-| P10 | Final identifiers, direct registry source, and release integration | P2, P2.1, and P3–P9 | Proposal plus ordinary maintenance |
+| P10.1 | Direct registry source and release integration matrix | P2, P2.1, and P3–P9 | Ordinary maintenance unless the contract changes |
+| P10.2 | Release-candidate field test | P10.1 | Revisions for what the field finds; the user ends the test |
+| P10.3 | Final identifiers and registry binding | P10.2 | Proposal |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
 ### P0 — Revision-process foundation
@@ -740,18 +748,14 @@ Analysis lineage and canonicality belong in P5.1 rather than this catch-all; ada
 belongs in P8. This placement keeps the earlier review's “remaining reconciliations” from becoming
 one omnibus revision.
 
-### P10 — Final identifiers, direct source, and integration
+### P10 — Registry source, field test, and final identifiers
 
-After the contract stabilizes, assign correct semantic, logical, physical-profile, registry,
-meta-schema, packet-schema, and rule-language identifiers. Lift the deliberate
-`registry_version` hold and ensure identifiers change whenever governed bytes or contracts are
-incompatible. Apply the packet registry-binding decision from P6 using the final identifiers and
-digests.
+P10 runs in three steps, because the contract is tested in the field as a release candidate before
+its identifiers are frozen. The deliberate `registry_version` hold stays in place through the field
+test; a packet built from the candidate still identifies each registry it binds by the SHA-256 in
+its manifest (Part 04).
 
-The hold is provisional rather than permission to reuse an identifier for incompatible bytes.
-P4.1 advances the registry meta-schema and core registry when it changes the document contract,
-and advances each affected extension independently. P10 assigns and verifies the final release
-identifiers after the remaining contract work stabilizes.
+#### P10.1 — Direct registry source and integration matrix
 
 Replace historical imperative registry replay with one reviewed declarative current state or
 deterministically assembled fragments. Preserve each declaration's provenance and prove byte
@@ -760,11 +764,30 @@ does not alter the published contract; any semantic change returns through a pro
 
 Add a current-registry writer-to-reader-to-validator integration matrix covering core, valid and
 invalid extensions, a non-table derived resource, an external resource, packet-schema format
-checking, and the executable Part 08 examples. This is where the TODO items for direct registry
-authoring and final registry versions close.
+checking, and the executable Part 08 examples. The TODO item for direct registry authoring closes
+here.
 
-**Review coverage:** D7, I9, identifier findings, and final-value portions of the packet-registry
-TODO.
+#### P10.2 — Release-candidate field test
+
+Build and use packets from the candidate in the field. What the test finds returns through the
+ordinary lifecycle: a defect in a numbered part, registry, or schema is a revision, and an
+implementation defect is maintenance. The user decides when the test ends; P10.3 does not start
+before then.
+
+#### P10.3 — Final identifiers and registry binding
+
+Assign correct semantic, logical, physical-profile, registry, meta-schema, packet-schema, and
+rule-language identifiers. Lift the `registry_version` hold and ensure identifiers change whenever
+governed bytes or contracts are incompatible. Apply the packet registry-binding decision from P6
+using the final identifiers and digests. The TODO item for final registry versions closes here.
+
+The hold is provisional rather than permission to reuse an identifier for incompatible bytes.
+P4.1 advances the registry meta-schema and core registry when it changes the document contract,
+and advances each affected extension independently. P10.3 assigns and verifies the final release
+identifiers after the field test's revisions are incorporated.
+
+**Review coverage:** D7 and I9 in P10.1; identifier findings and final-value portions of the
+packet-registry TODO in P10.3.
 
 ### P11 — Immutable v0.2 publication
 
@@ -810,7 +833,7 @@ This table prevents a finding from disappearing merely because it was split out 
 | D4 hidden arbitration | P8 |
 | D5 missing session-recipe schema | P8 |
 | D6 underspecified adapter declarations | P8 |
-| D7 imperative registry replay | P10 |
+| D7 imperative registry replay | P10.1 |
 | D8 extension non-table assets | P5.1 |
 | D9 cross-language proof | Deferred interoperability hardening; reconsider as a P11 release criterion if independent implementation is required for v0.2. The adapter source-cache location moved into v0.2 as P9.8; a cache storage format shared across implementations, likely content-addressed, stays deferred here, with the `cache-v` subdirectory names reserved for it |
 | R1–R4 and R6–R7 process gaps | P0 is complete; continue using its gates and evidence artifacts |
@@ -824,14 +847,14 @@ This table prevents a finding from disappearing merely because it was split out 
 | I6 manifest lookup and state validation | P6 |
 | I7 incomplete extension physical checks | P7, using P4.1-conforming extension declarations |
 | I8 codec capability reporting | P5.2 and P9.3 |
-| I9 missing cross-package release proof | P2–P10 incrementally; final matrix in P10 |
+| I9 missing cross-package release proof | P2–P10 incrementally; final matrix in P10.1 |
 | I10 stale public types and docs | P2 |
 | I11 constructor validation bypass | P4.2 for registry inputs and P8 for adapter/declaration inputs |
 | `layer` and `canonical` TODO | P5.1 |
-| packet registry ID/version/digest TODO | shape in P6; final values in P10 |
-| direct declarative registry authoring TODO | P10, ordinarily if contract-preserving |
+| packet registry ID/version/digest TODO | shape in P6; final values in P10.3 |
+| direct declarative registry authoring TODO | P10.1, ordinarily if contract-preserving |
 | remaining JSON Schema audits | manifest/resources in P6; sources/adapter in P8 |
-| held `registry_version` and stale `$id` values | P10 |
+| held `registry_version` and stale `$id` values | P10.3, after the P10.2 field test |
 
 ## 6. Final publication gate
 
@@ -849,6 +872,8 @@ the accumulated revisions and evidence should establish all of the following:
 - every declared extension contributes to overall packet validity and failed validation prevents
   committed publication;
 - recipe resolution contains no undeclared lab/task preference policy;
+- the release candidate has been field tested, and each finding is incorporated or deferred by the
+  user's decision;
 - identifier and digest fields identify the actual contracts and bytes they govern;
 - one packet built from the current recipe and registries passes public reader and validator paths;
 - negative evidence covers duplicates, missing required resources, invalid registries, physical
