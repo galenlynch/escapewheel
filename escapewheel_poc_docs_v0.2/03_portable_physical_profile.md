@@ -123,6 +123,7 @@ amendment there and nowhere else under the packet root. Under the packet root, p
 staged resource to its final path by a rename within one filesystem; the fixed name lets a writer
 and a cleanup tell a staging area from a directory this specification does not govern (§9.5).
 
+<a id="ew-portable-uri-rules" data-spec-anchor="canonical"></a>
 ## 4. URI rules
 
 A URI in the manifest or in a table MAY be relative to the packet root or absolute, or — where the entry names a `source` — relative to that source (Part 04 §5.5). A portable local packet SHOULD use relative URIs.
