@@ -29,7 +29,8 @@ bytes, so a video, a figure, or a report reaches a packet only as a URI into its
 recorded the gap and left the route list open for a later decision. Three statements lack a subject
 as a result: Part 03 §10 says what an owned table's and array's digest covers and nothing about an
 opaque resource's; the portable-profile descriptor states ownership per interface and `opaque` has
-none; and a resource-document entry that does not declare `external` has no stated meaning.
+none; and Part 03 §11.3 does not carry R117 §3.2's rule that a build records every resource-document
+entry as external, so an entry that does not declare `external` has no stated meaning.
 
 This revision adds that route. An adapter writes each owned opaque resource, a file or a directory
 under its own name, into a directory named by its resource ID in a new build-supplied location,
@@ -41,10 +42,10 @@ copy to Windows or to a filesystem that folds case or normalization.
 Two rules the route relies on are made exact for every resource. A relative URI in a manifest is a
 relative reference under RFC 3986, percent-encoded in one form by whoever writes it and decoded by
 whoever resolves it. A prefix digest's listing writes each key in UTF-8, escaping only what JSON
-requires, in RFC 8785's form. A resource document describes only referenced resources, and a build
-refuses an entry that does not declare `external: true`. The route carries catalog instances and
-singletons; a family instance would need a channel for its `declaration_id`, which a later revision
-can add.
+requires, in RFC 8785's form. A resource document describes only referenced resources: a build
+records each entry as external and refuses one declaring `external: false`. The route carries
+catalog instances and singletons; a family instance would need a channel for its `declaration_id`,
+which a later revision can add.
 
 The change is structural because it replaces text inside existing sections: Part 03 §11's list of
 routes, Part 03 §3.1's `media/` line, Part 04 §4.3's spelling of a listing key, Part 04 §5.4's
@@ -78,10 +79,10 @@ split, merged, or retired.
 | Part 03 §4, what a relative URI resolves to | extend in place | same section | a manifest `uri` without a scheme is a relative reference with one percent-encoded form, which a reader or validator decodes | §3.4 |
 | Part 04 §5.5, "a path relative to wherever that source is" | revise in place | same section | a relative reference resolved against the source's location | §3.4 |
 | Part 04 §10, the table of manifest checks | extend in place | same section | adds `packet.resource.uri_form` | §3.4 |
-| Part 03 §11.3, the resource-document paragraph | extend in place | same section | a build refuses a malformed relative `uri` and records the rest in the one form; it refuses an entry that does not declare `external: true` | §3.4 and §3.7 |
+| Part 03 §11.3, the resource-document paragraph | extend in place | same section | a build refuses a malformed relative `uri` and records the rest in the one form; it records every entry as external and refuses one declaring `external: false` | §3.4 and §3.7 |
 | Part 03 §10, what a packet-owned resource's digest covers | extend in place | same section | adds the opaque case and its listing keys | §3.5 |
 | Part 04 §5.4, "an external store, or a packet-owned Zarr array" | revise in place | same section | also names a packet-owned opaque directory | §3.5 |
-| Part 04 §4.3, "ASCII-escaped keys" | replace in place | same section | a key is written in UTF-8 under RFC 8785's string serialization, and a size as a plain decimal integer | §3.6 |
+| Part 04 §4.3, "ASCII-escaped keys" | replace in place | same section | a key, and a member's `key`, is a path of unencoded names written in UTF-8 under RFC 8785's string serialization, and a size a plain decimal integer | §3.6 |
 | Part 04 §11, the reference table | extend in place | same section | adds RFC 8785 | §3.6 |
 
 ## 2. Background
@@ -160,7 +161,7 @@ The AIND `video` adapter references every video it finds; its module text gives 
 three cameras are 10 GB as MP4 and 80 GB as AVI. The writer has no way to stage opaque bytes. Under
 `files-v0.1` a build reads `resources.json` and `*.parquet` from `delivery_root` and ignores every
 other file there without a finding. Every resource-document entry the reference adapters emit
-declares `external: true`.
+declares `external: true`, and the writer records an entry that declares nothing as external.
 
 The validator's owned-digest check, `packet.resource.digest_missing`, and
 `packet.resource.catalog_row_binding` apply to every packet-owned entry whatever its kind, so an
@@ -226,7 +227,16 @@ then look identical in the manifest while naming different files, and a tool tha
 text would change which file the URI names; percent-encoded, they are `%C3%A9` and `e%CC%81`. RFC
 3987 also still percent-encodes private-use characters, noncharacters, and bidirectional formatting
 marks, so it would give non-ASCII two spellings rather than one. Percent-encoding only a
-packet-owned URI would make a reader consult `external` to learn whether `%20` is a space.
+packet-owned URI would make a reader consult `external` to learn whether `%20` is a space. Resolving
+a relative reference by RFC 3986 Section 5 would drop a source location's last segment wherever it
+lacks a trailing `/`, and admitting `..` would let a URI leave the packet root; a resource outside
+the root is reached through Part 04 §5.5's `source`. The URI columns of `core.source_files` and
+`core.processing_runs` are free strings recording provenance, which nothing resolves, and stay
+outside the rule.
+
+Requiring every resource-document entry to declare `external: true` would reverse R117 §3.2, which
+lets an adapter send only `resource_id` and `uri`, to restate what every entry already is. Refusing
+an entry declaring `external: false` catches the one contradiction a document can carry.
 
 A listing could instead keep ASCII escaping and pin its exact form. JSON's grammar is Unicode, and
 RFC 8785 fixes the escapes it requires, so writing keys in UTF-8 in that form adds no encoding the
@@ -250,7 +260,7 @@ Part 03 §11. This draft appends its row after R142's and adds no subsection. Th
 location lies outside the staging area and outlives a build, where `opaque_location` lies inside it
 and does not, so neither term can serve for the other. R141 shares no section with this draft. The
 later relocation of Part 03 §11 into its own part moves §§11, 11.2, and 11.3 as R142 and this draft
-leave them. A reverse-citation query for the sixteen amended sections lists 579 citations outside
+leave them. A reverse-citation query for the sixteen amended sections lists 572 citations outside
 this draft, 322 of them outside the revision records; incorporation reads those in Parts 00, 02, 03,
 04, 05, 07, and 09, the registry schemas and tooling, the fixture and adapter-boundary tooling, the
 writer, the validator, the reader, and the AIND package.
@@ -305,7 +315,9 @@ A build MUST refuse, before it validates the staged packet, naming each such dir
 ID, where a resource directory's name is the `resource_id` of no catalog row of an opaque catalog
 family and the ID of no opaque singleton declaration a loaded registry declares, or is both; where a
 catalog row of an opaque catalog family is bound by no payload or referenced resource; or where one
-resource ID is bound by more than one payload or referenced resource.
+resource ID is bound by more than one payload or referenced resource. A build MUST also refuse a
+payload bound to an opaque singleton declaration that Part 05 §3.4 does not leave the delivering
+source owning, naming the source and the declaration.
 
 Nothing else crosses for a payload. A build MUST NOT require an adapter to state a payload's format,
 media type, size, or digest; it takes `size_bytes` and `digest` from the staged bytes (§3.5) and
@@ -329,75 +341,77 @@ theirs, and MUST NOT rename, normalize, or case-fold any of them. It MUST publis
 directory under the packet root that holds nothing else, since two payloads may share a name. Part
 03 §3.1's recommended layout places that directory at `opaque/<resource_id>/`, so a payload lies at
 `opaque/<resource_id>/<name>`, in place of `media/<media_asset_id>.<ext>`. No validator checks that
-a payload kept its names, since a packet does not record them as the source spelled them; a build's
-own tests are the evidence. A payload's manifest `uri` names the payload itself, the file where the
-payload is one and otherwise the directory, as a relative reference (§3.4).
+a payload kept its names or has its directory to itself, since a packet records neither the names as
+the source spelled them nor which files a build placed; a build's own tests are the evidence. A
+payload's manifest `uri` names the payload itself, the file where the payload is one and otherwise
+the directory, as a relative reference (§3.4).
 
 Two names in one directory of a packet-owned opaque payload **collide** where they differ and are a
 canonical caseless match under the Unicode Standard, Section 3.13, definition D145, which equates
 names differing only in case, only in normalization form, or in both. A name within such a payload,
-or a segment of the payload's path under the packet root, is **unportable to Windows** where it
+or a decoded segment of the payload's `uri`, is **unportable to Windows** where it
 contains a code point from U+0001 through U+001F or any of `"`, `*`, `:`, `<`, `>`, `?`, `\`, and
 `|`; ends in a full stop or a space; or, compared without regard to ASCII case, is `CON`, `PRN`,
 `AUX`, `NUL`, or `COM` or `LPT` followed by one of the digits `1` through `9` or the superscripts
 `¹`, `²`, and `³`, whether alone or followed by a full stop and anything else.
 
-A validator MUST report each set of colliding names and each name unportable to Windows, one
-finding per set and one per name, at `warning` under the check ID
-`physical.opaque_name_portability`, naming the resource, the path under the packet root of the
-directory holding the names, and the names. The packet is
-conformant: each name holds its own file under the packet root, and it fails only on a copy to a
-filesystem that folds case or normalization or that Windows governs. The finding concerns one
-resource, so Part 05 §9.5 attributes it to the registry whose declaration the resource's entry
-names. Part 05 §15 identifies the Unicode Standard, Version 16.0.0, as an exact reference for
+A validator MUST report each set of colliding names and each name unportable to Windows, one finding
+per set and one per name, at `warning` under the check ID `physical.opaque_name_portability`, naming
+the resource, the path under the packet root of the directory holding the names, and the names. The
+packet is conformant: each name holds its own file under the packet root, and it fails only on a
+copy to a filesystem that folds case or normalization or that Windows governs. The finding concerns
+one resource, so Part 05 §9.5 attributes it to the registry whose declaration the resource's entry
+names. Part 05 §15 identifies the Unicode Standard, Version 15.0.0, as an exact reference for
 canonical caseless matching.
 
 ### 3.4 A relative URI in a manifest is a percent-encoded reference
 
-A manifest entry's `uri` that has no scheme is a relative reference under RFC 3986, Section 4.2,
-consisting of a path alone, with no authority, query, or fragment. It resolves against the packet
-root, or, where the entry names a `source`, against that source's location (Part 04 §5.5). Each
-segment of its path spells a name: a reader or validator resolving it MUST decode each
-percent-encoded octet of a segment and read the octets as the name's UTF-8 encoding, forming the
-path or object key from those names.
+A manifest entry's `uri` is **absolute** where it begins with a scheme under RFC 3986, Section 3.1,
+followed by `://`. Every other `uri` is a **relative reference**: one or more segments under RFC
+3986, Section 3.3, separated by `/`, with no leading `/`, each of which decodes to a representable
+name (§3.3). A segment decodes by replacing each percent-encoded octet of RFC 3986, Section 2.1,
+with that octet and reading the octets as UTF-8. A reader or validator MUST resolve a relative
+reference by appending its decoded names, in order, to the packet root, or, where the entry names a
+`source`, to that source's location (Part 04 §5.5), as path components or object-key segments; it
+MUST NOT resolve one by RFC 3986, Section 5.
 
-A writer MUST write each segment of such a URI in one form: every unreserved character of RFC 3986,
-Section 2.3, as itself, and every other octet of the name's UTF-8 encoding as a percent-encoded
-octet with uppercase hexadecimal digits. A checker MUST report an entry whose `uri` has no scheme
-and is not in that form, or has a segment that is not valid UTF-8 once decoded, at `error` in Part
-04 §10's `entries` phase, under the check ID `packet.resource.uri_form`, naming the entry's
-`resource_id`.
+A writer MUST write each segment of a relative reference in one form: every unreserved character of
+RFC 3986, Section 2.3, as itself, and every other octet of the name's UTF-8 encoding as a
+percent-encoded octet with uppercase hexadecimal digits. A checker MUST report an entry whose `uri`
+is not absolute and is not a relative reference in that form, at `error` in Part 04 §10's `entries`
+phase, under the check ID `packet.resource.uri_form`, naming the entry's `resource_id`. This section
+governs a manifest entry's `uri`; a URI a table holds keeps the spelling its producer gave it.
 
-An adapter MUST write a resource-document entry's `uri` that has no scheme as a relative reference
-of that kind, in any form RFC 3986 admits. A build MUST refuse an entry whose `uri` has no scheme
-and is not such a reference, or has a segment that is not valid UTF-8 once decoded or that decodes
-to a name containing NUL or `/`, naming the source and the entry's `resource_id`. A build MUST
-record each entry it accepts with its `uri` rewritten in the one form above.
+An adapter MUST write a resource-document entry's `uri` that is not absolute as a relative
+reference, in any form RFC 3986 admits for its segments. A build MUST refuse an entry whose `uri` is
+neither, naming the source and the entry's `resource_id`, and MUST record each entry it accepts with
+its `uri` rewritten in the one form above.
 
 ### 3.5 A packet-owned opaque resource's digest covers its payload
 
 In the portable profile, a packet-owned opaque resource's `digest` covers its payload: the one
 object where the payload is a file, and otherwise its files, as Part 04 §4.3 defines a prefix's
-value. Each file's key in that listing is its path relative to the payload, spelled with its names
-as they are and not percent-encoded. `size_bytes` covers the same bytes. Part 04 §5.4's prefix
-resources are an external store, a packet-owned Zarr array, and a packet-owned opaque resource whose
-payload is a directory.
+value, with each file's key its path relative to the payload (§3.6). `size_bytes` covers the same
+bytes. Part 04 §5.4's prefix resources are an external store, a packet-owned Zarr array, and a
+packet-owned opaque resource whose payload is a directory.
 
 ### 3.6 A prefix listing writes its keys in UTF-8
 
-Part 04 §4.3's listing is UTF-8 JSON text whose entries are sorted by the bytes of each key's UTF-8
-encoding. Each key is a string serialized under RFC 8785, Section 3.2.2.2: `"` and `\` as `\"` and
-`\\`; U+0008, U+0009, U+000A, U+000C, and U+000D as `\b`, `\t`, `\n`, `\f`, and `\r`; every other
-code point from U+0000 through U+001F as `\u` followed by four lowercase hexadecimal digits; and
-every other code point as itself. Each size is a decimal integer with no sign, leading zero,
-fraction, or exponent. This replaces the listing's ASCII escaping of keys. Part 04 §11 identifies
-RFC 8785 as an exact reference for that serialization.
+A key in Part 04 §4.3's listing, and a member's `key` (Part 04 §5.4), is the object's path relative
+to the resource's location: its names as they are, joined by `/`, and never percent-encoded. The
+listing is UTF-8 JSON text whose entries are sorted by the bytes of each key's UTF-8 encoding. Each
+key is a string serialized under RFC 8785, Section 3.2.2.2: `"` and `\` as `\"` and `\\`; U+0008,
+U+0009, U+000A, U+000C, and U+000D as `\b`, `\t`, `\n`, `\f`, and `\r`; every other code point from
+U+0000 through U+001F as `\u` followed by four lowercase hexadecimal digits; and every other code
+point as itself. Each size is a JSON integer with no sign, fraction, or exponent, and no leading
+zero unless the size is zero, which is written `0`. This replaces the listing's ASCII escaping of
+keys. Part 04 §11 identifies RFC 8785 as an exact reference for that serialization.
 
 ### 3.7 A resource document describes only a referenced resource
 
-A build MUST refuse a resource-document entry that does not declare `external: true`, naming the
-source and the entry's `resource_id`. A packet-owned opaque resource crosses only as a payload
-(§3.2).
+A build MUST record every resource-document entry as external, and MUST refuse one that declares
+`external: false`, naming the source and the entry's `resource_id`. A packet-owned opaque resource
+crosses only as a payload (§3.2).
 
 ## 5. Consequence
 
@@ -410,20 +424,21 @@ predate R128 and are rebuilt for other reasons; a rebuild owns media only where 
 it as a payload.
 
 Behavior changes in five places. A build supplies a new location and stages what it finds there,
-where it now ignores files it does not expect. A build refuses a resource-document entry not marked
-external, which it now records as external, and one whose relative `uri` is malformed, and rewrites
-the rest in one form. A reader and a validator decode every relative URI, which they now use
-verbatim, and a checker reports one not in that form. A prefix listing writes a key holding U+007F
-or a code point above it in UTF-8, where it now escapes it. A validator warns of payload names that
-collide or that Windows cannot hold. Every existing adapter declaration stays valid, and the
-reference adapters already mark every resource-document entry.
+where it now ignores files it does not expect. A build refuses a resource-document entry declaring
+`external: false` or carrying a malformed relative `uri`, and rewrites the rest in one form. A
+writer writes every relative URI in that form, a reader and a validator decode every relative URI,
+which they now use verbatim, and a checker reports one not in that form. A prefix listing writes a
+key holding U+007F or a code point above it in UTF-8, where it now escapes it. A validator warns of
+payload names that collide or that Windows cannot hold. Every existing adapter declaration stays
+valid, and the reference adapters already mark every resource-document entry.
 
 No accepted clause is superseded. R136 §3.2's listing keeps its construction and changes only how a
 key is spelled, and R80 §2.1's source-relative `uri` becomes a relative reference; the ledger
-entries of both gain notes. R117 §3.1's array route gains a sibling, R117 §3.2's resource document
-gains the refusals of an unmarked entry and a malformed relative URI, and R134 §7's missing opaque
-route is settled without amending R134 §3.4, whose route list is open. The ledger entries of R117
-§§3.1 and 3.2 gain notes.
+entries of both gain notes. R117 §3.1's array route gains a sibling; R117 §3.2's rule that a build
+records every entry as external is restated in Part 03 §11.3, and its resource document gains the
+refusals of an entry declaring `external: false` and of a malformed relative URI; and R134 §7's
+missing opaque route is settled without amending R134 §3.4, whose route list is open. The ledger
+entries of R117 §§3.1 and 3.2 gain notes.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -431,19 +446,19 @@ route is settled without amending R134 §3.4, whose route list is open. The ledg
 | logical prose and registry | Unchanged; the route reads the existing `kind`, instance modes, and catalog binding, and no declaration changes. | None required. |
 | physical profiles | Part 03 §2 states opaque ownership; §3.1's `media/` line becomes `opaque/<resource_id>/<name>`; §4 makes a manifest `uri` without a scheme a relative reference in one percent-encoded form, which a reader or validator decodes; §10 gains the opaque digest and its listing keys; §11's routes gain the opaque route; §11.2 gains `opaque_location`; §11.3 states the payload, its binding to a catalog row or singleton declaration, the refusals, the in-process hand-over, names, and the resource-document refusals. The descriptor and its schema are unchanged. | `evidence/R<N>.json` names `ew-portable-profile-technologies`, `ew-portable-packet-layout`, `ew-portable-uri-rules`, `ew-owned-resource-digests`, `ew-reaching-a-source`, `ew-build-supplied-values`, and `ew-referenced-resource-delivery`. |
 | packet manifest and JSON Schemas | Manifest, delivery, recipe, and adapter schemas unchanged; the adapter schema's `needs` already admits any term. Part 04 §4.3 writes listing keys under RFC 8785, §5.4 names the new prefix case, §5.5 calls a source-relative `uri` a relative reference, §10 gains `packet.resource.uri_form`, and §11 gains RFC 8785. | `registry/check.py`, the vendoring check, and `evidence/R<N>.json` naming `ew-resource-digests`, `ew-prefix-resources`, `ew-source-resolution`, `ew-packet-manifest-conformance`, and `ew-packet-catalog-normative-references`. |
-| validation and import | Part 05 §2 says a payload is staged by its delivery. Part 05 §5.3 gains `physical.opaque_name_portability` at `warning`, and Part 05 §15 the Unicode Standard, Version 16.0.0, which Python 3.14's `unicodedata` implements. Part 05 §6's promotion record already lists every promoted resource directory. | The writer tests below and the corpus fixtures. |
+| validation and import | Part 05 §2 says a payload is staged by its delivery. Part 05 §5.3 gains `physical.opaque_name_portability` at `warning`, and Part 05 §15 the Unicode Standard, Version 15.0.0, the edition of the oldest Python the reference packages support; Unicode's normalization and case-folding stability policies keep D145's result for every code point 15.0.0 assigns, so an implementation of a later edition agrees on every name built from them. Part 05 §6's promotion record already lists every promoted resource directory. | The writer tests below, the corpus fixtures, and `evidence/R<N>.json` naming `ew-import-pipeline`, `ew-validation-shim`, and `ew-validation-normative-references`. |
 | extensions | Registry content unchanged. An extension declaring an opaque catalog family or singleton gains the route without registry change, and Part 09 §5.7, which states how an extension's registry document and rows reach a build, is unchanged. The AIND `video` adapter is unchanged; it may own a video once it declares `opaque_location`, which this decision permits and does not require. | The AIND suite. |
-| reader, writer, validator, adapters | The writer supplies `opaque_location`, binds payloads by resource directory to catalog rows and singleton declarations, applies the refusals, publishes payloads under their names in their own directories, writes every relative URI in §3.4's form, rewrites and refuses resource-document URIs, digests payloads, writes listings under §3.6, accepts payload bytes in process over every protocol, and refuses an unmarked resource-document entry. The reader and validator decode every relative URI; the validator reports `packet.resource.uri_form` and payload names that collide or that Windows cannot hold, and writes listings under §3.6, as the fixture builder does. Digest, binding, and presence checks are otherwise unchanged (§2.4). | Writer, validator, and reader suites. |
-| conformance fixtures and tests | Packet fixtures for an owned opaque single object, an owned opaque prefix, and an owned opaque singleton, one with a name needing percent-encoding, each checked for binding and digest; a negative fixture whose owned opaque digest disagrees; a prefix holding `é.png` in NFC beside `É.png` in NFD and a file named `12:00:00.png`, which passes with two `physical.opaque_name_portability` warnings; a negative fixture whose relative `uri` holds a raw space, failing `packet.resource.uri_form`; and a prefix whose keys hold `"`, `\`, a newline, U+007F, `é`, and a code point above U+FFFF, pinning §3.6's value. Writer tests in §6. | The corpus and the writer suite. |
+| reader, writer, validator, adapters | The writer supplies `opaque_location`, binds payloads by resource directory to catalog rows and singleton declarations, applies the refusals, publishes payloads under their names in their own directories, writes every relative URI in §3.4's form, rewrites and refuses resource-document URIs, digests payloads, writes listings under §3.6, accepts payload bytes in process over every protocol, records every resource-document entry as external, and refuses one declaring `external: false`. The reader and validator decode every relative URI; the validator reports `packet.resource.uri_form` and payload names that collide or that Windows cannot hold, and writes listings under §3.6, as the fixture builder does. Digest, binding, and presence checks are otherwise unchanged (§2.4). | Writer, validator, and reader suites. |
+| conformance fixtures and tests | Packet fixtures for an owned opaque single object, an owned opaque prefix, and an owned opaque singleton, one with a name needing percent-encoding, each checked for binding and digest; a negative fixture whose owned opaque digest disagrees; a prefix holding `é.png` in NFC beside `É.png` in NFD and a file named `12:00:00.png`, which passes with two `physical.opaque_name_portability` warnings; negative fixtures whose relative `uri` holds a raw space, lowercase hexadecimal digits (`%c3%a9`), an encoded unreserved character (`%41`), or a `..` segment, each failing `packet.resource.uri_form`; and a prefix whose keys hold `"`, `\`, a newline, U+007F, `é`, and a code point above U+FFFF, pinning §3.6's value. Writer tests in §6. | The corpus and the writer suite. |
 | revision process and tooling | Ordinary ledger and evidence records, with the notes stated above. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. Part 07 §4 names a payload beside an array. The writer README and the AIND `video` module text describe the route. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
 Each clause is `applied` by canonical anchor: §3.1 at `ew-portable-profile-technologies`,
-`ew-reaching-a-source`, and `ew-build-supplied-values`; §3.2 at `ew-referenced-resource-delivery`
-and `ew-import-pipeline`; §3.3 at `ew-referenced-resource-delivery`, `ew-validation-shim`,
-`ew-validation-normative-references`, and `ew-portable-packet-layout`; §3.4 at
+`ew-reaching-a-source`, and `ew-build-supplied-values`; §3.2 at `ew-referenced-resource-delivery`,
+`ew-import-pipeline`, and `ew-reference-object-model`; §3.3 at `ew-referenced-resource-delivery`,
+`ew-validation-shim`, `ew-validation-normative-references`, and `ew-portable-packet-layout`; §3.4 at
 `ew-portable-uri-rules`, `ew-source-resolution`, `ew-packet-manifest-conformance`, and
 `ew-referenced-resource-delivery`; §3.5 at `ew-owned-resource-digests` and `ew-prefix-resources`;
 §3.6 at `ew-resource-digests` and `ew-packet-catalog-normative-references`; and §3.7 at
@@ -470,13 +485,18 @@ Writer tests distinguish the new rules from the current ones:
 - a payload holding `a.png` beside `A.png`, a name in NFD, and `12:00:00.png` is published with
   every name unchanged, and the build's validation reports two `physical.opaque_name_portability`
   warnings and passes;
-- the build refuses a `resource_id` delivered as a payload by two sources, or as a payload and a
-  resource-document entry;
+- the build refuses, naming the resource ID: a `resource_id` delivered as a payload by two sources,
+  or as a payload and a resource-document entry; an opaque catalog row that nothing binds; a
+  resource directory named both by a catalog row and by a singleton declaration; and a payload for a
+  singleton declaration that the recipe leaves another source owning;
+- two sources each delivering a payload of one resource ID are each supplied their own
+  `opaque_location`, so the build sees both and refuses the duplicate rather than merging them;
 - a resource-document entry whose `uri` is `videos/cam 1.mp4` is refused, and one whose `uri` is
-  `videos/cam%201.mp4` is resolved by the reader against its source, and one spelled
-  `videos/r%c3%a9sum%c3%a9.pdf` is recorded as `videos/r%C3%A9sum%C3%A9.pdf`; and
-- a resource-document entry without `external: true` is refused, where the current writer records it
-  as external.
+  `videos/cam%201.mp4` is resolved by the reader against its source, one spelled
+  `videos/r%c3%a9sum%c3%a9.pdf` is recorded as `videos/r%C3%A9sum%C3%A9.pdf`, and ones spelled
+  `a%2Fb.mp4` or `../b.mp4` are refused; and
+- a resource-document entry declaring `external: false` is refused, and one declaring nothing is
+  recorded as external.
 
 The positive case beside them is an adapter declaring no `opaque_location`, which delivers rows,
 arrays, and referenced resources as today. The corpus fixtures of §5 check what a validator decides:
