@@ -13,9 +13,9 @@ belong to the subject-owning parts listed in §9.
 
 This specification defines a portable data packet as a small semantic and logical standard over
 commodity storage formats. Its packet mechanism comprises the packet manifest (Part 04), the logical
-declaration and registry model (Part 02 §§2–10), the physical profile (Part 03), validation and
-import (Part 05), extensions (Part 09), and the Tier 2 rule language (Part 11), and it confines no
-packet to a recording modality. Which resources a packet carries is decided by the registries it
+declaration and registry model (Part 02 §§2–10), the physical profile (Parts 03 and 12), validation
+and import (Part 05), extensions (Part 09), and the Tier 2 rule language (Part 11), and it confines
+no packet to a recording modality. Which resources a packet carries is decided by the registries it
 binds and their presence policies (Part 02 §2.5).
 
 The **core vocabulary** comprises the concepts Part 01 defines and the declarations of the core
@@ -184,16 +184,20 @@ Part 02 and the artifacts it incorporates specify it.
 <a id="ew-physical-profile" data-spec-anchor="canonical"></a>
 #### 3.1.3 Physical profile
 
-A **physical profile** defines how logical resources are stored. Two are contemplated:
+A **physical profile** defines how logical resources are stored, and can also define the adapter
+interface by which a build writing a packet under it receives what adapters read. Two are
+contemplated:
 
 | profile | tables | arrays | manifest |
 |---|---|---|---|
 | portable | Parquet | Zarr | JSON manifest |
 | lakehouse | Iceberg over Parquet | Zarr | JSON manifest plus Iceberg catalog references |
 
-Only the portable profile, `escapewheel-portable-v0.1`, is specified. Part 03 specifies it and is
-normative for a packet whose manifest declares its `profile_id` and binds no other packet. A
-physical profile is the only abstraction level whose rules may depend on a storage technology.
+Only the portable profile, `escapewheel-portable-v0.1`, is specified, and it defines both. Part 03
+specifies how it stores a packet and is normative for a packet whose manifest declares its
+`profile_id` and binds no other packet; Part 12 specifies its adapter interface. A physical profile
+is the only abstraction level whose rules may depend on a storage technology, and Parts 03 and 12,
+which form the physical level, are the only parts whose rules may.
 
 <a id="ew-packet-content-classes" data-spec-anchor="canonical"></a>
 ### 3.2 Packet content classes
@@ -356,8 +360,10 @@ implementation of this specification MUST NOT require it.
 A physical profile — Iceberg's or any other — MUST declare a `profile_id` that a packet's manifest
 names, MUST bind only the packets declaring it, and MUST say how each logical resource of Part 02
 is stored. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the
-defect is in those parts rather than in the profile. No clause of Part 01 or Part 02 may depend on a
-clause of Part 03.
+defect is in those parts rather than in the profile. A physical profile's adapter interface binds a
+build only while the build writes a packet declaring the profile, and binds an adapter only while
+such a build reaches it. No clause of Part 01 or Part 02 may depend on a clause of Part 03 or
+Part 12.
 
 `packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A writer
 MUST NOT increment `packet_version` for a rewrite of rows.
@@ -396,6 +402,7 @@ MUST make the candidate inconsistent.
 | 09 | extension boundaries, namespace ownership, extension declarations, and extension independence | normative |
 | 10 | performance measurements and rationale | informative |
 | 11 | portable language and execution semantics for registry-declared validation rules | normative |
+| 12 | exchange between a build and the adapters it reaches under the portable profile | normative |
 
 An informative section MUST NOT be the sole statement of an obligation. A part MUST NOT state a
 second version of a rule another part owns. It MAY cite the owner, or summarize the rule only when
@@ -414,7 +421,11 @@ The numbered parts MUST observe this dependency direction:
    identifiers that govern them without redefining those contracts.
 6. Part 05 specifies how writers, readers, and validators construct and judge instances under the
    upstream contracts rather than becoming a second owner of those contracts.
-7. Part 09 permits namespaced extension declarations under the same applicable semantic, logical,
+7. Part 12 specifies what a build and the adapters it reaches exchange under a profile, within
+   Part 05's import pipeline, without changing Part 02's logical resources and identities or how
+   Part 03 stores them; Part 05 cites it for what a build supplies an adapter and what a delivery
+   states.
+8. Part 09 permits namespaced extension declarations under the same applicable semantic, logical,
    physical, manifest, and conformance boundaries without altering core.
 
 A writer MUST interpret adapter declarations and output under the owning numbered parts and
@@ -482,6 +493,7 @@ The application column states the extent to which the specification invokes each
 | [RFC 3986](https://www.rfc-editor.org/info/rfc3986) | exact | URI syntax |
 | [JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core) and [Validation](https://json-schema.org/draft/2020-12/json-schema-validation) | Draft 2020-12 | incorporated JSON Schemas |
 | [RFC 1952](https://www.rfc-editor.org/info/rfc1952) | exact | gzip member format of a bound registry (Part 03 §3.3) and CRC-32 (Part 04 §4.3) |
+| [Apache Parquet format](https://github.com/apache/parquet-format), including [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md) | unversioned | Parquet files and logical types of stored tables (Part 03 §5) and of `files-v0.1` deliveries (Part 12 §3) |
 
 The missing-authority release block applies currently to any required Zarr codec configuration or
 binary behavior not determined by the authorities in

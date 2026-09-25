@@ -28,10 +28,10 @@ def test_this_distribution_registers_the_kinds_it_ships():
 
 @pytest.mark.parametrize("kind", sorted(KINDS))
 def test_every_registered_adapter_generates_a_valid_document(kind):
-    """Generated rather than maintained (Part 03 §11.5), and complete without a protocol supplied.
+    """Generated rather than maintained (Part 12 §7), and complete without a protocol supplied.
 
     A kind registered by another distribution is released independently of a build, so its class
-    must state its protocols; a build refuses one that states none (Part 03 §11.1).
+    must state its protocols; a build refuses one that states none (Part 12 §3).
     """
     document = declaration.of(KINDS[kind], kind)
     assert declaration.shape_problems(document) == []
@@ -44,9 +44,9 @@ def test_every_option_an_adapter_reads_is_declared(kind):
     """The declared list is checked against the constructor, so it cannot go stale.
 
     A parameter holding a default is an option a recipe may set, and one a recipe may set and no
-    declaration names is refused (Part 03 §11.2) -- so an option added here without being declared
+    declaration names is refused (Part 12 §4) -- so an option added here without being declared
     would refuse every recipe setting it. `store` is the exception: a handle a recipe cannot
-    carry, supplied where the class accepts one rather than declared (Part 03 §11.2).
+    carry, supplied where the class accepts one rather than declared (Part 12 §4).
     """
     adapter = KINDS[kind]
     parameters = list(inspect.signature(adapter.__init__).parameters.values())[1:]

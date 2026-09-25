@@ -36,7 +36,7 @@ def _by_resource() -> dict[str, list[str]]:
 
 @pytest.mark.parametrize("kind", EVERY_KIND)
 def test_an_adapter_contributes_only_what_it_produces(kind):
-    """Part 03 §11.5: a resource supplied in part is still one the adapter declares it can supply."""
+    """Part 12 §7: a resource supplied in part is still one the adapter declares it can supply."""
     assert contributes(kind) <= produces(kind), f"{kind} contributes {sorted(contributes(kind) - produces(kind))}"
 
 
@@ -93,7 +93,7 @@ def test_the_build_dispatches_on_no_kind():
 
     Both used to branch per kind: `_build_source` passed a different set of extras for each, and
     the call side passed three adapters values they never declared -- a mapping of rates, a
-    closure, and eight keyword arguments -- which Part 03 §11.2 forbids a build to require and
+    closure, and eight keyword arguments -- which Part 12 §4 forbids a build to require and
     which no protocol could carry. A branch reappearing in either is a value that belongs in the
     adapter's `NEEDS`.
 

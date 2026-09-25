@@ -1,8 +1,8 @@
 """What an adapter declares, as a document a build reads instead of importing it.
 
 A build reads `protocols`, `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`
-before it opens any source, and for a class it reads them by importing the adapter -- which Part 03
-§11.5 forbids requiring. So an adapter a build cannot import publishes the same facts as JSON, and
+before it opens any source, and for a class it reads them by importing the adapter -- which Part 12
+§7 forbids requiring. So an adapter a build cannot import publishes the same facts as JSON, and
 the two forms are one declaration: a build checks a class as the document it would generate, and
 prefers neither.
 
@@ -19,7 +19,7 @@ from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-#: Part 03 §11.1's group for `escapewheel-portable-v0.1`: the ways rows cross a process boundary.
+#: Part 12 §3's group for `escapewheel-portable-v0.1`: the ways rows cross a process boundary.
 #: A build supports every one of them, so no negotiation can fail; an adapter released
 #: independently of a build declares at least one, as a class's `PROTOCOLS` or a document's
 #: `protocols`.
@@ -28,7 +28,7 @@ STREAM = "stream-v0.1"
 FLIGHT = "flight-v0.1"
 PROTOCOLS = (FILES, STREAM, FLIGHT)
 
-#: Terms a protocol requires rather than an adapter declares (Part 03 §11.2). A build supplies one
+#: Terms a protocol requires rather than an adapter declares (Part 12 §4). A build supplies one
 #: because it reaches the adapter by that protocol and never because the adapter asked, so an
 #: adapter declaring one is refused as any undeclarable name is.
 PROTOCOL_TERMS = {
@@ -37,7 +37,7 @@ PROTOCOL_TERMS = {
     FLIGHT: ("socket",),
 }
 
-#: Where a report travels as a file, and so where `report_path` is supplied (Part 09 §5.8). Under
+#: Where a report travels as a file, and so where `report_path` is supplied (Part 12 §9). Under
 #: `flight-v0.1` the connection carries it and no file outlives the run.
 REPORT_AS_FILE = (FILES, STREAM)
 
@@ -46,7 +46,7 @@ BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
 
 
 def schema() -> dict[str, Any]:
-    """Load the bundled JSON Schema for a declaration document (Part 03 §11.5).
+    """Load the bundled JSON Schema for a declaration document (Part 12 §7).
 
     Vendored from `registry/` the way the manifest's schema is, because a wheel cannot read a file
     from another repository.
@@ -70,7 +70,7 @@ def of(adapter: Any, kind: str, protocols: Sequence[str] = ()) -> dict[str, Any]
         The name a recipe's source entry uses for it.
     protocols : sequence of str, optional
         What to declare for a class stating no `PROTOCOLS`, as an adapter a build ships does not
-        (Part 03 §11.1). A class stating its own keeps them.
+        (Part 12 §3). A class stating its own keeps them.
 
     Returns
     -------
@@ -94,11 +94,11 @@ def of(adapter: Any, kind: str, protocols: Sequence[str] = ()) -> dict[str, Any]
 
 
 def shape_problems(document: Any, *, shipped: bool = False) -> list[str]:
-    """Where a declaration fails the schema Part 03 §11.5 incorporates, each as `where: message`.
+    """Where a declaration fails the schema Part 12 §7 incorporates, each as `where: message`.
 
     One check for a document and for the document a class would generate, so the two are refused
     for the same defects. `shipped` lifts the one difference: an adapter a build ships may declare
-    no protocol (Part 03 §11.1).
+    no protocol (Part 12 §3).
     """
     import jsonschema
 
@@ -146,7 +146,7 @@ def refusals(
 ) -> list[str]:
     """Return what a build refuses this declaration for, reading it, the registry and the recipe.
 
-    Part 03 §11.5's checks, each firing on its own and naming what is wrong. None of them
+    Part 12 §7's checks, each firing on its own and naming what is wrong. None of them
     needs the adapter opened or imported, which is the point: a declaration is checked against
     what a build holds and never against the thing it describes.
 
@@ -159,10 +159,10 @@ def refusals(
     options : collection of str
         The option names the recipe's entry for this source sets.
     terms : collection of str
-        Part 03 §11.2's vocabulary, which a declared name resolves against first.
+        Part 12 §4's vocabulary, which a declared name resolves against first.
     payloads : collection of str
         The loaded registries' opaque singleton declarations, which an adapter may produce as a
-        payload rather than as rows (Part 03 §11.3).
+        payload rather than as rows (Part 12 §5).
     """
     found = [
         f"declares protocol {protocol!r}, which is in no group this profile names"
@@ -192,7 +192,7 @@ def refusals(
         elif name not in terms and name not in options:
             found.append(f"needs {name}, neither a term nor an option this entry sets")
     # An accepted option is one the recipe may leave unset, so it is never checked for presence --
-    # only that it is an option at all, and that it is not already mandatory (Part 03 §11.5).
+    # only that it is an option at all, and that it is not already mandatory (Part 12 §7).
     declared_needs = set(document.get("needs", ()))
     for name in document.get("accepts", ()):
         if name in terms or name in _protocol_terms():

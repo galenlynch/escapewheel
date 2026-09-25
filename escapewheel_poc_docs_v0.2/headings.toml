@@ -171,14 +171,7 @@
 "9.5" = "Cleanup"
 "9.6" = "What a version is not"
 "10" = "Checksums"
-"11" = "Reaching a source"
-"11.1" = "Protocol groups"
-"11.2" = "What a build supplies"
-"11.3" = "What a delivery states"
-"11.4" = "The Arrow IPC floor"
-"11.5" = "The declaration document"
-"11.6" = "Reaching an adapter that must be running"
-"11.7" = "The source cache"
+"11" = "Opaque storage"
 "12" = "Normative references"
 
 ["04"]
@@ -291,7 +284,6 @@
 "5.5" = "Independent versioning"
 "5.6" = "A writer requires no code of an extension"
 "5.7" = "How an extension's document and rows reach a build"
-"5.8" = "What an extension may state about its own run"
 "6" = "Direction of reference"
 "6.1" = "Core does not reference an extension"
 "6.2" = "Core may name an extension"
@@ -331,6 +323,19 @@
 "8" = "Evaluation outcomes"
 "9" = "Normative references"
 
+["12"]
+"1" = "Scope"
+"2" = "Reaching a source"
+"3" = "Protocol groups"
+"4" = "What a build supplies"
+"5" = "What a delivery states"
+"6" = "The Arrow IPC floor"
+"7" = "The declaration document"
+"8" = "Reaching an adapter that must be running"
+"9" = "What an adapter may state about its own run"
+"10" = "The source cache"
+"11" = "Normative references"
+
 [anchor.ew-abstraction-levels]
 part = "00"
 section = "3.1"
@@ -338,15 +343,27 @@ title = "Abstraction levels"
 aliases = []
 
 [anchor.ew-adapter-declaration-document]
-part = "03"
-section = "11.5"
+part = "12"
+section = "7"
 title = "The declaration document"
 aliases = []
 
+[anchor.ew-adapter-interface-normative-references]
+part = "12"
+section = "11"
+title = "Normative references"
+aliases = []
+
+[anchor.ew-adapter-interface-scope]
+part = "12"
+section = "1"
+title = "Scope"
+aliases = []
+
 [anchor.ew-adapter-run-report]
-part = "09"
-section = "5.8"
-title = "What an extension may state about its own run"
+part = "12"
+section = "9"
+title = "What an adapter may state about its own run"
 aliases = []
 
 [anchor.ew-analysis-content-class]
@@ -452,8 +469,8 @@ title = "Version"
 aliases = []
 
 [anchor.ew-arrow-ipc-floor]
-part = "03"
-section = "11.4"
+part = "12"
+section = "6"
 title = "The Arrow IPC floor"
 aliases = []
 
@@ -464,8 +481,8 @@ title = "Authority by concern"
 aliases = []
 
 [anchor.ew-build-supplied-values]
-part = "03"
-section = "11.2"
+part = "12"
+section = "4"
 title = "What a build supplies"
 aliases = []
 
@@ -793,6 +810,12 @@ section = "5.6"
 title = "One null"
 aliases = []
 
+[anchor.ew-opaque-storage]
+part = "03"
+section = "11"
+title = "Opaque storage"
+aliases = []
+
 [anchor.ew-owned-resource-digests]
 part = "03"
 section = "10"
@@ -932,20 +955,20 @@ title = "Prefix resources"
 aliases = []
 
 [anchor.ew-protocol-groups]
-part = "03"
-section = "11.1"
+part = "12"
+section = "3"
 title = "Protocol groups"
 aliases = []
 
 [anchor.ew-reaching-a-running-adapter]
-part = "03"
-section = "11.6"
+part = "12"
+section = "8"
 title = "Reaching an adapter that must be running"
 aliases = []
 
 [anchor.ew-reaching-a-source]
-part = "03"
-section = "11"
+part = "12"
+section = "2"
 title = "Reaching a source"
 aliases = []
 
@@ -1010,8 +1033,8 @@ title = "Performance notes"
 aliases = []
 
 [anchor.ew-referenced-resource-delivery]
-part = "03"
-section = "11.3"
+part = "12"
+section = "5"
 title = "What a delivery states"
 aliases = []
 
@@ -1154,8 +1177,8 @@ title = "Session scope"
 aliases = []
 
 [anchor.ew-source-cache]
-part = "03"
-section = "11.7"
+part = "12"
+section = "10"
 title = "The source cache"
 aliases = []
 

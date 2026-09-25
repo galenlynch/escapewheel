@@ -85,7 +85,7 @@ directory named by its `core.array_assets` row's `resource_id`, which is all the
 its resource declaration. An adapter never chooses final packet paths or commits resources.
 
 An adapter this package ships declares no `PROTOCOLS`; one registered by another distribution
-declares the protocols it supports, since it is released apart from the writer (Part 03 §11.1).
+declares the protocols it supports, since it is released apart from the writer (Part 12 §3).
 `Recipe.check` checks every adapter class as the document `escapewheel declare` would generate.
 
 1. **Declare what it owns** in the recipe, and `contributes` only where a resource genuinely has
@@ -166,7 +166,7 @@ a declaration and a script that writes Parquet: nothing to install, so nothing t
 same failure `ndx-` extensions demonstrate on the read path, avoided one step earlier.
 
 Under `files-v0.1` the command reads the build's terms as one JSON object on standard input (Part
-03 §11.2) and writes `<resource_id>.parquet` for each resource into the `delivery_root` that
+12 §4) and writes `<resource_id>.parquet` for each resource into the `delivery_root` that
 object names. The declaration document satisfies `registry/adapter.schema.json`, and a build reads
 it before it launches anything, so a term the script needs is one it declares.
 

@@ -14,7 +14,7 @@ class SourceDefect(ValueError):
     """A source cannot supply what it was asked for, and the build cannot proceed past it.
 
     Carried as an exception rather than a note because it stops a build (Part 05 §4.4), where what
-    an adapter worked around goes in the run's report (Part 09 §5.8).
+    an adapter worked around goes in the run's report (Part 12 §9).
     """
 
 

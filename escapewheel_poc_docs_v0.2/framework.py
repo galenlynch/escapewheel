@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 CORE_REGISTRY = HERE.parent / "registry" / "logical_schemas.json"
 
 PARTS = {path.name[:2]: path.name for path in sorted(HERE.glob("[0-9][0-9]_*.md"))}
-EXPECTED_PARTS = {f"{number:02d}" for number in range(12)}
+EXPECTED_PARTS = {f"{number:02d}" for number in range(13)}
 
 IDENTIFIERS = {
     "profile_id": (
@@ -89,11 +89,11 @@ REFERENCE_OWNERS = {
     "RFC 3986": "00",
     "JSON Schema Core": "00",
     "JSON Schema Validation": "00",
-    "Parquet": "03",
-    "Parquet logical types": "03",
-    "Arrow columnar": "03",
-    "Arrow IPC": "03",
-    "Arrow Flight": "03",
+    "Parquet": "00",
+    "Parquet logical types": "00",
+    "Arrow columnar": "12",
+    "Arrow IPC": "12",
+    "Arrow Flight": "12",
     "Zarr v3 core": "03",
     "Zarr data types": "03",
     "Zarr regular chunk grid": "03",
@@ -131,6 +131,7 @@ REFERENCE_ANCHORS = {
     "03": "ew-portable-profile-normative-references",
     "04": "ew-packet-catalog-normative-references",
     "11": "ew-rule-language-normative-references",
+    "12": "ew-adapter-interface-normative-references",
 }
 
 REFERENCE_SECTION_ANCHOR = re.compile(r'id="(ew-[a-z-]*normative-references)"')
@@ -163,6 +164,11 @@ REFERENCE_ROWS = {
             "exact",
             "gzip member format of a bound registry (Part 03 §3.3) and CRC-32 (Part 04 §4.3)",
         ),
+        (
+            "[Apache Parquet format](https://github.com/apache/parquet-format), including [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)",
+            "unversioned",
+            "Parquet files and logical types of stored tables (Part 03 §5) and of `files-v0.1` deliveries (Part 12 §3)",
+        ),
     ),
     "02": (
         (
@@ -187,16 +193,6 @@ REFERENCE_ROWS = {
         ),
     ),
     "03": (
-        (
-            "[Apache Parquet format](https://github.com/apache/parquet-format), including [logical types](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md)",
-            "unversioned",
-            "Parquet files and logical types",
-        ),
-        (
-            "[Apache Arrow columnar format](https://arrow.apache.org/docs/format/Columnar.html), [IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc), and [Flight](https://arrow.apache.org/docs/format/Flight.html)",
-            "unversioned",
-            "Arrow data, IPC, and Flight",
-        ),
         (
             "[Zarr v3 core](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html), [data types](https://zarr-specs.readthedocs.io/en/latest/v3/data-types/index.html), [regular chunk grid](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-grids/regular-grid/index.html), and [default chunk-key encoding](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-key-encodings/default/index.html)",
             "core v3.0; other entries unversioned",
@@ -277,13 +273,21 @@ REFERENCE_ROWS = {
             "binary32, binary64, rounding, exceptional values, and approximate arithmetic",
         ),
     ),
+    "12": (
+        (
+            "[Apache Arrow columnar format](https://arrow.apache.org/docs/format/Columnar.html), [IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc), and [Flight](https://arrow.apache.org/docs/format/Flight.html)",
+            "unversioned",
+            "Arrow data, IPC, and Flight",
+        ),
+    ),
 }
 
 REFERENCE_INVOCATIONS = {
     "00": "Normative prose invokes an external authority **directly**",
-    "03": "Its requirements directly invoke the shared JSON, URI, and RFC 1952",
+    "03": "Its requirements directly invoke the shared JSON, URI, JSON Schema, Parquet, and RFC 1952",
     "04": "Its requirements directly invoke the shared JSON, URI, JSON Schema, and RFC 1952",
     "11": "SQL/Foundation editions, corrigenda, and IEEE floating-point edition identified in §9",
+    "12": "Its requirements directly invoke the shared JSON, URI, JSON Schema, and Parquet",
 }
 
 NORMATIVE_KEYWORD = re.compile(
@@ -439,7 +443,7 @@ def defects(
     )
     readme_parts = [row[0] for row in readme_rows]
     if readme_parts != sorted(EXPECTED_PARTS):
-        found.append("README part projection does not contain Parts 00–11 exactly once")
+        found.append("README part projection does not contain Parts 00–12 exactly once")
     for number, title, status in readme_rows:
         if number not in PARTS:
             continue

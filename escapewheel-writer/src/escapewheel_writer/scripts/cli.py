@@ -10,7 +10,7 @@ ownership decisions a build depends on are made from what the sources actually h
 from memory.
 ``import`` is every later step, delivery through publication.
 
-``declare`` and ``deliver`` are the two halves of Part 03 §11's boundary. ``declare`` writes an
+``declare`` and ``deliver`` are the two halves of Part 12's boundary. ``declare`` writes an
 adapter's declarations as the document a build reads where it cannot import one, generated from the
 class rather than maintained. ``deliver`` runs one adapter and hands its rows over a protocol, which
 is how an adapter this package ships becomes reachable out of process without declaring anything --
@@ -38,7 +38,7 @@ from ..writer import CommitRefused
 
 
 def declaration_protocols() -> tuple[str, ...]:
-    """Part 03 §11.1's group, read where the CLI is built rather than imported at module load."""
+    """Part 12 §3's group, read where the CLI is built rather than imported at module load."""
     from ..declaration import PROTOCOLS
 
     return PROTOCOLS
@@ -423,7 +423,7 @@ def _extension_check(args: argparse.Namespace) -> int:
 
 
 def _declare(args: argparse.Namespace) -> int:
-    """Write one adapter's declarations as the document Part 03 §11.5 publishes the shape of."""
+    """Write one adapter's declarations as the document Part 12 §7 publishes the shape of."""
     from .. import declaration
     from ..sources import ADAPTERS, discovered
 
@@ -439,7 +439,7 @@ def _declare(args: argparse.Namespace) -> int:
     if problems := declaration.shape_problems(document):
         for problem in problems:
             print(f"  {problem}", file=sys.stderr)
-        print(f"{args.kind}: its declaration does not satisfy the schema (Part 03 §11.5)", file=sys.stderr)
+        print(f"{args.kind}: its declaration does not satisfy the schema (Part 12 §7)", file=sys.stderr)
         return 2
     text = json.dumps(document, indent=2) + "\n"
     if args.out is None:
@@ -456,7 +456,7 @@ def _deliver(args: argparse.Namespace) -> int:
     from ..sources import SourceDefect
 
     # Read to end of file before anything is written, which is what a build supplies and all it
-    # supplies on this stream (Part 03 §11.2).
+    # supplies on this stream (Part 12 §4).
     try:
         supplied = json.loads(sys.stdin.buffer.read() or b"{}")
     except json.JSONDecodeError as exc:
@@ -597,7 +597,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         "--protocol",
         action="append",
         choices=declaration_protocols(),
-        help="a protocol to declare for an adapter stating none, repeatable (default: stream-v0.1; Part 03 §11.1)",
+        help="a protocol to declare for an adapter stating none, repeatable (default: stream-v0.1; Part 12 §3)",
     )
     declare.add_argument("--out", type=Path, help="write here rather than to stdout")
     declare.set_defaults(func=_declare)

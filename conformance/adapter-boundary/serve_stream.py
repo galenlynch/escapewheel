@@ -26,7 +26,7 @@ def emit(out, resource: str, table: pa.Table) -> None:
 
 
 if __name__ == "__main__":
-    # Part 03 §11.2: what a build supplies crosses on standard input, read to end of file
+    # Part 12 §4: what a build supplies crosses on standard input, read to end of file
     # before anything is written.
     supplied = json.loads(sys.stdin.buffer.read())
     source = build(supplied)
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     out.flush()
     if path := supplied.get("report_path"):
         # The one fact a declaration cannot carry: `states` names the recipe fields this source can
-        # state, and every value needs the source read. Part 09 §5.8's report is the channel.
+        # state, and every value needs the source read. Part 12 §9's report is the channel.
         stated = {
             field: getattr(source, attr) for field, attr in type(source).STATES.items()
         }

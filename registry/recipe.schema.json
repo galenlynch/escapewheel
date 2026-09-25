@@ -174,7 +174,7 @@
               },
               "declaration": {
                 "type": "string",
-                "description": "The adapter's declaration document (Part 03 §11.5), relative to the recipe."
+                "description": "The adapter's declaration document (Part 12 §7), relative to the recipe."
               },
               "report_path": {
                 "type": "string"

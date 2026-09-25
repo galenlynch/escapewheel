@@ -709,7 +709,7 @@ class PacketWriter:
         self._referenced_arrays: dict[str, ExternalArray] = {}
         self._referenced_media: dict[str, ExternalMedia] = {}
         #: Packet-owned opaque resources as each source delivered them, bound at commit, once every
-        #: source's catalog rows are in (Part 03 §11.3).
+        #: source's catalog rows are in (Part 12 §5).
         self._payloads: list[opaque.StagedPayload] = []
 
     def declaration(self, declaration_id: str) -> Mapping[str, Any] | None:
@@ -1016,7 +1016,7 @@ class PacketWriter:
         self._staged_arrays[resource_id] = array
 
     def _delivered_binding(self, resource_id: str, array: StagedArray) -> StagedArray:
-        """Bind an array delivered by name to the one catalog row carrying that name (Part 03 §11.3).
+        """Bind an array delivered by name to the one catalog row carrying that name (Part 12 §5).
 
         A delivery names an array's directory by the row's `resource_id` and says nothing else, so
         the row is found among every dense-array catalog, and the array takes that catalog's
@@ -1100,7 +1100,7 @@ class PacketWriter:
     def add_payloads(
         self, source: str, location: str | Path, *, owned: Collection[str] | None = None
     ) -> list[opaque.StagedPayload]:
-        """Take every packet-owned opaque resource one source placed in its `opaque_location` (Part 03 §11.3).
+        """Take every packet-owned opaque resource one source placed in its `opaque_location` (Part 12 §5).
 
         Bound at commit rather than here, since the catalog row a payload binds to may come from a
         source that runs later.
@@ -1150,7 +1150,7 @@ class PacketWriter:
         """Bind each payload by its resource directory's name, refusing before anything is validated.
 
         A name binds the catalog row of an opaque catalog family carrying it, or otherwise the opaque
-        singleton declaration it names (Part 03 §11.3). Every opaque catalog row must be bound, and
+        singleton declaration it names (Part 12 §5). Every opaque catalog row must be bound, and
         no resource ID twice, whether by two payloads or by a payload and a referenced resource.
 
         Returns
@@ -1221,7 +1221,7 @@ class PacketWriter:
             if resource_id not in delivered
         ]
         if problems or unbound:
-            raise opaque.PayloadRefused("; ".join([*problems, *unbound]) + " (Part 03 §11.3)")
+            raise opaque.PayloadRefused("; ".join([*problems, *unbound]) + " (Part 12 §5)")
         return bound
 
     @property
@@ -1244,7 +1244,7 @@ class PacketWriter:
             path.parent.mkdir(parents=True, exist_ok=True)
             if spec.written is not None:
                 # Delivered: the adapter wrote it, so staging moves it rather than writing it
-                # again, and what the manifest says about it is read off the array (Part 03 §11.3).
+                # again, and what the manifest says about it is read off the array (Part 12 §5).
                 path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(spec.written), str(path))
                 size = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
@@ -1266,7 +1266,7 @@ class PacketWriter:
         """Move each bound payload's resource directory under `staging` and return its manifest entries.
 
         The directory holds its payload alone, so moving it whole publishes the payload under its own
-        name in a directory holding nothing else (Part 03 §11.3), and promotion is then one rename.
+        name in a directory holding nothing else (Part 03 §11), and promotion is then one rename.
         """
         entries = []
         for payload, declaration_id in bound:
@@ -1515,7 +1515,7 @@ class PacketWriter:
         """Prepare, empty, the staging area `commit` will use at `root`, and return it.
 
         For a build pointing deliveries there before any source runs, so commit moves what they
-        wrote by rename (Part 03 §11.3) and keeps it rather than clearing it.
+        wrote by rename (Part 12 §5) and keeps it rather than clearing it.
 
         Raises
         ------

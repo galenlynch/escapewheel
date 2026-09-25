@@ -117,7 +117,7 @@ class SessionSource(Compensates):
     >>> source.behavior().start  # doctest: +SKIP
     """
 
-    #: Part 03 §11.1: released apart from the writer, so it declares its protocols. `escapewheel
+    #: Part 12 §3: released apart from the writer, so it declares its protocols. `escapewheel
     #: deliver` serves every one; the first is what a build reaches it by when a recipe names none.
     PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
@@ -167,14 +167,14 @@ class SessionSource(Compensates):
         "subject.strain": "stated_strain",
     }
 
-    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: Part 05 §3.4: what a build must supply, resolved against Part 12 §4's terms first and the
     #: recipe's options second. A name resolving to neither is refused before any source is opened.
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
     #: resolves to nothing, so declaring one makes it mandatory.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "zone", "reference_clock")
 
-    #: Part 05 §3.4: options this adapter reads and can run without (Part 03 §11.2).
+    #: Part 05 §3.4: options this adapter reads and can run without (Part 12 §4).
     ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix",)
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
@@ -193,7 +193,7 @@ class SessionSource(Compensates):
     ) -> None:
         zone = zone_of(zone)
         #: The reference clock's own row, emitted as given. A build locates `tick_zero_utc`
-        #: from the record nodes' stamps, which are better than anything here (Part 03 §11.2);
+        #: from the record nodes' stamps, which are better than anything here (Part 12 §4);
         #: :meth:`epoch` is what derives one where a caller has nothing better.
         self.clock_row = dict(reference_clock)
         path = source_root(root)
@@ -691,7 +691,7 @@ class SessionSource(Compensates):
         dict
             `core.clocks`, plus `core.subjects` and the calibration tables where the documents
             behind them are present. The reference clock is the row a build supplied, emitted
-            rather than rebuilt: everything a build supplies is data (Part 03 §11.2), and where
+            rather than rebuilt: everything a build supplies is data (Part 12 §4), and where
             a build located tick 0 from an instrument's own record it knows better than the
             whole-second stream start this JSON carries.
         """

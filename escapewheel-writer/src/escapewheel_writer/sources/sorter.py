@@ -216,7 +216,7 @@ class SorterSource:
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
-    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: Part 05 §3.4: what a build must supply, resolved against Part 12 §4's terms first and the
     #: recipe's options second. A name resolving to neither is refused before any source is opened.
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
@@ -224,8 +224,8 @@ class SorterSource:
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
-    #: unset (Part 03 §11.2). `sample` is among them because a build applies `--sample` by setting
-    #: it, and a build may not supply what the adapter does not declare (Part 03 §11.2).
+    #: unset (Part 12 §4). `sample` is among them because a build applies `--sample` by setting
+    #: it, and a build may not supply what the adapter does not declare (Part 12 §4).
     ACCEPTS: ClassVar[tuple[str, ...]] = (
         "experiment",
         "prefix",

@@ -63,9 +63,9 @@ def main() -> int:
         _replace(
             "00_architecture.md",
             part_row,
-            part_row + "\n| 12 | unknown | informative |",
+            part_row + "\n| 13 | unknown | informative |",
         ),
-        "part table has unknown: 12",
+        "part table has unknown: 13",
     )
     _assert_rejected(
         "conflicting local status",
@@ -140,13 +140,22 @@ def main() -> int:
         "Part 00 normative references are missing BCP 14",
     )
     _assert_rejected(
-        "missing Part 03 reference",
+        "missing shared Parquet reference",
         _replace(
-            "03_portable_physical_profile.md",
+            "00_architecture.md",
             "[Apache Parquet format](https://github.com/apache/parquet-format)",
             "[Apache Parquet format](https://example.invalid/missing-parquet)",
         ),
-        "Part 03 normative references are missing Parquet",
+        "Part 00 normative references are missing Parquet",
+    )
+    _assert_rejected(
+        "missing Part 03 reference",
+        _replace(
+            "03_portable_physical_profile.md",
+            "https://www.rfc-editor.org/info/rfc8878",
+            "https://example.invalid/missing-rfc8878",
+        ),
+        "Part 03 normative references are missing RFC 8878",
     )
     _assert_rejected(
         "missing Part 04 reference",
@@ -167,17 +176,29 @@ def main() -> int:
         "Part 11 normative references are missing IEEE 754-2019",
     )
     parquet_marker = framework.REFERENCE_MARKERS["Parquet"]
-    misplaced_part_03 = _text("03_portable_physical_profile.md").replace(
+    misplaced_part_00 = _text("00_architecture.md").replace(
         parquet_marker, "example.invalid/misplaced-parquet"
     )
     misplaced_part_04 = _text("04_packet_catalog.md") + f"\n{parquet_marker}\n"
     _assert_rejected(
         "misplaced reference",
         {
-            "03_portable_physical_profile.md": misplaced_part_03,
+            "00_architecture.md": misplaced_part_00,
             "04_packet_catalog.md": misplaced_part_04,
         },
-        "Parquet normative reference is in Part 04, expected Part 03",
+        "Parquet normative reference is in Part 04, expected Part 00",
+    )
+    arrow_marker = framework.REFERENCE_MARKERS["Arrow columnar"]
+    _assert_rejected(
+        "Arrow reference outside Part 12",
+        {
+            "12_adapter_interface.md": _text("12_adapter_interface.md").replace(
+                arrow_marker, "example.invalid/misplaced-arrow"
+            ),
+            "03_portable_physical_profile.md": _text("03_portable_physical_profile.md")
+            + f"\n{arrow_marker}\n",
+        },
+        "Arrow columnar normative reference is in Part 03, expected Part 12",
     )
     _assert_rejected(
         "duplicate reference",
@@ -185,7 +206,7 @@ def main() -> int:
             "04_packet_catalog.md": _text("04_packet_catalog.md")
             + f"\n{parquet_marker}\n"
         },
-        "Parquet normative reference appears in Parts 03, 04",
+        "Parquet normative reference appears in Parts 00, 04",
     )
     _assert_rejected(
         "reference copied into an unallocated section",
@@ -252,8 +273,8 @@ def main() -> int:
         "missing Part 03 invocation",
         _replace(
             "03_portable_physical_profile.md",
-            "Its requirements directly invoke the shared JSON, URI, and RFC 1952",
-            "Its requirements use the shared JSON, URI, and RFC 1952",
+            "Its requirements directly invoke the shared JSON, URI, JSON Schema, Parquet, and RFC 1952",
+            "Its requirements use the shared JSON, URI, JSON Schema, Parquet, and RFC 1952",
         ),
         "Part 03 external-reference invocation is missing",
     )
@@ -274,6 +295,15 @@ def main() -> int:
             "SQL and floating-point references identified in §9",
         ),
         "Part 11 external-reference invocation is missing",
+    )
+    _assert_rejected(
+        "missing Part 12 invocation",
+        _replace(
+            "12_adapter_interface.md",
+            "Its requirements directly invoke the shared JSON, URI, JSON Schema, and Parquet",
+            "Its requirements use the shared JSON, URI, JSON Schema, and Parquet",
+        ),
+        "Part 12 external-reference invocation is missing",
     )
     _assert_rejected(
         "implementation used as authority",

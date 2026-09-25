@@ -1,6 +1,6 @@
 """Names in a packet-owned opaque payload that would not survive every copy (Part 05 §5.3).
 
-A payload keeps its names byte for byte (Part 03 §11.3), so the packet is conformant whatever they
+A payload keeps its names byte for byte (Part 03 §11), so the packet is conformant whatever they
 are; these say which names a case- or normalization-folding filesystem, or Windows, cannot hold.
 """
 

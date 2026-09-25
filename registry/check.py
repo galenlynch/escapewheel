@@ -653,7 +653,7 @@ try:
             )
         ],
     )
-    # Part 03 §11.5's declaration document, checked the way the two above are: valid JSON Schema
+    # Part 12 §7's declaration document, checked the way the two above are: valid JSON Schema
     # here, vendored by build.py, and an example that must still satisfy it.
     _adapter = json.loads((HERE / "adapter.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(_adapter)
@@ -701,7 +701,7 @@ try:
         if _recipe_example.exists()
         else [],
     )
-    # Part 03 §11.3's resource document, checked as the three above are.
+    # Part 12 §5's resource document, checked as the three above are.
     _resources = json.loads((HERE / "resources.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(_resources)
     check("resource document schema is valid JSON Schema", [])

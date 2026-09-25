@@ -100,7 +100,7 @@ class Context:
         One record per unit: the probe and the sorter's label for it, and the identifier
         assigned. The join key the NWB and the sorter meet on -- the sorter mints unit identity,
         the NWB places it in space -- carried as rows rather than as a mapping, because a
-        compound key does not survive the crossing (Part 03 §11.2). One identity column, not
+        compound key does not survive the crossing (Part 12 §4). One identity column, not
         three: `core.units` is keyed on `unit_id` alone (Part 02 §12.1), and the tables an
         adapter puts this on declare no other.
     clocks : dict
@@ -151,7 +151,7 @@ class Context:
     #: failed build leaves it where it can be looked at.
     workspace: Path = Path()
     #: The packet's staging area, prepared before any source runs, so an array a source writes
-    #: there moves into the packet by rename at commit (Part 03 §11.3).
+    #: there moves into the packet by rename at commit (Part 12 §5).
     staging: Path = Path()
     #: The build's progress reporter, for the stages that happen inside one source rather than
     #: between them -- a delivery being the one that can take minutes on its own.
@@ -164,7 +164,7 @@ class Context:
     #: Source kind to the `opaque_location` supplied it, which the build reads back once it has run.
     opaque_locations: dict[str, Path] = field(default_factory=dict)
     #: The loaded registries' opaque singletons, which a source owns and delivers as a payload
-    #: rather than as rows (Part 03 §11.3), so no table for one is asked for or staged.
+    #: rather than as rows (Part 12 §5), so no table for one is asked for or staged.
     payloads: frozenset[str] = frozenset()
 
     def alignment(self) -> tuple[dict[str, Any], float]:
@@ -221,7 +221,7 @@ def order(recipe: Recipe) -> list[SourceSpec]:
 
 
 def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collection[str]) -> dict[str, Any]:
-    """Return what this build can fill of Part 03 §11.2's vocabulary, for this source.
+    """Return what this build can fill of Part 12 §4's vocabulary, for this source.
 
     A term absent from the result is one this recipe cannot fill, which is a refusal rather than an
     omission: an adapter cannot tell a term nobody filled from one whose value is legitimately
@@ -230,14 +230,14 @@ def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collectio
     """
     terms: dict[str, Any] = {"root": spec.root, "session_id": context.session_id}
     if "reference_clock" in needed:
-        # The row, not the object: everything a build supplies is data (Part 03 §11.2).
+        # The row, not the object: everything a build supplies is data (Part 12 §4).
         terms["reference_clock"] = _reference(recipe, context).record()
     if "clocks" in needed and context.clocks:
         terms["clocks"] = [context.clocks[clock_id] for clock_id in sorted(context.clocks)]
     if "units" in needed and context.units:
         terms["units"] = context.units
     if "array_location" in needed:
-        # One directory per source (Part 03 §11.3), since two sources may each deliver an asset of
+        # One directory per source (Part 12 §5), since two sources may each deliver an asset of
         # one name, and supplied empty (Part 05 §2), since a build binds what it finds by name.
         location = context.staging / "deliveries" / spec.kind
         if location.exists():
@@ -245,7 +245,7 @@ def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collectio
         terms["array_location"] = str(location)
     if "opaque_location" in needed:
         # One directory per source for the same reason, apart from `array_location`'s so neither
-        # delivery can pass for the other (Part 03 §11.3).
+        # delivery can pass for the other (Part 12 §5).
         location = context.staging / opaque.DELIVERIES / spec.kind
         if location.exists():
             shutil.rmtree(location)
@@ -282,12 +282,12 @@ def _reference(recipe: Recipe, context: Context) -> Any:
 def _supplied(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, Any]:
     """Return what a build supplies this source, resolved against what it declares (Part 05 §3.4).
 
-    Each name in the declaration resolves against Part 03 §11.2's terms first and the recipe's
+    Each name in the declaration resolves against Part 12 §4's terms first and the recipe's
     options second, and a name resolving to neither is refused -- which `Recipe.check` reports
     before anything is opened, so reaching the refusal here means the recipe was not checked.
 
     The recipe's remaining options travel too, under `options`, so no option can collide with a
-    term. They are the ones an adapter can run without, which Part 03 §11.2 gives no way to
+    term. They are the ones an adapter can run without, which Part 12 §4 gives no way to
     declare: a declared name a recipe does not set resolves to nothing, so declaring one would
     make it mandatory.
     """
@@ -322,7 +322,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
     options = supplied.pop("options")
     if (protocol := reached_by(spec)) is not None and spec.delivery is not None:
         # The URI rather than the root this build resolved, and the options that open it beside
-        # it: the other process opens the source for itself (Part 03 §11.2), and what it is
+        # it: the other process opens the source for itself (Part 12 §4), and what it is
         # handed has to be enough to.
         crossing = {**supplied, "root": spec.uri or str(spec.root)}
         if spec.storage_options:
@@ -346,7 +346,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
         raise RecipeError(f"unknown source kind {spec.kind!r}; known kinds are {known}")
     # In process, adapters reading one Zarr root share an open store, so they cannot disagree about
     # what is in it and the electrode table is parsed once. A handle is not something an adapter may
-    # declare (Part 03 §11.2), so it is supplied where the class accepts one rather than from a
+    # declare (Part 12 §4), so it is supplied where the class accepts one rather than from a
     # table of kinds -- and an adapter out of process is handed none and opens its own.
     if "store" in inspect.signature(adapter).parameters:
         options.setdefault("store", store_for(spec.root, context.stores))
@@ -871,7 +871,7 @@ def build(  # noqa: C901
         # Any adapter may stage arrays, not only the waveform one. A source that has them says
         # so by defining `staged_arrays`; the kind it happens to be is not the question.
         for staged in getattr(source, "staged_arrays", lambda: ())():
-            # A delivered array is bytes an adapter already wrote (Part 03 §11.3), so what there
+            # A delivered array is bytes an adapter already wrote (Part 12 §5), so what there
             # is to say about it is what is on disk; one staged in process is values, and its
             # shape is what a reader of the log wants before it costs anything to write.
             if staged.values is None:
@@ -895,7 +895,7 @@ def build(  # noqa: C901
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
             say(f"  referenced {resource_id}{size}")
         # An adapter in this process may hand its payloads over as bytes, which the build writes where
-        # a protocol adapter would have, so both are read back and refused the same way (Part 03 §11.3).
+        # a protocol adapter would have, so both are read back and refused the same way (Part 12 §5).
         location = context.opaque_locations.get(spec.kind)
         opaque.write(getattr(source, "staged_payloads", lambda: ())(), location, spec.kind)
         if location is not None:

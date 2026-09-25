@@ -1,6 +1,6 @@
 """How rows cross a process boundary: the serving half and the reading half of one protocol.
 
-Part 03 §11.1 names three protocols for `escapewheel-portable-v0.1`, and a build supports all of
+Part 12 §3 names three protocols for `escapewheel-portable-v0.1`, and a build supports all of
 them because there is one build and there will be many adapters. Both halves live here so the
 encoder and the decoder of one wire format cannot drift apart.
 
@@ -9,7 +9,7 @@ to reach for where a source is large: the delivery is Parquet on disk, so a buil
 at a time the way it streams any other file. `stream-v0.1` and `flight-v0.1` hold each resource as
 it arrives, because a build consumes resources in its own order and a pipe cannot be rewound.
 
-An adapter's arrays and opaque payloads do not cross here. Part 03 §11.3 has each cross as bytes
+An adapter's arrays and opaque payloads do not cross here. Part 12 §5 has each cross as bytes
 in a location a build supplies, which is a different act from delivering rows; a source that stages
 one is refused with what it would take, rather than delivering half of itself.
 """
@@ -35,12 +35,12 @@ from . import opaque
 from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE
 from .sources import SourceDefect
 
-#: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 03 §11.4). A resource
+#: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
 #: identifier is dotted, so no undotted token can collide with it.
 SENTINEL = "end"
 
 #: The other reserved one: what a delivery says about the resources it references rather than
-#: writes (Part 03 §11.3). Carried as text in a single-row table where a protocol carries Arrow,
+#: writes (Part 12 §5). Carried as text in a single-row table where a protocol carries Arrow,
 #: so the manifest's schema stays the one description of an entry.
 RESOURCES = "resources"
 
@@ -48,7 +48,7 @@ RESOURCES = "resources"
 BATCH_ROWS = 1_000_000
 
 #: How long to wait between attempts on a `flight-v0.1` socket, in seconds. A build retries until
-#: the address answers or the adapter's process exits (Part 03 §11.6), so this only decides how
+#: the address answers or the adapter's process exits (Part 12 §8), so this only decides how
 #: soon an adapter that died before binding is noticed.
 RETRY = 0.01
 
@@ -61,7 +61,7 @@ def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
 
     `pa.Table.from_pylist` infers the schema from the leading row and drops what later rows carry,
     which loses a column a source populates for some rows only -- and an absent column is a
-    statement under Part 03 §11.3, so losing one says something untrue. Types are the build's to
+    statement under Part 12 §5, so losing one says something untrue. Types are the build's to
     settle against the registry, so nothing here declares one.
 
     A mapping is the exception, and it is not a type decision: the profile stores one as JSON text
@@ -97,7 +97,7 @@ def offered(source: Any) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
 
 
 def written_arrays(source: Any, location: str | None) -> int:
-    """Write every array this source stages into the location a build supplied (Part 03 §11.3).
+    """Write every array this source stages into the location a build supplied (Part 12 §5).
 
     The adapter writes, because an array does not cross as rows and a reference to one a build
     cannot open is no use to it. Each goes in a directory named by its catalog row's `resource_id`,
@@ -109,7 +109,7 @@ def written_arrays(source: Any, location: str | None) -> int:
     if not location:
         raise SourceDefect(
             "this source stages a dense array and no array_location was supplied; an array crosses "
-            "as bytes under a location a build names (Part 03 §11.3)"
+            "as bytes under a location a build names (Part 12 §5)"
         )
     from .arrays import write_zarr
 
@@ -177,7 +177,7 @@ def construct(kind: str, supplied: Mapping[str, Any]) -> Any:
 def infers(supplied: Mapping[str, Any]) -> str:
     """Which protocol a build reached this adapter by, from the term it supplied for it.
 
-    A build supplies whichever terms its adapter's protocol requires (Part 03 §11.2), so the term
+    A build supplies whichever terms its adapter's protocol requires (Part 12 §4), so the term
     that is there says which protocol this is without a second statement that could disagree with
     the first.
     """
@@ -199,10 +199,10 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
         The JSON object a build passed: the terms the adapter declared, plus whichever its
         protocol requires.
     protocol : str
-        Which of Part 03 §11.1's protocols to deliver over.
+        Which of Part 12 §3's protocols to deliver over.
     out : file-like, optional
         Where `stream-v0.1` writes. Standard output's binary handle by default, because a
-        platform translating a line ending corrupts the stream (Part 03 §11.4).
+        platform translating a line ending corrupts the stream (Part 12 §6).
     """
     written_arrays(source, supplied.get("array_location"))
     handed = getattr(source, "staged_payloads", lambda: ())()
@@ -210,7 +210,7 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
     delivering = offered(source)
     # A resource this source has nothing for arrives empty rather than not arriving, so a build
     # reads absence as the run having failed and never as the source having had nothing to say
-    # (Part 03 §11.3). What it owns is what the recipe left it, where a build said so, and its
+    # (Part 12 §5). What it owns is what the recipe left it, where a build said so, and its
     # whole `produces` otherwise -- an adapter that is not told cannot narrow, and must not
     # deliver less than it declared either way.
     declares = sorted(getattr(type(source), "PRODUCES", ()) or ())
@@ -231,7 +231,7 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
 
 
 def report_of(source: Any) -> dict[str, Any]:
-    """Return the run's report (Part 09 §5.8): what a build cannot derive from the delivery.
+    """Return the run's report (Part 12 §9): what a build cannot derive from the delivery.
 
     `stated` is the half no static document can carry -- a declared field's value needs the source
     read -- and the notes an adapter accumulated are the other: what it worked around, and why a
@@ -251,7 +251,7 @@ def _write(out: Any, resource: str, table: pa.Table | Iterator[pa.RecordBatch]) 
         if not batches:
             batches = [pa.RecordBatch.from_pylist([])]
     schema = batches[0].schema.with_metadata({"resource_id": resource})
-    # Uncompressed bodies at metadata version V5, each dictionary whole (Part 03 §11.4).
+    # Uncompressed bodies at metadata version V5, each dictionary whole (Part 12 §6).
     options = pa.ipc.IpcWriteOptions(compression=None, metadata_version=pa.ipc.MetadataVersion.V5)
     with pa.ipc.new_stream(out, schema, options=options) as writer:
         for batch in batches:
@@ -312,7 +312,7 @@ def _serve_flight(tables: Mapping[str, Any], socket: str) -> None:
 
     # Bound last, and that is load-bearing: a build's first call arrives as soon as the socket
     # answers, so an adapter that binds before it can answer serves discovery half-built
-    # (Part 03 §11.6).
+    # (Part 12 §8).
     Served(fl.Location.for_grpc_unix(socket)).serve()
 
 
@@ -346,7 +346,7 @@ class Delivered:
         self.kind = kind
         self.tables = dict(tables)
         #: What the delivery said about the resources it references rather than writes, as
-        #: manifest entries (Part 03 §11.3).
+        #: manifest entries (Part 12 §5).
         self.referenced = list(referenced)
         #: Where this source wrote the arrays the packet will own, which a build reads back.
         self.arrays = arrays
@@ -376,7 +376,7 @@ class Delivered:
         declared sort order across the seam between them. And a resource small enough to hold is
         held so the writer *applies* that sort: the streaming path writes through untouched and
         requires its caller to have sorted already, where an adapter's rows arrive in whatever
-        order it read them and the sort is the build's (Part 03 §11.3).
+        order it read them and the sort is the build's (Part 12 §5).
 
         What is left is a table too large to hold, which is what the streaming path exists for,
         and which reaches a build in the order the adapter streamed it.
@@ -388,7 +388,7 @@ class Delivered:
         return {resource: self.rows(resource) for resource in self.tables if self.held(resource)}
 
     def staged_arrays(self) -> list[Any]:
-        """Every array this source wrote, as a reference to what is on disk (Part 03 §11.3).
+        """Every array this source wrote, as a reference to what is on disk (Part 12 §5).
 
         The bytes are written and their layout is the array's own, so nothing here carries values
         or a layout to apply: staging moves the directory and reads the manifest entry off it. The
@@ -508,10 +508,10 @@ def fetch(
         because a parse is a quoting convention no recipe declared (Part 05 §3.7).
     supplied : Mapping
         The terms the adapter declared, which cross as one JSON object on the command's standard
-        input; the terms of the protocol a build reaches the adapter by are added here (Part 03
-        §11.2).
+        input; the terms of the protocol a build reaches the adapter by are added here (Part 12
+        §4).
     protocol : str
-        Which of Part 03 §11.1's protocols to read.
+        Which of Part 12 §3's protocols to read.
     wanted : sequence of str
         The resources this source owns, which a delivery is complete when it carries.
     states : sequence of str
@@ -521,7 +521,7 @@ def fetch(
         writer can merge and sort them; everything it owns outright streams.
     report_path : Path, optional
         Where a report is expected. Removed before the run, so last week's findings are not
-        reported as this run's (Part 09 §5.8).
+        reported as this run's (Part 12 §9).
     workspace : Path
         A directory to put a delivery and a socket in, beside the packet; a successful commit
         removes it.
@@ -549,7 +549,7 @@ def fetch(
             leftover.unlink(missing_ok=True)
     supplied = {**supplied, **locations}
     # On standard input, not in the argument list: an argument has a size no profile can raise,
-    # and one term carrying a record per unit passed it on a real session (Part 03 §11.2).
+    # and one term carrying a record per unit passed it on a real session (Part 12 §4).
     crossing = json.dumps(supplied, default=str).encode()
     argv = list(command)
     started = time.perf_counter()
@@ -586,7 +586,7 @@ def fetch(
     if unresolved := delivered.unresolved():
         raise SourceDefect(
             f"{kind}: {len(unresolved)} referenced resource(s) bind no delivered catalog row "
-            f"(Part 03 §11.3): {', '.join(unresolved)}" + _tail(notes)
+            f"(Part 12 §5): {', '.join(unresolved)}" + _tail(notes)
         )
     return delivered
 
@@ -596,7 +596,7 @@ def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[str
 
     Refused rather than reported, unlike a report: this is the manifest's own content arriving from
     elsewhere, and a malformed entry merged into a manifest is a packet that misdescribes its own
-    resources (Part 03 §11.3).
+    resources (Part 12 §5).
     """
     if delivered is None:
         return [], []
@@ -621,7 +621,7 @@ def _entry_refusals(document: Any) -> list[str]:
     """Each entry declaring itself packet-owned, or whose uri no reader could resolve, by its `resource_id`.
 
     A resource document describes only a referenced resource, and a packet-owned opaque resource
-    crosses as a payload (Part 03 §11.3). A uri that is not absolute is a relative reference in any
+    crosses as a payload (Part 12 §5). A uri that is not absolute is a relative reference in any
     spelling RFC 3986 admits for its segments (Part 03 §4).
     """
     entries = document.get("resources") if isinstance(document, Mapping) else None
@@ -633,7 +633,7 @@ def _entry_refusals(document: Any) -> list[str]:
         if entry.get("external") is False:
             found.append(
                 f"{resource_id}: declares external: false; a resource document describes only a referenced "
-                "resource, and a packet-owned opaque resource crosses as a payload (Part 03 §11.3)"
+                "resource, and a packet-owned opaque resource crosses as a payload (Part 12 §5)"
             )
         uri = entry.get("uri")
         if isinstance(uri, str) and not is_absolute(uri):
@@ -686,7 +686,7 @@ def _from_report(
 ) -> tuple[list[str], dict[str, Any]]:
     """Read a report where one is expected, as notes and the values a source stated.
 
-    A build must not require one and must not fail on its contents (Part 09 §5.8), so an absent
+    A build must not require one and must not fail on its contents (Part 12 §9), so an absent
     report and an unparseable one are both notes. What it carries that nothing else can is
     `stated`; rows per table and which tables exist are established without asking.
     """
@@ -817,7 +817,7 @@ def _read_stream(
         failures.append(f"the command exited {child.returncode}{_said(said)}")
     if not ended:
         # Naming the last resource read rather than the first that never arrived: a reader treats
-        # end of file as end of stream, so a cut delivery parses clean (Part 03 §11.4).
+        # end of file as end of stream, so a cut delivery parses clean (Part 12 §6).
         where = f" after {last}" if last else " before anything arrived"
         failures.append(f"the delivery did not end with the sentinel; the adapter died{where}{_said(said)}")
     del kind
@@ -854,7 +854,7 @@ def _read_flight(
             failures.append(f"{exc}; detail: {getattr(exc, 'extra_info', b'')!r}")
         client.close()
     # A build that started a process owns it, and an adapter may not rely on running code after
-    # its last response (Part 03 §11.6).
+    # its last response (Part 12 §8).
     child.terminate()
     child.wait()
     draining.join(timeout=5)
@@ -866,7 +866,7 @@ def _rendezvous(socket: str, child: subprocess.Popen[bytes]) -> Any:
     """Wait for a `flight-v0.1` adapter by connecting, not by reading a readiness line.
 
     A line would work and would be a second thing to specify, and it cannot cover the case that
-    matters: an adapter that dies before binding says nothing either way (Part 03 §11.6).
+    matters: an adapter that dies before binding says nothing either way (Part 12 §8).
     """
     import pyarrow.flight as fl
 

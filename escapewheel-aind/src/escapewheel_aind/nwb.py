@@ -102,14 +102,14 @@ class AindNWBSource(NWBSource):
     #: Where it puts the label. `location` is core NWB's; `ccf_acronym` is this pipeline's.
     REGION_LABEL: ClassVar[tuple[str, ...]] = ("ccf_acronym", "location")
 
-    #: Part 03 §11.1: released apart from the writer, so it declares its protocols. `escapewheel
+    #: Part 12 §3: released apart from the writer, so it declares its protocols. `escapewheel
     #: deliver` serves every one; the first is what a build reaches it by when a recipe names none.
     PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
     PRODUCES = NWBSource.PRODUCES | {"core.unit_coordinates", "core.unit_coordinate_values"}
 
     #: `units` is what the base reader does not need: this adapter joins an NWB unit row to the
-    #: identity the build assigned, so the build must supply it (Part 03 §11.2).
+    #: identity the build assigned, so the build must supply it (Part 12 §4).
     NEEDS: ClassVar[tuple[str, ...]] = (*NWBSource.NEEDS, "units")
 
     def _device_identity(self, described: Mapping[str, Any]) -> dict[str, Any]:

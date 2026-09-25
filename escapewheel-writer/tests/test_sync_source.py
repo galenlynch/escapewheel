@@ -33,7 +33,7 @@ PROBE_CLOCKS = [
     for stream in FIRST_SAMPLE
 ]
 
-#: One record per stream, which is the shape the term takes (Part 03 §11.2).
+#: One record per stream, which is the shape the term takes (Part 12 §4).
 FIRST_SAMPLES = [{"stream": f"experiment1.{k}", "first_sample": v} for k, v in FIRST_SAMPLE.items()]
 
 

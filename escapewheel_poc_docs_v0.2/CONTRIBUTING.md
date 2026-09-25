@@ -57,11 +57,12 @@ owned by a lower layer.
 | metadata boundaries and extension behavior | Part 09 |
 | measured performance evidence | Part 10 |
 | portable Tier 2 query language, type binding, deterministic semantics, and evaluation outcomes | Part 11 |
+| what a build and an adapter exchange under a particular storage profile | Part 12 |
 
 Use two tests when placement is unclear:
 
-1. If changing the physical profile would change the statement, it belongs in Part 03 rather than
-   the semantic or logical standard.
+1. If changing the physical profile would change the statement, it belongs at the physical level,
+   Parts 03 and 12, rather than in the semantic or logical standard.
 2. If changing the reference implementation without changing conformance would change the
    statement, it belongs in Part 07 or developer documentation rather than a normative part.
 

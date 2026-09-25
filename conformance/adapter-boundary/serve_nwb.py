@@ -79,7 +79,7 @@ class Served(fl.FlightServerBase):
 
 
 if __name__ == "__main__":
-    # Part 03 §11.2: what a build supplies crosses on standard input, read to end of file
+    # Part 12 §4: what a build supplies crosses on standard input, read to end of file
     # before anything is written.
     supplied = json.loads(sys.stdin.buffer.read())
     # No readiness line: a build retries the socket until it answers or this process exits, so an

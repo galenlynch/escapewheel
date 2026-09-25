@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "revision": "R144",
+  "based_on": "9bac392d5760d0e800d7707cc37b0002a53d5e88",
+  "clauses": {
+    "R144 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/12_adapter_interface.md",
+          "anchor": "ew-adapter-interface-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/12_adapter_interface.md",
+          "anchor": "ew-adapter-declaration-document"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "specification framework declarations agree"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "unknown part"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "escapewheel-writer/src/escapewheel_writer/declaration.py",
+          "escapewheel-writer/src/escapewheel_writer/delivery.py",
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md",
+          "registry/README.md",
+          "escapewheel-writer/CONTRIBUTING.md",
+          "escapewheel-aind/README.md"
+        ]
+      }
+    },
+    "R144 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-architecture-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-physical-profile"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-later-physical-profiles"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-opaque-storage"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "the clause places existing rules at the physical level and changes no verdict; headings.py confirms ew-opaque-storage resolves in Part 03"
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/uri.py",
+          "escapewheel-validator/src/escapewheel_validator/opaque.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-writer/src/escapewheel_writer/opaque.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "README.md",
+          "escapewheel_poc_docs_v0.2/CONTRIBUTING.md",
+          "escapewheel-writer/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R144 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-numbered-part-ownership"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "specification framework declarations agree"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "unknown part"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "conformance/specification-framework/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel_poc_docs_v0.2/CONTRIBUTING.md"
+        ]
+      }
+    },
+    "R144 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/12_adapter_interface.md",
+          "anchor": "ew-adapter-run-report"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivery.py::test_a_stale_report_is_not_read_as_this_runs"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivery.py::test_what_the_report_says_is_reported"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivery.py::test_a_report_is_not_required"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/delivery.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "TODO.md",
+          "conformance/adapter-boundary/README.md"
+        ]
+      }
+    },
+    "R144 §3.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-normative-references"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-normative-references"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/12_adapter_interface.md",
+          "anchor": "ew-adapter-interface-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/12_adapter_interface.md",
+          "anchor": "ew-adapter-interface-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "specification framework declarations agree"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "missing shared Parquet reference"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "misplaced reference"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "Arrow reference outside Part 12"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "missing Part 03 invocation"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "missing Part 12 invocation"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "conformance/specification-framework/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    }
+  }
+}

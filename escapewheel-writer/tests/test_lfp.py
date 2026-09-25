@@ -8,7 +8,7 @@ from escapewheel_writer.sources.lfp import LFPSource
 from escapewheel_writer.sources.nwb import SourceDefect
 
 CLOCK = "experiment1.Neuropix-PXI-100.45883-1.samples"
-#: The clock's own `core.clocks` row, which is what a build supplies (Part 03 §11.2).
+#: The clock's own `core.clocks` row, which is what a build supplies (Part 12 §4).
 CLOCK_ROW = {"clock_id": CLOCK, "session_id": "s1", "origin": "sample 0", "tick_rate_num": 30000, "tick_rate_den": 1}
 
 

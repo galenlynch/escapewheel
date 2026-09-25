@@ -49,6 +49,7 @@ This table is an informative projection of
 | 09 | Metadata minimalism and extensions | normative |
 | 10 | Performance notes | informative |
 | 11 | Tier 2 rule language | normative |
+| 12 | Adapter interface | normative |
 
 A consolidated convenience rendering is provided as
 `Escapewheel_POC_v0.2_Implementation_Spec.md`. It is generated from this entry point and the
@@ -81,7 +82,10 @@ Part 04 §§3 and 8 define the manifest fields that record these identifiers.
 
 [Part 00 §10](00_architecture.md#ew-normative-references) defines normative-reference policy and
 lists shared external authorities, among them RFC 1952, which the portable profile and the packet
-manifest both invoke. References invoked only by the portable profile are in
+manifest both invoke, and Parquet, which the portable profile and its adapter interface both invoke.
+The Arrow authorities invoked by the adapter interface are in
+[Part 12 §11](12_adapter_interface.md#ew-adapter-interface-normative-references). The other
+references invoked only by the portable profile are in
 [Part 03 §12](03_portable_physical_profile.md#ew-portable-profile-normative-references), and the
 SHA-256, CRC64NVME, and CRC32C authorities invoked by the packet manifest are in
 [Part 04 §11](04_packet_catalog.md#ew-packet-catalog-normative-references).

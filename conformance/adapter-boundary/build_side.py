@@ -126,7 +126,7 @@ def over_flight(
         stdin=subprocess.PIPE,
         env={**os.environ, "PYTHONPATH": str(HERE)},
     )
-    # Part 03 §11.2: on standard input, and closed, so the adapter reads to end of file.
+    # Part 12 §4: on standard input, and closed, so the adapter reads to end of file.
     child.stdin.write(json.dumps({**supplied, "socket": socket}).encode())
     child.stdin.close()
     client = rendezvous(socket, child)

@@ -101,7 +101,7 @@ a file or a directory of files under its own name, into a directory named by its
 process it returns `opaque.Payload` bytes from `staged_payloads()` instead. The directory name binds
 it to the opaque catalog row carrying that `resource_id`, or to the opaque singleton of that ID, and
 the payload is published at `opaque/<resource_id>/<name>` with nothing read from its name or
-contents (Part 03 §11.3).
+contents (Part 12 §5 and Part 03 §11).
 
 Ordering comes from the adapters, not the registry: a foreign key constrains validity, not
 write order, and what actually sequences a build is data-flow — the NWB source needs the
@@ -115,7 +115,7 @@ parent directory, on the filesystem that will hold the packet, and a rebuild int
 reuses what the last one fetched. Setting `ESCAPEWHEEL_SOURCE_CACHE` names another directory; the
 variable is also how the location reaches an adapter run out of process.
 
-Part 03 §11.7 governs source data kept across builds, and this cache does not yet meet it: an entry
+Part 12 §10 governs source data kept across builds, and this cache does not yet meet it: an entry
 is keyed on the object's path alone and used without asking the store whether the object changed,
 and its location reaches adapters outside the `source_cache` term. Until that is reworked, clear the
 cache after replacing an object at a store root a recipe names.

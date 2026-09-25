@@ -23,7 +23,7 @@ def test_a_representable_name_may_be_anything_but_the_five_exclusions(name):
 
 @pytest.mark.parametrize("name", ["", ".", "..", "a/b", "a\0b", "caf\udce9"])
 def test_empty_dot_dotdot_slash_nul_and_non_utf8_are_not_representable(name):
-    """Part 03 §11.3; `\\udce9` is what `os.fsdecode` makes of a byte that is not UTF-8."""
+    """Part 03 §11; `\\udce9` is what `os.fsdecode` makes of a byte that is not UTF-8."""
     assert not representable(name)
 
 
@@ -48,7 +48,7 @@ def test_decode_reads_any_spelling_rfc_3986_admits():
 
 
 def test_decoding_keeps_normalization_distinct():
-    """No normalization: NFC and NFD `é` are two names (Part 03 §11.3)."""
+    """No normalization: NFC and NFD `é` are two names (Part 03 §11)."""
     assert decode("%C3%A9") != decode("e%CC%81")
 
 

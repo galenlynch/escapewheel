@@ -40,7 +40,7 @@ SAMPLED = frozenset({"sorter"})
 
 RECIPE_SUPPLIES = ("core.sessions", "core.processing_runs")
 
-#: Part 03 §11.2's closed vocabulary: the names a build fills itself. A declared name outside this
+#: Part 12 §4's closed vocabulary: the names a build fills itself. A declared name outside this
 #: set is an option, which the recipe has to carry. Held here because `check` has to tell the two
 #: apart with nothing open, and a profile adding a term amends that section.
 TERMS = frozenset(
@@ -67,7 +67,7 @@ def payloads(registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]
     """Return the loaded registries' opaque singleton declarations, which a source owns as it owns a table.
 
     Each is one resource whose ID is its declaration's, so a recipe can name it and a source deliver
-    it as a payload (Part 03 §11.3).
+    it as a payload (Part 12 §5).
     """
     return frozenset(
         declaration_id
@@ -118,20 +118,20 @@ def state_accessors(kind: str) -> Mapping[str, str]:
 def needs(kind: str) -> tuple[str, ...]:
     """Return the names a build must supply an adapter of this kind (Part 05 §3.4).
 
-    Each resolves against Part 03 §11.2's terms first and the recipe's options second, so what a
+    Each resolves against Part 12 §4's terms first and the recipe's options second, so what a
     recipe has to carry is whatever is left: the declaration is where the options a source cannot
     be constructed without are recorded, rather than a table here keyed by kind.
     """
     # The floor is what every adapter needs and no declaration can omit: a root to open and the
-    # session it is built for (Part 03 §11.2).
+    # session it is built for (Part 12 §4).
     adapter = adapter_for(kind)
     return tuple(getattr(adapter, "NEEDS", ("root", "session_id")) if adapter is not None else ())
 
 
 #: Options a build reaches a source with rather than an adapter reading them, so no declaration
 #: names them and none is refused. `storage_options` says how to open the root and is consumed
-#: where the store is opened (Part 03 §11.2). A facility a build applies through an option the
-#: *adapter* reads is not one of these: Part 03 §11.2 makes the adapter declare it, which is why
+#: where the store is opened (Part 12 §4). A facility a build applies through an option the
+#: *adapter* reads is not one of these: Part 12 §4 makes the adapter declare it, which is why
 #: `sample` is `sorter`'s to accept and not a build's to inject silently.
 _BUILD_OPTIONS = frozenset({"storage_options"})
 
@@ -173,7 +173,7 @@ def produces(kind: str) -> frozenset[str]:
     """Return what an adapter of this kind can supply (Part 05 §3.4).
 
     Empty where no adapter of this kind can be imported, which `check` reports through the
-    declaration a recipe must then name (Part 03 §11.5) rather than treating as a source that
+    declaration a recipe must then name (Part 12 §7) rather than treating as a source that
     produces nothing.
     """
     adapter = adapter_for(kind)
@@ -315,7 +315,7 @@ class ClockSpec:
 
 @dataclass(frozen=True)
 class DeliverySpec:
-    """How a build reaches a source it does not import (Part 03 §11).
+    """How a build reaches a source it does not import (Part 12 §2).
 
     The recipe carries all of it, because every field is a fact about one machine: which command
     runs the adapter, where its declarations are, and where it should write its report. What the
@@ -328,12 +328,12 @@ class DeliverySpec:
         parse is a quoting convention no recipe declared (Part 05 §3.7).
     protocol : str
         The protocol the recipe names, empty where it names none; :func:`reached_by` settles the
-        one a build uses (Part 03 §11.1).
+        one a build uses (Part 12 §3).
     declaration : Mapping, optional
         The parsed declaration document, where the recipe names one. Absent for a kind this build
         can import, whose class declares the same facts.
     report_path : Path, optional
-        Where the adapter writes its report (Part 09 §5.8). A build removes it before the run.
+        Where the adapter writes its report (Part 12 §9). A build removes it before the run.
     """
 
     command: tuple[str, ...]
@@ -375,7 +375,7 @@ class SourceSpec:
     owns: tuple[str, ...]
     contributes: tuple[str, ...] = ()
     options: Mapping[str, Any] = field(default_factory=dict)
-    #: Where the source is, as the URI an adapter opens for itself (Part 03 §11.2). Not `str(root)`:
+    #: Where the source is, as the URI an adapter opens for itself (Part 12 §4). Not `str(root)`:
     #: a root this build resolved is a chained path carrying both the cache it reads through and
     #: the anonymity it was opened with, and `str()` drops the second while keeping the first --
     #: which is how a public bucket comes back signed in a process that was handed the text.
@@ -386,7 +386,7 @@ class SourceSpec:
     #: Part 05 §3.4: whether the recipe stated `owns`. Silence means the whole of `PRODUCES`, so it
     #: must be distinguishable from an explicit empty list, which narrows to nothing.
     narrowed: bool = True
-    #: Part 03 §11: how a build reaches this source where it does not import it. A source with
+    #: Part 12 §2: how a build reaches this source where it does not import it. A source with
     #: no delivery block is constructed in this process, which every adapter this build ships
     #: can be (Part 05 §3.9).
     delivery: DeliverySpec | None = None
@@ -445,7 +445,7 @@ def _importable(kind: str) -> bool:
 def reached_by(spec: SourceSpec) -> str | None:
     """Return the protocol a build reaches this source by, or None where it runs in process.
 
-    The recipe's where it names one, else the adapter's first declared (Part 03 §11.1). An adapter
+    The recipe's where it names one, else the adapter's first declared (Part 12 §3). An adapter
     this build ships declares none, and is served over `stream-v0.1`, which needs no term beyond
     what the adapter declares.
     """
@@ -460,7 +460,7 @@ def declared(spec: SourceSpec) -> dict[str, Any]:
     """Return one source's declarations, from the document the recipe names or the class.
 
     A document and an importable class declaring the same facts are one declaration, and a build
-    prefers neither (Part 03 §11.5) -- so everything reading a declaration reads it through here,
+    prefers neither (Part 12 §7) -- so everything reading a declaration reads it through here,
     and nothing downstream has to know which form this source took.
     """
     document = spec.delivery.declaration if spec.delivery is not None else None
@@ -859,7 +859,7 @@ class Recipe:
                 }
             )
         # A source may own an opaque singleton, whose payload it delivers under the declaration's ID
-        # (Part 03 §11.3); catalog instances are bound by the rows of the table it owns instead.
+        # (Part 12 §5); catalog instances are bound by the rows of the table it owns instead.
         singletons = payloads(registry, extensions)
         owners, claimants = self.owners, self.claimants
         errors: list[str] = []
@@ -907,7 +907,7 @@ class Recipe:
         every report unable to say which entry they mean (Part 05 §3.1). A preference declares
         ownership (Part 05 §3.3), so one naming a source that is absent, cannot supply the resource,
         or contradicts another entry's own `owns` or `contributes` has no sound reading. A delivered
-        adapter's `contributes` is refused with the rest of its document (Part 03 §11.5); an
+        adapter's `contributes` is refused with the rest of its document (Part 12 §7); an
         imported one's is refused here.
         """
         problems = []
@@ -984,7 +984,7 @@ class Recipe:
                 problems.append(f"source {spec.kind} declares no STATES, so a build cannot tell what facts it states")
             if spec.delivery is not None:
                 # An adapter a build cannot import exposes its stated values in its report rather
-                # than through an attribute, so there is nothing here to look for (Part 09 §5.8).
+                # than through an attribute, so there is nothing here to look for (Part 12 §9).
                 continue
             for fact, attribute in sorted(state_accessors(spec.kind).items()):
                 problems.append(
@@ -1117,8 +1117,8 @@ class Recipe:
         in process unless its entry gives it a delivery, so a recipe need say nothing.
 
         What is left over is a kind another distribution registered and the recipe says nothing
-        about. An adapter released independently of a build must declare a protocol (Part 03
-        §11.1), and declaring one is not enough on its own: something still has to say what
+        about. An adapter released independently of a build must declare a protocol (Part 12
+        §3), and declaring one is not enough on its own: something still has to say what
         command runs it, and only the recipe knows.
         """
         problems = []
@@ -1134,7 +1134,7 @@ class Recipe:
     def _declaration_problems(self, tables: Mapping[str, Any], singletons: Collection[str] = ()) -> list[str]:
         """Everything wrong with a source's declaration, knowable with nothing opened.
 
-        Part 03 §11.5's checks for every source, whichever route it takes, plus what the recipe has
+        Part 12 §7's checks for every source, whichever route it takes, plus what the recipe has
         to get right for a build to reach the adapter at all. A class is checked as the document it
         would generate, so the two forms are refused for the same defects. Each check fires on its
         own and names what is wrong, and none needs the adapter imported.
@@ -1179,7 +1179,7 @@ class Recipe:
                 if not shipped and not asked["protocols"]:
                     problems.append(
                         f"{spec.kind} declares no protocol; an adapter released independently of a build "
-                        f"declares at least one of {', '.join(document.PROTOCOLS)} (Part 03 §11.1)"
+                        f"declares at least one of {', '.join(document.PROTOCOLS)} (Part 12 §3)"
                     )
                 problems += [
                     f"{spec.kind} declaration: {problem}" for problem in document.shape_problems(stated, shipped=True)
@@ -1203,11 +1203,11 @@ class Recipe:
     def _option_problems(self) -> list[str]:
         """Options a source kind requires and this recipe does not carry, and options it reads at all.
 
-        Both are refused before any source is opened (Part 03 §11.2). A term the build fills is not
+        Both are refused before any source is opened (Part 12 §4). A term the build fills is not
         a recipe's business, so only the names that fall through to the recipe's options are
         reported here. An option the adapter names nowhere is the converse: the recipe states
         something about the packet that never reaches the source, and its author's next evidence
-        would be its absence from the output (Part 03 §11.2).
+        would be its absence from the output (Part 12 §4).
         """
         problems = [
             f"source {spec.kind} requires {name!r}, which this entry does not set"

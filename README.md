@@ -71,7 +71,7 @@ uses file layout as identity.
 
 - **Semantic** (Part 01) — what a Trial, Unit, Clock or ElectricalSeries *means*. Storage-agnostic.
 - **Logical** (Parts 02 and 06) — those concepts as computable resources: tables, arrays, views.
-- **Physical** (Part 03) — `escapewheel-portable-v0.1`: Parquet + Zarr v3 + JSON, readable with no server.
+- **Physical** (Parts 03 and 12) — `escapewheel-portable-v0.1`: Parquet + Zarr v3 + JSON, readable with no server.
 
 ## Building and reading a packet
 

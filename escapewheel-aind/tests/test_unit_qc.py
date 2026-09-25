@@ -164,7 +164,7 @@ def test_the_template_metrics_carry_the_names_spikeinterface_0104_computes(asset
 
 
 def test_a_template_metric_the_analyzer_lacks_is_absent_rather_than_null(asset: Path) -> None:
-    """An absent column says the source stated nothing for it (Part 03 §11.3)."""
+    """An absent column says the source stated nothing for it (Part 12 §5)."""
     rows = _by_unit(UnitQCSource(asset, session_id="s1", units=UNITS).records()["aind_unit_qc.waveform_metrics"])
     assert "repolarization_slope" not in rows["exp1.A:0"]
     assert "trough_width" not in rows["exp1.A:0"]

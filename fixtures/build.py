@@ -1411,7 +1411,7 @@ def owned_opaque(
     algorithm: str = "sha256",
     declaration_id: str = "core.media_asset_instances",
 ) -> dict:
-    """Publish a payload at `opaque/<resource_id>/<name>` as a build does (Part 03 §11.3), and
+    """Publish a payload at `opaque/<resource_id>/<name>` as a build does (Part 03 §11), and
     return its entry.
 
     `payload` is the bytes of a payload that is one file, or a mapping from each file's path
@@ -1443,7 +1443,7 @@ def owned_opaque(
 
 
 def opaque_variants(root: Path) -> None:
-    """Packet-owned opaque payloads (Part 03 §11.3): kept names, their `uri`, and their digest."""
+    """Packet-owned opaque payloads (Part 03 §11): kept names, their `uri`, and their digest."""
 
     def owned(name, *payloads, extensions=()):
         """Write `valid` plus each `(resource_id, name, payload, options)` payload."""

@@ -46,7 +46,7 @@ VENDORED = {
     / "escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json",
     "sources.schema.json": HERE.parent
     / "escapewheel-reader/src/escapewheel_reader/schemas/sources.schema.json",
-    # A *build* reads an adapter's declaration (Part 03 §11.5), so this one vendors into the
+    # A *build* reads an adapter's declaration (Part 12 §7), so this one vendors into the
     # writer where the other three go to whichever package reads them.
     "adapter.schema.json": HERE.parent
     / "escapewheel-writer/src/escapewheel_writer/schemas/adapter.schema.json",
@@ -186,7 +186,7 @@ BUILD_SUPPLIED = ("validation_state", "derived_from")
 
 
 def delivery_schema(manifest: dict) -> dict:
-    """Part 03 §11.3's resource document: the manifest entry without its build-supplied members.
+    """Part 12 §5's resource document: the manifest entry without its build-supplied members.
 
     Generated so the two cannot define a shared member differently; every definition an entry
     reaches is copied from the manifest schema rather than restated.
@@ -214,7 +214,7 @@ def delivery_schema(manifest: dict) -> dict:
         "title": "Escapewheel resource document",
         "description": (
             "Shape of the document an adapter delivers alongside its rows to describe the "
-            "resources it references rather than writes (Part 03 §11.3). Generated from the "
+            "resources it references rather than writes (Part 12 §5). Generated from the "
             "manifest schema by registry/build.py: each entry is a manifest resource entry "
             "without the members a build supplies."
         ),

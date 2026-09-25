@@ -25,9 +25,9 @@ history and rationale but are not current normative owners.
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.1.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | Incorporated closed schema for `packet.json` (Part 04). |
-| `resources.schema.json` | Incorporated delivery schema (Part 03 §11.3). **Generated** by `build.py` from the manifest's resource entry. |
+| `resources.schema.json` | Incorporated delivery schema (Part 12 §5). **Generated** by `build.py` from the manifest's resource entry. |
 | `resources.example.json` | A delivery document that `check.py` validates against it. |
-| `adapter.schema.json` | Incorporated schema for an adapter's declaration document (Part 03 §11.5). |
+| `adapter.schema.json` | Incorporated schema for an adapter's declaration document (Part 12 §7). |
 | `adapter.example.json` | A declaration document that `check.py` validates against it. |
 | `sources.schema.json` | Incorporated schema for a source resolution document (Part 04 §5.5). |
 | `sources.example.json` | A resolution document that `check.py` validates against it. |

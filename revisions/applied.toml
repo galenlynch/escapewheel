@@ -1727,10 +1727,10 @@ note = "Part 02 names no storage technology except to place a rule outside its o
 disposition = "applied"
 where = [
     { part = "00", anchor = "ew-physical-profile" },
-    { part = "00", section = "7.3" },
+    { part = "00", anchor = "ew-later-physical-profiles" },
     { part = "03", anchor = "ew-portable-profile-scope" },
 ]
-note = "what a profile is, what a second one must satisfy, and that no Part 01 or 02 clause may depend on one"
+note = "what a profile is, what a second one must satisfy, and that no Part 01 or 02 clause may depend on one; R144 §3.2 names Parts 03 and 12 as the portable profile's parts and as those no Part 01 or 02 clause may depend on"
 
 [clause."R93 §3.3"]
 disposition = "registry"
@@ -2308,13 +2308,13 @@ note = "a build MUST capture both streams and report them with a failure, and SH
 
 [clause."R109 §3.5"]
 disposition = "applied"
-where = [{ part = "09", section = "5.8" }]
-note = "an extension MAY validate its own tables on core's terms (R17 §4) and a build MUST NOT rely on it, its own validation running over every staged resource whatever produced it"
+where = [{ part = "12", anchor = "ew-adapter-run-report" }]
+note = "an extension MAY validate its own tables on core's terms (R17 §4) and a build MUST NOT rely on it, its own validation running over every staged resource whatever produced it; R144 §3.4 extends it to every adapter under the portable profile"
 
 [clause."R109 §3.6"]
 disposition = "applied"
-where = [{ part = "09", section = "5.8" }]
-note = "a report is optional to produce and reported when present, R51 §2.2's shape for store_digest; it carries what a build cannot derive -- what the command read, skipped and why -- since rows per table come from the footer at Stage 1. JSON with problems[] at R2 §7.3's levels and read[], and unrecognised keys MUST NOT be refused"
+where = [{ part = "12", anchor = "ew-adapter-run-report" }]
+note = "a report is optional to produce and reported when present, R51 §2.2's shape for store_digest; it carries what a build cannot derive -- what the command read, skipped and why -- since rows per table come from the footer at Stage 1. JSON with problems[] at R2 §7.3's levels and read[], and unrecognised keys MUST NOT be refused; R144 §3.4 extends it to every adapter under the portable profile"
 
 [clause."R109 §3.7"]
 disposition = "applied"
@@ -2396,7 +2396,7 @@ disposition = "applied"
 where = [
     { part = "00", anchor = "ew-core-content-requirements" },
     { part = "00", anchor = "ew-analysis-content-requirements" },
-    { part = "00", section = "7.3" },
+    { part = "00", anchor = "ew-later-physical-profiles" },
     { part = "01", section = "3.5" },
     { part = "01", section = "3.8" },
     { part = "01", section = "3.9" },
@@ -2432,7 +2432,7 @@ where = [
     { part = "09", section = "5.2" },
     { part = "09", section = "5.4" },
     { part = "09", section = "5.7" },
-    { part = "09", section = "5.8" },
+    { part = "12", anchor = "ew-adapter-run-report" },
     { part = "09", section = "8" },
     { part = "09", section = "8.1" },
 ]
@@ -2523,7 +2523,7 @@ note = "35 resources produced, 8 contested, 2 needing arbitration, which no adap
 [clause."R115 §3.1"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-build-supplied-values", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
+  { part = "12", anchor = "ew-build-supplied-values", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
   { part = "05", anchor = "ew-source-declarations", note = "the four facts an adapter declares, one of them the values a build supplies" },
 ]
 note = "the supply contract; Part 07 §4 keeps the reference spelling. R116 §3.1 replaced the channel the object crosses by, and R134 §3.5 replaced declaring a protocol as what asks for its terms with the protocol a build reaches the adapter by; the rest of the clause stands"
@@ -2535,7 +2535,7 @@ where = [{ part = "05", anchor = "ew-recipe-ownership", note = "a preference is 
 [clause."R115 §3.3"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-protocol-groups", note = "the group, its three protocols, the asymmetry, and versioning by name" },
+  { part = "12", anchor = "ew-protocol-groups", note = "the group, its three protocols, the asymmetry, and versioning by name" },
   { part = "09", section = "5.7", note = "an extension may deliver over any protocol of the group" },
 ]
 note = "R134 §3.5 adds the build's choice among the protocols an adapter declares, and R134 §3.4 replaces files-v0.1 as Parquet the recipe names with Parquet under delivery_root named by resource identifier"
@@ -2552,22 +2552,22 @@ note = "R134 §3.5 replaces in process as the only route of an adapter a build s
 [clause."R115 §3.6"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-referenced-resource-delivery", note = "a delivery's column set is a statement, and what a build settles on arrival" },
+  { part = "12", anchor = "ew-referenced-resource-delivery", note = "a delivery's column set is a statement, and what a build settles on arrival" },
   { part = "07", anchor = "ew-reference-object-model", note = "the return type stays records, and the conversion that keeps a column" },
 ]
 
 [clause."R115 §3.7"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-referenced-resource-delivery", note = "identifiers cross as the names the source used" }]
+where = [{ part = "12", anchor = "ew-referenced-resource-delivery", note = "identifiers cross as the names the source used" }]
 
 [clause."R115 §3.8"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-referenced-resource-delivery", note = "an array crosses as a reference to a location the build supplied" }]
+where = [{ part = "12", anchor = "ew-referenced-resource-delivery", note = "an array crosses as a reference to a location the build supplied" }]
 
 [clause."R115 §3.9"]
 disposition = "applied"
 where = [
-  { part = "03", section = "11.6", note = "the retry rendezvous, and that an adapter binds only when it can answer" },
+  { part = "12", anchor = "ew-reaching-a-running-adapter", note = "the retry rendezvous, and that an adapter binds only when it can answer" },
   { part = "07", anchor = "ew-reference-object-model", note = "a protocol is named by a constant the implementation exports" },
 ]
 note = "that a writer ships each end and that using it is nobody's condition of conformance is Part 03 §11.1's group plus this"
@@ -2576,7 +2576,7 @@ note = "that a writer ships each end and that using it is nobody's condition of 
 disposition = "applied"
 where = [
   { part = "05", section = "4.4", note = "the ownership set as the expectation, the empty delivery, and a non-zero exit" },
-  { part = "03", section = "11.4", note = "the reserved `end` stream, since a reader treats end of file as end of stream" },
+  { part = "12", anchor = "ew-arrow-ipc-floor", note = "the reserved `end` stream, since a reader treats end of file as end of stream" },
 ]
 
 [clause."R115 §3.11"]
@@ -2584,16 +2584,16 @@ disposition = "applied"
 where = [
   { part = "05", section = "4.4", note = "what a build reports of a failure, per protocol, and every failure together" },
   { part = "05", section = "3.7", note = "standard error carries the diagnosis where rows have taken standard output" },
-  { part = "09", section = "5.8", note = "the connection as a carrier beside the file, and a report cleared before the run" },
+  { part = "12", anchor = "ew-adapter-run-report", note = "the connection as a carrier beside the file, and a report cleared before the run" },
 ]
 
 [clause."R115 §3.12"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-adapter-declaration-document", note = "the declaration document, its keys, and what a build refuses one for" },
+  { part = "12", anchor = "ew-adapter-declaration-document", note = "the declaration document, its keys, and what a build refuses one for" },
   { part = "05", anchor = "ew-source-declarations", note = "the four facts, and that an adapter a build cannot import publishes them" },
   { part = "05", anchor = "ew-recipe-check", note = "the refusals a recipe check makes against a declaration" },
-  { part = "09", section = "5.8", note = "`stated` carries the values behind the fields a source declares it states" },
+  { part = "12", anchor = "ew-adapter-run-report", note = "`stated` carries the values behind the fields a source declares it states" },
 ]
 
 [clause."R116 §2.1"]
@@ -2611,7 +2611,7 @@ note = "standard input is free under all three protocols, is unbounded, and is t
 [clause."R116 §3.1"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-build-supplied-values", note = "the object crosses on standard input, an adapter reads it to end of file, and no argument is added" },
+  { part = "12", anchor = "ew-build-supplied-values", note = "the object crosses on standard input, an adapter reads it to end of file, and no argument is added" },
 ]
 
 [clause."R116 §3.2"]
@@ -2635,22 +2635,22 @@ note = "a row carries a referenced resource's location and cannot carry what the
 [clause."R117 §3.1"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-referenced-resource-delivery", note = "array_location per source, the name that is the identifier, the rows that must agree with it, and the manifest entry read off the array" },
+  { part = "12", anchor = "ew-referenced-resource-delivery", note = "array_location per source, the name that is the identifier, the rows that must agree with it, and the manifest entry read off the array" },
 ]
 note = "R134 §3.4 replaces the rule that no other adapter writes anything with delivery only where a build points it; the rule for arrays stands, and R143 §3.1 adds the packet-owned opaque route beside it"
 
 [clause."R117 §3.2"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-referenced-resource-delivery", note = "the resource document, what a build requires of an entry, and why it is a delivery rather than a report" },
-  { part = "03", section = "11.4", note = "`resources` as the second reserved resource identifier, and the single-row table it travels as" },
+  { part = "12", anchor = "ew-referenced-resource-delivery", note = "the resource document, what a build requires of an entry, and why it is a delivery rather than a report" },
+  { part = "12", anchor = "ew-arrow-ipc-floor", note = "`resources` as the second reserved resource identifier, and the single-row table it travels as" },
 ]
 note = "R143 §3.7 restates in Part 03 §11.3 that a build records every entry as external, and adds the refusals of an entry declaring `external: false` and, under R143 §3.4, of a malformed relative `uri`"
 
 [clause."R117 §3.3"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-referenced-resource-delivery", note = "the published shape, and a build refusing a document that does not satisfy it" },
+  { part = "12", anchor = "ew-referenced-resource-delivery", note = "the published shape, and a build refusing a document that does not satisfy it" },
 ]
 
 [clause."R118 §2.1"]
@@ -2745,22 +2745,22 @@ note = "waveforms needs an option naming the sorter's label column and base NWB 
 
 [clause."R119 §3.1"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-build-supplied-values" }, { part = "07", anchor = "ew-reference-object-model" }]
+where = [{ part = "12", anchor = "ew-build-supplied-values" }, { part = "07", anchor = "ew-reference-object-model" }]
 note = "an adapter MUST declare in accepts every option it reads and can be constructed without and in needs every value it cannot, MUST NOT name one option in both or a term in accepts, and MUST apply its own default where the recipe sets no value; Part 07 §4 carries the reference spelling ACCEPTS. R142 §3.1 lets accepts name the one term source_cache and bars it from needs"
 
 [clause."R119 §3.2"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-build-supplied-values" }, { part = "05", anchor = "ew-recipe-check" }]
+where = [{ part = "12", anchor = "ew-build-supplied-values" }, { part = "05", anchor = "ew-recipe-check" }]
 note = "a build MUST supply an option the recipe sets and the adapter names in either list, MUST refuse a recipe setting an option the adapter names in neither, naming the source and the option, before any source is opened, and MUST NOT require a recipe to set one named in accepts"
 
 [clause."R119 §3.3"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-build-supplied-values" }]
+where = [{ part = "12", anchor = "ew-build-supplied-values" }]
 note = "a build MUST NOT supply an option the adapter names in neither list, including one it adds itself rather than reading from the recipe, and MUST NOT apply a facility of its own to an adapter that does not name the option carrying it"
 
 [clause."R119 §3.4"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }]
+where = [{ part = "12", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }]
 note = "the declaration document carries accepts beside needs, and a build MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four. R134 §3.1 requires the member, replacing the reading of a document without it. R142 §3.1 excepts source_cache from the refusal of a term in accepts and refuses a declaration whose needs names it"
 
 [clause."R120 §3.1"]
@@ -2914,7 +2914,7 @@ where = [
   { part = "04", anchor = "ew-packet-catalog-scope" },
   { part = "04", anchor = "ew-packet-catalog-normative-references" },
 ]
-note = "exact current allocation and invocation of the eleven existing bibliographic rows; R140 §3.3 adds Part 02 §13's four rows to the allocation"
+note = "exact current allocation and invocation of the eleven existing bibliographic rows; R140 §3.3 adds Part 02 §13's four rows to the allocation; R144 §3.5 moves the Parquet row to Part 00 and the Arrow row to Part 12"
 
 [clause."R125 §3.1"]
 disposition = "applied"
@@ -3217,7 +3217,7 @@ note = "current interfaces are materialized; ownership is not a realization kind
 
 [clause."R129 §3.11"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-metadata-placement" }, { part = "03", anchor = "ew-referenced-resource-delivery" }]
+where = [{ part = "03", anchor = "ew-array-metadata-placement" }, { part = "12", anchor = "ew-referenced-resource-delivery" }]
 note = "logical facts and self-describing physical metadata retain separate owners"
 
 [clause."R130 §3.1"]
@@ -3267,7 +3267,7 @@ note = "only bound registries that pass binding direct packet checks"
 
 [clause."R130 §3.10"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-portable-profile-scope" }, { part = "03", anchor = "ew-referenced-resource-delivery" }]
+where = [{ part = "12", anchor = "ew-adapter-interface-scope" }, { part = "12", anchor = "ew-referenced-resource-delivery" }]
 note = "the delivery schema is the manifest entry without validation_state and derived_from"
 
 [clause."R130 §3.11"]
@@ -3327,7 +3327,7 @@ note = "a [preference] entry names a source kind and a reason; the preferred sou
 
 [clause."R133 §3.2"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }, { part = "03", anchor = "ew-adapter-declaration-document" }]
+where = [{ part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }, { part = "12", anchor = "ew-adapter-declaration-document" }]
 note = "an adapter declares the resources it supplies only in part, each one it produces; the document key is contributes, which R134 §3.1 requires, replacing the reading of a document without it"
 
 [clause."R133 §3.3"]
@@ -3347,12 +3347,12 @@ note = "a recipe lists a kind once, and a build names a source by its kind"
 
 [clause."R134 §3.1"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-adapter-declaration-document" }, { part = "07", anchor = "ew-reference-object-model" }]
+where = [{ part = "12", anchor = "ew-adapter-declaration-document" }, { part = "07", anchor = "ew-reference-object-model" }]
 note = "Part 03 §11.5 incorporates registry/adapter.schema.json; a declaration document carries all eight members, protocols replacing protocol"
 
 [clause."R134 §3.2"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-recipe-check" }]
+where = [{ part = "12", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-recipe-check" }]
 note = "a build refuses a declaration failing the schema and checks a class as its document, a shipped class alone omitting protocols"
 
 [clause."R134 §3.3"]
@@ -3364,9 +3364,9 @@ note = "Part 04 §5.5 incorporates registry/sources.schema.json; a writer writes
 disposition = "applied"
 where = [
   { part = "05", anchor = "ew-import-pipeline" },
-  { part = "03", anchor = "ew-reaching-a-source" },
-  { part = "03", anchor = "ew-protocol-groups" },
-  { part = "03", anchor = "ew-referenced-resource-delivery" },
+  { part = "12", anchor = "ew-reaching-a-source" },
+  { part = "12", anchor = "ew-protocol-groups" },
+  { part = "12", anchor = "ew-referenced-resource-delivery" },
   { part = "07", anchor = "ew-reference-object-model" },
   { part = "09", section = "5.7", note = "files-v0.1 as Parquet under delivery_root" },
 ]
@@ -3374,7 +3374,7 @@ note = "an adapter delivers only where a build points it; the build owns each lo
 
 [clause."R134 §3.5"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-protocol-groups" }, { part = "03", anchor = "ew-build-supplied-values" }, { part = "05", anchor = "ew-recipe-check" }, { part = "05", anchor = "ew-in-process-opt-in" }]
+where = [{ part = "12", anchor = "ew-protocol-groups" }, { part = "12", anchor = "ew-build-supplied-values" }, { part = "05", anchor = "ew-recipe-check" }, { part = "05", anchor = "ew-in-process-opt-in" }]
 note = "out of process a build reaches an adapter by a protocol it declares, in process by none; a shipped adapter runs in process unless given a delivery; a build supplies only that protocol's terms"
 
 [clause."R135 §3.1"]
@@ -3392,8 +3392,8 @@ disposition = "applied"
 where = [
   { part = "05", anchor = "ew-import-pipeline" },
   { part = "03", anchor = "ew-staging-area" },
-  { part = "03", anchor = "ew-build-supplied-values" },
-  { part = "03", anchor = "ew-referenced-resource-delivery" },
+  { part = "12", anchor = "ew-build-supplied-values" },
+  { part = "12", anchor = "ew-referenced-resource-delivery" },
 ]
 note = "the staging area is the build's or amendment's own and when a writer may empty it; the portable profile's is staging/"
 
@@ -3551,7 +3551,7 @@ note = "every authority URI on an open core or analysis column is an entry's lin
 [clause."R141 §3.1"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-architecture-scope" }]
-note = "the specification defines a portable data packet; its packet mechanism, Parts 04, 02 §§2–10, 03, 05, 09 and 11, confines no packet to a recording modality"
+note = "the specification defines a portable data packet; its packet mechanism, Parts 04, 02 §§2–10, 03, 05, 09 and 11, confines no packet to a recording modality; R144 §3.2 adds Part 12"
 
 [clause."R141 §3.2"]
 disposition = "applied"
@@ -3574,8 +3574,8 @@ note = "both core rows read normalized facts of the core vocabulary"
 [clause."R142 §3.1"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-build-supplied-values", note = "the source_cache term, the one term accepts may name and needs may not, supplied to every accepting adapter where a build has a location and to none where it has none, and exempt from the unfillable-term refusal" },
-  { part = "03", anchor = "ew-adapter-declaration-document", note = "a declaration whose accepts names source_cache is not refused, and one whose needs names it is, naming the adapter" },
+  { part = "12", anchor = "ew-build-supplied-values", note = "the source_cache term, the one term accepts may name and needs may not, supplied to every accepting adapter where a build has a location and to none where it has none, and exempt from the unfillable-term refusal" },
+  { part = "12", anchor = "ew-adapter-declaration-document", note = "a declaration whose accepts names source_cache is not refused, and one whose needs names it is, naming the adapter" },
   { part = "05", anchor = "ew-source-declarations", note = "the accepted options include the one term source_cache" },
   { part = "05", anchor = "ew-recipe-check", note = "the unfillable-term and accepted-term refusals except source_cache, and a declaration whose needs names it is refused" },
   { part = "07", anchor = "ew-reference-object-model", note = "ACCEPTS may carry source_cache" },
@@ -3583,32 +3583,33 @@ where = [
 
 [clause."R142 §3.2"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-source-cache" }]
+where = [{ part = "12", anchor = "ew-source-cache" }]
 note = "a build takes its source-cache location from its configuration, supplies only a writable directory outside the packet root and every delivery location, creates it where absent, and never empties it or removes anything in it; builds at different packet roots may share one"
 
 [clause."R142 §3.3"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-source-cache" }]
+where = [{ part = "12", anchor = "ew-source-cache" }]
 note = "an adapter uses source data kept from before a run only after confirming in that run, by an entity tag, full-object checksum, or version identifier and never a modification time, that the source still holds it, or where the URI names immutable content; unchecked by any build or validator"
 
 [clause."R142 §3.4"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-source-cache" }]
+where = [{ part = "12", anchor = "ew-source-cache" }]
 note = "each storage format keeps to one subdirectory named by an identifier its implementation controls, cache-v names are reserved, data becomes readable to another run only when complete, and naming, publication, replacement, and eviction are the format's own; unchecked by any build or validator"
 
 [clause."R143 §3.1"]
 disposition = "applied"
 where = [
   { part = "03", anchor = "ew-portable-profile-technologies", note = "an opaque resource may be packet-owned or external" },
-  { part = "03", anchor = "ew-reaching-a-source", note = "the packet-owned opaque route" },
-  { part = "03", anchor = "ew-build-supplied-values", note = "the opaque_location term" },
-  { part = "03", anchor = "ew-referenced-resource-delivery", note = "an adapter declares opaque_location in needs, and a build supplies one directory per source" },
+  { part = "12", anchor = "ew-reaching-a-source", note = "the packet-owned opaque route" },
+  { part = "12", anchor = "ew-build-supplied-values", note = "the opaque_location term" },
+  { part = "12", anchor = "ew-referenced-resource-delivery", note = "an adapter declares opaque_location in needs, and a build supplies one directory per source" },
 ]
 
 [clause."R143 §3.2"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-referenced-resource-delivery", note = "a payload in a resource directory, its binding to an opaque catalog row or singleton declaration, the refusals, and the in-process hand-over" },
+  { part = "03", anchor = "ew-opaque-storage", note = "a payload's shape: one regular file or one directory of files and directories, none empty" },
+  { part = "12", anchor = "ew-referenced-resource-delivery", note = "a payload in a resource directory, its binding to an opaque catalog row or singleton declaration, the refusals, and the in-process hand-over" },
   { part = "05", anchor = "ew-import-pipeline", note = "a payload is staged by its delivery" },
   { part = "07", anchor = "ew-reference-object-model", note = "the adapter writes a payload where the build points" },
 ]
@@ -3616,7 +3617,7 @@ where = [
 [clause."R143 §3.3"]
 disposition = "applied"
 where = [
-  { part = "03", anchor = "ew-referenced-resource-delivery", note = "representable names, publication under them in a directory of its own, and the unchecked-by-validator statement" },
+  { part = "03", anchor = "ew-opaque-storage", note = "representable names, publication under them in a directory of its own, and the unchecked-by-validator statement" },
   { part = "03", anchor = "ew-portable-packet-layout", note = "opaque/<resource_id>/<name> replaces media/" },
   { part = "05", anchor = "ew-validation-shim", note = "colliding and Windows-unportable names, and the physical.opaque_name_portability warning" },
   { part = "05", anchor = "ew-validation-normative-references", note = "the Unicode Standard, Version 15.0.0" },
@@ -3628,7 +3629,7 @@ where = [
   { part = "03", anchor = "ew-portable-uri-rules", note = "absolute and relative-reference URIs, decoding and resolution by appending names, the writer's one form, and packet.resource.uri_form" },
   { part = "04", anchor = "ew-source-resolution", note = "a source-relative uri is a relative reference" },
   { part = "04", anchor = "ew-packet-manifest-conformance", note = "the packet.resource.uri_form row" },
-  { part = "03", anchor = "ew-referenced-resource-delivery", note = "a resource-document uri in any RFC 3986 form, refused where malformed and rewritten in the one form" },
+  { part = "12", anchor = "ew-referenced-resource-delivery", note = "a resource-document uri in any RFC 3986 form, refused where malformed and rewritten in the one form" },
 ]
 
 [clause."R143 §3.5"]
@@ -3647,5 +3648,43 @@ where = [
 
 [clause."R143 §3.7"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-referenced-resource-delivery" }]
+where = [{ part = "12", anchor = "ew-referenced-resource-delivery" }]
 note = "a build records every resource-document entry as external and refuses one declaring external: false"
+
+[clause."R144 §3.1"]
+disposition = "applied"
+where = [
+  { part = "12", anchor = "ew-adapter-interface-scope", note = "the part's subject, what it binds, and its incorporation of the resources schema" },
+  { part = "12", anchor = "ew-adapter-declaration-document", note = "its incorporation of the adapter declaration schema" },
+]
+note = "Part 12 specifies the portable profile's adapter interface in eleven sections"
+
+[clause."R144 §3.2"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-architecture-scope", note = "the packet mechanism names Parts 03 and 12" },
+  { part = "00", anchor = "ew-physical-profile", note = "a profile can define an adapter interface; Parts 03 and 12 form the physical level" },
+  { part = "00", anchor = "ew-later-physical-profiles", note = "an interface binds a build writing the profile and the adapters it reaches; no Part 01 or 02 clause depends on Part 03 or 12" },
+  { part = "03", anchor = "ew-portable-profile-scope", note = "Part 03 cites Part 00 §3.1.3 for the physical level" },
+  { part = "03", anchor = "ew-opaque-storage", note = "a payload's shape, representable names, and publication" },
+]
+
+[clause."R144 §3.3"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-numbered-part-ownership" }]
+note = "Part 12's subject and status, and its dependency item after Part 05's"
+
+[clause."R144 §3.4"]
+disposition = "applied"
+where = [{ part = "12", anchor = "ew-adapter-run-report" }]
+note = "the report rules bind every adapter under the portable profile; Part 09 keeps none"
+
+[clause."R144 §3.5"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-normative-references", note = "the shared Parquet row, last" },
+  { part = "03", anchor = "ew-portable-profile-scope", note = "the invocation names JSON Schema and Parquet" },
+  { part = "03", anchor = "ew-portable-profile-normative-references", note = "the Parquet and Arrow rows leave" },
+  { part = "12", anchor = "ew-adapter-interface-scope", note = "the invocation of JSON, URI, JSON Schema, Parquet, and Arrow" },
+  { part = "12", anchor = "ew-adapter-interface-normative-references", note = "the Arrow row" },
+]

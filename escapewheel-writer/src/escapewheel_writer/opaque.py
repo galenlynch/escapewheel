@@ -1,4 +1,4 @@
-"""A packet-owned opaque resource: a payload in a directory named by its resource ID (Part 03 §11.3).
+"""A packet-owned opaque resource: a payload in a directory named by its resource ID (Part 12 §5).
 
 An adapter places each payload, a regular file or a directory of them under its own name, alone in a
 resource directory directly in the `opaque_location` a build supplied it. The directory's name is
@@ -32,7 +32,7 @@ class PayloadRefused(ValueError):
 
 @dataclass(frozen=True)
 class Payload:
-    """A payload an in-process adapter hands the build as bytes (Part 03 §11.3).
+    """A payload an in-process adapter hands the build as bytes (Part 12 §5).
 
     Exactly one of `data`, for a file, and `files`, for a directory keyed by each file's `/`-separated
     path relative to it.
@@ -81,7 +81,7 @@ def write(payloads: Iterable[Payload], location: str | Path | None, source: str)
     if not location:
         raise PayloadRefused(
             f"{source}: hands over a packet-owned opaque resource and declares no opaque_location; a payload "
-            "crosses into a location the build supplies (Part 03 §11.3)"
+            "crosses into a location the build supplies (Part 12 §5)"
         )
     root = Path(location)
     for payload in handed:
@@ -121,7 +121,7 @@ def read(source: str, location: str | Path | None, owned: Collection[str] | None
     PayloadRefused
         Naming the source and each path: an entry that is not a directory, a resource directory
         holding no payload or several, a member that is neither a regular file nor a directory, an
-        empty directory, or a name that is not representable (Part 03 §11.3).
+        empty directory (Part 12 §5), or a name that is not representable (Part 03 §11).
     """
     if not location or not Path(location).is_dir():
         return []
@@ -140,7 +140,7 @@ def read(source: str, location: str | Path | None, owned: Collection[str] | None
         if not refused:
             found.append(StagedPayload(source, directory.name, members[0], held))
     if problems:
-        raise PayloadRefused(f"{source}: " + "; ".join(problems) + " (Part 03 §11.3)")
+        raise PayloadRefused(f"{source}: " + "; ".join(problems) + " (Part 12 §5)")
     return found
 
 

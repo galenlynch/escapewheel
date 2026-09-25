@@ -118,7 +118,7 @@ class UnitQCSource:
         rows are keyed by `(device_name, ks_unit_id)`, the stream's probe and the sorter's label.
     """
 
-    #: Part 03 §11.1: released apart from the writer, so it declares its protocols.
+    #: Part 12 §3: released apart from the writer, so it declares its protocols.
     PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -128,7 +128,7 @@ class UnitQCSource:
     #: build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
-    #: Part 05 §3.4: what a build must supply (Part 03 §11.2).
+    #: Part 05 §3.4: what a build must supply (Part 12 §4).
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "units")
 
     #: Part 05 §3.4: options this adapter reads and can run without. `store` is absent because it
@@ -155,7 +155,7 @@ class UnitQCSource:
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.experiment = experiment
-        # A mapping keyed by a pair does not cross a boundary (Part 03 §11.2), so the build hands
+        # A mapping keyed by a pair does not cross a boundary (Part 12 §4), so the build hands
         # over rows and this keys them.
         self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
         self.nwb = SourceStore(nwb) if nwb is not None else None

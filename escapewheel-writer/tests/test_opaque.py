@@ -1,4 +1,4 @@
-"""A packet-owned opaque resource crosses as its bytes in a directory named by its resource ID (Part 03 §11.3)."""
+"""A packet-owned opaque resource crosses as its bytes in a directory named by its resource ID (Part 12 §5)."""
 
 import hashlib
 import io
@@ -89,7 +89,7 @@ def _commit_one(tmp_path, registry, minimal, resource_id, payload, *, rows=None,
 
 
 def test_a_payload_file_is_published_under_its_resource_directory(tmp_path, registry, minimal):
-    """Part 03 §11.3: bound by its directory to the row naming it, digested as a single object."""
+    """Part 12 §5: bound by its directory to the row naming it, digested as a single object."""
     clip = b"\x00\x00\x00\x18ftypmp42" * 100
     root, report = _commit_one(tmp_path, registry, minimal, "core.clip", {"clip.mp4": clip})
     assert report.passed, [(f.check, f.message) for f in report.findings]
@@ -171,7 +171,7 @@ def _refused(tmp_path, arrange) -> str:
     with pytest.raises(PayloadRefused) as refused:
         opaque.read("clips", location)
     message = str(refused.value)
-    assert message.startswith("clips: ") and "Part 03 §11.3" in message
+    assert message.startswith("clips: ") and "Part 12 §5" in message
     return message
 
 
@@ -239,7 +239,7 @@ def _bind_refused(tmp_path, registry, minimal, deliveries, *, rows=(), extension
     with pytest.raises(PayloadRefused) as refused:
         writer.commit(root)
     assert not (root / "packet.json").exists() and not (root / "opaque").exists()
-    assert "Part 03 §11.3" in str(refused.value)
+    assert "Part 12 §5" in str(refused.value)
     return str(refused.value)
 
 
@@ -376,7 +376,7 @@ def test_a_hand_over_with_nowhere_to_go_is_refused_over_a_protocol(tmp_path):
 
 
 def test_opaque_location_is_supplied_empty_under_staging_one_per_source(tmp_path):
-    """Part 03 §11.2: supplied empty, since what is found there is bound; apart from `array_location`'s."""
+    """Part 12 §4: supplied empty, since what is found there is bound; apart from `array_location`'s."""
     from escapewheel_writer.recipe import TERMS, SourceSpec
     from escapewheel_writer.session import Context, _terms
 
@@ -479,7 +479,7 @@ def _build(tmp_path, registry, monkeypatch, sources, *, extensions=None):
 
 @pytest.mark.parametrize("route", ["in-process", "files-v0.1", "stream-v0.1", "flight-v0.1"])
 def test_one_payload_yields_one_entry_whatever_the_route(tmp_path, registry, monkeypatch, route):
-    """Part 03 §11.3: handed over in process or written by an adapter reached by any protocol."""
+    """Part 12 §5: handed over in process or written by an adapter reached by any protocol."""
     if route == "flight-v0.1":
         pytest.importorskip("pyarrow.flight")
     source = _source(tmp_path, "clips", {"core.report": {QC_NAME: PDF}}, ["core.media_assets"], route)
@@ -624,7 +624,7 @@ def test_a_source_relative_uri_is_resolved_by_the_reader(tmp_path, registry, min
 
 
 def test_a_resource_document_entry_declaring_itself_owned_is_refused(tmp_path):
-    """Part 03 §11.3: a packet-owned opaque resource crosses only as a payload."""
+    """Part 12 §5: a packet-owned opaque resource crosses only as a payload."""
     with pytest.raises(SourceDefect, match="cams: core.cam: declares external: false"):
         _document_delivery(tmp_path, [_cam("videos/cam.mp4", external=False)])
 

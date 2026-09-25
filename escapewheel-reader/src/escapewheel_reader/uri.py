@@ -24,7 +24,7 @@ def is_absolute(uri: str) -> bool:
 
 
 def representable(name: str) -> bool:
-    """Whether a packet can hold a file or directory under this name (Part 03 §11.3).
+    """Whether a packet can hold a file or directory under this name (Part 03 §11).
 
     Nonempty, valid UTF-8, holding neither NUL nor `/`, and neither `.` nor `..`. A `str` holding a
     lone surrogate, as `os.fsdecode` makes of bytes that are not UTF-8, is not valid UTF-8.

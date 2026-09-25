@@ -300,7 +300,7 @@ now does.
 
 **A plain exception crosses, badly.** 1,108 characters, the adapter's Python traceback and gRPC's
 debug context pasted inside the message. The same failure raised as a Flight error carrying one
-Part 09 §5.8 `problems` entry is 125 bytes a build parses.
+Part 12 §9 `problems` entry is 125 bytes a build parses.
 
 **No rows survive a failed transfer.** Two of four rows had crossed as batches and `read_all`
 returned none, so a build never holds part of a resource and needs no count to know it.

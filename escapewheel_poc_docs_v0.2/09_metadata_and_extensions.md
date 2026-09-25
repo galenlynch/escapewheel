@@ -92,32 +92,15 @@ A writer MAY accept an extension that ships code — an adapter registered under
 
 ### 5.7 How an extension's document and rows reach a build
 
-An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet written under the `delivery_root` a build supplies (`files-v0.1`) is one way and remains the route every implementation supports; an extension MAY deliver over any protocol of the group its profile names (Part 03 §11.1), since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that. Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how.
+An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet written under the `delivery_root` a build supplies (`files-v0.1`) is one way and remains the route every implementation supports; an extension MAY deliver over any protocol of the group its profile names (Part 12 §3), since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that. Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how.
 
-An extension's registry document and Part 03 §11.5's declaration document are different things for different readers, and neither substitutes for the other: the first declares logical resources, while the second declares what the adapter carrying them produces, states, needs, and speaks.
+An extension's registry document and Part 12 §7's declaration document are different things for different readers, and neither substitutes for the other: the first declares logical resources, while the second declares what the adapter carrying them produces, states, needs, and speaks.
 
 Rows arrive carrying identifiers as the names their source used, and a writer numbers them, so an extension neither knows nor needs the packet's numbering.
 
 How the registry document is produced is the extension's business, but an extension MUST NOT derive it from the rows it delivers for the packet being built. A declaration derived from one packet's data cannot disagree with that data, so it declares nothing, and two packets whose extensions each derived one no longer share a schema. Part 02 §5's three presence states are what carry the difference between a column this run did not compute and one the extension does not have.
 
 An extension's command MUST produce the same rows from the same inputs, and MUST NOT let wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it writes. Which program the command resolves to is the recipe author's: pinning library versions so two runs agree byte for byte is a build property, and a validator MUST NOT judge a packet non-conforming for lacking one. An extension that cannot be a function of its inputs delivers a file produced beforehand rather than a command the build runs.
-
-<a id="ew-adapter-run-report" data-spec-anchor="canonical"></a>
-### 5.8 What an extension may state about its own run
-
-An extension MAY validate its own tables before returning them, against its own registry document and on the same terms a validator applies to core. A build MUST NOT rely on its having done so; its own validation runs over every staged resource whatever produced it.
-
-An extension MAY write a report of its run at a path the recipe names, and a build MUST report what one contains where it is present. A build MUST NOT require one, and MUST NOT fail on a report's contents alone.
-
-Where the report is a file, a build MUST remove that path before it runs the command and MUST treat a report it did not see appear as absent. A file at a path the recipe names is present after any run that ever wrote one, so last week's findings are otherwise reported as this run's with nothing to distinguish them.
-
-Which channel carries a report is the protocol's. Under `files-v0.1` and `stream-v0.1` it is a file at the path the recipe names, supplied to the adapter as `report_path` (Part 03 §11.2), because rows have taken standard output and a file is the channel left. Under `flight-v0.1` it is `DoAction("report")`, because the connection is that channel and no file outlives the run; an adapter with a report MUST name `report` among its actions, and a build MUST NOT ask one that did not.
-
-A report carries what a build cannot derive, and a build SHOULD ignore what it can: rows per table, which tables exist, and whether their schemas conform are each established without asking. What no artifact holds is what the command read, what it skipped and why, and whether a table that is short is legitimately short.
-
-A report is JSON. An optional `problems` array carries an entry per finding, each with a `level` of `error`, `warning` or `info`, a `message`, and optionally the `resource` the finding concerns; an optional `read` array names what the command consumed; an optional `stated` object carries, per `block.field` name the source declares it states, the value the source holds (Part 03 §11.5). A build MUST report every problem it is given and MUST NOT refuse a report for carrying keys it does not recognise.
-
-A build MUST look for a report after a failure as it does after a success, since the run that went wrong is the one with something to say.
 
 ## 6. Direction of reference
 

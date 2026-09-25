@@ -144,7 +144,7 @@ owns = ["core.array_channels"]
     path.write_text(text)
     recipe = Recipe.load(path)
     # Both declare `units` and `clocks`, which a build fills from the sorter's output and
-    # refuses to pass empty (Part 03 §11.2), so the context carries both as it would by the time any
+    # refuses to pass empty (Part 12 §4), so the context carries both as it would by the time any
     # of them is built.
     context = Context(
         session_id="s1",

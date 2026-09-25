@@ -86,7 +86,7 @@ and `corpus.py` checks the count; `valid` must draw neither finding (Part 05 §5
 a `zarr.json` with no chunk written, so no Zarr library is needed to build the corpus.
 
 Four packets each add one packet-owned opaque payload at `opaque/<resource_id>/<name>` (Part 03
-§11.3), and are clean with checksums: `owned_opaque_object` a single file, `owned_opaque_prefix` a
+§11), and are clean with checksums: `owned_opaque_object` a single file, `owned_opaque_prefix` a
 directory digested as a prefix, `owned_opaque_singleton` a file bound to an opaque singleton of
 the fixture-local extension `qc_documents`, since core declares none, and
 `owned_opaque_encoded_name` the file `QC report é.pdf` at the `uri`

@@ -170,7 +170,7 @@ def _rooted(target: Any) -> bool:
 ANONYMOUS = frozenset({"s3", "gs", "gcs", "az", "abfs", "adl"})
 
 
-#: The environment variable naming the cache directory. Not a supplied term (Part 03 §11.2): an
+#: The environment variable naming the cache directory. Not a supplied term (Part 12 §4): an
 #: adapter that never reads it caches somewhere else and is conforming, so this says where the
 #: bytes should land rather than anything a delivery depends on.
 CACHE_VARIABLE = "ESCAPEWHEEL_SOURCE_CACHE"

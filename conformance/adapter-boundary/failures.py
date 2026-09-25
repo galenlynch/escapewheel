@@ -23,7 +23,7 @@ import pyarrow.flight as fl
 HERE = Path(__file__).resolve().parent
 ROWS = pa.table({"electrode_id": [1, 2, 3, 4], "session_id": [0, 0, 0, 0]})
 
-#: One finding in the shape Part 09 §5.8 gives an extension's report.
+#: One finding in the shape Part 12 §9 gives an extension's report.
 FINDING = {
     "level": "warning",
     "resource": "core.electrodes",
@@ -77,7 +77,7 @@ class Adapter(fl.FlightServerBase):
         )
 
     def do_action(self, context, action):
-        """The whole run's report, asked for once, after the rows (Part 09 §5.8's shape)."""
+        """The whole run's report, asked for once, after the rows (Part 12 §9's shape)."""
         if self.mode == "silent":
             raise NotImplementedError(action.type)
         if action.type == "report":

@@ -84,7 +84,7 @@ def test_a_recipe_may_run_some_sources_in_process_and_not_others(tmp_path):
 
 
 def test_a_shipped_adapter_needs_no_declaration_and_a_registered_one_does(tmp_path):
-    """Part 03 §11.1's test is the release boundary. A built-in ships with this package and is
+    """Part 12 §3's test is the release boundary. A built-in ships with this package and is
     upgraded with it, so in process is its only route and there is nothing to declare; a kind
     another distribution registers moves on its own schedule and must say how it can be reached."""
     registry = {"resources": {"core.units": {"kind": "table", "table": {"columns": [], "rules": []}}}}
@@ -704,7 +704,7 @@ def test_an_encoding_declaration_reaches_the_writer(tmp_path):
     assert _encoding_exceptions(recipe)["delta"] == {"aind_unit_qc.metrics": ("num_spikes_used",)}
 
 
-# -- a source the build does not import (Part 03 §11) ---------------------------------------
+# -- a source the build does not import (Part 12 §2) ---------------------------------------
 
 
 def declaration_for(tmp_path, **fields):
@@ -748,7 +748,7 @@ def test_a_delivered_source_carries_how_a_build_reaches_it(tmp_path):
 
 
 def test_a_recipe_naming_no_protocol_reaches_the_adapter_by_one_it_declares(tmp_path):
-    """Part 03 §11.1: the adapter's first declared, and only that protocol's terms are supplied."""
+    """Part 12 §3: the adapter's first declared, and only that protocol's terms are supplied."""
     from escapewheel_writer.delivery import _protocol_supplies
     from escapewheel_writer.recipe import reached_by
 
@@ -768,7 +768,7 @@ def test_a_recipe_naming_a_protocol_its_adapter_does_not_declare_is_refused(tmp_
 
 
 def test_a_source_run_in_process_is_reached_by_no_protocol(tmp_path):
-    """In process there is no boundary, so no protocol and none of its terms (Part 03 §11.2)."""
+    """In process there is no boundary, so no protocol and none of its terms (Part 12 §4)."""
     from escapewheel_writer.recipe import reached_by
 
     (spec,) = Recipe.load(write(tmp_path, '[[source]]\nkind = "sorter"\nroot = "."\n')).sources
@@ -795,7 +795,7 @@ def test_a_declaration_naming_a_resource_no_registry_declares_is_refused(tmp_pat
 
 
 def test_a_declaration_contributing_what_it_does_not_produce_is_refused(tmp_path, registry):
-    """Part 03 §11.5: the document form of the sixth fact is checked as the class form is."""
+    """Part 12 §7: the document form of the sixth fact is checked as the class form is."""
     named = declaration_for(tmp_path, contributes=["core.clocks"])
     recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
     assert any("contributes core.clocks, which its produces does not name" in p.message for p in recipe.check(registry))
@@ -846,7 +846,7 @@ def test_an_accepted_option_the_recipe_leaves_unset_is_not_refused(tmp_path, reg
     ],
 )
 def test_an_accepted_name_a_build_cannot_honor_is_refused(tmp_path, registry, accepted, refusal):
-    """Part 03 §11.5: an option cannot be a term, nor both accepted and needed."""
+    """Part 12 §7: an option cannot be a term, nor both accepted and needed."""
     named = declaration_for(tmp_path, accepts=[accepted])
     recipe = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named)))
     assert any(refusal in p.message for p in recipe.check(registry))
@@ -856,7 +856,7 @@ def test_an_accepted_name_a_build_cannot_honor_is_refused(tmp_path, registry, ac
     "member", ["kind", "protocols", "produces", "contributes", "states", "needs", "accepts", "consumes"]
 )
 def test_a_document_missing_a_member_is_refused(tmp_path, registry, member):
-    """Part 03 §11.5: all eight are required, so an absent one has no reading to fall back on."""
+    """Part 12 §7: all eight are required, so an absent one has no reading to fall back on."""
     import json
 
     named = declaration_for(tmp_path)
@@ -919,7 +919,7 @@ def test_a_sound_registered_class_is_refused_for_nothing(monkeypatch, tmp_path, 
 
 
 def test_a_registered_class_run_in_process_is_reached_by_no_protocol(monkeypatch, tmp_path, registry):
-    """In process there is no boundary, whatever the adapter declares (Part 03 §11.1)."""
+    """In process there is no boundary, whatever the adapter declares (Part 12 §3)."""
     from escapewheel_writer.recipe import reached_by
 
     _registered(monkeypatch, tmp_path, registry)
@@ -938,7 +938,7 @@ def test_a_registered_class_run_in_process_is_reached_by_no_protocol(monkeypatch
     ids=["no-protocol", "undeclared-resource", "term-accepted", "malformed-name"],
 )
 def test_a_registered_class_is_refused_as_its_document_would_be(monkeypatch, tmp_path, registry, attributes, refusal):
-    """Part 03 §11.5: a class run in process is checked, and on the same terms as a document."""
+    """Part 12 §7: a class run in process is checked, and on the same terms as a document."""
     assert any(refusal in m for m in _registered(monkeypatch, tmp_path, registry, **attributes))
 
 
@@ -980,7 +980,7 @@ def test_a_source_is_reached_one_way_or_the_other(tmp_path, registry):
 
 
 def test_a_built_in_adapter_may_be_delivered_without_a_document(tmp_path, registry):
-    """A build may serve an adapter it ships over any protocol of the group (Part 03 §11.1)."""
+    """A build may serve an adapter it ships over any protocol of the group (Part 12 §3)."""
     body = """
 [[source]]
 kind = "sorter"

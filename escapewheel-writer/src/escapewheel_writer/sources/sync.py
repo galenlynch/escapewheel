@@ -343,7 +343,7 @@ class SyncSource:
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
-    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: Part 05 §3.4: what a build must supply, resolved against Part 12 §4's terms first and the
     #: recipe's options second. A name resolving to neither is refused before any source is opened.
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
@@ -351,7 +351,7 @@ class SyncSource:
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "clocks")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
-    #: unset (Part 03 §11.2). `first_samples` is absent because it is a term a build fills, which
+    #: unset (Part 12 §4). `first_samples` is absent because it is a term a build fills, which
     #: a declaration may not name as an option.
     ACCEPTS: ClassVar[tuple[str, ...]] = ("experiment", "recording", "sync_line", "prefix")
 

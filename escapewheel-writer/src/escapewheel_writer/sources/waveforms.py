@@ -133,12 +133,12 @@ class WaveformSource:
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
-    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: Part 05 §3.4: what a build must supply, resolved against Part 12 §4's terms first and the
     #: recipe's options second. A name resolving to neither is refused before any source is opened.
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "units", "array_location")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
-    #: unset (Part 03 §11.2). `store` is absent because it is a handle, which a recipe cannot
+    #: unset (Part 12 §4). `store` is absent because it is a handle, which a recipe cannot
     #: carry and a declaration may not name.
     ACCEPTS: ClassVar[tuple[str, ...]] = (
         "array_asset_id",
@@ -175,14 +175,14 @@ class WaveformSource:
         self.session_id = session_id
         self.experiment = experiment
         # Records in, lookup here: a mapping keyed by a pair does not cross a boundary
-        # (Part 03 §11.2), so the build hands over rows and each adapter keys them itself.
+        # (Part 12 §4), so the build hands over rows and each adapter keys them itself.
         self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
         self.array_asset_id = f"{prefix}{array_asset_id}"
         self.sd = sd
         self.sd_asset_id = f"{prefix}{sd_asset_id}"
         self.compressed_per_chunk = compressed_per_chunk
         self.prefix = prefix
-        #: Where an array goes when this source is delivered out of process (Part 03 §11.3). Held
+        #: Where an array goes when this source is delivered out of process (Part 12 §5). Held
         #: rather than used: the values are what `staged_arrays` hands over, and what writes them
         #: is whichever side of the boundary is staging.
         self.array_location = array_location
@@ -352,14 +352,14 @@ class WaveformSource:
         """One `core.array_assets` row.
 
         No `dtype`, `shape`, location or format: the Zarr array declares the first two, and the
-        build places the array by `resource_id` and records where in the manifest (Part 03 §11.3).
+        build places the array by `resource_id` and records where in the manifest (Part 12 §5).
         `conversion` is the one thing the array cannot say.
         """
         built = self._read()
         return {
             "array_asset_id": asset_id,
             # The packet identity `staged_arrays` gives the array, so a delivered one binds to this
-            # row by name alone (Part 03 §11.3).
+            # row by name alone (Part 12 §5).
             "resource_id": f"core.{asset_id}",
             "session_id": self.session_id,
             "semantic_type": semantic_type,

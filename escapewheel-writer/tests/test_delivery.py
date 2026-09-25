@@ -55,7 +55,7 @@ def supplied(nwb, harp):
 
 @pytest.mark.parametrize("kind", sorted(ADAPTERS))
 def test_every_shipped_adapter_generates_a_valid_document(kind):
-    """Generated rather than maintained (Part 03 §11.5), so this is what an author starts from."""
+    """Generated rather than maintained (Part 12 §7), so this is what an author starts from."""
     jsonschema = pytest.importorskip("jsonschema")
     document = declaration.of(ADAPTERS[kind], kind, ["stream-v0.1"])
     assert not list(jsonschema.Draft202012Validator(declaration.schema()).iter_errors(document))
@@ -74,9 +74,9 @@ def test_every_option_an_adapter_reads_is_declared(kind):
     """The declared list is checked against the constructor, so it cannot go stale.
 
     A parameter holding a default is an option a recipe may set, and one a recipe may set and no
-    declaration names is refused (Part 03 §11.2) -- so an option added here without being declared
+    declaration names is refused (Part 12 §4) -- so an option added here without being declared
     would refuse every recipe setting it. `store` is the exception: a handle a recipe cannot
-    carry, supplied where the class accepts one rather than declared (Part 03 §11.2).
+    carry, supplied where the class accepts one rather than declared (Part 12 §4).
     """
     adapter = ADAPTERS[kind]
     parameters = list(inspect.signature(adapter.__init__).parameters.values())[1:]
@@ -111,7 +111,7 @@ def test_a_document_round_trips_through_a_file(tmp_path):
 
 
 def test_a_shipped_class_generates_no_protocol_unless_given_one():
-    """Only a shipped adapter may state none (Part 03 §11.1), and its document then fails the schema."""
+    """Only a shipped adapter may state none (Part 12 §3), and its document then fails the schema."""
     bare = declaration.of(ADAPTERS["nwb"], "nwb")
     assert "protocols" not in bare
     assert declaration.shape_problems(bare) == ["declaration: 'protocols' is a required property"]
@@ -157,7 +157,7 @@ def test_declare_refuses_a_protocol_for_a_class_stating_its_own(monkeypatch, cap
     ],
 )
 def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected, registry):
-    """Part 03 §11.5's checks, each firing on its own and naming what is wrong."""
+    """Part 12 §7's checks, each firing on its own and naming what is wrong."""
     sound = declaration.of(ADAPTERS["nwb"], "nwb", ["stream-v0.1"])
     found = declaration.refusals(
         {**sound, **broken},
@@ -222,7 +222,7 @@ def test_stage_one_agrees_with_what_arrived(supplied, tmp_path):
 
 
 def test_a_build_asks_for_only_what_the_recipe_leaves_it_owning(supplied, tmp_path):
-    """`wanted` is a term a build supplies and an adapter may act on (Part 03 §11.2)."""
+    """`wanted` is a term a build supplies and an adapter may act on (Part 12 §4)."""
     wanted = ["core.electrodes", "core.probes"]
     got = delivery.fetch(
         "nwb",
@@ -239,7 +239,7 @@ def test_a_build_asks_for_only_what_the_recipe_leaves_it_owning(supplied, tmp_pa
 
 
 def test_the_values_behind_states_come_back_in_the_report(supplied, tmp_path):
-    """No static document can carry them, because each needs the source read (Part 09 §5.8)."""
+    """No static document can carry them, because each needs the source read (Part 12 §9)."""
     report = tmp_path / "report.json"
     got = delivery.fetch(
         "nwb",
@@ -257,7 +257,7 @@ def test_the_values_behind_states_come_back_in_the_report(supplied, tmp_path):
 
 
 def test_a_stale_report_is_not_read_as_this_runs(supplied, tmp_path):
-    """A file at a path the recipe names outlives the run that wrote it (Part 09 §5.8)."""
+    """A file at a path the recipe names outlives the run that wrote it (Part 12 §9)."""
     report = tmp_path / "report.json"
     report.write_text(json.dumps({"problems": [{"level": "error", "message": "last week"}]}))
     got = delivery.fetch(
@@ -382,7 +382,7 @@ def test_a_command_that_is_a_string_is_refused(tmp_path):
 
 
 def test_an_array_with_nowhere_to_go_is_refused_rather_than_half_delivered(tmp_path):
-    """A dense array crosses as bytes under a location a build supplies (Part 03 §11.3)."""
+    """A dense array crosses as bytes under a location a build supplies (Part 12 §5)."""
 
     class Stages:
         def records(self):
@@ -429,7 +429,7 @@ def test_an_array_crosses_as_the_bytes_the_adapter_wrote(tmp_path):
 
 
 def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp_path, registry):
-    """Every field of its manifest entry is in the array or in the build (Part 03 §11.3)."""
+    """Every field of its manifest entry is in the array or in the build (Part 12 §5)."""
     import numpy as np
 
     from escapewheel_writer.writer import PacketWriter, StagedArray
@@ -505,7 +505,7 @@ def _array_writer(registry, rows):
 
 
 def test_a_delivered_array_binds_to_the_catalog_row_carrying_its_name(registry, tmp_path):
-    """The directory's name is the row's `resource_id`, and the row supplies the rest (Part 03 §11.3)."""
+    """The directory's name is the row's `resource_id`, and the row supplies the rest (Part 12 §5)."""
     from escapewheel_writer.writer import StagedArray
 
     writer = _array_writer(
@@ -562,7 +562,7 @@ def test_a_shared_resource_is_held_however_large_it_is():
 
 
 def test_the_protocol_is_read_from_the_term_that_asked_for_it():
-    """A build supplies whichever terms its adapter's protocol requires (Part 03 §11.2)."""
+    """A build supplies whichever terms its adapter's protocol requires (Part 12 §4)."""
     assert delivery.infers({"socket": "/tmp/a.sock"}) == "flight-v0.1"
     assert delivery.infers({"delivery_root": "/tmp/d"}) == "files-v0.1"
     assert delivery.infers({"root": "/data"}) == "stream-v0.1"
@@ -610,7 +610,7 @@ def test_a_build_reaches_a_delivered_source_through_the_same_construction(tmp_pa
 
 
 def test_a_shipped_adapter_whose_entry_names_no_protocol_is_served_over_one(tmp_path, nwb, harp):
-    """Part 03 §11.1: a delivery table takes an adapter this build ships out of process."""
+    """Part 12 §3: a delivery table takes an adapter this build ships out of process."""
     from escapewheel_writer.session import _build_source
 
     said = []
@@ -658,7 +658,7 @@ def test_a_file_written_outside_the_delivery_root_is_not_a_delivery(tmp_path, su
 
 
 def test_an_array_location_is_under_staging_and_supplied_empty(tmp_path):
-    """So an array moves into the packet by rename (Part 03 §11.3), and no leftover binds."""
+    """So an array moves into the packet by rename (Part 12 §5), and no leftover binds."""
     from escapewheel_writer.recipe import SourceSpec
     from escapewheel_writer.session import _terms
 
@@ -715,7 +715,7 @@ def test_the_harvest_reads_a_delivered_source_s_rows(tmp_path, nwb, harp):
 
 
 def test_what_a_build_supplies_crosses_on_standard_input(tmp_path, supplied):
-    """Part 03 §11.2: on standard input, with no argument added to the command the recipe wrote."""
+    """Part 12 §4: on standard input, with no argument added to the command the recipe wrote."""
     script = tmp_path / "echo.py"
     script.write_text(
         "import json, sys\n"
@@ -806,7 +806,7 @@ class Referencing:
 
 @pytest.mark.parametrize("protocol", ["stream-v0.1", "files-v0.1"])
 def test_what_a_source_references_crosses_with_its_rows(protocol, tmp_path):
-    """The half of a manifest no row holds and no build may go looking for (Part 03 §11.3)."""
+    """The half of a manifest no row holds and no build may go looking for (Part 12 §5)."""
     script = tmp_path / "serve.py"
     script.write_text(
         "import json, sys\n"
@@ -856,7 +856,7 @@ def test_a_malformed_resource_document_is_refused(tmp_path, supplied):
 
 
 def test_a_referenced_resource_no_row_declares_is_refused(tmp_path, supplied):
-    """Part 03 §11.3: a build rejects an entry that does not resolve rather than dropping it."""
+    """Part 12 §5: a build rejects an entry that does not resolve rather than dropping it."""
     script = tmp_path / "stray.py"
     script.write_text(
         "import json, sys\n"
@@ -892,7 +892,7 @@ def test_a_referenced_resource_no_row_declares_is_refused(tmp_path, supplied):
     ],
 )
 def test_a_delivered_entry_carries_no_build_supplied_member(extra):
-    """Part 03 §11.3: the delivered entry is the manifest entry less what the build supplies."""
+    """Part 12 §5: the delivered entry is the manifest entry less what the build supplies."""
     entry = {
         "resource_id": "core.lfp",
         "declaration_id": "core.array_asset_instances",

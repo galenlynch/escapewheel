@@ -118,7 +118,7 @@ class LFPSource(Compensates):
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
-    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: Part 05 §3.4: what a build must supply, resolved against Part 12 §4's terms first and the
     #: recipe's options second. A name resolving to neither is refused before any source is opened.
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
@@ -126,7 +126,7 @@ class LFPSource(Compensates):
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "clocks")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
-    #: unset (Part 03 §11.2). `store` is absent because it is a handle, which a recipe cannot
+    #: unset (Part 12 §4). `store` is absent because it is a handle, which a recipe cannot
     #: carry and a declaration may not name.
     ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "prefix", "verify")
 

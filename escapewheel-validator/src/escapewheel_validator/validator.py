@@ -808,7 +808,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
 def _check_packet_owned_opaque(packet: Packet, report: Report) -> None:
     """Every packet-owned opaque payload is present, and its names survive a copy (Part 05 §5.3).
 
-    A payload is one file or a directory of them (Part 03 §11.3), so its listing is all either check
+    A payload is one file or a directory of them (Part 03 §11), so its listing is all either check
     reads. Its names draw `physical.opaque_name_portability` at `warning` and never fail the packet.
     """
     for resource in packet.resources(kind="opaque"):

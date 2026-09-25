@@ -173,7 +173,7 @@ def test_a_fixed_offset_is_not_a_zone(nwb, harp):
 
 
 def test_a_zone_is_accepted_as_the_name_a_recipe_wrote(nwb, harp):
-    """An option crosses to an adapter as data (Part 03 §11.2), so a zone arrives as a string.
+    """An option crosses to an adapter as data (Part 12 §4), so a zone arrives as a string.
 
     The adapter used to require a `ZoneInfo` and the build's per-kind branch converted on the way
     in; once every source was constructed from its declaration the conversion had nowhere to live,

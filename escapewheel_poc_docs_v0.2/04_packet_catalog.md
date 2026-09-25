@@ -206,7 +206,7 @@ resource specifically when support is absent.
 <a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources
 
-Where a resource is a prefix rather than a single object — an external store, a packet-owned Zarr array, or a packet-owned opaque resource whose payload is a directory ([Part 03 §11.3](03_portable_physical_profile.md#ew-referenced-resource-delivery)) — its `digest` and `size_bytes` are defined over its objects by [§4.3](#ew-resource-digests).
+Where a resource is a prefix rather than a single object — an external store, a packet-owned Zarr array, or a packet-owned opaque resource whose payload is a directory ([Part 03 §11](03_portable_physical_profile.md#ew-opaque-storage)) — its `digest` and `size_bytes` are defined over its objects by [§4.3](#ew-resource-digests).
 
 Such a resource MAY additionally declare a `members` array recording what was seen, one member per object. A member records its object's single-object value as `digest`, a string under its entry's algorithm, and MAY carry a `store_digest`. The incorporated schema requires every member to record `digest` where its entry records one, and forbids a member recording one where its entry does not. Carrying each member's own value is what lets a consumer that fetched three chunks verify those three without the other two hundred.
 

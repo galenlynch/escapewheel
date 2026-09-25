@@ -173,7 +173,7 @@ class NWBSource(Compensates):
     root : str or Path
         The ``.nwb`` directory, or a directory containing exactly one.
     reference_clock : Mapping
-        The `core.clocks` row of the clock the file's `timestamps` are on (Part 03 §11.2). Every
+        The `core.clocks` row of the clock the file's `timestamps` are on (Part 12 §4). Every
         conversion is checked against its grid, so the wrong clock raises rather than producing
         plausible ticks. A row rather than a clock object because everything a build supplies is
         data, and the row is what an adapter out of process receives.
@@ -294,17 +294,17 @@ class NWBSource(Compensates):
         "subject.strain": "stated_strain",
     }
 
-    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: Part 05 §3.4: what a build must supply, resolved against Part 12 §4's terms first and the
     #: recipe's options second. A name resolving to neither is refused before any source is opened.
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
     #: resolves to nothing, so declaring one makes it mandatory.
     #: `units` is not here: the build fills it, and only a dialect that can read a unit's label
-    #: joins on it. A subclass that does declares it (Part 03 §11.2).
+    #: joins on it. A subclass that does declares it (Part 12 §4).
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "reference_clock", "zone")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
-    #: unset (Part 03 §11.2). `interval_kind` is the one no declaration could carry until there
+    #: unset (Part 12 §4). `interval_kind` is the one no declaration could carry until there
     #: was a list for it: it defaults to no intervals, which is right for a session holding none.
     ACCEPTS: ClassVar[tuple[str, ...]] = (
         "prefix",
@@ -384,7 +384,7 @@ class NWBSource(Compensates):
         #: Unmapped trial columns found constant across the session, filled in by `trials`.
         self._constants: dict[str, Any] = {}
         #: The build's unit identity, keyed by the pair this file joins on. A collection crosses
-        #: as records (Part 03 §11.2), so the lookup is built here rather than handed over: a
+        #: as records (Part 12 §4), so the lookup is built here rather than handed over: a
         #: mapping keyed by a pair does not survive the crossing at all.
         self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
         Compensates.__init__(self)
@@ -957,7 +957,7 @@ class NWBSource(Compensates):
                     "session_id": self.session_id,
                     "array_asset_id": f"{self.prefix}{name}",
                     # The packet identity `staged_arrays` gives the array, so a delivered one binds
-                    # to this row by name alone (Part 03 §11.3).
+                    # to this row by name alone (Part 12 §5).
                     "resource_id": f"core.{self.prefix}{name}",
                     # Part 01 §3.17: which instrument made this array. Read from the same description
                     # `_signal_devices` declares the device from, so the two cannot disagree.

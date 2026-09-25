@@ -21,7 +21,7 @@ Three cameras of one session are 10 GB as MP4 and 80 GB as the AVI they were enc
 packet that copied them would be mostly video (Part 04 §5.1). What it owns instead is one row per
 frame on a declared clock, which is the part no player can supply: an MP4 knows its own
 presentation timestamps and nothing about the rig's clock. It could own a video instead by declaring
-`opaque_location` and delivering the file as a payload (Part 03 §11.3).
+`opaque_location` and delivering the file as a payload (Part 12 §5).
 
 Each camera writes a CSV beside its video, one line per frame and three columns:
 
@@ -86,18 +86,18 @@ class VideoSource(Compensates):
         The session these were recorded in.
     reference_clock : Mapping
         The `core.clocks` row of the clock the CSV's first column is in seconds of
-        (Part 03 §11.2). Only its `clock_id` is read: the CSV states a frame's tick, so nothing
+        (Part 12 §4). Only its `clock_id` is read: the CSV states a frame's tick, so nothing
         here converts.
     uri_base : str, optional
         Absolute base the videos are addressed under. Without one the packet records a `file://`
         URI, which resolves only on the machine that built it.
     prefix : str, optional
         Prepended to every media asset ID and name, and to the name part of the resource ID each
-        video is referenced under, which a build binds to the asset by that name (Part 03 §11.3).
+        video is referenced under, which a build binds to the asset by that name (Part 12 §5).
         The reference clock is not this adapter's to name, so it is left as given.
     """
 
-    #: Part 03 §11.1: released apart from the writer, so it declares its protocols. `escapewheel
+    #: Part 12 §3: released apart from the writer, so it declares its protocols. `escapewheel
     #: deliver` serves every one; the first is what a build reaches it by when a recipe names none.
     PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
@@ -108,7 +108,7 @@ class VideoSource(Compensates):
     #: empty rather than omitted, because a build refuses a source it cannot ask.
     STATES: ClassVar[dict[str, str]] = {}
 
-    #: Part 05 §3.4: what a build must supply, resolved against Part 03 §11.2's terms first and the
+    #: Part 05 §3.4: what a build must supply, resolved against Part 12 §4's terms first and the
     #: recipe's options second. A name resolving to neither is refused before any source is opened.
     #:
     #: An option the adapter can run without is left out: a declared name a recipe does not set
@@ -116,7 +116,7 @@ class VideoSource(Compensates):
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "reference_clock")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
-    #: unset (Part 03 §11.2).
+    #: unset (Part 12 §4).
     ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "batch_rows", "prefix")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.

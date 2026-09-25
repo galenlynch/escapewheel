@@ -68,7 +68,7 @@ class TickGrid:
     """The identifier ticks are counted on, the rate they advance at, and the conversion.
 
     Separate from :class:`Clock` because this is the whole of what turning seconds into ticks
-    needs, and it is all an adapter handed a `core.clocks` row can build (Part 03 §11.2): the row
+    needs, and it is all an adapter handed a `core.clocks` row can build (Part 12 §4): the row
     carries no human label, `clock_name` being what `clock_id` stands for (Part 02 §8.2), so a grid
     is derivable from one where a clock is not.
 
@@ -305,7 +305,7 @@ class Clock:
 def zone_of(value: str | tzinfo) -> ZoneInfo:
     """Resolve a recipe's declared time zone, which crosses to an adapter as a string.
 
-    An option is data (Part 03 §11.2), so a zone arrives as the name the recipe wrote and the
+    An option is data (Part 12 §4), so a zone arrives as the name the recipe wrote and the
     adapter is what turns it into a zone. A fixed offset is refused however it arrives: the sources
     here record naive local wall clocks, and resolving one needs a zone that knows when DST moved.
     """

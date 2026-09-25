@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R143 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R144 accepted. R42 and R73 withdrawn. No proposal or draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 43 tables, 348 columns, 111 references, 77 Tier 2 rules (2 advisory)
@@ -69,7 +69,7 @@ fork. What it should generate:
   and a test running it against `registry/registry.schema.json`;
 - an `extract.py` delivering by `files-v0.1`: it reads the build's JSON object of terms from
   standard input and writes `<resource_id>.parquet` into the `delivery_root` it names, beside an
-  adapter declaration document (Part 03 §11.5) for the recipe's `delivery` table;
+  adapter declaration document (Part 12 §7) for the recipe's `delivery` table;
 - an optional self-validation step against the extension's own document (R109 §3.5) and an
   optional run report (R109 §3.6);
 - a `[source]` block, with its `delivery` table, and an `[encoding]` block to paste into a recipe.
@@ -108,7 +108,7 @@ null where an in-process one fills them, and the build says so rather than leavi
 quietly poorer.
 
 The build cannot recompute the result, because a withheld anchor never reaches the packet. The
-recommended fix is a report key: sync's delivery report (Part 09 §5.8) carries the result per clock,
+recommended fix is a report key: sync's delivery report (Part 12 §9) carries the result per clock,
 and the build stamps it on the clock rows as `_declare_withheld` does in process. It needs a
 revision because it adds a report key. A table of sync's own would restate R99's columns, and a
 general way for one source to contribute columns to another's rows is more mechanism than one fact
@@ -181,7 +181,7 @@ natural.
   implementation floor R3 §2.3 also argues. Worth re-deciding before a table next wants a repeated
   value inline.
 - **A nullable identifier's null has no stated meaning.** Nothing obliges an adapter to report a
-  value it could not fill, since Part 09 §5.8's report is a MAY. So a consumer cannot tell
+  value it could not fill, since Part 12 §9's report is a MAY. So a consumer cannot tell
   `core.array_channels.electrode_id` null meaning *this channel maps to no contact* from null
   meaning *I gave up*, and that is true of every nullable reference in the registry. `lfp` now
   refuses rather than writing such a null, and the column is null in **0 of 1,152 and 0 of 960**
@@ -207,7 +207,7 @@ accepts `prefix`.
 - **The scaffold never mentions `vocabulary`.** Once an author gives a string column a role, the
   meta-schema requires one, so a finished draft with string columns fails until the author finds
   out.
-- **The source cache does not meet R142** (Part 03 §11.7). The writer should take the location from
+- **The source cache does not meet R142** (Part 12 §10). The writer should take the location from
   its own configuration and supply it only as `source_cache` in the input object, dropping
   `ESCAPEWHEEL_SOURCE_CACHE`, its `TMPDIR` fallback, and `cache_beside`'s process-wide variable;
   keep entries under its own subdirectory, keyed by URI and entity tag, and confirm each object with
@@ -215,7 +215,7 @@ accepts `prefix`.
   data on every fetch route, `cat` included; refuse a declaration whose `needs` names the term and
   admit one whose `accepts` does; have `session`, `video`, and `aind_unit_qc` declare it in
   `accepts`; and add a command that prunes the location. The writer README's cache section and the
-  comment in `sources/store.py` citing Part 03 §11.2 change with it. R142 §6 lists the tests.
+  comment in `sources/store.py` citing Part 12 §4 change with it. R142 §6 lists the tests.
 - **`fixtures/packets/` holds stale directories** (`stream_clock_mismatch`, `undetected_default`),
   and `fixtures/README.md` still lists one.
 
@@ -418,7 +418,7 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
   the top level with the target's options under the protocol name. `Recipe.load` now places the
   cache in the packet's parent directory before it resolves the first root, since a store root is
   opened through a chained path carrying the location; `ESCAPEWHEEL_SOURCE_CACHE` carries it to a
-  delivering command, which is not a Part 03 §11.2 supplied term.
+  delivering command, which is not a Part 12 §4 supplied term.
 
 ---
 

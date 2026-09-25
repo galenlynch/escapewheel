@@ -53,13 +53,13 @@ A writer MUST NOT combine parsing, normalization, validation, and writing into o
 An adapter MUST deliver only through the channels and locations a build supplies it, and a build
 MUST read a delivery from nowhere else. A build owns each location it chooses for a delivery, and
 may choose the place the delivered bytes will stay, as
-[Part 03 §11.3](03_portable_physical_profile.md#ew-referenced-resource-delivery) has a packet-owned
+[Part 12 §5](12_adapter_interface.md#ew-referenced-resource-delivery) has a packet-owned
 array written under the staging area. A build MUST supply each such location empty, a directory
 holding nothing or a path where nothing exists, since a build identifies what an adapter wrote
 there by name and a name an earlier run left would pass for the delivery. An adapter MUST NOT rely
 on what a location held before its run, or on what it writes there remaining after the build. This
 rule governs a delivery and nothing else an adapter writes;
-[Part 03 §11](03_portable_physical_profile.md#ew-reaching-a-source) names the portable profile's
+[Part 12 §2](12_adapter_interface.md#ew-reaching-a-source) names the portable profile's
 routes.
 
 ## 3. The session recipe
@@ -137,7 +137,7 @@ A preference MUST NOT name a resource only one source produces. Such an entry ar
 
 Every source adapter MUST declare the set of resource identifiers it can supply. It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-An adapter declares six such facts, all read before any source is opened: the resources it can supply; those of them whose rows it supplies only in part, such as the clocks of its own streams; the recipe fields it can state (§3.6); the values a build must supply it (Part 03 §11.2); the options it reads and can run without, and the one term it may accept, `source_cache` (Part 03 §11.2); and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 03 §11.5 specifies, where they are `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
+An adapter declares six such facts, all read before any source is opened: the resources it can supply; those of them whose rows it supplies only in part, such as the clocks of its own streams; the recipe fields it can state (§3.6); the values a build must supply it (Part 12 §4); the options it reads and can run without, and the one term it may accept, `source_cache` (Part 12 §4); and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 12 §7 specifies, where they are `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
 
 A build MUST read a source entry that declares no `owns` as follows. Of the resources its adapter declares it can supply, leaving out any another entry declares under `owns` and any a preference gives to another source, the entry contributes those its adapter supplies only in part and owns the rest. It also contributes every resource its own `contributes` names, and owns none of those. An entry that declares `owns` owns exactly what it names and contributes what its `contributes` names. **A recipe states what it narrows; silence means the whole.**
 
@@ -149,7 +149,7 @@ A build MUST refuse where a preference discards a value another source stated: w
 
 A build MUST NOT compose a row from more than one source. The merged row would be a fact no source stated. A recipe resolves the refusal by naming the fact in `[overrides]` with its reason, by preferring the other source, or by correcting the source that states less.
 
-A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for. What an implementation calls that declaration in code is Part 07 §4's, and the key it takes in a declaration document is Part 03 §11.5's.
+A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for. What an implementation calls that declaration in code is Part 07 §4's, and the key it takes in a declaration document is Part 12 §7's.
 
 <a id="ew-recipe-check" data-spec-anchor="canonical"></a>
 ### 3.5 Checking a recipe
@@ -164,10 +164,10 @@ A build MUST check a recipe against the registry before it opens any source. A b
 
 A build MUST also refuse, on the same terms and before any source is opened:
 
-- an adapter declaring a value Part 03 §11.2 resolves to neither a term nor a recipe option;
+- an adapter declaring a value Part 12 §4 resolves to neither a term nor a recipe option;
 - an adapter declaring a term that list carries, other than `source_cache`, that this recipe cannot fill, naming the term and the source;
 - an adapter released independently of a build declaring no protocol of a group the profile names, or any adapter declaring one it does not name;
-- a declaration failing the schema Part 03 §11.5 incorporates, whether a document or an importable declaration, naming where it fails;
+- a declaration failing the schema Part 12 §7 incorporates, whether a document or an importable declaration, naming where it fails;
 - a source entry naming a protocol its adapter does not declare, where the adapter declares any, naming the source and the protocol;
 - a declaration whose resources include one no loaded registry declares;
 - a declaration whose stated fields include one no recipe block carries;
@@ -207,9 +207,9 @@ A command that exits non-zero MUST fail the build, and a build MUST name the sou
 
 A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string. A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
 
-Where the command is one a build reaches a source through (Part 03 §11.2), the build MUST write what it supplies that source to the command's standard input and MUST close the stream when it has, without waiting for the command to exit, and MUST read what the command produces while it writes. A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
+Where the command is one a build reaches a source through (Part 12 §4), the build MUST write what it supplies that source to the command's standard input and MUST close the stream when it has, without waiting for the command to exit, and MUST read what the command produces while it writes. A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
 
-A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards. Where the recipe puts rows on standard output (Part 03 §11.1), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one. Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
+A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards. Where the recipe puts rows on standard output (Part 12 §3), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one. Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
 ### 3.8 A recipe declares an encoding
 
@@ -231,7 +231,7 @@ belongs to the build.
 <a id="ew-in-process-opt-in" data-spec-anchor="canonical"></a>
 ### 3.9 Whether a source runs in the writer's process
 
-A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so. A build MUST run an adapter it ships that declares no protocol in process unless its recipe entry gives it a `delivery` table naming a command (§§3.1 and 3.7), and then serves it over a protocol of the group (Part 03 §11.1); a build MUST NOT require a recipe to opt such an adapter into the writer's process.
+A build MUST deliver a source whose adapter declares a protocol out of process unless the recipe declares that it runs in the writer's, and a writer MUST NOT run such a source in process where the recipe does not say so. A build MUST run an adapter it ships that declares no protocol in process unless its recipe entry gives it a `delivery` table naming a command (§§3.1 and 3.7), and then serves it over a protocol of the group (Part 12 §3); a build MUST NOT require a recipe to opt such an adapter into the writer's process.
 
 The recipe declares it because the recipe author chose the environment. One process resolves one dependency closure, so whether a given set of adapters installs together is a fact about one machine on one day rather than a property of any adapter, and the person assembling the recipe is the only party who can find out and the one who carries it when the answer changes.
 
@@ -265,7 +265,7 @@ An adapter compensating for a known defect in its source MUST declare the compen
 
 What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean.
 
-A resource an adapter owns and has nothing for MUST arrive empty rather than not arriving (Part 03 §11.3). That is what makes the test usable: a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
+A resource an adapter owns and has nothing for MUST arrive empty rather than not arriving (Part 12 §5). That is what makes the test usable: a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
 
 A non-zero exit is a failure whatever arrived. A build MUST report one as a failure even where every resource is present, because an adapter saying it failed is not overruled by its own output, and a command dying between two resources delivers the first one complete and valid.
 
@@ -322,7 +322,7 @@ The finding's level is `warning` for a packet-owned resource whose interface's f
 registry whose declaration the resource's entry names.
 
 Two names in one directory of a packet-owned opaque payload
-([Part 03 §11.3](03_portable_physical_profile.md#ew-referenced-resource-delivery)) **collide** where
+([Part 03 §11](03_portable_physical_profile.md#ew-opaque-storage)) **collide** where
 they differ and are a canonical caseless match under the Unicode Standard, Section 3.13, definition
 D145, which equates names differing only in case, only in normalization form, or in both. A name
 within such a payload, or a decoded segment of the payload's `uri`, is **unportable to Windows**

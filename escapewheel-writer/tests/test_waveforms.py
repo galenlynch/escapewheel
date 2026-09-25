@@ -109,7 +109,7 @@ def test_mean_alone_is_one_array(asset: Path) -> None:
     assert [a["array_asset_id"] for a in assets] == ["waveform_mean"]
     assert len(source.array_dimensions()) == 3
     (staged,) = source.staged_arrays()
-    # The build places and binds the array by this alone (Part 03 §11.3).
+    # The build places and binds the array by this alone (Part 12 §5).
     assert assets[0]["resource_id"] == staged.resource_id == "core.waveform_mean"
 
 

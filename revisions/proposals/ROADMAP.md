@@ -705,7 +705,7 @@ packet semantics in registries and profiles.
 ownership follows only from it and the adapter declarations. An adapter declaration states all of
 its members, including the protocols it can be reached by; a build checks a registered class as
 the document it would generate. The sources schema is incorporated, and an adapter writes only to
-the empty locations a build supplies, along the routes Part 03 §11 lists.
+the empty locations a build supplies, along the routes Part 12 §2 lists.
 
 ### P9 — Remaining independent reconciliations
 
