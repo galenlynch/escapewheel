@@ -708,8 +708,8 @@ for _vocab, _names in {
     VOCABULARY |= dict.fromkeys(_names, _vocab)
 
 #: Part 02 §9.3. Where a column's values are spelled, never what they may be: a validator MUST NOT
-#: dereference one (Part 04 §5.3) nor reject a value for being absent from it. An array because a
-#: strain is drawn from two registries, MGI for mouse and RGD for rat.
+#: dereference one nor reject a value for being absent from it. An array because a strain is drawn
+#: from two registries, MGI for mouse and RGD for rat.
 UCUM = {"name": "UCUM", "uri": "https://ucum.org/ucum"}
 #: Part 02 §9.3. A name beside the URI, because the name is a fact and not a substring: neither
 #: `informatics.jax.org` nor `rgd.mcw.edu` contains the name of the registry it serves, so no rule
