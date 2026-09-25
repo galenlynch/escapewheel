@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `782dbf811f90f8741e1dc735d326996a69df0d36` |
+| **Based on** | `3d124a9630793af9916e91a6bbd07e739fb36553` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 00 §§1 and 3.2; Part 02 §2.2 |
@@ -144,11 +144,12 @@ gives that word a second meaning beside Part 00 §3.1.3's physical profile.
 
 ### 2.5 Feasibility and overlap
 
-No open draft exists. The two other open proposals, on delivering a packet-owned opaque resource and
-on a build-supplied source cache, amend Part 03 §§2, 3.1, 10, 11, 11.2, and 11.3, Part 05 §2,
-Part 07 §4, and Part 09 §5.7, none of which this revision touches. Relocating Part 03 §11 would
-amend Part 00 §3.1.3, Part 00 §9, and Part 00 §10 and the specification README's part table and
-reference paragraph, and shares no text with this revision either.
+The two other open items, on delivering a packet-owned opaque resource and on a build-supplied
+source cache, amend sections of Parts 03 and 05, Part 07 §4, and Part 09 §5.7, none of which this
+revision touches. Relocating Part 03 §11 would amend Part 00 §3.1.3, Part 00 §9, and Part 00 §10
+and the specification README's part table and reference paragraph, and shares no text with this
+revision. §3.1's list of the parts forming the packet mechanism gains the new part when that
+relocation lands.
 
 ## 3. Decision
 
