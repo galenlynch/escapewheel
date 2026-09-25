@@ -190,34 +190,26 @@ natural.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
-## 9. Implementation work queued behind R135
+## 9. Implementation follow-ups
 
-Each item follows an existing rule, so none needs a revision. They wait only because R135's
-uncommitted incorporation touches the same files; each lands as its own commit with tests once R135
-is committed.
+Each follows an existing rule, so none needs a revision. `tables` sources now deliver by
+`files-v0.1`, `aind_unit_qc` is an adapter in `escapewheel-aind`, and every name-minting adapter
+accepts `prefix`.
 
-- **Deliver `tables` sources by `files-v0.1`.** `TablesSource` knows no format and normalizes
-  nothing: it runs a command, reads Parquet the command wrote, and needs an exception to every
-  adapter rule. That is the `files-v0.1` protocol. Replace each `kind = "tables"` entry with a
-  `delivery` table naming a command, `protocol = "files-v0.1"`, and a declaration document (Part 03
-  §11.5). Each script reads the build's JSON object from standard input and writes
-  `<resource_id>.parquet` into the `delivery_root` it names. Then delete `TablesSource`, its tests,
-  and the module docs that steer extension authors to it. The work covers the writer, plus
-  `extract.py` and the recipes edited in place under `/mnt/Data/776259-packet`,
-  `/mnt/Data/786867-packet` and `/mnt/Data/df-packet`. It is done when 786867 builds in one pass
-  with the same extension tables as the current packet.
-- **Move `extract_qc.py` into `escapewheel-aind` as the `aind_unit_qc` adapter.** The three
-  per-packet copies are the only source of `aind_unit_qc.metrics`, `waveform_metrics` and
-  `synchrony`, and they have drifted apart. The adapter reads the sorter's analyzer output as
-  `waveforms` does, declares `consumes = ["sorter"]`, and resolves units from the build-supplied
-  `units` term. That ends the two-pass build and the packet-assigned integer keys the script
-  writes. Delete the three scripts and switch the recipes to the new kind. It is done when the
-  three tables match the current packets' and each packet builds in one pass.
-- **Adapters that take no `prefix` mint bare identifiers.** A build now refuses sources that
-  accept `prefix` and set it differently, but `openephys`, `harp` and AIND's `session` accept none.
-  Under a non-empty prefix, `session`'s `core.calibration_devices.device_id`, an assembly name,
-  then names no prefixed NWB device. They will accept `prefix` and apply it as `nwb` does, before
-  v0.2 is finished; in progress.
+- **The three real packets are rebuilt once, after the last P9 incorporation.** Each builds to a new
+  path and is compared with the current packet by `/mnt/Data/maint-scratch/compare.py`; then the
+  three `extract_qc.py` copies are deleted. df now reads the repaired 786867 NWB with
+  `signals = []`. Until then the current packets bind core 0.6.0, which no descriptor selects.
+- **A `prefix` outside `[a-z0-9_.-]` mints an invalid resource ID** (Part 04 §4.1). A recipe check
+  should refuse it before a build opens a source.
+- **A camera file name with capitals mints an invalid resource ID** in `video`. Whether to fold case
+  or refuse is undecided.
+- **The scaffold never mentions `vocabulary`.** Once an author gives a string column a role, the
+  meta-schema requires one, so a finished draft with string columns fails until the author finds
+  out.
+- **The writer refuses a relative external URI without `source`,** which Part 04 §5.1 permits.
+- **`fixtures/packets/` holds stale directories** (`stream_clock_mismatch`, `undetected_default`),
+  and `fixtures/README.md` still lists one.
 
 ---
 
