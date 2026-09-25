@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -28,9 +29,14 @@ def _replace(name: str, old: str, new: str) -> dict[str, str]:
     return {name: text.replace(old, new)}
 
 
-def _assert_rejected(label: str, mutation: dict[str, str], expected: str) -> None:
+def _assert_rejected(
+    label: str,
+    mutation: dict[str, str],
+    expected: str,
+    registry: dict | None = None,
+) -> None:
     """Require a mutation to produce its intended framework defect."""
-    found = framework.defects(mutation)
+    found = framework.defects(mutation, registry)
     if not any(expected in defect for defect in found):
         raise AssertionError(f"{label} was not rejected as {expected!r}: {found}")
 
@@ -182,13 +188,56 @@ def main() -> int:
         "Parquet normative reference appears in Parts 03, 04",
     )
     _assert_rejected(
-        "reference copied into an untabled section",
+        "reference copied into an unallocated section",
+        _replace(
+            "05_validation_and_import.md",
+            "## 15. Normative references\n",
+            "## 15. Normative references\n\n- [RFC 3986](https://www.rfc-editor.org/info/rfc3986)\n",
+        ),
+        "RFC 3986 normative reference appears in Parts 00, 05",
+    )
+    _assert_rejected(
+        "removed Part 02 reference",
         _replace(
             "02_core_logical_schemas.md",
-            "## 13. Normative references\n",
-            "## 13. Normative references\n\n- [RFC 3986](https://www.rfc-editor.org/info/rfc3986)\n",
+            "| [Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |\n",
+            "",
         ),
-        "RFC 3986 normative reference appears in Parts 00, 02",
+        "Part 02 normative references are missing MGI",
+    )
+    _assert_rejected(
+        "Part 02 reference copied into another part",
+        {
+            "04_packet_catalog.md": _text("04_packet_catalog.md")
+            + f"\n{framework.REFERENCE_MARKERS['UCUM']}\n"
+        },
+        "UCUM normative reference appears in Parts 02, 04",
+    )
+    _assert_rejected(
+        "changed Part 02 reference row",
+        _replace(
+            "02_core_logical_schemas.md",
+            "| [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | living registry |",
+            "| [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | exact |",
+        ),
+        "Part 02 normative-reference rows disagree with the approved allocation",
+    )
+    unlinked = json.loads(framework.CORE_REGISTRY.read_text())
+    genotype = next(
+        column
+        for column in unlinked["resources"]["core.subjects"]["table"]["columns"]
+        if column["name"] == "genotype"
+    )
+    assert genotype["vocabulary"] == "open" and "authority" not in genotype
+    genotype["authority"] = [
+        {"name": "Example", "uri": "https://example.invalid/allele-nomenclature"}
+    ]
+    _assert_rejected(
+        "open core column authority with no Part 02 entry",
+        {},
+        "open core column core.subjects.genotype names authority "
+        "https://example.invalid/allele-nomenclature",
+        unlinked,
     )
     _assert_rejected(
         "changed reference row",

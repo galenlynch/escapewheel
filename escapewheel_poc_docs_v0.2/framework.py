@@ -2,11 +2,13 @@
 
 Part 00 owns artifact roles, numbered-part subjects and statuses, identifier ownership, and the
 normative-reference policy. Subject-owning parts own their local bibliographies. This checker verifies the representations that can be compared
-mechanically. It does not decide whether prose is well placed or semantically complete.
+mechanically, including that Part 02 §13 links every authority an open column of the core registry
+names. It does not decide whether prose is well placed or semantically complete.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping
 from pathlib import Path
@@ -14,6 +16,7 @@ from pathlib import Path
 import combine
 
 HERE = Path(__file__).resolve().parent
+CORE_REGISTRY = HERE.parent / "registry" / "logical_schemas.json"
 
 PARTS = {path.name[:2]: path.name for path in sorted(HERE.glob("[0-9][0-9]_*.md"))}
 EXPECTED_PARTS = {f"{number:02d}" for number in range(12)}
@@ -72,6 +75,10 @@ REFERENCE_MARKERS = {
     "ISO/IEC 9075-2:2023": "https://www.iso.org/standard/76584.html",
     "ISO/IEC 9075-2:2023/Cor 1:2026": "https://www.iso.org/standard/93691.html",
     "IEEE 754-2019": "https://standards.ieee.org/ieee/754/6210/",
+    "UCUM": "https://ucum.org/ucum",
+    "NCBI Taxonomy": "https://www.ncbi.nlm.nih.gov/taxonomy",
+    "MGI": "https://www.informatics.jax.org/",
+    "RGD": "https://rgd.mcw.edu/",
 }
 
 REFERENCE_OWNERS = {
@@ -108,16 +115,22 @@ REFERENCE_OWNERS = {
     "ISO/IEC 9075-2:2023": "11",
     "ISO/IEC 9075-2:2023/Cor 1:2026": "11",
     "IEEE 754-2019": "11",
+    "UCUM": "02",
+    "NCBI Taxonomy": "02",
+    "MGI": "02",
+    "RGD": "02",
 }
 
 REFERENCE_ANCHORS = {
     "00": "ew-normative-references",
+    "02": "ew-logical-schema-normative-references",
     "03": "ew-portable-profile-normative-references",
     "04": "ew-packet-catalog-normative-references",
     "11": "ew-rule-language-normative-references",
 }
 
 REFERENCE_SECTION_ANCHOR = re.compile(r'id="(ew-[a-z-]*normative-references)"')
+LINK_TARGET = re.compile(r"\]\(([^)\s]+)\)")
 
 REFERENCE_ROWS = {
     "00": (
@@ -145,6 +158,28 @@ REFERENCE_ROWS = {
             "[RFC 1952](https://www.rfc-editor.org/info/rfc1952)",
             "exact",
             "gzip member format of a bound registry (Part 03 §3.3) and CRC-32 (Part 04 §4.3)",
+        ),
+    ),
+    "02": (
+        (
+            "[The Unified Code for Units of Measure](https://ucum.org/ucum)",
+            "version 2.2, revision date 2024-06-17",
+            "unit codes (§8.4) and the spelling of values in open columns naming it (§9.3)",
+        ),
+        (
+            "[NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy)",
+            "living registry",
+            "the spelling of the names it registers, in open columns naming it (§9.3)",
+        ),
+        (
+            "[Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/)",
+            "living registry",
+            "the spelling of the names it registers, in open columns naming it (§9.3)",
+        ),
+        (
+            "[Rat Genome Database (RGD)](https://rgd.mcw.edu/)",
+            "living registry",
+            "the spelling of the names it registers, in open columns naming it (§9.3)",
         ),
     ),
     "03": (
@@ -329,6 +364,17 @@ def _part_title(text: str) -> str:
     return first.split("—", 1)[1].strip() if "—" in first else ""
 
 
+def _open_authorities(registry: Mapping) -> list[tuple[str, str]]:
+    """Return each (column, URI) naming an authority on an open column of a registry document."""
+    return [
+        (f"{resource_id}.{column['name']}", entry["uri"])
+        for resource_id, resource in registry.get("resources", {}).items()
+        for column in resource.get("table", {}).get("columns", [])
+        if column.get("vocabulary") == "open"
+        for entry in column.get("authority", [])
+    ]
+
+
 def _render(documents: Mapping[str, str]) -> str:
     """Render the combined document from possibly mutated source documents."""
     blocks = [combine.HEADER]
@@ -338,9 +384,16 @@ def _render(documents: Mapping[str, str]) -> str:
     return "\n".join(blocks)
 
 
-def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
-    """Return each mechanically observable framework disagreement."""
+def defects(
+    overrides: Mapping[str, str] | None = None, registry: Mapping | None = None
+) -> list[str]:
+    """Return each mechanically observable framework disagreement.
+
+    ``registry`` replaces the core registry document read from ``CORE_REGISTRY``.
+    """
     documents = _documents(overrides)
+    if registry is None:
+        registry = json.loads(CORE_REGISTRY.read_text())
     found: list[str] = []
     architecture = documents[PARTS["00"]]
     readme = documents["README.md"]
@@ -441,11 +494,12 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
         for number, text in numbered_texts.items()
         if (match := REFERENCE_SECTION_ANCHOR.search(text))
     } | reference_sections
+    reference_rows: dict[str, list[tuple[str, ...]]] = {}
     for number, references in reference_sections.items():
         if not references:
             found.append(f"Part {number} normative-reference section is missing")
             continue
-        rows = _table_after(
+        rows = reference_rows[number] = _table_after(
             references,
             REFERENCE_ANCHORS[number],
             ("reference", "candidate edition", "application"),
@@ -472,6 +526,18 @@ def defects(overrides: Mapping[str, str] | None = None) -> list[str]:
         else:
             found.append(
                 f"{name} normative reference appears in Parts {', '.join(owners)}, expected only Part {expected}"
+            )
+    # Part 02 §13's consistency condition with the core registry: an exact URI match on an entry's
+    # link, with no dereference.
+    part_02_links = {
+        target
+        for row in reference_rows.get("02", [])
+        for target in LINK_TARGET.findall(row[0])
+    }
+    for column, uri in _open_authorities(registry):
+        if uri not in part_02_links:
+            found.append(
+                f"open core column {column} names authority {uri}, which no Part 02 §13 entry links"
             )
     for number, marker in REFERENCE_INVOCATIONS.items():
         if marker not in numbered_texts[number]:

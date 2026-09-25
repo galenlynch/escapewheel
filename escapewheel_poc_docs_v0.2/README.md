@@ -86,5 +86,5 @@ SHA-256, CRC64NVME, and CRC32C authorities invoked by the packet manifest are in
 [Part 04 §11](04_packet_catalog.md#ew-packet-catalog-normative-references).
 The SQL and IEEE authorities invoked by the portable Tier 2 language are in
 [Part 11 §9](11_tier_2_rule_language.md#ew-rule-language-normative-references).
-The UCUM and URI authorities invoked by logical registry declarations are in
+The UCUM, NCBI Taxonomy, MGI, and RGD authorities invoked by logical registry declarations are in
 [Part 02 §13](02_core_logical_schemas.md#ew-logical-schema-normative-references).

@@ -94,7 +94,7 @@ SHA-256, CRC64NVME, and CRC32C authorities invoked by the packet manifest are in
 [Part 04 §11](04_packet_catalog.md#ew-packet-catalog-normative-references).
 The SQL and IEEE authorities invoked by the portable Tier 2 language are in
 [Part 11 §9](11_tier_2_rule_language.md#ew-rule-language-normative-references).
-The UCUM and URI authorities invoked by logical registry declarations are in
+The UCUM, NCBI Taxonomy, MGI, and RGD authorities invoked by logical registry declarations are in
 [Part 02 §13](02_core_logical_schemas.md#ew-logical-schema-normative-references).
 
 <!-- END README.md -->
@@ -542,8 +542,17 @@ independent bibliographic owner.
 
 An **exact** bibliographic entry MUST identify the edition used by the candidate. An
 **unversioned** entry MUST be identified as such and follows the linked external specification
-during candidate development. A specification release MUST identify the exact external edition on
-which every conformance requirement depends.
+during candidate development. A **living-registry** entry identifies a registry that assigns names
+or identifiers as they are registered, by the registry's name and URI, and gives `living registry`
+as its candidate edition. A numbered part MAY give an authority a living-registry entry only where
+the authority is such a registry and no validator verdict depends on its content. A requirement
+invoking a living registry refers to the registry as it stood when the bound actor acted; for a
+spelling requirement, when the writer wrote the value, so a later registration or renaming leaves
+the value conforming.
+
+A specification release MUST identify the exact external edition on which every conformance
+requirement depends, and MUST identify each living registry by its entry's name and URI in place of
+an edition.
 
 A normative reference's own dependencies MUST apply through that reference and need not be copied
 into an Escapewheel reference section unless this specification relies on them directly. Where
@@ -1540,8 +1549,20 @@ dereference one when checking a registry or a packet, and MUST NOT reject a valu
 from its column's authority. Neither this rule nor the `open` row above covers a unit column's value
 that is not a unit code, which §8.4 makes nonconforming, because UCUM defines its codes by a grammar
 rather than a list. An entry named `UCUM` MUST
-use `https://ucum.org/ucum`, and an entry using that URI MUST be named `UCUM`. A writer MUST spell
-a value as the named nomenclature does.
+use `https://ucum.org/ucum`, and an entry using that URI MUST be named `UCUM`.
+
+Where a writer can identify the name that a nomenclature in an open column's `authority` registers
+for the thing a value names, it MUST write that name as the nomenclature spells it. Otherwise, as
+for a strain not yet registered or a source value matching no registered name, a writer MUST write
+the value as the source states it. A validator verifies neither obligation, since it neither
+dereferences an authority nor rejects a value for being absent from one. A unit column's value is
+the exception: §8.4 requires it to be a unit code whatever the source states, and a validator
+checks it by UCUM's grammar under [Part 05 §5.3](05_validation_and_import.md#ew-validation-shim).
+[§13](#ew-logical-schema-normative-references) identifies each nomenclature the core registry names
+in this way, and the edition that applies.
+
+A closed column's `enum` is its whole value set and spells every value it admits. On a closed
+column, `authority` records where the `enum`'s spelling came from and invokes no nomenclature.
 
 A column's declarations are rendered in `registry/tables.md` from the fields holding them — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
 
@@ -1975,8 +1996,23 @@ A coordinate MAY carry values on fewer axes than its frame declares, where its s
 <a id="ew-logical-schema-normative-references" data-spec-anchor="canonical"></a>
 ## 13. Normative references
 
-- [The Unified Code for Units of Measure, version 2.2](https://ucum.org/ucum), revision date
-  2024-06-17. Unit codes (§8.4) use its case-sensitive syntax and terminal tables.
+The application column states the extent to which this part invokes each external authority:
+
+| reference | candidate edition | application |
+|---|---|---|
+| [The Unified Code for Units of Measure](https://ucum.org/ucum) | version 2.2, revision date 2024-06-17 | unit codes (§8.4) and the spelling of values in open columns naming it (§9.3) |
+| [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
+| [Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
+| [Rat Genome Database (RGD)](https://rgd.mcw.edu/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
+
+This section MUST carry an entry whose link is the `uri` of each `authority` entry declared on an
+open column of the incorporated core registry, in its `core` or `analysis` namespace. A core
+registry naming such an authority without a matching entry makes the candidate internally
+inconsistent under [Part 00 §2.3](00_architecture.md#ew-candidate-consistency). The comparison is
+exact on the URI string and dereferences nothing, so the core registry and this section alone
+decide it. An authority on a closed column, such as HL7 FHIR's administrative-gender value set on
+`core.subjects.sex`, records provenance under §9.3 and has no entry here. An extension registry's
+authorities are outside this condition.
 
 Validation of unit codes and authority URIs is offline, and §9.3 forbids dereferencing an identifier. A
 registry check parses literal `unit` declarations, and

@@ -439,8 +439,17 @@ independent bibliographic owner.
 
 An **exact** bibliographic entry MUST identify the edition used by the candidate. An
 **unversioned** entry MUST be identified as such and follows the linked external specification
-during candidate development. A specification release MUST identify the exact external edition on
-which every conformance requirement depends.
+during candidate development. A **living-registry** entry identifies a registry that assigns names
+or identifiers as they are registered, by the registry's name and URI, and gives `living registry`
+as its candidate edition. A numbered part MAY give an authority a living-registry entry only where
+the authority is such a registry and no validator verdict depends on its content. A requirement
+invoking a living registry refers to the registry as it stood when the bound actor acted; for a
+spelling requirement, when the writer wrote the value, so a later registration or renaming leaves
+the value conforming.
+
+A specification release MUST identify the exact external edition on which every conformance
+requirement depends, and MUST identify each living registry by its entry's name and URI in place of
+an edition.
 
 A normative reference's own dependencies MUST apply through that reference and need not be copied
 into an Escapewheel reference section unless this specification relies on them directly. Where

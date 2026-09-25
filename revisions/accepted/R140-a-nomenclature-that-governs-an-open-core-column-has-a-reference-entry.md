@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-24 |
 | **Based on** | `0526ab09528afca6dbea7e79fe10cdea51846c29` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -170,10 +170,10 @@ sharding-indexed codecs it admitted to the Zarr v3 floor have unversioned entrie
 whose release treatment this draft leaves unchanged. R138 amended Part 05 §3.1. R137 and R138 share
 no text with this draft.
 
-One other draft is open. `a-float-column-declares-whether-it-admits-non-finite-values.md` edits
-Part 02 §§3, 5, 9.2, 9.4, and 10.1 and the specification README's identifier table, and cites
-Part 02 §9.3's rule that an absent `vocabulary` is a defect, which this draft keeps. The two share
-no text and neither depends on the other; the drafts' application order puts the float draft first.
+R139 edits Part 02 §§3, 5, 9.2, 9.4, and 10.1 and the specification README's identifier table,
+and cites Part 02 §9.3's rule that an absent `vocabulary` is a defect, which this draft keeps. The
+two share no text and neither depends on the other; the drafts' application order puts the float
+draft first.
 
 ## 3. Decision
 

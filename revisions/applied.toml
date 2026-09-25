@@ -806,7 +806,7 @@ where = [{ part = "01", section = "2.4" }]
 
 [clause."R9 §6"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 note = "covered by the general open-vocabulary rule; activity_type declares no enum"
 
 [clause."R31 §2"]
@@ -1135,11 +1135,11 @@ note = "local_*_label columns become string"
 
 [clause."R8 §3"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 
 [clause."R8 §4"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 
 [clause."R10 §6"]
 disposition = "registry"
@@ -1184,7 +1184,7 @@ disposition = "rationale"
 
 [clause."R22 §3"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 
 [clause."R22 §4"]
 disposition = "applied"
@@ -1960,25 +1960,25 @@ note = "core.array_assets.kind held dense_array_asset, a manifest resource kind 
 
 [clause."R101 §3.1"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 note = "build.py's VOCABULARY and vocabulary_of refuse an unclassified name; registry.schema.json requires the field of every string column but a discriminator and forbids it elsewhere; 4 closed, 39 open, 52 free, 7 discriminators declaring none"
 
 [clause."R101 §3.3"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 note = "check.py refuses a discriminator declaring a vocabulary; R55 §2.1 fixes the value space to the declared resource IDs"
 
 [clause."R101 §3.5"]
 disposition = "registry"
-note = "25 open columns stating no form, plus core.processing_runs.status whose prose said etc. of a closed set; check.py requires a description on an open column"
+note = "25 open columns stating no form, plus core.processing_runs.status whose prose said etc. of a closed set; check.py requires a description on an open column; R140 §3.1 confines its spelling sentence to values of open columns whose registered name a writer can identify, and a writer writes any other value as the source states it"
 
 [clause."R101 §3.6"]
 disposition = "applied"
 where = [
     { part = "02", section = "8.4" },
-    { part = "02", section = "9.3" },
+    { part = "02", anchor = "ew-registry-vocabularies" },
 ]
-note = "authority in registry.schema.json and build.py's AUTHORITY, on species, strain, sex and the eight unit columns; UNIT_SUFFIX gives Ohm and By, and the two packet-relative units become UCUM annotations; check.py checks the URI, the UCUM code and one-name-one-vocabulary"
+note = "authority in registry.schema.json and build.py's AUTHORITY, on species, strain, sex and the eight unit columns; UNIT_SUFFIX gives Ohm and By, and the two packet-relative units become UCUM annotations; check.py checks the URI, the UCUM code and one-name-one-vocabulary; under R140 §3.1 an authority on a closed column records provenance and invokes no nomenclature"
 
 [clause."R101 §3.7"]
 disposition = "registry"
@@ -1990,8 +1990,8 @@ note = "raw, ap, lfp, waveform with R8 §4's meanings; coordinate_frame's three 
 
 [clause."R101 §3.9"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
-note = "enum male/female/hermaphrodite/other with FHIR as authority, unknown carried as null"
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
+note = "enum male/female/hermaphrodite/other with FHIR as authority, unknown carried as null; R140 §3.1 makes FHIR provenance for the enum's spelling, so hermaphrodite conforms on the enum's terms"
 
 [clause."R101 §3.10"]
 disposition = "applied"
@@ -2000,7 +2000,7 @@ note = "one null and no second marker, NaN a value rather than an absence on 30 
 
 [clause."R101 §3.11"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 note = "a synonym stays uncheckable, so R8 §4 binds a writer and no rule (R67 §2.4)"
 
 [clause."R102 §2.1"]
@@ -2212,12 +2212,12 @@ note = "core.intervals.interval_kind, both scope_kinds and both detail_kinds sto
 
 [clause."R107 §3.3"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 note = "authority becomes an array of {name, uri}, both required, on 12 columns naming 5 nomenclatures; R53 §2.3.1's shape one level over, since neither informatics.jax.org nor rgd.mcw.edu contains the name of the registry it serves and no rule derives MGI or RGD from a URI"
 
 [clause."R107 §3.4"]
 disposition = "applied"
-where = [{ part = "02", section = "9.3" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 note = "tables.md renders each field, generated so the two cannot disagree"
 
 [clause."R107 §3.5"]
@@ -2901,7 +2901,7 @@ note = "reference policy, direct invocation, and exactly one shared or subject-l
 [clause."R124 §3.2"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-normative-references" }]
-note = "candidate edition discipline and the missing-authority release block"
+note = "candidate edition discipline and the missing-authority release block; R140 §3.2 adds the living-registry entry kind, which a release identifies by name and URI"
 
 [clause."R124 §3.3"]
 disposition = "applied"
@@ -2912,7 +2912,7 @@ where = [
   { part = "04", anchor = "ew-packet-catalog-scope" },
   { part = "04", anchor = "ew-packet-catalog-normative-references" },
 ]
-note = "exact current allocation and invocation of the eleven existing bibliographic rows"
+note = "exact current allocation and invocation of the eleven existing bibliographic rows; R140 §3.3 adds Part 02 §13's four rows to the allocation"
 
 [clause."R125 §3.1"]
 disposition = "applied"
@@ -3525,3 +3525,23 @@ note = "finite: true on the 26 core and analysis float columns, and on no other 
 [clause."R139 §3.5"]
 disposition = "registry"
 note = "core.clocks.transform_slope_positive flags a transform_slope of zero or below"
+
+[clause."R140 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
+note = "a writer writes the name a nomenclature on an open column registers where it can identify one, and otherwise the source's value; no validator checks either, a unit column's value staying a unit code; a closed column's authority is provenance"
+
+[clause."R140 §3.2"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-normative-references" }]
+note = "the living-registry entry kind, its condition, the registry as it stood when the actor acted, and a release naming each by name and URI"
+
+[clause."R140 §3.3"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-logical-schema-normative-references" }]
+note = "UCUM 2.2 exact and NCBI Taxonomy, MGI and RGD as living registries in the three-column table; HL7 FHIR has no entry"
+
+[clause."R140 §3.4"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-logical-schema-normative-references" }]
+note = "every authority URI on an open core or analysis column is an entry's link; framework.py compares them, and extension registries are outside it"

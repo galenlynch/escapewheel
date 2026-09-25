@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "revision": "R140",
+  "based_on": "0526ab09528afca6dbea7e79fe10cdea51846c29",
+  "clauses": {
+    "R140 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-vocabularies"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_nwb_source.py::test_a_subjects_sex_lands_inside_the_closed_vocabulary"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "the writer's sex mapping, which the AIND adapter shares, already targets the enum; the writer and the AIND adapter write species and strain as the source states them and map neither; no reader or validator reads an authority's content, and no test checks a species or strain spelling because no implementation maps one"
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification states how a value of a column naming an authority is spelled"
+      }
+    },
+    "R140 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "the clause binds numbered parts and a specification release rather than an actor a probe can run, so its evidence is review of Part 00 §10 and of each living-registry entry against its condition"
+      },
+      "implementations": {
+        "unchanged": "no implementation reads a bibliographic entry's kind or edition"
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes the bibliographic entry kinds"
+      }
+    },
+    "R140 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-logical-schema-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "ew-logical-schema-normative-references"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "removed Part 02 reference"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "Part 02 reference copied into another part"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "changed Part 02 reference row"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "conformance/specification-framework/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    },
+    "R140 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-logical-schema-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "which no Part 02 §13 entry links"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "open core column authority with no Part 02 entry"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "conformance/specification-framework/probe.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes which authorities need a reference entry"
+      }
+    }
+  }
+}
