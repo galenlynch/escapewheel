@@ -6,7 +6,7 @@
 | **Based on** | `b8bf7c10b0942eb1e2a675976493e94f2fe3e12b` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 03 §§2, 3.1, 4, 10, 11, 11.2, and 11.3; Part 04 §5.4; Part 05 §2; Part 07 §4 |
+| **Amends** | Part 03 §§2, 3.1, 4, 10, 11, 11.2, and 11.3; Part 04 §5.4; Part 05 §§2, 5.3, and 15; Part 07 §4 |
 | **Depends on** | R117 §§3.1 and 3.2; R134 §3.4; R135 §§3.2 and 3.3; R136 §§3.2 and 3.4 |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5 |
@@ -34,10 +34,11 @@ This revision adds that route. An adapter writes each owned opaque resource, a f
 under its own name, into a directory named by its catalog row's `resource_id` in a new
 build-supplied location, `opaque_location`. The build binds it by that directory name, keeps every
 name the payload carries, spells them in the manifest URI by percent-encoding, and digests the
-staged bytes. A resource document describes only referenced resources, and a build refuses an entry
-that does not declare `external: true`. The route carries catalog instances only; no registry
-declares an opaque family, and a family instance would need a channel for its `declaration_id`,
-which a later revision can add.
+staged bytes. It refuses only a name a packet cannot hold, and a validator warns where two names in
+one directory differ only in Unicode normalization or case. A resource document describes only
+referenced resources, and a build refuses an entry that does not declare `external: true`. The route
+carries catalog instances only; no registry declares an opaque family, and a family instance would
+need a channel for its `declaration_id`, which a later revision can add.
 
 The change is structural because it replaces text inside existing sections: Part 03 §11's list of
 routes, Part 03 §3.1's `media/` line, Part 04 §5.4's statement of which resources are prefixes, and
@@ -50,7 +51,8 @@ Commit `b8bf7c1` added the canonical anchor `ew-portable-uri-rules` to Part 03 �
 nothing else. Every other amended section already carried one: `ew-portable-profile-technologies`,
 `ew-portable-packet-layout`, `ew-owned-resource-digests`, `ew-reaching-a-source`,
 `ew-build-supplied-values`, `ew-referenced-resource-delivery`, `ew-prefix-resources`,
-`ew-import-pipeline`, and `ew-reference-object-model`. No section is added, moved, split, merged, or
+`ew-import-pipeline`, `ew-validation-shim`, `ew-validation-normative-references`, and
+`ew-reference-object-model`. No section is added, moved, split, merged, or
 retired.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
@@ -59,7 +61,9 @@ retired.
 | Part 03 §11, the list of routes | extend in place | same section | adds the packet-owned opaque route | §3.1 |
 | Part 03 §11.2, the table of terms | extend in place | same section | adds `opaque_location` | §3.1 |
 | none; no text says how an owned opaque resource crosses | add | Part 03 §11.3 | the payload, its binding by resource directory, the refusals, and the in-process hand-over | §3.2 |
-| none; no text governs a payload's names | add | Part 03 §11.3 | reproducible names and publication under them | §3.3 |
+| none; no text governs a payload's names | add | Part 03 §11.3 | representable names and publication under them | §3.3 |
+| Part 05 §5.3, the physical findings beside `physical.outside_reader_floor` | extend in place | same section | a warning for names in one payload directory that are canonical caseless matches | §3.3 |
+| Part 05 §15, the reference table | extend in place | same section | adds the Unicode Standard | §3.3 |
 | Part 03 §4, what a relative URI resolves to | extend in place | same section | a build percent-encodes a packet-owned URI's segments, and a reader or validator decodes them | §3.3 |
 | Part 03 §3.1, the `media/` line | replace in place | same section | recommends `opaque/<resource_id>/<name>` for every packet-owned opaque resource | §3.3 |
 | Part 03 §10, what a packet-owned resource's digest covers | extend in place | same section | adds the opaque case and its listing keys | §3.4 |
@@ -164,12 +168,19 @@ from resource ID to path in the resource document or a new channel would need a 
 every protocol, where a directory name states the same map with nothing new crossing.
 
 Restricting names to a portable character set, such as POSIX's portable filename characters, would
-rename any payload using a space or a letter outside it. The preferred rule refuses only what cannot
-be held unchanged: a name that is not UTF-8 cannot be written in the manifest's JSON, NUL and `/`
-cannot occur in a POSIX name, `.` and `..` are path steps rather than names, and two names differing
-only in the case of ASCII letters collide on a case-insensitive filesystem. Recording an IANA media
-type would change the manifest schema and its version for a claim no validator checks against the
-bytes, which identify their own container.
+rename any payload using a space or a letter outside it. Refusing a name that is not in NFC, or two
+names that differ only in case, would stop a build over a name the operator did not choose and the
+build may not change. Packaging standards take the same course: BagIt (RFC 8493 §6.1.1) describes
+case and normalization collisions and asks an implementation to discourage and tolerate them rather
+than refuse them; OCFL 1.1 forbids only empty, `.`, and `..` path elements; and Git stores names as
+bytes and warns of a case collision when it writes files out. The preferred rule refuses only what a
+packet cannot hold: a name that is not UTF-8 cannot be written in the manifest's JSON, NUL and `/`
+cannot occur in a POSIX name, and `.` and `..` are path steps rather than names. A collision is a
+warning, since the packet is sound where it lies and fails only when copied to a filesystem that
+folds case or normalization. Defining digest keys and name lookup under NFC, as BagIt's tolerance
+would, changes Part 04 §4.3 for every prefix, and is left to a later decision. Recording an IANA
+media type would change the manifest schema and its version for a claim no validator checks against
+the bytes, which identify their own container.
 
 ### 2.6 Feasibility and overlap
 
@@ -232,7 +243,7 @@ path, where:
   the packet would then own a pointer rather than bytes;
 - a directory within a payload, the payload included, holds nothing, since a prefix consists of
   objects and an empty directory does not survive a copy to an object store; or
-- a name within a payload, the payload's own included, is not reproducible (§3.3).
+- a name within a payload, the payload's own included, is not representable (§3.3).
 
 A build MUST refuse, before it validates the staged packet, where a resource directory is named by
 no catalog row of an opaque catalog family, or where those rows and the payloads and referenced
@@ -252,9 +263,9 @@ refusals above apply to what it writes.
 
 ### 3.3 A payload keeps its names
 
-A name is **reproducible** where it is nonempty, is valid UTF-8, contains neither NUL nor `/`, is
-neither `.` nor `..`, and differs from every other name in the same directory by more than the case
-of ASCII letters.
+A name is **representable** where it is nonempty, is valid UTF-8, contains neither NUL nor `/`, and
+is neither `.` nor `..`. Nothing else about a name is refused: a name need not be in any Unicode
+normalization form, and two names in one directory may differ only in case.
 
 A build MUST publish each payload under its name, and every file and directory within it under
 theirs, and MUST NOT rename, normalize, or case-fold any of them. It MUST publish each payload in a
@@ -270,6 +281,17 @@ packet-owned resource's URI by percent-encoding, under RFC 3986, every octet of 
 encoding other than an unreserved character, so one name has one spelling. A reader and a validator
 resolving a packet-owned URI MUST decode its percent-encoding before resolving it to a path or
 object key.
+
+Two names in one directory of a packet-owned opaque payload **collide** where they differ and are a
+canonical caseless match under the Unicode Standard, Section 3.13, definition D145, which equates
+names differing only in case, only in normalization form, or in both. A validator MUST report each
+set of colliding names, one finding per set, at `warning` under the check ID
+`physical.opaque_name_collision`, naming the resource, the directory's path relative to the payload,
+and the names. The packet is conformant: each name holds its own file under the packet root, and two
+become one only on a copy to a filesystem that folds case or normalization. The finding concerns one
+resource, so Part 05 §9.5 attributes it to the registry whose declaration the resource's entry
+names. Part 05 §15 identifies the Unicode Standard, Version 16.0.0, as an exact reference for
+canonical caseless matching.
 
 ### 3.4 A packet-owned opaque resource's digest covers its payload
 
@@ -312,10 +334,10 @@ notes.
 | logical prose and registry | Unchanged; the route reads the existing `kind` and catalog binding, and no declaration changes. | None required. |
 | physical profiles | Part 03 §2 states opaque ownership; §3.1's `media/` line becomes `opaque/<resource_id>/<name>`; §4 has a build percent-encode a packet-owned URI and a reader or validator decode it; §10 gains the opaque digest and its listing keys; §11's routes gain the opaque route; §11.2 gains `opaque_location`; §11.3 states the payload, binding, refusals, in-process hand-over, names, and the resource-document refusal. The descriptor and its schema are unchanged. | `evidence/R<N>.json` names `ew-portable-profile-technologies`, `ew-portable-packet-layout`, `ew-portable-uri-rules`, `ew-owned-resource-digests`, `ew-reaching-a-source`, `ew-build-supplied-values`, and `ew-referenced-resource-delivery`. |
 | packet manifest and JSON Schemas | Manifest, delivery, recipe, and adapter schemas unchanged; the adapter schema's `needs` already admits any term. Part 04 §5.4 names the new prefix case. | `registry/check.py` and the vendoring check. |
-| validation and import | Part 05 §2 says a payload is staged by its delivery. Part 05 §6's promotion record already lists every promoted resource directory. | The writer tests below. |
+| validation and import | Part 05 §2 says a payload is staged by its delivery. Part 05 §5.3 gains `physical.opaque_name_collision` at `warning`, and Part 05 §15 the Unicode Standard, Version 16.0.0, which Python 3.14's `unicodedata` implements. Part 05 §6's promotion record already lists every promoted resource directory. | The writer tests below and the corpus fixture for the warning. |
 | extensions | Registry content unchanged. An extension declaring an opaque catalog family gains the route without registry change, and Part 09 §5.7, which states how an extension's registry document and rows reach a build, is unchanged. The AIND `video` adapter is unchanged; it may own a video once it declares `opaque_location`, which this decision permits and does not require. | The AIND suite. |
-| reader, writer, validator, adapters | The writer supplies `opaque_location`, binds payloads by resource directory, applies the refusals, publishes payloads under their names in their own directories, percent-encodes their URIs, digests them, accepts payload bytes in process over every protocol, and refuses an unmarked resource-document entry. The validator and reader decode percent-encoding in a packet-owned URI; their digest, binding, and presence checks are otherwise unchanged (§2.4). | Writer, validator, and reader suites. |
-| conformance fixtures and tests | Packet fixtures for an owned opaque single object and an owned opaque prefix, one with a name needing percent-encoding, each checked for binding and digest, and a negative fixture whose owned opaque digest disagrees. Writer tests in §6. | The corpus and the writer suite. |
+| reader, writer, validator, adapters | The writer supplies `opaque_location`, binds payloads by resource directory, applies the refusals, publishes payloads under their names in their own directories, percent-encodes their URIs, digests them, accepts payload bytes in process over every protocol, and refuses an unmarked resource-document entry. The validator and reader decode percent-encoding in a packet-owned URI, and the validator reports colliding payload names; their digest, binding, and presence checks are otherwise unchanged (§2.4). | Writer, validator, and reader suites. |
+| conformance fixtures and tests | Packet fixtures for an owned opaque single object and an owned opaque prefix, one with a name needing percent-encoding, each checked for binding and digest; a negative fixture whose owned opaque digest disagrees; and a prefix holding `é.png` in NFC beside `É.png` in NFD, which passes with one `physical.opaque_name_collision` warning. Writer tests in §6. | The corpus and the writer suite. |
 | revision process and tooling | Ordinary ledger and evidence records, with the notes stated above. | `ledger.py` and `evidence.py`. |
 | generated publications and developer documentation | The combined specification and heading index regenerate. Part 07 §4 names a payload beside an array. The writer README and the AIND `video` module text describe the route. | `verify.py`. |
 
@@ -323,9 +345,10 @@ notes.
 
 Each clause is `applied` by canonical anchor: §3.1 at `ew-portable-profile-technologies`,
 `ew-reaching-a-source`, and `ew-build-supplied-values`; §3.2 at `ew-referenced-resource-delivery`
-and `ew-import-pipeline`; §3.3 at `ew-referenced-resource-delivery`, `ew-portable-uri-rules`, and
-`ew-portable-packet-layout`; §3.4 at `ew-owned-resource-digests` and `ew-prefix-resources`; and §3.5
-at `ew-referenced-resource-delivery`.
+and `ew-import-pipeline`; §3.3 at `ew-referenced-resource-delivery`, `ew-portable-uri-rules`,
+`ew-validation-shim`, `ew-validation-normative-references`, and `ew-portable-packet-layout`; §3.4 at
+`ew-owned-resource-digests` and `ew-prefix-resources`; and §3.5 at
+`ew-referenced-resource-delivery`.
 
 Writer tests distinguish the new rules from the current ones:
 
@@ -340,8 +363,11 @@ Writer tests distinguish the new rules from the current ones:
   process, yields the same entry;
 - the build refuses, naming the path: a file directly in `opaque_location`; a resource directory
   holding two payloads or none; a symbolic link; an empty directory within a payload; a name that is
-  not UTF-8; `a.png` beside `A.png`; a resource directory named by no catalog row; and one named by
-  a dense-array catalog row;
+  not UTF-8; a resource directory named by no catalog row; and one named by a dense-array catalog
+  row;
+- a payload holding `a.png` beside `A.png`, and a name in NFD, is published with every name
+  unchanged, and the build's validation reports the pair as one `physical.opaque_name_collision`
+  warning and passes;
 - the build refuses a `resource_id` delivered as a payload by two sources, or as a payload and a
   resource-document entry; and
 - a resource-document entry without `external: true` is refused, where the current writer records it
@@ -349,5 +375,6 @@ Writer tests distinguish the new rules from the current ones:
 
 The positive case beside them is an adapter declaring no `opaque_location`, which delivers rows,
 arrays, and referenced resources as today. The corpus fixtures of §5 check what a validator decides:
-binding, digest, and a percent-encoded URI. Name preservation and the refusals are a build's
-obligations, which a validator cannot observe after the fact, so writer tests are their evidence.
+binding, digest, a percent-encoded URI, and the collision warning. Name preservation and the
+refusals are a build's obligations, which a validator cannot observe after the fact, so writer tests
+are their evidence.
