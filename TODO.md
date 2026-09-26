@@ -205,8 +205,6 @@ accepts `prefix`.
   admit one whose `accepts` does; have `session`, `video`, and `aind_unit_qc` declare it in
   `accepts`; and add a command that prunes the location. The writer README's cache section and the
   comment in `sources/store.py` citing Part 12 §4 change with it. R142 §6 lists the tests.
-- **`fixtures/packets/` holds stale directories** (`stream_clock_mismatch`, `undetected_default`),
-  and `fixtures/README.md` still lists one.
 
 ---
 

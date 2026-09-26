@@ -1046,6 +1046,9 @@ def variants():
 
 def main():
     root = HERE / "packets"
+    # A variant dropped from this file would otherwise leave its last build behind.
+    if root.exists():
+        shutil.rmtree(root)
     write_packet(root / "valid", content())
     print(
         f"valid                     {sum(len(v) for v in content().values()):>5d} rows"

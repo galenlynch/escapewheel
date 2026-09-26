@@ -10,19 +10,19 @@ implementation can be checked against the same evidence rather than against a pr
 of what should happen.
 
 ```bash
-uv run --with pyarrow python build.py                            # writes packets/
-uv run --no-cache --with ../escapewheel-validator --with duckdb python corpus.py  # run them all
+uv run --project ../escapewheel-writer python build.py   # rewrites packets/ from scratch
+uv run --project ../escapewheel-writer python corpus.py  # run them all
 ```
 
-`--no-cache` matters: uv caches the built wheel of the sibling package, and without it a
-run can silently test a stale copy of the validator rather than the working tree.
+The writer's environment installs the reader and validator from their sibling directories as
+editable packages, so both commands run against the working tree, as `verify.py` does.
 
 The validator under test is `escapewheel_validator`. Nothing is reimplemented here —
 a second copy of the checks would be exactly the drift this corpus exists to detect. To
 validate one packet directly:
 
 ```bash
-uv run --with '../escapewheel-validator' --with duckdb escapewheel validate packets/valid
+uv run --project ../escapewheel-validator escapewheel validate packets/valid
 ```
 
 ## The valid packet
@@ -51,7 +51,6 @@ description, and is not all of them.
 | `null_required` | null in a required column | `core.events.event_type.not_null` |
 | `bad_vocabulary` | `quality_label` is `good` | `core.units.quality_label.in_vocabulary` |
 | `inconsistent_projection` | one `(source, label)` pair projects two ways | `core.unit_quality_labels.projection_is_consistent` |
-| `stream_clock_mismatch` | an event's clock disagrees with its stream's | `core.events.clock_matches_stream` |
 | `bad_interval` | `stop_tick` before `start_tick` | `core.intervals.interval_valid` |
 | `stale_summary` | `n_spikes` disagrees with the spikes | `core.units.spike_summary_consistent` |
 | `missing_amplitude_unit` | amplitudes with no declared unit | `core.sorting_runs.amplitude_unit_declared` |
