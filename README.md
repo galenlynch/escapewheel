@@ -52,6 +52,7 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 | `escapewheel-validator/` | The reference validator. SQL rules generated from the registry, plus the shim for what SQL cannot see. |
 | `escapewheel-writer/` | The writer, the source adapters, and the session recipe that drives them. |
 | `fixtures/` | The conformance corpus: one valid packet and its variants, each with its expected finding recorded as data. |
+| `integration/` | The writer, reader, and validator run against one another, and the generator of Part 08's example packet. |
 | `conformance/` | Mechanical probes producing the measured evidence revisions cite. |
 | `inventory/` | Source inventories from discovery (Part 05 §4.1), and the upstream defects found while writing adapters. |
 

@@ -144,6 +144,12 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ROOT / "escapewheel_poc_docs_v0.2",
         [sys.executable, "columns.py", "--check"],
     ),
+    # Part 08 shows a packet the writer builds, so its layout and manifest follow the registries.
+    (
+        "spec: Part 08 shows the packet the writer builds",
+        ROOT / "integration",
+        ["uv", "run", "--project", str(TOOLS), "python", "example.py"],
+    ),
     (
         "spec: the single-file rendering is current",
         ROOT / "escapewheel_poc_docs_v0.2",
@@ -181,12 +187,24 @@ STAGES: list[tuple[str, Path, list[str]]] = [
 
 #: Run after the generators, never before: a suite passing against stale generated input says
 #: nothing. Skipped by --quick, since they are most of the runtime.
-SUITES = (
-    "escapewheel-reader",
-    "escapewheel-validator",
-    "escapewheel-writer",
-    "escapewheel-aind",
-)
+#: The last runs the writer, reader and validator against one another; it is not a project of
+#: its own, so it runs in the writer's environment, which carries all three.
+SUITES: list[tuple[str, Path, list[str]]] = [
+    *(
+        (f"{package}: tests", ROOT / package, ["uv", "run", "pytest", "-vv"])
+        for package in (
+            "escapewheel-reader",
+            "escapewheel-validator",
+            "escapewheel-writer",
+            "escapewheel-aind",
+        )
+    ),
+    (
+        "integration: tests",
+        ROOT / "integration",
+        ["uv", "run", "--project", str(TOOLS), "pytest", "-vv"],
+    ),
+]
 
 # Full verification needs facilities that some restricted execution environments deny or cannot
 # wake. Prove those facilities before doing any of the comparatively expensive generation and
@@ -406,9 +424,7 @@ def main() -> int:
 
     stages = list(STAGES)
     if not args.quick:
-        stages += [
-            (f"{p}: tests", ROOT / p, ["uv", "run", "pytest", "-vv"]) for p in SUITES
-        ]
+        stages += SUITES
 
     baseline = {where: candidate_state(where) for where in GENERATED}
     failed = []

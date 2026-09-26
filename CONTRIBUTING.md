@@ -140,6 +140,9 @@ the order matters.
 5. **`fixtures/build.py`** writes the 30-packet conformance corpus against the registry;
    `fixtures/corpus.py` runs each through the real validator and checks it produced the finding
    it was built to produce.
+6. **`integration/example.py`** commits a small packet with the writer, one resource of each
+   kind against every shipped extension, and fills Part 08's layout and manifest excerpt from it.
+   It runs before `combine.py --check`, since the single-file rendering carries Part 08.
 
 ## 5. Changing something
 
@@ -151,6 +154,7 @@ the order matters.
 | add an extension | a directory `registry/extensions/<id>/` holding `registry.toml` and one file per resource | `verify.py` |
 | change the manifest or the meta-schema | the hand-written copy in `registry/` | `build.py` re-vendors; `verify.py` |
 | add a fixture variant | `fixtures/build.py` and `fixtures/corpus.py` | `verify.py` |
+| change the packet Part 08 shows | `integration/example.py` | `verify.py` |
 
 **A schema change starts with a revision.** Not as ceremony: `revisions/registry-targets.toml`
 locates each accepted clause in the generated registry, so a declaration traces to the argument
@@ -219,6 +223,7 @@ that complete result. `check.py` separately adds checks true only of this reposi
 | `facts.py` | a count in a root document that no longer matches what it counts |
 | `verify.py`'s candidate-state comparison | a stale or hand-edited artifact changed by regeneration |
 | the four package test suites | asserted reference-implementation behavior outside the checks above |
+| `integration/` | a writer, reader, and validator that disagree with one another, or a Part 08 query that no longer runs |
 
 ## 8. Reading the result
 
