@@ -761,9 +761,10 @@ R144 differ from their earlier builds only as declared.
 ### P10 — Registry source, field test, and final identifiers
 
 P10 runs in three steps, because the contract is tested in the field as a release candidate before
-its identifiers are frozen. The deliberate `registry_version` hold stays in place through the field
-test; a packet built from the candidate still identifies each registry it binds by the SHA-256 in
-its manifest (Part 04).
+its identifiers are frozen. Through the field test every identifier stays a development identifier
+(Part 02 §9.2): a contract change advances the version it governs, as it has since R126,
+and no identifier is reused for an incompatible contract. A packet built from the candidate
+identifies each registry it binds by that version and by the SHA-256 in its manifest (Part 04).
 
 #### P10.1 — Direct registry source and integration matrix
 
@@ -787,13 +788,13 @@ before then.
 #### P10.3 — Final identifiers and registry binding
 
 Assign correct semantic, logical, physical-profile, registry, meta-schema, packet-schema, and
-rule-language identifiers. Lift the `registry_version` hold and ensure identifiers change whenever
-governed bytes or contracts are incompatible. Apply the packet registry-binding decision from P6
+rule-language identifiers, replacing the development identifiers; the semantic, logical,
+physical-profile, and rule-language identifiers still name v0.1 in a v0.2 specification. Ensure
+identifiers change whenever governed bytes or contracts are incompatible. Apply the packet registry-binding decision from P6
 using the final identifiers and digests. The TODO item for final registry versions closes here.
 
-The hold is provisional rather than permission to reuse an identifier for incompatible bytes.
-P4.1 advances the registry meta-schema and core registry when it changes the document contract,
-and advances each affected extension independently. P10.3 assigns and verifies the final release
+Until then a contract change advances the registry meta-schema and core registry, and each
+affected extension independently, as P4.1 established. P10.3 assigns and verifies the final release
 identifiers after the field test's revisions are incorporated.
 
 **Review coverage:** D7 and I9 in P10.1; identifier findings and final-value portions of the
@@ -864,7 +865,7 @@ This table prevents a finding from disappearing merely because it was split out 
 | packet registry ID/version/digest TODO | shape in P6; final values in P10.3 |
 | direct declarative registry authoring TODO | P10.1, ordinarily if contract-preserving |
 | remaining JSON Schema audits | manifest/resources in P6; sources/adapter in P8 |
-| held `registry_version` and stale `$id` values | P10.3, after the P10.2 field test |
+| development `registry_version` and `$id` values | P10.3, after the P10.2 field test |
 
 ## 6. Final publication gate
 
