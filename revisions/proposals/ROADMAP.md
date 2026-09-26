@@ -316,7 +316,7 @@ P1 authority framework
 | P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | [R130](../accepted/R130-a-packet-binds-the-exact-registries-that-declare-its-resources.md) |
 | P7 | Core, extension, and packet validity composition | P4.2, P6 | [R131](../accepted/R131-a-validator-checks-every-unit-value-against-ucum.md); [R132](../accepted/R132-a-packet-passes-only-when-its-manifest-core-and-every-bound-extension-pass.md) |
 | P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | [R133](../accepted/R133-a-build-decides-ownership-only-from-the-recipe-and-adapter-declarations.md); [R134](../accepted/R134-an-adapter-declares-its-whole-contract-and-delivers-only-where-a-build-points-it.md) |
-| P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | Proposal family; split before promotion |
+| P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | [R135](../accepted/R135-a-build-owns-its-staging-area-and-validates-everything-it-stages-before-publishing.md); [R136](../accepted/R136-every-packet-owned-resource-records-a-named-whole-object-digest.md); [R137](../accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md); [R138](../accepted/R138-a-recipe-names-each-extension-registry-once.md); [R139](../accepted/R139-a-float-column-declares-whether-it-admits-non-finite-values.md); [R140](../accepted/R140-a-nomenclature-that-governs-an-open-core-column-has-a-reference-entry.md); [R141](../accepted/R141-the-core-vocabulary-targets-extracellular-electrophysiology.md); [R142](../accepted/R142-a-build-supplies-an-adapter-a-persistent-source-cache.md); [R143](../accepted/R143-a-packet-owned-opaque-resource-crosses-as-its-bytes-in-a-directory-named-by-its-resource-id.md); [R144](../accepted/R144-the-adapter-interface-is-its-own-part-at-the-physical-level.md) |
 | P10.1 | Direct registry source and release integration matrix | P2, P2.1, and P3–P9 | Ordinary maintenance unless the contract changes |
 | P10.2 | Release-candidate field test | P10.1 | Revisions for what the field finds; the user ends the test |
 | P10.3 | Final identifiers and registry binding | P10.2 | Proposal |
@@ -747,6 +747,16 @@ Split this family wherever the decisions can stand independently:
 Analysis lineage and canonicality belong in P5.1 rather than this catch-all; adapter write capability
 belongs in P8. This placement keeps the earlier review's “remaining reconciliations” from becoming
 one omnibus revision.
+
+**Completed as R135–R144 on 2026-09-26.** A build validates everything it stages before publishing
+(R135), and every packet-owned resource records a named digest (R136). The Zarr floor admits Blosc
+with Zstandard and sharding, and a feature outside a floor is a resource finding (R137). A recipe
+names each extension once (R138), a float column declares whether it admits non-finite values
+(R139), and each nomenclature governing an open core column has a reference entry (R140). The core
+vocabulary targets extracellular electrophysiology while the mechanism stays general (R141), and
+the adapter interface is its own Part 12 (R144). A build supplies a persistent source cache (R142),
+and a packet-owned opaque resource crosses as its bytes (R143). The two real packets rebuilt at
+R144 differ from their earlier builds only as declared.
 
 ### P10 — Registry source, field test, and final identifiers
 
