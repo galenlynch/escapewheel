@@ -198,8 +198,6 @@ accepts `prefix`.
 
 - **A `prefix` outside `[a-z0-9_.-]` mints an invalid resource ID** (Part 04 §4.1). A recipe check
   should refuse it before a build opens a source.
-- **A camera file name with capitals mints an invalid resource ID** in `video`. Whether to fold case
-  or refuse is undecided.
 - **The scaffold never mentions `vocabulary`.** Once an author gives a string column a role, the
   meta-schema requires one, so a finished draft with string columns fails until the author finds
   out.

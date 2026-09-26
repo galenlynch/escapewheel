@@ -46,9 +46,15 @@ positions from where it is shown.
 
 from __future__ import annotations
 
+import hashlib
+import re
+import unicodedata
+from collections import Counter
 from collections.abc import Iterator, Mapping
+from functools import cached_property
 from pathlib import Path
 from typing import Any, ClassVar
+from urllib.parse import quote
 
 import numpy as np
 import pyarrow as pa
@@ -72,6 +78,25 @@ COLUMNS = ("rig_seconds", "frame_counter", "camera_nanoseconds")
 
 #: Ticks per second of the clock the CSV's first column is quantised to.
 HARP_TICKS = 31250
+
+#: Runs of characters Part 04 §4.1 does not admit after a resource ID's dot.
+_INADMISSIBLE = re.compile(r"[^a-z0-9_.-]+")
+
+
+def resource_name(stem: str) -> str:
+    """Return a resource-ID name for a video from its file stem, however spelled (Part 04 §4.1).
+
+    Accents are dropped, case is folded, and every other run of inadmissible characters becomes one
+    `_`, so `Side Camera (Left)` is `side_camera_left`. A stem with nothing left is named by its
+    digest. `media_asset_name` keeps the stem as it came.
+    """
+    ascii_only = unicodedata.normalize("NFKD", stem).encode("ascii", "ignore").decode()
+    return _INADMISSIBLE.sub("_", ascii_only.lower()).strip("_") or _digest(stem)
+
+
+def _digest(stem: str) -> str:
+    """Return eight hex digits naming a stem, stable across runs and independent of its siblings."""
+    return hashlib.sha256(stem.encode()).hexdigest()[:8]
 
 
 class VideoSource(Compensates):
@@ -142,25 +167,39 @@ class VideoSource(Compensates):
         self.notes: list[str] = []
 
     def videos(self) -> list[Path]:
-        """Every video under `root`, sorted so two runs number them alike."""
-        return sorted(p for p in self.root.glob(f"*{SUFFIX}") if p.is_file())
+        """Every video under `root`, whatever the case of its suffix, sorted so two runs number them alike."""
+        return sorted(p for p in self.root.iterdir() if p.suffix.lower() == SUFFIX and p.is_file())
+
+    @cached_property
+    def _names(self) -> dict[Path, str]:
+        """Each video's asset key, which is also the name in its resource ID.
+
+        Stems that fold to one name each take their own digest as a suffix rather than a position,
+        so adding a camera never renames another.
+        """
+        folded = {video: resource_name(video.stem) for video in self.videos()}
+        taken = Counter(folded.values())
+        return {
+            video: self.prefix + (name if taken[name] == 1 else f"{name}-{_digest(video.stem)}")
+            for video, name in folded.items()
+        }
 
     def _timing(self, video: Path) -> Path | None:
-        """Return the CSV beside a video, or None where it has none."""
-        beside = video.with_suffix(".csv")
-        return beside if beside.is_file() else None
+        """Return the CSV beside a video, whatever the case of its suffix, or None where it has none."""
+        beside = [p for p in video.parent.iterdir() if p.stem == video.stem and p.suffix.lower() == ".csv"]
+        return beside[0] if len(beside) == 1 and beside[0].is_file() else None
 
     def _uri(self, video: Path) -> str:
-        """Where this video is addressed, absolutely (Part 04 §5.1)."""
+        """Where this video is addressed, absolutely and percent-encoded (Part 03 §4, Part 04 §5.1)."""
         if self.uri_base:
-            return f"{self.uri_base}/{video.name}"
+            return f"{self.uri_base}/{quote(video.name, safe='')}"
         return video.resolve().as_uri()
 
     def external_media(self) -> dict[str, ExternalMedia]:
         """Each video as a resource the packet references and does not own."""
         found = {}
         for video in self.videos():
-            name = self.prefix + video.stem
+            name = self._names[video]
             local = self.uri_base is None
             found[f"core.{name}"] = ExternalMedia(
                 media_asset_id=name,
@@ -189,11 +228,11 @@ class VideoSource(Compensates):
                 self.compensate("video.zip_pairing_repaired")
             rows.append(
                 {
-                    "media_asset_id": self.prefix + video.stem,
+                    "media_asset_id": self._names[video],
                     "session_id": self.session_id,
                     "semantic_type": "behavior_video",
                     "media_asset_name": self.prefix + video.stem,
-                    "resource_id": f"core.{self.prefix}{video.stem}",
+                    "resource_id": f"core.{self._names[video]}",
                     **(self._pts_rate(video) if timing else {}),
                     "clock_id": self.clock_id if timing else None,
                 }
@@ -280,7 +319,7 @@ class VideoSource(Compensates):
             stop = min(start + self.batch_rows, ticks.size)
             yield pa.record_batch(
                 {
-                    "media_asset_id": pa.array([self.prefix + video.stem] * (stop - start)),
+                    "media_asset_id": pa.array([self._names[video]] * (stop - start)),
                     "frame_index": pa.array(np.arange(start, stop, dtype=np.int64)),
                     "t_tick": pa.array(ticks[start:stop]),
                     "clock_id": pa.array([self.clock_id] * (stop - start)),

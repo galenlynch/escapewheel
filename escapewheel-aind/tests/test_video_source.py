@@ -1,6 +1,7 @@
 """Behaviour videos: the assets referenced and the frames timed on the rig clock."""
 
 import json
+import re
 from pathlib import Path
 
 import pyarrow as pa
@@ -71,3 +72,43 @@ def test_a_prefixed_video_binds_to_its_own_asset_row(root):
     for resource_id, media in source.external_media().items():
         writer.reference_media(resource_id, media)
     assert {f["media_asset_id"] for f in _frames(source)} <= {r["media_asset_id"] for r in rows}
+
+
+#: Part 04 §4.1's resource-ID pattern.
+RESOURCE_ID = re.compile(r"^[a-z][a-z0-9_]*\.[a-z0-9_.-]+$")
+
+
+def _camera(root, stem, suffix=".mp4", timing=".csv"):
+    (root / f"{stem}{suffix}").write_bytes(b"")
+    (root / f"{stem}{timing}").write_text(TIMING)
+
+
+def test_a_file_name_is_accepted_however_it_is_spelled(root):
+    """A stem Part 04 §4.1 would not admit is folded for the ID and kept as it came for the name."""
+    (root / "bottom_camera.mp4").unlink()
+    _camera(root, "Side Caméra (Left)", suffix=".MP4", timing=".CSV")
+    source = _source(root, uri_base="s3://bucket/videos")
+    (row,) = source.media_assets()
+    assert (row["media_asset_id"], row["media_asset_name"], row["resource_id"]) == (
+        "side_camera_left",
+        "Side Caméra (Left)",
+        "core.side_camera_left",
+    )
+    assert row["clock_id"] == "harp"
+    ((resource_id, media),) = source.external_media().items()
+    assert (resource_id, media.media_asset_id) == ("core.side_camera_left", "side_camera_left")
+    assert media.uri == "s3://bucket/videos/Side%20Cam%C3%A9ra%20%28Left%29.MP4"
+    assert {f["media_asset_id"] for f in _frames(source)} == {"side_camera_left"}
+
+
+def test_stems_that_fold_alike_stay_distinct(root):
+    """Each takes its own digest, so adding a camera never renames another."""
+    _camera(root, "Bottom Camera")
+    _camera(root, "日本")
+    rows = _source(root).media_assets()
+    ids = [r["resource_id"] for r in rows]
+    assert len(set(ids)) == 3
+    assert all(RESOURCE_ID.match(i) for i in ids)
+    folded = sorted(i for i in ids if i.startswith("core.bottom_camera"))
+    assert len(folded) == 2 and all(i.startswith("core.bottom_camera-") for i in folded)
+    assert {r["media_asset_name"] for r in rows} == {"bottom_camera", "Bottom Camera", "日本"}
