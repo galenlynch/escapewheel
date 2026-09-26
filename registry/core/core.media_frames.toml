@@ -64,10 +64,24 @@ description = "Dropped-frame flag."
 id = "core.media_frames.frame_index_contiguous"
 level = "error"
 message = "frame_index is not contiguous from 0 within an asset"
-sql = "SELECT media_asset_id, COUNT(*) AS n_frames, MAX(frame_index) AS max_index FROM core.media_frames GROUP BY media_asset_id HAVING MAX(frame_index) <> COUNT(*) - 1 OR MIN(frame_index) <> 0"
+sql = '''
+SELECT media_asset_id, COUNT(*) AS n_frames, MAX(frame_index) AS max_index
+FROM core.media_frames
+GROUP BY media_asset_id
+HAVING MAX(frame_index) <> COUNT(*) - 1
+  OR MIN(frame_index) <> 0'''
 
 [[rules]]
 id = "core.media_frames.pts_increases_with_frame_index"
 level = "error"
 message = "pts is not strictly increasing in frame_index order within an asset, so the frames are not numbered in presentation order"
-sql = "SELECT media_asset_id, frame_index, pts, prev AS previous_pts FROM (SELECT media_asset_id, frame_index, pts, LAG(pts) OVER (PARTITION BY media_asset_id ORDER BY frame_index) AS prev FROM core.media_frames WHERE pts IS NOT NULL) AS derived_1 WHERE prev IS NOT NULL AND pts <= prev"
+sql = '''
+SELECT media_asset_id, frame_index, pts, prev AS previous_pts
+FROM (
+  SELECT media_asset_id, frame_index, pts,
+    LAG(pts) OVER (PARTITION BY media_asset_id ORDER BY frame_index) AS prev
+  FROM core.media_frames
+  WHERE pts IS NOT NULL
+) AS derived_1
+WHERE prev IS NOT NULL
+  AND pts <= prev'''

@@ -125,46 +125,81 @@ description = "Clock the ticks are counted on (regular tick axis)."
 id = "core.array_dimensions.axis_index_contiguous"
 level = "error"
 message = "axis_index is not contiguous from 0"
-sql = "SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis FROM core.array_dimensions GROUP BY array_asset_id HAVING MAX(axis_index) <> COUNT(*) - 1 OR MIN(axis_index) <> 0"
+sql = '''
+SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis
+FROM core.array_dimensions
+GROUP BY array_asset_id
+HAVING MAX(axis_index) <> COUNT(*) - 1
+  OR MIN(axis_index) <> 0'''
 
 [[rules]]
 id = "core.array_dimensions.one_coordinate_form"
 level = "error"
 message = "an axis declares more than one coordinate form"
-sql = "SELECT array_asset_id, axis_index FROM core.array_dimensions WHERE (CASE WHEN origin_tick IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END) > 1"
+sql = '''
+SELECT array_asset_id, axis_index
+FROM core.array_dimensions
+WHERE (
+  CASE WHEN origin_tick IS NOT NULL THEN 1 ELSE 0 END
+  + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END
+  + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END
+  + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END
+) > 1'''
 
 [[rules]]
 id = "core.array_dimensions.tick_axis_complete"
 level = "error"
 message = "a regular tick axis needs clock_id, origin_tick and step_tick_num"
-sql = "SELECT array_asset_id, axis_index FROM core.array_dimensions WHERE origin_tick IS NOT NULL AND (step_tick_num IS NULL OR clock_id IS NULL)"
+sql = '''
+SELECT array_asset_id, axis_index
+FROM core.array_dimensions
+WHERE origin_tick IS NOT NULL
+  AND (step_tick_num IS NULL OR clock_id IS NULL)'''
 
 [[rules]]
 id = "core.array_dimensions.numeric_axis_complete"
 level = "error"
 message = "a regular numeric axis needs origin_value, step_value and coordinate_unit"
-sql = "SELECT array_asset_id, axis_index FROM core.array_dimensions WHERE origin_value IS NOT NULL AND (step_value IS NULL OR coordinate_unit IS NULL)"
+sql = '''
+SELECT array_asset_id, axis_index
+FROM core.array_dimensions
+WHERE origin_value IS NOT NULL
+  AND (step_value IS NULL OR coordinate_unit IS NULL)'''
 
 [[rules]]
 id = "core.array_dimensions.labelled_axis_complete"
 level = "error"
 message = "coordinate_resource and coordinate_position_column must be present together"
-sql = "SELECT array_asset_id, axis_index FROM core.array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
+sql = '''
+SELECT array_asset_id, axis_index
+FROM core.array_dimensions
+WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)'''
 
 [[rules]]
 id = "core.array_dimensions.coordinate_resource_is_core"
 level = "error"
 message = "a core axis points outward at a non-core resource"
-sql = "SELECT array_asset_id, axis_index, coordinate_resource FROM core.array_dimensions WHERE coordinate_resource IS NOT NULL AND coordinate_resource NOT LIKE 'core.%'"
+sql = '''
+SELECT array_asset_id, axis_index, coordinate_resource
+FROM core.array_dimensions
+WHERE coordinate_resource IS NOT NULL
+  AND coordinate_resource NOT LIKE 'core.%''''
 
 [[rules]]
 id = "core.array_dimensions.step_denominator_positive"
 level = "error"
 message = "a step denominator is not positive, so the step it defines is meaningless"
-sql = "SELECT array_asset_id, axis_index, step_tick_den FROM core.array_dimensions WHERE step_tick_den IS NOT NULL AND step_tick_den <= 0"
+sql = '''
+SELECT array_asset_id, axis_index, step_tick_den
+FROM core.array_dimensions
+WHERE step_tick_den IS NOT NULL
+  AND step_tick_den <= 0'''
 
 [[rules]]
 id = "core.array_dimensions.coordinate_pair_complete"
 level = "error"
 message = "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them"
-sql = "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM core.array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
+sql = '''
+SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column
+FROM core.array_dimensions
+WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)'''

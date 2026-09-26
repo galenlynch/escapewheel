@@ -99,10 +99,18 @@ description = "What the source stated about this row that the standard does not 
 id = "core.calibrations.unit_pair_complete"
 level = "error"
 message = "a calibration declares one unit of measure and not the other; the pair is what makes a point readable"
-sql = "SELECT calibration_id, input_unit, output_unit FROM core.calibrations WHERE (input_unit IS NULL) <> (output_unit IS NULL)"
+sql = '''
+SELECT calibration_id, input_unit, output_unit
+FROM core.calibrations
+WHERE (input_unit IS NULL) <> (output_unit IS NULL)'''
 
 [[rules]]
 id = "core.calibrations.points_declare_units"
 level = "error"
 message = "a calibration carries points and declares no units, so nothing says what its values are measured in"
-sql = "SELECT DISTINCT c.calibration_id FROM core.calibrations AS c JOIN core.calibration_points AS p USING (calibration_id) WHERE c.input_unit IS NULL OR c.output_unit IS NULL"
+sql = '''
+SELECT DISTINCT c.calibration_id
+FROM core.calibrations AS c
+JOIN core.calibration_points AS p USING (calibration_id)
+WHERE c.input_unit IS NULL
+  OR c.output_unit IS NULL'''

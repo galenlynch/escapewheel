@@ -59,4 +59,9 @@ description = "How many consecutive anchor intervals the step spans."
 id = "core.clock_phase_steps.step_needs_parent"
 level = "error"
 message = "a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase"
-sql = "SELECT s.session_id, s.clock_id, s.t_tick FROM core.clock_phase_steps AS s JOIN core.clocks AS c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE c.parent_clock_id IS NULL"
+sql = '''
+SELECT s.session_id, s.clock_id, s.t_tick
+FROM core.clock_phase_steps AS s
+JOIN core.clocks AS c ON c.session_id = s.session_id
+  AND c.clock_id = s.clock_id
+WHERE c.parent_clock_id IS NULL'''

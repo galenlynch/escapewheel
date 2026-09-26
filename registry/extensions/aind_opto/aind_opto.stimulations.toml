@@ -119,4 +119,8 @@ description = "What the source stated about this row that the standard does not 
 id = "aind_opto.stimulations.pulsing_needs_a_frequency"
 level = "error"
 message = "a pulse duration is recorded with no frequency, so the train is undefined"
-sql = "SELECT session_id, epoch_id FROM aind_opto.stimulations WHERE pulse_duration_s IS NOT NULL AND frequency_hz IS NULL"
+sql = '''
+SELECT session_id, epoch_id
+FROM aind_opto.stimulations
+WHERE pulse_duration_s IS NOT NULL
+  AND frequency_hz IS NULL'''

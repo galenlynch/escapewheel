@@ -207,34 +207,66 @@ resource_columns = ["session_id", "block_id"]
 id = "dynamic_foraging.trials.the_cue_follows_the_delay"
 level = "error"
 message = "the go cue precedes the delay it is supposed to follow"
-sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE delay_start_tick IS NOT NULL AND go_cue_start_tick IS NOT NULL AND go_cue_start_tick < delay_start_tick"
+sql = '''
+SELECT session_id, trial_id
+FROM dynamic_foraging.trials
+WHERE delay_start_tick IS NOT NULL
+  AND go_cue_start_tick IS NOT NULL
+  AND go_cue_start_tick < delay_start_tick'''
 
 [[rules]]
 id = "dynamic_foraging.trials.the_outcome_follows_the_cue"
 level = "error"
 message = "the outcome is recorded before the go cue"
-sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE reward_outcome_tick IS NOT NULL AND go_cue_start_tick IS NOT NULL AND reward_outcome_tick < go_cue_start_tick"
+sql = '''
+SELECT session_id, trial_id
+FROM dynamic_foraging.trials
+WHERE reward_outcome_tick IS NOT NULL
+  AND go_cue_start_tick IS NOT NULL
+  AND reward_outcome_tick < go_cue_start_tick'''
 
 [[rules]]
 id = "dynamic_foraging.trials.a_probability_is_a_probability"
 level = "error"
 message = "a reward probability falls outside 0-1"
-sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE NOT reward_probability_left BETWEEN 0 AND 1 OR NOT reward_probability_right BETWEEN 0 AND 1"
+sql = '''
+SELECT session_id, trial_id
+FROM dynamic_foraging.trials
+WHERE NOT reward_probability_left BETWEEN 0 AND 1
+  OR NOT reward_probability_right BETWEEN 0 AND 1'''
 
 [[rules]]
 id = "dynamic_foraging.trials.a_draw_is_a_draw"
 level = "error"
 message = "a reward random number falls outside 0-1, so the outcome cannot be reproduced"
-sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE NOT reward_random_number_left BETWEEN 0 AND 1 OR NOT reward_random_number_right BETWEEN 0 AND 1"
+sql = '''
+SELECT session_id, trial_id
+FROM dynamic_foraging.trials
+WHERE NOT reward_random_number_left BETWEEN 0 AND 1
+  OR NOT reward_random_number_right BETWEEN 0 AND 1'''
 
 [[rules]]
 id = "dynamic_foraging.trials.a_reward_needs_a_bait"
 level = "error"
 message = "a port paid out where nothing was baited"
-sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE (rewarded_history_left AND NOT bait_left) OR (rewarded_history_right AND NOT bait_right)"
+sql = '''
+SELECT session_id, trial_id
+FROM dynamic_foraging.trials
+WHERE (rewarded_history_left AND NOT bait_left)
+  OR (rewarded_history_right AND NOT bait_right)'''
 
 [[rules]]
 id = "dynamic_foraging.trials.a_block_holds_one_probability_pair"
 level = "error"
 message = "a block's trials disagree about the reward probabilities, so the block is not one"
-sql = "SELECT session_id, block_id FROM (SELECT session_id, block_id, COUNT(DISTINCT reward_probability_left) AS l, COUNT(DISTINCT reward_probability_right) AS r FROM dynamic_foraging.trials WHERE block_id IS NOT NULL GROUP BY session_id, block_id) AS derived_1 WHERE l > 1 OR r > 1"
+sql = '''
+SELECT session_id, block_id
+FROM (
+  SELECT session_id, block_id, COUNT(DISTINCT reward_probability_left) AS l,
+    COUNT(DISTINCT reward_probability_right) AS r
+  FROM dynamic_foraging.trials
+  WHERE block_id IS NOT NULL
+  GROUP BY session_id, block_id
+) AS derived_1
+WHERE l > 1
+  OR r > 1'''

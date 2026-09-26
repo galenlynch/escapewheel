@@ -125,4 +125,7 @@ description = "Clock the ticks are counted on (regular tick axis)."
 id = "analysis.array_dimensions.coordinate_pair_complete"
 level = "error"
 message = "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them"
-sql = "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM analysis.array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
+sql = '''
+SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column
+FROM analysis.array_dimensions
+WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)'''

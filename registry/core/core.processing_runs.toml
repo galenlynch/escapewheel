@@ -129,40 +129,93 @@ description = "What the source stated about this row that the standard does not 
 id = "core.processing_runs.no_failed_runs"
 level = "error"
 message = "a failed run is recorded in a committed packet"
-sql = "SELECT processing_run_id, activity_type FROM core.processing_runs WHERE status = 'failed'"
+sql = '''
+SELECT processing_run_id, activity_type
+FROM core.processing_runs
+WHERE status = 'failed''''
 
 [[rules]]
 id = "core.processing_runs.materialization_records_software"
 level = "error"
 message = "a materialization run does not record the software that produced it"
-sql = "SELECT processing_run_id, software_name, software_version FROM core.processing_runs WHERE activity_type = 'materialization' AND (software_name IS NULL OR software_version IS NULL)"
+sql = '''
+SELECT processing_run_id, software_name, software_version
+FROM core.processing_runs
+WHERE activity_type = 'materialization'
+  AND (software_name IS NULL OR software_version IS NULL)'''
 
 [[rules]]
 id = "core.processing_runs.supersedes_not_self"
 level = "error"
 message = "a run supersedes_run_id itself"
-sql = "SELECT processing_run_id FROM core.processing_runs WHERE supersedes_run_id = processing_run_id"
+sql = '''
+SELECT processing_run_id
+FROM core.processing_runs
+WHERE supersedes_run_id = processing_run_id'''
 
 [[rules]]
 id = "core.processing_runs.supersedes_well_founded"
 level = "error"
 message = "the supersedes chain contains a cycle"
-sql = "WITH RECURSIVE up(processing_run_id, ancestor, depth) AS (SELECT processing_run_id, supersedes_run_id, 1 FROM core.processing_runs WHERE supersedes_run_id IS NOT NULL UNION ALL SELECT u.processing_run_id, r.supersedes_run_id, u.depth + 1 FROM up AS u JOIN core.processing_runs AS r ON r.processing_run_id = u.ancestor WHERE r.supersedes_run_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT processing_run_id FROM up WHERE ancestor = processing_run_id OR depth >= 64"
+sql = '''
+WITH RECURSIVE up(processing_run_id, ancestor, depth) AS (
+  SELECT processing_run_id, supersedes_run_id, 1
+  FROM core.processing_runs
+  WHERE supersedes_run_id IS NOT NULL
+  UNION ALL
+  SELECT u.processing_run_id, r.supersedes_run_id, u.depth + 1
+  FROM up AS u
+  JOIN core.processing_runs AS r ON r.processing_run_id = u.ancestor
+  WHERE r.supersedes_run_id IS NOT NULL
+    AND u.depth < 64
+)
+SELECT DISTINCT processing_run_id
+FROM up
+WHERE ancestor = processing_run_id
+  OR depth >= 64'''
 
 [[rules]]
 id = "core.processing_runs.undeclared_currency"
 level = "error"
 message = "several runs share an activity and scope and none is preferred, so a consumer cannot choose between them"
-sql = "WITH grouped AS (SELECT session_id, activity_type, scope, COUNT(*) AS n FROM core.processing_runs WHERE scope IS NOT NULL GROUP BY session_id, activity_type, scope HAVING COUNT(*) > 1) SELECT g.session_id, g.activity_type, g.scope, g.n FROM grouped AS g WHERE NOT EXISTS(SELECT 1 FROM core.preferred_runs AS p WHERE p.activity_type = g.activity_type AND p.scope = g.scope AND (p.session_id = g.session_id OR (p.session_id IS NULL AND g.session_id IS NULL)))"
+sql = '''
+WITH grouped AS (
+  SELECT session_id, activity_type, scope, COUNT(*) AS n
+  FROM core.processing_runs
+  WHERE scope IS NOT NULL
+  GROUP BY session_id, activity_type, scope
+  HAVING COUNT(*) > 1
+)
+SELECT g.session_id, g.activity_type, g.scope, g.n
+FROM grouped AS g
+WHERE NOT EXISTS(
+  SELECT 1
+  FROM core.preferred_runs AS p
+  WHERE p.activity_type = g.activity_type
+    AND p.scope = g.scope
+    AND (p.session_id = g.session_id OR (p.session_id IS NULL AND g.session_id IS NULL))
+)'''
 
 [[rules]]
 id = "core.processing_runs.scope_undeclared"
 level = "error"
 message = "an activity has several runs and at least one records no scope, so whether they compete cannot be determined"
-sql = "WITH per_activity AS (SELECT session_id, activity_type, COUNT(*) AS n, COUNT(*) FILTER(WHERE scope IS NULL) AS unscoped FROM core.processing_runs GROUP BY session_id, activity_type) SELECT session_id, activity_type, n, unscoped FROM per_activity WHERE n > 1 AND unscoped > 0"
+sql = '''
+WITH per_activity AS (
+  SELECT session_id, activity_type, COUNT(*) AS n, COUNT(*) FILTER(WHERE scope IS NULL) AS unscoped
+  FROM core.processing_runs
+  GROUP BY session_id, activity_type
+)
+SELECT session_id, activity_type, n, unscoped
+FROM per_activity
+WHERE n > 1
+  AND unscoped > 0'''
 
 [[rules]]
 id = "core.processing_runs.scope_pair_complete"
 level = "error"
 message = "a run declares one half of its scope; the pair is what carries the meaning"
-sql = "SELECT processing_run_id, scope_kind, scope FROM core.processing_runs WHERE (scope IS NULL) <> (scope_kind IS NULL)"
+sql = '''
+SELECT processing_run_id, scope_kind, scope
+FROM core.processing_runs
+WHERE (scope IS NULL) <> (scope_kind IS NULL)'''

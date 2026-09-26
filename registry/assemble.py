@@ -66,7 +66,7 @@ def expand(
             "id": f"{resource}.interval_valid",
             "level": "error",
             "message": f"{stop} precedes {start}",
-            "sql": f"SELECT {report} FROM {resource} WHERE {stop} < {start}",
+            "sql": f"SELECT {report}\nFROM {resource}\nWHERE {stop} < {start}",
         }
     ]
 
@@ -85,8 +85,8 @@ def expand(
                 "level": "error",
                 "message": f"{index} is not contiguous from 0",
                 "sql": (
-                    f"SELECT {by}, COUNT(*) AS n FROM {resource} GROUP BY {by} "
-                    f"HAVING MAX({index}) <> COUNT(*) - 1 OR MIN({index}) <> 0"
+                    f"SELECT {by}, COUNT(*) AS n\nFROM {resource}\nGROUP BY {by}\n"
+                    f"HAVING MAX({index}) <> COUNT(*) - 1\n  OR MIN({index}) <> 0"
                 ),
             }
         )
@@ -96,9 +96,10 @@ def expand(
             "level": "error",
             "message": call["overlap_message"],
             "sql": (
-                f"SELECT {report} FROM (SELECT *, LAG({stop}) OVER "
-                f"(PARTITION BY {by} ORDER BY {index or start}) AS prev_stop FROM {resource}) "
-                f"AS checked_interval WHERE prev_stop IS NOT NULL AND {start} {op} prev_stop"
+                f"SELECT {report}\nFROM (\n"
+                f"  SELECT *, LAG({stop}) OVER (PARTITION BY {by} ORDER BY {index or start})"
+                f" AS prev_stop\n  FROM {resource}\n) AS checked_interval\n"
+                f"WHERE prev_stop IS NOT NULL\n  AND {start} {op} prev_stop"
             ),
         }
     )

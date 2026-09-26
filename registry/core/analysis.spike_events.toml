@@ -52,10 +52,28 @@ description = "First tick of the bucket this spike falls in, on clock_id."
 id = "analysis.spike_events.bucket_contains_spike"
 level = "error"
 message = "a spike precedes the start of the bucket it is labelled with"
-sql = "SELECT session_id, unit_id, t_tick, time_bucket_tick FROM analysis.spike_events WHERE time_bucket_tick > t_tick"
+sql = '''
+SELECT session_id, unit_id, t_tick, time_bucket_tick
+FROM analysis.spike_events
+WHERE time_bucket_tick > t_tick'''
 
 [[rules]]
 id = "analysis.spike_events.buckets_partition_time"
 level = "error"
 message = "buckets overlap in tick range, so the layout they declare is not a partition"
-sql = "SELECT a.session_id, a.clock_id, a.time_bucket_tick AS earlier_bucket, a.hi, b.time_bucket_tick AS later_bucket, b.lo FROM (SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM analysis.spike_events GROUP BY session_id, clock_id, time_bucket_tick) AS a JOIN (SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM analysis.spike_events GROUP BY session_id, clock_id, time_bucket_tick) AS b ON a.session_id = b.session_id AND a.clock_id = b.clock_id AND b.time_bucket_tick > a.time_bucket_tick WHERE b.lo <= a.hi"
+sql = '''
+SELECT a.session_id, a.clock_id, a.time_bucket_tick AS earlier_bucket, a.hi,
+  b.time_bucket_tick AS later_bucket, b.lo
+FROM (
+  SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi
+  FROM analysis.spike_events
+  GROUP BY session_id, clock_id, time_bucket_tick
+) AS a
+JOIN (
+  SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi
+  FROM analysis.spike_events
+  GROUP BY session_id, clock_id, time_bucket_tick
+) AS b ON a.session_id = b.session_id
+  AND a.clock_id = b.clock_id
+  AND b.time_bucket_tick > a.time_bucket_tick
+WHERE b.lo <= a.hi'''

@@ -96,4 +96,8 @@ resource_columns = ["array_asset_id", "axis_index"]
 id = "core.array_channels.scaling_pair_complete"
 level = "error"
 message = "a conversion without a unit yields a number in no known quantity"
-sql = "SELECT array_asset_id, channel_index FROM core.array_channels WHERE conversion IS NOT NULL AND unit IS NULL"
+sql = '''
+SELECT array_asset_id, channel_index
+FROM core.array_channels
+WHERE conversion IS NOT NULL
+  AND unit IS NULL'''

@@ -63,4 +63,8 @@ resource_columns = ["session_id", "coordinate_frame"]
 id = "core.coordinate_frame_axes.axis_names_distinct"
 level = "error"
 message = "two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told"
-sql = "SELECT session_id, coordinate_frame, axis_name, COUNT(*) AS axes FROM core.coordinate_frame_axes GROUP BY session_id, coordinate_frame, axis_name HAVING COUNT(*) > 1"
+sql = '''
+SELECT session_id, coordinate_frame, axis_name, COUNT(*) AS axes
+FROM core.coordinate_frame_axes
+GROUP BY session_id, coordinate_frame, axis_name
+HAVING COUNT(*) > 1'''

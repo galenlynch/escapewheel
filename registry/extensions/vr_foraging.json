@@ -92,13 +92,13 @@
             "id": "vr_foraging.sessions.a_stage_needs_a_curriculum",
             "level": "error",
             "message": "a curriculum stage is named with no curriculum to place it in",
-            "sql": "SELECT session_id FROM vr_foraging.sessions WHERE curriculum_stage_name IS NOT NULL AND curriculum_name IS NULL"
+            "sql": "SELECT session_id\nFROM vr_foraging.sessions\nWHERE curriculum_stage_name IS NOT NULL\n  AND curriculum_name IS NULL"
           },
           {
             "id": "vr_foraging.sessions.on_curriculum_means_a_curriculum",
             "level": "error",
             "message": "the session reports as on-curriculum but names no curriculum",
-            "sql": "SELECT session_id FROM vr_foraging.sessions WHERE curriculum_enabled AND curriculum_name IS NULL"
+            "sql": "SELECT session_id\nFROM vr_foraging.sessions\nWHERE curriculum_enabled\n  AND curriculum_name IS NULL"
           }
         ]
       }
@@ -170,19 +170,19 @@
             "id": "vr_foraging.site_odors.every_site_gets_every_channel",
             "level": "error",
             "message": "sites carry different numbers of odor channels, so the channel list is not the rig's",
-            "sql": "SELECT session_id, site_id, n FROM (SELECT session_id, site_id, COUNT(*) AS n FROM vr_foraging.site_odors GROUP BY session_id, site_id) AS t WHERE n <> (SELECT MAX(n) FROM (SELECT COUNT(*) AS n FROM vr_foraging.site_odors GROUP BY session_id, site_id) AS derived_1)"
+            "sql": "SELECT session_id, site_id, n\nFROM (\n  SELECT session_id, site_id, COUNT(*) AS n\n  FROM vr_foraging.site_odors\n  GROUP BY session_id, site_id\n) AS t\nWHERE n <> (\n  SELECT MAX(n)\n  FROM (\n    SELECT COUNT(*) AS n\n    FROM vr_foraging.site_odors\n    GROUP BY session_id, site_id\n  ) AS derived_1\n)"
           },
           {
             "id": "vr_foraging.site_odors.channels_are_a_dense_range",
             "level": "error",
             "message": "a site's odor channels are not 0..n-1, so the index does not address the rig's list",
-            "sql": "SELECT session_id, site_id FROM (SELECT session_id, site_id, MAX(odor_channel_index) AS hi, COUNT(*) AS n FROM vr_foraging.site_odors GROUP BY session_id, site_id) AS derived_1 WHERE hi <> n - 1"
+            "sql": "SELECT session_id, site_id\nFROM (\n  SELECT session_id, site_id, MAX(odor_channel_index) AS hi, COUNT(*) AS n\n  FROM vr_foraging.site_odors\n  GROUP BY session_id, site_id\n) AS derived_1\nWHERE hi <> n - 1"
           },
           {
             "id": "vr_foraging.site_odors.a_concentration_is_a_percentage",
             "level": "error",
             "message": "a concentration falls outside 0-100%",
-            "sql": "SELECT session_id, site_id, odor_channel_index, concentration FROM vr_foraging.site_odors WHERE concentration < 0 OR concentration > 100"
+            "sql": "SELECT session_id, site_id, odor_channel_index, concentration\nFROM vr_foraging.site_odors\nWHERE concentration < 0\n  OR concentration > 100"
           }
         ]
       }
@@ -441,103 +441,103 @@
             "id": "vr_foraging.sites.site_index_in_patch_counts_what_it_says",
             "level": "error",
             "message": "site_index_in_patch does not match the order it claims to record",
-            "sql": "SELECT session_id, site_id, site_index_in_patch FROM (SELECT session_id, site_id, site_index_in_patch, ROW_NUMBER() OVER (PARTITION BY session_id, patch_index ORDER BY site_id) - 1 AS expected FROM vr_foraging.sites) AS derived_1 WHERE site_index_in_patch <> expected"
+            "sql": "SELECT session_id, site_id, site_index_in_patch\nFROM (\n  SELECT session_id, site_id, site_index_in_patch,\n    ROW_NUMBER() OVER (PARTITION BY session_id, patch_index ORDER BY site_id) - 1 AS expected\n  FROM vr_foraging.sites\n) AS derived_1\nWHERE site_index_in_patch <> expected"
           },
           {
             "id": "vr_foraging.sites.site_index_in_block_counts_what_it_says",
             "level": "error",
             "message": "site_index_in_block does not match the order it claims to record",
-            "sql": "SELECT session_id, site_id, site_index_in_block FROM (SELECT session_id, site_id, site_index_in_block, ROW_NUMBER() OVER (PARTITION BY session_id, block_index ORDER BY site_id) - 1 AS expected FROM vr_foraging.sites) AS derived_1 WHERE site_index_in_block <> expected"
+            "sql": "SELECT session_id, site_id, site_index_in_block\nFROM (\n  SELECT session_id, site_id, site_index_in_block,\n    ROW_NUMBER() OVER (PARTITION BY session_id, block_index ORDER BY site_id) - 1 AS expected\n  FROM vr_foraging.sites\n) AS derived_1\nWHERE site_index_in_block <> expected"
           },
           {
             "id": "vr_foraging.sites.site_index_by_type_counts_what_it_says",
             "level": "error",
             "message": "site_index_by_type does not match the order it claims to record",
-            "sql": "SELECT session_id, site_id, site_index_by_type FROM (SELECT session_id, site_id, site_index_by_type, ROW_NUMBER() OVER (PARTITION BY session_id, site_label ORDER BY site_id) - 1 AS expected FROM vr_foraging.sites) AS derived_1 WHERE site_index_by_type <> expected"
+            "sql": "SELECT session_id, site_id, site_index_by_type\nFROM (\n  SELECT session_id, site_id, site_index_by_type,\n    ROW_NUMBER() OVER (PARTITION BY session_id, site_label ORDER BY site_id) - 1 AS expected\n  FROM vr_foraging.sites\n) AS derived_1\nWHERE site_index_by_type <> expected"
           },
           {
             "id": "vr_foraging.sites.site_index_in_patch_by_type_counts_what_it_says",
             "level": "error",
             "message": "site_index_in_patch_by_type does not match the order it claims to record",
-            "sql": "SELECT session_id, site_id, site_index_in_patch_by_type FROM (SELECT session_id, site_id, site_index_in_patch_by_type, ROW_NUMBER() OVER (PARTITION BY session_id, patch_index, site_label ORDER BY site_id) - 1 AS expected FROM vr_foraging.sites) AS derived_1 WHERE site_index_in_patch_by_type <> expected"
+            "sql": "SELECT session_id, site_id, site_index_in_patch_by_type\nFROM (\n  SELECT session_id, site_id, site_index_in_patch_by_type,\n    ROW_NUMBER() OVER (PARTITION BY session_id, patch_index, site_label ORDER BY site_id) - 1 AS expected\n  FROM vr_foraging.sites\n) AS derived_1\nWHERE site_index_in_patch_by_type <> expected"
           },
           {
             "id": "vr_foraging.sites.site_index_in_block_by_type_counts_what_it_says",
             "level": "error",
             "message": "site_index_in_block_by_type does not match the order it claims to record",
-            "sql": "SELECT session_id, site_id, site_index_in_block_by_type FROM (SELECT session_id, site_id, site_index_in_block_by_type, ROW_NUMBER() OVER (PARTITION BY session_id, block_index, site_label ORDER BY site_id) - 1 AS expected FROM vr_foraging.sites) AS derived_1 WHERE site_index_in_block_by_type <> expected"
+            "sql": "SELECT session_id, site_id, site_index_in_block_by_type\nFROM (\n  SELECT session_id, site_id, site_index_in_block_by_type,\n    ROW_NUMBER() OVER (PARTITION BY session_id, block_index, site_label ORDER BY site_id) - 1 AS expected\n  FROM vr_foraging.sites\n) AS derived_1\nWHERE site_index_in_block_by_type <> expected"
           },
           {
             "id": "vr_foraging.sites.patch_index_in_block_counts_what_it_says",
             "level": "error",
             "message": "patch_index_in_block does not match the order it claims to record",
-            "sql": "SELECT session_id, site_id, patch_index_in_block FROM (SELECT session_id, site_id, patch_index_in_block, DENSE_RANK() OVER (PARTITION BY session_id, block_index ORDER BY patch_index) - 1 AS expected FROM vr_foraging.sites) AS derived_1 WHERE patch_index_in_block <> expected"
+            "sql": "SELECT session_id, site_id, patch_index_in_block\nFROM (\n  SELECT session_id, site_id, patch_index_in_block,\n    DENSE_RANK() OVER (PARTITION BY session_id, block_index ORDER BY patch_index) - 1 AS expected\n  FROM vr_foraging.sites\n) AS derived_1\nWHERE patch_index_in_block <> expected"
           },
           {
             "id": "vr_foraging.sites.patch_index_by_type_counts_what_it_says",
             "level": "error",
             "message": "patch_index_by_type does not match the order it claims to record",
-            "sql": "SELECT session_id, site_id, patch_index_by_type FROM (SELECT session_id, site_id, patch_index_by_type, DENSE_RANK() OVER (PARTITION BY session_id, patch_label ORDER BY patch_index) - 1 AS expected FROM vr_foraging.sites) AS derived_1 WHERE patch_index_by_type <> expected"
+            "sql": "SELECT session_id, site_id, patch_index_by_type\nFROM (\n  SELECT session_id, site_id, patch_index_by_type,\n    DENSE_RANK() OVER (PARTITION BY session_id, patch_label ORDER BY patch_index) - 1 AS expected\n  FROM vr_foraging.sites\n) AS derived_1\nWHERE patch_index_by_type <> expected"
           },
           {
             "id": "vr_foraging.sites.patch_index_in_block_by_type_counts_what_it_says",
             "level": "error",
             "message": "patch_index_in_block_by_type does not match the order it claims to record",
-            "sql": "SELECT session_id, site_id, patch_index_in_block_by_type FROM (SELECT session_id, site_id, patch_index_in_block_by_type, DENSE_RANK() OVER (PARTITION BY session_id, block_index, patch_label ORDER BY patch_index) - 1 AS expected FROM vr_foraging.sites) AS derived_1 WHERE patch_index_in_block_by_type <> expected"
+            "sql": "SELECT session_id, site_id, patch_index_in_block_by_type\nFROM (\n  SELECT session_id, site_id, patch_index_in_block_by_type,\n    DENSE_RANK() OVER (PARTITION BY session_id, block_index, patch_label ORDER BY patch_index) - 1 AS expected\n  FROM vr_foraging.sites\n) AS derived_1\nWHERE patch_index_in_block_by_type <> expected"
           },
           {
             "id": "vr_foraging.sites.reward_follows_the_choice_cue",
             "level": "error",
             "message": "water was delivered before the choice cue, so the reward delay is negative",
-            "sql": "SELECT session_id, site_id, choice_cue_tick, reward_onset_tick FROM vr_foraging.sites WHERE choice_cue_tick IS NOT NULL AND reward_onset_tick IS NOT NULL AND reward_onset_tick < choice_cue_tick"
+            "sql": "SELECT session_id, site_id, choice_cue_tick, reward_onset_tick\nFROM vr_foraging.sites\nWHERE choice_cue_tick IS NOT NULL\n  AND reward_onset_tick IS NOT NULL\n  AND reward_onset_tick < choice_cue_tick"
           },
           {
             "id": "vr_foraging.sites.the_last_stop_precedes_the_cue",
             "level": "error",
             "message": "the last stop is recorded after the choice cue it is supposed to precede",
-            "sql": "SELECT session_id, site_id, last_stop_tick, choice_cue_tick FROM vr_foraging.sites WHERE last_stop_tick IS NOT NULL AND choice_cue_tick IS NOT NULL AND last_stop_tick > choice_cue_tick"
+            "sql": "SELECT session_id, site_id, last_stop_tick, choice_cue_tick\nFROM vr_foraging.sites\nWHERE last_stop_tick IS NOT NULL\n  AND choice_cue_tick IS NOT NULL\n  AND last_stop_tick > choice_cue_tick"
           },
           {
             "id": "vr_foraging.sites.a_stop_is_needed_before_a_cue",
             "level": "error",
             "message": "a choice cue is recorded with no preceding stop, which the parse requires",
-            "sql": "SELECT session_id, site_id FROM vr_foraging.sites WHERE choice_cue_tick IS NOT NULL AND last_stop_tick IS NULL"
+            "sql": "SELECT session_id, site_id\nFROM vr_foraging.sites\nWHERE choice_cue_tick IS NOT NULL\n  AND last_stop_tick IS NULL"
           },
           {
             "id": "vr_foraging.sites.no_choice_means_nothing_was_sampled",
             "level": "error",
             "message": "a site with no choice carries values the source only fills in when one occurred",
-            "sql": "SELECT session_id, site_id FROM vr_foraging.sites WHERE choice_cue_tick IS NULL AND (reward_probability IS NOT NULL OR reward_available IS NOT NULL OR has_waited_reward_delay IS NOT NULL)"
+            "sql": "SELECT session_id, site_id\nFROM vr_foraging.sites\nWHERE choice_cue_tick IS NULL\n  AND (\n    reward_probability IS NOT NULL\n    OR reward_available IS NOT NULL\n    OR has_waited_reward_delay IS NOT NULL\n  )"
           },
           {
             "id": "vr_foraging.sites.a_velocity_needs_a_stop",
             "level": "error",
             "message": "a velocity at the last stop is recorded where there is no last stop to take it at",
-            "sql": "SELECT session_id, site_id FROM vr_foraging.sites WHERE velocity_at_last_stop IS NOT NULL AND last_stop_tick IS NULL"
+            "sql": "SELECT session_id, site_id\nFROM vr_foraging.sites\nWHERE velocity_at_last_stop IS NOT NULL\n  AND last_stop_tick IS NULL"
           },
           {
             "id": "vr_foraging.sites.a_patch_is_contiguous",
             "level": "error",
             "message": "a patch's sites are not consecutive, so patch_index does not describe the traversal",
-            "sql": "SELECT session_id, patch_index FROM (SELECT session_id, patch_index, CAST(MAX(site_id) AS DECIMAL(38,0)) - CAST(MIN(site_id) AS DECIMAL(38,0)) + 1 AS span, COUNT(*) AS n FROM vr_foraging.sites GROUP BY session_id, patch_index) AS derived_1 WHERE span <> n"
+            "sql": "SELECT session_id, patch_index\nFROM (\n  SELECT session_id, patch_index,\n    CAST(MAX(site_id) AS DECIMAL(38,0)) - CAST(MIN(site_id) AS DECIMAL(38,0)) + 1 AS span,\n    COUNT(*) AS n\n  FROM vr_foraging.sites\n  GROUP BY session_id, patch_index\n) AS derived_1\nWHERE span <> n"
           },
           {
             "id": "vr_foraging.sites.a_block_is_contiguous",
             "level": "error",
             "message": "a block's sites are not consecutive, so block_index does not describe the traversal",
-            "sql": "SELECT session_id, block_index FROM (SELECT session_id, block_index, CAST(MAX(site_id) AS DECIMAL(38,0)) - CAST(MIN(site_id) AS DECIMAL(38,0)) + 1 AS span, COUNT(*) AS n FROM vr_foraging.sites GROUP BY session_id, block_index) AS derived_1 WHERE span <> n"
+            "sql": "SELECT session_id, block_index\nFROM (\n  SELECT session_id, block_index,\n    CAST(MAX(site_id) AS DECIMAL(38,0)) - CAST(MIN(site_id) AS DECIMAL(38,0)) + 1 AS span,\n    COUNT(*) AS n\n  FROM vr_foraging.sites\n  GROUP BY session_id, block_index\n) AS derived_1\nWHERE span <> n"
           },
           {
             "id": "vr_foraging.sites.a_patch_sits_in_one_block",
             "level": "error",
             "message": "a patch spans more than one block, which patch_index_in_block cannot express",
-            "sql": "SELECT session_id, patch_index FROM (SELECT session_id, patch_index, COUNT(DISTINCT block_index) AS blocks FROM vr_foraging.sites GROUP BY session_id, patch_index) AS derived_1 WHERE blocks > 1"
+            "sql": "SELECT session_id, patch_index\nFROM (\n  SELECT session_id, patch_index, COUNT(DISTINCT block_index) AS blocks\n  FROM vr_foraging.sites\n  GROUP BY session_id, patch_index\n) AS derived_1\nWHERE blocks > 1"
           },
           {
             "id": "vr_foraging.sites.a_patch_has_one_label",
             "level": "error",
             "message": "a patch carries more than one patch_label, so patch_index_by_type is undefined",
-            "sql": "SELECT session_id, patch_index FROM (SELECT session_id, patch_index, COUNT(DISTINCT patch_label) AS labels FROM vr_foraging.sites GROUP BY session_id, patch_index) AS derived_1 WHERE labels > 1"
+            "sql": "SELECT session_id, patch_index\nFROM (\n  SELECT session_id, patch_index, COUNT(DISTINCT patch_label) AS labels\n  FROM vr_foraging.sites\n  GROUP BY session_id, patch_index\n) AS derived_1\nWHERE labels > 1"
           }
         ]
       }

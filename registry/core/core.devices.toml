@@ -106,10 +106,30 @@ description = "What the source stated about this row that the standard does not 
 id = "core.devices.parent_chain_well_founded"
 level = "error"
 message = "a device is its own ancestor, or its attachment chain does not terminate"
-sql = "WITH RECURSIVE up(device_id, ancestor, depth) AS (SELECT device_id, parent_device_id, 1 FROM core.devices WHERE parent_device_id IS NOT NULL UNION ALL SELECT u.device_id, d.parent_device_id, u.depth + 1 FROM up AS u JOIN core.devices AS d ON d.device_id = u.ancestor WHERE d.parent_device_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT device_id FROM up WHERE ancestor = device_id OR depth >= 64"
+sql = '''
+WITH RECURSIVE up(device_id, ancestor, depth) AS (
+  SELECT device_id, parent_device_id, 1
+  FROM core.devices
+  WHERE parent_device_id IS NOT NULL
+  UNION ALL
+  SELECT u.device_id, d.parent_device_id, u.depth + 1
+  FROM up AS u
+  JOIN core.devices AS d ON d.device_id = u.ancestor
+  WHERE d.parent_device_id IS NOT NULL
+    AND u.depth < 64
+)
+SELECT DISTINCT device_id
+FROM up
+WHERE ancestor = device_id
+  OR depth >= 64'''
 
 [[rules]]
 id = "core.devices.serial_identifies_one_device"
 level = "error"
 message = "one serial number appears on more than one device row; a device is the physical object"
-sql = "SELECT serial_number, COUNT(*) AS n_rows FROM core.devices WHERE serial_number IS NOT NULL GROUP BY serial_number HAVING COUNT(*) > 1"
+sql = '''
+SELECT serial_number, COUNT(*) AS n_rows
+FROM core.devices
+WHERE serial_number IS NOT NULL
+GROUP BY serial_number
+HAVING COUNT(*) > 1'''

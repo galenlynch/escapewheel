@@ -60,4 +60,8 @@ description = "The source's confidence, where it reports one."
 id = "core.unit_quality_labels.projection_is_consistent"
 level = "error"
 message = "a (source, label) pair projects onto more than one normalized_label"
-sql = "SELECT source, label, COUNT(DISTINCT COALESCE(normalized_label, '')) AS distinct_projections FROM core.unit_quality_labels GROUP BY source, label HAVING COUNT(DISTINCT COALESCE(normalized_label, '')) > 1"
+sql = '''
+SELECT source, label, COUNT(DISTINCT COALESCE(normalized_label, '')) AS distinct_projections
+FROM core.unit_quality_labels
+GROUP BY source, label
+HAVING COUNT(DISTINCT COALESCE(normalized_label, '')) > 1'''

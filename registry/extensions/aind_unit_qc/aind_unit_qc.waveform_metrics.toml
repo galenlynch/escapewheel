@@ -130,4 +130,9 @@ description = "Propagation velocity below the peak channel. Populated for 757 of
 id = "aind_unit_qc.waveform_metrics.a_width_is_positive"
 level = "error"
 message = "a waveform width is zero or negative, which no waveform has"
-sql = "SELECT session_id, unit_id FROM aind_unit_qc.waveform_metrics WHERE peak_to_trough_duration <= 0 OR peak_half_width <= 0 OR trough_half_width <= 0"
+sql = '''
+SELECT session_id, unit_id
+FROM aind_unit_qc.waveform_metrics
+WHERE peak_to_trough_duration <= 0
+  OR peak_half_width <= 0
+  OR trough_half_width <= 0'''

@@ -65,10 +65,18 @@ description = "Stage the trainer state named."
 id = "vr_foraging.sessions.a_stage_needs_a_curriculum"
 level = "error"
 message = "a curriculum stage is named with no curriculum to place it in"
-sql = "SELECT session_id FROM vr_foraging.sessions WHERE curriculum_stage_name IS NOT NULL AND curriculum_name IS NULL"
+sql = '''
+SELECT session_id
+FROM vr_foraging.sessions
+WHERE curriculum_stage_name IS NOT NULL
+  AND curriculum_name IS NULL'''
 
 [[rules]]
 id = "vr_foraging.sessions.on_curriculum_means_a_curriculum"
 level = "error"
 message = "the session reports as on-curriculum but names no curriculum"
-sql = "SELECT session_id FROM vr_foraging.sessions WHERE curriculum_enabled AND curriculum_name IS NULL"
+sql = '''
+SELECT session_id
+FROM vr_foraging.sessions
+WHERE curriculum_enabled
+  AND curriculum_name IS NULL'''

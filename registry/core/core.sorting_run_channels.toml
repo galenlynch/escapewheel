@@ -43,10 +43,19 @@ description = "The contact at that position."
 id = "core.sorting_run_channels.contact_listed_once"
 level = "error"
 message = "a contact appears more than once in one run's channel list"
-sql = "SELECT session_id, sorting_run_id, electrode_id, COUNT(*) AS n FROM core.sorting_run_channels GROUP BY session_id, sorting_run_id, electrode_id HAVING COUNT(*) > 1"
+sql = '''
+SELECT session_id, sorting_run_id, electrode_id, COUNT(*) AS n
+FROM core.sorting_run_channels
+GROUP BY session_id, sorting_run_id, electrode_id
+HAVING COUNT(*) > 1'''
 
 [[rules]]
 id = "core.sorting_run_channels.index_contiguous"
 level = "error"
 message = "channel_index is not contiguous from 0 within a run"
-sql = "SELECT session_id, sorting_run_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core.sorting_run_channels GROUP BY session_id, sorting_run_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
+sql = '''
+SELECT session_id, sorting_run_id, COUNT(*) AS n, MAX(channel_index) AS hi
+FROM core.sorting_run_channels
+GROUP BY session_id, sorting_run_id
+HAVING MAX(channel_index) <> COUNT(*) - 1
+  OR MIN(channel_index) <> 0'''

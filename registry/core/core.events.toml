@@ -49,4 +49,28 @@ description = "What the source stated about this row that the standard does not 
 id = "core.events.within_observation"
 level = "warning"
 message = "events fall outside the observation window in force for their stream"
-sql = "WITH stream_windows AS (SELECT o.event_stream_id, o.start_tick, o.stop_tick FROM core.event_stream_observation_intervals AS o UNION ALL SELECT s.event_stream_id, c.start_tick, c.stop_tick FROM core.event_streams AS s JOIN core.clock_observation_intervals AS c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE NOT EXISTS(SELECT 1 FROM core.event_stream_observation_intervals AS o WHERE o.event_stream_id = s.event_stream_id)), observed AS (SELECT DISTINCT event_stream_id FROM stream_windows) SELECT e.session_id, e.stream_id, e.t_tick FROM core.events AS e JOIN observed AS k ON e.stream_id = k.event_stream_id LEFT JOIN stream_windows AS w ON e.stream_id = w.event_stream_id AND e.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"
+sql = '''
+WITH stream_windows AS (
+  SELECT o.event_stream_id, o.start_tick, o.stop_tick
+  FROM core.event_stream_observation_intervals AS o
+  UNION ALL
+  SELECT s.event_stream_id, c.start_tick, c.stop_tick
+  FROM core.event_streams AS s
+  JOIN core.clock_observation_intervals AS c ON c.session_id = s.session_id
+    AND c.clock_id = s.clock_id
+  WHERE NOT EXISTS(
+    SELECT 1
+    FROM core.event_stream_observation_intervals AS o
+    WHERE o.event_stream_id = s.event_stream_id
+  )
+),
+observed AS (
+  SELECT DISTINCT event_stream_id
+  FROM stream_windows
+)
+SELECT e.session_id, e.stream_id, e.t_tick
+FROM core.events AS e
+JOIN observed AS k ON e.stream_id = k.event_stream_id
+LEFT JOIN stream_windows AS w ON e.stream_id = w.event_stream_id
+  AND e.t_tick BETWEEN w.start_tick AND w.stop_tick
+WHERE w.start_tick IS NULL'''

@@ -204,40 +204,68 @@ description = "Median absolute deviation of that drift. Populated for 2,531 of 4
 id = "aind_unit_qc.metrics.presence_ratio_is_bounded"
 level = "error"
 message = "presence_ratio falls outside 0-1, which its definition does not allow"
-sql = "SELECT session_id, unit_id, presence_ratio FROM aind_unit_qc.metrics WHERE presence_ratio IS NOT NULL AND (presence_ratio < 0 OR presence_ratio > 1)"
+sql = '''
+SELECT session_id, unit_id, presence_ratio
+FROM aind_unit_qc.metrics
+WHERE presence_ratio IS NOT NULL
+  AND (presence_ratio < 0 OR presence_ratio > 1)'''
 
 [[rules]]
 id = "aind_unit_qc.metrics.amplitude_cutoff_is_bounded"
 level = "error"
 message = "amplitude_cutoff falls outside 0-0.5, which its definition does not allow"
-sql = "SELECT session_id, unit_id, amplitude_cutoff FROM aind_unit_qc.metrics WHERE amplitude_cutoff IS NOT NULL AND (amplitude_cutoff < 0 OR amplitude_cutoff > 0.5)"
+sql = '''
+SELECT session_id, unit_id, amplitude_cutoff
+FROM aind_unit_qc.metrics
+WHERE amplitude_cutoff IS NOT NULL
+  AND (amplitude_cutoff < 0 OR amplitude_cutoff > 0.5)'''
 
 [[rules]]
 id = "aind_unit_qc.metrics.rp_contamination_is_bounded"
 level = "error"
 message = "rp_contamination falls outside 0-1, which its definition does not allow"
-sql = "SELECT session_id, unit_id, rp_contamination FROM aind_unit_qc.metrics WHERE rp_contamination IS NOT NULL AND (rp_contamination < 0 OR rp_contamination > 1)"
+sql = '''
+SELECT session_id, unit_id, rp_contamination
+FROM aind_unit_qc.metrics
+WHERE rp_contamination IS NOT NULL
+  AND (rp_contamination < 0 OR rp_contamination > 1)'''
 
 [[rules]]
 id = "aind_unit_qc.metrics.nn_hit_rate_is_bounded"
 level = "error"
 message = "nn_hit_rate falls outside 0-1, which its definition does not allow"
-sql = "SELECT session_id, unit_id, nn_hit_rate FROM aind_unit_qc.metrics WHERE nn_hit_rate IS NOT NULL AND (nn_hit_rate < 0 OR nn_hit_rate > 1)"
+sql = '''
+SELECT session_id, unit_id, nn_hit_rate
+FROM aind_unit_qc.metrics
+WHERE nn_hit_rate IS NOT NULL
+  AND (nn_hit_rate < 0 OR nn_hit_rate > 1)'''
 
 [[rules]]
 id = "aind_unit_qc.metrics.nn_miss_rate_is_bounded"
 level = "error"
 message = "nn_miss_rate falls outside 0-1, which its definition does not allow"
-sql = "SELECT session_id, unit_id, nn_miss_rate FROM aind_unit_qc.metrics WHERE nn_miss_rate IS NOT NULL AND (nn_miss_rate < 0 OR nn_miss_rate > 1)"
+sql = '''
+SELECT session_id, unit_id, nn_miss_rate
+FROM aind_unit_qc.metrics
+WHERE nn_miss_rate IS NOT NULL
+  AND (nn_miss_rate < 0 OR nn_miss_rate > 1)'''
 
 [[rules]]
 id = "aind_unit_qc.metrics.silhouette_is_bounded"
 level = "error"
 message = "silhouette falls outside -1-1, which its definition does not allow"
-sql = "SELECT session_id, unit_id, silhouette FROM aind_unit_qc.metrics WHERE silhouette IS NOT NULL AND (silhouette < -1 OR silhouette > 1)"
+sql = '''
+SELECT session_id, unit_id, silhouette
+FROM aind_unit_qc.metrics
+WHERE silhouette IS NOT NULL
+  AND (silhouette < -1 OR silhouette > 1)'''
 
 [[rules]]
 id = "aind_unit_qc.metrics.a_count_is_not_negative"
 level = "error"
 message = "a violation count is negative"
-sql = "SELECT session_id, unit_id FROM aind_unit_qc.metrics WHERE isi_violations_count < 0 OR rp_violations < 0"
+sql = '''
+SELECT session_id, unit_id
+FROM aind_unit_qc.metrics
+WHERE isi_violations_count < 0
+  OR rp_violations < 0'''

@@ -84,16 +84,34 @@ description = "What the source stated about this row that the standard does not 
 id = "dynamic_foraging.blocks.interval_valid"
 level = "error"
 message = "stop_tick precedes start_tick"
-sql = "SELECT session_id, block_id FROM dynamic_foraging.blocks WHERE stop_tick < start_tick"
+sql = '''
+SELECT session_id, block_id
+FROM dynamic_foraging.blocks
+WHERE stop_tick < start_tick'''
 
 [[rules]]
 id = "dynamic_foraging.blocks.blocks_do_not_overlap"
 level = "error"
 message = "two blocks of one session overlap, so a trial falls in both"
-sql = "SELECT a.session_id, a.block_id, b.block_id AS other FROM dynamic_foraging.blocks AS a JOIN dynamic_foraging.blocks AS b ON a.session_id = b.session_id AND a.block_id < b.block_id WHERE a.start_tick <= b.stop_tick AND b.start_tick <= a.stop_tick"
+sql = '''
+SELECT a.session_id, a.block_id, b.block_id AS other
+FROM dynamic_foraging.blocks AS a
+JOIN dynamic_foraging.blocks AS b ON a.session_id = b.session_id
+  AND a.block_id < b.block_id
+WHERE a.start_tick <= b.stop_tick
+  AND b.start_tick <= a.stop_tick'''
 
 [[rules]]
 id = "dynamic_foraging.blocks.contains_its_trials"
 level = "error"
 message = "a trial names a block whose interval does not contain it"
-sql = "SELECT t.session_id, t.trial_id FROM dynamic_foraging.trials AS t JOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id AND b.block_id = t.block_id JOIN core.intervals AS c ON c.session_id = t.session_id AND c.interval_kind = t.interval_kind AND c.interval_id = t.trial_id WHERE c.start_tick < b.start_tick OR c.stop_tick > b.stop_tick"
+sql = '''
+SELECT t.session_id, t.trial_id
+FROM dynamic_foraging.trials AS t
+JOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id
+  AND b.block_id = t.block_id
+JOIN core.intervals AS c ON c.session_id = t.session_id
+  AND c.interval_kind = t.interval_kind
+  AND c.interval_id = t.trial_id
+WHERE c.start_tick < b.start_tick
+  OR c.stop_tick > b.stop_tick'''

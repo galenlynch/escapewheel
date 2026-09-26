@@ -113,22 +113,54 @@ description = "What the source stated about this row that the standard does not 
 id = "core.sessions.session_interval_valid"
 level = "error"
 message = "session_end_time precedes session_start_time"
-sql = "SELECT session_id, session_start_time, session_end_time FROM core.sessions WHERE session_end_time < session_start_time"
+sql = '''
+SELECT session_id, session_start_time, session_end_time
+FROM core.sessions
+WHERE session_end_time < session_start_time'''
 
 [[rules]]
 id = "core.sessions.reference_clock_declared"
 level = "error"
 message = "a session declaring more than one clock names no reference clock"
-sql = "SELECT s.session_id, COUNT(*) AS n_clocks FROM core.sessions AS s JOIN core.clocks AS c USING (session_id) WHERE s.reference_clock_id IS NULL GROUP BY s.session_id HAVING COUNT(*) > 1"
+sql = '''
+SELECT s.session_id, COUNT(*) AS n_clocks
+FROM core.sessions AS s
+JOIN core.clocks AS c USING (session_id)
+WHERE s.reference_clock_id IS NULL
+GROUP BY s.session_id
+HAVING COUNT(*) > 1'''
 
 [[rules]]
 id = "core.sessions.every_clock_reaches_the_reference"
 level = "error"
 message = "a clock does not reach the session's reference clock, so it cannot be converted to it"
-sql = "WITH RECURSIVE up(clock_id, ancestor, depth) AS (SELECT clock_id, clock_id, 0 FROM core.clocks UNION ALL SELECT u.clock_id, c.parent_clock_id, u.depth + 1 FROM up AS u JOIN core.clocks AS c ON c.clock_id = u.ancestor WHERE c.parent_clock_id IS NOT NULL AND u.depth < 64) SELECT c.session_id, c.clock_id FROM core.clocks AS c JOIN core.sessions AS s USING (session_id) WHERE s.reference_clock_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM up AS u WHERE u.clock_id = c.clock_id AND u.ancestor = s.reference_clock_id)"
+sql = '''
+WITH RECURSIVE up(clock_id, ancestor, depth) AS (
+  SELECT clock_id, clock_id, 0
+  FROM core.clocks
+  UNION ALL
+  SELECT u.clock_id, c.parent_clock_id, u.depth + 1
+  FROM up AS u
+  JOIN core.clocks AS c ON c.clock_id = u.ancestor
+  WHERE c.parent_clock_id IS NOT NULL
+    AND u.depth < 64
+)
+SELECT c.session_id, c.clock_id
+FROM core.clocks AS c
+JOIN core.sessions AS s USING (session_id)
+WHERE s.reference_clock_id IS NOT NULL
+  AND NOT EXISTS(
+  SELECT 1
+  FROM up AS u
+  WHERE u.clock_id = c.clock_id
+    AND u.ancestor = s.reference_clock_id
+)'''
 
 [[rules]]
 id = "core.sessions.alignment_bound_at_least_default"
 level = "error"
 message = "a session declares an alignment bound below the default of one median anchor interval, which reaches no further than declaring nothing"
-sql = "SELECT session_id, alignment_bound FROM core.sessions WHERE alignment_bound < 1.0"
+sql = '''
+SELECT session_id, alignment_bound
+FROM core.sessions
+WHERE alignment_bound < 1.0'''

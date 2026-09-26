@@ -50,16 +50,39 @@ description = "Whether this is the unit's peak electrode."
 id = "core.unit_electrodes.one_primary"
 level = "warning"
 message = "a unit designates more than one peak electrode"
-sql = "SELECT unit_id, COUNT(*) AS n FROM core.unit_electrodes WHERE is_primary GROUP BY unit_id HAVING COUNT(*) > 1"
+sql = '''
+SELECT unit_id, COUNT(*) AS n
+FROM core.unit_electrodes
+WHERE is_primary
+GROUP BY unit_id
+HAVING COUNT(*) > 1'''
 
 [[rules]]
 id = "core.unit_electrodes.channel_index_contiguous"
 level = "error"
 message = "channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there"
-sql = "SELECT unit_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core.unit_electrodes WHERE channel_index IS NOT NULL GROUP BY unit_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"
+sql = '''
+SELECT unit_id, COUNT(*) AS n, MAX(channel_index) AS hi
+FROM core.unit_electrodes
+WHERE channel_index IS NOT NULL
+GROUP BY unit_id
+HAVING MAX(channel_index) <> COUNT(*) - 1
+  OR MIN(channel_index) <> 0'''
 
 [[rules]]
 id = "core.unit_electrodes.electrode_is_a_run_channel"
 level = "error"
 message = "a unit sits on an electrode its sorting run did not use"
-sql = "SELECT ue.unit_id, ue.electrode_id FROM core.unit_electrodes AS ue JOIN core.units AS u ON ue.unit_id = u.unit_id JOIN (SELECT DISTINCT session_id, sorting_run_id FROM core.sorting_run_channels) AS d ON d.session_id = u.session_id AND d.sorting_run_id = u.sorting_run_id LEFT JOIN core.sorting_run_channels AS c ON c.session_id = u.session_id AND c.sorting_run_id = u.sorting_run_id AND c.electrode_id = ue.electrode_id WHERE c.electrode_id IS NULL"
+sql = '''
+SELECT ue.unit_id, ue.electrode_id
+FROM core.unit_electrodes AS ue
+JOIN core.units AS u ON ue.unit_id = u.unit_id
+JOIN (
+  SELECT DISTINCT session_id, sorting_run_id
+  FROM core.sorting_run_channels
+) AS d ON d.session_id = u.session_id
+  AND d.sorting_run_id = u.sorting_run_id
+LEFT JOIN core.sorting_run_channels AS c ON c.session_id = u.session_id
+  AND c.sorting_run_id = u.sorting_run_id
+  AND c.electrode_id = ue.electrode_id
+WHERE c.electrode_id IS NULL'''

@@ -85,5 +85,18 @@ description = "What the source stated about this row that the standard does not 
 id = "core.event_streams.observation_declared"
 level = "info"
 message = "streams carry no observation intervals and their clock declares none, so no rate over them has a denominator"
-sql = "SELECT s.event_stream_id, s.event_stream_name FROM core.event_streams AS s WHERE NOT EXISTS(SELECT 1 FROM core.event_stream_observation_intervals AS o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS(SELECT 1 FROM core.clock_observation_intervals AS c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
+sql = '''
+SELECT s.event_stream_id, s.event_stream_name
+FROM core.event_streams AS s
+WHERE NOT EXISTS(
+  SELECT 1
+  FROM core.event_stream_observation_intervals AS o
+  WHERE o.event_stream_id = s.event_stream_id
+)
+  AND NOT EXISTS(
+  SELECT 1
+  FROM core.clock_observation_intervals AS c
+  WHERE c.session_id = s.session_id
+    AND c.clock_id = s.clock_id
+)'''
 advisory = true

@@ -90,16 +90,32 @@ description = "What the source stated about this row that the standard does not 
 id = "core.media_assets.pts_rate_pair_complete"
 level = "error"
 message = "an asset declares one half of its presentation-timestamp rate; half a rational is unusable"
-sql = "SELECT media_asset_id, pts_rate_num, pts_rate_den FROM core.media_assets WHERE (pts_rate_num IS NULL) <> (pts_rate_den IS NULL)"
+sql = '''
+SELECT media_asset_id, pts_rate_num, pts_rate_den
+FROM core.media_assets
+WHERE (pts_rate_num IS NULL) <> (pts_rate_den IS NULL)'''
 
 [[rules]]
 id = "core.media_assets.pts_rate_declared_where_frames_carry_pts"
 level = "error"
 message = "frames carry pts for an asset that does not say what those timestamps count"
-sql = "SELECT a.media_asset_id FROM core.media_assets AS a WHERE a.pts_rate_num IS NULL AND EXISTS(SELECT 1 FROM core.media_frames AS f WHERE f.media_asset_id = a.media_asset_id AND f.pts IS NOT NULL)"
+sql = '''
+SELECT a.media_asset_id
+FROM core.media_assets AS a
+WHERE a.pts_rate_num IS NULL
+  AND EXISTS(
+  SELECT 1
+  FROM core.media_frames AS f
+  WHERE f.media_asset_id = a.media_asset_id
+    AND f.pts IS NOT NULL
+)'''
 
 [[rules]]
 id = "core.media_assets.pts_rate_positive"
 level = "error"
 message = "a presentation-timestamp rate is not positive"
-sql = "SELECT media_asset_id, pts_rate_num, pts_rate_den FROM core.media_assets WHERE pts_rate_num <= 0 OR pts_rate_den <= 0"
+sql = '''
+SELECT media_asset_id, pts_rate_num, pts_rate_den
+FROM core.media_assets
+WHERE pts_rate_num <= 0
+  OR pts_rate_den <= 0'''
