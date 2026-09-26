@@ -4,8 +4,8 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
-from escapewheel_reader import open_packet
-from escapewheel_reader.clocks import BOUND, Unanchored, align, declared_bound, extrapolation_error, rate
+from escapewheel_reader import ResourceNotFoundError, open_packet
+from escapewheel_reader.clocks import BOUND, Unanchored, align, anchors, declared_bound, extrapolation_error, rate
 
 AP, HARP = 30000, 31250
 
@@ -212,6 +212,16 @@ def test_an_unreadable_table_is_no_record():
             raise RuntimeError("no such resource")
 
     assert declared_bound(_Broken()) == BOUND
+
+
+def test_a_packet_without_anchors_has_none():
+    """`core.clock_anchors` is optional, so its absence is an empty mapping, not an error."""
+
+    class _NoAnchors:
+        def table(self, resource_id, columns=None):
+            raise ResourceNotFoundError(resource_id)
+
+    assert anchors(_NoAnchors()) == {}
 
 
 # -- the free function is the implementation; the method is a delegate --------------------

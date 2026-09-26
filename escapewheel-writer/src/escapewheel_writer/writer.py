@@ -965,24 +965,26 @@ class PacketWriter:
         any row in it. Recording it here rather than inferring it keeps a derivation the
         writer cannot see, such as one made in another process, expressible.
 
+        Any resource may be derived, a table or an array instance alike, so the resource need
+        not exist yet; `commit` refuses lineage naming one the packet does not carry.
+
         Parameters
         ----------
         resource_id : str
             The derived resource.
         sources : sequence of str
             The resource IDs it came from.
-
-        Raises
-        ------
-        KeyError
-            If the registry does not define this resource.
         """
-        if self.spec(resource_id) is None:
-            raise KeyError(
-                f"no registry defines a table named {resource_id}; core and "
-                f"{len(self._extensions)} extension(s) were consulted"
-            )
         self._derived.setdefault(resource_id, []).extend(sources)
+
+    def _with_lineage(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Put each derived resource's `derived_from` on its manifest entry."""
+        if missing := sorted(set(self._derived) - {e["resource_id"] for e in entries}):
+            raise ValueError(f"lineage was recorded for {missing}, which this packet does not carry")
+        for entry in entries:
+            if lineage := self._derived.get(entry["resource_id"]):
+                entry["derived_from"] = list(lineage)
+        return entries
 
     def add_array(self, resource_id: str, array: StagedArray) -> None:
         """Add a dense array, to be written into the packet as Zarr v3.
@@ -1395,8 +1397,6 @@ class PacketWriter:
                 "validation_state": "not_run",
             }
             entry["digest"] = _digest(path)
-            if lineage := self._derived.get(resource_id):
-                entry["derived_from"] = lineage
             entries.append(entry)
         return entries
 
@@ -1602,13 +1602,15 @@ class PacketWriter:
 
         # 1. staged resources, plus the registry they were written against
         clock = time.perf_counter()
-        entries = [
-            *self._stage(staging),
-            *self._stage_arrays(staging),
-            *self._stage_payloads(staging, payloads),
-            *self._reference_arrays(),
-            *self._reference_media(),
-        ]
+        entries = self._with_lineage(
+            [
+                *self._stage(staging),
+                *self._stage_arrays(staging),
+                *self._stage_payloads(staging, payloads),
+                *self._reference_arrays(),
+                *self._reference_media(),
+            ]
+        )
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
         # Part 03 §5.5's rules are good guesses, and a column one guesses wrong
         # about is said aloud rather than silently paid for. A report, not a refusal: every
@@ -1645,7 +1647,7 @@ class PacketWriter:
             touched |= set(self.resources) - {e["resource_id"] for e in entries}
             restaged = self._stage(staging, only=touched)
             kept = [e for e in entries if e["resource_id"] not in touched]
-            entries = [*kept, *restaged]
+            entries = self._with_lineage([*kept, *restaged])
             (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, registries, None), indent=2) + "\n")
             say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
             clock = time.perf_counter()
@@ -1750,7 +1752,7 @@ class PacketWriter:
         if staging.exists():
             shutil.rmtree(staging)
         staging.mkdir(parents=True)
-        entries = self._stage(staging)
+        entries = self._with_lineage(self._stage(staging))
 
         # Validate with the added resources still under staging/, so nothing occupies a final
         # path until it has passed. The candidate is derived from the superseded manifest, not

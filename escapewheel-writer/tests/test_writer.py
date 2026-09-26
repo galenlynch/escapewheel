@@ -92,6 +92,18 @@ def test_a_failing_packet_is_not_committed(tmp_path, registry, minimal):
     assert any(f.check == "core.clocks.session_id_resolves" for f in caught.value.report.findings)
 
 
+def test_lineage_for_a_resource_the_packet_does_not_carry_is_refused(tmp_path, registry, minimal):
+    """`derives` accepts a resource staged later, so the check waits for commit."""
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    writer.derives("analysis.unit_rates", ["core.sessions"])
+    root = tmp_path / "s001"
+    with pytest.raises(ValueError, match=r"analysis\.unit_rates"):
+        writer.commit(root)
+    assert not (root / "packet.json").exists()
+
+
 def _workspace(tmp_path):
     """A delivery workspace holding what a `files-v0.1` source hands over."""
     workspace = tmp_path / "s001.deliveries"

@@ -488,7 +488,9 @@ def into(
         run["ended_at"] = datetime.now(tz=timezone.utc)
 
     writer.add_batches(resource, streamed())
-    writer.derives(resource, ["core.spike_events", "core.clock_anchors", "core.clocks"])
+    # The anchor table is optional, and lineage may name only a resource the packet carries.
+    carried = {r.resource_id for r in packet.resources()}
+    writer.derives(resource, [r for r in ("core.spike_events", "core.clock_anchors", "core.clocks") if r in carried])
     writer.add("core.processing_runs", [run])
     return resource
 

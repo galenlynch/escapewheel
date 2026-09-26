@@ -42,7 +42,7 @@ import pyarrow.compute as pc
 from numpy.typing import NDArray
 
 from .dictionaries import values, where
-from .errors import NoTimeOrigin
+from .errors import NoTimeOrigin, ResourceNotFoundError
 
 #: How far from an anchor the mapping stays defined, as a multiple of the median anchor
 #: interval (Part 01 §3.9). One, so that the same threshold covers a gap between anchors and the
@@ -200,12 +200,16 @@ def anchors(packet: Any) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]
 
     The packet owns the cache because the answer is a property of its bytes. Memoised because an
     accessor is called per unit, and reading the anchor table for each of 6,781 units would cost
-    more than the spikes do.
+    more than the spikes do. The table is optional, so a packet without it has no anchors.
     """
     cached = getattr(packet, "_anchor_cache", None)
     if cached is not None:
         return cached  # type: ignore[no-any-return]
-    table = packet.table("core.clock_anchors")
+    try:
+        table = packet.table("core.clock_anchors")
+    except ResourceNotFoundError:
+        empty = pa.array([], pa.int64())
+        table = pa.table({"clock_id": pa.array([], pa.int32()), "t_tick": empty, "parent_tick": empty})
     clock = table.column("clock_id").to_pylist()
     tick = np.asarray(table.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
     parent = np.asarray(table.column("parent_tick").to_numpy(zero_copy_only=False), dtype=np.int64)

@@ -1,5 +1,7 @@
 """Materializing analysis.spike_events onto the reference clock."""
 
+from types import SimpleNamespace
+
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -25,8 +27,9 @@ class Handle:
 class Fake:
     """The smallest thing `spike_events` reads: two tables and a file handle."""
 
-    def __init__(self, tmp_path, *, ticks, clocks, anchors=True, reference=REF, unit_of=None):
+    def __init__(self, tmp_path, *, ticks, clocks, anchors=True, reference=REF, unit_of=None, absent=()):
         self.tmp_path = tmp_path
+        self.absent = set(absent)
         self.root = tmp_path / "packet"
         self.root.mkdir(exist_ok=True)
         self._clocks = pa.table(
@@ -94,6 +97,10 @@ class Fake:
             "core.clocks": self._clocks,
             "core.units": self._units,
         }[rid]
+
+    def resources(self):
+        carried = ["core.sessions", "core.clock_anchors", "core.clocks", "core.units", "core.spike_events"]
+        return tuple(SimpleNamespace(resource_id=rid) for rid in carried if rid not in self.absent)
 
     def table_resource(self, rid):
         return Handle(self._path)
@@ -275,6 +282,15 @@ def test_into_records_lineage_and_a_run_row(tmp_path):
     assert run["processing_run_id"] == RUN_ID
     assert run["activity_type"] == "materialization"
     assert run["software_name"] and run["software_version"]
+
+
+def test_lineage_names_only_a_source_the_packet_carries(tmp_path):
+    """`core.clock_anchors` is optional, and a packet without it cannot be a lineage source."""
+    from escapewheel_writer.materialize import into
+
+    writer = Recorder()
+    into(Fake(tmp_path, ticks=[1000], clocks=[REF], absent={"core.clock_anchors"}), writer)
+    assert writer.derived["analysis.spike_events"] == ["core.spike_events", "core.clocks"]
 
 
 def test_the_dropped_count_is_the_one_the_stream_reached(tmp_path):
