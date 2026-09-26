@@ -1,0 +1,62 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "epoch_id", "device_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Session ID."
+
+[[columns]]
+name = "epoch_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "carried"
+description = "The interval this emission belongs to."
+
+[[columns]]
+name = "device_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.devices"
+description = "The emitter, which core already models."
+
+[[columns]]
+name = "power_mw"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "mW"
+description = "Power delivered by this emitter."
+
+[[columns]]
+name = "wavelength_nm"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "nm"
+description = "Wavelength of this emitter."
+
+[[columns]]
+name = "location"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Where this emitter delivered, in the rig's own words."
+
+[[references]]
+columns = ["session_id", "epoch_id"]
+resource = "aind_opto.stimulations"
+resource_columns = ["session_id", "epoch_id"]

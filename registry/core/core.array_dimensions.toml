@@ -1,0 +1,170 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["array_asset_id", "axis_index"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "array_asset_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.array_assets"
+description = "Array asset ID."
+
+[[columns]]
+name = "axis_index"
+type = "int64"
+presence = "required"
+role = "structural_index"
+description = "0-based axis position in stored order (Part 03 §6.2)."
+
+[[columns]]
+name = "dimension_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "Axis name."
+
+[[columns]]
+name = "coordinate_position_column"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Which column of that resource holds the 0-based position."
+
+[[columns]]
+name = "coordinate_resource"
+type = "string"
+presence = "nullable"
+role = "discriminator"
+resolves = "required"
+positions_in = "coordinate_position_column"
+description = "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`."
+
+[[columns]]
+name = "coordinate_array_asset_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = { resource = "core.array_assets", column = "array_asset_id" }
+description = "A 1-D array holding one value per position (irregular axis)."
+
+[[columns]]
+name = "coordinate_unit"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "UCUM", uri = "https://ucum.org/ucum" }]
+description = "The physical unit of this axis's coordinate values, as a UCUM code."
+
+[[columns]]
+name = "step_value"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit_from = "coordinate_unit"
+description = "Increment per position."
+
+[[columns]]
+name = "origin_value"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit_from = "coordinate_unit"
+description = "Value at position 0 (regular numeric axis)."
+
+[[columns]]
+name = "step_tick_num"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Ticks advanced per position (numerator)."
+
+[[columns]]
+name = "step_tick_den"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Denominator of the step, in ticks. Absent means 1."
+
+[[columns]]
+name = "origin_tick"
+type = "int64"
+presence = "nullable"
+role = "coordinate"
+description = "Tick at position 0."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "Clock the ticks are counted on (regular tick axis)."
+
+[[rules]]
+id = "core.array_dimensions.axis_index_contiguous"
+level = "error"
+message = "axis_index is not contiguous from 0"
+sql = "SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis FROM core.array_dimensions GROUP BY array_asset_id HAVING MAX(axis_index) <> COUNT(*) - 1 OR MIN(axis_index) <> 0"
+
+[[rules]]
+id = "core.array_dimensions.one_coordinate_form"
+level = "error"
+message = "an axis declares more than one coordinate form"
+sql = "SELECT array_asset_id, axis_index FROM core.array_dimensions WHERE (CASE WHEN origin_tick IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END) > 1"
+
+[[rules]]
+id = "core.array_dimensions.tick_axis_complete"
+level = "error"
+message = "a regular tick axis needs clock_id, origin_tick and step_tick_num"
+sql = "SELECT array_asset_id, axis_index FROM core.array_dimensions WHERE origin_tick IS NOT NULL AND (step_tick_num IS NULL OR clock_id IS NULL)"
+
+[[rules]]
+id = "core.array_dimensions.numeric_axis_complete"
+level = "error"
+message = "a regular numeric axis needs origin_value, step_value and coordinate_unit"
+sql = "SELECT array_asset_id, axis_index FROM core.array_dimensions WHERE origin_value IS NOT NULL AND (step_value IS NULL OR coordinate_unit IS NULL)"
+
+[[rules]]
+id = "core.array_dimensions.labelled_axis_complete"
+level = "error"
+message = "coordinate_resource and coordinate_position_column must be present together"
+sql = "SELECT array_asset_id, axis_index FROM core.array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
+
+[[rules]]
+id = "core.array_dimensions.coordinate_resource_is_core"
+level = "error"
+message = "a core axis points outward at a non-core resource"
+sql = "SELECT array_asset_id, axis_index, coordinate_resource FROM core.array_dimensions WHERE coordinate_resource IS NOT NULL AND coordinate_resource NOT LIKE 'core.%'"
+
+[[rules]]
+id = "core.array_dimensions.step_denominator_positive"
+level = "error"
+message = "a step denominator is not positive, so the step it defines is meaningless"
+sql = "SELECT array_asset_id, axis_index, step_tick_den FROM core.array_dimensions WHERE step_tick_den IS NOT NULL AND step_tick_den <= 0"
+
+[[rules]]
+id = "core.array_dimensions.coordinate_pair_complete"
+level = "error"
+message = "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them"
+sql = "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column FROM core.array_dimensions WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"

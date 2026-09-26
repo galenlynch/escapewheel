@@ -93,7 +93,7 @@ gets its own.
 | closed vocabulary | `enum` |
 | finite value | `finite: true` |
 | discriminator | `role: discriminator`, two checks each (R55 §2.4) |
-| Tier 2 | statically checked `escapewheel-rule-sql-v0.1` queries the structure cannot imply, authored in `registry/rules.json` |
+| Tier 2 | statically checked `escapewheel-rule-sql-v0.1` queries the structure cannot imply, authored as `[[rules]]` in the registry's TOML source |
 
 A generated check reading an `optional` column is skipped where a table omits that column, which
 leaves it nothing to test (Part 02 §6).

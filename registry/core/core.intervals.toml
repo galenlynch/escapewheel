@@ -1,0 +1,66 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "interval_kind", "interval_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "interval_kind"
+type = "string"
+presence = "required"
+role = "discriminator"
+resolves = "required"
+description = "The resource that specialises this interval, as a dotted resource ID, resolved as Part 02 §8.3's shared key."
+
+[[columns]]
+name = "interval_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "carried"
+description = "Stable trial ID."
+
+[[columns]]
+name = "start_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+description = "First tick of the trial, inclusive, on `clock_id`."
+
+[[columns]]
+name = "stop_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+description = "Last tick of the trial, inclusive, on `clock_id`."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "Clock for start/stop ticks."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+use = "interval"
+start = "start_tick"
+stop = "stop_tick"

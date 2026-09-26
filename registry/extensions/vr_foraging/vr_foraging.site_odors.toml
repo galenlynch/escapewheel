@@ -1,0 +1,61 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "site_id", "odor_channel_index"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Session ID."
+
+[[columns]]
+name = "site_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "carried"
+description = "The site these concentrations were set for."
+
+[[columns]]
+name = "odor_channel_index"
+type = "int32"
+presence = "required"
+role = "structural_index"
+description = "Which olfactometer channel, as an offset into the rig's channel list."
+
+[[columns]]
+name = "concentration"
+type = "float64"
+presence = "required"
+role = "data"
+finite = true
+unit = "%"
+description = "Concentration commanded on this channel. Zero where the channel was not used: the source emits one value per channel whether or not an odor is on it, so a missing row is a missing channel rather than a silent one."
+
+[[references]]
+columns = ["session_id", "site_id"]
+resource = "vr_foraging.sites"
+resource_columns = ["session_id", "site_id"]
+
+[[rules]]
+id = "vr_foraging.site_odors.every_site_gets_every_channel"
+level = "error"
+message = "sites carry different numbers of odor channels, so the channel list is not the rig's"
+sql = "SELECT session_id, site_id, n FROM (SELECT session_id, site_id, COUNT(*) AS n FROM vr_foraging.site_odors GROUP BY session_id, site_id) AS t WHERE n <> (SELECT MAX(n) FROM (SELECT COUNT(*) AS n FROM vr_foraging.site_odors GROUP BY session_id, site_id) AS derived_1)"
+
+[[rules]]
+id = "vr_foraging.site_odors.channels_are_a_dense_range"
+level = "error"
+message = "a site's odor channels are not 0..n-1, so the index does not address the rig's list"
+sql = "SELECT session_id, site_id FROM (SELECT session_id, site_id, MAX(odor_channel_index) AS hi, COUNT(*) AS n FROM vr_foraging.site_odors GROUP BY session_id, site_id) AS derived_1 WHERE hi <> n - 1"
+
+[[rules]]
+id = "vr_foraging.site_odors.a_concentration_is_a_percentage"
+level = "error"
+message = "a concentration falls outside 0-100%"
+sql = "SELECT session_id, site_id, odor_channel_index, concentration FROM vr_foraging.site_odors WHERE concentration < 0 OR concentration > 100"

@@ -1,0 +1,104 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["curation_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "curation_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable curation ID."
+
+[[columns]]
+name = "curation_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What `curation_id` stands for: the identifier a source or an earlier packet used for this curation. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "sorting_run_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sorting_runs"
+description = "Sorting run ID."
+
+[[columns]]
+name = "curator"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Curator."
+
+[[columns]]
+name = "curation_tool"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Tool."
+
+[[columns]]
+name = "curation_tool_version"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Tool version."
+
+[[columns]]
+name = "processing_run_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.processing_runs"
+description = "The run that produced this record, where provenance is recorded."
+
+[[columns]]
+name = "parent_curation_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = { resource = "core.curation_versions", column = "curation_id" }
+description = "Parent curation."
+
+[[columns]]
+name = "created_at"
+type = "timestamp"
+presence = "nullable"
+role = "data"
+description = "Creation time."
+
+[[columns]]
+name = "notes"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Notes."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."

@@ -1,0 +1,72 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["subject_id"]
+
+[[columns]]
+name = "subject_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable subject ID."
+
+[[columns]]
+name = "subject_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What `subject_id` stands for: the identifier a source or an earlier packet used for this subject. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "species"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "NCBI Taxonomy", uri = "https://www.ncbi.nlm.nih.gov/taxonomy" }]
+description = "The scientific name of the organism the subject derives from, as NCBI Taxonomy spells it: `Mus musculus`, never `mouse`. Null where the subject derives from no organism -- Part 01 §3.4 admits a preparation, and a phantom or a simulation has no species."
+
+[[columns]]
+name = "strain"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "MGI", uri = "https://www.informatics.jax.org/" }, { name = "RGD", uri = "https://rgd.mcw.edu/" }]
+description = "The strain in its registry's nomenclature: MGI for mouse, where `C57BL/6J`'s substrain letter is what distinguishes it from the Nnt-deleted `C57BL/6N`, and RGD for rat stocks such as `Long-Evans`."
+
+[[columns]]
+name = "sex"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "closed"
+enum = ["male", "female", "hermaphrodite", "other"]
+authority = [{ name = "HL7 FHIR administrative gender", uri = "https://hl7.org/fhir/valueset-administrative-gender.html" }]
+description = "The subject's sex. Null where the source states none, states it unknown, or describes a preparation that has none."
+
+[[columns]]
+name = "date_of_birth"
+type = "date"
+presence = "nullable"
+role = "data"
+description = "Date of birth if known."
+
+[[columns]]
+name = "genotype"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "The genotype as the source states it, in MGI allele nomenclature where it uses one."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."

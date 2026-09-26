@@ -1,0 +1,48 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "unit_id", "start_tick"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.units"
+description = "Unit ID."
+
+[[columns]]
+name = "start_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "core.units.clock_id"
+description = "First tick, inclusive."
+
+[[columns]]
+name = "stop_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "core.units.clock_id"
+description = "Last tick, inclusive."
+
+[[rules]]
+use = "interval"
+start = "start_tick"
+stop = "stop_tick"
+partition_of = ["session_id", "unit_id"]
+overlap_op = "<="
+overlap_message = "observation windows overlap, which would double-count observed time"

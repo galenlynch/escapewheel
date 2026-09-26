@@ -1,0 +1,99 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "block_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "block_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "The block."
+
+[[columns]]
+name = "block_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "The block's own name, where the source has one."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "The clock the interval's ticks are on."
+
+[[columns]]
+name = "start_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "clock_id"
+description = "First tick of the block."
+
+[[columns]]
+name = "stop_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "clock_id"
+description = "Last tick of the block, inclusive."
+
+[[columns]]
+name = "reward_probability_left"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "Left reward probability across the block."
+
+[[columns]]
+name = "reward_probability_right"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "Right reward probability across the block."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "dynamic_foraging.blocks.interval_valid"
+level = "error"
+message = "stop_tick precedes start_tick"
+sql = "SELECT session_id, block_id FROM dynamic_foraging.blocks WHERE stop_tick < start_tick"
+
+[[rules]]
+id = "dynamic_foraging.blocks.blocks_do_not_overlap"
+level = "error"
+message = "two blocks of one session overlap, so a trial falls in both"
+sql = "SELECT a.session_id, a.block_id, b.block_id AS other FROM dynamic_foraging.blocks AS a JOIN dynamic_foraging.blocks AS b ON a.session_id = b.session_id AND a.block_id < b.block_id WHERE a.start_tick <= b.stop_tick AND b.start_tick <= a.stop_tick"
+
+[[rules]]
+id = "dynamic_foraging.blocks.contains_its_trials"
+level = "error"
+message = "a trial names a block whose interval does not contain it"
+sql = "SELECT t.session_id, t.trial_id FROM dynamic_foraging.trials AS t JOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id AND b.block_id = t.block_id JOIN core.intervals AS c ON c.session_id = t.session_id AND c.interval_kind = t.interval_kind AND c.interval_id = t.trial_id WHERE c.start_tick < b.start_tick OR c.stop_tick > b.stop_tick"

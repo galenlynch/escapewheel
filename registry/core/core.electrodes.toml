@@ -1,0 +1,72 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["electrode_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "electrode_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable electrode ID."
+
+[[columns]]
+name = "electrode_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What `electrode_id` stands for: the identifier a source or an earlier packet used for this electrode. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "probe_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.probes"
+description = "Probe ID."
+
+[[columns]]
+name = "local_electrode_label"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Opaque source label; undefined base, not an offset."
+
+[[columns]]
+name = "local_channel_label"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Opaque source label; undefined base, not an offset."
+
+[[columns]]
+name = "impedance_ohm"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "Ohm"
+description = "Impedance."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."

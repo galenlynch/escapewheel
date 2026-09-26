@@ -1,0 +1,63 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "unit_id", "source"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.units"
+description = "Unit ID."
+
+[[columns]]
+name = "source"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "What produced the label, e.g. kilosort, decoder, bombcell."
+
+[[columns]]
+name = "label"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "The source's own label, verbatim."
+
+[[columns]]
+name = "normalized_label"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "closed"
+enum = ["sua", "mua", "noise"]
+description = "Declared projection onto the closed set. Null where the source's label does not project."
+
+[[columns]]
+name = "confidence"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "The source's confidence, where it reports one."
+
+[[rules]]
+id = "core.unit_quality_labels.projection_is_consistent"
+level = "error"
+message = "a (source, label) pair projects onto more than one normalized_label"
+sql = "SELECT source, label, COUNT(DISTINCT COALESCE(normalized_label, '')) AS distinct_projections FROM core.unit_quality_labels GROUP BY source, label HAVING COUNT(DISTINCT COALESCE(normalized_label, '')) > 1"

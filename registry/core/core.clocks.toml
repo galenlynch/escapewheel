@@ -1,0 +1,194 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["clock_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable clock ID."
+
+[[columns]]
+name = "clock_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "What `clock_id` stands for: the identifier a source or an earlier packet used for this clock. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "tick_rate_hz"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "Hz"
+description = "Tick rate as float, required unless exact tick rate provided."
+
+[[columns]]
+name = "tick_rate_num"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Exact rational numerator."
+
+[[columns]]
+name = "tick_rate_den"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Exact rational denominator."
+
+[[columns]]
+name = "origin"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "Where this clock's tick 0 is, in the source's own terms -- for a sample clock, tick 0 is sample 0, and a writer MUST NOT re-base a source's index (Part 01 §2.2)."
+
+[[columns]]
+name = "tick_zero_utc"
+type = "timestamp"
+presence = "nullable"
+role = "data"
+description = "Wall-clock instant of tick 0 on this clock."
+
+[[columns]]
+name = "parent_clock_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = { resource = "core.clocks", column = "clock_id" }
+description = "Parent/reference clock."
+
+[[columns]]
+name = "transform_slope"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "Parent ticks per this clock's tick, as measured."
+
+[[columns]]
+name = "transform_offset"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "Parent-clock tick at this clock's tick 0."
+
+[[columns]]
+name = "transform_to_parent"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "Clock alignment transform."
+
+[[columns]]
+name = "withheld_first_anchor"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether Part 02 §12.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run."
+
+[[columns]]
+name = "withheld_last_anchor"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether Part 02 §12.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "core.clocks.tick_rate_declared"
+level = "error"
+message = "neither tick_rate_hz nor an exact rational rate is present"
+sql = "SELECT clock_id FROM core.clocks WHERE tick_rate_hz IS NULL AND (tick_rate_num IS NULL OR tick_rate_den IS NULL)"
+
+[[rules]]
+id = "core.clocks.tick_rate_one_form"
+level = "error"
+message = "a clock declares both a float rate and a rational one"
+sql = "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core.clocks WHERE tick_rate_hz IS NOT NULL AND tick_rate_num IS NOT NULL"
+
+[[rules]]
+id = "core.clocks.tick_rate_positive"
+level = "error"
+message = "tick rate is not positive"
+sql = "SELECT clock_id, tick_rate_hz, tick_rate_num, tick_rate_den FROM core.clocks WHERE tick_rate_hz <= 0 OR tick_rate_num <= 0 OR tick_rate_den <= 0"
+
+[[rules]]
+id = "core.clocks.transform_pair_complete"
+level = "error"
+message = "transform_slope and transform_offset must be present together"
+sql = "SELECT clock_id FROM core.clocks WHERE (transform_slope IS NULL) <> (transform_offset IS NULL)"
+
+[[rules]]
+id = "core.clocks.transform_requires_parent"
+level = "error"
+message = "a clock transform is declared without a parent clock"
+sql = "SELECT clock_id FROM core.clocks WHERE parent_clock_id IS NULL AND transform_slope IS NOT NULL"
+
+[[rules]]
+id = "core.clocks.tick_zero_plausible"
+level = "warning"
+message = "tick_zero_utc is more than a day from session_start_time"
+sql = "SELECT c.clock_id, c.tick_zero_utc, s.session_start_time FROM core.clocks AS c JOIN core.sessions AS s USING (session_id) WHERE c.tick_zero_utc IS NOT NULL AND s.session_start_time IS NOT NULL AND (c.tick_zero_utc < s.session_start_time - INTERVAL '1' DAY OR c.tick_zero_utc > s.session_start_time + INTERVAL '1' DAY)"
+
+[[rules]]
+id = "core.clocks.one_alignment_model"
+level = "error"
+message = "a clock declares both a linear transform and anchor points"
+sql = "SELECT c.clock_id FROM core.clocks AS c WHERE c.transform_slope IS NOT NULL AND EXISTS(SELECT 1 FROM core.clock_anchors AS a WHERE a.clock_id = c.clock_id)"
+
+[[rules]]
+id = "core.clocks.parent_chain_well_founded"
+level = "error"
+message = "a clock is its own ancestor, so walking the chain does not terminate"
+sql = "WITH RECURSIVE up(clock_id, ancestor, depth) AS (SELECT clock_id, parent_clock_id, 1 FROM core.clocks WHERE parent_clock_id IS NOT NULL UNION ALL SELECT u.clock_id, c.parent_clock_id, u.depth + 1 FROM up AS u JOIN core.clocks AS c ON c.clock_id = u.ancestor WHERE c.parent_clock_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT clock_id FROM up WHERE ancestor = clock_id OR depth >= 64"
+
+[[rules]]
+id = "core.clocks.alignment_declared_for_conversion"
+level = "error"
+message = "a non-reference clock declares no alignment, so it cannot be converted"
+sql = "SELECT c.clock_id FROM core.clocks AS c JOIN core.sessions AS s USING (session_id) WHERE s.reference_clock_id IS NOT NULL AND c.clock_id <> s.reference_clock_id AND c.transform_slope IS NULL AND NOT EXISTS(SELECT 1 FROM core.clock_anchors AS a WHERE a.clock_id = c.clock_id)"
+
+[[rules]]
+id = "core.clocks.observation_declared"
+level = "error"
+message = "a clock that is anchored or is the session's reference declares no observation interval, so nothing on it has a window to inherit"
+sql = "SELECT c.session_id, c.clock_id FROM core.clocks AS c LEFT JOIN core.clock_observation_intervals AS o ON o.session_id = c.session_id AND o.clock_id = c.clock_id WHERE o.clock_id IS NULL AND (EXISTS(SELECT 1 FROM core.clock_anchors AS a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id) OR EXISTS(SELECT 1 FROM core.sessions AS s WHERE s.session_id = c.session_id AND s.reference_clock_id = c.clock_id))"
+
+[[rules]]
+id = "core.clocks.withheld_needs_anchors"
+level = "error"
+message = "a clock with no anchors records the outcome of a terminal-anchor test that cannot have run on it"
+sql = "SELECT c.session_id, c.clock_id FROM core.clocks AS c WHERE (c.withheld_first_anchor IS NOT NULL OR c.withheld_last_anchor IS NOT NULL) AND NOT EXISTS(SELECT 1 FROM core.clock_anchors AS a WHERE a.session_id = c.session_id AND a.clock_id = c.clock_id)"
+
+[[rules]]
+id = "core.clocks.transform_slope_positive"
+level = "error"
+message = "transform_slope is not positive"
+sql = "SELECT clock_id, transform_slope FROM core.clocks WHERE transform_slope <= 0"

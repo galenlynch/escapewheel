@@ -1,0 +1,87 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["probe_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "probe_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable probe ID."
+
+[[columns]]
+name = "probe_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What `probe_id` stands for: the identifier a source or an earlier packet used for this probe. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "device_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.devices"
+description = "Associated device."
+
+[[columns]]
+name = "probe_type"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "The probe's model, as the manufacturer names it: `Neuropixels 1.0`."
+
+[[columns]]
+name = "manufacturer"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers."
+
+[[columns]]
+name = "serial_number"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Serial number."
+
+[[columns]]
+name = "insertion_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Insertion label."
+
+[[columns]]
+name = "target_region"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "The structure the probe was aimed at, as an atlas acronym where the source gives one. Not resolvable: no column here names the atlas, which only a coordinate frame does (Part 01 §3.24)."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."

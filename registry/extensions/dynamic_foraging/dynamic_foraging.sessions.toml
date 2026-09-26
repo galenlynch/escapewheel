@@ -1,0 +1,274 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "base_reward_probability_sum"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "The two ports' probabilities sum to this."
+
+[[columns]]
+name = "block_beta"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "Exponential parameter the block length is drawn from."
+
+[[columns]]
+name = "block_min"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "Shortest block, in trials."
+
+[[columns]]
+name = "block_max"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "Longest block, in trials."
+
+[[columns]]
+name = "min_reward_each_block"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "Rewards a block must deliver before it may end."
+
+[[columns]]
+name = "delay_beta"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "Exponential parameter the delay is drawn from. Zero fixes it."
+
+[[columns]]
+name = "delay_min"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Shortest delay."
+
+[[columns]]
+name = "delay_max"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Longest delay."
+
+[[columns]]
+name = "iti_beta"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "Exponential parameter the inter-trial interval is drawn from."
+
+[[columns]]
+name = "iti_min"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Shortest inter-trial interval."
+
+[[columns]]
+name = "iti_max"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Longest inter-trial interval."
+
+[[columns]]
+name = "response_duration"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "How long a response is accepted for."
+
+[[columns]]
+name = "reward_consumption_duration"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "How long the animal is given to drink."
+
+[[columns]]
+name = "reward_delay"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Delay between a correct response and delivery."
+
+[[columns]]
+name = "left_valve_open_time"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Calibrated open time for the left valve."
+
+[[columns]]
+name = "right_valve_open_time"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Calibrated open time for the right valve."
+
+[[columns]]
+name = "reward_size_left"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "uL"
+description = "Volume one left reward delivers."
+
+[[columns]]
+name = "reward_size_right"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "uL"
+description = "Volume one right reward delivers."
+
+[[columns]]
+name = "minimum_opto_interval"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Shortest gap between optogenetic trials."
+
+[[columns]]
+name = "fraction_of_session"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "Fraction of the session the schedule applies to."
+
+[[columns]]
+name = "session_wide_control"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Whether a session-wide control condition was in force."
+
+[[columns]]
+name = "session_start_with"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Which condition the session opened on."
+
+[[columns]]
+name = "session_alternation"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Whether conditions alternated."
+
+[[columns]]
+name = "auto_train_curriculum_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Curriculum the trainer was running."
+
+[[columns]]
+name = "auto_train_curriculum_version"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "That curriculum's version."
+
+[[columns]]
+name = "auto_train_curriculum_schema_version"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "The schema version that curriculum was written to."
+
+[[columns]]
+name = "auto_train_stage"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Stage within the curriculum."
+
+[[columns]]
+name = "auto_train_engaged"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether the trainer was driving the task."
+
+[[columns]]
+name = "auto_train_stage_overridden"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether an experimenter overrode the stage the trainer chose."
+
+[[rules]]
+id = "dynamic_foraging.sessions.a_range_is_ordered"
+level = "error"
+message = "a minimum exceeds its maximum, so nothing can be drawn from the range"
+sql = "SELECT session_id FROM dynamic_foraging.sessions WHERE block_min > block_max OR delay_min > delay_max OR iti_min > iti_max"
+
+[[rules]]
+id = "dynamic_foraging.sessions.a_stage_needs_a_curriculum"
+level = "error"
+message = "a curriculum stage is named with no curriculum to place it in"
+sql = "SELECT session_id FROM dynamic_foraging.sessions WHERE auto_train_stage IS NOT NULL AND auto_train_curriculum_name IS NULL"

@@ -1,0 +1,68 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["source_file_id"]
+
+[[columns]]
+name = "source_file_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable source file ID."
+
+[[columns]]
+name = "source_file_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "uri"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "Source URI/path."
+
+[[columns]]
+name = "format"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "The file's format in the producer's own terms, which this specification does not constrain."
+
+[[columns]]
+name = "sha256"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Checksum."
+
+[[columns]]
+name = "size_bytes"
+type = "int64"
+presence = "nullable"
+role = "data"
+unit = "By"
+description = "Size."
+
+[[columns]]
+name = "modified_at"
+type = "timestamp"
+presence = "nullable"
+role = "data"
+description = "Modification time if known."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."

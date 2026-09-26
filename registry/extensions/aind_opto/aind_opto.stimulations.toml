@@ -1,0 +1,122 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "epoch_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "epoch_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "carried"
+description = "The interval this describes, in core."
+
+[[columns]]
+name = "protocol"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "What the light was for, in the rig's own words: tagging and inactivation are the same measurement differently parameterised."
+
+[[columns]]
+name = "duration_s"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "How long the light was on."
+
+[[columns]]
+name = "pulse_duration_s"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "One pulse, where the protocol pulses."
+
+[[columns]]
+name = "frequency_hz"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "Hz"
+description = "Pulse frequency, where the protocol pulses."
+
+[[columns]]
+name = "ramping_down_s"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Ramp-down time, where the protocol ramps."
+
+[[columns]]
+name = "start_offset_s"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Onset relative to the interval's start."
+
+[[columns]]
+name = "end_offset_s"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Offset relative to the interval's end."
+
+[[columns]]
+name = "condition"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "The rig's own condition label."
+
+[[columns]]
+name = "condition_probability"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "How often this condition was drawn."
+
+[[columns]]
+name = "on_probability"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "How often the light was on at all."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "aind_opto.stimulations.pulsing_needs_a_frequency"
+level = "error"
+message = "a pulse duration is recorded with no frequency, so the train is undefined"
+sql = "SELECT session_id, epoch_id FROM aind_opto.stimulations WHERE pulse_duration_s IS NOT NULL AND frequency_hz IS NULL"

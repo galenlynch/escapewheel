@@ -1,0 +1,5 @@
+content_class = "core"
+kind = "opaque"
+instances = { mode = "catalog", catalog_resource = "core.media_assets", resource_id_column = "resource_id" }
+requires = []
+lineage = "optional"

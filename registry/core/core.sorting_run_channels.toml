@@ -1,0 +1,52 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "sorting_run_id", "channel_index"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "sorting_run_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sorting_runs"
+description = "The run whose channel list this row belongs to."
+
+[[columns]]
+name = "channel_index"
+type = "int64"
+presence = "required"
+role = "structural_index"
+description = "0-based position in the run's own channel order, which is what a source's channel index counts. int64 as every structural index is."
+
+[[columns]]
+name = "electrode_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.electrodes"
+description = "The contact at that position."
+
+[[rules]]
+id = "core.sorting_run_channels.contact_listed_once"
+level = "error"
+message = "a contact appears more than once in one run's channel list"
+sql = "SELECT session_id, sorting_run_id, electrode_id, COUNT(*) AS n FROM core.sorting_run_channels GROUP BY session_id, sorting_run_id, electrode_id HAVING COUNT(*) > 1"
+
+[[rules]]
+id = "core.sorting_run_channels.index_contiguous"
+level = "error"
+message = "channel_index is not contiguous from 0 within a run"
+sql = "SELECT session_id, sorting_run_id, COUNT(*) AS n, MAX(channel_index) AS hi FROM core.sorting_run_channels GROUP BY session_id, sorting_run_id HAVING MAX(channel_index) <> COUNT(*) - 1 OR MIN(channel_index) <> 0"

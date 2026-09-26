@@ -1,0 +1,70 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["clock_id", "anchor_index"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "The clock being aligned."
+
+[[columns]]
+name = "anchor_index"
+type = "int64"
+presence = "required"
+role = "sequence_position"
+description = "0-based position in this clock's anchor sequence."
+
+[[columns]]
+name = "t_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+description = "Tick on clock_id."
+
+[[columns]]
+name = "parent_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "core.clocks.parent_clock_id"
+description = "The corresponding tick on parent_clock_id."
+
+[[rules]]
+id = "core.clock_anchors.requires_parent"
+level = "error"
+message = "anchors are declared for a clock with no parent"
+sql = "SELECT DISTINCT a.clock_id FROM core.clock_anchors AS a JOIN core.clocks AS c USING (clock_id) WHERE c.parent_clock_id IS NULL"
+
+[[rules]]
+id = "core.clock_anchors.anchor_index_contiguous"
+level = "error"
+message = "anchor_index is not contiguous from 0"
+sql = "SELECT clock_id, COUNT(*) AS n, MAX(anchor_index) AS hi FROM core.clock_anchors GROUP BY clock_id HAVING MAX(anchor_index) <> COUNT(*) - 1 OR MIN(anchor_index) <> 0"
+
+[[rules]]
+id = "core.clock_anchors.monotonic"
+level = "error"
+message = "anchor sequences do not increase together, so interpolation is undefined"
+sql = "SELECT clock_id, anchor_index FROM (SELECT *, LAG(t_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS prev_t, LAG(parent_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS prev_p FROM core.clock_anchors) AS derived_1 WHERE prev_t IS NOT NULL AND (t_tick <= prev_t OR parent_tick <= prev_p)"
+
+[[rules]]
+id = "core.clock_anchors.gap_within_bound"
+level = "warning"
+message = "an anchor gap exceeds twice the median, leaving ticks the mapping does not define"
+sql = "WITH gaps AS (SELECT clock_id, anchor_index, CAST(t_tick AS DECIMAL(38,0)) - CAST(LAG(t_tick) OVER (PARTITION BY clock_id ORDER BY anchor_index) AS DECIMAL(38,0)) AS gap FROM core.clock_anchors), typical AS (SELECT clock_id, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY gap) AS m FROM gaps WHERE gap IS NOT NULL GROUP BY clock_id) SELECT g.clock_id, g.anchor_index, g.gap, t.m FROM gaps AS g JOIN typical AS t USING (clock_id) WHERE g.gap IS NOT NULL AND g.gap > t.m * 2"

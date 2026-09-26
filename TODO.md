@@ -43,14 +43,10 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 # Live
 
-## 1. Registry replay should give way to declarative authoring
+## 1. Closed: the registry is authored as TOML
 
-`registry/build.py` derives the core registry by parsing Part 02's tables and then replaying the
-accepted decisions that changed them. Replace it with one reviewed registry document or
-deterministically assembled fragments, keep provenance in accepted history and Git rather than in
-the registry document, and prove that the migration preserves the released registry bytes or a
-defined canonical form. This is ordinary repository maintenance if the published contract is
-unchanged; any change to the published form returns through the revision process.
+Every registry document is assembled from one TOML file per resource under `registry/core/` or
+`registry/extensions/<id>/`; see `registry/README.md`.
 
 ## 2. No template scaffolds an extension project
 

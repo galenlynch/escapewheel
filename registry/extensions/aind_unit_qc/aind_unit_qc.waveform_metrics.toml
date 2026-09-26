@@ -1,0 +1,133 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "unit_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session Id."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.units"
+description = "Unit Id."
+
+[[columns]]
+name = "peak_to_trough_duration"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Time from the template's trough (minimum) to the main peak (maximum) after it."
+
+[[columns]]
+name = "main_peak_to_trough_ratio"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "Absolute amplitude of the template's larger peak, before or after the trough, over the trough's."
+
+[[columns]]
+name = "peak_half_width"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Width at half amplitude of the template's larger peak, before or after the trough."
+
+[[columns]]
+name = "trough_half_width"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "Width at half amplitude of the template's trough."
+
+[[columns]]
+name = "repolarization_slope"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "uV/s"
+description = "Slope of the repolarizing phase."
+
+[[columns]]
+name = "recovery_slope"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "uV/s"
+description = "Slope of the recovery phase."
+
+[[columns]]
+name = "num_positive_peaks"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Positive peaks in the waveform."
+
+[[columns]]
+name = "num_negative_peaks"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Negative peaks in the waveform."
+
+[[columns]]
+name = "exp_decay"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "/um"
+description = "Exponential decay of amplitude with distance from the peak channel. Populated for 4,293 of 4,559 units measured."
+
+[[columns]]
+name = "spread"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "um"
+description = "Depth span of the channels on which the template's amplitude exceeds a set fraction of its largest."
+
+[[columns]]
+name = "velocity_above"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "mm/s"
+description = "Propagation velocity above the peak channel. Sparse: the fit needs channels on that side. Populated for 807 of 4,559 units measured."
+
+[[columns]]
+name = "velocity_below"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "mm/s"
+description = "Propagation velocity below the peak channel. Populated for 757 of 4,559 units measured."
+
+[[rules]]
+id = "aind_unit_qc.waveform_metrics.a_width_is_positive"
+level = "error"
+message = "a waveform width is zero or negative, which no waveform has"
+sql = "SELECT session_id, unit_id FROM aind_unit_qc.waveform_metrics WHERE peak_to_trough_duration <= 0 OR peak_half_width <= 0 OR trough_half_width <= 0"

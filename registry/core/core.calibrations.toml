@@ -1,0 +1,108 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["calibration_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "calibration_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable calibration ID."
+
+[[columns]]
+name = "calibration_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "What `calibration_id` stands for: the identifier a source or an earlier packet used for this calibration. Required, and composed by the writer where the source names none, since Part 02 §8.2 makes two calibrations sharing a name one row."
+
+[[columns]]
+name = "calibration_type"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "What was calibrated: `water_volume`, `light_power`, `manipulator_transform`. Named `_type` rather than `_kind` because a `_kind` column is a discriminator (Part 02 §8.3), and this holds a value that resolves to no table."
+
+[[columns]]
+name = "calibrated_at"
+type = "timestamp"
+presence = "nullable"
+role = "data"
+description = "When the calibration was measured, which is not when it was in force; measured examples differ by 133 and 302 days. Null where the source states none, since what a source did not say is not invented (Part 01 §3.5)."
+
+[[columns]]
+name = "description"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What the source said the calibration was."
+
+[[columns]]
+name = "input_unit"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "UCUM", uri = "https://ucum.org/ucum" }]
+description = "The unit of `core.calibration_points.input_value`, as a UCUM code. On the calibration because it varies per calibration -- `s` for water, `V` for opto -- so no literal unit can sit on the value column."
+
+[[columns]]
+name = "output_unit"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "UCUM", uri = "https://ucum.org/ucum" }]
+description = "The unit of `core.calibration_points.output_value`, as a UCUM code."
+
+[[columns]]
+name = "array_asset_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.array_assets"
+description = "The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics."
+
+[[columns]]
+name = "detail_kind"
+type = "string"
+presence = "nullable"
+role = "discriminator"
+resolves = "optional"
+description = "A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (Part 02 §12.3)."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "core.calibrations.unit_pair_complete"
+level = "error"
+message = "a calibration declares one unit of measure and not the other; the pair is what makes a point readable"
+sql = "SELECT calibration_id, input_unit, output_unit FROM core.calibrations WHERE (input_unit IS NULL) <> (output_unit IS NULL)"
+
+[[rules]]
+id = "core.calibrations.points_declare_units"
+level = "error"
+message = "a calibration carries points and declares no units, so nothing says what its values are measured in"
+sql = "SELECT DISTINCT c.calibration_id FROM core.calibrations AS c JOIN core.calibration_points AS p USING (calibration_id) WHERE c.input_unit IS NULL OR c.output_unit IS NULL"

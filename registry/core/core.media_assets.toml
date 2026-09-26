@@ -1,0 +1,105 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["media_asset_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "media_asset_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable media asset ID."
+
+[[columns]]
+name = "resource_id"
+type = "string"
+presence = "required"
+role = "identifier"
+identity = "carried"
+vocabulary = "free"
+description = "The packet resource ID of the catalogued payload."
+
+[[columns]]
+name = "media_asset_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "What `media_asset_id` stands for: the identifier a source or an earlier packet used for this media asset. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "semantic_type"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 §3.17)."
+
+[[columns]]
+name = "device_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.devices"
+description = "The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (Part 01 §3.5)."
+
+[[columns]]
+name = "pts_rate_num"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Presentation timestamps per second in this asset's container: numerator."
+
+[[columns]]
+name = "pts_rate_den"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Presentation timestamps per second in this asset's container: denominator."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "Clock for frame timing."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "core.media_assets.pts_rate_pair_complete"
+level = "error"
+message = "an asset declares one half of its presentation-timestamp rate; half a rational is unusable"
+sql = "SELECT media_asset_id, pts_rate_num, pts_rate_den FROM core.media_assets WHERE (pts_rate_num IS NULL) <> (pts_rate_den IS NULL)"
+
+[[rules]]
+id = "core.media_assets.pts_rate_declared_where_frames_carry_pts"
+level = "error"
+message = "frames carry pts for an asset that does not say what those timestamps count"
+sql = "SELECT a.media_asset_id FROM core.media_assets AS a WHERE a.pts_rate_num IS NULL AND EXISTS(SELECT 1 FROM core.media_frames AS f WHERE f.media_asset_id = a.media_asset_id AND f.pts IS NOT NULL)"
+
+[[rules]]
+id = "core.media_assets.pts_rate_positive"
+level = "error"
+message = "a presentation-timestamp rate is not positive"
+sql = "SELECT media_asset_id, pts_rate_num, pts_rate_den FROM core.media_assets WHERE pts_rate_num <= 0 OR pts_rate_den <= 0"

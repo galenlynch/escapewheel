@@ -1,0 +1,52 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "stream_id", "t_tick"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "stream_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = { resource = "core.event_streams", column = "event_stream_id" }
+description = "The stream this event belongs to."
+
+[[columns]]
+name = "t_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "core.event_streams.clock_id"
+description = "Event tick."
+
+[[columns]]
+name = "payload"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "Event payload."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "core.events.within_observation"
+level = "warning"
+message = "events fall outside the observation window in force for their stream"
+sql = "WITH stream_windows AS (SELECT o.event_stream_id, o.start_tick, o.stop_tick FROM core.event_stream_observation_intervals AS o UNION ALL SELECT s.event_stream_id, c.start_tick, c.stop_tick FROM core.event_streams AS s JOIN core.clock_observation_intervals AS c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE NOT EXISTS(SELECT 1 FROM core.event_stream_observation_intervals AS o WHERE o.event_stream_id = s.event_stream_id)), observed AS (SELECT DISTINCT event_stream_id FROM stream_windows) SELECT e.session_id, e.stream_id, e.t_tick FROM core.events AS e JOIN observed AS k ON e.stream_id = k.event_stream_id LEFT JOIN stream_windows AS w ON e.stream_id = w.event_stream_id AND e.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"

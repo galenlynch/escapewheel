@@ -36,15 +36,15 @@ package belongs in the registry, and the design is what makes that true.
 - **Tier 1 is generated** from structure — required-column presence, primary keys, foreign keys,
   closed vocabularies, finite values, none of them hand-written. If your check is one of
   those five shapes, it already exists the moment the registry declares the column.
-- **Tier 2 is hand-written portable-profile SQL**, and it lives in `../registry/rules.json`, **not here**. Adding
-  one is editing a JSON file in the registry and running `build.py`. Nothing in this package
-  needs to change.
+- **Tier 2 is hand-written portable-profile SQL**, and it lives in the registry, **not here**:
+  each is a `[[rules]]` entry in its table's file under `../registry/core/`. Adding one is editing
+  that file and running `build.py`. Nothing in this package needs to change.
 
 So before writing Python, ask which of these your check is. Code lands here only for something a
 query cannot see at all — see *SQL or shim* below.
 
 A rule may also be a **template invocation** rather than SQL (R24). `interval` is the only one;
-`build.py` expands it, so the registry a packet embeds still carries plain SQL and no validator
+`assemble.py` expands it, so the registry a packet embeds still carries plain SQL and no validator
 has to learn a vocabulary.
 
 ## The execution contract

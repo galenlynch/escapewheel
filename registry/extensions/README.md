@@ -11,6 +11,10 @@ reading one of their tables needs nothing installed.
 | `aind_opto` | `stimulations`, `emissions` | 19 | the 17 `laser_*` columns the real NWB's `trials` table carries |
 | `vr_foraging` | `sites`, `site_odors`, `sessions` | 39 | the `Site` and `SessionMetadata` pydantic models the packaging library writes its parquet from |
 
+Each document is generated: `extensions/<id>.json` is assembled from the TOML files in
+`extensions/<id>/`, one per table, in the same form as the core registry's source (see
+`../README.md`). Edit the TOML and run `build.py`.
+
 ## Why these, and why they are not core
 
 Measured on `ecephys_776259_2025-04-09`, comparing what each NWB `DynamicTable` carries against

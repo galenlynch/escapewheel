@@ -1,0 +1,169 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["unit_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable unit ID."
+
+[[columns]]
+name = "unit_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "probe_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.probes"
+description = "Probe ID."
+
+[[columns]]
+name = "sorting_run_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sorting_runs"
+description = "Sorting run ID."
+
+[[columns]]
+name = "curation_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.curation_versions"
+description = "Curation ID."
+
+[[columns]]
+name = "local_unit_label"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Opaque source label; undefined base, not an offset."
+
+[[columns]]
+name = "quality_label"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "closed"
+enum = ["sua", "mua", "noise"]
+description = "Quality label."
+
+[[columns]]
+name = "amplitude_unit"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "UCUM", uri = "https://ucum.org/ucum" }]
+description = "Unit of measure of `core.spike_events.amplitude` for this unit's spikes -- microvolts, or ADC counts."
+
+[[columns]]
+name = "quality_label_source"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Which core.unit_quality_labels source the designated label came from."
+
+[[columns]]
+name = "firing_rate_hz"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "Hz"
+description = "Firing rate if known."
+
+[[columns]]
+name = "n_spikes"
+type = "int64"
+presence = "nullable"
+role = "data"
+description = "Total spikes for this unit in this context."
+
+[[columns]]
+name = "first_spike_tick"
+type = "int64"
+presence = "nullable"
+role = "coordinate"
+description = "Lowest t_tick for this unit."
+
+[[columns]]
+name = "last_spike_tick"
+type = "int64"
+presence = "nullable"
+role = "coordinate"
+description = "Highest t_tick for this unit."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "The clock every tick of this unit is counted on."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "core.units.spike_summary_consistent"
+level = "error"
+message = "n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events"
+sql = "SELECT u.session_id, u.unit_id FROM core.units AS u LEFT JOIN (SELECT unit_id, COUNT(*) AS n, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM core.spike_events GROUP BY unit_id) AS s USING (unit_id) WHERE (u.n_spikes IS NOT NULL AND u.n_spikes IS DISTINCT FROM COALESCE(s.n, 0)) OR (u.first_spike_tick IS NOT NULL AND u.first_spike_tick IS DISTINCT FROM s.lo) OR (u.last_spike_tick IS NOT NULL AND u.last_spike_tick IS DISTINCT FROM s.hi)"
+
+[[rules]]
+id = "core.units.designated_label_is_recorded"
+level = "error"
+message = "the designated quality label is not among the recorded ones"
+sql = "SELECT u.session_id, u.unit_id, u.quality_label, u.quality_label_source FROM core.units AS u LEFT JOIN core.unit_quality_labels AS q ON u.unit_id = q.unit_id AND u.quality_label = q.normalized_label AND u.quality_label_source = q.source WHERE u.quality_label IS NOT NULL AND q.source IS NULL"
+
+[[rules]]
+id = "core.units.designated_label_pair_complete"
+level = "error"
+message = "quality_label and quality_label_source must be present together"
+sql = "SELECT session_id, unit_id FROM core.units WHERE (quality_label IS NULL) <> (quality_label_source IS NULL)"
+
+[[rules]]
+id = "core.units.observation_declared"
+level = "info"
+message = "units carry no observation intervals and their clock declares none, so no rate over them has a denominator"
+sql = "SELECT u.session_id, u.unit_id FROM core.units AS u WHERE NOT EXISTS(SELECT 1 FROM core.unit_observation_intervals AS o WHERE o.unit_id = u.unit_id) AND NOT EXISTS(SELECT 1 FROM core.clock_observation_intervals AS c WHERE c.session_id = u.session_id AND c.clock_id = u.clock_id)"
+advisory = true
+
+[[rules]]
+id = "core.units.amplitude_unit_declared"
+level = "error"
+message = "a unit's spikes carry an amplitude and the unit declares no amplitude_unit"
+sql = "SELECT DISTINCT u.unit_id FROM core.spike_events AS s JOIN core.units AS u USING (unit_id) WHERE s.amplitude IS NOT NULL AND u.amplitude_unit IS NULL"

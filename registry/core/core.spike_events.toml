@@ -1,0 +1,53 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "unit_id", "t_tick"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.units"
+description = "Unit ID."
+
+[[columns]]
+name = "t_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "core.units.clock_id"
+description = "Spike tick."
+
+[[columns]]
+name = "amplitude"
+type = "float32"
+presence = "nullable"
+role = "data"
+finite = true
+unit_from = "core.units.amplitude_unit"
+description = "Spike amplitude if available."
+
+[[rules]]
+id = "core.spike_events.ticks_within_clock_span"
+level = "warning"
+message = "negative ticks on a clock with no absolute reference"
+sql = "SELECT u.session_id, u.clock_id, MIN(s.t_tick) AS min_tick FROM core.spike_events AS s JOIN core.units AS u USING (unit_id) JOIN core.clocks AS c ON c.clock_id = u.clock_id WHERE s.t_tick < 0 AND c.tick_zero_utc IS NULL GROUP BY u.session_id, u.clock_id"
+
+[[rules]]
+id = "core.spike_events.within_observation"
+level = "warning"
+message = "spikes fall outside the observation window in force for their unit"
+sql = "WITH unit_windows AS (SELECT o.unit_id, o.start_tick, o.stop_tick FROM core.unit_observation_intervals AS o UNION ALL SELECT u.unit_id, c.start_tick, c.stop_tick FROM core.units AS u JOIN core.clock_observation_intervals AS c ON c.session_id = u.session_id AND c.clock_id = u.clock_id WHERE NOT EXISTS(SELECT 1 FROM core.unit_observation_intervals AS o WHERE o.unit_id = u.unit_id)), observed AS (SELECT DISTINCT unit_id FROM unit_windows) SELECT s.session_id, s.unit_id, s.t_tick FROM core.spike_events AS s JOIN observed AS k ON s.unit_id = k.unit_id LEFT JOIN unit_windows AS w ON s.unit_id = w.unit_id AND s.t_tick BETWEEN w.start_tick AND w.stop_tick WHERE w.start_tick IS NULL"

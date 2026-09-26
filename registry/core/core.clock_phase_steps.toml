@@ -1,0 +1,62 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "clock_id", "t_tick"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "The clock whose alignment stepped."
+
+[[columns]]
+name = "t_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+description = "Where the step is, on `clock_id`."
+
+[[columns]]
+name = "parent_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "core.clocks.parent_clock_id"
+description = "The same instant on the parent clock."
+
+[[columns]]
+name = "shift_seconds"
+type = "float64"
+presence = "required"
+role = "data"
+finite = true
+unit = "s"
+description = "How far the parent's phase moved. Signed."
+
+[[columns]]
+name = "anchor_interval_span"
+type = "int32"
+presence = "required"
+role = "data"
+unit = "{anchor_interval}"
+description = "How many consecutive anchor intervals the step spans."
+
+[[rules]]
+id = "core.clock_phase_steps.step_needs_parent"
+level = "error"
+message = "a phase step is recorded on a clock with no parent, and a step is a movement of the parent's phase"
+sql = "SELECT s.session_id, s.clock_id, s.t_tick FROM core.clock_phase_steps AS s JOIN core.clocks AS c ON c.session_id = s.session_id AND c.clock_id = s.clock_id WHERE c.parent_clock_id IS NULL"

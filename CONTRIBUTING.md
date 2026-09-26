@@ -7,15 +7,14 @@ The repository-wide [authority model](README.md#authority) applies. This file de
 authoring and generation pipeline; it is not normative.
 
 The process feels byzantine for one reason: **most of what looks like source is output.**
-`logical_schemas.json` is committed, readable, and edited by nobody. `tables.md` is a document
-generated from it. Two schemas are copied into two other packages by a build step. Once you know
+`logical_schemas.json` and the extension documents beside it are committed, readable, and edited
+by nobody. `tables.md` is a document generated from the core registry. Two schemas are copied into two other packages by a build step. Once you know
 which files a person writes, the rest is a straight line.
 
 ## 1. What a person writes
 
 | file | what it is |
 |---|---|
-| `nwb_lake_poc_docs/02_core_logical_schemas.md` | the **frozen** starting point. Never edited, including to fix errors |
 | `escapewheel_poc_docs_v0.2/00_architecture.md` | the authority framework, part subjects and statuses, normative-reference policy, and shared references |
 | `escapewheel_poc_docs_v0.2/README.md` | the informational specification entry point; its tables are checked projections |
 | `escapewheel_poc_docs_v0.2/01_*.md` through `10_*.md` | subject-owning numbered parts, including their local normative references; normative prose changes through an accepted revision's incorporation |
@@ -24,13 +23,12 @@ which files a person writes, the rest is a straight line.
 | `revisions/proposals/*.md` | active problem statements and alternatives; non-authoritative |
 | `revisions/drafts/*.md` | candidate normative changes; non-authoritative and unnumbered |
 | `revisions/accepted/R<N>-*.md` | accepted decision records explaining changes incorporated into the specification or revision process |
-| `registry/build.py` | one block per revision, applying it to the parsed Part 02 |
-| `registry/rules.json` | Tier 2 rules — the checks structure cannot imply |
+| `registry/core/*.toml` | the core registry's source: one file per resource, named by its resource ID, and `registry.toml` for the document's own fields |
 | `registry/registry.schema.json` | the local-shape schema a registry document validates against |
 | `registry/registry_contract.schema.json` | the closed shape of a registry-contract descriptor |
 | `registry/registry_contracts/*.json` | phase and semantic-invariant identities, applicability, and owning anchors |
 | `registry/manifest.schema.json` | the JSON Schema for `packet.json` |
-| `registry/extensions/*.json` | extension registries, in the same format, hand-written |
+| `registry/extensions/<id>/*.toml` | each extension registry's source, in the same form |
 | `escapewheel-validator/.../generate.py` | how Tier 1 checks are derived from structure |
 
 Everything else in `registry/` is output.
@@ -38,9 +36,9 @@ Everything else in `registry/` is output.
 ## 2. What a machine writes
 
 ```
-nwb_lake_poc_docs/02_…md ──parse02.py──┐
-registry/build.py  (revision blocks) ──┼──> registry/logical_schemas.json
-registry/rules.json (+ R24 templates) ─┘         │
+registry/core/*.toml ────────────assemble.py──> registry/logical_schemas.json
+registry/extensions/<id>/*.toml ─assemble.py──> registry/extensions/<id>.json
+                                                 │
                                                  ├──render.py──> registry/tables.md
                                                  └──render.py──> registry/README.md (marked regions)
 
@@ -51,15 +49,15 @@ registry/manifest.schema.json ──build.py──> escapewheel-validator/src/�
                               └─build.py─> Part 04 §§3, 4.1, 8 and 9 field tables
 ```
 
-`logical_schemas.json`, `tables.md`, the README's generated regions, the delivery schema, Part 04's
+The registry documents, `tables.md`, the README's generated regions, the delivery schema, Part 04's
 field tables, and the vendored schema copies are **build artifacts that happen to be committed**.
 They are committed because a packet binds the registry and a reviewer should see it change; they
 are not files to edit. The delivery schema is the manifest's resource entry without
 `validation_state` and `derived_from`, so change the manifest schema and rebuild.
 
-The registry regenerates from the frozen Part 02 plus accepted build blocks and rules: delete
-`logical_schemas.json` and `tables.md`, run `uv run --project ../escapewheel-writer python build.py`
-from `registry/`, and both come back byte-identical. `verify.py` asserts exactly
+The registry regenerates from its source: delete `logical_schemas.json` and `tables.md`, run
+`uv run --project ../escapewheel-writer python build.py` from `registry/`, and both come back
+byte-identical. `verify.py` asserts exactly
 that on every run — snapshot the intentional candidate, regenerate, then demand that generation
 preserved the snapshot. This catches an artifact drifting from its source while allowing the
 pre-commit change that intentionally updates both to pass.
@@ -102,48 +100,44 @@ directory for its memory limit to be effective.
 Nothing here needs doing by hand in normal work — `verify.py` does it — but this is the order, and
 the order matters.
 
-1. **`parse02.py`** reads the frozen Part 02 and returns its tables as structure. This is the only
-   thing that ever reads Part 02.
-2. **`build.py`** applies the transformations that produce the current declaration set. Historical
-   comments may explain a transformation, but neither select its behavior nor enter the generated
-   registry.
-3. **`build.py`** runs the two passes that apply a general rule after the transformations, so both
-   see the final primary keys: the metadata pass emits a `metadata` column wherever
-   the key decides it and strikes one where the key forbids it, and `session_id` moves to the front
-   of every table carrying it.
+1. **`assemble.py`** reads each registry's source directory and writes its document. A file uses
+   the published format's keys and differs from the document only in spelling: a table's fields
+   sit at the top of its file, a single-column reference is written on its column, and a rule may
+   invoke the `interval` template, which is expanded into plain SQL so that the registry a packet
+   embeds carries no vocabulary a validator would have to learn. `canonical.py` fixes what JSON
+   leaves free — keys in the order `registry.schema.json` declares them, single-column references
+   in column order before multi-column ones — so how a file orders them changes nothing.
 
    **Column order is a convention of this registry and not a conformance requirement** — a
    validator resolves a column by name, and no clause of Part 02 or Part 03 states an order — so no
-   revision mandates one and `check.py` is what holds it. Three conventions, each chosen so a
-   reader meets the same shape in every table:
+   revision mandates one. Three conventions, each chosen so a reader meets the same shape in every
+   table:
 
-   - `session_id` is the first column, being the coarsest scope a row has. Placed by the pass
-     above, so a revision cannot leave a new table out.
+   - `session_id` is the first column, being the coarsest scope a row has.
    - a `clock_id` outside the primary key sits beside the coordinates that resolve against it
-     (R56 §2.2), so a reader who has found a tick has its clock. Not placed automatically: which
-     coordinates a clock interprets is the revision's decision, so `check.py` reports a stranded
-     one rather than guessing where to move it.
-   - `metadata` is last, which follows from the R97 §3.1 pass appending it.
+     (R56 §2.2), so a reader who has found a tick has its clock. Unchecked, because which
+     coordinates a clock interprets is the author's judgement.
+   - `metadata` is last.
+
+   `check.py` holds the first and the last in core and every extension.
 
    Each varies only where the rule says it may — a `clock_id` in the key leads because it is key,
    and a table with no coordinate has nothing to sit beside — so a placement that looks odd is
    one the rule accounts for rather than one nobody decided.
-4. **`build.py`** merges `rules.json`, expanding each template invocation into plain SQL —
-   templates are a build-time device, so the registry a packet embeds carries no vocabulary a
-   validator would have to learn.
-5. **`build.py`** writes `logical_schemas.json`, then calls `render.py` for `tables.md` and the
-   README's regions, then copies the hand-written schemas into their consuming packages.
-6. **`check.py`** verifies the result: one complete registry-contract result for core and every
+2. **`build.py`** runs `assemble.py`, then `render.py` for `tables.md` and the README's regions,
+   then refreshes Part 03's and Part 04's projections and copies the hand-written schemas into
+   their consuming packages.
+3. **`check.py`** verifies the result: one complete registry-contract result for core and every
    extension, then repository authoring conventions, source-to-output agreement, vendored copies,
    and — with DuckDB present — execution binding against empty qualified tables built from the
    registry. The shared result is implemented in `escapewheel_validator.registry_document`, so an
    extension author and this repository receive the same answer. Section 7 counts the descriptor's
    invariant inventory.
-7. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
+4. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
    Changing what Tier 1 means is a code change in `generate.py`, not a data change.
-8. **`fixtures/build.py`** writes the 30-packet conformance corpus against the registry;
+5. **`fixtures/build.py`** writes the 30-packet conformance corpus against the registry;
    `fixtures/corpus.py` runs each through the real validator and checks it produced the finding
    it was built to produce.
 
@@ -151,17 +145,16 @@ the order matters.
 
 | you want to | edit | then |
 |---|---|---|
-| add or change a column, key, type, reference | begin with a proposal or draft, then get the revision accepted and add a block to `build.py` | `verify.py`; `revisions/CONTRIBUTING.md` has the whole sequence |
-| add a Tier 2 rule | `registry/rules.json` | `verify.py` |
+| add or change a column, key, type, reference | begin with a proposal or draft, then get the revision accepted and edit the table's file in `registry/core/` | `verify.py`; `revisions/CONTRIBUTING.md` has the whole sequence |
+| add a Tier 2 rule | a `[[rules]]` entry in the table's file | `verify.py` |
 | change how Tier 1 is derived | `escapewheel-validator/.../generate.py` | `verify.py` |
-| add an extension | `registry/extensions/<id>.json` | `verify.py` |
+| add an extension | a directory `registry/extensions/<id>/` holding `registry.toml` and one file per resource | `verify.py` |
 | change the manifest or the meta-schema | the hand-written copy in `registry/` | `build.py` re-vendors; `verify.py` |
 | add a fixture variant | `fixtures/build.py` and `fixtures/corpus.py` | `verify.py` |
 
-**A schema change starts with a revision.** Not as ceremony: `build.py`'s blocks are labelled with
-the revision that mandates them, so a column's type traces to the argument that set it, and
-`registry/tables.md` answers both what a table is and why. A block with no revision breaks that
-chain silently.
+**A schema change starts with a revision.** Not as ceremony: `revisions/registry-targets.toml`
+locates each accepted clause in the generated registry, so a declaration traces to the argument
+that set it. A declaration changed with no revision breaks that chain silently.
 
 Moving a draft to an accepted revision requires explicit authorization. Acceptance and
 incorporation into the applicable current owner are one reviewable change; until it is complete,
@@ -170,8 +163,9 @@ subjects.
 
 ## 6. Four traps, each of which has actually happened
 
-**Editing `logical_schemas.json`.** The next `build.py` overwrites it. `verify.py`'s candidate-state
-comparison catches that overwrite, which is why the comparison exists.
+**Editing `logical_schemas.json` or an extension's `.json`.** The next `build.py` overwrites it
+from its TOML source. `verify.py`'s candidate-state comparison catches that overwrite, which is why
+the comparison exists.
 
 **A stale vendored schema.** `registry.schema.json` and `manifest.schema.json` are copied into two
 other packages because a wheel cannot read a file from another distribution. A stale copy has broken
@@ -207,7 +201,7 @@ that complete result. `check.py` separately adds checks true only of this reposi
 `facts.py` counts the descriptor inventory and those repository checks:
 
 <!-- BEGIN facts: checks -->
-26 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 44 further checks over the whole set
+26 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 40 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |
@@ -235,6 +229,6 @@ editing a number, check whether something can compute it instead:
 every number that was hand-maintained here went stale, several of them twice in one day.
 
 `registry/tables.md` is the readable registry: every table, every column, its type, presence,
-role, unit, and the revision that introduced it. Read Part 02 and the registry to see what holds
+what it declares about its values, and its description. Read Part 02 and the registry to see what holds
 **now**; read the accepted revisions to understand why. `registry/README.md` carries the counts,
 generated.

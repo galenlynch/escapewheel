@@ -10,7 +10,7 @@ locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/cor
 locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table" },
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table" },
-  { path = "registry/rules.json", pointer = "/rules/core.array_assets/0/id", equals = "core.array_assets.one_scaling_level" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table/rules/0/id", equals = "core.array_assets.one_scaling_level" },
 ]
 
 [target."R20 §2.3"]
@@ -84,7 +84,7 @@ locations = [
 ]
 
 [target."R69 §2.3"]
-locations = [{ path = "registry/rules.json", pointer = "/rules/core.media_frames/1/id", equals = "core.media_frames.pts_increases_with_frame_index" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.media_frames/table/rules/1/id", equals = "core.media_frames.pts_increases_with_frame_index" }]
 
 [target."R76 §2.3"]
 locations = [{ path = "registry/registry.schema.json", pointer = "/$defs/column/properties/identity" }]
@@ -139,14 +139,14 @@ locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/cor
 
 [target."R38 §2.4"]
 locations = [
-  { path = "registry/rules.json", pointer = "/rules/core.event_streams/0/id", equals = "core.event_streams.observation_declared" },
-  { path = "registry/rules.json", pointer = "/rules/core.units/3/id", equals = "core.units.observation_declared" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.event_streams/table/rules/0/id", equals = "core.event_streams.observation_declared" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.units/table/rules/3/id", equals = "core.units.observation_declared" },
 ]
 
 [target."R38 §2.5"]
 locations = [
-  { path = "registry/rules.json", pointer = "/rules/core.events/0/id", equals = "core.events.within_observation" },
-  { path = "registry/rules.json", pointer = "/rules/core.spike_events/1/id", equals = "core.spike_events.within_observation" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.events/table/rules/0/id", equals = "core.events.within_observation" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.spike_events/table/rules/1/id", equals = "core.spike_events.within_observation" },
 ]
 
 [target."R49 §2.1"]
@@ -195,10 +195,10 @@ locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/cor
 
 [target."R24 §3.1"]
 locations = [
-  { path = "registry/rules.json", pointer = "/rules/core.clock_observation_intervals/0/use", equals = "interval" },
-  { path = "registry/rules.json", pointer = "/rules/core.event_stream_observation_intervals/0/use", equals = "interval" },
-  { path = "registry/rules.json", pointer = "/rules/core.intervals/0/use", equals = "interval" },
-  { path = "registry/rules.json", pointer = "/rules/core.unit_observation_intervals/0/use", equals = "interval" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clock_observation_intervals/table/rules" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.event_stream_observation_intervals/table/rules" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table/rules" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_observation_intervals/table/rules" },
 ]
 
 [target."R25 §2.1"]
@@ -222,10 +222,10 @@ locations = [
 
 [target."R47 §2.3"]
 locations = [
-  { path = "registry/rules.json", pointer = "/rules/core.clock_observation_intervals/0/use", equals = "interval" },
-  { path = "registry/rules.json", pointer = "/rules/core.event_stream_observation_intervals/0/use", equals = "interval" },
-  { path = "registry/rules.json", pointer = "/rules/core.intervals/0/use", equals = "interval" },
-  { path = "registry/rules.json", pointer = "/rules/core.unit_observation_intervals/0/use", equals = "interval" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clock_observation_intervals/table/rules" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.event_stream_observation_intervals/table/rules" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table/rules" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_observation_intervals/table/rules" },
 ]
 
 [target."R47 §2.4"]
@@ -331,16 +331,16 @@ locations = [
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.units/table" }]
 
 [target."R82 §2.1"]
-locations = [{ path = "registry/rules.json", pointer = "/rules/core.processing_runs/4/id", equals = "core.processing_runs.undeclared_currency" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table/rules/4/id", equals = "core.processing_runs.undeclared_currency" }]
 
 [target."R82 §2.2"]
-locations = [{ path = "registry/rules.json", pointer = "/rules/core.processing_runs/5/id", equals = "core.processing_runs.scope_undeclared" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table/rules/5/id", equals = "core.processing_runs.scope_undeclared" }]
 
 [target."R83 §2.1"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_run_channels/table" }]
 
 [target."R83 §2.4"]
-locations = [{ path = "registry/rules.json", pointer = "/rules/core.unit_electrodes/2/id", equals = "core.unit_electrodes.electrode_is_a_run_channel" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.unit_electrodes/table/rules/2/id", equals = "core.unit_electrodes.electrode_is_a_run_channel" }]
 
 [target."R85 §2.1"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.devices/table" }]
@@ -348,7 +348,7 @@ locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/cor
 [target."R89 §2.1"]
 locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.calibrations/table" },
-  { path = "registry/rules.json", pointer = "/rules/core.calibrations" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.calibrations/table/rules" },
 ]
 
 [target."R89 §2.2"]
@@ -410,19 +410,19 @@ locations = [
 [target."R99 §3.1"]
 locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.sessions/table" },
-  { path = "registry/rules.json", pointer = "/rules/core.sessions/3/id", equals = "core.sessions.alignment_bound_at_least_default" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.sessions/table/rules/3/id", equals = "core.sessions.alignment_bound_at_least_default" },
 ]
 
 [target."R99 §3.2"]
 locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.clocks/table" },
-  { path = "registry/rules.json", pointer = "/rules/core.clocks/10/id", equals = "core.clocks.withheld_needs_anchors" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clocks/table/rules/10/id", equals = "core.clocks.withheld_needs_anchors" },
 ]
 
 [target."R99 §3.3"]
 locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.clock_phase_steps/table" },
-  { path = "registry/rules.json", pointer = "/rules/core.clock_phase_steps/0/id", equals = "core.clock_phase_steps.step_needs_parent" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.clock_phase_steps/table/rules/0/id", equals = "core.clock_phase_steps.step_needs_parent" },
 ]
 
 [target."R100 §2.1"]
@@ -433,8 +433,8 @@ locations = [
 
 [target."R100 §2.2"]
 locations = [
-  { path = "registry/rules.json", pointer = "/rules/core.array_dimensions/7/id", equals = "core.array_dimensions.coordinate_pair_complete" },
-  { path = "registry/rules.json", pointer = "/rules/analysis.array_dimensions/0/id", equals = "analysis.array_dimensions.coordinate_pair_complete" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/rules/7/id", equals = "core.array_dimensions.coordinate_pair_complete" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/rules/0/id", equals = "analysis.array_dimensions.coordinate_pair_complete" },
 ]
 
 [target."R100 §2.4"]
@@ -527,4 +527,4 @@ locations = [
 ]
 
 [target."R139 §3.5"]
-locations = [{ path = "registry/rules.json", pointer = "/rules/core.clocks/11/id", equals = "core.clocks.transform_slope_positive" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.clocks/table/rules/11/id", equals = "core.clocks.transform_slope_positive" }]

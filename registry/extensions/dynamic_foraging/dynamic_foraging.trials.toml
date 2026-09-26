@@ -1,0 +1,240 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "trial_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Session ID."
+
+[[columns]]
+name = "interval_kind"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know."
+
+[[columns]]
+name = "trial_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "carried"
+description = "The trial, and the interval it occupies in core."
+
+[[columns]]
+name = "block_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+description = "The block this trial falls in. Blocks are derived from where the reward probabilities change, since the source records no boundary."
+
+[[columns]]
+name = "animal_response"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "closed"
+enum = ["left", "no_response", "right"]
+description = "Which way the animal responded. The source emits 0, 1 and 2; the writer decodes them, because a code whose key is not in the packet leaves no rule, query or reader able to tell one response from another."
+
+[[columns]]
+name = "rewarded_history_left"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether the left port paid out."
+
+[[columns]]
+name = "rewarded_history_right"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether the right port paid out."
+
+[[columns]]
+name = "bait_left"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether reward was baited on the left."
+
+[[columns]]
+name = "bait_right"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether reward was baited on the right."
+
+[[columns]]
+name = "reward_probability_left"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "Left reward probability in force. Constant within a block, which is what blocks are derived from."
+
+[[columns]]
+name = "reward_probability_right"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "Right reward probability in force."
+
+[[columns]]
+name = "reward_random_number_left"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "The draw the left outcome was decided by, so a reanalysis can reproduce it."
+
+[[columns]]
+name = "reward_random_number_right"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "1"
+description = "The draw the right outcome was decided by."
+
+[[columns]]
+name = "delay_start_tick"
+type = "int64"
+presence = "nullable"
+role = "coordinate"
+clock_from = "core.intervals.clock_id"
+description = "When the delay began."
+
+[[columns]]
+name = "go_cue_start_tick"
+type = "int64"
+presence = "nullable"
+role = "coordinate"
+clock_from = "core.intervals.clock_id"
+description = "When the go cue played."
+
+[[columns]]
+name = "reward_outcome_tick"
+type = "int64"
+presence = "nullable"
+role = "coordinate"
+clock_from = "core.intervals.clock_id"
+description = "When the outcome was delivered or withheld."
+
+[[columns]]
+name = "delay_duration"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "The delay this trial drew. Constant where the session's delay_beta is zero."
+
+[[columns]]
+name = "iti_duration"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "s"
+description = "The inter-trial interval this trial drew."
+
+[[columns]]
+name = "auto_water_left"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether the left port delivered unearned water."
+
+[[columns]]
+name = "auto_water_right"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether the right port delivered unearned water."
+
+[[columns]]
+name = "lickspout_position_x"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "um"
+description = "Lickspout position."
+
+[[columns]]
+name = "lickspout_position_y"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "um"
+description = "Lickspout position."
+
+[[columns]]
+name = "lickspout_position_z"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "um"
+description = "Lickspout position."
+
+[[references]]
+columns = ["session_id", "interval_kind", "trial_id"]
+resource = "core.intervals"
+resource_columns = ["session_id", "interval_kind", "interval_id"]
+
+[[references]]
+columns = ["session_id", "block_id"]
+resource = "dynamic_foraging.blocks"
+resource_columns = ["session_id", "block_id"]
+
+[[rules]]
+id = "dynamic_foraging.trials.the_cue_follows_the_delay"
+level = "error"
+message = "the go cue precedes the delay it is supposed to follow"
+sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE delay_start_tick IS NOT NULL AND go_cue_start_tick IS NOT NULL AND go_cue_start_tick < delay_start_tick"
+
+[[rules]]
+id = "dynamic_foraging.trials.the_outcome_follows_the_cue"
+level = "error"
+message = "the outcome is recorded before the go cue"
+sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE reward_outcome_tick IS NOT NULL AND go_cue_start_tick IS NOT NULL AND reward_outcome_tick < go_cue_start_tick"
+
+[[rules]]
+id = "dynamic_foraging.trials.a_probability_is_a_probability"
+level = "error"
+message = "a reward probability falls outside 0-1"
+sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE NOT reward_probability_left BETWEEN 0 AND 1 OR NOT reward_probability_right BETWEEN 0 AND 1"
+
+[[rules]]
+id = "dynamic_foraging.trials.a_draw_is_a_draw"
+level = "error"
+message = "a reward random number falls outside 0-1, so the outcome cannot be reproduced"
+sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE NOT reward_random_number_left BETWEEN 0 AND 1 OR NOT reward_random_number_right BETWEEN 0 AND 1"
+
+[[rules]]
+id = "dynamic_foraging.trials.a_reward_needs_a_bait"
+level = "error"
+message = "a port paid out where nothing was baited"
+sql = "SELECT session_id, trial_id FROM dynamic_foraging.trials WHERE (rewarded_history_left AND NOT bait_left) OR (rewarded_history_right AND NOT bait_right)"
+
+[[rules]]
+id = "dynamic_foraging.trials.a_block_holds_one_probability_pair"
+level = "error"
+message = "a block's trials disagree about the reward probabilities, so the block is not one"
+sql = "SELECT session_id, block_id FROM (SELECT session_id, block_id, COUNT(DISTINCT reward_probability_left) AS l, COUNT(DISTINCT reward_probability_right) AS r FROM dynamic_foraging.trials WHERE block_id IS NOT NULL GROUP BY session_id, block_id) AS derived_1 WHERE l > 1 OR r > 1"

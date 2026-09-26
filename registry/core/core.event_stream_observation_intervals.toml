@@ -1,0 +1,48 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["event_stream_id", "start_tick"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "event_stream_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.event_streams"
+description = "The stream being observed."
+
+[[columns]]
+name = "start_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "core.event_streams.clock_id"
+description = "First observed tick, on the stream's clock."
+
+[[columns]]
+name = "stop_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+clock_from = "core.event_streams.clock_id"
+description = "Last observed tick, on the stream's clock."
+
+[[rules]]
+use = "interval"
+start = "start_tick"
+stop = "stop_tick"
+partition_of = ["event_stream_id"]
+overlap_op = "<="
+overlap_message = "observation windows overlap, which would double-count observed time"

@@ -1,0 +1,6 @@
+content_class = "core"
+kind = "dense_array"
+instances = { mode = "catalog", catalog_resource = "core.array_assets", resource_id_column = "resource_id" }
+requires = []
+lineage = "optional"
+array = { axes_resource = "core.array_dimensions" }

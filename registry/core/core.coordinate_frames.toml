@@ -1,0 +1,47 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "coordinate_frame"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session."
+
+[[columns]]
+name = "coordinate_frame"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "The session's own name for this space."
+
+[[columns]]
+name = "atlas"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "The published atlas this space is, where it is one. Null where no source names it; a writer MUST NOT read one out of the frame's name."
+
+[[columns]]
+name = "atlas_version"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "That atlas's version, spelled as the atlas spells it -- `CCFv3`. Two packets naming one atlas at different versions are in different spaces."
+
+[[columns]]
+name = "description"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What the frame is, for a reader without the atlas."

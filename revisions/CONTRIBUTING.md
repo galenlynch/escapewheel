@@ -445,7 +445,7 @@ incorporation review still reads both.
 Apply the decision to every affected owner identified in the impact inventory:
 
 - numbered prose for meaning, processing semantics, actor obligations, and conformance;
-- registry build sources and rule sources for exact logical declarations;
+- the registry's TOML sources for exact logical declarations and their rules;
 - registry or packet meta-schemas for exact document structure;
 - extension registries for extension declarations; and
 - physical-profile or packet-manifest parts for profile-specific storage and manifest behavior.

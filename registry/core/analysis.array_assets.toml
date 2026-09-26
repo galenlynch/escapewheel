@@ -1,0 +1,126 @@
+content_class = "analysis"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "required"
+primary_key = ["array_asset_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "array_asset_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable array asset ID."
+
+[[columns]]
+name = "resource_id"
+type = "string"
+presence = "required"
+role = "identifier"
+identity = "carried"
+vocabulary = "free"
+description = "The packet resource ID of the catalogued payload."
+
+[[columns]]
+name = "array_asset_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "What `array_asset_id` stands for: the identifier a source or an earlier packet used for this array asset. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "semantic_type"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "What quantity the asset holds, where the row's declared facts do not already say. Null is the ordinary case: a writer MUST NOT fill it where the device, the unit, the channel map or the dimensions carry the answer. An unrecognised value is a label carrying no contract (Part 01 §3.17)."
+
+[[columns]]
+name = "band"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+reserved_values = ["wideband", "ap", "lfp"]
+description = "Which band of a sampled signal this array holds: `wideband` unfiltered, `ap` the action-potential band, `lfp` the local field potential band, with Part 02 §9.3's meanings. A conventional shorthand for a filter the packet does not record. Null where the signal was not split."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "Clock for time axis."
+
+[[columns]]
+name = "device_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.devices"
+description = "The device that produced this array."
+
+[[columns]]
+name = "processing_run_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.processing_runs"
+description = "The run that produced this array. Null means it was acquired rather than computed."
+
+[[columns]]
+name = "sample_rate_hz"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit = "Hz"
+description = "Sample rate if regularly sampled."
+
+[[columns]]
+name = "unit"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "UCUM", uri = "https://ucum.org/ucum" }]
+description = "The physical unit of the array's values, as a UCUM code."
+
+[[columns]]
+name = "conversion"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "Multiply stored values by this before offset."
+
+[[columns]]
+name = "offset"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+unit_from = "unit"
+description = "Add after conversion."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."

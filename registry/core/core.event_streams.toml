@@ -1,0 +1,89 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["event_stream_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "event_stream_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable ID."
+
+[[columns]]
+name = "event_stream_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "What `event_stream_id` stands for: the identifier a source or an earlier packet used for this event stream. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "event_type"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "What kind of event this stream emits. A stream emits one kind, so a source emitting several on one channel is written as several streams."
+
+[[columns]]
+name = "detail_kind"
+type = "string"
+presence = "nullable"
+role = "discriminator"
+resolves = "optional"
+discriminates_via = "core.events.stream_id"
+description = "A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (Part 02 §8.3). Resolved against `core.events`' key by Part 02 §8.3's shared key, through the reference `discriminates_via` names."
+
+[[columns]]
+name = "device_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.devices"
+description = "The device that produced it, where one is identified."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.clocks"
+description = "The clock its events are timed on."
+
+[[columns]]
+name = "processing_run_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.processing_runs"
+description = "The run that produced it. Null means it came off the device as recorded. The manifest records outputs per resource and cannot distinguish streams within one table."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "core.event_streams.observation_declared"
+level = "info"
+message = "streams carry no observation intervals and their clock declares none, so no rate over them has a denominator"
+sql = "SELECT s.event_stream_id, s.event_stream_name FROM core.event_streams AS s WHERE NOT EXISTS(SELECT 1 FROM core.event_stream_observation_intervals AS o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS(SELECT 1 FROM core.clock_observation_intervals AS c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
+advisory = true

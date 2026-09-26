@@ -1,0 +1,65 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "unit_id", "coordinate_frame", "coordinate_basis", "axis_index"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "The thing positioned."
+
+[[columns]]
+name = "coordinate_frame"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "The frame, naming a `core.coordinate_frames` row of this session; with `coordinate_basis` it completes the parent's key."
+
+[[columns]]
+name = "coordinate_basis"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "What the coordinate asserts (Part 01 §3.8)."
+
+[[columns]]
+name = "axis_index"
+type = "int64"
+presence = "required"
+role = "structural_index"
+description = "Which of the frame's axes this value is on."
+
+[[columns]]
+name = "axis_value"
+type = "float64"
+presence = "required"
+role = "data"
+finite = true
+unit_from = "core.coordinate_frame_axes.unit"
+description = "The value, in the axis's unit."
+
+[[references]]
+columns = ["session_id", "unit_id", "coordinate_frame", "coordinate_basis"]
+resource = "core.unit_coordinates"
+resource_columns = ["session_id", "unit_id", "coordinate_frame", "coordinate_basis"]
+
+[[references]]
+columns = ["session_id", "coordinate_frame", "axis_index"]
+resource = "core.coordinate_frame_axes"
+resource_columns = ["session_id", "coordinate_frame", "axis_index"]

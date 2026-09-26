@@ -1,0 +1,57 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "unit_id", "synchrony_size"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session Id."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.units"
+description = "Unit Id."
+
+[[columns]]
+name = "synchrony_size"
+type = "int32"
+presence = "required"
+role = "data"
+description = "How many units must fire together to count, which the sorter computes over a list of sizes -- 2, 4 and 8 in every session measured."
+
+[[columns]]
+name = "sync_spike"
+type = "float64"
+presence = "nullable"
+role = "data"
+finite = true
+description = "Fraction of the unit's spikes that fall in a synchronous event of this size."
+
+[[rules]]
+id = "aind_unit_qc.synchrony.a_size_is_at_least_two"
+level = "error"
+message = "a synchrony size below two describes a unit firing with itself"
+sql = "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc.synchrony WHERE synchrony_size < 2"
+
+[[rules]]
+id = "aind_unit_qc.synchrony.a_fraction_is_a_fraction"
+level = "error"
+message = "a synchrony fraction falls outside 0-1"
+sql = "SELECT session_id, unit_id, synchrony_size FROM aind_unit_qc.synchrony WHERE sync_spike IS NOT NULL AND (sync_spike < 0 OR sync_spike > 1)"
+
+[[rules]]
+id = "aind_unit_qc.synchrony.larger_is_rarer"
+level = "error"
+message = "a larger synchrony size is reported as more common than a smaller one, which its nesting forbids"
+sql = "SELECT a.session_id, a.unit_id, a.synchrony_size, b.synchrony_size AS larger FROM aind_unit_qc.synchrony AS a JOIN aind_unit_qc.synchrony AS b ON a.unit_id = b.unit_id AND a.synchrony_size < b.synchrony_size WHERE a.sync_spike IS NOT NULL AND b.sync_spike IS NOT NULL AND b.sync_spike > a.sync_spike"

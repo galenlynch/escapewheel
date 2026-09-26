@@ -1,0 +1,82 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "activity_type", "scope_kind", "scope"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "activity_type"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "Which kind of output this preference is about, in the vocabulary `core.processing_runs.activity_type` uses (Part 02 §9.3)."
+
+[[columns]]
+name = "scope_kind"
+type = "string"
+presence = "required"
+role = "discriminator"
+resolves = "optional"
+discriminates = "scope"
+description = "The resource whose primary key `scope` holds, as a dotted resource ID."
+
+[[columns]]
+name = "scope"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide."
+
+[[columns]]
+name = "processing_run_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.processing_runs"
+description = "The preferred run."
+
+[[columns]]
+name = "chosen_at"
+type = "timestamp"
+presence = "nullable"
+role = "data"
+description = "When the choice was made."
+
+[[columns]]
+name = "reason"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Why, in one line."
+
+[[rules]]
+id = "core.preferred_runs.activity_matches_run"
+level = "error"
+message = "a preference names a run whose activity_type differs from the preference's"
+sql = "SELECT p.session_id, p.activity_type AS preferred_activity_type, p.scope, r.activity_type AS run_activity_type FROM core.preferred_runs AS p JOIN core.processing_runs AS r USING (processing_run_id) WHERE r.activity_type IS DISTINCT FROM p.activity_type"
+
+[[rules]]
+id = "core.preferred_runs.run_in_session"
+level = "error"
+message = "a preference names a run belonging to another session"
+sql = "SELECT p.session_id AS preferred_session_id, p.processing_run_id, r.session_id AS run_session_id FROM core.preferred_runs AS p JOIN core.processing_runs AS r USING (processing_run_id) WHERE r.session_id IS NOT NULL AND r.session_id IS DISTINCT FROM p.session_id"
+
+[[rules]]
+id = "core.preferred_runs.not_superseded"
+level = "warning"
+message = "the preferred run is superseded by another run"
+sql = "SELECT p.session_id, p.activity_type, p.scope, p.processing_run_id FROM core.preferred_runs AS p WHERE EXISTS(SELECT 1 FROM core.processing_runs AS r WHERE r.supersedes_run_id = p.processing_run_id)"

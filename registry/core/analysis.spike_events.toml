@@ -1,0 +1,61 @@
+content_class = "analysis"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "required"
+primary_key = ["session_id", "unit_id", "t_tick"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.units"
+description = "Unit ID."
+
+[[columns]]
+name = "t_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+description = "Spike tick on clock_id, mapped through core.clock_anchors."
+
+[[columns]]
+name = "clock_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+determined_by = ["session_id"]
+references = "core.clocks"
+description = "The clock these ticks are on, normally the session's reference."
+
+[[columns]]
+name = "time_bucket_tick"
+type = "int64"
+presence = "required"
+role = "coordinate"
+determined_by = ["t_tick"]
+description = "First tick of the bucket this spike falls in, on clock_id."
+
+[[rules]]
+id = "analysis.spike_events.bucket_contains_spike"
+level = "error"
+message = "a spike precedes the start of the bucket it is labelled with"
+sql = "SELECT session_id, unit_id, t_tick, time_bucket_tick FROM analysis.spike_events WHERE time_bucket_tick > t_tick"
+
+[[rules]]
+id = "analysis.spike_events.buckets_partition_time"
+level = "error"
+message = "buckets overlap in tick range, so the layout they declare is not a partition"
+sql = "SELECT a.session_id, a.clock_id, a.time_bucket_tick AS earlier_bucket, a.hi, b.time_bucket_tick AS later_bucket, b.lo FROM (SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM analysis.spike_events GROUP BY session_id, clock_id, time_bucket_tick) AS a JOIN (SELECT session_id, clock_id, time_bucket_tick, MIN(t_tick) AS lo, MAX(t_tick) AS hi FROM analysis.spike_events GROUP BY session_id, clock_id, time_bucket_tick) AS b ON a.session_id = b.session_id AND a.clock_id = b.clock_id AND b.time_bucket_tick > a.time_bucket_tick WHERE b.lo <= a.hi"

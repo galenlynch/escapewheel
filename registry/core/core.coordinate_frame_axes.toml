@@ -1,0 +1,66 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "coordinate_frame", "axis_index"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session."
+
+[[columns]]
+name = "coordinate_frame"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "The frame these axes belong to."
+
+[[columns]]
+name = "axis_index"
+type = "int64"
+presence = "required"
+role = "structural_index"
+description = "Which axis, 0-based (Part 02 §8.1.1)."
+
+[[columns]]
+name = "axis_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "Whatever the source called the field these values came from, verbatim (Part 02 §9.3). A writer MUST NOT normalise it or replace it with what the quantity is conventionally taken to be."
+
+[[columns]]
+name = "axis_direction"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Which way the values increase -- `right`, `anterior`, `superior`. Null where the source does not state it, which no inference may fill."
+
+[[columns]]
+name = "unit"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "UCUM", uri = "https://ucum.org/ucum" }]
+description = "The axis's unit, as a UCUM code (Part 02 §8.4)."
+
+[[references]]
+columns = ["session_id", "coordinate_frame"]
+resource = "core.coordinate_frames"
+resource_columns = ["session_id", "coordinate_frame"]
+
+[[rules]]
+id = "core.coordinate_frame_axes.axis_names_distinct"
+level = "error"
+message = "two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told"
+sql = "SELECT session_id, coordinate_frame, axis_name, COUNT(*) AS axes FROM core.coordinate_frame_axes GROUP BY session_id, coordinate_frame, axis_name HAVING COUNT(*) > 1"

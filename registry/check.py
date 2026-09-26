@@ -156,83 +156,24 @@ check(
     ],
 )
 
-# rules.json is hand-authored and merged at build time, so it can drift from the
-# structure it annotates. build.py rejects unknown tables; these catch the rest.
-RULES = json.loads((HERE / "rules.json").read_text())["rules"]
-check("every rules.json table exists in the registry", sorted(set(RULES) - set(T)))
-
-# Template invocations carry no id until build.py expands them (R24 §3). Expand through the
-# same function rather than a second copy, so this cannot drift from what the build does.
+# A committed document an edit bypassed its source to reach, or a source edited without
+# rebuilding, is caught here as well as by `verify.py`'s regeneration.
 sys.path.insert(0, str(HERE))
-from build import expand, merged_name_target
+import assemble
+from canonical import dumps
 
-_name_targets = {
-    "analysis.array_assets": "array_asset_name",
-    "core.array_assets": "array_asset_name",
-    "core.clocks": "clock_name",
-    "core.devices": "device_name",
-    "core.event_streams": "event_stream_name",
-    "core.media_assets": "media_asset_name",
-    "core.probes": "probe_name",
-}
 check(
-    "name-column selector resolves the seven targets",
+    "every registry document is what its source assembles to",
     [
-        f"{resource}: {merged_name_target(resource, spec | {'columns': [*spec['columns'], {'name': 'name'}]})}"
-        for resource, spec in T.items()
-        if resource in _name_targets
-        and merged_name_target(
-            resource, spec | {"columns": [*spec["columns"], {"name": "name"}]}
-        )
-        != _name_targets[resource]
+        str(out.relative_to(HERE))
+        for directory, out in assemble.sources().items()
+        if dumps(assemble.assemble(directory)) != out.read_text()
     ]
-    + sorted(set(_name_targets) - set(T)),
-)
-
-
-def _selector_rejects(spec):
-    """Return whether a malformed literal-name declaration is rejected."""
-    try:
-        merged_name_target("test.resource", spec)
-    except ValueError:
-        return True
-    return False
-
-
-_selector_base = {
-    "columns": [
-        {"name": "thing_id", "role": "identifier", "identity": "assigned"},
-        {"name": "thing_name", "role": "data"},
-        {"name": "name", "role": "data"},
-    ],
-    "primary_key": ["thing_id"],
-    "references": [],
-}
-check(
-    "name-column selector rejects missing or ambiguous inputs",
-    [
-        label
-        for label, malformed in {
-            "missing identifier": _selector_base | {"primary_key": []},
-            "ambiguous identifier": _selector_base
-            | {
-                "columns": _selector_base["columns"]
-                + [
-                    {
-                        "name": "other_id",
-                        "role": "identifier",
-                        "identity": "assigned",
-                    }
-                ],
-                "primary_key": ["thing_id", "other_id"],
-            },
-            "missing target": _selector_base
-            | {"columns": [_selector_base["columns"][0], _selector_base["columns"][2]]},
-            "ambiguous target": _selector_base
-            | {"columns": _selector_base["columns"] + [_selector_base["columns"][1]]},
-        }.items()
-        if not _selector_rejects(malformed)
-    ],
+    + sorted(
+        str(path.relative_to(HERE))
+        for path in (HERE / "extensions").glob("*.json")
+        if path not in assemble.sources().values()
+    ),
 )
 
 _history_cleanup = subprocess.run(
@@ -249,21 +190,6 @@ check(
     []
     if _history_cleanup.returncode == 0
     else (_history_cleanup.stdout + _history_cleanup.stderr).splitlines(),
-)
-
-authored_rules = []
-for resource, rs in RULES.items():
-    for r in rs:
-        if template := r.get("use"):
-            authored_rules += expand(template, resource, r, T[resource]["primary_key"])
-        else:
-            authored_rules.append(r)
-
-merged = {r["id"] for t_ in T.values() for r in t_["rules"]}
-authored = {r["id"] for r in authored_rules}
-check("every authored rule reached the registry", sorted(authored - merged))
-check(
-    "the registry carries no rule rules.json does not author", sorted(merged - authored)
 )
 # Column order is a convention of this repository's registries rather than a conformance
 # requirement (CONTRIBUTING.md §4), so nothing but this holds it.

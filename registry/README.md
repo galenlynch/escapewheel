@@ -57,34 +57,36 @@ packet three times — R48, R53 and R56 — each time surfacing as a hundred fin
 rather than one about the copy, which is why it is now a build output and a check rather than
 a thing to remember.
 
-## Provenance of this file
+## Where the registry comes from
 
-`logical_schemas.json` is **generated. Do not edit it.** Its inputs are maintained separately:
+`logical_schemas.json` and the extension documents are **generated. Do not edit them.**
+`assemble.py` writes each from a directory of TOML:
 
 ```
-nwb_lake_poc_docs/02_*.md ──parse02.py──┐
-registry/build.py (reviewed transformations) ─┼──> logical_schemas.json
-rules.json (hand-authored) ──────────────────┘
+core/registry.toml + core/<resource_id>.toml   ──assemble.py──> logical_schemas.json
+extensions/<id>/registry.toml + <resource_id>.toml ─assemble.py──> extensions/<id>.json
 ```
 
-**Structure** — columns, keys, references, and ordering — is derived. Historical labels in
-`build.py` preserve why a transformation exists; current conformance comes from the incorporated
-registry and its Part 02 meanings. Contract changes use the specification-change lifecycle and
-then rebuild the generated document.
+`registry.toml` holds the document's own fields and each other file declares one resource, in the
+published format's keys. A file differs from the document only in spelling, so reading one needs
+nothing beyond Part 02: a table's fields sit at the top of its file rather than under `table`, a
+single-column reference is written on its column, and a rule may invoke the `interval` template,
+which `assemble.py` expands into plain SQL. `canonical.py` fixes the document's key and reference
+order, so how a file orders them changes nothing, and `check.py` refuses a table whose
+`session_id` does not lead or whose `metadata` does not close it.
 
-**Tier 2 rules** are hand-authored in `rules.json`, because nothing derives a check the
-structure cannot imply. Keeping them out of the generated file means the registry can be
-rebuilt without losing hand-written work, and a diff shows at a glance whether a change was
-to a schema or to a rule.
+Why a declaration is as it is lives in the accepted revisions and in Git, not in the source:
+`revisions/registry-targets.toml` locates each accepted clause in the generated document. Before
+the source existed, `build.py` generated the core registry by replaying the accepted revisions
+over the frozen Part 02, and `git show 0c8fa3e:registry/build.py` recovers that replay.
 
 From the monorepo root, `uv run --project escapewheel-writer python verify.py --quick` rebuilds
 the registry and runs its complete checks. Use the same command without `--quick` for package
 tests as well.
 
-`build.py` rejects a `rules.json` entry naming a table the registry does not define;
-`check.py` verifies the merge round-trips. The rule-language conformance suite statically checks
-every Tier 2 rule against the selected profile, binds it against qualified relations built from
-the registry, and exercises typed semantic vectors.
+`check.py` verifies that each document is what its source assembles to. The rule-language
+conformance suite statically checks every Tier 2 rule against the selected profile, binds it
+against qualified relations built from the registry, and exercises typed semantic vectors.
 
 `render.py` writes `tables.md` and fills this file's generated regions. Every count below is
 one of those: a number stated in prose is a number that goes stale, which this file
@@ -95,7 +97,7 @@ demonstrated by claiming 33 tables and 51 rules against a registry holding 34 an
 `check.py` requires the core registry and every repository extension example to return the one
 complete result defined by Part 02 §9.4. It then checks repository authoring conventions and
 generation invariants that are intentionally not packet-conformance rules, including the table
-ledger, source-rule merge, naming exceptions, generated copies, and current development
+ledger, source-to-document agreement, column order, naming exceptions, generated copies, and current development
 identities. Tier 2 rules also pass the Part 11 static contract and execute against empty typed
 relations; semantic vectors separately test their data behavior.
 
@@ -128,7 +130,8 @@ it names a resource the packet declares (R55 §2.4).
 
 ## Tier 2 rules
 
-Authored in `rules.json` and merged inline into each table's `rules` array. The whole registry
+Authored as `[[rules]]` entries in each table's source file and carried inline in its `rules`
+array. The whole registry
 selects `escapewheel-rule-sql-v0.1`; individual rules cannot override it. Inline rules keep a
 table's whole logical contract readable in one declaration.
 

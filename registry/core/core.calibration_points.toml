@@ -1,0 +1,49 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["calibration_id", "point_index"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "calibration_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.calibrations"
+description = "The calibration this point belongs to."
+
+[[columns]]
+name = "point_index"
+type = "int64"
+presence = "required"
+role = "structural_index"
+description = "0-based position in the curve's own order. The key is not `input_value` even though the inputs are distinct: an equality join on a float64 is not safe, so the key uses an explicit sequence position."
+
+[[columns]]
+name = "input_value"
+type = "float64"
+presence = "required"
+role = "data"
+finite = true
+unit_from = "core.calibrations.input_unit"
+description = "The setting the point was measured at."
+
+[[columns]]
+name = "output_value"
+type = "float64"
+presence = "required"
+role = "data"
+finite = true
+unit_from = "core.calibrations.output_unit"
+description = "What the instrument then delivered."

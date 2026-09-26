@@ -1,0 +1,70 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id", "unit_id", "coordinate_frame", "coordinate_basis"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "unit_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.units"
+description = "Unit ID."
+
+[[columns]]
+name = "coordinate_frame"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "The space these coordinates are in, naming a `core.coordinate_frames` row of this session, which declares that space's axes and the published atlas it is."
+
+[[columns]]
+name = "coordinate_basis"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "open"
+description = "What the coordinate asserts: `planned` where the probe was meant to go, `measured` where it was, `nominal` where it is by construction and nothing aimed or observed it (Part 01 §3.8). A consumer that does not recognise a basis MUST NOT treat it as measured (Part 01 §3.8)."
+
+[[columns]]
+name = "region_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "carried"
+description = "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names."
+
+[[columns]]
+name = "region_label"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "That structure's short name, so a consumer without the atlas can read the annotation."
+
+[[columns]]
+name = "processing_run_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = "core.processing_runs"
+description = "The run that produced this coordinate."
+
+[[references]]
+columns = ["session_id", "coordinate_frame"]
+resource = "core.coordinate_frames"
+resource_columns = ["session_id", "coordinate_frame"]

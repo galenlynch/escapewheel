@@ -47,11 +47,6 @@ REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
 #: its exemption with it rather than leaving a permanent excuse behind.
 EXEMPT: tuple[tuple[str, str, str], ...] = (
     (
-        "registry/",
-        r"^\s*# ----",
-        "a block marker saying which revision's block follows; both files are organised by revision",
-    ),
-    (
         "revisions/ledger.py",
         r".",
         "the ledger keys on revision clauses, as `revisions/CONTRIBUTING.md#ew-current-owner-ledger` defines",
@@ -86,21 +81,6 @@ REASONING: tuple[tuple[str, str, str], ...] = (
         "the revision's own terminal-anchor test, which is the measurement rather than the rule",
     ),
     (
-        "registry/build.py",
-        "R67 §2.1",
-        "what that revision gave the device chain, and where it stopped",
-    ),
-    (
-        "registry/build.py",
-        "R65 §2.1",
-        "what that revision gave the array tables, and what it skipped",
-    ),
-    (
-        "registry/build.py",
-        "R81 §2.4",
-        "which columns the old override named, which is why the current one has five",
-    ),
-    (
         "escapewheel-reader/src/escapewheel_reader/ordering.py",
         "R81 §2.4",
         "what narrowed the override, beside the citation of the override itself",
@@ -124,11 +104,6 @@ REASONING: tuple[tuple[str, str, str], ...] = (
         "fixtures/corpus.py",
         "R82 §2",
         "that the two rules changed level, which is why no advisory pass is needed here",
-    ),
-    (
-        "registry/build.py",
-        "R54 §2",
-        "what that revision gave `core.intervals`, and what had nowhere to go before it",
     ),
 )
 

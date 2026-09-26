@@ -1,0 +1,74 @@
+content_class = "extension"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["session_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "dataset_version"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "Schema version the session's task logic declared."
+
+[[columns]]
+name = "data_contract_version"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "Version of the data-contract library that read the session."
+
+[[columns]]
+name = "packaging_version"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "Version of the packaging library that produced these tables."
+
+[[columns]]
+name = "curriculum_enabled"
+type = "bool"
+presence = "nullable"
+role = "data"
+description = "Whether the subject was on-curriculum. Null where the session records no trainer state, which is not an error: curriculum tracking is optional."
+
+[[columns]]
+name = "curriculum_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Curriculum the trainer state named."
+
+[[columns]]
+name = "curriculum_stage_name"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Stage the trainer state named."
+
+[[rules]]
+id = "vr_foraging.sessions.a_stage_needs_a_curriculum"
+level = "error"
+message = "a curriculum stage is named with no curriculum to place it in"
+sql = "SELECT session_id FROM vr_foraging.sessions WHERE curriculum_stage_name IS NOT NULL AND curriculum_name IS NULL"
+
+[[rules]]
+id = "vr_foraging.sessions.on_curriculum_means_a_curriculum"
+level = "error"
+message = "the session reports as on-curriculum but names no curriculum"
+sql = "SELECT session_id FROM vr_foraging.sessions WHERE curriculum_enabled AND curriculum_name IS NULL"

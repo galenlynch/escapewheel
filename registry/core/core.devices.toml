@@ -1,0 +1,115 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["device_id"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session if device record is session-scoped."
+
+[[columns]]
+name = "device_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Stable device ID."
+
+[[columns]]
+name = "device_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "What `device_id` stands for: the identifier a source or an earlier packet used for this device. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
+name = "manufacturer"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "The manufacturer's own name for itself, as the source states it, compared exactly, so two spellings are two manufacturers."
+
+[[columns]]
+name = "model"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Model."
+
+[[columns]]
+name = "firmware_version"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "The firmware the instrument was running, verbatim as its source stated it."
+
+[[columns]]
+name = "hardware_version"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "The instrument's hardware revision, verbatim as its source stated it."
+
+[[columns]]
+name = "serial_number"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "Serial number."
+
+[[columns]]
+name = "parent_device_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+references = { resource = "core.devices", column = "device_id" }
+description = "The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it."
+
+[[columns]]
+name = "parent_port"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "Which port, dock or slot of `parent_device_id` this device attached to. Null where the attachment is stated and its coordinate is not. Establishes nothing about identity: two rows may share a parent and a port (Part 01 §3.5)."
+
+[[columns]]
+name = "device_kind"
+type = "string"
+presence = "nullable"
+role = "discriminator"
+resolves = "optional"
+description = "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is Part 02 §8.3's shared-key join. Core declares no such table (Part 02 §8.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (Part 02 §8.3)."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+
+[[rules]]
+id = "core.devices.parent_chain_well_founded"
+level = "error"
+message = "a device is its own ancestor, or its attachment chain does not terminate"
+sql = "WITH RECURSIVE up(device_id, ancestor, depth) AS (SELECT device_id, parent_device_id, 1 FROM core.devices WHERE parent_device_id IS NOT NULL UNION ALL SELECT u.device_id, d.parent_device_id, u.depth + 1 FROM up AS u JOIN core.devices AS d ON d.device_id = u.ancestor WHERE d.parent_device_id IS NOT NULL AND u.depth < 64) SELECT DISTINCT device_id FROM up WHERE ancestor = device_id OR depth >= 64"
+
+[[rules]]
+id = "core.devices.serial_identifies_one_device"
+level = "error"
+message = "one serial number appears on more than one device row; a device is the physical object"
+sql = "SELECT serial_number, COUNT(*) AS n_rows FROM core.devices WHERE serial_number IS NOT NULL GROUP BY serial_number HAVING COUNT(*) > 1"

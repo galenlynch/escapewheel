@@ -301,7 +301,6 @@ CURRENT_CONTRACT = (
     HERE.parent / "registry/registry.schema.json",
     HERE.parent / "registry/manifest.schema.json",
     HERE.parent / "registry/sources.schema.json",
-    HERE.parent / "registry/rules.json",
     *sorted((HERE.parent / "registry/extensions").glob("*.json")),
     PARTS / "Escapewheel_POC_v0.2_Implementation_Spec.md",
     HERE.parent / "registry/tables.md",
