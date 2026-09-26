@@ -808,6 +808,10 @@ def _read_stream(
             name = reader.schema.metadata[b"resource_id"].decode()
             if name == SENTINEL:
                 ended = True
+                # The adapter is still writing the sentinel's batch and end-of-stream marker, and
+                # closing the pipe first fails a conforming delivery with a broken pipe.
+                reader.read_all()
+                rows.read()
                 break
             tables[name] = reader.read_all()
             last = name

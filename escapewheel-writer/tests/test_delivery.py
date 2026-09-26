@@ -332,6 +332,34 @@ def test_a_non_zero_exit_is_a_failure_whatever_arrived(supplied, tmp_path):
         )
 
 
+def test_an_adapter_still_ending_the_sentinel_is_not_cut_off(tmp_path):
+    """The sentinel's schema arrives before its batch and end-of-stream marker are written."""
+    script = tmp_path / "slow.py"
+    script.write_text(
+        "import sys, time\n"
+        "import pyarrow as pa\n"
+        "out = sys.stdout.buffer\n"
+        "t = pa.table({'session_id': ['s1']}).replace_schema_metadata({'resource_id': 'core.sessions'})\n"
+        "with pa.ipc.new_stream(out, t.schema) as w:\n"
+        "    w.write_table(t)\n"
+        "end = pa.table({}).replace_schema_metadata({'resource_id': 'end'})\n"
+        "with pa.ipc.new_stream(out, end.schema) as w:\n"
+        "    w.write_batch(pa.RecordBatch.from_pylist([], schema=end.schema))\n"
+        "    out.flush()\n"
+        "    time.sleep(0.5)\n"
+        "out.flush()\n"
+    )
+    got = delivery.fetch(
+        "slow",
+        [sys.executable, str(script)],
+        {"root": str(tmp_path)},
+        protocol="stream-v0.1",
+        wanted=["core.sessions"],
+        workspace=tmp_path / "work",
+    )
+    assert got.tables["core.sessions"].num_rows == 1
+
+
 def test_a_delivery_cut_short_is_named_by_where_it_stopped(tmp_path):
     """A reader treats end of file as end of stream, so the sentinel is what tells them apart."""
     script = tmp_path / "half.py"
