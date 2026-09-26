@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -39,6 +40,9 @@ from .sources.store import cache_beside, source_root
 SAMPLED = frozenset({"sorter"})
 
 RECIPE_SUPPLIES = ("core.sessions", "core.processing_runs")
+
+#: What Part 04 §4.1 admits after a resource ID's dot, which a prefix begins.
+_PREFIX = re.compile(r"[a-z0-9_.-]*")
 
 #: Part 12 §4's closed vocabulary: the names a build fills itself. A declared name outside this
 #: set is an option, which the recipe has to carry. Held here because `check` has to tell the two
@@ -1225,13 +1229,22 @@ class Recipe:
         return problems
 
     def _prefix_problems(self) -> list[str]:
-        """Refuse sources that would spell one identifier two ways under different prefixes.
+        """Refuse a prefix no resource ID admits, or sources that would spell one identifier two ways.
 
-        Adapters that read `prefix` compose shared identifiers from it -- `nwb`, `lfp` and
-        `waveforms` each name a contact through `nwb.contact_ids` -- and a writer numbers a name
-        (Part 05 §4.3), so a prefix on one and not another mints a second row for one entity. An
-        unset prefix counts as a value, since a delivered adapter's default is not declared.
+        A prefix begins the name an adapter mints a resource ID from, so it holds only what Part 04
+        §4.1 admits after the ID's dot. Adapters that read `prefix` compose shared identifiers from
+        it -- `nwb`, `lfp` and `waveforms` each name a contact through `nwb.contact_ids` -- and a
+        writer numbers a name (Part 05 §4.3), so a prefix on one and not another mints a second row
+        for one entity. An unset prefix counts as a value, since a delivered adapter's default is
+        not declared.
         """
+        problems = [
+            f"source {spec.kind!r}: prefix {spec.options['prefix']!r} holds characters outside [a-z0-9_.-], which "
+            "a resource ID does not admit (Part 04 §4.1)"
+            for spec in self.sources
+            if "prefix" in spec.options
+            and not (isinstance(spec.options["prefix"], str) and _PREFIX.fullmatch(spec.options["prefix"]))
+        ]
         taking = sorted(
             (spec for spec in self.sources if "prefix" in {*declared(spec)["needs"], *declared(spec)["accepts"]}),
             key=lambda spec: spec.kind,
@@ -1239,13 +1252,14 @@ class Recipe:
         values = {spec.kind: spec.options.get("prefix") for spec in taking}
         # By repr, since an option may be a TOML table, which is unhashable.
         if len({repr(value) for value in values.values()}) <= 1:
-            return []
+            return problems
         named = ", ".join(f"{kind} {'unset' if value is None else repr(value)}" for kind, value in values.items())
         return [
+            *problems,
             (
                 f"sources disagree on prefix ({named}); every source whose adapter accepts prefix sets the same "
                 "one, or one entity gets two identifiers"
-            )
+            ),
         ]
 
     def _clock_problems(self) -> list[str]:

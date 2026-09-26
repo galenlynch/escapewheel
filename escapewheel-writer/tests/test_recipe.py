@@ -1101,6 +1101,14 @@ def test_a_delivered_source_whose_declaration_accepts_prefix_must_agree(tmp_path
     assert "(nwb 'a.', thermistor unset)" in refused
 
 
+@pytest.mark.parametrize("prefix", ["A_", "a b.", "é.", "a/"])
+def test_a_prefix_a_resource_id_does_not_admit_is_refused(tmp_path, registry, prefix):
+    """Part 04 §4.1: a prefix begins a minted resource ID's name, so it is refused before a build."""
+    problems = Recipe.load(write(tmp_path, prefixed(sorter=prefix))).check(registry)
+    (refused,) = [p.message for p in problems if "outside [a-z0-9_.-]" in p.message]
+    assert f"source 'sorter': prefix {prefix!r}" in refused
+
+
 def test_a_build_refuses_disagreeing_prefixes_before_opening_a_source(tmp_path, registry):
     from escapewheel_writer.session import build
 

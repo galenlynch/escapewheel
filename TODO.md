@@ -196,8 +196,6 @@ Each follows an existing rule, so none needs a revision. `tables` sources now de
 `files-v0.1`, `aind_unit_qc` is an adapter in `escapewheel-aind`, and every name-minting adapter
 accepts `prefix`.
 
-- **A `prefix` outside `[a-z0-9_.-]` mints an invalid resource ID** (Part 04 §4.1). A recipe check
-  should refuse it before a build opens a source.
 - **The scaffold never mentions `vocabulary`.** Once an author gives a string column a role, the
   meta-schema requires one, so a finished draft with string columns fails until the author finds
   out.
