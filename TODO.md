@@ -196,9 +196,6 @@ Each follows an existing rule, so none needs a revision. `tables` sources now de
 `files-v0.1`, `aind_unit_qc` is an adapter in `escapewheel-aind`, and every name-minting adapter
 accepts `prefix`.
 
-- **The scaffold never mentions `vocabulary`.** Once an author gives a string column a role, the
-  meta-schema requires one, so a finished draft with string columns fails until the author finds
-  out.
 - **The source cache does not meet R142** (Part 12 §10). The writer should take the location from
   its own configuration and supply it only as `source_cache` in the input object, dropping
   `ESCAPEWHEEL_SOURCE_CACHE`, its `TMPDIR` fallback, and `cache_beside`'s process-wide variable;

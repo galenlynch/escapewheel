@@ -51,6 +51,9 @@ ARROW_TO_REGISTRY = {
 #: to have needed three renames (R50).
 NAME_HINTS = (("_tick", "coordinate"), ("_index", "structural_index"), ("_id", "identifier"))
 
+#: Up to how many distinct values a string column's report lists, as candidates for a closed enum.
+SHOWN_VALUES = 10
+
 
 @dataclass
 class Draft:
@@ -101,6 +104,15 @@ def _column(table: pa.Table, name: str, resource: str, decisions: list[str]) -> 
         decisions.append(
             f"{resource}.{name}: finite is false, admitting NaN and infinities; declare true if it never "
             f"holds one (Part 02 §5.4); this data holds {non_finite} non-finite value(s)"
+        )
+    if declared == "string":
+        # Part 02 §9.3 gives `vocabulary` no default either, and the meta-schema requires one as
+        # soon as the column has a role, so a draft finished by its reported decisions alone fails.
+        distinct = pc.unique(table.column(name).drop_null())
+        listed = f": {', '.join(sorted(distinct.to_pylist()))}" if len(distinct) <= SHOWN_VALUES else ""
+        decisions.append(
+            f"{resource}.{name}: needs a vocabulary, closed with an enum, open, or free, unless its role is "
+            f"discriminator (Part 02 §9.3); this data holds {len(distinct)} distinct value(s){listed}"
         )
     # No role is written, deliberately. R48 §2.2 refuses a default because a forgotten
     # classification would look deliberate, and a *generated* file is where a forgotten one

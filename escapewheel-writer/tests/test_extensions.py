@@ -364,6 +364,23 @@ def test_a_finished_draft_with_float_columns_passes_the_registry_check(tmp_path)
     assert result.state == "valid", [(o.id, o.instance) for p in result.phases for o in p.outcomes]
 
 
+def test_a_string_column_is_reported_as_needing_a_vocabulary(tmp_path):
+    """Part 02 §9.3: a string column with a role needs one, so the report says so and lists the
+    values a closed enum could start from."""
+    import pyarrow.parquet as pq
+
+    from escapewheel_writer.scaffold import draft
+
+    path = tmp_path / "doses.parquet"
+    pq.write_table(pa.table({"route": ["oral", "iv", "oral", None]}), path)
+    drafted = draft("vrf", {"doses": path})
+    columns = {c["name"]: c for c in drafted.document["resources"]["vrf.doses"]["table"]["columns"]}
+    assert "vocabulary" not in columns["route"], "no default, as for role"
+    reported = " ".join(drafted.decisions)
+    assert "vrf.doses.route: needs a vocabulary" in reported
+    assert "this data holds 2 distinct value(s): iv, oral" in reported
+
+
 def test_the_namespace_is_the_extension_id(tmp_path):
     from escapewheel_writer.scaffold import draft
 
