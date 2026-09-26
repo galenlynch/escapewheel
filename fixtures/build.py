@@ -63,6 +63,9 @@ def table(resource: str, rows: list[dict]) -> pa.Table:
     states (Part 02 §6).
     """
     spec = SPECS[resource]
+    declared = {c["name"] for c in spec["columns"]}
+    if undeclared := sorted({key for row in rows for key in row} - declared):
+        raise SystemExit(f"{resource}: no column declares {undeclared}, so it would be dropped")
     rows = number(spec, [dict(r) for r in rows])
     arrays, fields = [], []
     for c in spec["columns"]:
@@ -239,7 +242,6 @@ def content() -> dict[str, list[dict]]:
             {
                 "device_id": "imec0",
                 "session_id": "s001",
-                "name": "Neuropixels headstage",
                 "manufacturer": "imec",
                 "model": "Neuropixels 1.0",
             }
@@ -249,7 +251,6 @@ def content() -> dict[str, list[dict]]:
                 "probe_id": "probe0",
                 "session_id": "s001",
                 "device_id": "imec0",
-                "name": "probe0",
                 "probe_type": "Neuropixels 1.0",
                 "manufacturer": "imec",
                 "target_region": "VISp",
@@ -283,12 +284,9 @@ def content() -> dict[str, list[dict]]:
             {
                 "session_id": "s001",
                 "unit_id": unit,
-                "sorting_run_id": "sort_ks4_001",
-                "curation_id": "curation_001",
                 "electrode_id": f"elec_{e:03d}",
                 "channel_index": k,
                 "is_primary": f"elec_{e:03d}" == primary,
-                "amplitude": -80.0 + k,
             }
             # Contacts drawn from the run's channel list only, which R83 2.4 requires:
             # `elec_002` is a real electrode the sorting dropped, so no unit can sit on it.
@@ -393,7 +391,6 @@ def content() -> dict[str, list[dict]]:
             {
                 "clock_id": "behavior_s001",
                 "session_id": "s001",
-                "name": "behavior acquisition clock",
                 "tick_rate_hz": float(BEH_HZ),
                 "origin": "tick 0 at behavior start",
                 "parent_clock_id": "imec_ap_s001",
@@ -404,7 +401,6 @@ def content() -> dict[str, list[dict]]:
             {
                 "clock_id": "imec_ap_s001",
                 "session_id": "s001",
-                "name": "Neuropixels AP sample clock",
                 "tick_rate_hz": float(AP_HZ),
                 "origin": "sample 0 at acquisition start",
                 "tick_zero_utc": START,
@@ -455,7 +451,6 @@ def content() -> dict[str, list[dict]]:
             {
                 "event_stream_id": "stim",
                 "session_id": "s001",
-                "name": "stimulus_trigger",
                 "event_type": "stimulus_onset",
                 "clock_id": "behavior_s001",
                 "device_id": None,
@@ -464,7 +459,6 @@ def content() -> dict[str, list[dict]]:
             {
                 "event_stream_id": "stim_off",
                 "session_id": "s001",
-                "name": "stimulus_trigger_off",
                 "event_type": "stimulus_offset",
                 "clock_id": "behavior_s001",
                 "device_id": None,
@@ -473,7 +467,6 @@ def content() -> dict[str, list[dict]]:
             {
                 "event_stream_id": "reward",
                 "session_id": "s001",
-                "name": "reward_valve",
                 "event_type": "reward",
                 "clock_id": "behavior_s001",
                 "device_id": "imec0",
@@ -482,7 +475,6 @@ def content() -> dict[str, list[dict]]:
             {
                 "event_stream_id": "lick",
                 "session_id": "s001",
-                "name": "lick_sensor",
                 "event_type": "lick",
                 "clock_id": "behavior_s001",
                 "device_id": "imec0",
@@ -613,7 +605,6 @@ def content() -> dict[str, list[dict]]:
                 "unit_id": u,
                 "start_tick": lo,
                 "stop_tick": hi,
-                "clock_id": "imec_ap_s001",
             }
             for u, windows in (
                 (1, [(0, 300_000)]),
@@ -888,7 +879,6 @@ def variants():
                 "session_id": "s001",
                 "unit_id": 2,
                 "t_tick": 129_000,
-                "clock_id": "imec_ap_s001",
                 "amplitude": -80.0,
             }
         )
@@ -912,7 +902,6 @@ def variants():
             {
                 "clock_id": "aux_s001",
                 "session_id": "s001",
-                "name": "unparented aux clock",
                 "tick_rate_hz": 1000.0,
                 "origin": "tick 0 at aux start",
             }
