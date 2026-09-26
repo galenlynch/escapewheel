@@ -42,9 +42,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `device_id` → `core.devices` (`device_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `device_id` → `core.devices` (`device_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 ### `analysis.array_dimensions`
@@ -70,10 +70,10 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `array_asset_id` → `analysis.array_assets` (`array_asset_id`)
-- `clock_id` → `core.clocks` (`clock_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `array_asset_id` → `analysis.array_assets` (`array_asset_id`)
 - `coordinate_array_asset_id` → `analysis.array_assets` (`array_asset_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
 
 **Tier 2 rules** — 1
 
@@ -93,9 +93,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
+- `session_id` → `core.sessions` (`session_id`)
 - `unit_id` → `core.units` (`unit_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
-- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 2
 
@@ -127,9 +127,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `device_id` → `core.devices` (`device_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `device_id` → `core.devices` (`device_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
 **Tier 2 rules** — 2
@@ -156,9 +156,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `array_asset_id`, `axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
-- `electrode_id` → `core.electrodes` (`electrode_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `electrode_id` → `core.electrodes` (`electrode_id`)
+- `array_asset_id`, `axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
 
 **Tier 2 rules** — 1
 
@@ -187,10 +187,10 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `array_asset_id` → `core.array_assets` (`array_asset_id`)
-- `clock_id` → `core.clocks` (`clock_id`)
-- `coordinate_array_asset_id` → `core.array_assets` (`array_asset_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `array_asset_id` → `core.array_assets` (`array_asset_id`)
+- `coordinate_array_asset_id` → `core.array_assets` (`array_asset_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
 
 **Tier 2 rules** — 8
 
@@ -278,8 +278,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `clock_id` → `core.clocks` (`clock_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
 
 **Tier 2 rules** — 4
 
@@ -388,8 +388,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 - `session_id` → `core.sessions` (`session_id`)
+- `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 
 **Tier 2 rules** — 1
 
@@ -432,9 +432,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `parent_curation_id` → `core.curation_versions` (`curation_id`)
 
 ### `core.devices`
@@ -458,8 +458,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `parent_device_id` → `core.devices` (`device_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `parent_device_id` → `core.devices` (`device_id`)
 
 **Tier 2 rules** — 2
 
@@ -481,9 +481,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
+- `session_id` → `core.sessions` (`session_id`)
 - `electrode_id`, `coordinate_frame`, `coordinate_basis` → `core.electrode_coordinates` (`electrode_id`, `coordinate_frame`, `coordinate_basis`)
 - `session_id`, `coordinate_frame`, `axis_index` → `core.coordinate_frame_axes` (`session_id`, `coordinate_frame`, `axis_index`)
-- `session_id` → `core.sessions` (`session_id`)
 
 ### `core.electrode_coordinates`
 
@@ -501,9 +501,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
+- `session_id` → `core.sessions` (`session_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
-- `session_id` → `core.sessions` (`session_id`)
 - `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 
 ### `core.electrodes`
@@ -539,8 +539,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `event_stream_id` → `core.event_streams` (`event_stream_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `event_stream_id` → `core.event_streams` (`event_stream_id`)
 
 **Tier 2 rules** — 2
 
@@ -638,8 +638,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 **References**
 
 - `session_id` → `core.sessions` (`session_id`)
-- `clock_id` → `core.clocks` (`clock_id`)
 - `device_id` → `core.devices` (`device_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
 
 **Tier 2 rules** — 3
 
@@ -663,9 +663,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `clock_id` → `core.clocks` (`clock_id`)
-- `media_asset_id` → `core.media_assets` (`media_asset_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `media_asset_id` → `core.media_assets` (`media_asset_id`)
+- `clock_id` → `core.clocks` (`clock_id`)
 
 **Tier 2 rules** — 2
 
@@ -731,9 +731,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
+- `session_id` → `core.sessions` (`session_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `source_file_id` → `core.source_files` (`source_file_id`)
-- `session_id` → `core.sessions` (`session_id`)
 
 ### `core.processing_runs`
 
@@ -759,8 +759,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `supersedes_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `supersedes_run_id` → `core.processing_runs` (`processing_run_id`)
 
 **Tier 2 rules** — 7
 
@@ -830,9 +830,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
+- `session_id` → `core.sessions` (`session_id`)
 - `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
-- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 2
 
@@ -860,9 +860,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id` → `core.sessions` (`session_id`)
 - `probe_id` → `core.probes` (`probe_id`)
+- `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `input_array_asset_id` → `core.array_assets` (`array_asset_id`)
 
 ### `core.source_files`
@@ -931,9 +931,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
+- `session_id` → `core.sessions` (`session_id`)
 - `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis` → `core.unit_coordinates` (`session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`)
 - `session_id`, `coordinate_frame`, `axis_index` → `core.coordinate_frame_axes` (`session_id`, `coordinate_frame`, `axis_index`)
-- `session_id` → `core.sessions` (`session_id`)
 
 ### `core.unit_coordinates`
 
@@ -951,9 +951,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
+- `session_id` → `core.sessions` (`session_id`)
 - `unit_id` → `core.units` (`unit_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
-- `session_id` → `core.sessions` (`session_id`)
 - `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 
 ### `core.unit_electrodes`
@@ -970,9 +970,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
+- `session_id` → `core.sessions` (`session_id`)
 - `unit_id` → `core.units` (`unit_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
-- `session_id` → `core.sessions` (`session_id`)
 
 **Tier 2 rules** — 3
 
@@ -993,8 +993,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `unit_id` → `core.units` (`unit_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `unit_id` → `core.units` (`unit_id`)
 
 **Tier 2 rules** — 2
 
@@ -1016,8 +1016,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 
 **References**
 
-- `unit_id` → `core.units` (`unit_id`)
 - `session_id` → `core.sessions` (`session_id`)
+- `unit_id` → `core.units` (`unit_id`)
 
 **Tier 2 rules** — 1
 

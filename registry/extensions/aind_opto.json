@@ -46,18 +46,18 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Power delivered by this emitter.",
-            "unit": "mW",
-            "finite": true
+            "unit": "mW"
           },
           {
             "name": "wavelength_nm",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Wavelength of this emitter.",
-            "unit": "nm",
-            "finite": true
+            "unit": "nm"
           },
           {
             "name": "location",
@@ -76,6 +76,15 @@
         "references": [
           {
             "columns": [
+              "device_id"
+            ],
+            "resource": "core.devices",
+            "resource_columns": [
+              "device_id"
+            ]
+          },
+          {
+            "columns": [
               "session_id",
               "epoch_id"
             ],
@@ -83,15 +92,6 @@
             "resource_columns": [
               "session_id",
               "epoch_id"
-            ]
-          },
-          {
-            "columns": [
-              "device_id"
-            ],
-            "resource": "core.devices",
-            "resource_columns": [
-              "device_id"
             ]
           }
         ],
@@ -138,54 +138,54 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "How long the light was on.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "pulse_duration_s",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "One pulse, where the protocol pulses.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "frequency_hz",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Pulse frequency, where the protocol pulses.",
-            "unit": "Hz",
-            "finite": true
+            "unit": "Hz"
           },
           {
             "name": "ramping_down_s",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Ramp-down time, where the protocol ramps.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "start_offset_s",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Onset relative to the interval's start.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "end_offset_s",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Offset relative to the interval's end.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "condition",
@@ -200,16 +200,16 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "How often this condition was drawn.",
-            "finite": true
+            "finite": true,
+            "description": "How often this condition was drawn."
           },
           {
             "name": "on_probability",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "How often the light was on at all.",
-            "finite": true
+            "finite": true,
+            "description": "How often the light was on at all."
           },
           {
             "name": "metadata",

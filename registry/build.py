@@ -17,6 +17,7 @@ without losing hand-written work. Do not edit it directly.
 import json
 from pathlib import Path
 
+from canonical import dumps
 from parse02 import parse
 
 HERE = Path(__file__).resolve().parent
@@ -3642,7 +3643,7 @@ def build() -> dict:
 
 if __name__ == "__main__":
     reg = build()
-    OUT.write_text(json.dumps(reg, indent=2) + "\n")
+    OUT.write_text(dumps(reg))
     print(
         f"wrote {OUT.name}: {len(reg['resources'])} resources, "
         f"{sum(1 for r in reg['resources'].values() if r['kind'] == 'table')} tables, "

@@ -22,8 +22,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "dataset_version",
@@ -119,16 +119,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "site_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The site these concentrations were set for.",
-            "identity": "carried"
+            "identity": "carried",
+            "description": "The site these concentrations were set for."
           },
           {
             "name": "odor_channel_index",
@@ -142,9 +142,9 @@
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "Concentration commanded on this channel. Zero where the channel was not used: the source emits one value per channel whether or not an odor is on it, so a missing row is a missing channel rather than a silent one.",
-            "unit": "%",
-            "finite": true
+            "unit": "%"
           }
         ],
         "primary_key": [
@@ -203,8 +203,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "interval_kind",
@@ -219,8 +219,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The site, and the interval it occupies in core. The source numbers sites from 0 within a session and uses that number as the site's identity, so no separate site_index is carried.",
-            "identity": "carried"
+            "identity": "carried",
+            "description": "The site, and the interval it occupies in core. The source numbers sites from 0 within a session and uses that number as the site's identity, so no separate site_index is carried."
           },
           {
             "name": "site_label",
@@ -243,27 +243,27 @@
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "Where the site begins along the virtual corridor.",
-            "unit": "cm",
-            "finite": true
+            "unit": "cm"
           },
           {
             "name": "length",
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "How far the site extends.",
-            "unit": "cm",
-            "finite": true
+            "unit": "cm"
           },
           {
             "name": "friction",
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "Friction in force over the site, carried forward from the last friction change.",
-            "unit": "%",
-            "finite": true
+            "unit": "%"
           },
           {
             "name": "odor_onset_tick",
@@ -302,26 +302,26 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Water delivered.",
-            "unit": "mL",
-            "finite": true
+            "unit": "mL"
           },
           {
             "name": "reward_probability",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Reward probability at delivery. Null where the reward was not sampled. No unit is declared: the model says percentage for a field named probability, and which of 0-1 or 0-100 is stored has not been checked against data.",
-            "finite": true
+            "finite": true,
+            "description": "Reward probability at delivery. Null where the reward was not sampled. No unit is declared: the model says percentage for a field named probability, and which of 0-1 or 0-100 is stored has not been checked against data."
           },
           {
             "name": "reward_available",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Water left in the patch at delivery. Null where the reward was not sampled.",
-            "unit": "mL",
-            "finite": true
+            "unit": "mL"
           },
           {
             "name": "has_forced_rewards",
@@ -342,9 +342,9 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Velocity at the sample closest to last_stop_tick. Null where that is null.",
-            "unit": "cm/s",
-            "finite": true
+            "unit": "cm/s"
           },
           {
             "name": "patch_index",

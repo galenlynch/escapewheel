@@ -36,24 +36,24 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "array_asset_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable array asset ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable array asset ID."
           },
           {
             "name": "resource_id",
             "type": "string",
             "presence": "required",
             "role": "identifier",
-            "description": "The packet resource ID of the catalogued payload.",
             "identity": "carried",
+            "description": "The packet resource ID of the catalogued payload.",
             "vocabulary": "free"
           },
           {
@@ -90,33 +90,33 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Clock for time axis.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Clock for time axis."
           },
           {
             "name": "device_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The device that produced this array.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The device that produced this array."
           },
           {
             "name": "processing_run_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The run that produced this array. Null means it was acquired rather than computed.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run that produced this array. Null means it was acquired rather than computed."
           },
           {
             "name": "sample_rate_hz",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Sample rate if regularly sampled.",
-            "unit": "Hz",
-            "finite": true
+            "unit": "Hz"
           },
           {
             "name": "unit",
@@ -137,17 +137,17 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Multiply stored values by this before offset.",
-            "finite": true
+            "finite": true,
+            "description": "Multiply stored values by this before offset."
           },
           {
             "name": "offset",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Add after conversion.",
-            "unit_from": "unit",
-            "finite": true
+            "unit_from": "unit"
           },
           {
             "name": "metadata",
@@ -161,15 +161,6 @@
           "array_asset_id"
         ],
         "references": [
-          {
-            "columns": [
-              "device_id"
-            ],
-            "resource": "core.devices",
-            "resource_columns": [
-              "device_id"
-            ]
-          },
           {
             "columns": [
               "session_id"
@@ -186,6 +177,15 @@
             "resource": "core.clocks",
             "resource_columns": [
               "clock_id"
+            ]
+          },
+          {
+            "columns": [
+              "device_id"
+            ],
+            "resource": "core.devices",
+            "resource_columns": [
+              "device_id"
             ]
           },
           {
@@ -217,16 +217,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "array_asset_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Array asset ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Array asset ID."
           },
           {
             "name": "axis_index",
@@ -256,17 +256,17 @@
             "type": "string",
             "presence": "nullable",
             "role": "discriminator",
-            "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`.",
             "resolves": "required",
-            "positions_in": "coordinate_position_column"
+            "positions_in": "coordinate_position_column",
+            "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`."
           },
           {
             "name": "coordinate_array_asset_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "A 1-D array holding one value per position (irregular axis).",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "A 1-D array holding one value per position (irregular axis)."
           },
           {
             "name": "coordinate_unit",
@@ -287,18 +287,18 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Increment per position.",
-            "unit_from": "coordinate_unit",
-            "finite": true
+            "unit_from": "coordinate_unit"
           },
           {
             "name": "origin_value",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Value at position 0 (regular numeric axis).",
-            "unit_from": "coordinate_unit",
-            "finite": true
+            "unit_from": "coordinate_unit"
           },
           {
             "name": "step_tick_num",
@@ -326,8 +326,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Clock the ticks are counted on (regular tick axis).",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Clock the ticks are counted on (regular tick axis)."
           }
         ],
         "primary_key": [
@@ -337,7 +337,25 @@
         "references": [
           {
             "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
               "array_asset_id"
+            ],
+            "resource": "analysis.array_assets",
+            "resource_columns": [
+              "array_asset_id"
+            ]
+          },
+          {
+            "columns": [
+              "coordinate_array_asset_id"
             ],
             "resource": "analysis.array_assets",
             "resource_columns": [
@@ -351,24 +369,6 @@
             "resource": "core.clocks",
             "resource_columns": [
               "clock_id"
-            ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
-            ]
-          },
-          {
-            "columns": [
-              "coordinate_array_asset_id"
-            ],
-            "resource": "analysis.array_assets",
-            "resource_columns": [
-              "array_asset_id"
             ]
           }
         ],
@@ -398,16 +398,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "unit_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Unit ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Unit ID."
           },
           {
             "name": "t_tick",
@@ -421,8 +421,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The clock these ticks are on, normally the session's reference.",
             "identity": "assigned",
+            "description": "The clock these ticks are on, normally the session's reference.",
             "determined_by": [
               "session_id"
             ]
@@ -446,6 +446,15 @@
         "references": [
           {
             "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
               "unit_id"
             ],
             "resource": "core.units",
@@ -460,15 +469,6 @@
             "resource": "core.clocks",
             "resource_columns": [
               "clock_id"
-            ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
             ]
           }
         ],
@@ -518,24 +518,24 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "array_asset_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable array asset ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable array asset ID."
           },
           {
             "name": "resource_id",
             "type": "string",
             "presence": "required",
             "role": "identifier",
-            "description": "The packet resource ID of the catalogued payload.",
             "identity": "carried",
+            "description": "The packet resource ID of the catalogued payload.",
             "vocabulary": "free"
           },
           {
@@ -572,33 +572,33 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Clock for time axis.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Clock for time axis."
           },
           {
             "name": "device_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The device that produced this array.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The device that produced this array."
           },
           {
             "name": "processing_run_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The run that produced this array. Null means it was acquired rather than computed.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run that produced this array. Null means it was acquired rather than computed."
           },
           {
             "name": "sample_rate_hz",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Sample rate if regularly sampled.",
-            "unit": "Hz",
-            "finite": true
+            "unit": "Hz"
           },
           {
             "name": "unit",
@@ -619,17 +619,17 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Multiply stored values by this before offset.",
-            "finite": true
+            "finite": true,
+            "description": "Multiply stored values by this before offset."
           },
           {
             "name": "offset",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Add after conversion.",
-            "unit_from": "unit",
-            "finite": true
+            "unit_from": "unit"
           },
           {
             "name": "metadata",
@@ -643,15 +643,6 @@
           "array_asset_id"
         ],
         "references": [
-          {
-            "columns": [
-              "device_id"
-            ],
-            "resource": "core.devices",
-            "resource_columns": [
-              "device_id"
-            ]
-          },
           {
             "columns": [
               "session_id"
@@ -668,6 +659,15 @@
             "resource": "core.clocks",
             "resource_columns": [
               "clock_id"
+            ]
+          },
+          {
+            "columns": [
+              "device_id"
+            ],
+            "resource": "core.devices",
+            "resource_columns": [
+              "device_id"
             ]
           },
           {
@@ -712,16 +712,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "array_asset_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Array asset ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Array asset ID."
           },
           {
             "name": "axis_index",
@@ -742,8 +742,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Electrode ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Electrode ID."
           },
           {
             "name": "channel_label",
@@ -758,8 +758,8 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Acquisition time offset within one sample period, in sample periods.",
-            "finite": true
+            "finite": true,
+            "description": "Acquisition time offset within one sample period, in sample periods."
           },
           {
             "name": "unit",
@@ -780,17 +780,17 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Add after conversion.",
-            "unit_from": "unit",
-            "finite": true
+            "unit_from": "unit"
           },
           {
             "name": "conversion",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Multiply stored values by this before offset.",
-            "finite": true
+            "finite": true,
+            "description": "Multiply stored values by this before offset."
           }
         ],
         "primary_key": [
@@ -800,13 +800,11 @@
         "references": [
           {
             "columns": [
-              "array_asset_id",
-              "axis_index"
+              "session_id"
             ],
-            "resource": "core.array_dimensions",
+            "resource": "core.sessions",
             "resource_columns": [
-              "array_asset_id",
-              "axis_index"
+              "session_id"
             ]
           },
           {
@@ -820,11 +818,13 @@
           },
           {
             "columns": [
-              "session_id"
+              "array_asset_id",
+              "axis_index"
             ],
-            "resource": "core.sessions",
+            "resource": "core.array_dimensions",
             "resource_columns": [
-              "session_id"
+              "array_asset_id",
+              "axis_index"
             ]
           }
         ],
@@ -854,16 +854,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "array_asset_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Array asset ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Array asset ID."
           },
           {
             "name": "axis_index",
@@ -893,17 +893,17 @@
             "type": "string",
             "presence": "nullable",
             "role": "discriminator",
-            "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`.",
             "resolves": "required",
-            "positions_in": "coordinate_position_column"
+            "positions_in": "coordinate_position_column",
+            "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`."
           },
           {
             "name": "coordinate_array_asset_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "A 1-D array holding one value per position (irregular axis).",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "A 1-D array holding one value per position (irregular axis)."
           },
           {
             "name": "coordinate_unit",
@@ -924,18 +924,18 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Increment per position.",
-            "unit_from": "coordinate_unit",
-            "finite": true
+            "unit_from": "coordinate_unit"
           },
           {
             "name": "origin_value",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Value at position 0 (regular numeric axis).",
-            "unit_from": "coordinate_unit",
-            "finite": true
+            "unit_from": "coordinate_unit"
           },
           {
             "name": "step_tick_num",
@@ -963,8 +963,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Clock the ticks are counted on (regular tick axis).",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Clock the ticks are counted on (regular tick axis)."
           }
         ],
         "primary_key": [
@@ -974,20 +974,20 @@
         "references": [
           {
             "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
               "array_asset_id"
             ],
             "resource": "core.array_assets",
             "resource_columns": [
               "array_asset_id"
-            ]
-          },
-          {
-            "columns": [
-              "clock_id"
-            ],
-            "resource": "core.clocks",
-            "resource_columns": [
-              "clock_id"
             ]
           },
           {
@@ -1001,11 +1001,11 @@
           },
           {
             "columns": [
-              "session_id"
+              "clock_id"
             ],
-            "resource": "core.sessions",
+            "resource": "core.clocks",
             "resource_columns": [
-              "session_id"
+              "clock_id"
             ]
           }
         ],
@@ -1077,24 +1077,24 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "calibration_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The calibration this row names a device for.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The calibration this row names a device for."
           },
           {
             "name": "device_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "A device the calibration covers.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "A device the calibration covers."
           }
         ],
         "primary_key": [
@@ -1149,16 +1149,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "calibration_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The calibration this point belongs to.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The calibration this point belongs to."
           },
           {
             "name": "point_index",
@@ -1172,18 +1172,18 @@
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "The setting the point was measured at.",
-            "unit_from": "core.calibrations.input_unit",
-            "finite": true
+            "unit_from": "core.calibrations.input_unit"
           },
           {
             "name": "output_value",
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "What the instrument then delivered.",
-            "unit_from": "core.calibrations.output_unit",
-            "finite": true
+            "unit_from": "core.calibrations.output_unit"
           }
         ],
         "primary_key": [
@@ -1229,16 +1229,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "calibration_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable calibration ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable calibration ID."
           },
           {
             "name": "calibration_name",
@@ -1304,16 +1304,16 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The array holding this calibration where its content is one rather than a curve: a manipulator transform, a camera's intrinsics."
           },
           {
             "name": "detail_kind",
             "type": "string",
             "presence": "nullable",
             "role": "discriminator",
-            "description": "A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (Part 02 \u00a712.3).",
-            "resolves": "optional"
+            "resolves": "optional",
+            "description": "A table carrying a calibration shape core does not define, as a dotted resource ID. A kind the packet cannot resolve records that the content is elsewhere rather than that the row is wrong (Part 02 \u00a712.3)."
           },
           {
             "name": "metadata",
@@ -1378,16 +1378,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "clock_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The clock being aligned.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The clock being aligned."
           },
           {
             "name": "anchor_index",
@@ -1419,20 +1419,20 @@
         "references": [
           {
             "columns": [
-              "clock_id"
-            ],
-            "resource": "core.clocks",
-            "resource_columns": [
-              "clock_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "clock_id"
+            ],
+            "resource": "core.clocks",
+            "resource_columns": [
+              "clock_id"
             ]
           }
         ],
@@ -1480,16 +1480,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "clock_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The clock that was observing.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The clock that was observing."
           },
           {
             "name": "start_tick",
@@ -1563,16 +1563,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session."
           },
           {
             "name": "clock_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The clock whose alignment stepped.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The clock whose alignment stepped."
           },
           {
             "name": "t_tick",
@@ -1594,9 +1594,9 @@
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "How far the parent's phase moved. Signed.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "anchor_interval_span",
@@ -1658,16 +1658,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "clock_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable clock ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable clock ID."
           },
           {
             "name": "clock_name",
@@ -1682,9 +1682,9 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Tick rate as float, required unless exact tick rate provided.",
-            "unit": "Hz",
-            "finite": true
+            "unit": "Hz"
           },
           {
             "name": "tick_rate_num",
@@ -1720,24 +1720,24 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Parent/reference clock.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Parent/reference clock."
           },
           {
             "name": "transform_slope",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Parent ticks per this clock's tick, as measured.",
-            "finite": true
+            "finite": true,
+            "description": "Parent ticks per this clock's tick, as measured."
           },
           {
             "name": "transform_offset",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Parent-clock tick at this clock's tick 0.",
-            "finite": true
+            "finite": true,
+            "description": "Parent-clock tick at this clock's tick 0."
           },
           {
             "name": "transform_to_parent",
@@ -1883,8 +1883,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session."
           },
           {
             "name": "coordinate_frame",
@@ -1940,6 +1940,15 @@
         "references": [
           {
             "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
               "session_id",
               "coordinate_frame"
             ],
@@ -1947,15 +1956,6 @@
             "resource_columns": [
               "session_id",
               "coordinate_frame"
-            ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
             ]
           }
         ],
@@ -1985,8 +1985,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session."
           },
           {
             "name": "coordinate_frame",
@@ -2055,16 +2055,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "curation_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable curation ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable curation ID."
           },
           {
             "name": "curation_name",
@@ -2079,8 +2079,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Sorting run ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Sorting run ID."
           },
           {
             "name": "curator",
@@ -2111,16 +2111,16 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The run that produced this record, where provenance is recorded.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run that produced this record, where provenance is recorded."
           },
           {
             "name": "parent_curation_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Parent curation.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Parent curation."
           },
           {
             "name": "created_at",
@@ -2151,15 +2151,6 @@
         "references": [
           {
             "columns": [
-              "processing_run_id"
-            ],
-            "resource": "core.processing_runs",
-            "resource_columns": [
-              "processing_run_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
@@ -2174,6 +2165,15 @@
             "resource": "core.sorting_runs",
             "resource_columns": [
               "sorting_run_id"
+            ]
+          },
+          {
+            "columns": [
+              "processing_run_id"
+            ],
+            "resource": "core.processing_runs",
+            "resource_columns": [
+              "processing_run_id"
             ]
           },
           {
@@ -2205,16 +2205,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session if device record is session-scoped.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session if device record is session-scoped."
           },
           {
             "name": "device_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable device ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable device ID."
           },
           {
             "name": "device_name",
@@ -2269,8 +2269,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The device this one was attached to -- a probe's headstage, a headstage's connect board. Null at the root of a chain, or where no source states it."
           },
           {
             "name": "parent_port",
@@ -2285,8 +2285,8 @@
             "type": "string",
             "presence": "nullable",
             "role": "discriminator",
-            "description": "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is Part 02 \u00a78.3's shared-key join. Core declares no such table (Part 02 \u00a78.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (Part 02 \u00a78.3).",
-            "resolves": "optional"
+            "resolves": "optional",
+            "description": "The table carrying this device's kind-specific facts, as a dotted resource ID. Its primary key begins `device_id`, so resolution is Part 02 \u00a78.3's shared-key join. Core declares no such table (Part 02 \u00a78.3); an extension does, and a value naming a resource the packet does not carry is a fact rather than a defect (Part 02 \u00a78.3)."
           },
           {
             "name": "metadata",
@@ -2302,20 +2302,20 @@
         "references": [
           {
             "columns": [
-              "parent_device_id"
-            ],
-            "resource": "core.devices",
-            "resource_columns": [
-              "device_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "parent_device_id"
+            ],
+            "resource": "core.devices",
+            "resource_columns": [
+              "device_id"
             ]
           }
         ],
@@ -2351,16 +2351,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session."
           },
           {
             "name": "electrode_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The thing positioned.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The thing positioned."
           },
           {
             "name": "coordinate_frame",
@@ -2390,9 +2390,9 @@
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "The value, in the axis's unit.",
-            "unit_from": "core.coordinate_frame_axes.unit",
-            "finite": true
+            "unit_from": "core.coordinate_frame_axes.unit"
           }
         ],
         "primary_key": [
@@ -2402,6 +2402,15 @@
           "axis_index"
         ],
         "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
           {
             "columns": [
               "electrode_id",
@@ -2427,15 +2436,6 @@
               "coordinate_frame",
               "axis_index"
             ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
-            ]
           }
         ],
         "rules": []
@@ -2457,16 +2457,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "electrode_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Electrode ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Electrode ID."
           },
           {
             "name": "coordinate_frame",
@@ -2489,8 +2489,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names.",
-            "identity": "carried"
+            "identity": "carried",
+            "description": "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names."
           },
           {
             "name": "region_label",
@@ -2505,8 +2505,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The run that produced this coordinate.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run that produced this coordinate."
           }
         ],
         "primary_key": [
@@ -2515,6 +2515,15 @@
           "coordinate_basis"
         ],
         "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
           {
             "columns": [
               "electrode_id"
@@ -2531,15 +2540,6 @@
             "resource": "core.processing_runs",
             "resource_columns": [
               "processing_run_id"
-            ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
             ]
           },
           {
@@ -2573,16 +2573,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "electrode_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable electrode ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable electrode ID."
           },
           {
             "name": "electrode_name",
@@ -2597,8 +2597,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Probe ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Probe ID."
           },
           {
             "name": "local_electrode_label",
@@ -2621,9 +2621,9 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Impedance.",
-            "unit": "Ohm",
-            "finite": true
+            "unit": "Ohm"
           },
           {
             "name": "metadata",
@@ -2675,16 +2675,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "event_stream_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The stream being observed.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The stream being observed."
           },
           {
             "name": "start_tick",
@@ -2710,20 +2710,20 @@
         "references": [
           {
             "columns": [
-              "event_stream_id"
-            ],
-            "resource": "core.event_streams",
-            "resource_columns": [
-              "event_stream_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "event_stream_id"
+            ],
+            "resource": "core.event_streams",
+            "resource_columns": [
+              "event_stream_id"
             ]
           }
         ],
@@ -2759,16 +2759,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "event_stream_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable ID."
           },
           {
             "name": "event_stream_name",
@@ -2791,33 +2791,33 @@
             "type": "string",
             "presence": "nullable",
             "role": "discriminator",
-            "description": "A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (Part 02 \u00a78.3). Resolved against `core.events`' key by Part 02 \u00a78.3's shared key, through the reference `discriminates_via` names.",
             "resolves": "optional",
-            "discriminates_via": "core.events.stream_id"
+            "discriminates_via": "core.events.stream_id",
+            "description": "A table specialising this stream's events, as a dotted resource ID. A kind the packet cannot resolve records that the detail is elsewhere (Part 02 \u00a78.3). Resolved against `core.events`' key by Part 02 \u00a78.3's shared key, through the reference `discriminates_via` names."
           },
           {
             "name": "device_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The device that produced it, where one is identified.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The device that produced it, where one is identified."
           },
           {
             "name": "clock_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The clock its events are timed on.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The clock its events are timed on."
           },
           {
             "name": "processing_run_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The run that produced it. Null means it came off the device as recorded. The manifest records outputs per resource and cannot distinguish streams within one table.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run that produced it. Null means it came off the device as recorded. The manifest records outputs per resource and cannot distinguish streams within one table."
           },
           {
             "name": "metadata",
@@ -2872,9 +2872,9 @@
           {
             "id": "core.event_streams.observation_declared",
             "level": "info",
-            "advisory": true,
             "message": "streams carry no observation intervals and their clock declares none, so no rate over them has a denominator",
-            "sql": "SELECT s.event_stream_id, s.event_stream_name FROM core.event_streams AS s WHERE NOT EXISTS(SELECT 1 FROM core.event_stream_observation_intervals AS o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS(SELECT 1 FROM core.clock_observation_intervals AS c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)"
+            "sql": "SELECT s.event_stream_id, s.event_stream_name FROM core.event_streams AS s WHERE NOT EXISTS(SELECT 1 FROM core.event_stream_observation_intervals AS o WHERE o.event_stream_id = s.event_stream_id) AND NOT EXISTS(SELECT 1 FROM core.clock_observation_intervals AS c WHERE c.session_id = s.session_id AND c.clock_id = s.clock_id)",
+            "advisory": true
           }
         ]
       }
@@ -2895,16 +2895,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "stream_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The stream this event belongs to.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The stream this event belongs to."
           },
           {
             "name": "t_tick",
@@ -2980,24 +2980,24 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "interval_kind",
             "type": "string",
             "presence": "required",
             "role": "discriminator",
-            "description": "The resource that specialises this interval, as a dotted resource ID, resolved as Part 02 \u00a78.3's shared key.",
-            "resolves": "required"
+            "resolves": "required",
+            "description": "The resource that specialises this interval, as a dotted resource ID, resolved as Part 02 \u00a78.3's shared key."
           },
           {
             "name": "interval_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable trial ID.",
-            "identity": "carried"
+            "identity": "carried",
+            "description": "Stable trial ID."
           },
           {
             "name": "start_tick",
@@ -3018,8 +3018,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Clock for start/stop ticks.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Clock for start/stop ticks."
           },
           {
             "name": "metadata",
@@ -3091,24 +3091,24 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "media_asset_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable media asset ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable media asset ID."
           },
           {
             "name": "resource_id",
             "type": "string",
             "presence": "required",
             "role": "identifier",
-            "description": "The packet resource ID of the catalogued payload.",
             "identity": "carried",
+            "description": "The packet resource ID of the catalogued payload.",
             "vocabulary": "free"
           },
           {
@@ -3132,8 +3132,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (Part 01 \u00a73.5).",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The device that recorded this asset. A writer names it where its source states one, and MUST NOT infer it from a file name (Part 01 \u00a73.5)."
           },
           {
             "name": "pts_rate_num",
@@ -3154,8 +3154,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Clock for frame timing.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Clock for frame timing."
           },
           {
             "name": "metadata",
@@ -3180,20 +3180,20 @@
           },
           {
             "columns": [
-              "clock_id"
-            ],
-            "resource": "core.clocks",
-            "resource_columns": [
-              "clock_id"
-            ]
-          },
-          {
-            "columns": [
               "device_id"
             ],
             "resource": "core.devices",
             "resource_columns": [
               "device_id"
+            ]
+          },
+          {
+            "columns": [
+              "clock_id"
+            ],
+            "resource": "core.clocks",
+            "resource_columns": [
+              "clock_id"
             ]
           }
         ],
@@ -3235,16 +3235,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "media_asset_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Media asset ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Media asset ID."
           },
           {
             "name": "frame_index",
@@ -3265,8 +3265,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Clock ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Clock ID."
           },
           {
             "name": "pts",
@@ -3290,11 +3290,11 @@
         "references": [
           {
             "columns": [
-              "clock_id"
+              "session_id"
             ],
-            "resource": "core.clocks",
+            "resource": "core.sessions",
             "resource_columns": [
-              "clock_id"
+              "session_id"
             ]
           },
           {
@@ -3308,11 +3308,11 @@
           },
           {
             "columns": [
-              "session_id"
+              "clock_id"
             ],
-            "resource": "core.sessions",
+            "resource": "core.clocks",
             "resource_columns": [
-              "session_id"
+              "clock_id"
             ]
           }
         ],
@@ -3348,8 +3348,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "activity_type",
@@ -3364,9 +3364,9 @@
             "type": "string",
             "presence": "required",
             "role": "discriminator",
-            "description": "The resource whose primary key `scope` holds, as a dotted resource ID.",
             "resolves": "optional",
-            "discriminates": "scope"
+            "discriminates": "scope",
+            "description": "The resource whose primary key `scope` holds, as a dotted resource ID."
           },
           {
             "name": "scope",
@@ -3381,8 +3381,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The preferred run.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The preferred run."
           },
           {
             "name": "chosen_at",
@@ -3464,16 +3464,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "probe_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable probe ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable probe ID."
           },
           {
             "name": "probe_name",
@@ -3488,8 +3488,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Associated device.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Associated device."
           },
           {
             "name": "probe_type",
@@ -3581,24 +3581,24 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "processing_run_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The run.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run."
           },
           {
             "name": "source_file_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "A source file the run consumed.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "A source file the run consumed."
           }
         ],
         "primary_key": [
@@ -3606,6 +3606,15 @@
           "source_file_id"
         ],
         "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
           {
             "columns": [
               "processing_run_id"
@@ -3622,15 +3631,6 @@
             "resource": "core.source_files",
             "resource_columns": [
               "source_file_id"
-            ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
             ]
           }
         ],
@@ -3653,16 +3653,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID if session-scoped.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID if session-scoped."
           },
           {
             "name": "processing_run_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable processing run ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable processing run ID."
           },
           {
             "name": "processing_run_name",
@@ -3693,17 +3693,17 @@
             "type": "string",
             "presence": "nullable",
             "role": "discriminator",
-            "description": "The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all.",
             "resolves": "optional",
-            "discriminates": "scope"
+            "discriminates": "scope",
+            "description": "The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all."
           },
           {
             "name": "supersedes_run_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The run this one replaces, if any.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run this one replaces, if any."
           },
           {
             "name": "software_name",
@@ -3756,12 +3756,12 @@
             "presence": "required",
             "role": "data",
             "description": "Whether the run completed, with the meanings Part 02 \u00a79.3 declares.",
+            "vocabulary": "closed",
             "enum": [
               "succeeded",
               "failed",
               "partial"
-            ],
-            "vocabulary": "closed"
+            ]
           },
           {
             "name": "metadata",
@@ -3777,20 +3777,20 @@
         "references": [
           {
             "columns": [
-              "supersedes_run_id"
-            ],
-            "resource": "core.processing_runs",
-            "resource_columns": [
-              "processing_run_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "supersedes_run_id"
+            ],
+            "resource": "core.processing_runs",
+            "resource_columns": [
+              "processing_run_id"
             ]
           }
         ],
@@ -3856,8 +3856,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "experimenter",
@@ -3902,8 +3902,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable session ID."
           },
           {
             "name": "session_name",
@@ -3918,8 +3918,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Subject ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Subject ID."
           },
           {
             "name": "session_start_time",
@@ -3940,8 +3940,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The clock this session's times are reported on by default.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The clock this session's times are reported on by default."
           },
           {
             "name": "session_description",
@@ -3972,8 +3972,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Source-system session ID if different.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Source-system session ID if different."
           },
           {
             "name": "t_zero_tick",
@@ -3995,9 +3995,9 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "How far past its anchors the writer mapped, in median anchor intervals (Part 01 \u00a73.9). Null means the default of one.",
-            "unit": "{median_anchor_interval}",
-            "finite": true
+            "unit": "{median_anchor_interval}"
           }
         ],
         "primary_key": [
@@ -4067,16 +4067,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "sorting_run_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The run whose channel list this row belongs to.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run whose channel list this row belongs to."
           },
           {
             "name": "channel_index",
@@ -4090,8 +4090,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The contact at that position.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The contact at that position."
           }
         ],
         "primary_key": [
@@ -4100,6 +4100,15 @@
           "channel_index"
         ],
         "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
           {
             "columns": [
               "sorting_run_id"
@@ -4116,15 +4125,6 @@
             "resource": "core.electrodes",
             "resource_columns": [
               "electrode_id"
-            ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
             ]
           }
         ],
@@ -4160,16 +4160,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "sorting_run_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable sorting run ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable sorting run ID."
           },
           {
             "name": "sorting_run_name",
@@ -4184,8 +4184,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Probe ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Probe ID."
           },
           {
             "name": "sorter_name",
@@ -4208,8 +4208,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The run that produced this record, where provenance is recorded.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run that produced this record, where provenance is recorded."
           },
           {
             "name": "parameters",
@@ -4223,8 +4223,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Input array asset.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Input array asset."
           },
           {
             "name": "started_at",
@@ -4254,15 +4254,6 @@
         "references": [
           {
             "columns": [
-              "processing_run_id"
-            ],
-            "resource": "core.processing_runs",
-            "resource_columns": [
-              "processing_run_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
@@ -4277,6 +4268,15 @@
             "resource": "core.probes",
             "resource_columns": [
               "probe_id"
+            ]
+          },
+          {
+            "columns": [
+              "processing_run_id"
+            ],
+            "resource": "core.processing_runs",
+            "resource_columns": [
+              "processing_run_id"
             ]
           },
           {
@@ -4308,8 +4308,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable source file ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable source file ID."
           },
           {
             "name": "source_file_name",
@@ -4389,16 +4389,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "unit_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Unit ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Unit ID."
           },
           {
             "name": "t_tick",
@@ -4413,9 +4413,9 @@
             "type": "float32",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Spike amplitude if available.",
-            "unit_from": "core.units.amplitude_unit",
-            "finite": true
+            "unit_from": "core.units.amplitude_unit"
           }
         ],
         "primary_key": [
@@ -4475,8 +4475,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable subject ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable subject ID."
           },
           {
             "name": "subject_name",
@@ -4524,13 +4524,13 @@
             "presence": "nullable",
             "role": "data",
             "description": "The subject's sex. Null where the source states none, states it unknown, or describes a preparation that has none.",
+            "vocabulary": "closed",
             "enum": [
               "male",
               "female",
               "hermaphrodite",
               "other"
             ],
-            "vocabulary": "closed",
             "authority": [
               {
                 "name": "HL7 FHIR administrative gender",
@@ -4584,16 +4584,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session."
           },
           {
             "name": "unit_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The thing positioned.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The thing positioned."
           },
           {
             "name": "coordinate_frame",
@@ -4623,9 +4623,9 @@
             "type": "float64",
             "presence": "required",
             "role": "data",
+            "finite": true,
             "description": "The value, in the axis's unit.",
-            "unit_from": "core.coordinate_frame_axes.unit",
-            "finite": true
+            "unit_from": "core.coordinate_frame_axes.unit"
           }
         ],
         "primary_key": [
@@ -4636,6 +4636,15 @@
           "axis_index"
         ],
         "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
           {
             "columns": [
               "session_id",
@@ -4663,15 +4672,6 @@
               "coordinate_frame",
               "axis_index"
             ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
-            ]
           }
         ],
         "rules": []
@@ -4693,16 +4693,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "unit_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Unit ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Unit ID."
           },
           {
             "name": "coordinate_frame",
@@ -4725,8 +4725,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names.",
-            "identity": "carried"
+            "identity": "carried",
+            "description": "The atlas structure this position falls in, numbered by the atlas that `coordinate_frame` names."
           },
           {
             "name": "region_label",
@@ -4741,8 +4741,8 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The run that produced this coordinate.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The run that produced this coordinate."
           }
         ],
         "primary_key": [
@@ -4752,6 +4752,15 @@
           "coordinate_basis"
         ],
         "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
           {
             "columns": [
               "unit_id"
@@ -4768,15 +4777,6 @@
             "resource": "core.processing_runs",
             "resource_columns": [
               "processing_run_id"
-            ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
             ]
           },
           {
@@ -4810,24 +4810,24 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "unit_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Unit ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Unit ID."
           },
           {
             "name": "electrode_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "An electrode this unit was detected on.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "An electrode this unit was detected on."
           },
           {
             "name": "channel_index",
@@ -4852,6 +4852,15 @@
         "references": [
           {
             "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
               "unit_id"
             ],
             "resource": "core.units",
@@ -4866,15 +4875,6 @@
             "resource": "core.electrodes",
             "resource_columns": [
               "electrode_id"
-            ]
-          },
-          {
-            "columns": [
-              "session_id"
-            ],
-            "resource": "core.sessions",
-            "resource_columns": [
-              "session_id"
             ]
           }
         ],
@@ -4916,16 +4916,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "unit_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Unit ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Unit ID."
           },
           {
             "name": "start_tick",
@@ -4952,20 +4952,20 @@
         "references": [
           {
             "columns": [
-              "unit_id"
-            ],
-            "resource": "core.units",
-            "resource_columns": [
-              "unit_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "unit_id"
+            ],
+            "resource": "core.units",
+            "resource_columns": [
+              "unit_id"
             ]
           }
         ],
@@ -5001,16 +5001,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "unit_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Unit ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Unit ID."
           },
           {
             "name": "source",
@@ -5034,20 +5034,20 @@
             "presence": "nullable",
             "role": "data",
             "description": "Declared projection onto the closed set. Null where the source's label does not project.",
+            "vocabulary": "closed",
             "enum": [
               "sua",
               "mua",
               "noise"
-            ],
-            "vocabulary": "closed"
+            ]
           },
           {
             "name": "confidence",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "The source's confidence, where it reports one.",
-            "finite": true
+            "finite": true,
+            "description": "The source's confidence, where it reports one."
           }
         ],
         "primary_key": [
@@ -5058,20 +5058,20 @@
         "references": [
           {
             "columns": [
-              "unit_id"
-            ],
-            "resource": "core.units",
-            "resource_columns": [
-              "unit_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "unit_id"
+            ],
+            "resource": "core.units",
+            "resource_columns": [
+              "unit_id"
             ]
           }
         ],
@@ -5101,16 +5101,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "unit_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Stable unit ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Stable unit ID."
           },
           {
             "name": "unit_name",
@@ -5125,24 +5125,24 @@
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "Probe ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Probe ID."
           },
           {
             "name": "sorting_run_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Sorting run ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Sorting run ID."
           },
           {
             "name": "curation_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Curation ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Curation ID."
           },
           {
             "name": "local_unit_label",
@@ -5158,12 +5158,12 @@
             "presence": "nullable",
             "role": "data",
             "description": "Quality label.",
+            "vocabulary": "closed",
             "enum": [
               "sua",
               "mua",
               "noise"
-            ],
-            "vocabulary": "closed"
+            ]
           },
           {
             "name": "amplitude_unit",
@@ -5192,9 +5192,9 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Firing rate if known.",
-            "unit": "Hz",
-            "finite": true
+            "unit": "Hz"
           },
           {
             "name": "n_spikes",
@@ -5222,8 +5222,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The clock every tick of this unit is counted on.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The clock every tick of this unit is counted on."
           },
           {
             "name": "metadata",
@@ -5305,9 +5305,9 @@
           {
             "id": "core.units.observation_declared",
             "level": "info",
-            "advisory": true,
             "message": "units carry no observation intervals and their clock declares none, so no rate over them has a denominator",
-            "sql": "SELECT u.session_id, u.unit_id FROM core.units AS u WHERE NOT EXISTS(SELECT 1 FROM core.unit_observation_intervals AS o WHERE o.unit_id = u.unit_id) AND NOT EXISTS(SELECT 1 FROM core.clock_observation_intervals AS c WHERE c.session_id = u.session_id AND c.clock_id = u.clock_id)"
+            "sql": "SELECT u.session_id, u.unit_id FROM core.units AS u WHERE NOT EXISTS(SELECT 1 FROM core.unit_observation_intervals AS o WHERE o.unit_id = u.unit_id) AND NOT EXISTS(SELECT 1 FROM core.clock_observation_intervals AS c WHERE c.session_id = u.session_id AND c.clock_id = u.clock_id)",
+            "advisory": true
           },
           {
             "id": "core.units.amplitude_unit_declared",

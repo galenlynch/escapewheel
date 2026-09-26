@@ -45,33 +45,33 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Fraction of the recording in which the unit fired.",
-            "finite": true
+            "finite": true,
+            "description": "Fraction of the recording in which the unit fired."
           },
           {
             "name": "firing_range",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Spread of the unit's firing rate over the recording.",
-            "unit": "Hz",
-            "finite": true
+            "unit": "Hz"
           },
           {
             "name": "snr",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Signal-to-noise ratio of the unit's waveform.",
-            "finite": true
+            "finite": true,
+            "description": "Signal-to-noise ratio of the unit's waveform."
           },
           {
             "name": "isi_violations_ratio",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Refractory violations as a ratio to chance.",
-            "finite": true
+            "finite": true,
+            "description": "Refractory violations as a ratio to chance."
           },
           {
             "name": "isi_violations_count",
@@ -85,8 +85,8 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Contamination estimated from the refractory period.",
-            "finite": true
+            "finite": true,
+            "description": "Contamination estimated from the refractory period."
           },
           {
             "name": "rp_violations",
@@ -100,115 +100,115 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Contamination from the sliding refractory estimate. Populated for 2,555 of 4,559 units measured.",
-            "finite": true
+            "finite": true,
+            "description": "Contamination from the sliding refractory estimate. Populated for 2,555 of 4,559 units measured."
           },
           {
             "name": "amplitude_cutoff",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Estimated fraction of spikes lost below threshold. Populated for 4,277 of 4,559 units measured.",
-            "finite": true
+            "finite": true,
+            "description": "Estimated fraction of spikes lost below threshold. Populated for 4,277 of 4,559 units measured."
           },
           {
             "name": "amplitude_median",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Median spike amplitude, in the sorting's own units.",
-            "finite": true
+            "finite": true,
+            "description": "Median spike amplitude, in the sorting's own units."
           },
           {
             "name": "amplitude_cv_median",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Median of the amplitude coefficient of variation. Populated for 3,857 of 4,559 units measured.",
-            "finite": true
+            "finite": true,
+            "description": "Median of the amplitude coefficient of variation. Populated for 3,857 of 4,559 units measured."
           },
           {
             "name": "amplitude_cv_range",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Range of the amplitude coefficient of variation. Populated for 3,857 of 4,559 units measured.",
-            "finite": true
+            "finite": true,
+            "description": "Range of the amplitude coefficient of variation. Populated for 3,857 of 4,559 units measured."
           },
           {
             "name": "isolation_distance",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Mahalanobis distance at which as many other spikes fall inside as the unit has.",
-            "finite": true
+            "finite": true,
+            "description": "Mahalanobis distance at which as many other spikes fall inside as the unit has."
           },
           {
             "name": "l_ratio",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Contamination measured in the same feature space. Populated for 4,484 of 4,559 units measured.",
-            "finite": true
+            "finite": true,
+            "description": "Contamination measured in the same feature space. Populated for 4,484 of 4,559 units measured."
           },
           {
             "name": "d_prime",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Linear-discriminant separation from the neighbouring cluster.",
-            "finite": true
+            "finite": true,
+            "description": "Linear-discriminant separation from the neighbouring cluster."
           },
           {
             "name": "silhouette",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Silhouette score in the feature space.",
-            "finite": true
+            "finite": true,
+            "description": "Silhouette score in the feature space."
           },
           {
             "name": "nn_hit_rate",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Nearest-neighbour hit rate.",
-            "finite": true
+            "finite": true,
+            "description": "Nearest-neighbour hit rate."
           },
           {
             "name": "nn_miss_rate",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Nearest-neighbour miss rate.",
-            "finite": true
+            "finite": true,
+            "description": "Nearest-neighbour miss rate."
           },
           {
             "name": "drift_ptp",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Peak-to-peak drift of the unit's position. Populated for 2,531 of 4,559 units measured.",
-            "unit": "um",
-            "finite": true
+            "unit": "um"
           },
           {
             "name": "drift_std",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Standard deviation of that drift. Populated for 2,531 of 4,559 units measured.",
-            "unit": "um",
-            "finite": true
+            "unit": "um"
           },
           {
             "name": "drift_mad",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Median absolute deviation of that drift. Populated for 2,531 of 4,559 units measured.",
-            "unit": "um",
-            "finite": true
+            "unit": "um"
           }
         ],
         "primary_key": [
@@ -218,20 +218,20 @@
         "references": [
           {
             "columns": [
-              "unit_id"
-            ],
-            "resource": "core.units",
-            "resource_columns": [
-              "unit_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "unit_id"
+            ],
+            "resource": "core.units",
+            "resource_columns": [
+              "unit_id"
             ]
           }
         ],
@@ -320,8 +320,8 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Fraction of the unit's spikes that fall in a synchronous event of this size.",
-            "finite": true
+            "finite": true,
+            "description": "Fraction of the unit's spikes that fall in a synchronous event of this size."
           }
         ],
         "primary_key": [
@@ -332,20 +332,20 @@
         "references": [
           {
             "columns": [
-              "unit_id"
-            ],
-            "resource": "core.units",
-            "resource_columns": [
-              "unit_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "unit_id"
+            ],
+            "resource": "core.units",
+            "resource_columns": [
+              "unit_id"
             ]
           }
         ],
@@ -403,53 +403,53 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Time from the template's trough (minimum) to the main peak (maximum) after it.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "main_peak_to_trough_ratio",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Absolute amplitude of the template's larger peak, before or after the trough, over the trough's.",
-            "finite": true
+            "finite": true,
+            "description": "Absolute amplitude of the template's larger peak, before or after the trough, over the trough's."
           },
           {
             "name": "peak_half_width",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Width at half amplitude of the template's larger peak, before or after the trough.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "trough_half_width",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Width at half amplitude of the template's trough.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "repolarization_slope",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Slope of the repolarizing phase.",
-            "unit": "uV/s",
-            "finite": true
+            "unit": "uV/s"
           },
           {
             "name": "recovery_slope",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Slope of the recovery phase.",
-            "unit": "uV/s",
-            "finite": true
+            "unit": "uV/s"
           },
           {
             "name": "num_positive_peaks",
@@ -470,36 +470,36 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Exponential decay of amplitude with distance from the peak channel. Populated for 4,293 of 4,559 units measured.",
-            "unit": "/um",
-            "finite": true
+            "unit": "/um"
           },
           {
             "name": "spread",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Depth span of the channels on which the template's amplitude exceeds a set fraction of its largest.",
-            "unit": "um",
-            "finite": true
+            "unit": "um"
           },
           {
             "name": "velocity_above",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Propagation velocity above the peak channel. Sparse: the fit needs channels on that side. Populated for 807 of 4,559 units measured.",
-            "unit": "mm/s",
-            "finite": true
+            "unit": "mm/s"
           },
           {
             "name": "velocity_below",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Propagation velocity below the peak channel. Populated for 757 of 4,559 units measured.",
-            "unit": "mm/s",
-            "finite": true
+            "unit": "mm/s"
           }
         ],
         "primary_key": [
@@ -509,20 +509,20 @@
         "references": [
           {
             "columns": [
-              "unit_id"
-            ],
-            "resource": "core.units",
-            "resource_columns": [
-              "unit_id"
-            ]
-          },
-          {
-            "columns": [
               "session_id"
             ],
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "unit_id"
+            ],
+            "resource": "core.units",
+            "resource_columns": [
+              "unit_id"
             ]
           }
         ],

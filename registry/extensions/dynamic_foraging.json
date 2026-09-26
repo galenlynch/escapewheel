@@ -22,16 +22,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "block_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The block.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The block."
           },
           {
             "name": "block_name",
@@ -46,8 +46,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The clock the interval's ticks are on.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The clock the interval's ticks are on."
           },
           {
             "name": "start_tick",
@@ -70,18 +70,18 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Left reward probability across the block.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "reward_probability_right",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Right reward probability across the block.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "metadata",
@@ -153,185 +153,185 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "base_reward_probability_sum",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "The two ports' probabilities sum to this.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "block_beta",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Exponential parameter the block length is drawn from.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "block_min",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Shortest block, in trials.",
-            "finite": true
+            "finite": true,
+            "description": "Shortest block, in trials."
           },
           {
             "name": "block_max",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Longest block, in trials.",
-            "finite": true
+            "finite": true,
+            "description": "Longest block, in trials."
           },
           {
             "name": "min_reward_each_block",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
-            "description": "Rewards a block must deliver before it may end.",
-            "finite": true
+            "finite": true,
+            "description": "Rewards a block must deliver before it may end."
           },
           {
             "name": "delay_beta",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Exponential parameter the delay is drawn from. Zero fixes it.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "delay_min",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Shortest delay.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "delay_max",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Longest delay.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "iti_beta",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Exponential parameter the inter-trial interval is drawn from.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "iti_min",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Shortest inter-trial interval.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "iti_max",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Longest inter-trial interval.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "response_duration",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "How long a response is accepted for.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "reward_consumption_duration",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "How long the animal is given to drink.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "reward_delay",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Delay between a correct response and delivery.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "left_valve_open_time",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Calibrated open time for the left valve.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "right_valve_open_time",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Calibrated open time for the right valve.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "reward_size_left",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Volume one left reward delivers.",
-            "unit": "uL",
-            "finite": true
+            "unit": "uL"
           },
           {
             "name": "reward_size_right",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Volume one right reward delivers.",
-            "unit": "uL",
-            "finite": true
+            "unit": "uL"
           },
           {
             "name": "minimum_opto_interval",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Shortest gap between optogenetic trials.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "fraction_of_session",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Fraction of the session the schedule applies to.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "session_wide_control",
@@ -450,8 +450,8 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "Session ID.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "Session ID."
           },
           {
             "name": "interval_kind",
@@ -466,16 +466,16 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "description": "The trial, and the interval it occupies in core.",
-            "identity": "carried"
+            "identity": "carried",
+            "description": "The trial, and the interval it occupies in core."
           },
           {
             "name": "block_id",
             "type": "int32",
             "presence": "nullable",
             "role": "identifier",
-            "description": "The block this trial falls in. Blocks are derived from where the reward probabilities change, since the source records no boundary.",
-            "identity": "assigned"
+            "identity": "assigned",
+            "description": "The block this trial falls in. Blocks are derived from where the reward probabilities change, since the source records no boundary."
           },
           {
             "name": "animal_response",
@@ -523,36 +523,36 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Left reward probability in force. Constant within a block, which is what blocks are derived from.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "reward_probability_right",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Right reward probability in force.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "reward_random_number_left",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "The draw the left outcome was decided by, so a reanalysis can reproduce it.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "reward_random_number_right",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "The draw the right outcome was decided by.",
-            "unit": "1",
-            "finite": true
+            "unit": "1"
           },
           {
             "name": "delay_start_tick",
@@ -583,18 +583,18 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "The delay this trial drew. Constant where the session's delay_beta is zero.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "iti_duration",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "The inter-trial interval this trial drew.",
-            "unit": "s",
-            "finite": true
+            "unit": "s"
           },
           {
             "name": "auto_water_left",
@@ -615,27 +615,27 @@
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Lickspout position.",
-            "unit": "um",
-            "finite": true
+            "unit": "um"
           },
           {
             "name": "lickspout_position_y",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Lickspout position.",
-            "unit": "um",
-            "finite": true
+            "unit": "um"
           },
           {
             "name": "lickspout_position_z",
             "type": "float64",
             "presence": "nullable",
             "role": "data",
+            "finite": true,
             "description": "Lickspout position.",
-            "unit": "um",
-            "finite": true
+            "unit": "um"
           }
         ],
         "primary_key": [
