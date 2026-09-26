@@ -125,7 +125,7 @@ abstraction, the registry's generators and the clock arithmetic are the places t
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
 because renaming it mid-session breaks absolute paths in flight and `git mv` cannot rename the
-working tree's own root. All three real recipes name absolute paths into it, so this and the
+working tree's own root. Both real recipes name absolute paths into it, so this and the
 rebuild want doing in one order or the other, not at once.
 
 ## 6. Staging both packets to scratch needs a token
@@ -196,15 +196,6 @@ Each follows an existing rule, so none needs a revision. `tables` sources now de
 `files-v0.1`, `aind_unit_qc` is an adapter in `escapewheel-aind`, and every name-minting adapter
 accepts `prefix`.
 
-- **The df packet does not rebuild at R144.** 786867 and 776259 rebuild to `packet-p9`, and every
-  table matches the current packet except the declared changes since core 0.6.0: UCUM unit codes,
-  `resource_id` in place of an asset's `uri` and `format`, the new `core.source_files` and
-  `core.processing_run_inputs`, the `aind_unit_qc` adapter's waveform metric names, and the build's
-  own processing runs. df's recipe fails validation on `sex = "Male"` outside the closed vocabulary
-  and on probe clocks with no observation interval, since its sorter does not contribute
-  `core.clock_observation_intervals` as 786867's does. Once df builds and compares, the three
-  `extract_qc.py` copies are deleted. Builds run from the writer's environment, whose `python` has
-  the `harp` extra and `zarr` that the recipes' delivery commands need.
 - **A `prefix` outside `[a-z0-9_.-]` mints an invalid resource ID** (Part 04 §4.1). A recipe check
   should refuse it before a build opens a source.
 - **A camera file name with capitals mints an invalid resource ID** in `video`. Whether to fold case
