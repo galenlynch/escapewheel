@@ -170,12 +170,12 @@ def _mixed(**prefixes):
 
 
 def test_a_mixed_build_under_one_prefix_passes_the_check(tmp_path):
-    _, errors = _checked(tmp_path, _mixed(**dict.fromkeys(MIXED_KINDS, "A_")))
+    _, errors = _checked(tmp_path, _mixed(**dict.fromkeys(MIXED_KINDS, "a_")))
     assert errors == []
 
 
 def test_a_session_source_left_unprefixed_in_a_prefixed_build_is_refused(tmp_path):
     """Its calibration devices are the NWB's devices, so it cannot be the one source left at none."""
-    prefixes = dict.fromkeys(MIXED_KINDS, "A_") | {"session": None}
+    prefixes = dict.fromkeys(MIXED_KINDS, "a_") | {"session": None}
     _, errors = _checked(tmp_path, _mixed(**prefixes))
     assert [e for e in errors if "disagree on prefix" in e and "session unset" in e], errors
