@@ -70,6 +70,8 @@ class LFPSource(Compensates):
     prefix : str
         Prepended to the contact names this adapter composes. It MUST match what the adapter
         owning `core.electrodes` uses, since a name is what the writer numbers.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
     verify : str, default "size"
         What to establish about the referenced bytes, each level including the one before it:
 
@@ -128,7 +130,7 @@ class LFPSource(Compensates):
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
     #: unset (Part 12 §4). `store` is absent because it is a handle, which a recipe cannot
     #: carry and a declaration may not name.
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "prefix", "verify")
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "prefix", "verify", "source_cache")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
@@ -143,8 +145,9 @@ class LFPSource(Compensates):
         prefix: str = "",
         verify: str = "size",
         store: Any = None,
+        source_cache: str | None = None,
     ) -> None:
-        self.root = source_root(root)
+        self.root = source_root(root, cache=source_cache)
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.clocks = [dict(row) for row in clocks]

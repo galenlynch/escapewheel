@@ -103,6 +103,8 @@ class SessionSource(Compensates):
         Prepended to every calibration ID and name, and to the device a calibration covers, which
         is an NWB source's device ID and carries the prefix that source was built with. The
         reference clock and the subject are not this adapter's to name, so they are left as given.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
 
     Attributes
     ----------
@@ -175,7 +177,7 @@ class SessionSource(Compensates):
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "zone", "reference_clock")
 
     #: Part 05 §3.4: options this adapter reads and can run without (Part 12 §4).
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix",)
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix", "source_cache")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     #: `aind_nwb` rather than `nwb`: a kind is matched by name, and `session.order` raises on one
@@ -190,13 +192,14 @@ class SessionSource(Compensates):
         reference_clock: Mapping[str, Any],
         session_id: str | None = None,
         prefix: str = "",
+        source_cache: str | None = None,
     ) -> None:
         zone = zone_of(zone)
         #: The reference clock's own row, emitted as given. A build locates `tick_zero_utc`
         #: from the record nodes' stamps, which are better than anything here (Part 12 §4);
         #: :meth:`epoch` is what derives one where a caller has nothing better.
         self.clock_row = dict(reference_clock)
-        path = source_root(root)
+        path = source_root(root, cache=source_cache)
         self.path = path if path.is_file() else path / SESSION_JSON
         if not self.path.is_file():
             raise SourceDefect(f"{path} holds no {SESSION_JSON}")

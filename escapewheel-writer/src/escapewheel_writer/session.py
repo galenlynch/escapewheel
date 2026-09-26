@@ -22,6 +22,7 @@ the recipe says it owns, so the resolution is declared in one place a reader can
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field, replace
@@ -37,11 +38,11 @@ from escapewheel_validator import CheckedRegistryContext, RegistryRejected, chec
 from numpy.typing import NDArray
 
 from . import opaque
+from .declaration import SOURCE_CACHE
 from .extensions import load_checked as load_extension_context
 from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, declared, payloads, reached_by, redacted
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
-from .sources.store import cache_directory
 from .writer import PacketWriter
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
@@ -108,9 +109,9 @@ class Context:
         An axis advances in ticks (R20 §2), so a step cannot be derived without the rate, and
         the row is what carries it.
     stores : dict
-        Resolved source root to its open store. Three adapters in a real recipe read the same
-        `.nwb`; sharing the store means they cannot disagree about what is in it, and stops the
-        electrode table being parsed once per adapter.
+        Resolved source root and source-cache location to the open store. Three adapters in a
+        real recipe read the same `.nwb`; sharing the store means they cannot disagree about what
+        is in it, and stops the electrode table being parsed once per adapter.
     stated : dict
         Resource to source kind to the rows that kind produced, for the resources the recipe
         declares a preference for. Held so Part 05 §3.4 can compare the winner's row against the
@@ -121,7 +122,7 @@ class Context:
     sources: dict[str, Any] = field(default_factory=dict)
     units: list[dict[str, Any]] = field(default_factory=list)
     clocks: dict[str, dict[str, Any]] = field(default_factory=dict)
-    stores: dict[Path, Any] = field(default_factory=dict)
+    stores: dict[Any, Any] = field(default_factory=dict)
     stated: dict[str, dict[str, list[dict[str, Any]]]] = field(default_factory=dict)
     #: The reference clock, as the recipe declares it and the build locates it. `_reference`
     #: fills `tick_zero_utc` once a source carrying the stamps has run; an adapter uses the
@@ -156,6 +157,9 @@ class Context:
     #: The build's progress reporter, for the stages that happen inside one source rather than
     #: between them -- a delivery being the one that can take minutes on its own.
     say: Callable[[str], None] = lambda _: None
+    #: The source-cache location supplied to every adapter accepting `source_cache`, or None where
+    #: the build has none (Part 12 §10).
+    source_cache: Path | None = None
     #: What the build itself observed, reported beside the adapters' own notes.
     notes: list[str] = field(default_factory=list)
     #: Part 05 §3.6: `block.field` to the registry type the packet stores it as, so a declared
@@ -301,6 +305,8 @@ def _supplied(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, A
             supplied[name] = terms[name]
         elif name not in spec.options:
             raise RecipeError(f"source {spec.kind} needs {name!r}, which this entry does not set")
+    if SOURCE_CACHE in declared(spec)["accepts"] and context.source_cache is not None:
+        supplied[SOURCE_CACHE] = str(context.source_cache)
     return {**supplied, "options": dict(spec.options)}
 
 
@@ -349,7 +355,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
     # declare (Part 12 §4), so it is supplied where the class accepts one rather than from a
     # table of kinds -- and an adapter out of process is handed none and opens its own.
     if "store" in inspect.signature(adapter).parameters:
-        options.setdefault("store", store_for(spec.root, context.stores))
+        options.setdefault("store", store_for(spec.root, context.stores, cache=supplied.get(SOURCE_CACHE)))
     return adapter(supplied.pop("root"), **supplied, **options)
 
 
@@ -776,6 +782,7 @@ def build(  # noqa: C901
     extension_contexts: Collection[CheckedRegistryContext] | None = None,
     say: Callable[[str], None] = lambda _: None,
     strict: bool = False,
+    source_cache: str | Path | None = None,
 ) -> PacketWriter:
     """Run every source and return a writer holding the packet, uncommitted.
 
@@ -793,6 +800,10 @@ def build(  # noqa: C901
         an absent column, a dropped timestamp, an offset that disagreed -- and every one is a
         place the packet says less than the source could have. Off by default because working
         around them is the point of an adapter; on in CI, where a new one is news.
+    source_cache : str or Path, optional
+        The source-cache location, supplied as `source_cache` to each adapter accepting it
+        (Part 12 §10). Created where absent and never emptied. One inside the packet root or the
+        delivery workspace is supplied to no adapter, and the build notes that and proceeds.
 
     Returns
     -------
@@ -817,9 +828,6 @@ def build(  # noqa: C901
     if errors := [p.message for p in recipe.check(checked_registry, extension_documents) if p.level == "error"]:
         raise RecipeError(f"{recipe.path}: refused, {len(errors)} error(s): " + "; ".join(errors))
     session_id = str(recipe.session["session_id"])
-    # Reported rather than chosen here: `Recipe.load` places it, because a store root is opened
-    # through a chained path that carries the location and is built as the recipe parses.
-    say(f"source cache {cache_directory()}")
     context = Context(
         session_id=session_id,
         fact_types=_fact_types(checked_registry),
@@ -827,6 +835,7 @@ def build(  # noqa: C901
         say=say,
         payloads=payloads(checked_registry, extension_documents),
     )
+    context.source_cache = _source_cache(source_cache, recipe.out, context)
     if recipe.session.get("reference_clock_id"):
         context.reference = _reference_clock(recipe, context)
     writer = PacketWriter(
@@ -948,6 +957,31 @@ def build(  # noqa: C901
 
     writer.after_staging(written)
     return writer
+
+
+def _source_cache(configured: str | Path | None, out: Path, context: Context) -> Path | None:
+    """Return the location this build supplies as `source_cache`, creating it, or None (Part 12 §10).
+
+    Refused inside the packet root or the delivery workspace, where a build replaces what it finds,
+    and wherever it cannot be written; either way the build proceeds as one with no location.
+    """
+    if configured is None:
+        return None
+    where = Path(configured).resolve()
+    for inside in (out.resolve(), context.workspace.resolve()):
+        if where == inside or inside in where.parents:
+            context.notes.append(f"source cache {where} lies inside {inside}, so no adapter is supplied one")
+            return None
+    try:
+        where.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        context.notes.append(f"source cache {where} cannot be created ({exc}), so no adapter is supplied one")
+        return None
+    if not os.access(where, os.W_OK | os.X_OK):
+        context.notes.append(f"source cache {where} is not writable, so no adapter is supplied one")
+        return None
+    context.say(f"source cache {where}")
+    return where
 
 
 def _say_notes(kind: str, source: Any, seen: int, say: Callable[[str], None], strict: bool) -> int:

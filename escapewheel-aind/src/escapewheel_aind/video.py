@@ -120,6 +120,8 @@ class VideoSource(Compensates):
         Prepended to every media asset ID and name, and to the name part of the resource ID each
         video is referenced under, which a build binds to the asset by that name (Part 12 §5).
         The reference clock is not this adapter's to name, so it is left as given.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
     """
 
     #: Part 12 §3: released apart from the writer, so it declares its protocols. `escapewheel
@@ -142,7 +144,7 @@ class VideoSource(Compensates):
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
     #: unset (Part 12 §4).
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "batch_rows", "prefix")
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("uri_base", "batch_rows", "prefix", "source_cache")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ()
@@ -156,8 +158,9 @@ class VideoSource(Compensates):
         uri_base: str | None = None,
         batch_rows: int = BATCH_ROWS,
         prefix: str = "",
+        source_cache: str | None = None,
     ) -> None:
-        self.root = source_root(root)
+        self.root = source_root(root, cache=source_cache)
         self.session_id = session_id
         self.clock_id = str(reference_clock["clock_id"])
         self.uri_base = uri_base.rstrip("/") if uri_base else None

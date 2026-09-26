@@ -31,7 +31,7 @@ from typing import Any
 import tomllib
 from upath import UPath
 
-from .sources.store import cache_beside, source_root
+from .sources.store import source_root
 
 #: Resources a recipe supplies from its own declarations rather than through a source: the
 #: session and subject it names, and the record of the run that read the sources.
@@ -58,6 +58,7 @@ TERMS = frozenset(
         "wanted",
         "array_location",
         "opaque_location",
+        "source_cache",
     }
 )
 
@@ -380,8 +381,7 @@ class SourceSpec:
     contributes: tuple[str, ...] = ()
     options: Mapping[str, Any] = field(default_factory=dict)
     #: Where the source is, as the URI an adapter opens for itself (Part 12 §4). Not `str(root)`:
-    #: a root this build resolved is a chained path carrying both the cache it reads through and
-    #: the anonymity it was opened with, and `str()` drops the second while keeping the first --
+    #: a root this build resolved carries the anonymity it was opened with, and `str()` drops it,
     #: which is how a public bucket comes back signed in a process that was handed the text.
     uri: str = ""
     #: How to open that URI, where the recipe says. A fact about one machine's credentials, so it
@@ -634,9 +634,7 @@ class Recipe:
             The ``.toml`` file. Relative paths inside it resolve against its directory, so a
             recipe travels with the tree it describes.
         out : str or Path, optional
-            Where the packet goes, overriding ``[packet].out``. Settled here rather than by the
-            caller because a store root is opened through a cache that sits beside the packet,
-            and a root resolved against the wrong one cannot be moved afterwards.
+            Where the packet goes, overriding ``[packet].out``.
 
         Returns
         -------
@@ -693,17 +691,14 @@ class Recipe:
             """Where the source is, for an adapter that opens it in another process.
 
             A local path is resolved, since the other process has its own working directory; a
-            store URI is left exactly as the recipe wrote it, because what `resolve_root` returns
-            is a chained path whose text no longer says how to open it.
+            store URI is left exactly as the recipe wrote it, because the text of what
+            `resolve_root` returns no longer says how to open it.
             """
             del storage
             resolved = resolve_root(value, {})
             return str(resolved) if isinstance(resolved, Path) else value
 
         destination = Path(out) if out else resolve(str(packet.get("out", packet["id"])))
-        # Before the first `resolve_root` below, which bakes the cache location into the chained
-        # path it returns.
-        cache_beside(destination)
 
         return cls(
             path=path,
@@ -1205,9 +1200,9 @@ class Recipe:
         return problems
 
     def _option_problems(self) -> list[str]:
-        """Options a source kind requires and this recipe does not carry, and options it reads at all.
+        """Options a source kind requires and the recipe does not set, terms it sets, and unread options.
 
-        Both are refused before any source is opened (Part 12 §4). A term the build fills is not
+        All are refused before any source is opened (Part 12 §4). A term the build fills is not
         a recipe's business, so only the names that fall through to the recipe's options are
         reported here. An option the adapter names nowhere is the converse: the recipe states
         something about the packet that never reaches the source, and its author's next evidence
@@ -1219,12 +1214,18 @@ class Recipe:
             for name in declared(spec)["needs"]
             if name not in TERMS and name not in spec.options
         ]
+        problems += [
+            f"source {spec.kind} sets {name!r}, which is a term the build fills rather than an option"
+            for spec in self.sources
+            for name in sorted(spec.options)
+            if name in TERMS
+        ]
         for spec in self.sources:
             known = set(declared(spec)["needs"]) | set(declared(spec)["accepts"])
             problems += [
                 f"source {spec.kind} sets {name!r}, which it declares neither as needed nor as accepted"
                 for name in sorted(spec.options)
-                if name not in known and name not in _BUILD_OPTIONS
+                if name not in known and name not in _BUILD_OPTIONS and name not in TERMS
             ]
         return problems
 

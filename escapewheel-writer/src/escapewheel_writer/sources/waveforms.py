@@ -109,6 +109,8 @@ class WaveformSource:
         Prepended to identifiers this adapter mints, including the contact names it composes. It
         MUST match what the adapter owning `core.electrodes` uses, since a name is what the writer
         numbers.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -147,6 +149,7 @@ class WaveformSource:
         "compressed_per_chunk",
         "prefix",
         "experiment",
+        "source_cache",
     )
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
@@ -166,8 +169,9 @@ class WaveformSource:
         prefix: str = "",
         array_location: str | None = None,
         store: Any = None,
+        source_cache: str | None = None,
     ) -> None:
-        path = source_root(root)
+        path = source_root(root, cache=source_cache)
         self.root = path if path.name == ANALYZERS else path / ANALYZERS
         if not self.root.is_dir():
             raise SourceDefect(f"{path} holds no {ANALYZERS}/ directory")

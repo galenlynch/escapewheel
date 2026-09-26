@@ -47,6 +47,8 @@ class HarpSource:
         The session these devices were used in.
     prefix : str, optional
         Prepended to every device ID and name.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -68,13 +70,13 @@ class HarpSource:
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id")
 
     #: Part 05 §3.4: options this adapter reads and can run without (Part 12 §4).
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix",)
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix", "source_cache")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ()
 
-    def __init__(self, root: str | Path, *, session_id: str, prefix: str = "") -> None:
-        self.root = source_root(root)
+    def __init__(self, root: str | Path, *, session_id: str, prefix: str = "", source_cache: str | None = None) -> None:
+        self.root = source_root(root, cache=source_cache)
         self.session_id = session_id
         self.prefix = prefix
         self.notes: list[str] = []

@@ -185,6 +185,8 @@ class NWBSource(Compensates):
     prefix : str, optional
         Prepended to every generated ID. A single-session packet needs none; merging
         sessions into one packet needs the IDs disambiguated.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
     trial_metadata : bool, default False
         Carry every unmapped trial column into `core.intervals.metadata` as JSON. **Off**, per
         Part 02 §6: a writer SHOULD NOT fill that column routinely, because doing so puts a task's
@@ -313,6 +315,7 @@ class NWBSource(Compensates):
         "interval_kind",
         "emit_clock",
         "attachments",
+        "source_cache",
     )
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
@@ -348,9 +351,10 @@ class NWBSource(Compensates):
         emit_clock: bool = True,
         attachments: str | Path | None = None,
         store: Any = None,
+        source_cache: str | None = None,
     ) -> None:
         zone = zone_of(zone)
-        self.root = _resolve(source_root(root))
+        self.root = _resolve(source_root(root, cache=source_cache))
         # Part 01 §3.10: an interval declares the resource that says what it was, and this adapter
         # cannot know it -- an exported trials table is the task's, and which task it is is a
         # fact about the session rather than about the file. The recipe names it, which is the

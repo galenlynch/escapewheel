@@ -192,19 +192,9 @@ natural.
 
 ## 9. Implementation follow-ups
 
-Each follows an existing rule, so none needs a revision. `tables` sources now deliver by
-`files-v0.1`, `aind_unit_qc` is an adapter in `escapewheel-aind`, and every name-minting adapter
-accepts `prefix`.
-
-- **The source cache does not meet R142** (Part 12 §10). The writer should take the location from
-  its own configuration and supply it only as `source_cache` in the input object, dropping
-  `ESCAPEWHEEL_SOURCE_CACHE`, its `TMPDIR` fallback, and `cache_beside`'s process-wide variable;
-  keep entries under its own subdirectory, keyed by URI and entity tag, and confirm each object with
-  the store once per run before using it; fetch to a unique temporary name and publish only complete
-  data on every fetch route, `cat` included; refuse a declaration whose `needs` names the term and
-  admit one whose `accepts` does; have `session`, `video`, and `aind_unit_qc` declare it in
-  `accepts`; and add a command that prunes the location. The writer README's cache section and the
-  comment in `sources/store.py` citing Part 12 §4 change with it. R142 §6 lists the tests.
+None open. `tables` sources deliver by `files-v0.1`, `aind_unit_qc` is an adapter in
+`escapewheel-aind`, every name-minting adapter accepts `prefix`, and every store-reading adapter
+accepts `source_cache` and keeps store objects as Part 12 §10 requires.
 
 ---
 
@@ -402,10 +392,8 @@ Against a whole-packet build of 1 min 51 s, which is what §2 turns on.
   drops: the filesystem came back with `storage` at a `tempfile.mkdtemp()` while the directory
   `source_root` had just created stayed empty, so every fetched object went to tmpfs — RAM a cgroup
   cap does not bound, which is what killed two builds capped at 24 GB and 8 GB. The option goes at
-  the top level with the target's options under the protocol name. `Recipe.load` now places the
-  cache in the packet's parent directory before it resolves the first root, since a store root is
-  opened through a chained path carrying the location; `ESCAPEWHEEL_SOURCE_CACHE` carries it to a
-  delivering command, which is not a Part 12 §4 supplied term.
+  the top level with the target's options under the protocol name. `escapewheel import` places the
+  location in the packet's parent directory by default and supplies it as `source_cache` (R142).
 
 ---
 

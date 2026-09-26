@@ -17,45 +17,138 @@ one happened to ask first.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
+import shutil
 import tempfile
+import time
+import uuid
+import weakref
 from pathlib import Path, PurePath
 from typing import Any
 
-import fsspec
 from fsspec.implementations.cached import SimpleCacheFileSystem
 from numpy.typing import NDArray
 from upath import UPath
 
 from .zarr_compat import attrs, members, read_array
 
+#: This writer's storage format, the subdirectory of a source-cache location it keeps data under
+#: and the only one it changes (Part 12 §10). Named for the package, which is what controls it.
+STORAGE_FORMAT = "escapewheel-writer"
 
-class WholeObjectCache(SimpleCacheFileSystem):  # type: ignore[misc]
-    """`simplecache`, publishing an object into the cache only once all of it has arrived.
+#: What a store's `info` reports that changes when an object's bytes do -- an entity tag, a
+#: version, or a full-object checksum -- under each fsspec backend's key, in preference order.
+#: A modification time is not one (Part 12 §10).
+CONFIRMING = (
+    "ETag",
+    "etag",
+    "VersionId",
+    "version_id",
+    "generation",
+    "ChecksumSHA256",
+    "ChecksumCRC64NVME",
+    "crc32c",
+    "md5Hash",
+)
 
-    Upstream downloads into the file it later treats as cached and counts a file as cached if it
-    exists, so a build killed mid-download leaves a truncated object every later build reads as
-    whole. Registered under `simplecache` so every chained path this process opens uses it.
+#: A URI naming one version of an object, whose content cannot change, so a copy of it needs no
+#: confirmation (Part 12 §10).
+PINNED = re.compile(r"[?&]versionId=[^&]+")
+
+
+class KeptObjects(SimpleCacheFileSystem):  # type: ignore[misc]
+    """Whole objects kept across builds, each used only once the store has confirmed it this run.
+
+    Every read route upstream -- `open`, `cat`, `cat_file`, `cat_ranges` and their async forms --
+    asks `_check_file` for a local copy before fetching one itself, so answering it with a
+    confirmed, complete copy every time governs them all. Helpers are module functions because
+    `CachingFileSystem.__getattribute__` hands any method it does not list to the target store.
+
+    Layout under the storage root: `objects/` holds entries keyed by URI and confirming value,
+    `partial/` fetches in flight, and `runs/<run>/` objects the store reports no confirming value
+    for, which this run reuses and no later one does.
+
+    Parameters
+    ----------
+    run : str
+        Distinguishes this run's instance from every other: fsspec caches instances by their
+        arguments, and a confirmation holds only within the run that made it.
     """
 
-    def _get_cached_file_before_open(self, path: str, **kwargs: Any) -> None:
-        if self.compression:
-            super()._get_cached_file_before_open(path, **kwargs)
-            return
-        cached = os.path.join(self.storage[-1], self._mapper(path))
-        partial = f"{cached}.{os.getpid()}.part"
-        self._mkcache()
-        self._cache_size = None
-        try:
-            self.fs.get_file(path, partial)
-            os.replace(partial, cached)
-        finally:
-            if os.path.exists(partial):
-                os.remove(partial)
+    def __init__(self, run: str, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.run = run
+        self._confirmed: dict[str, str] = {}
+        weakref.finalize(self, shutil.rmtree, os.path.join(self.storage[-1], "runs", run), ignore_errors=True)
+
+    def _check_file(self, path: str) -> str:
+        path = self._strip_protocol(path)
+        kept = self._confirmed.get(path)
+        if kept is None or not os.path.exists(kept):
+            kept = self._confirmed[path] = _confirmed_copy(self, path)
+        return kept
 
 
-fsspec.register_implementation("simplecache", WholeObjectCache, clobber=True)
+def _confirmed_copy(fs: KeptObjects, path: str) -> str:
+    """Return a complete local copy of `path` that the store has just confirmed, fetching it if needed."""
+    root = fs.storage[-1]
+    uri = fs.fs.unstrip_protocol(path)
+    if PINNED.search(uri):
+        entry = os.path.join(root, "objects", _digest(uri))
+        if not os.path.exists(entry):
+            _fetch(fs, path, entry)
+        return entry
+    tag, size = _confirming(fs, path)
+    this_run = os.path.join(root, "runs", fs.run, _digest(uri))
+    if tag is None:
+        if not os.path.exists(this_run):
+            _fetch(fs, path, this_run)
+        return this_run
+    entry = os.path.join(root, "objects", _digest(f"{uri}\n{tag}"))
+    if os.path.exists(entry) and os.path.getsize(entry) != size:
+        os.remove(entry)
+    if os.path.exists(entry):
+        # Touched on use, so `prune_kept`'s age is time since a build last read it.
+        os.utime(entry)
+        return entry
+    _fetch(fs, path, this_run)
+    # Filed under the tag only if the store still reports it, since the object may have changed
+    # between asking and fetching; otherwise it is only what this run read.
+    if _confirming(fs, path)[0] != tag:
+        return this_run
+    os.makedirs(os.path.dirname(entry), exist_ok=True)
+    os.replace(this_run, entry)
+    return entry
+
+
+def _confirming(fs: KeptObjects, path: str) -> tuple[str | None, int | None]:
+    """Ask the store, bypassing any listing it cached, for the object's confirming value and size."""
+    fs.fs.invalidate_cache(path)
+    info = fs.fs.info(path)
+    tag = next((f"{key}={info[key]}" for key in CONFIRMING if info.get(key) not in (None, "", "null")), None)
+    return tag, info.get("size")
+
+
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def _fetch(fs: KeptObjects, path: str, entry: str) -> None:
+    """Fetch into a name no reader looks up, and publish it under `entry` only once it is whole."""
+    partial = os.path.join(fs.storage[-1], "partial")
+    os.makedirs(partial, exist_ok=True)
+    os.makedirs(os.path.dirname(entry), exist_ok=True)
+    handle, fetching = tempfile.mkstemp(dir=partial)
+    os.close(handle)
+    try:
+        fs.fs.get_file(path, fetching)
+        os.replace(fetching, entry)
+    finally:
+        if os.path.exists(fetching):
+            os.remove(fetching)
 
 
 class SourceStore:
@@ -76,8 +169,8 @@ class SourceStore:
         121 s build, and saves the 3.8 GB copy.
     """
 
-    def __init__(self, root: str | Path) -> None:
-        self.root = source_root(root)
+    def __init__(self, root: str | Path, *, cache: str | PurePath | None = None) -> None:
+        self.root = source_root(root, cache=cache)
         self._arrays: dict[str, NDArray[Any]] = {}
         self._attrs: dict[str, dict[str, Any]] = {}
         self._heads: dict[tuple[str, int], NDArray[Any]] = {}
@@ -170,59 +263,8 @@ def _rooted(target: Any) -> bool:
 ANONYMOUS = frozenset({"s3", "gs", "gcs", "az", "abfs", "adl"})
 
 
-#: The environment variable naming the cache directory. Not a supplied term (Part 12 §4): an
-#: adapter that never reads it caches somewhere else and is conforming, so this says where the
-#: bytes should land rather than anything a delivery depends on.
-CACHE_VARIABLE = "ESCAPEWHEEL_SOURCE_CACHE"
-
-
-def cache_directory() -> Path:
-    """Where a store's fetched objects are kept: `ESCAPEWHEEL_SOURCE_CACHE`, else under `TMPDIR`.
-
-    The variable is the channel because an adapter may run in another process, where a value
-    set in this one does not reach it; the environment is what a delivering command inherits.
-    """
-    named = os.environ.get(CACHE_VARIABLE)
-    if named:
-        return Path(named)
-    return Path(os.environ.get("TMPDIR", tempfile.gettempdir())) / "escapewheel-source-cache"
-
-
-#: What the last `cache_beside` put in the environment, so a second packet moves the cache and an
-#: operator's own setting is left alone. Two recipes in one process is the case: the variable is
-#: how the location reaches a child, and a value this process wrote is not a declaration.
-_PLACED: str | None = None
-
-
-def cache_beside(packet: str | PurePath) -> Path:
-    """Put the cache in the packet's parent directory, and return where that is.
-
-    A default under `TMPDIR` is RAM wherever `/tmp` is a tmpfs, so a cgroup cap does not bound
-    what a build fetches and the kill arrives as system memory pressure. Beside the packet puts
-    it on the filesystem that is about to hold the packet, which is the same choice the
-    materializer and the validator make for their scratch.
-
-    The parent rather than the packet, so a rebuild into a new directory reads what the last
-    one fetched: `simplecache` keys on the URI, so two packets sharing a directory share
-    whatever objects they share and collide over none.
-
-    Call it before the first root resolves. A store root is opened through a chained path
-    carrying the cache location, so where the bytes land is fixed when the path is built and
-    moving the cache afterwards moves nothing.
-
-    An operator who has set `ESCAPEWHEEL_SOURCE_CACHE` keeps it.
-    """
-    global _PLACED
-    declared = os.environ.get(CACHE_VARIABLE)
-    if declared and declared != _PLACED:
-        return Path(declared)
-    where = Path(packet).parent / ".escapewheel-source-cache"
-    os.environ[CACHE_VARIABLE] = _PLACED = str(where)
-    return where
-
-
 def source_root(root: str | PurePath, *, cache: str | PurePath | None = None, **storage: Any) -> Any:
-    """Return a root as a path: a local one resolved, a store one opened through a cache.
+    """Return a root as a path: a local one resolved, a store one opened, through `cache` if given.
 
     `resolve()` on a store URI is a no-op that still costs a round trip on some backends, and
     a URI has no `..` to collapse: what makes two spellings of one local tree share a store is
@@ -234,52 +276,92 @@ def source_root(root: str | PurePath, *, cache: str | PurePath | None = None, **
     `storage` replaces that default rather than adding to it, so `anon=False` asks for the
     ambient credential chain back.
 
-    **A store is also read through a local cache**, because an adapter reads some objects more
-    than once: `spikes.npy` is read for a stream's unit summary and again to stream its spikes,
-    and over a network that second read costs another 344 MB. Bandwidth is not the lever --
-    parallel ranges within one object win 1.1x and concurrency across objects 1.2x against a
-    link that saturates near 99 MB/s -- so what pays is not fetching twice, which the cache
-    turns from 4.0 s into 0.1 s. What lands in it is exactly what the adapters read, which is
-    the list a hand-written prefetch would have to keep in step with them. Pass `cache=False`
-    to read straight through.
+    **`cache` is the `source_cache` a build supplied** (Part 12 §10), and a store root is then
+    read through :class:`KeptObjects` under it, because an adapter reads some objects more than
+    once and some builds more than once: `spikes.npy` is read for a stream's unit summary and
+    again to stream its spikes, and over a network that second read costs another 344 MB.
+    Bandwidth is not the lever -- parallel ranges within one object win 1.1x and concurrency
+    across objects 1.2x against a link that saturates near 99 MB/s -- so what pays is not
+    fetching twice, which the cache turns from 4.0 s into 0.1 s. What lands in it is exactly what
+    the adapters read, which is the list a hand-written prefetch would have to keep in step with
+    them. Each call opens a new run, so the store confirms each object again.
     """
     if not storage and not isinstance(root, str):
         # Idempotent: a root reaches an adapter already resolved by the recipe, and `str()` on
         # a store path drops the options it was opened with -- anonymity among them. Tested on
-        # the type rather than on `PurePath`, because a chained `UPath` is not one: a
-        # `simplecache::s3://` path subclasses `UPath` alone, so an isinstance check against
-        # `PurePath` silently sends it down the re-parse path and it comes back signed.
-        if getattr(root, "protocol", "") not in ("", "file"):
-            return root
-        return Path(root).resolve()
+        # the type rather than on `PurePath`, because a chained `UPath` is not one.
+        if getattr(root, "protocol", "") in ("", "file"):
+            return Path(root).resolve()
+        return root if cache is None or isinstance(root.fs, KeptObjects) else _kept(root, cache)
     text = str(root)
     protocol = getattr(UPath(text), "protocol", "")
     if protocol in ("", "file"):
         return Path(text).resolve()
-    options = dict(storage) or ({"anon": True} if protocol in ANONYMOUS else {})
-    if cache is False or protocol == "simplecache":
-        return UPath(text, **options)
-    where = cache_directory() if cache is None else Path(cache)
-    where.mkdir(parents=True, exist_ok=True)
-    # `cache_storage` at the top level, the target's options under its protocol. Nesting it under
-    # `simplecache`, as the chained-URL form suggests, parses and is then dropped: the filesystem
-    # comes back with `storage` at a `mkdtemp()` under `TMPDIR`, which is where every fetched
-    # object went while the directory named here stayed empty.
-    return UPath(f"simplecache::{text}", **{protocol: options, "cache_storage": str(where)})
+    opened = UPath(text, **(dict(storage) or ({"anon": True} if protocol in ANONYMOUS else {})))
+    return opened if cache is None else _kept(opened, cache)
 
 
-def store_for(root: str | PurePath, shared: dict[Any, SourceStore] | None = None) -> SourceStore:
+def _kept(root: Any, cache: str | PurePath) -> Any:
+    """Open a store root through the objects kept under `cache`, as a new run.
+
+    A `simplecache::` path, so upath chains and joins it as the cache it is, with the filesystem
+    assigned rather than registered: every path derived from it shares the instance, and fsspec's
+    own `simplecache` stays what other code in the process expects.
+    """
+    kept = UPath(f"simplecache::{root}", **{root.protocol: dict(root.storage_options)})
+    kept._fs_cached = KeptObjects(
+        run=uuid.uuid4().hex,
+        target_protocol=root.protocol,
+        target_options=dict(root.storage_options),
+        cache_storage=str(Path(cache) / STORAGE_FORMAT),
+    )
+    return kept
+
+
+def prune_kept(
+    location: str | PurePath, *, older_than: float | None = None, apply: bool = False
+) -> list[tuple[Path, int]]:
+    """Return each file this writer keeps under `location` unused for `older_than` days, with its size.
+
+    Removes them where `apply` is set.
+    Only under :data:`STORAGE_FORMAT`, since everything else in a location is another format's
+    (Part 12 §10). Run between builds: a build reading what this removes fetches it again, and one
+    fetching into `partial/` fails.
+    """
+    root = Path(location) / STORAGE_FORMAT
+    if not root.is_dir():
+        return []
+    cutoff = None if older_than is None else time.time() - older_than * 86400
+    found = []
+    for path in sorted(root.rglob("*")):
+        stat = path.stat()
+        if path.is_file() and (cutoff is None or stat.st_mtime < cutoff):
+            found.append((path, stat.st_size))
+    if apply:
+        for path, _ in found:
+            path.unlink(missing_ok=True)
+        runs = root / "runs"
+        for run in runs.iterdir() if runs.is_dir() else ():
+            if run.is_dir() and not any(run.iterdir()):
+                run.rmdir()
+    return found
+
+
+def store_for(
+    root: str | PurePath, shared: dict[Any, SourceStore] | None = None, *, cache: str | PurePath | None = None
+) -> SourceStore:
     """Return the store for a root, from `shared` where a caller is keeping one.
 
     An adapter constructed on its own gets a private store, so nothing about sharing leaks
-    into how an adapter is written or tested.
+    into how an adapter is written or tested. Keyed by the cache too, since an adapter supplied
+    no `source_cache` must not read through one (Part 12 §4).
     """
     if shared is None:
-        return SourceStore(root)
-    resolved = source_root(root)
-    if resolved not in shared:
-        shared[resolved] = SourceStore(resolved)
-    return shared[resolved]
+        return SourceStore(root, cache=cache)
+    key = (source_root(root), None if cache is None else str(cache))
+    if key not in shared:
+        shared[key] = SourceStore(key[0], cache=cache)
+    return shared[key]
 
 
-__all__ = ["SourceStore", "source_root", "store_for"]
+__all__ = ["STORAGE_FORMAT", "KeptObjects", "SourceStore", "prune_kept", "source_root", "store_for"]

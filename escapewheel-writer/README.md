@@ -107,18 +107,25 @@ Ordering comes from the adapters, not the registry: a foreign key constrains val
 write order, and what actually sequences a build is data-flow — the NWB source needs the
 sorter's units before it can attach a unit to an electrode.
 
-## Store sources are read through a cache
+## Adapters keep store objects in a source cache
 
-A source root on an object store is opened through fsspec's `simplecache`, so each object is
-fetched once and read locally. The cache lives in `.escapewheel-source-cache/` in the packet's
-parent directory, on the filesystem that will hold the packet, and a rebuild into a new directory
-reuses what the last one fetched. Setting `ESCAPEWHEEL_SOURCE_CACHE` names another directory; the
-variable is also how the location reaches an adapter run out of process.
+`escapewheel import` supplies a source-cache location as `source_cache` to every adapter whose
+`accepts` names it (Part 12 §10), and to no other. By default the location is
+`.escapewheel-source-cache/` in the packet's parent directory, on the filesystem that will hold the
+packet, so a rebuild into a new directory reuses what the last one fetched. `--source-cache DIR`
+names another, and `--no-source-cache` supplies none; `build(..., source_cache=...)` is the same
+setting for a caller of the library, where the default is none. A location inside the packet root
+or the delivery workspace is supplied to no adapter, and the build notes it. A build creates the
+location and never removes anything in it.
 
-Part 12 §10 governs source data kept across builds, and this cache does not yet meet it: an entry
-is keyed on the object's path alone and used without asking the store whether the object changed,
-and its location reaches adapters outside the `source_cache` term. Until that is reworked, clear the
-cache after replacing an object at a store root a recipe names.
+Every store-reading adapter in this package and in `escapewheel-aind` accepts the term and reads a
+store root through it. What it keeps lies under `escapewheel-writer/` in the location, keyed by URI
+and entity tag, and it uses a kept object only after the store has reported the same tag, version or
+checksum in the same run; an object the store reports none of is fetched in every run. A fetch lands
+under a temporary name and is published only when complete.
+
+`escapewheel prune-cache DIR` reports what the writer keeps in a location, `--older-than D` limits it
+to objects no build has read for D days, and `--apply` removes them. Run it between builds.
 
 ## Commit is atomic
 

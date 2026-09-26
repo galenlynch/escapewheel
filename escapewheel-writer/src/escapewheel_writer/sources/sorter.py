@@ -171,6 +171,8 @@ class SorterSource:
         right only when the caller means them to share a packet.
     prefix : str, optional
         Prepended to every generated ID.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
     parent_clock_id : str, optional
         The clock these sample clocks align to, where another source supplies the anchors.
         Left null a packet with more than one clock cannot satisfy R27 §2.
@@ -232,6 +234,7 @@ class SorterSource:
         "emit_probes",
         "parent_clock_id",
         "sample",
+        "source_cache",
     )
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
@@ -247,8 +250,9 @@ class SorterSource:
         emit_probes: bool = True,
         parent_clock_id: str | None = None,
         sample: int | None = None,
+        source_cache: str | None = None,
     ) -> None:
-        path = source_root(root)
+        path = source_root(root, cache=source_cache)
         self.root = path if path.name == "curated" else path / "curated"
         if not self.root.is_dir():
             raise SourceDefect(f"{path} holds no curated/ directory")

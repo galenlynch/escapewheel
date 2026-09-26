@@ -116,6 +116,8 @@ class UnitQCSource:
     nwb : str or Path, optional
         The session's NWB, whose `units` table fills a `FILLABLE` metric the analyzer left NaN. Its
         rows are keyed by `(device_name, ks_unit_id)`, the stream's probe and the sorter's label.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
     """
 
     #: Part 12 §3: released apart from the writer, so it declares its protocols.
@@ -133,7 +135,7 @@ class UnitQCSource:
 
     #: Part 05 §3.4: options this adapter reads and can run without. `store` is absent because it
     #: is a handle, which a recipe cannot carry and a declaration may not name.
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("experiment", "nwb")
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("experiment", "nwb", "source_cache")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads. `units` is the sorter's.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
@@ -147,8 +149,9 @@ class UnitQCSource:
         experiment: str | None = None,
         nwb: str | Path | None = None,
         store: Any = None,
+        source_cache: str | None = None,
     ) -> None:
-        path = source_root(root)
+        path = source_root(root, cache=source_cache)
         self.root = path if path.name == ANALYZERS else path / ANALYZERS
         if not self.root.is_dir():
             raise SourceDefect(f"{path} holds no {ANALYZERS}/ directory")
@@ -158,7 +161,7 @@ class UnitQCSource:
         # A mapping keyed by a pair does not cross a boundary (Part 12 §4), so the build hands
         # over rows and this keys them.
         self.units = {(str(row["device_name"]), str(row["local_unit_label"])): row["unit_id"] for row in units}
-        self.nwb = SourceStore(nwb) if nwb is not None else None
+        self.nwb = SourceStore(nwb, cache=source_cache) if nwb is not None else None
         self.notes: list[str] = []
         self._built: dict[str, list[dict[str, Any]]] | None = None
         self._nwb_rows: dict[tuple[str, str], int] | None = None

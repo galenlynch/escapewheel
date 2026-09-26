@@ -37,6 +37,10 @@ PROTOCOL_TERMS = {
     FLIGHT: ("socket",),
 }
 
+#: The one term a declaration names in `accepts`, since a build supplies it only where it has a
+#: source-cache location, and never in `needs` (Part 12 §4).
+SOURCE_CACHE = "source_cache"
+
 #: Where a report travels as a file, and so where `report_path` is supplied (Part 12 §9). Under
 #: `flight-v0.1` the connection carries it and no file outlives the run.
 REPORT_AS_FILE = (FILES, STREAM)
@@ -186,8 +190,16 @@ def refusals(
             found.append(f"states {field}, whose block resolves to {resource}, which no registry declares")
         elif column not in {c["name"] for c in tables[resource].get("columns", ())}:
             found.append(f"states {field}, which is no column of {resource}")
+    return found + _name_refusals(document, options=options, terms=terms)
+
+
+def _name_refusals(document: Mapping[str, Any], *, options: Collection[str], terms: Collection[str]) -> list[str]:
+    """Return what `needs` and `accepts` name that Part 12 §4 does not let them."""
+    found = []
     for name in document.get("needs", ()):
-        if name in _protocol_terms():
+        if name == SOURCE_CACHE:
+            found.append(f"needs {name}, which a build supplies only where it has a location, so it is accepted")
+        elif name in _protocol_terms():
             found.append(f"needs {name}, which a protocol supplies rather than an adapter declaring it")
         elif name not in terms and name not in options:
             found.append(f"needs {name}, neither a term nor an option this entry sets")
@@ -195,6 +207,8 @@ def refusals(
     # only that it is an option at all, and that it is not already mandatory (Part 12 §7).
     declared_needs = set(document.get("needs", ()))
     for name in document.get("accepts", ()):
+        if name == SOURCE_CACHE:
+            continue
         if name in terms or name in _protocol_terms():
             found.append(f"accepts {name}, which is a term a build fills rather than an option a recipe sets")
         elif name in declared_needs:
@@ -214,6 +228,7 @@ __all__ = [
     "PROTOCOLS",
     "PROTOCOL_TERMS",
     "REPORT_AS_FILE",
+    "SOURCE_CACHE",
     "STREAM",
     "load",
     "of",

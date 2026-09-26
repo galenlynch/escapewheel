@@ -32,7 +32,7 @@ import pyarrow.parquet as pq
 from escapewheel_reader.uri import canonical, is_absolute
 
 from . import opaque
-from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE
+from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_CACHE
 from .sources import SourceDefect
 
 #: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
@@ -153,7 +153,8 @@ def construct(kind: str, supplied: Mapping[str, Any]) -> Any:
 
     The terms the adapter declared arrive at the top level and the recipe's options under
     `options`, so no option can collide with a term. A term the protocol required is not passed
-    on: an adapter never declared it, and a build supplied it because of the protocol.
+    on: an adapter never declared it, and a build supplied it because of the protocol. The root is
+    opened uncached, and an adapter accepting `source_cache` reads through it for itself.
     """
     from .sources import ADAPTERS, discovered
     from .sources.store import source_root
@@ -164,6 +165,8 @@ def construct(kind: str, supplied: Mapping[str, Any]) -> Any:
         raise SourceDefect(f"unknown source kind {kind!r}; this build ships {known}")
     declared = getattr(adapter, "NEEDS", ("root", "session_id"))
     terms = {name: supplied[name] for name in declared if name in supplied and name != "root"}
+    if SOURCE_CACHE in supplied and SOURCE_CACHE in getattr(adapter, "ACCEPTS", ()):
+        terms[SOURCE_CACHE] = supplied[SOURCE_CACHE]
     if "root" not in supplied:
         raise SourceDefect(f"{kind}: nothing supplied a root, which every adapter needs")
     options = dict(supplied.get("options", {}))

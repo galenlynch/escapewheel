@@ -201,8 +201,7 @@ HINTS = {
 def _import(args: argparse.Namespace) -> int:  # noqa: C901
     """Build and commit a packet from a recipe (Part 05 §2, delivery through publication)."""
     # The override goes into the load rather than onto the result: a build derives where a
-    # delivery lands and where the source cache sits from where the packet is going, and the
-    # second of those is fixed when the first source root resolves.
+    # delivery lands from where the packet is going.
     recipe = Recipe.load(args.recipe, out=args.out)
     registry_path = args.registry or recipe.registry
     if registry_path is None:
@@ -258,6 +257,7 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
             extension_contexts=extension_contexts,
             say=say,
             strict=args.strict,
+            source_cache=_source_cache(args, recipe.out),
         )
     except RegistryRejected as exc:
         print(json.dumps(exc.result.to_dict(), indent=2), file=sys.stderr)
@@ -281,6 +281,29 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
         for resource_id in dropped:
             print(f"  lost  {resource_id}", file=sys.stderr)
     print(f"committed {out} — {report.warnings} warning(s)")
+    return 0
+
+
+def _source_cache(args: argparse.Namespace, out: Path) -> Path | None:
+    """Return the location `import` supplies as `source_cache`: the one named, else beside the packet.
+
+    Beside rather than under `TMPDIR`, which is RAM wherever `/tmp` is a tmpfs, so a cgroup cap
+    would not bound what a build fetches; and in the packet's parent, so a rebuild into a new
+    directory reads what the last one kept.
+    """
+    if args.no_source_cache:
+        return None
+    return args.source_cache or out.parent / ".escapewheel-source-cache"
+
+
+def _prune_cache(args: argparse.Namespace) -> int:
+    """Report, or remove, what this writer keeps in a source-cache location (Part 12 §10)."""
+    from ..sources.store import STORAGE_FORMAT, prune_kept
+
+    found = prune_kept(args.location, older_than=args.older_than, apply=args.apply)
+    total = sum(size for _, size in found)
+    verb = "removed" if args.apply else "would remove"
+    print(f"{args.location / STORAGE_FORMAT}: {verb} {len(found)} file(s), {total:,} bytes")
     return 0
 
 
@@ -589,7 +612,30 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         help="keep only the first N spikes per stream, for a fast development cycle; "
         "recorded in the run's parameters so the packet says it is a sample",
     )
+    kept = importer.add_mutually_exclusive_group()
+    kept.add_argument(
+        "--source-cache",
+        type=Path,
+        metavar="DIR",
+        help="where adapters keep what they read from a store for later builds (default: "
+        ".escapewheel-source-cache beside the packet; Part 12 §10)",
+    )
+    kept.add_argument("--no-source-cache", action="store_true", help="supply no source-cache location")
     importer.set_defaults(func=_import)
+
+    cache_pruner = subcommands.add_parser(
+        "prune-cache", help="remove what this writer keeps in a source-cache location, reporting by default"
+    )
+    cache_pruner.add_argument("location", type=Path, help="the location `import` was given as --source-cache")
+    cache_pruner.add_argument(
+        "--older-than",
+        type=float,
+        default=None,
+        metavar="D",
+        help="only what no build has read for D days (default: everything)",
+    )
+    cache_pruner.add_argument("--apply", action="store_true", help="remove, rather than report what would be removed")
+    cache_pruner.set_defaults(func=_prune_cache)
 
     declare = subcommands.add_parser("declare", help="write an adapter's declarations as a document")
     declare.add_argument("kind", help="the source kind, as a recipe entry names it")

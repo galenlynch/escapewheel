@@ -310,6 +310,8 @@ class SyncSource:
         present on disk.
     prefix : str, optional
         Prepended to every generated ID.
+    source_cache : str, optional
+        The build's source-cache location, which a store root is read through (Part 12 §10).
 
     Attributes
     ----------
@@ -353,7 +355,7 @@ class SyncSource:
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
     #: unset (Part 12 §4). `first_samples` is absent because it is a term a build fills, which
     #: a declaration may not name as an option.
-    ACCEPTS: ClassVar[tuple[str, ...]] = ("experiment", "recording", "sync_line", "prefix")
+    ACCEPTS: ClassVar[tuple[str, ...]] = ("experiment", "recording", "sync_line", "prefix", "source_cache")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter",)
@@ -369,8 +371,9 @@ class SyncSource:
         clocks: Sequence[Mapping[str, Any]] = (),
         first_samples: Sequence[Mapping[str, Any]] = (),
         prefix: str = "",
+        source_cache: str | None = None,
     ) -> None:
-        self.root = _resolve(source_root(root))
+        self.root = _resolve(source_root(root, cache=source_cache))
         self.session_id = session_id
         self.experiment = experiment
         self.recording = recording
