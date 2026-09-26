@@ -347,9 +347,9 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 | `transform_slope` | float64 | nullable | finite | Parent ticks per this clock's tick, as measured. |
 | `transform_offset` | float64 | nullable | finite | Parent-clock tick at this clock's tick 0. |
 | `transform_to_parent` | json_string | optional | — | Clock alignment transform. |
-| `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 | `withheld_first_anchor` | bool | nullable | — | Whether Part 02 §12.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run. |
 | `withheld_last_anchor` | bool | nullable | — | Whether Part 02 §12.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run. |
+| `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `clock_id`  
 
@@ -800,8 +800,8 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 | `task_name` | string | nullable | free | Task/protocol name. |
 | `source_session_id` | int32 | nullable | — | Source-system session ID if different. |
 | `t_zero_tick` | int64 | nullable | — | Earliest observed tick, on `reference_clock_id`; the origin seconds count from. |
-| `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 | `alignment_bound` | float64 | nullable | finite | How far past its anchors the writer mapped, in median anchor intervals (Part 01 §3.9). Null means the default of one. |
+| `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `session_id`  
 

@@ -3543,6 +3543,11 @@ def build() -> dict:
         if session is not None:
             cols.remove(session)
             cols.insert(0, session)
+        # `metadata` closes a table, which a column added after the metadata pass would break.
+        metadata = next((c for c in cols if c["name"] == "metadata"), None)
+        if metadata is not None:
+            cols.remove(metadata)
+            cols.append(metadata)
 
     # ---- Tier 2 rules, merged from rules.json (R2 §7.2) --------------------------------------
     # Last, so every table exists to be named and every primary key is final -- R24's templates

@@ -265,6 +265,26 @@ check("every authored rule reached the registry", sorted(authored - merged))
 check(
     "the registry carries no rule rules.json does not author", sorted(merged - authored)
 )
+# Column order is a convention of this repository's registries rather than a conformance
+# requirement (CONTRIBUTING.md §4), so nothing but this holds it.
+check(
+    "a table carrying session_id leads with it",
+    [
+        n
+        for n, t in ALL.items()
+        if any(c["name"] == "session_id" for c in t["columns"])
+        and t["columns"][0]["name"] != "session_id"
+    ],
+)
+check(
+    "a table carrying metadata ends with it",
+    [
+        n
+        for n, t in ALL.items()
+        if any(c["name"] == "metadata" for c in t["columns"])
+        and t["columns"][-1]["name"] != "metadata"
+    ],
+)
 # R50 §5: a naming convention is a property of the registry, not of any packet's rows, so no SQL
 # rule can see it -- and one written anyway would pass silently (R12 §4). It is checked here.
 #

@@ -207,7 +207,7 @@ that complete result. `check.py` separately adds checks true only of this reposi
 `facts.py` counts the descriptor inventory and those repository checks:
 
 <!-- BEGIN facts: checks -->
-26 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 42 further checks over the whole set
+26 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 44 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |

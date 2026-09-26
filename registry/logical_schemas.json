@@ -1747,13 +1747,6 @@
             "description": "Clock alignment transform."
           },
           {
-            "name": "metadata",
-            "type": "json_string",
-            "presence": "optional",
-            "role": "data",
-            "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
-          },
-          {
             "name": "withheld_first_anchor",
             "type": "bool",
             "presence": "nullable",
@@ -1766,6 +1759,13 @@
             "presence": "nullable",
             "role": "data",
             "description": "Whether Part 02 \u00a712.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run."
+          },
+          {
+            "name": "metadata",
+            "type": "json_string",
+            "presence": "optional",
+            "role": "data",
+            "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
           }
         ],
         "primary_key": [
@@ -3984,13 +3984,6 @@
             "clock_from": "reference_clock_id"
           },
           {
-            "name": "metadata",
-            "type": "json_string",
-            "presence": "optional",
-            "role": "data",
-            "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
-          },
-          {
             "name": "alignment_bound",
             "type": "float64",
             "presence": "nullable",
@@ -3998,6 +3991,13 @@
             "finite": true,
             "description": "How far past its anchors the writer mapped, in median anchor intervals (Part 01 \u00a73.9). Null means the default of one.",
             "unit": "{median_anchor_interval}"
+          },
+          {
+            "name": "metadata",
+            "type": "json_string",
+            "presence": "optional",
+            "role": "data",
+            "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
           }
         ],
         "primary_key": [
