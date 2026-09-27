@@ -292,10 +292,10 @@ P1 authority framework
                       |
                       v
         P10.2 release-candidate field test ---- P10.2a summaries agree with owners
+                      |                              |   (beside the field test)
+                      |                              v
+                      |                         P10.2b placement cleanup
                       |                              (beside the field test)
-                      v
-        P10.2b placement cleanup
-                      |
                       v
         P10.3 final identifiers (after P10.2a and P10.2b)
                       |
@@ -323,7 +323,7 @@ P1 authority framework
 | P10.1 | Direct registry source and release integration matrix | P2, P2.1, and P3–P9 | Ordinary maintenance unless the contract changes |
 | P10.2 | Release-candidate field test | P10.1 | Revisions for what the field finds; the user ends the test |
 | P10.2a | Summaries in Parts 00, 01 and 06 agree with the parts owning their rules | P10.1; runs beside P10.2 | [R145](../accepted/R145-each-rule-is-stated-by-its-owner-and-a-canonical-resource-depends-only-on-canonical-resources.md) |
-| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2, P10.2a | Structural revision; verbatim duplicates as maintenance |
+| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2a; runs beside P10.2 | [Proposal](each-statement-sits-in-the-part-that-owns-its-subject.md); structural revision, verbatim duplicates as maintenance |
 | P10.3 | Final identifiers and registry binding | P10.2, P10.2a, P10.2b | Proposal |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
@@ -808,8 +808,11 @@ registry advanced to 0.8.0, so packets built for the field test before then are 
 The same inventory's remaining entries are placement: duplicates, operational rules in logical
 parts, evidence and history in normative text, and Part 05's organization by actor. A statement
 restating its owner word for word is removed as maintenance; the rest is one structural placement
-revision after the field test and before final identifiers, since P11's gate requires one owner
-for each fact.
+revision before final identifiers, since P11's gate requires one owner for each fact. Resolved
+toward the owners, the placement changes no packet's verdict and no registry byte, so it runs
+beside the field test rather than after it, and a field-test revision reads the reorganized parts.
+The revision also states R39's time origin, which no part's prose carries, and the check the
+reference validator makes of it.
 
 #### P10.3 — Final identifiers and registry binding
 
