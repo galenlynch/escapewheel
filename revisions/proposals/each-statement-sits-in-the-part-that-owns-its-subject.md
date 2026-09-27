@@ -237,14 +237,14 @@ it to every adapter, which is a contract change outside placement.
 
 ## 6. Open questions
 
-1. **Does Part 05 state its actors in a scope section, without renumbering?** Preferred: yes
-   (§4.1, option 1).
+1. **Does Part 05 state its actors in a scope section, without renumbering?** Resolved
+   2026-09-27: yes (§4.1, option 1).
 2. **Do the profile-independent amendment rules move to Part 05 and bind every profile?**
-   Preferred: yes (§4.2, option 1).
-3. **Are dataset counts and history deleted, and benchmarks moved to Part 10?** Preferred: yes
-   (§4.3, option 1).
-4. **Is a declared origin checked to within one reference-clock tick?** Preferred: yes (§4.4,
-   option 1).
+   Resolved 2026-09-27: yes (§4.2, option 1).
+3. **Are dataset counts and history deleted, and benchmarks moved to Part 10?** Resolved
+   2026-09-27: yes (§4.3, option 1).
+4. **Is a declared origin checked to within one reference-clock tick?** Resolved 2026-09-27: yes
+   (§4.4, option 1).
 
 ## 7. Promotion criteria
 
@@ -254,7 +254,7 @@ it to every adapter, which is a contract change outside placement.
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The exact proposal and its final appraisal state are tracked in the current commit.
-- [ ] The proposal has explicit approval to advance to a revision draft.
+- [x] The exact proposal and its final appraisal state are tracked in the current commit.
+- [x] The proposal has explicit approval to advance to a revision draft.
