@@ -91,6 +91,7 @@ packet_root/
 
 The manifest MUST record the actual layout. A reader MUST resolve resources through the manifest and MUST NOT infer them from paths.
 
+<a id="ew-portable-forbidden-files" data-spec-anchor="canonical"></a>
 ### 3.2 Files that MUST NOT be written
 
 `schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the manifest is required to carry, and so bought no otherwise-available access.

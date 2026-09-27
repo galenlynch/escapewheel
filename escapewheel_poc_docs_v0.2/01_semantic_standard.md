@@ -52,6 +52,7 @@ An imported core resource SHOULD be traceable to source data or source activitie
 
 Provenance is a source-file record, a processing-run record, and a link between them. A packet carrying no provenance is conforming; where provenance is present it is validated.
 
+<a id="ew-units-of-measure" data-spec-anchor="canonical"></a>
 ### 2.5 Units of measure
 
 A measured quantity SHOULD declare its unit. A stored integer requiring conversion to physical units MUST declare the conversion.
@@ -97,6 +98,7 @@ The animal or preparation recorded from.
 - MUST have an identifier.
 - SHOULD declare species, sex, and date of birth.
 
+<a id="ew-device-concept" data-spec-anchor="canonical"></a>
 ### 3.5 Device
 
 A physical instrument used during acquisition.
@@ -221,6 +223,7 @@ one kind of event and declares one clock. An event does not reference an interva
 stimulus onset, reward delivery, lick, threshold crossing, TTL edge,
 synchronization pulse.
 
+<a id="ew-event-stream-concept" data-spec-anchor="canonical"></a>
 ### 3.12 Event stream
 
 The context a class of events was observed in: what produced them, on what clock, what kind of
