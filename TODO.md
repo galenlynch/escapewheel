@@ -32,12 +32,15 @@ Phase 7 (Iceberg) untouched.
 **This is one repository.** It was ten until 2026-09-04; each history was preserved through the
 join, so `git log -- revisions/` and `git blame` reach back through it.
 
-### What stands between here and a production trial
+### What stands between here and a v0.2 release
 
-1. **Define the publication model.** The current core registry and its meta-schema now identify the
-   complete registry-contract development shape as `0.6.0` (Part 02 §9.2). The dependent authority
-   work still needs to define the released artifact set, publication state, and identifier
-   discipline before a production trial.
+1. **Field-test the release candidate** (roadmap P10.2). Packets are built and used from the
+   current contract with every identifier still a development identifier (Part 02 §9.2). A defect
+   in a part, registry or schema it finds is a revision; an implementation defect is maintenance.
+   The user decides when it ends.
+2. **Assign final identifiers** (P10.3), once the field test's revisions are incorporated.
+3. **Publish immutably** (P11): the released artifact set, its manifest and the publication
+   verifier.
 
 ---
 
