@@ -121,8 +121,10 @@ forbidding that admits every shipped registry.
 
 Part 02 §2.7 already applies that rule to lineage. A `core` resource derives only from `core`, and
 an `extension` resource only from visible `core` and its own extension, so no canonical resource's
-`derived_from` names an analysis resource. A reference, a `requires` entry and a catalog binding
-are dependencies of the same kind, and nothing restricts them the same way.
+`derived_from` names an `analysis`, `compatibility_projection` or `documentation` resource. A
+reference, a `requires` entry and a catalog binding are dependencies of the same kind, and nothing
+restricts them the same way. Either registry may declare the two classes besides `analysis`, and
+none does, so the rule costs no shipped registry anything for covering them.
 
 Part 02 §9.4 selects a contract descriptor by a tuple that includes the meta-schema identifier and
 forbids reinterpreting a descriptor after publication. A checked invariant therefore needs a new
@@ -250,10 +252,12 @@ key for it. Part 02 §12.6 states this rule, and no other part states a second v
 ### 3.4 A canonical resource depends only on canonical resources
 
 A registry document MUST NOT declare a `core` or `extension` resource that has a table reference, a
-`requires` entry or a catalog binding targeting an `analysis` declaration. A writer may delete any
-analysis resource under Part 06 §2, which would leave a canonical resource depending on one without
-its target. Part 02 §2.2 states this rule. A discriminator names a resource without depending on it
-(Part 09 §6.2), so the rule does not reach one.
+`requires` entry or a catalog binding targeting a declaration of a class Part 02 §2.2 makes
+non-canonical: `analysis`, `compatibility_projection` or `documentation`. A non-canonical resource
+holds no fact a canonical one may depend on, and a writer may delete any analysis resource under
+Part 06 §2, which would leave a canonical resource depending on one without its target. Part 02 §2.2
+states this rule, as Part 02 §2.7 states the same relation for lineage. A discriminator names a
+resource without depending on it (Part 09 §6.2), so the rule does not reach one.
 
 Which registry a declaration may target remains Part 09 §6.1's rule. Part 00 §3.2 states no
 direction of reference and cites Part 02 §2.2 and Part 09 §§6.1–6.2.
@@ -366,6 +370,8 @@ descriptor with `registry.resource.canonical_targets` and valid under v0.4 apart
 
 - a core table with a reference to `analysis.array_assets`;
 - a core declaration naming an analysis declaration in `requires`;
+- a core table with a reference to a core `compatibility_projection` table;
+- a core declaration naming a `documentation` declaration in `requires`;
 - an extension's `extension` table with a reference to its own `analysis` table; and
 - an extension's `extension` table with a reference to a core-registry analysis table, which is
   core-dependent.
