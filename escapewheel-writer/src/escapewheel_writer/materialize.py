@@ -104,28 +104,6 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
     raise NotAligned(f"{clock_id} declares no tick rate, so a bucket has no width in ticks")
 
 
-def _clock_id(packet: Any, reference: Any) -> Any:
-    """Resolve a clock a recipe named to the identifier this packet assigned it (Part 05 §4.3).
-
-    A recipe is written before any identifier exists, so it names a clock by name -- as its
-    own `[[clock]]` blocks and every `parent_clock_id` do. `reference_clock` returns an id
-    already, so only a recipe's spelling reaches here needing resolution, and an id passed
-    straight through keeps a caller that has one from having to look up its name to pass it.
-    """
-    if not isinstance(reference, str):
-        return reference
-    clocks = packet.table("core.clocks")
-    identifiers = clocks.column("clock_id").to_pylist()
-    if reference in identifiers:
-        # A packet whose identifiers are themselves names -- anything built before R53.
-        return reference
-    names = clocks.column("clock_name").to_pylist() if "clock_name" in clocks.column_names else []
-    for identifier, name in zip(identifiers, names, strict=True):
-        if name == reference:
-            return identifier
-    raise NotAligned(f"no clock is named {reference!r}, so there is nothing to map onto")
-
-
 def _unit_clocks(packet: Any) -> NDArray[np.int64]:
     """Each unit's `clock_id`, indexed by `unit_id` (R96 §3.3).
 
@@ -278,29 +256,27 @@ class _Buckets:
 def spike_events(
     packet: Any,
     *,
-    reference: str | None = None,
     bound: float | None = None,
     bucket_seconds: int = BUCKET_SECONDS,
     scratch: Path | None = None,
     memory_budget: int | str = 0,
-    dropped: list[int] | None = None,
+    dropped: dict[int, int] | None = None,
 ) -> Iterator[pa.RecordBatch]:
     """`analysis.spike_events` -- core spikes on the reference clock, bucketed by time.
 
-    A spike whose tick falls further than the bound from any anchor is **dropped**: Part 01 §3.9
-    leaves it undefined, and a derived table is the wrong place to record that a value is
-    missing.
+    The reference is always `core.sessions.reference_clock_id`, since Part 06 §4 fixes the table's
+    clock to it. A spike whose tick falls further than the bound from any anchor is **dropped**:
+    Part 01 §3.9 leaves it undefined, and a derived table is the wrong place to record that a
+    value is missing.
 
     Parameters
     ----------
     packet : Packet
         An open packet carrying `core.spike_events`, `core.clock_anchors`, `core.clocks` and
         `core.sessions`.
-    reference : str, optional
-        The clock to map onto. Defaults to `core.sessions.reference_clock_id` (R27 §2).
     bound : float, optional
         Passed to :func:`~escapewheel_reader.clocks.align`. Defaults to what the packet's own
-        import run measured (Part 01 §3.9), so a table derived here places the same spikes the
+        import run measured (Part 02 §12.6), so a table derived here places the same spikes the
         packet's `t_zero_tick` was taken over.
     bucket_seconds : int
         Bucket width, in seconds of the reference clock. A transform parameter Part 06 requires
@@ -312,9 +288,10 @@ def spike_events(
         Bytes the partition may occupy before it spills, as a number or a string such as
         `"10GB"`. Bucketing is a transpose -- every unit spans every bucket, so no streaming
         pass can emit in order -- and the partition either fits in memory or goes to disk.
-    dropped : list of int, optional
-        A one-element list the count of unmappable spikes is accumulated into, since a
-        generator cannot return one. Part 06 §4 requires the producing run to record it.
+    dropped : dict of int to int, optional
+        Unmappable spikes counted by the `clock_id` they were on, accumulated here since a
+        generator cannot return them. Every clock a spike is on gets an entry, zero included,
+        because Part 06 §4 requires the producing run to record each.
         Held with identifiers as dictionary codes it is 36 bytes a row, so a session of 287 M
         spikes wants 10.4 GB; the same rows spill to 0.5 GB of Parquet instead. Zero, the
         default, holds no more than one batch per bucket, because whether ten gigabytes is
@@ -333,10 +310,10 @@ def spike_events(
         If the session declares no reference clock, if a clock the spikes are on carries no
         anchors, or if the reference clock declares no tick rate.
     """
-    reference = _clock_id(packet, reference or reference_clock(packet))
+    reference = reference_clock(packet)
     bound = declared_bound(packet) if bound is None else bound
     width = bucket_seconds * _tick_rate(packet, reference)
-    dropped = [0] if dropped is None else dropped
+    dropped = {} if dropped is None else dropped
     by_clock = anchors(packet)
     handle = packet.table_resource("core.spike_events")
     columns = ["session_id", "unit_id", "t_tick"]
@@ -366,12 +343,15 @@ def spike_events(
                     f"a spike names unit {int(units.max())}, which `core.units` does not declare, "
                     f"so its tick reaches no clock (R96 §3.3)"
                 )
-            timed = pa.record_batch({"t_tick": batch.column("t_tick"), "clock_id": pa.array(on_clock[units])})
+            clocks = on_clock[units]
+            timed = pa.record_batch({"t_tick": batch.column("t_tick"), "clock_id": pa.array(clocks)})
             parent, keep = mapped(timed, reference, by_clock, bound)
-            # Part 06 §4: counted whether or not any are dropped. A recorded zero is the
-            # evidence the bound was sufficient; silence is what let a reader and this
-            # writer disagree about which spikes exist without either noticing.
-            dropped[0] += int(keep.size - keep.sum())
+            # Part 06 §4: counted per clock whether or not any are dropped. A recorded zero is
+            # the evidence that clock's bound was sufficient; silence is what let a reader and
+            # this writer disagree about which spikes exist without either noticing.
+            for clock in np.unique(clocks).tolist():
+                on = clocks == clock
+                dropped[clock] = dropped.get(clock, 0) + int(on.sum() - keep[on].sum())
             if not keep.any():
                 continue
             taken = np.flatnonzero(keep)
@@ -415,7 +395,6 @@ def into(
     packet: Any,
     writer: Any,
     *,
-    reference: str | None = None,
     bound: float | None = None,
     bucket_seconds: int = BUCKET_SECONDS,
     run_id: str = RUN_ID,
@@ -430,8 +409,8 @@ def into(
 
     `bucket_seconds` goes in `parameters` because it cannot be recovered from the data -- a
     table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s
-    (Part 06 §5). So does the count of spikes this could not place (Part 06 §4), which is otherwise
-    invisible: a derived table one row short looks exactly like a derived table. `memory_budget`
+    (Part 06 §5). So does each clock's count of spikes this could not place (Part 06 §4), which is
+    otherwise invisible: a derived table one row short looks exactly like a derived table. `memory_budget`
     and `scratch` do not: they change how the rows are produced, not which rows they are, and
     recording them would make two identical packets claim different provenance.
 
@@ -446,7 +425,7 @@ def into(
     session = packet.sessions[0] if len(packet.sessions) == 1 else None
     bound = declared_bound(packet) if bound is None else bound
     started = datetime.now(tz=timezone.utc)
-    dropped: list[int] = [0]
+    dropped: dict[int, int] = {}
     run: dict[str, Any] = {
         "processing_run_id": run_id,
         "session_id": session,
@@ -462,9 +441,8 @@ def into(
         "parameters": {
             "bucket_seconds": bucket_seconds,
             "bound": bound,
-            "reference_clock_id": reference,
-            # Part 06 §4. Recorded even when zero: that a bound was sufficient is a
-            # fact about this packet, not an assumption a reader should have to make.
+            # Part 06 §4. Recorded per clock and even when zero: that a bound was sufficient
+            # is a fact about this packet, not an assumption a reader should have to make.
             "spikes_without_a_defined_mapping": None,
         },
         "started_at": started,
@@ -477,14 +455,15 @@ def into(
         # `core.processing_runs`, so the run row is completed here rather than when it is added.
         yield from spike_events(
             packet,
-            reference=reference,
             bound=bound,
             bucket_seconds=bucket_seconds,
             memory_budget=memory_budget,
             scratch=scratch,
             dropped=dropped,
         )
-        run["parameters"]["spikes_without_a_defined_mapping"] = dropped[0]
+        run["parameters"]["spikes_without_a_defined_mapping"] = [
+            {"clock_id": clock, "spikes": count} for clock, count in sorted(dropped.items())
+        ]
         run["ended_at"] = datetime.now(tz=timezone.utc)
 
     writer.add_batches(resource, streamed())

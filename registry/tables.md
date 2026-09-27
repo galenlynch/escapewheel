@@ -8,7 +8,7 @@ This generated rendering is not a standalone specification. See the repository
 
 ```text
 46 resources, 43 tables, 348 columns, 111 references, 77 Tier 2 rules
-registry 0.7.0   logical standard escapewheel-logical-v0.1
+registry 0.8.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -86,7 +86,7 @@ registry 0.7.0   logical standard escapewheel-logical-v0.1
 | `session_id` | int32 | **required** | — | Session ID. |
 | `unit_id` | int32 | **required** | — | Unit ID. |
 | `t_tick` | int64 | **required** | — | Spike tick on clock_id, mapped through core.clock_anchors. |
-| `clock_id` | int32 | **required** | — | The clock these ticks are on, normally the session's reference. |
+| `clock_id` | int32 | **required** | — | The session's reference clock, which these ticks are on. |
 | `time_bucket_tick` | int64 | **required** | — | First tick of the bucket this spike falls in, on clock_id. |
 
 **Primary key** — `session_id`, `unit_id`, `t_tick`  

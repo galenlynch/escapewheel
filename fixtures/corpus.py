@@ -74,6 +74,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "outside_table_floor": ("warning", "physical.outside_reader_floor"),
     "unresolved_externals": ("info", "external.physical_unassessed"),
     "no_extracellular": None,
+    "one_clock": None,
     "sessions_only": None,
     "owned_opaque_object": None,
     "owned_opaque_prefix": None,

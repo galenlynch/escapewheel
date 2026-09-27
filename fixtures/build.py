@@ -1093,6 +1093,20 @@ def main():
     write_packet(root / "no_extracellular", c)
     print(f"{'no_extracellular':26s}written")
 
+    # Part 01 §3.3: a session declaring one clock needs no reference to name it.
+    c = content()
+    for resource in EXTRACELLULAR:
+        del c[resource]
+    c["core.clocks"] = [clock for clock in c["core.clocks"] if clock["clock_id"] == "behavior_s001"]
+    for field in ("parent_clock_id", "transform_slope", "transform_offset"):
+        c["core.clocks"][0][field] = None
+    c["core.clock_observation_intervals"] = [
+        r for r in c["core.clock_observation_intervals"] if r["clock_id"] == "behavior_s001"
+    ]
+    c["core.sessions"][0]["reference_clock_id"] = None
+    write_packet(root / "one_clock", c)
+    print(f"{'one_clock':26s}written")
+
     c = {
         resource: content()[resource] for resource in ("core.sessions", "core.subjects")
     }

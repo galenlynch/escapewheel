@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-27 |
 | **Based on** | `a0f7d8b14928afe19b1079fb2b98455d5ee86d25` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -340,8 +340,8 @@ ledger entry gains a note. R37 §3.3's note records that its measurement is stat
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
-| semantic prose | Part 01 §3.3 takes §3.1, Part 01 §2.1 takes §3.2, and Part 01 §3.9 takes §3.3's first paragraph. | `evidence/R<N>.json` names `ew-session-concept`, `ew-stable-identity` and `ew-clock-concept`. |
-| logical prose and registry | Part 02 §12.6 takes §3.3's second paragraph, Part 02 §2.2 takes §3.4, and Part 02 §§9.2 and 9.4 take §3.5. The meta-schema and descriptor take §3.5. The core registry source takes §3.7's `clock_id` description and §3.5's version, and `registry/build.py` and `registry/check.py` follow the identifiers. `registry/check.py` gains the invariant. | `evidence/R<N>.json` names each anchor, the meta-schema and descriptor, and the column's description; `registry/check.py` passes every shipped registry. |
+| semantic prose | Part 01 §3.3 takes §3.1, Part 01 §2.1 takes §3.2, and Part 01 §3.9 takes §3.3's first paragraph. | `evidence/R145.json` names `ew-session-concept`, `ew-stable-identity` and `ew-clock-concept`. |
+| logical prose and registry | Part 02 §12.6 takes §3.3's second paragraph, Part 02 §2.2 takes §3.4, and Part 02 §§9.2 and 9.4 take §3.5. The meta-schema and descriptor take §3.5. The core registry source takes §3.7's `clock_id` description and §3.5's version, and `registry/build.py` and `registry/check.py` follow the identifiers. `registry/check.py` gains the invariant. | `evidence/R145.json` names each anchor, the meta-schema and descriptor, and the column's description; `registry/check.py` passes every shipped registry. |
 | physical profiles | Unchanged. Part 03 §5.4 is cited, not changed. | None required. |
 | packet manifest and JSON Schemas | Unchanged. The manifest names no content class, and the registry meta-schema changes under the row above. | None required. |
 | validation and import | Part 05 §5.3 takes §3.9, which the reference validator already implements. The registry-document checker in the validator gains §3.5's invariant and selects the v0.5 descriptor. | The validator suite and the registry-document tests below. |

@@ -387,7 +387,7 @@ class SyncSource:
         #: said once.
         self._epoch: datetime | None = None
         #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters. Every
-        #: clock aligned appears here, dropping nothing included (Part 06 §4).
+        #: clock aligned appears here, dropping nothing included (Part 02 §12.6).
         self.withheld: dict[str, dict[str, Any]] = {}
         #: Clock ID to phase steps found in the parent's alignment, for the run's parameters.
         #: Reported, never corrected: whether a step also moved the devices timestamped on the
@@ -702,7 +702,7 @@ class SyncSource:
         self._observed.append((int(parents[0]), int(parents[-1])))
         drop_first, drop_last, residuals = suspect_terminals(ticks, parents)
         withheld = ["first"] * drop_first + ["last"] * drop_last
-        # Recorded for every clock, including the ones that dropped nothing (Part 06 §4): a count
+        # Recorded for every clock, including the ones that dropped nothing (Part 02 §12.6): a count
         # of zero is the evidence that the bound was sufficient, and a packet that says nothing
         # is indistinguishable from one that never looked.
         self.withheld[clock] = {"anchors": withheld, "n_withheld": len(withheld), **residuals}

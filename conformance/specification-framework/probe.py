@@ -80,7 +80,7 @@ def main() -> int:
         "missing mixed exception",
         _replace(
             "00_architecture.md",
-            "informative except §§2 and 5, which are normative",
+            "informative except §§2, 4, and 5, which are normative",
             "informative",
         ),
         "Part 06 local status disagrees",
@@ -89,8 +89,8 @@ def main() -> int:
         "conflicting mixed exception",
         _replace(
             "06_analysis_layer.md",
-            "Informative, except §2 and §5, which are normative.",
-            "Informative, except §2 and §4, which are normative.",
+            "Informative, except §§2, 4, and 5, which are normative.",
+            "Informative, except §§2 and 4, which are normative.",
         ),
         "Part 06 local status disagrees",
     )

@@ -23,7 +23,7 @@ from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, ch
 SCHEMAS = Path(__file__).resolve().parent / "schemas"
 SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
-CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.4.json"
+CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.5.json"
 RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
 UCUM_URI = "https://ucum.org/ucum"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
@@ -547,6 +547,7 @@ def _semantic_outcomes(
         "registry.resource.catalog",
         "registry.resource.array_axes",
         "registry.resource.dependency",
+        "registry.resource.canonical_targets",
     }
     for entry in descriptor["invariants"]:
         invariant = str(entry["id"])
@@ -598,6 +599,7 @@ def _semantic_checks() -> dict[str, Any]:
         "registry.resource.catalog": _resource_catalog,
         "registry.resource.array_axes": _resource_array_axes,
         "registry.resource.dependency": _resource_dependency,
+        "registry.resource.canonical_targets": _resource_canonical_targets,
     }
 
 
@@ -816,6 +818,56 @@ def _resource_dependency(
                         f"dependency {target_name!r} is not one visible singleton declaration",
                     )
                 )
+    return outcomes
+
+
+CANONICAL_CLASSES = frozenset({"core", "extension"})
+
+
+def _resource_canonical_targets(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+) -> list[Outcome]:
+    """Part 02 §2.2: a canonical declaration depends only on canonical ones.
+
+    An unresolved target is left to the invariant that resolves it, so one defect is not reported
+    twice; a discriminator names without depending and is not a reference here.
+    """
+    outcomes: list[Outcome] = []
+    for resource, declaration in document["resources"].items():
+        if declaration["content_class"] not in CANONICAL_CLASSES:
+            continue
+        targets: list[tuple[str, tuple[Any, ...]]] = []
+        if declaration.get("kind") == "table" and "table" in declaration:
+            targets += [
+                (str(reference["resource"]), ("tables", resource, "references", index, "resource"))
+                for index, reference in enumerate(declaration["table"]["references"])
+            ]
+        targets += [
+            (str(name), ("resources", resource, "requires", index))
+            for index, name in enumerate(declaration["requires"])
+        ]
+        if declaration["instances"]["mode"] == "catalog":
+            targets.append(
+                (
+                    str(declaration["instances"]["catalog_resource"]),
+                    ("resources", resource, "instances", "catalog_resource"),
+                )
+            )
+        for target_name, parts in targets:
+            target = universe.get(target_name)
+            if target is None or target["content_class"] in CANONICAL_CLASSES:
+                continue
+            outcomes.append(
+                _invalid(
+                    "registry.resource.canonical_targets",
+                    _pointer(parts),
+                    resource,
+                    f"canonical declaration depends on {target['content_class']} declaration {target_name!r}",
+                )
+            )
     return outcomes
 
 

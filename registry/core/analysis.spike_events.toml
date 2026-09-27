@@ -38,7 +38,7 @@ role = "identifier"
 identity = "assigned"
 determined_by = ["session_id"]
 references = "core.clocks"
-description = "The clock these ticks are on, normally the session's reference."
+description = "The session's reference clock, which these ticks are on."
 
 [[columns]]
 name = "time_bucket_tick"

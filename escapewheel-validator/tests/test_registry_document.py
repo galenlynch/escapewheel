@@ -95,7 +95,7 @@ def _ids(result):
 def test_reference_registry_has_one_complete_valid_result():
     result = check_registry(CORE)
     assert result.state == "valid"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.4"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.5"
     assert tuple(phase.phase for phase in result.phases) == PHASES
     assert result.phases[0].state == "skipped"
     assert result.phases[0].reason == "registry.phase.mapping_input"
@@ -165,7 +165,7 @@ def test_every_repository_extension_satisfies_the_same_contract(path):
 
 def test_byte_entry_rejects_a_nested_duplicate_at_its_containing_object():
     result = check_registry_bytes(
-        b'{"$schema":"https://escapewheel.org/schemas/registry/0.7.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
+        b'{"$schema":"https://escapewheel.org/schemas/registry/0.8.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
     )
     outcome = result.findings[0]
     assert result.state == "invalid"
@@ -212,7 +212,7 @@ def test_shape_failure_uses_schema_identity_and_location():
     result = check_registry(document, CORE)
     outcome = result.findings[0]
     assert result.state == "invalid"
-    assert outcome.id == "https://escapewheel.org/schemas/registry/0.7.0"
+    assert outcome.id == "https://escapewheel.org/schemas/registry/0.8.0"
     assert outcome.instance == "/resources/demo.rows/table/columns/1/type"
     assert outcome.schema_location
 
@@ -302,7 +302,7 @@ def test_meta_schema_owns_each_local_conditional(case):  # noqa: C901
     result = check_registry(document, CORE)
     shape = next(phase for phase in result.phases if phase.phase == "shape")
     assert shape.state == "invalid"
-    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.7.0"}
+    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.8.0"}
 
 
 def test_unknown_contract_tuple_is_unsupported():
@@ -327,7 +327,7 @@ def test_null_primary_key_is_a_valid_duplicate_row_declaration():
 def test_two_local_contracts_for_one_tuple_are_ambiguous():
     first = json.loads(CONTRACT.read_text())
     second = copy.deepcopy(first)
-    second["id"] = "escapewheel-registry-contract-v0.4"
+    second["id"] = "escapewheel-registry-contract-v0.5"
     result = check_registry(CORE, descriptors=[first, second])
     assert result.state == "unsupported"
     assert "registry.contract.selector_ambiguous" in _ids(result)
@@ -336,7 +336,7 @@ def test_two_local_contracts_for_one_tuple_are_ambiguous():
 def test_extension_without_core_runs_local_checks_and_is_incomplete():
     result = check_registry(_document())
     assert result.state == "incomplete"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.4"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.5"
     assert "registry.contract.core_context_unusable" in _ids(result)
 
     broken = _document()
@@ -406,6 +406,98 @@ def test_resource_invariants_reject_ineligible_declarations(invariant, mutate):
     result = check_registry(document, CORE)
     assert result.state == "invalid"
     assert invariant in _ids(result)
+
+
+def _canonical_target_pointers(result):
+    return {outcome.instance for outcome in result.findings if outcome.id == "registry.resource.canonical_targets"}
+
+
+REFERENCE_SITE = "/resources/core.array_channels/table/references/0/resource"
+REQUIRES_SITE = "/resources/core.sessions/requires/0"
+
+
+@pytest.mark.parametrize(
+    ("target", "content_class", "site"),
+    [
+        ("analysis.array_assets", None, REFERENCE_SITE),
+        ("analysis.array_assets", None, REQUIRES_SITE),
+        ("core.legacy_rows", "compatibility_projection", REFERENCE_SITE),
+        ("core.notes", "documentation", REQUIRES_SITE),
+    ],
+    ids=["reference_to_analysis", "requires_analysis", "reference_to_projection", "requires_documentation"],
+)
+def test_a_core_declaration_depends_only_on_canonical_ones(target, content_class, site):
+    document = copy.deepcopy(CORE)
+    if content_class is not None:
+        declaration = copy.deepcopy(document["resources"]["analysis.array_assets"])
+        declaration["content_class"] = content_class
+        document["resources"][target] = declaration
+    if site == REQUIRES_SITE:
+        document["resources"]["core.sessions"]["requires"] = [target]
+    else:
+        document["resources"]["core.array_channels"]["table"]["references"][0]["resource"] = target
+    result = check_registry(document)
+    assert result.state == "invalid"
+    assert site in _canonical_target_pointers(result)
+
+
+def _with_extension_analysis(document):
+    derived = copy.deepcopy(document["resources"]["demo.rows"])
+    derived.update(content_class="analysis", lineage="required")
+    derived["table"]["columns"].pop()
+    document["resources"]["demo.derived"] = derived
+    return document
+
+
+def test_an_extension_declaration_depends_only_on_canonical_ones():
+    document = _with_extension_analysis(_document())
+    _table(document)["references"].append(
+        {
+            "columns": ["session_id", "demo_id"],
+            "resource": "demo.derived",
+            "resource_columns": ["session_id", "demo_id"],
+        }
+    )
+    document["resources"]["demo.items"] = {
+        "content_class": "extension",
+        "kind": "opaque",
+        "instances": {
+            "mode": "catalog",
+            "catalog_resource": "demo.derived",
+            "resource_id_column": "demo_id",
+        },
+        "requires": [],
+        "lineage": "optional",
+    }
+    for core in (CORE, None):
+        result = check_registry(document, core)
+        assert result.state == "invalid"
+        assert _canonical_target_pointers(result) >= {
+            "/resources/demo.rows/table/references/1/resource",
+            "/resources/demo.items/instances/catalog_resource",
+        }
+
+
+def test_a_core_non_canonical_target_needs_the_core_context():
+    document = _document()
+    _table(document)["references"][0]["resource"] = "analysis.array_assets"
+    assert check_registry(document).state == "incomplete"
+    result = check_registry(document, CORE)
+    assert result.state == "invalid"
+    assert "/resources/demo.rows/table/references/0/resource" in _canonical_target_pointers(result)
+
+
+def test_a_non_canonical_declaration_may_depend_on_a_canonical_one():
+    document = _with_extension_analysis(_document())
+    document["resources"]["demo.derived"]["table"]["references"].append(
+        {
+            "columns": ["session_id", "demo_id"],
+            "resource": "demo.rows",
+            "resource_columns": ["session_id", "demo_id"],
+        }
+    )
+    result = check_registry(document, CORE)
+    assert result.state == "valid"
 
 
 def test_an_extension_registry_id_names_its_extension():

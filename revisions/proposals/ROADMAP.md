@@ -322,7 +322,7 @@ P1 authority framework
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | [R135](../accepted/R135-a-build-owns-its-staging-area-and-validates-everything-it-stages-before-publishing.md); [R136](../accepted/R136-every-packet-owned-resource-records-a-named-whole-object-digest.md); [R137](../accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md); [R138](../accepted/R138-a-recipe-names-each-extension-registry-once.md); [R139](../accepted/R139-a-float-column-declares-whether-it-admits-non-finite-values.md); [R140](../accepted/R140-a-nomenclature-that-governs-an-open-core-column-has-a-reference-entry.md); [R141](../accepted/R141-the-core-vocabulary-targets-extracellular-electrophysiology.md); [R142](../accepted/R142-a-build-supplies-an-adapter-a-persistent-source-cache.md); [R143](../accepted/R143-a-packet-owned-opaque-resource-crosses-as-its-bytes-in-a-directory-named-by-its-resource-id.md); [R144](../accepted/R144-the-adapter-interface-is-its-own-part-at-the-physical-level.md) |
 | P10.1 | Direct registry source and release integration matrix | P2, P2.1, and P3–P9 | Ordinary maintenance unless the contract changes |
 | P10.2 | Release-candidate field test | P10.1 | Revisions for what the field finds; the user ends the test |
-| P10.2a | Summaries in Parts 00, 01 and 06 agree with the parts owning their rules | P10.1; runs beside P10.2 | Proposal |
+| P10.2a | Summaries in Parts 00, 01 and 06 agree with the parts owning their rules | P10.1; runs beside P10.2 | [R145](../accepted/R145-each-rule-is-stated-by-its-owner-and-a-canonical-resource-depends-only-on-canonical-resources.md) |
 | P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2, P10.2a | Structural revision; verbatim duplicates as maintenance |
 | P10.3 | Final identifiers and registry binding | P10.2, P10.2a, P10.2b | Proposal |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
@@ -797,6 +797,11 @@ that contradict the part or accepted revision owning the rule (PD-023 to PD-028)
 toward their owners changes no packet's verdict, so the work runs beside the field test. Only a
 checked reference-direction rule would change registry bytes, by advancing the meta-schema's
 development identifier.
+
+**Completed as R145 on 2026-09-27.** Each disputed rule is stated once at its owner, Part 06 §4 is
+normative, and a canonical resource depends only on canonical resources, checked as the
+registry-document invariant `registry.resource.canonical_targets`. The meta-schema and core
+registry advanced to 0.8.0, so packets built for the field test before then are rebuilt.
 
 #### P10.2b — Placement cleanup
 

@@ -143,7 +143,7 @@ class Context:
     #: `core.clock_observation_intervals` rows, whatever source produced them, since R39's
     #: origin is a minimum across all of them and no single adapter sees them all.
     observed: list[dict[str, Any]] = field(default_factory=list)
-    #: What `_bound_for` measured, for the import run's parameters (Part 01 §3.9, §4).
+    #: What `_bound_for` measured, for the import run's parameters (Part 02 §12.6).
     measured_bound: dict[str, Any] = field(default_factory=dict)
     #: The anchors and the bound, once `alignment` has settled them.
     _alignment: tuple[dict[str, Any], float] | None = None
@@ -1037,7 +1037,7 @@ def _import_run(
                 # refusal existed carries a credential into every copy of it otherwise.
                 "recipe": redacted(recipe.document),
                 "compensations": describe(compensations or []),
-                # Part 02 §12.6 and §4: what the terminal-anchor test withheld, and the measurement
+                # Part 02 §12.6: what the terminal-anchor test withheld, and the measurement
                 # that justifies mapping further than Part 01 §3.9's default.
                 **_alignment_parameters(context),
             },
@@ -1199,7 +1199,7 @@ def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None])
     The sync source computes this and emits only the reference clock's row; the probe clock rows
     are the sorter's, and the sorter's `CONSUMES` runs it first, so they are already staged. Three
     states are the point: a clock the test never reached keeps both columns null, where one it
-    reached and kept records `false` (Part 06 §4).
+    reached and kept records `false` (Part 02 §12.6).
     """
     withheld = getattr(context.sources.get("sync"), "withheld", None)
     if not withheld:

@@ -143,7 +143,7 @@ def _context(withheld):
 
 
 def test_a_clock_the_test_kept_records_false_not_nothing():
-    """Part 06 §4: a silent absence and a recorded zero are different facts."""
+    """Part 02 §12.6: a silent absence and a recorded zero are different facts."""
     writer = _Staged()
     _declare_withheld(_context({"probeA": {"anchors": [], "n_withheld": 0}}), writer, lambda _: None)
     (resource, match, values) = writer.calls[0]

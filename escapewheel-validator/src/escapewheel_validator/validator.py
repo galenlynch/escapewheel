@@ -1578,12 +1578,11 @@ def _ordering_scan(
 
 
 def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str, str]]:
-    """Pairs of this table's columns holding equal values in every row (Part 07 §4).
+    """Pairs of this table's columns holding equal values in every row (Part 05 §5.3).
 
     Bounded by the footer, not by a row sample. Two columns can hold equal values in every row
     only if their per-chunk minimum, maximum and null count agree, which Parquet already records,
-    so statistics decide almost every pair and values are read for the few that survive. Measured
-    on `ecephys_776259`: 2,126 pairs across 32 tables reduce to 51 in 0.06 s with no values read.
+    so statistics decide almost every pair and values are read for the few that survive.
 
     Constant columns are excluded rather than reported. A column holding one value equals every
     other column holding that value, which says nothing about either.
@@ -1613,10 +1612,10 @@ def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str,
 
 
 def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
-    """Part 07 §4. Reported at `info` and never as a failure.
+    """Part 05 §5.3. Reported at `info` and never as a failure.
 
-    R95 §2.3 measures why it may not fail: four identifiers numbered independently coincide on
-    both packaged sessions, which is a fact about a packet rather than a defect in it.
+    Independently numbered identifiers can coincide, which is a fact about a packet rather than a
+    defect in it.
     """
     for resource_id, handle in present.items():
         try:

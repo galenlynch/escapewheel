@@ -1,7 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.8.0",
   "registry_id": "core",
-  "registry_version": "0.7.0",
+  "registry_version": "0.8.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
@@ -422,7 +422,7 @@
             "presence": "required",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The clock these ticks are on, normally the session's reference.",
+            "description": "The session's reference clock, which these ticks are on.",
             "determined_by": [
               "session_id"
             ]

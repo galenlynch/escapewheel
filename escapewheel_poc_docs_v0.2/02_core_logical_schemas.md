@@ -77,6 +77,17 @@ declare `core`. Every `analysis` and `compatibility_projection` declaration requ
 Every `documentation` declaration forbids lineage. These three
 classes are optional under §2.5.
 
+A registry document MUST NOT declare a `core` or `extension` resource that has a table reference,
+a `requires` entry or a catalog binding targeting an `analysis`, `compatibility_projection` or
+`documentation` declaration. A non-canonical resource holds no fact a canonical one may depend on,
+and a writer may delete any analysis resource
+([Part 06 §2](06_analysis_layer.md#ew-analysis-rules)), which would leave a canonical
+resource depending on one without its target. §2.7 states the same relation for lineage. A
+discriminator names a resource without depending on it
+([Part 09 §6.2](09_metadata_and_extensions.md#ew-core-extension-discrimination)), so this rule
+does not reach one. Which registry a declaration may target is
+[Part 09 §6.1](09_metadata_and_extensions.md#ew-core-extension-reference-direction)'s rule.
+
 <a id="ew-resource-kind" data-spec-anchor="canonical"></a>
 ### 2.3 Kind
 
@@ -559,9 +570,9 @@ A packet binds each registry that declares its resources under
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.7.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.8.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.7.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.8.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.1`.
 
@@ -569,7 +580,7 @@ An extension's `registry_version` identifies that extension registry and advance
 the core registry's version. An extension conforming to the incorporated meta-schema MUST carry
 the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
 The core specification does not assign an extension's version. An extension registry migrated to
-meta-schema 0.7.0 MUST carry a `registry_version` different from the one it carried under 0.6.0.
+meta-schema 0.8.0 MUST carry a `registry_version` different from the one it carried under 0.7.0.
 No checker verifies this, since a checker reads only the document before it and not the version
 that document replaced.
 
@@ -638,7 +649,7 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.4` and selects the 0.7.0
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.5` and selects the 0.8.0
 meta-schema. That meta-schema MUST declare `finite` as a boolean member of a column, require it
 where `type` is `float32` or `float64`, and forbid it otherwise; the `shape` phase therefore decides
 §5.4's declaration rule, and the descriptor adds no invariant for it. A checker MUST evaluate its
@@ -750,6 +761,7 @@ The descriptor assigns these invariants in this exact order:
 | `registry.resource.catalog` | semantic | core, extension |
 | `registry.resource.array_axes` | semantic | core, extension |
 | `registry.resource.dependency` | semantic | core, extension |
+| `registry.resource.canonical_targets` | semantic | core, extension |
 
 Every descriptor anchor MUST identify every numbered-part clause defining the invariant. Invariant
 IDs are unique. The descriptor schema closes its objects; requires nonempty, duplicate-free arrays;
@@ -773,8 +785,10 @@ member is `device_id`. This structural condition reserves device-detail tables f
 Each rule MUST pass Part 11's static contract, including rejection of every optional bound input.
 
 The resource invariants enforce §§2.1–2.7: document-class/content-class eligibility; kind and
-instance eligibility; unambiguous visible catalog bindings; the dense-array axes binding; and
-visible singleton dependencies. The existing table, column, reference, rule, and external-domain
+instance eligibility; unambiguous visible catalog bindings; the dense-array axes binding; visible
+singleton dependencies; and canonical resources' canonical targets, whose outcome points at the
+offending reference, `requires` entry or catalog binding and is core-dependent where the target
+lies in the core context. The existing table, column, reference, rule, and external-domain
 invariants operate on the `table` payload of table-kind declarations. Their stable IDs do not
 change merely because their instance pointers gain enclosing `resources` and `table` components.
 
@@ -1043,7 +1057,7 @@ Three facts about how a packet's clocks were aligned are columns, because a cons
 
 `core.clock_phase_steps` holds one row per step in a clock's alignment to its parent, a clock having possibly several (§5.2). A writer detecting a step MUST record it, and a step is reported and never corrected: the map is exact at every anchor, so it carries the step faithfully, and subtracting it would need to know whether the step also moved the devices timestamped on that parent, which the packet does not record. A clock whose `parent_clock_id` is null MUST NOT have rows here.
 
-`core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record the measurement's median, p95 and maximum error there, with the distance and the tolerance it judged them against. A consumer needs the bound to place a tick and not the residual that justified it.
+`core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record there the tolerance it judged its alignment against and, where it measured its error (Part 01 §3.9), the distance and the measurement. A writer recording the measurement MUST record its median, p95 and maximum together, so a consumer can judge the packet by a stricter rule than the writer applied. No checker verifies the record, since `parameters` names no key for it. A consumer needs the bound to place a tick and not the residual that justified it.
 
 ### 12.7 A frame's axes
 

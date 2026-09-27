@@ -125,7 +125,7 @@ def test_a_spike_already_on_the_reference_passes_through(tmp_path):
 
 
 def test_an_unmappable_spike_is_dropped(tmp_path):
-    """Part 01 §3.9 leaves it undefined, and a derived table is the wrong place to say so."""
+    """Part 01 §3.9 leaves it undefined, and Part 06 §4 omits it rather than extrapolating."""
     far = 1000 + 20 * AP
     out = rows(Fake(tmp_path, ticks=[1000, far], clocks=[PROBE] * 2))
     assert out["t_tick"] == [500_000_000]
@@ -151,16 +151,24 @@ def test_two_spikes_of_different_units_on_one_tick_are_fine(tmp_path):
 
 def test_a_dropped_spike_is_counted(tmp_path):
     """Part 06 §4: a derived table one row short looks exactly like a derived table."""
-    counted: list[int] = [0]
+    counted: dict[int, int] = {}
     rows(Fake(tmp_path, ticks=[1000, 1000 + 20 * AP], clocks=[PROBE] * 2), dropped=counted)
-    assert counted == [1]
+    assert counted == {PROBE: 1}
 
 
 def test_dropping_nothing_is_counted_too(tmp_path):
     """A recorded zero is the evidence the bound was sufficient, not an assumption."""
-    counted: list[int] = [0]
+    counted: dict[int, int] = {}
     rows(Fake(tmp_path, ticks=[1000, 1000 + AP], clocks=[PROBE] * 2), dropped=counted)
-    assert counted == [0]
+    assert counted == {PROBE: 0}
+
+
+def test_each_clock_is_counted_separately(tmp_path):
+    """Part 06 §4: a total would not say which clock's mapping fell short."""
+    counted: dict[int, int] = {}
+    packet = Fake(tmp_path, ticks=[777, 1000 + 20 * AP], clocks=[REF, PROBE])
+    rows(packet, dropped=counted)
+    assert counted == {REF: 0, PROBE: 1}
 
 
 def test_the_reference_comes_from_the_session(tmp_path):
@@ -169,9 +177,10 @@ def test_the_reference_comes_from_the_session(tmp_path):
     assert out["clock_id"] == [REF]
 
 
-def test_an_explicit_reference_overrides_it(tmp_path):
-    out = rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE], reference=99), reference="harp")
-    assert out["clock_id"] == [REF]
+def test_the_reference_cannot_be_directed_elsewhere(tmp_path):
+    """Part 06 §4 fixes the table's clock to the session's reference."""
+    with pytest.raises(TypeError, match="reference"):
+        rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE]), reference=PROBE)
 
 
 def test_a_session_declaring_no_reference_is_refused(tmp_path):
@@ -304,7 +313,9 @@ def test_the_dropped_count_is_the_one_the_stream_reached(tmp_path):
     writer = Deferred()
     into(Fake(tmp_path, ticks=[1000, 1000 + 20 * AP], clocks=[PROBE] * 2), writer)
     list(writer.batches["analysis.spike_events"])
-    assert writer.tables["core.processing_runs"][0]["parameters"]["spikes_without_a_defined_mapping"] == 1
+    assert writer.tables["core.processing_runs"][0]["parameters"]["spikes_without_a_defined_mapping"] == [
+        {"clock_id": PROBE, "spikes": 1}
+    ]
 
 
 def test_the_bucket_width_is_recorded_because_it_cannot_be_recovered(tmp_path):

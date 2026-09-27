@@ -1,0 +1,442 @@
+{
+  "version": 1,
+  "revision": "R145",
+  "based_on": "a0f7d8b14928afe19b1079fb2b98455d5ee86d25",
+  "clauses": {
+    "R145 \u00a73.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/01_semantic_standard.md",
+          "anchor": "ew-session-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "no_reference_clock",
+            "finding": "core.sessions.reference_clock_declared"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "one_clock"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R145 \u00a73.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/01_semantic_standard.md",
+          "anchor": "ew-stable-identity"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no verdict changes: the rule on an assigned identifier's value binds a writer and no checker verifies it, and Part 02 \u00a75.3 and Part 04 \u00a74.1 already fix the types it cites"
+      },
+      "implementations": {
+        "unchanged": "every shipped registry and the reference writer already comply: the carried identifiers keep their source values, and the writer numbers assigned identifiers in the order it meets them"
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification says what an identifier's value may encode"
+      }
+    },
+    "R145 \u00a73.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/01_semantic_standard.md",
+          "anchor": "ew-clock-concept"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-clock-alignment-record"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no checker verifies the measurement or the record, since `parameters` names no key for it; no verdict changes"
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/materialize.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes the alignment record"
+      }
+    },
+    "R145 \u00a73.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-resource-content-class"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-packet-content-classes"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_core_declaration_depends_only_on_canonical_ones[reference_to_analysis]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_core_declaration_depends_only_on_canonical_ones[requires_analysis]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_core_declaration_depends_only_on_canonical_ones[reference_to_projection]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_core_declaration_depends_only_on_canonical_ones[requires_documentation]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_an_extension_declaration_depends_only_on_canonical_ones"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_core_non_canonical_target_needs_the_core_context"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_non_canonical_declaration_may_depend_on_a_canonical_one"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_reference_registry_has_one_complete_valid_result"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[aind_opto]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[aind_unit_qc]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[dynamic_foraging]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[vr_foraging]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification states which content classes a declaration may reference"
+      }
+    },
+    "R145 \u00a73.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/registry.schema.json",
+          "registry/registry_contracts/escapewheel-registry-contract-v0.5.json",
+          "registry/logical_schemas.json",
+          "registry/extensions/aind_opto.json",
+          "registry/extensions/aind_unit_qc.json",
+          "registry/extensions/dynamic_foraging.json",
+          "registry/extensions/vr_foraging.json",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.5.json",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_descriptor_and_semantic_implementation_have_no_hidden_checks"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_reference_registry_has_one_complete_valid_result"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_extension_without_core_runs_local_checks_and_is_incomplete"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[aind_opto]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[aind_unit_qc]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[dynamic_foraging]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[vr_foraging]"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "escapewheel-registry-contract-v0.5"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/registry.toml",
+          "registry/extensions/aind_opto/registry.toml",
+          "registry/extensions/aind_unit_qc/registry.toml",
+          "registry/extensions/dynamic_foraging/registry.toml",
+          "registry/extensions/vr_foraging/registry.toml",
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "prototype/registry-codegen/registry.json",
+          "conformance/interval-kinds/probe.py",
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "facts.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md",
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    },
+    "R145 \u00a73.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/06_analysis_layer.md",
+          "anchor": "ew-analysis-promotion"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-analysis-content-requirements"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "promotion is a change to a registry document through a revision, which no packet or registry check observes; no verdict changes"
+      },
+      "implementations": {
+        "unchanged": "no implementation promotes a resource; a promotion is a registry revision"
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes how an analysis resource becomes canonical"
+      }
+    },
+    "R145 \u00a73.7": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-numbered-part-ownership"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/06_analysis_layer.md",
+          "anchor": "ew-analysis-spike-events"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/logical_schemas.json",
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "specification framework declarations agree"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework rejects conflicting projections",
+            "id": "conflicting mixed exception"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: the column tables come from the registry",
+            "id": "columns"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_materialize.py::test_the_reference_comes_from_the_session"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/analysis.spike_events.toml",
+          "conformance/specification-framework/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    },
+    "R145 \u00a73.8": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/06_analysis_layer.md",
+          "anchor": "ew-analysis-spike-events"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_materialize.py::test_each_clock_is_counted_separately"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_materialize.py::test_a_dropped_spike_is_counted"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_materialize.py::test_dropping_nothing_is_counted_too"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_materialize.py::test_the_dropped_count_is_the_one_the_stream_reached"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_materialize.py::test_the_reference_cannot_be_directed_elsewhere"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/materialize.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes the materialization run's parameters"
+      }
+    },
+    "R145 \u00a73.9": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_equal_varying_columns_are_reported_at_info_only"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_equal_constant_columns_are_not_reported"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the validator README lists no individual check"
+      }
+    }
+  }
+}

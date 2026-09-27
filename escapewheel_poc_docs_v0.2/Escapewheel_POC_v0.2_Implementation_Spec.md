@@ -51,7 +51,7 @@ This table is an informative projection of
 | 03 | Portable physical profile | normative |
 | 04 | Packet manifest | normative |
 | 05 | Validation, import, and reader operations | normative |
-| 06 | Analysis layer | informative except §§2 and 5, which are normative |
+| 06 | Analysis layer | informative except §§2, 4, and 5, which are normative |
 | 07 | Reference implementation and plan | informative |
 | 08 | Example packet | informative |
 | 09 | Metadata minimalism and extensions | normative |
@@ -74,11 +74,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.7.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.8.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.7.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.8.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -321,9 +321,9 @@ class**.
 | `compatibility_projection` | a projection into another representation | no | no |
 | `documentation` | human-readable sidecars that assert no semantic or conformance fact | no | no |
 
-A content class MAY reference a class beneath it and MUST NOT reference one above. Core does not
-reference analysis, and neither references an extension — a discriminator names without
-referencing, which is why core is allowed that one.
+Part 02 §2.2 owns which content classes a declaration may reference, require, or bind to, and
+Part 09 §§6.1–6.2 own which registry it may reference and how a discriminator names a resource
+without referencing it.
 
 A packet's **canonical** resources are exactly its `core` and `extension` resources. Core is not
 the whole of what is canonical: Part 09 sends a task's own facts
@@ -419,11 +419,8 @@ a validator checks against `core.spike_events`.
 ### 5.1 Requirements
 
 The analysis content class MAY contain denormalized, prejoined, binned, aligned, or otherwise
-transformed products. Part 06 owns its exact lineage, realization, and promotion requirements and
-its optional run provenance.
-
-Analysis resources are disposable. A writer MAY delete and recompute any of them. An analysis
-resource becomes canonical only through an explicit revision of this specification.
+transformed products. Part 06 owns its disposability and its exact lineage, realization, and
+promotion requirements and its optional run provenance.
 
 <a id="ew-analysis-materialization-criterion" data-spec-anchor="canonical"></a>
 ### 5.2 Materialization is justified by layout, not by arithmetic
@@ -504,7 +501,7 @@ MUST make the candidate inconsistent.
 | 03 | portable physical mapping of logical resources to stored bytes | normative |
 | 04 | packet manifest structure, resource entries, and dataset-to-resource bindings | normative |
 | 05 | validation, import, writer and reader operations, reporting, and publication of a packet | normative |
-| 06 | analysis policy, examples, and explanation | informative except §§2 and 5, which are normative |
+| 06 | analysis policy, examples, and explanation | informative except §§2, 4, and 5, which are normative |
 | 07 | reference-implementation design and examples | informative |
 | 08 | executable packet example | informative |
 | 09 | extension boundaries, namespace ownership, extension declarations, and extension independence | normative |
@@ -629,18 +626,16 @@ Every semantic concept MUST be representable in the logical standard (Part 02). 
 <a id="ew-stable-identity" data-spec-anchor="canonical"></a>
 ### 2.1 Stable identity
 
-Any object referenced by another object MUST have a stable identifier.
-
-An identifier is a signed 32-bit integer. Implementations MUST NOT encode semantic meaning in identifier values, and MUST NOT derive an identifier from a value's position in a file.
+Any object referenced by another object MUST have a stable identifier. A reference names its target by the identifier's value, never by a row's position in a file, so reordering a table's rows changes no reference. Part 02 §5.3 fixes each identifier column's type, and Part 04 §4.1 fixes the form of a resource ID.
 
 Each identifier declares its **identity**:
 
 | identity | definition |
 |---|---|
-| `carried` | the source's own number, reproduced unchanged |
+| `carried` | the source's own value, reproduced unchanged, whatever the source encoded in it |
 | `assigned` | chosen by the writer when the packet was built |
 
-An assigned identifier's owning table MUST carry a `*_name` column holding the name it was assigned from, so that a process outside the packet can reference the row without knowing the number.
+A writer MUST NOT encode meaning in the value of an identifier it assigns. No checker verifies this. An assigned identifier's owning table MUST carry a `*_name` column holding the name it was assigned from, so that a process outside the packet can reference the row without knowing the number.
 
 ### 2.2 Time basis
 
@@ -700,7 +695,8 @@ One concrete bundle of resources under a declared physical profile. A packet MUS
 One continuous recording engagement with one subject.
 
 - MUST have an identifier and a subject.
-- MUST declare the clock its times are reported on.
+- MUST declare the clock its times are reported on where it declares more than one clock, and
+  SHOULD declare it where it declares one.
 - MUST declare its time origin where seconds are to be derived.
 
 ### 3.4 Subject
@@ -803,9 +799,9 @@ sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a 
 index and a consumer MUST NOT assume any base beyond what the origin declares; that
 prohibition is what makes a tick exact.
 
-Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default. A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.
+Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default. A profile or a recipe MAY state a different tolerance.
 
-A writer reaching past one median anchor interval MUST measure its error and MUST record the median, p95, and maximum, so a consumer can judge the packet by a stricter rule than the writer applied.
+A writer reaching past one median anchor interval MUST measure its error; no checker verifies that it did. Part 02 §12.6 owns what the writer records of the tolerance and the measurement.
 
 A consumer MUST **report** ticks it cannot map rather than omitting them, so a converted table has the same row count as its source with nulls where the mapping is undefined. A row that vanishes in conversion is indistinguishable from one that was never there. It MUST record how many rows it dropped for falling outside the bound **even when that count is zero**: silence is what lets a reader and a writer disagree about which rows exist.
 
@@ -1050,6 +1046,17 @@ The core registry MUST NOT declare `extension`. An extension registry MAY declar
 declare `core`. Every `analysis` and `compatibility_projection` declaration requires lineage.
 Every `documentation` declaration forbids lineage. These three
 classes are optional under §2.5.
+
+A registry document MUST NOT declare a `core` or `extension` resource that has a table reference,
+a `requires` entry or a catalog binding targeting an `analysis`, `compatibility_projection` or
+`documentation` declaration. A non-canonical resource holds no fact a canonical one may depend on,
+and a writer may delete any analysis resource
+([Part 06 §2](06_analysis_layer.md#ew-analysis-rules)), which would leave a canonical
+resource depending on one without its target. §2.7 states the same relation for lineage. A
+discriminator names a resource without depending on it
+([Part 09 §6.2](09_metadata_and_extensions.md#ew-core-extension-discrimination)), so this rule
+does not reach one. Which registry a declaration may target is
+[Part 09 §6.1](09_metadata_and_extensions.md#ew-core-extension-reference-direction)'s rule.
 
 <a id="ew-resource-kind" data-spec-anchor="canonical"></a>
 ### 2.3 Kind
@@ -1533,9 +1540,9 @@ A packet binds each registry that declares its resources under
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.7.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.8.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.7.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.8.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.1`.
 
@@ -1543,7 +1550,7 @@ An extension's `registry_version` identifies that extension registry and advance
 the core registry's version. An extension conforming to the incorporated meta-schema MUST carry
 the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
 The core specification does not assign an extension's version. An extension registry migrated to
-meta-schema 0.7.0 MUST carry a `registry_version` different from the one it carried under 0.6.0.
+meta-schema 0.8.0 MUST carry a `registry_version` different from the one it carried under 0.7.0.
 No checker verifies this, since a checker reads only the document before it and not the version
 that document replaced.
 
@@ -1612,7 +1619,7 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.4` and selects the 0.7.0
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.5` and selects the 0.8.0
 meta-schema. That meta-schema MUST declare `finite` as a boolean member of a column, require it
 where `type` is `float32` or `float64`, and forbid it otherwise; the `shape` phase therefore decides
 §5.4's declaration rule, and the descriptor adds no invariant for it. A checker MUST evaluate its
@@ -1724,6 +1731,7 @@ The descriptor assigns these invariants in this exact order:
 | `registry.resource.catalog` | semantic | core, extension |
 | `registry.resource.array_axes` | semantic | core, extension |
 | `registry.resource.dependency` | semantic | core, extension |
+| `registry.resource.canonical_targets` | semantic | core, extension |
 
 Every descriptor anchor MUST identify every numbered-part clause defining the invariant. Invariant
 IDs are unique. The descriptor schema closes its objects; requires nonempty, duplicate-free arrays;
@@ -1747,8 +1755,10 @@ member is `device_id`. This structural condition reserves device-detail tables f
 Each rule MUST pass Part 11's static contract, including rejection of every optional bound input.
 
 The resource invariants enforce §§2.1–2.7: document-class/content-class eligibility; kind and
-instance eligibility; unambiguous visible catalog bindings; the dense-array axes binding; and
-visible singleton dependencies. The existing table, column, reference, rule, and external-domain
+instance eligibility; unambiguous visible catalog bindings; the dense-array axes binding; visible
+singleton dependencies; and canonical resources' canonical targets, whose outcome points at the
+offending reference, `requires` entry or catalog binding and is core-dependent where the target
+lies in the core context. The existing table, column, reference, rule, and external-domain
 invariants operate on the `table` payload of table-kind declarations. Their stable IDs do not
 change merely because their instance pointers gain enclosing `resources` and `table` components.
 
@@ -2017,7 +2027,7 @@ Three facts about how a packet's clocks were aligned are columns, because a cons
 
 `core.clock_phase_steps` holds one row per step in a clock's alignment to its parent, a clock having possibly several (§5.2). A writer detecting a step MUST record it, and a step is reported and never corrected: the map is exact at every anchor, so it carries the step faithfully, and subtracting it would need to know whether the step also moved the devices timestamped on that parent, which the packet does not record. A clock whose `parent_clock_id` is null MUST NOT have rows here.
 
-`core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record the measurement's median, p95 and maximum error there, with the distance and the tolerance it judged them against. A consumer needs the bound to place a tick and not the residual that justified it.
+`core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record there the tolerance it judged its alignment against and, where it measured its error (Part 01 §3.9), the distance and the measurement. A writer recording the measurement MUST record its median, p95 and maximum together, so a consumer can judge the packet by a stricter rule than the writer applied. No checker verifies the record, since `parameters` names no key for it. A consumer needs the bound to place a tick and not the residual that justified it.
 
 ### 12.7 A frame's axes
 
@@ -3407,6 +3417,13 @@ MUST report each value that is not a unit code at `error` under the check ID
 value once. The finding belongs to the registry holding that declaration under
 [§9.5](#ew-verdict-composition). The shim declares each such table as an input.
 
+A validator SHOULD report each pair of columns of one table resource that hold equal values in every
+row, where those values are not all the same, at `info` under the check ID
+`<resource_id>.columns_duplicated`, naming both columns. It MUST NOT report such a pair at `error`:
+independently numbered identifiers can coincide, which is a fact about a packet rather than a
+defect in it. The finding concerns one resource, so [§9.5](#ew-verdict-composition) attributes it
+to the registry whose declaration the resource's entry names.
+
 <a id="ew-validation-extensions" data-spec-anchor="canonical"></a>
 ### 5.4 Extensions
 
@@ -3799,7 +3816,7 @@ The application column states the extent to which this part invokes each externa
 
 # Part 06 — Analysis Layer
 
-Informative, except §2 and §5, which are normative.
+Informative, except §§2, 4, and 5, which are normative.
 
 <a id="ew-analysis-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
@@ -3838,9 +3855,11 @@ The test is therefore: does materializing change the *shape* of access, or only 
 <a id="ew-analysis-spike-events" data-spec-anchor="canonical"></a>
 ## 4. `analysis.spike_events`
 
+Normative, except its measurement of a population window.
+
 Core keeps each spike on the clock of the probe that measured it, sorted unit-major. That layout answers "this unit's spikes" well and "every unit's spikes in this window" not at all, because a window across many clocks means nothing.
 
-`analysis.spike_events` is core's spikes mapped onto the reference clock and bucketed by time, sorted by unit within each bucket, so that a time filter and a unit filter both prune.
+`analysis.spike_events` is core's spikes mapped onto the session's reference clock and bucketed by time, so that a time filter and a unit filter both prune. Its `clock_id` is the session's reference clock, so the table holds no rows for a session declaring no reference clock. Part 03 §5.4 owns the order it is stored in, by unit within each time bucket, and its row groups.
 
 <!-- columns: analysis.spike_events -->
 | column | type | presence | |
@@ -3848,17 +3867,17 @@ Core keeps each spike on the clock of the probe that measured it, sorted unit-ma
 | `session_id` | `int32` | required | Session ID. |
 | `unit_id` | `int32` | required | Unit ID. |
 | `t_tick` | `int64` | required | Spike tick on clock_id, mapped through core.clock_anchors. |
-| `clock_id` | `int32` | required | The clock these ticks are on, normally the session's reference. |
+| `clock_id` | `int32` | required | The session's reference clock, which these ticks are on. |
 | `time_bucket_tick` | `int64` | required | First tick of the bucket this spike falls in, on clock_id. |
 <!-- /columns -->
 
-A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data, so it is a parameter of a recorded materialization run (§5).
+The bucket width cannot be recovered from the data, so it is a parameter of a recorded materialization run (§5).
 
-**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A writer that records the materialization's run MUST record the count omitted among its parameters, even when it is zero: a derived table one row short otherwise looks exactly like a complete one.
+**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A writer that records the materialization's run MUST record among its parameters, for each clock from which it mapped spikes, how many of that clock's spikes it omitted, even when the count is zero: a derived table one row short otherwise looks exactly like a complete one, and a total does not say which clock's mapping fell short. No checker verifies this, since `parameters` names no key for the counts.
 
 **A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and where it records the run, it MUST record the reason among the run's parameters as it does for omitted rows. A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
 
-Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
+*Informative.* Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
 
 <a id="ew-analysis-materialization-provenance" data-spec-anchor="canonical"></a>
 ## 5. Provenance of a materialization
@@ -4038,11 +4057,11 @@ Two files are 99.3% of what the packet owns: `core.spike_events` at 232 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.7.0.json.gz
-    aind_opto/        0.7.0.json.gz
-    aind_unit_qc/     0.8.0.json.gz
-    dynamic_foraging/ 0.8.0.json.gz
-    vr_foraging/      0.7.0.json.gz
+    core/             0.8.0.json.gz
+    aind_opto/        0.8.0.json.gz
+    aind_unit_qc/     0.9.0.json.gz
+    dynamic_foraging/ 0.9.0.json.gz
+    vr_foraging/      0.8.0.json.gz
   tables/
     core/             sessions, subjects, session_experimenters, devices, probes, electrodes,
                       sorting_run_channels, unit_electrodes, coordinate_frames,
@@ -4078,11 +4097,11 @@ The packet carries 39 resources, 38 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.7.0", "path": "registries/core/0.7.0.json.gz", "sha256": "…"},
-    "aind_opto": {"role": "extension", "version": "0.7.0", "path": "registries/aind_opto/0.7.0.json.gz", "sha256": "…"},
-    "aind_unit_qc": {"role": "extension", "version": "0.8.0", "path": "registries/aind_unit_qc/0.8.0.json.gz", "sha256": "…"},
-    "dynamic_foraging": {"role": "extension", "version": "0.8.0", "path": "registries/dynamic_foraging/0.8.0.json.gz", "sha256": "…"},
-    "vr_foraging": {"role": "extension", "version": "0.7.0", "path": "registries/vr_foraging/0.7.0.json.gz", "sha256": "…"}
+    "core": {"role": "core", "version": "0.8.0", "path": "registries/core/0.8.0.json.gz", "sha256": "…"},
+    "aind_opto": {"role": "extension", "version": "0.8.0", "path": "registries/aind_opto/0.8.0.json.gz", "sha256": "…"},
+    "aind_unit_qc": {"role": "extension", "version": "0.9.0", "path": "registries/aind_unit_qc/0.9.0.json.gz", "sha256": "…"},
+    "dynamic_foraging": {"role": "extension", "version": "0.9.0", "path": "registries/dynamic_foraging/0.9.0.json.gz", "sha256": "…"},
+    "vr_foraging": {"role": "extension", "version": "0.8.0", "path": "registries/vr_foraging/0.8.0.json.gz", "sha256": "…"}
   },
   "created_at": "…",
   "sessions": ["s001"],

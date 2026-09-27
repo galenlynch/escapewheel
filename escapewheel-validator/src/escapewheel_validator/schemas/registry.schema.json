@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/registry/0.7.0",
+  "$id": "https://escapewheel.org/schemas/registry/0.8.0",
   "title": "Escapewheel schema registry",
   "description": "Local shape of an Escapewheel core or extension registry document.",
   "type": "object",

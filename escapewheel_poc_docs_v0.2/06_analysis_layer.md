@@ -1,6 +1,6 @@
 # Part 06 — Analysis Layer
 
-Informative, except §2 and §5, which are normative.
+Informative, except §§2, 4, and 5, which are normative.
 
 <a id="ew-analysis-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
@@ -39,9 +39,11 @@ The test is therefore: does materializing change the *shape* of access, or only 
 <a id="ew-analysis-spike-events" data-spec-anchor="canonical"></a>
 ## 4. `analysis.spike_events`
 
+Normative, except its measurement of a population window.
+
 Core keeps each spike on the clock of the probe that measured it, sorted unit-major. That layout answers "this unit's spikes" well and "every unit's spikes in this window" not at all, because a window across many clocks means nothing.
 
-`analysis.spike_events` is core's spikes mapped onto the reference clock and bucketed by time, sorted by unit within each bucket, so that a time filter and a unit filter both prune.
+`analysis.spike_events` is core's spikes mapped onto the session's reference clock and bucketed by time, so that a time filter and a unit filter both prune. Its `clock_id` is the session's reference clock, so the table holds no rows for a session declaring no reference clock. Part 03 §5.4 owns the order it is stored in, by unit within each time bucket, and its row groups.
 
 <!-- columns: analysis.spike_events -->
 | column | type | presence | |
@@ -49,17 +51,17 @@ Core keeps each spike on the clock of the probe that measured it, sorted unit-ma
 | `session_id` | `int32` | required | Session ID. |
 | `unit_id` | `int32` | required | Unit ID. |
 | `t_tick` | `int64` | required | Spike tick on clock_id, mapped through core.clock_anchors. |
-| `clock_id` | `int32` | required | The clock these ticks are on, normally the session's reference. |
+| `clock_id` | `int32` | required | The session's reference clock, which these ticks are on. |
 | `time_bucket_tick` | `int64` | required | First tick of the bucket this spike falls in, on clock_id. |
 <!-- /columns -->
 
-A row group lies inside one time bucket, so a window filter prunes at the row-group level. The bucket width cannot be recovered from the data, so it is a parameter of a recorded materialization run (§5).
+The bucket width cannot be recovered from the data, so it is a parameter of a recorded materialization run (§5).
 
-**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A writer that records the materialization's run MUST record the count omitted among its parameters, even when it is zero: a derived table one row short otherwise looks exactly like a complete one.
+**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A writer that records the materialization's run MUST record among its parameters, for each clock from which it mapped spikes, how many of that clock's spikes it omitted, even when the count is zero: a derived table one row short otherwise looks exactly like a complete one, and a total does not say which clock's mapping fell short. No checker verifies this, since `parameters` names no key for the counts.
 
 **A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and where it records the run, it MUST record the reason among the run's parameters as it does for omitted rows. A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
 
-Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
+*Informative.* Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
 
 <a id="ew-analysis-materialization-provenance" data-spec-anchor="canonical"></a>
 ## 5. Provenance of a materialization

@@ -49,6 +49,23 @@ def test_closed_vocabulary(packet_root):
     assert finding.rows == (("good",),)
 
 
+def test_equal_varying_columns_are_reported_at_info_only(packet_root):
+    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
+    index = trials.schema.get_field_index("clock_id")
+    _rewrite(packet_root, "trials", trials.set_column(index, "clock_id", pa.array([1, 2], type=pa.int32())))
+    report = validate(open_packet(packet_root))
+    duplicated = [f for f in report.findings if f.check == "core.trials.columns_duplicated"]
+    assert [f.level for f in duplicated] == ["info"]
+    assert "trial_id" in duplicated[0].message and "clock_id" in duplicated[0].message
+    assert report.passed
+
+
+def test_equal_constant_columns_are_not_reported(packet_root):
+    """The fixture's `session_id` and `clock_id` both hold 1 in every trial."""
+    report = validate(open_packet(packet_root))
+    assert not any(f.check.endswith(".columns_duplicated") for f in report.findings)
+
+
 def test_open_vocabulary_accepts_anything(packet_root):
     events = pq.read_table(packet_root / "tables" / "core" / "events.parquet")
     renamed = events.set_column(2, "event_type", pa.array(["whatever", "reward", "lick"]))
@@ -1542,7 +1559,7 @@ def test_an_empty_packet_owned_prefix_is_missing(packet_root):
 def _extension(root, *, tables=None, mutate=None):
     """Give the packet an extension registry and a table conforming to it."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.8.0",
         "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -1839,7 +1856,7 @@ def _required_extension(root, extension_id):
     install_registry(
         root,
         {
-            "$schema": "https://escapewheel.org/schemas/registry/0.7.0",
+            "$schema": "https://escapewheel.org/schemas/registry/0.8.0",
             "registry_id": extension_id,
             "registry_version": "0.1.0",
             "logical_standard_version": "escapewheel-logical-v0.1",

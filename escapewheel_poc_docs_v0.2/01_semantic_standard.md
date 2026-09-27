@@ -16,18 +16,16 @@ Every semantic concept MUST be representable in the logical standard (Part 02). 
 <a id="ew-stable-identity" data-spec-anchor="canonical"></a>
 ### 2.1 Stable identity
 
-Any object referenced by another object MUST have a stable identifier.
-
-An identifier is a signed 32-bit integer. Implementations MUST NOT encode semantic meaning in identifier values, and MUST NOT derive an identifier from a value's position in a file.
+Any object referenced by another object MUST have a stable identifier. A reference names its target by the identifier's value, never by a row's position in a file, so reordering a table's rows changes no reference. Part 02 §5.3 fixes each identifier column's type, and Part 04 §4.1 fixes the form of a resource ID.
 
 Each identifier declares its **identity**:
 
 | identity | definition |
 |---|---|
-| `carried` | the source's own number, reproduced unchanged |
+| `carried` | the source's own value, reproduced unchanged, whatever the source encoded in it |
 | `assigned` | chosen by the writer when the packet was built |
 
-An assigned identifier's owning table MUST carry a `*_name` column holding the name it was assigned from, so that a process outside the packet can reference the row without knowing the number.
+A writer MUST NOT encode meaning in the value of an identifier it assigns. No checker verifies this. An assigned identifier's owning table MUST carry a `*_name` column holding the name it was assigned from, so that a process outside the packet can reference the row without knowing the number.
 
 ### 2.2 Time basis
 
@@ -87,7 +85,8 @@ One concrete bundle of resources under a declared physical profile. A packet MUS
 One continuous recording engagement with one subject.
 
 - MUST have an identifier and a subject.
-- MUST declare the clock its times are reported on.
+- MUST declare the clock its times are reported on where it declares more than one clock, and
+  SHOULD declare it where it declares one.
 - MUST declare its time origin where seconds are to be derived.
 
 ### 3.4 Subject
@@ -190,9 +189,9 @@ sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a 
 index and a consumer MUST NOT assume any base beyond what the origin declares; that
 prohibition is what makes a tick exact.
 
-Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default. A profile or a recipe MAY state a different tolerance; a writer MUST record the value it used.
+Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default. A profile or a recipe MAY state a different tolerance.
 
-A writer reaching past one median anchor interval MUST measure its error and MUST record the median, p95, and maximum, so a consumer can judge the packet by a stricter rule than the writer applied.
+A writer reaching past one median anchor interval MUST measure its error; no checker verifies that it did. Part 02 §12.6 owns what the writer records of the tolerance and the measurement.
 
 A consumer MUST **report** ticks it cannot map rather than omitting them, so a converted table has the same row count as its source with nulls where the mapping is undefined. A row that vanishes in conversion is indistinguishable from one that was never there. It MUST record how many rows it dropped for falling outside the bound **even when that count is zero**: silence is what lets a reader and a writer disagree about which rows exist.
 

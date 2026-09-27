@@ -43,7 +43,7 @@ This table is an informative projection of
 | 03 | Portable physical profile | normative |
 | 04 | Packet manifest | normative |
 | 05 | Validation, import, and reader operations | normative |
-| 06 | Analysis layer | informative except §§2 and 5, which are normative |
+| 06 | Analysis layer | informative except §§2, 4, and 5, which are normative |
 | 07 | Reference implementation and plan | informative |
 | 08 | Example packet | informative |
 | 09 | Metadata minimalism and extensions | normative |
@@ -66,11 +66,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.7.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.8.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.7.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.8.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.

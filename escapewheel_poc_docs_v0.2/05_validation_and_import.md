@@ -360,6 +360,13 @@ MUST report each value that is not a unit code at `error` under the check ID
 value once. The finding belongs to the registry holding that declaration under
 [§9.5](#ew-verdict-composition). The shim declares each such table as an input.
 
+A validator SHOULD report each pair of columns of one table resource that hold equal values in every
+row, where those values are not all the same, at `info` under the check ID
+`<resource_id>.columns_duplicated`, naming both columns. It MUST NOT report such a pair at `error`:
+independently numbered identifiers can coincide, which is a fact about a packet rather than a
+defect in it. The finding concerns one resource, so [§9.5](#ew-verdict-composition) attributes it
+to the registry whose declaration the resource's entry names.
+
 <a id="ew-validation-extensions" data-spec-anchor="canonical"></a>
 ### 5.4 Extensions
 

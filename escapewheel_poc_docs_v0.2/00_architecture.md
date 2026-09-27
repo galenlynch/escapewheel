@@ -213,9 +213,9 @@ class**.
 | `compatibility_projection` | a projection into another representation | no | no |
 | `documentation` | human-readable sidecars that assert no semantic or conformance fact | no | no |
 
-A content class MAY reference a class beneath it and MUST NOT reference one above. Core does not
-reference analysis, and neither references an extension — a discriminator names without
-referencing, which is why core is allowed that one.
+Part 02 §2.2 owns which content classes a declaration may reference, require, or bind to, and
+Part 09 §§6.1–6.2 own which registry it may reference and how a discriminator names a resource
+without referencing it.
 
 A packet's **canonical** resources are exactly its `core` and `extension` resources. Core is not
 the whole of what is canonical: Part 09 sends a task's own facts
@@ -311,11 +311,8 @@ a validator checks against `core.spike_events`.
 ### 5.1 Requirements
 
 The analysis content class MAY contain denormalized, prejoined, binned, aligned, or otherwise
-transformed products. Part 06 owns its exact lineage, realization, and promotion requirements and
-its optional run provenance.
-
-Analysis resources are disposable. A writer MAY delete and recompute any of them. An analysis
-resource becomes canonical only through an explicit revision of this specification.
+transformed products. Part 06 owns its disposability and its exact lineage, realization, and
+promotion requirements and its optional run provenance.
 
 <a id="ew-analysis-materialization-criterion" data-spec-anchor="canonical"></a>
 ### 5.2 Materialization is justified by layout, not by arithmetic
@@ -396,7 +393,7 @@ MUST make the candidate inconsistent.
 | 03 | portable physical mapping of logical resources to stored bytes | normative |
 | 04 | packet manifest structure, resource entries, and dataset-to-resource bindings | normative |
 | 05 | validation, import, writer and reader operations, reporting, and publication of a packet | normative |
-| 06 | analysis policy, examples, and explanation | informative except §§2 and 5, which are normative |
+| 06 | analysis policy, examples, and explanation | informative except §§2, 4, and 5, which are normative |
 | 07 | reference-implementation design and examples | informative |
 | 08 | executable packet example | informative |
 | 09 | extension boundaries, namespace ownership, extension declarations, and extension independence | normative |
