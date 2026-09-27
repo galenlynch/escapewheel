@@ -51,7 +51,7 @@ where = [{ part = "01", section = "2.2" }]
 
 [clause."R39 §2.3"]
 disposition = "applied"
-where = [{ part = "01", section = "2.1" }]
+where = [{ part = "01", section = "2.2" }]
 
 [clause."R40 §2.3"]
 disposition = "applied"
@@ -650,8 +650,8 @@ disposition = "registry"
 note = "within_observation, in rules.json"
 
 [clause."R39 §2.1"]
-disposition = "applied"
-where = [{ part = "01", section = "2.1" }]
+disposition = "registry"
+note = "the description of core.sessions.t_zero_tick; the validator's shim checks the minimum as time.origin_not_earliest"
 
 [clause."R39 §2.2"]
 disposition = "applied"

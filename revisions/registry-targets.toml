@@ -149,6 +149,9 @@ locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.spike_events/table/rules/1/id", equals = "core.spike_events.within_observation" },
 ]
 
+[target."R39 §2.1"]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.sessions/table/columns/10/name", equals = "t_zero_tick" }]
+
 [target."R49 §2.1"]
 locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.processing_runs/table" },
