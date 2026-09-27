@@ -498,6 +498,18 @@ section = "14.1"
 title = "Checked registry context"
 aliases = []
 
+[anchor.ew-clock-alignment-record]
+part = "02"
+section = "12.6"
+title = "A clock's alignment record"
+aliases = []
+
+[anchor.ew-clock-concept]
+part = "01"
+section = "3.9"
+title = "Clock"
+aliases = []
+
 [anchor.ew-code-free-extension-handling]
 part = "09"
 section = "5.6"
@@ -1170,6 +1182,12 @@ section = "1"
 title = "Scope"
 aliases = []
 
+[anchor.ew-session-concept]
+part = "01"
+section = "3.3"
+title = "Session"
+aliases = []
+
 [anchor.ew-session-scope]
 part = "02"
 section = "7.1"
@@ -1210,6 +1228,12 @@ aliases = []
 part = "00"
 section = "2.1"
 title = "Specification candidate and release"
+aliases = []
+
+[anchor.ew-stable-identity]
+part = "01"
+section = "2.1"
+title = "Stable identity"
 aliases = []
 
 [anchor.ew-staging-area]

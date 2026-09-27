@@ -23,3 +23,4 @@ Dependencies run downward, so a draft may depend on the ones above it and on not
 
 | order | draft | words | appraisal | placement |
 |---:|---|---:|---|---|
+| 1 | [Summaries State Their Owners' Rules, and Every Accepted Obligation Binds](summaries-state-their-owners-rules-and-every-accepted-obligation-binds.md) | 4148 | Appraised 2026-09-26 on `a0f7d8b`, the anchor bootstrap for Part 01 §§2.1, 3.3 and 3.9 and Part 02 §12.6. No other proposal or draft is open. Registry and corpus counts rerun at the baseline. Findings closed in the draft: the reference writer accepts a recipe option mapping `analysis.spike_events` onto a non-reference clock, which §3.7 withdraws; R20 §5.1, not an unordered sentence, is the source of Part 00 §3.2's direction rule, and §3.4 supersedes it in part. | in place: Part 00 §§3.2, 5.1 and 9; Part 01 §§2.1, 3.3 and 3.9; Part 02 §§2.2, 9.2, 9.4 and 12.6; Part 05 §5.3; Part 06's status line and §4 |
