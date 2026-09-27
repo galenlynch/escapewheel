@@ -1,4 +1,4 @@
-# Summaries State Their Owners' Rules, and Every Accepted Obligation Binds
+# Each Rule Is Stated by Its Owner, and a Canonical Resource Depends Only on Canonical Resources
 
 | | |
 |---|---|
@@ -24,7 +24,8 @@ Parts 00 and 01 summarize rules that other parts own, normatively, and accepted 
 changed five of those rules without changing the summary. A reader of Part 00 or 01 and a reader of
 the owner then owe different things: whether a one-clock session names its reference clock, which
 content classes may reference which, how an analysis resource becomes canonical, what an identifier
-is, and what a writer records about its alignment error.
+is, and what a writer records about its alignment error. The identifier summary also bans, for every
+identifier, what only an identifier the writer chooses can avoid.
 
 The other failure runs the opposite way. Part 06 §4 carries four accepted obligations of a writer
 materializing `analysis.spike_events`, in a section Part 00 §9 declares informative, so they bind
@@ -50,8 +51,10 @@ or retires, and no section is added.
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | Part 01 §3.3, "MUST declare the clock its times are reported on" | replace in place | same section | required only for a session with more than one clock | §3.1 |
-| Part 01 §2.1, "An identifier is a signed 32-bit integer" and the ban on semantic meaning | replace in place | same section, citing Part 02 §5.3 and Part 04 §4.1 | representation moves to its owner; the ban reaches integer identifiers | §3.2 |
-| Part 01 §2.1, the `carried` row, "the source's own number" | revise in place | same section | "value" | §3.2 |
+| Part 01 §2.1, "An identifier is a signed 32-bit integer" | replace with a citation | Part 02 §5.3 and Part 04 §4.1 | representation moves to its owner | §3.2 |
+| Part 01 §2.1, "Implementations MUST NOT encode semantic meaning in identifier values" | replace in place | same section | binds a writer, for assigned identifiers only | §3.2 |
+| Part 01 §2.1, "MUST NOT derive an identifier from a value's position in a file" | replace in place | same section | a reference resolves by the identifier's value; an assigned identifier's number is otherwise the writer's choice | §3.2 |
+| Part 01 §2.1, the `carried` row, "the source's own number" | revise in place | same section | "value", whatever the source encoded in it | §3.2 |
 | Part 01 §3.9, "a writer MUST record the value it used" | delete the clause | Part 02 §12.6 | the tolerance record is recommended | §3.3 |
 | Part 01 §3.9, "MUST measure its error and MUST record the median, p95, and maximum" | replace in place | same section, citing Part 02 §12.6 | measurement stays; the record moves | §3.3 |
 | Part 02 §12.6, the paragraph on `core.processing_runs.parameters` | replace in place | same section | the record is recommended, and complete where made | §3.3 |
@@ -62,6 +65,7 @@ or retires, and no section is added.
 | Part 00 §5.1, the second paragraph | delete | Part 06 §§2 and 8 | promotion also by an extension-registry change; disposability unchanged | §3.6 |
 | Part 00 §9, the Part 06 row | revise in place | same section | §4 is normative | §3.7 |
 | Part 06, the status line | revise in place | same line | §4 is normative except its measurement | §3.7 |
+| Part 06 §4, "sorted by unit within each bucket" | replace with a citation | Part 03 §5.4 | none; the section describes the order Part 03 §5.4 requires | §3.7 |
 | Part 06 §4, "A row group lies inside one time bucket" | replace with a citation | Part 03 §5.4 | none; the section states no layout rule | §3.7 |
 | Part 06 §4, the ten-second window measurement | mark informative | same section | none | §3.7 |
 | core registry, the description of `analysis.spike_events.clock_id` | revise | same declaration | the session's reference clock | §3.7 |
@@ -86,8 +90,8 @@ clock. No part states R27 §2 in prose.
 The corpus refuses `no_reference_clock`, two clocks and none named, and passes `sessions_only`,
 which has no clock. No corpus packet has one clock and none named. Two AIND electrophysiology
 packets, of subjects 776259 and 786867, carry 13 and 11 clocks and each names its reference, so
-neither changes verdict under the narrower rule. Requiring the reference unconditionally would add a registry rule for no
-packet that needs it.
+neither changes verdict under the narrower rule. Requiring the reference unconditionally would add
+a registry rule for no packet that needs it.
 
 ### 2.2 Reference direction
 
@@ -114,6 +118,11 @@ extension to extension, 9 from analysis to core and 2 from analysis to analysis.
 catalog bindings, two from core to core and one from analysis to analysis, and no declaration names
 anything in `requires`. None targets a non-canonical resource from a canonical one, so a rule
 forbidding that admits every shipped registry.
+
+Part 02 §2.7 already applies that rule to lineage. A `core` resource derives only from `core`, and
+an `extension` resource only from visible `core` and its own extension, so no canonical resource's
+`derived_from` names an analysis resource. A reference, a `requires` entry and a catalog binding
+are dependencies of the same kind, and nothing restricts them the same way.
 
 Part 02 §9.4 selects a contract descriptor by a tuple that includes the meta-schema identifier and
 forbids reinterpreting a descriptor after publication. A checked invariant therefore needs a new
@@ -169,6 +178,16 @@ string identifier with carried identity on `core.array_assets`, `analysis.array_
 04 §4.1 requires it to open with a namespace and a dot. A resource ID's value therefore carries
 meaning by design, and it is not a number.
 
+The registries declare 152 identifier columns: 141 assigned, all `int32`, and 11 carried, 8 of them
+`int32`. Both bans fail on carried identifiers, which reproduce whatever the source chose:
+`core.electrode_coordinates.region_id` and `core.unit_coordinates.region_id` hold an atlas's
+structure number, and `vr_foraging.sites.site_id` holds the source's count of sites from 0 within a
+session. The reference writer numbers assigned identifiers from 0 in the order it first meets each
+object, which Part 05 §4.3 makes deterministic for one recipe. That number follows the sources'
+order, so the position ban as written is unclear even for assigned identifiers. What the ban
+protects is resolution: a reference names its target by a stored value, so reordering a table's
+rows changes no reference. No accepted revision states either ban.
+
 ### 2.6 The alignment record
 
 Four accepted clauses govern a writer mapping past the terminal anchors:
@@ -195,7 +214,8 @@ Part 06 §4's measurement to Part 10.
 ## 3. Decision
 
 Five subsections settle a rule a summary misstates and state it at its owner, §3.5 advances the
-registry identifiers for the invariant §3.4 adds, and three bind accepted obligations. The crosswalk in §1.1 places each.
+registry identifiers for the invariant §3.4 adds, and three bind accepted obligations. The
+crosswalk in §1.1 places each.
 
 ### 3.1 A session with more than one clock declares its reference clock
 
@@ -203,32 +223,36 @@ A session declaring more than one clock MUST declare the clock its times are rep
 session declaring one clock SHOULD declare it. Part 01 §3.3 states this rule in place of an
 unconditional one.
 
-### 3.2 An identifier is stable, and Part 02 fixes its representation
+### 3.2 An assigned identifier carries no meaning, and Part 02 fixes identifier types
 
-Any object referenced by another object MUST have a stable identifier. Implementations MUST NOT
-derive an identifier from a value's position in a file, and MUST NOT encode semantic meaning in an
-integer identifier's value. Part 02 §5.3 fixes each identifier column's type, and Part 04 §4.1 fixes
-the form of a resource ID, which names its namespace. A `carried` identifier is the source's own
-value, reproduced unchanged.
+Any object referenced by another object MUST have a stable identifier. A reference names its target
+by the identifier's value, never by a row's position in a file, so reordering a table's rows changes
+no reference.
+
+A writer MUST NOT encode meaning in the value of an identifier it assigns; the owning table's
+`*_name` column states what the row stands for. No checker verifies this. A `carried` identifier is
+the source's own value, reproduced unchanged, whatever the source encoded in it.
+
+Part 02 §5.3 fixes each identifier column's type, and Part 04 §4.1 fixes the form of a resource ID.
 
 ### 3.3 A writer measures its alignment error, and Part 02 §12.6 owns the record
 
-A writer reaching past one median anchor interval MUST measure its error. A profile or a recipe
-MAY state a tolerance other than the default of 3 ms at p95. Part 01 §3.9 states both and cites
-Part 02 §12.6 for the record.
+A writer reaching past one median anchor interval MUST measure its error; no checker verifies that
+it did. A profile or a recipe MAY state a tolerance other than the default of 3 ms at p95. Part 01
+§3.9 states both and cites Part 02 §12.6 for the record.
 
 A writer SHOULD record in `core.processing_runs.parameters` the tolerance it judged its alignment
 against and, where it measured its error, the distance and the measurement. A writer recording the
 measurement MUST record its median, p95 and maximum together, so a consumer can judge the packet by
-a stricter rule than the writer applied. Part 02 §12.6 states this rule, and no other part states a
-second version of it.
+a stricter rule than the writer applied. No checker verifies the record, since `parameters` names no
+key for it. Part 02 §12.6 states this rule, and no other part states a second version of it.
 
 ### 3.4 A canonical resource depends only on canonical resources
 
-A registry document MUST NOT declare a `core` or `extension` resource that has a table reference,
-a `requires` entry or a catalog binding targeting an `analysis` declaration. A writer may delete
-any analysis resource under Part 06 §2, which would leave a canonical resource depending on one
-without its target. Part 02 §2.2 states this rule. A discriminator names a resource without depending on it
+A registry document MUST NOT declare a `core` or `extension` resource that has a table reference, a
+`requires` entry or a catalog binding targeting an `analysis` declaration. A writer may delete any
+analysis resource under Part 06 §2, which would leave a canonical resource depending on one without
+its target. Part 02 §2.2 states this rule. A discriminator names a resource without depending on it
 (Part 09 §6.2), so the rule does not reach one.
 
 Which registry a declaration may target remains Part 09 §6.1's rule. Part 00 §3.2 states no
@@ -236,12 +260,12 @@ direction of reference and cites Part 02 §2.2 and Part 09 §§6.1–6.2.
 
 ### 3.5 The registry identifiers advance
 
-The registry-contract descriptor MUST assign the invariant `registry.resource.canonical_targets`,
-at phase `semantic`, for classes `core` and `extension`, with the anchors `ew-resource-content-class`
+The registry-contract descriptor MUST assign the invariant `registry.resource.canonical_targets`, at
+phase `semantic`, for classes `core` and `extension`, with the anchors `ew-resource-content-class`
 and `ew-registry-conformance`, after `registry.resource.dependency`. It is one of the resource
-invariants of Part 02 §9.4. Each outcome's instance pointer names the offending reference, `requires`
-entry or catalog binding. Where the target
-lies in the core context, the invariant is core-dependent under Part 02 §9.4.
+invariants of Part 02 §9.4. Each outcome's instance pointer names the offending reference,
+`requires` entry or catalog binding. Where the target lies in the core context, the invariant is
+core-dependent under Part 02 §9.4.
 
 These incorporated identifiers MUST advance:
 
@@ -253,7 +277,7 @@ These incorporated identifiers MUST advance:
 
 The meta-schema changes only its `$id`. An extension registry migrated to meta-schema 0.8.0 MUST
 carry a `registry_version` different from the one it carried under 0.7.0; the core specification
-does not assign it.
+does not assign it. No checker verifies this.
 
 ### 3.6 An analysis resource is promoted by its owning registry's change
 
@@ -269,15 +293,17 @@ informative. Part 00 §9's row for Part 06 and Part 06's status line name §§2,
 normative sections.
 
 The section states no physical layout of its own: it cites Part 03 §5.4 for the table's stored
-order and its row groups. `analysis.spike_events.clock_id` is the session's reference clock, as the
-table's purpose under R30 §2 requires, and the core registry's description of that column says so.
-The table therefore holds no rows for a session declaring no reference clock.
+order, by unit within each time bucket, and for its row groups. `analysis.spike_events.clock_id` is
+the session's reference clock, as the table's purpose under R30 §2 requires, and the core registry's
+description of that column says so. The table therefore holds no rows for a session declaring no
+reference clock.
 
 ### 3.8 A writer records omitted spikes per clock
 
 A writer materializing `analysis.spike_events` that records the materialization's run MUST record
 among its parameters, for each clock from which it mapped spikes, how many of that clock's spikes it
-omitted, including a count of zero. Part 06 §4 states this rule in place of a single count.
+omitted, including a count of zero. No checker verifies this, since `parameters` names no key for
+the counts. Part 06 §4 states this rule in place of a single count.
 
 ### 3.9 A validator reports two equal columns at `info`
 
@@ -360,8 +386,11 @@ For the packet rules:
   error.
 
 §§3.1, 3.2, 3.6 and 3.7 change no verdict, so their evidence is review of each part against its
-clause. §3.3's recommendation is not machine-checked: `parameters` is free JSON, and Part 02 §12.6
-keeps the facts a consumer needs in columns.
+clause. §3.2's scope admits every shipped registry and the reference writer: `region_id` and
+`site_id` are carried, and the writer numbers assigned identifiers in the order it meets them.
+§§3.2, 3.3, 3.5 and 3.8 each state which of their rules no checker verifies. Those of §§3.3 and 3.8
+live in `parameters`, which is free JSON, and Part 02 §12.6 keeps the facts a consumer needs in
+columns. The writer test for §3.8 is the only evidence for it.
 
 ## 7. Open
 
