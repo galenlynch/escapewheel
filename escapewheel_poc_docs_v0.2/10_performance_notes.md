@@ -174,8 +174,9 @@ A large table's row groups are sized for analytical scans (Part 03 §5.1). **100
 rows** is a starting point to be adjusted by profiling; it is a number this format fixes rather
 than a rule a packet can fail, which is why Part 03 §5.1 keeps the SHOULD and the number is here.
 
-Where a table declares a time bucket, a row group SHOULD start at each bucket boundary:
-a group cut at a fixed row count straddles boundaries and spans two buckets' worth of time.
+Part 03 §5.4 recommends starting a row group of `analysis.spike_events` at each time-bucket
+boundary, because a group cut at a fixed row count straddles boundaries and spans two buckets'
+worth of time.
 
 ## 4. The object store
 

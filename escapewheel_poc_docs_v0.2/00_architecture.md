@@ -334,18 +334,14 @@ renaming.
 ### 7.1 Portable profile first
 
 The portable profile is a JSON manifest, Parquet tables, Zarr arrays, ordinary media files, and
-text sidecars. It MUST be readable without a server.
+text sidecars. Part 03 §1 requires a packet under it to be readable without a server.
 
 <a id="ew-external-resource-referencing" data-spec-anchor="canonical"></a>
 ### 7.2 Referencing
 
-A packet need not own every byte it describes. Referencing is expected for large resources: a
-resource the packet does not own sets `external: true` and supplies a location. Externality changes
-ownership and what can be inspected; it does not move format-owned metadata into the manifest. An
-unreachable external resource's physical state remains unassessed.
-
-Externalizing a table costs more than externalizing an array, because a table's validation rules
-cannot run at all while it is unreachable.
+A packet need not own every byte it describes. Externality changes ownership and what can be
+inspected; it does not move format-owned metadata into the manifest. Part 04 §5 specifies how a
+packet declares, records, and verifies a resource it does not own.
 
 <a id="ew-later-physical-profiles" data-spec-anchor="canonical"></a>
 ### 7.3 Iceberg later
