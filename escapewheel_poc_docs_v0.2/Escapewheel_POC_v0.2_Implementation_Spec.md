@@ -403,6 +403,7 @@ Core resources are normalized enough to avoid drift and no further. One row per 
 `core.intervals`; one row per unit in a sorting and curation context in `core.units`; one row per
 spike in `core.spike_events`.
 
+<a id="ew-spike-representation" data-spec-anchor="canonical"></a>
 ### 4.2 Spike representation
 
 `core.spike_events`, one row per spike with primitive columns only, is the sole canonical spike
@@ -633,6 +634,7 @@ Each identifier declares its **identity**:
 
 A writer MUST NOT encode meaning in the value of an identifier it assigns. No checker verifies this. An assigned identifier's owning table MUST carry a `*_name` column holding the name it was assigned from, so that a process outside the packet can reference the row without knowing the number.
 
+<a id="ew-time-basis" data-spec-anchor="canonical"></a>
 ### 2.2 Time basis
 
 Every event, interval, spike time, dense time axis, and media frame timing record MUST declare a time basis: an integer tick and a `clock_id`.
@@ -740,6 +742,7 @@ One recording contact.
 - MUST belong to one probe.
 - MAY have a position in one or more coordinate frames.
 
+<a id="ew-coordinate-concept" data-spec-anchor="canonical"></a>
 ### 3.8 Coordinate
 
 A position of an electrode or unit in a declared frame.
@@ -928,6 +931,7 @@ A processing run that produced units from a recording, declaring the clock its t
 
 A named state of a sorting's unit set, optionally derived from a parent curation.
 
+<a id="ew-calibration-concept" data-spec-anchor="canonical"></a>
 ### 3.23 Calibration
 
 What someone measured about an instrument so that its numbers can be interpreted: how many microlitres a valve delivers when held open for 30 ms, how much light a fibre emits at a given drive, where a manipulator's own coordinates sit in the rig, where a camera is mounted.
@@ -943,6 +947,7 @@ One calibration covers many devices — six manipulator modules cite one file an
 
 A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made. A calibration with no recorded content is still a calibration, and a consumer MUST read such a row as **unrecorded** rather than as absent. A source stating that no calibration was performed gets no row: the absence of a calibration is not a calibration.
 
+<a id="ew-coordinate-frame-concept" data-spec-anchor="canonical"></a>
 ### 3.24 Coordinate frame
 
 The space a coordinate is a position in, together with its axes.
@@ -1828,6 +1833,7 @@ change whether a packet passed**. A validator MUST expose the choice, and a repo
 advisory rules were run: two reports over one packet may legitimately differ, and one that does
 not say which mode produced it cannot be compared with the other.
 
+<a id="ew-tier-2-exclusions" data-spec-anchor="canonical"></a>
 ### 10.3 What is not a rule
 
 A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
@@ -2025,6 +2031,7 @@ Three facts about how a packet's clocks were aligned are columns, because a cons
 
 `core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record there the tolerance it judged its alignment against and, where it measured its error (Part 01 §3.9), the distance and the measurement. A writer recording the measurement MUST record its median, p95 and maximum together, so a consumer can judge the packet by a stricter rule than the writer applied. No checker verifies the record, since `parameters` names no key for it. A consumer needs the bound to place a tick and not the residual that justified it.
 
+<a id="ew-frame-axes" data-spec-anchor="canonical"></a>
 ### 12.7 A frame's axes
 
 A frame declares one row of `core.coordinate_frame_axes` per axis it has, and two axes of one frame MUST NOT carry the same `axis_name`, which `core.coordinate_frame_axes.axis_names_distinct` checks. An axis name is the source's own word for the field the values came from, so two axes sharing one means a writer put two quantities under one name and the packet cannot say which value is on which axis.
@@ -2464,14 +2471,17 @@ This promise is what allows an amendment to skip revalidating untouched files, s
 
 This specification promises nothing about bytes the packet does not own. What a packet records about an external resource is what was true when it was checked, not a claim about now.
 
+<a id="ew-portable-amendment" data-spec-anchor="canonical"></a>
 ## 9. Amendment, versioning, and retention
 
+<a id="ew-amendment-definition" data-spec-anchor="canonical"></a>
 ### 9.1 What an amendment is
 
 An **amendment** produces a new version of an existing packet and MUST NOT modify any file the superseded manifest names. A table that gains rows is written as a **new file**, and the amended manifest names the new file; no byte of the old one changes. Immutability is thereby a property of files, and a resource's *content* may be superseded by naming different bytes.
 
 An amendment MUST set a `packet_version` that sorts strictly after the superseded one, compared as a semantic version.
 
+<a id="ew-amendment-scope" data-spec-anchor="canonical"></a>
 ### 9.2 What an amendment may and may not do
 
 | | |
@@ -2546,6 +2556,7 @@ having removed something.
 
 A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
+<a id="ew-packet-version-scope" data-spec-anchor="canonical"></a>
 ### 9.6 What a version is not
 
 `packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile.
@@ -3254,6 +3265,7 @@ The comparison needs the source read, so it happens as each source is built, and
 
 A fact the source **derives** is the source's. `core.sessions.session_start_time` and `session_end_time` come from the session source's declared stream windows, and a writer MUST use the source's value where a session source is present and MUST report a declaration it did not use rather than discarding it silently.
 
+<a id="ew-source-command" data-spec-anchor="canonical"></a>
 ### 3.7 When a source runs a command
 
 A command that exits non-zero MUST fail the build, and a build MUST name the source whose command failed together with the resources that source owns, rather than reporting the first resource it then finds missing. A command belongs to a source and a source is not an extension: one command may produce tables of several extensions, so a finding naming one of them would be wrong about the rest.
@@ -3304,6 +3316,7 @@ A build reads each source's delivery where it supplied it (§2), which need not 
 and writes what it normalizes from it into the staging area (§4.3). A writer MUST stream a table
 whose row count is large rather than materializing it as host objects.
 
+<a id="ew-import-normalization" data-spec-anchor="canonical"></a>
 ### 4.3 Normalize
 
 Map source objects onto the logical schemas: assign identifiers packet-wide before any table is written, apply the declared sort, and coerce types to the registry's.
@@ -3314,6 +3327,7 @@ An interval is closed (01 §2.3). A writer MUST convert a source whose intervals
 
 An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
 
+<a id="ew-delivery-completeness" data-spec-anchor="canonical"></a>
 ### 4.4 When a source's delivery is complete
 
 What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean.
@@ -3840,6 +3854,7 @@ An analysis resource MUST NOT be the only place a fact exists. Anything a consum
 not recomputable from the canonical resources belongs among them; which canonical layer
 it belongs to is decided by Part 09 §3's test, not by this rule.
 
+<a id="ew-analysis-layout-criterion" data-spec-anchor="canonical"></a>
 ## 3. A derived product earns its place by layout
 
 Arithmetic does not earn it. Where the computation is cheap against data already held, a view is the correct answer and a materialized copy is a maintenance liability.
@@ -3885,6 +3900,7 @@ records one, the row's parameters MUST carry every transform parameter the outpu
 A singleton analysis catalog table and each analysis instance it catalogs are distinct packet
 resources, each recording its own declaration-selected lineage.
 
+<a id="ew-withdrawn-analysis-resources" data-spec-anchor="canonical"></a>
 ## 6. Withdrawn resources
 
 Four resources proposed in v0.1 are withdrawn. They were specified before anything measured them:
@@ -3921,6 +3937,7 @@ Boolean or a validation-state transition.
 
 Informative.
 
+<a id="ew-reference-implementation-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part describes the reference implementation's shape and the phase plan. Nothing here constrains a conforming implementation.
@@ -3983,6 +4000,7 @@ An adapter that produces a dense array across a protocol writes it to the locati
 
 A build reports a `metadata` key whose value equals a column of the same row, which is how Part 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the same duplicate-value comparison used between two columns, applied to a key and a column; three keys in the packaged sessions restated a column.
 
+<a id="ew-reference-phases" data-spec-anchor="canonical"></a>
 ## 5. Phases
 
 | phase | scope | state |
@@ -3996,6 +4014,7 @@ A build reports a `metadata` key whose value equals a column of the same row, wh
 | 6 | release and version discipline | specified (03 §9); pruning implemented, amendment partial |
 | 7 | Iceberg profile experiment | not started |
 
+<a id="ew-reference-testing" data-spec-anchor="canonical"></a>
 ## 6. Testing
 
 A conformance corpus holds one conforming packet and a set of variants, each with its expected finding recorded as data rather than as a test body. The corpus runs against the reference validator rather than reimplementing the checks.
@@ -4030,6 +4049,7 @@ Informative. §1 and the results in §4 are measured on a real packet the refere
 built from one AIND session. §§2–3 show a small packet the reference writer builds from the current
 registries: the conformance corpus's session, with one resource of each kind.
 
+<a id="ew-example-packet-shape" data-spec-anchor="canonical"></a>
 ## 1. Shape
 
 One ecephys session with behaviour, ten probes, and two extensions.
@@ -4290,6 +4310,7 @@ writer's environment.
 
 A writer MAY accept an extension that ships code — an adapter registered under an entry-point group, or a registry document loaded from an installed distribution — and MUST NOT treat either as the ordinary case. That is what turns §5.1's "needs no code" from a possibility into a promise.
 
+<a id="ew-extension-delivery" data-spec-anchor="canonical"></a>
 ### 5.7 How an extension's document and rows reach a build
 
 An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet written under the `delivery_root` a build supplies (`files-v0.1`) is one way and remains the route every implementation supports; an extension MAY deliver over any protocol of the group its profile names (Part 12 §3), since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that. Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how.
@@ -4355,6 +4376,7 @@ An extension needing a multi-valued attribute declares its own typed child table
 
 Informative. Part version **0.1.0**.
 
+<a id="ew-performance-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part carries what a packet's bytes make true under `escapewheel-portable-v0.1`: what an

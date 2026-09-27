@@ -323,7 +323,7 @@ P1 authority framework
 | P10.1 | Direct registry source and release integration matrix | P2, P2.1, and P3–P9 | Ordinary maintenance unless the contract changes |
 | P10.2 | Release-candidate field test | P10.1 | Revisions for what the field finds; the user ends the test |
 | P10.2a | Summaries in Parts 00, 01 and 06 agree with the parts owning their rules | P10.1; runs beside P10.2 | [R145](../accepted/R145-each-rule-is-stated-by-its-owner-and-a-canonical-resource-depends-only-on-canonical-resources.md) |
-| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2a; runs beside P10.2 | [Proposal](each-statement-sits-in-the-part-that-owns-its-subject.md); structural revision, verbatim duplicates as maintenance |
+| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2a; runs beside P10.2 | [Draft](../drafts/each-statement-sits-in-the-part-that-owns-its-subject.md); structural revision, verbatim duplicates as maintenance |
 | P10.3 | Final identifiers and registry binding | P10.2, P10.2a, P10.2b | Proposal |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
