@@ -187,6 +187,24 @@ def test_a_parent_clock_that_is_not_declared_is_caught(tmp_path, registry):
     assert any("gone" in p.message for p in Recipe.load(write(tmp_path, body)).check(registry))
 
 
+def test_a_materializer_parameter_it_does_not_take_is_refused(tmp_path, registry):
+    """Materialization runs at commit, so an unknown parameter would otherwise fail the build last."""
+    body = '\n[[materialize]]\nresource = "analysis.spike_events"\nreference = "harp"\nbucket_seconds = 300\n'
+    errors = recipe_problems(tmp_path, body, registry)["error"]
+    assert errors == ["[[materialize]] analysis.spike_events sets 'reference', which its materializer does not take"]
+
+
+def test_a_resource_nothing_materializes_is_refused(tmp_path, registry):
+    body = '\n[[materialize]]\nresource = "analysis.array_assets"\n'
+    errors = recipe_problems(tmp_path, body, registry)["error"]
+    assert errors == ["no materializer for analysis.array_assets; this writer derives analysis.spike_events"]
+
+
+def test_a_materializer_parameter_it_takes_is_sound(tmp_path, registry):
+    body = '\n[[materialize]]\nresource = "analysis.spike_events"\nbucket_seconds = 300\n'
+    assert not recipe_problems(tmp_path, body, registry).get("error")
+
+
 def recipe_problems(tmp_path, body, registry):
     """Check a recipe body and return its messages grouped by level."""
     return levels(Recipe.load(write(tmp_path, body)).check(registry))

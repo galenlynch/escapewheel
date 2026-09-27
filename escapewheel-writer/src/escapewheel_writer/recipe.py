@@ -883,6 +883,7 @@ class Recipe:
         errors.extend(self._dangling_references(tables, claimants, warnings))
         errors.extend(self._clock_problems())
         errors.extend(self._option_problems())
+        errors.extend(self._materialize_problems())
         errors.extend(self._prefix_problems())
         errors.extend(self._storage_problems())
         errors.extend(self._delivery_problems())
@@ -1226,6 +1227,35 @@ class Recipe:
                 f"source {spec.kind} sets {name!r}, which it declares neither as needed nor as accepted"
                 for name in sorted(spec.options)
                 if name not in known and name not in _BUILD_OPTIONS and name not in TERMS
+            ]
+        return problems
+
+    def _materialize_problems(self) -> list[str]:
+        """Refuse a `[[materialize]]` resource nothing derives, or a parameter its materializer lacks.
+
+        Materialization runs at commit, after every source has been read, so either would
+        otherwise surface only once the build's whole cost had been paid.
+        """
+        import inspect
+
+        from . import materialize
+        from .session import MATERIALIZERS
+
+        taken = {
+            name
+            for name, parameter in inspect.signature(materialize.into).parameters.items()
+            if parameter.kind is inspect.Parameter.KEYWORD_ONLY
+        }
+        problems: list[str] = []
+        for spec in self.materialize:
+            if spec.resource not in MATERIALIZERS:
+                known = ", ".join(sorted(MATERIALIZERS)) or "nothing"
+                problems.append(f"no materializer for {spec.resource}; this writer derives {known}")
+                continue
+            problems += [
+                f"[[materialize]] {spec.resource} sets {name!r}, which its materializer does not take"
+                for name in sorted(spec.options)
+                if name not in taken
             ]
         return problems
 
