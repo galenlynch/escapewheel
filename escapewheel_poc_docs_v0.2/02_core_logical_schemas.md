@@ -1032,6 +1032,7 @@ A packet MUST declare at least one row of `core.clock_observation_intervals` for
 
 `core.clocks.observation_declared` checks the part of that a query can see — a clock that has anchors, or that a session names as its `reference_clock_id`, and declares no interval. A clock aligned by `transform_slope` alone carries data and has no anchors, so the obligation reaches it and the rule does not; the obligation binds the writer, which knows what it timestamped.
 
+<a id="ew-clock-alignment-record" data-spec-anchor="canonical"></a>
 ### 12.6 A clock's alignment record
 
 Three facts about how a packet's clocks were aligned are columns, because a consumer needs them to place a tick and Part 02 §8.6's line puts such a fact in a column and never in a key.

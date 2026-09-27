@@ -13,6 +13,7 @@ Every semantic concept MUST be representable in the logical standard (Part 02). 
 
 ## 2. Global semantic rules
 
+<a id="ew-stable-identity" data-spec-anchor="canonical"></a>
 ### 2.1 Stable identity
 
 Any object referenced by another object MUST have a stable identifier.
@@ -80,6 +81,7 @@ A collection of packets sharing a semantic and logical standard. It is a organiz
 
 One concrete bundle of resources under a declared physical profile. A packet MUST declare the sessions it contains.
 
+<a id="ew-session-concept" data-spec-anchor="canonical"></a>
 ### 3.3 Session
 
 One continuous recording engagement with one subject.
@@ -159,6 +161,7 @@ A validator MUST NOT treat an absent annotation as a finding. Where a position f
 
 A coordinate SHOULD name the processing run that produced it where the writer knows it. That is provenance — which run produced the row that is there — and not a choice between rows.
 
+<a id="ew-clock-concept" data-spec-anchor="canonical"></a>
 ### 3.9 Clock
 
 A monotonic counter with a declared rate and origin.
