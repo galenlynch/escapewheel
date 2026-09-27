@@ -159,8 +159,8 @@ preserve:
 - every packet's verdict: no corpus packet and no AIND packet examined changes validity;
 - every current registry document's validity, although each names a new meta-schema identifier;
   and
-- the reference implementation's behavior, except where §6's fourth question asks for a per-clock
-  count. Its comments and tests may cite different sections.
+- the reference implementation's behavior, except that the writer records the omitted count per
+  clock (§6). Its comments and tests may cite different sections.
 
 ## 4. Options and tradeoffs
 
@@ -230,7 +230,7 @@ keeps R37 §3.3's obligation to measure and cites Part 02 §12.6 for the record.
 | packet manifest and other schemas | unchanged |
 | validation and import | affected: Part 05 states R95 §3.3, which the reference validator already implements; registry checking gains one invariant |
 | extension registries | affected: each names the new meta-schema identifier; none references a non-canonical resource |
-| reader, writer, validator, adapters | registry checking gains the invariant; the writer records the omitted count per clock if §6's fourth question is answered as preferred; otherwise citations only, from Part 01 §3.9 to Part 02 §12.6 where they concern the record |
+| reader, writer, validator, adapters | registry checking gains the invariant; the writer records the omitted count per clock; otherwise citations only, from Part 01 §3.9 to Part 02 §12.6 where they concern the record |
 | existing packets | unchanged verdicts; packets built after the change carry registries naming the new identifier |
 | conformance fixtures and tests | a positive packet with one clock and no reference; negative registry documents in which a core column references, a core declaration requires, and a core catalog binds an analysis resource |
 | architecture and analysis prose | affected: Part 00 §§3.2, 5.1 and 9, and Part 06's status line and §4 |
@@ -245,13 +245,12 @@ keeps R37 §3.3's obligation to measure and cites Part 02 §12.6 for the record.
    R99 §3.4, since `core.sessions.alignment_bound` carries the decision a consumer uses.
 3. **How does Part 06 §4 bind?** Resolved 2026-09-26: option 1, by its status. One draft carries
    every item, since none depends on another.
-4. **Is the omitted count recorded per clock?** Preferred: yes, as R40 §2.3 requires. A spike's
-   omission depends on its own clock's anchors, so a total cannot say which mapping fell short. The
-   reference writer then records a count for each clock. Stating the total that §4 now asks for
-   would narrow an accepted clause.
-5. **Does R95 §3.3 join this proposal?** Preferred: yes. It is the one other accepted obligation
-   stated only in an informative section, and it fails Part 00 §9's rule the same way Part 06 §4
-   does. Leaving it to placement cleanup would bind it only after the field test.
+4. **Is the omitted count recorded per clock?** Resolved 2026-09-26: yes, as R40 §2.3 requires. A
+   spike's omission depends on its own clock's anchors, so a total cannot say which mapping fell
+   short. The reference writer then records a count for each clock.
+5. **Does R95 §3.3 join this proposal?** Resolved 2026-09-26: yes, stated in Part 05's validation
+   reporting. It fails Part 00 §9's rule the same way Part 06 §4 does, and placement cleanup would
+   bind it only after the field test.
 
 ## 7. Promotion criteria
 
@@ -261,7 +260,7 @@ keeps R37 §3.3's obligation to measure and cites Part 02 §12.6 for the record.
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
