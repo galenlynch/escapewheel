@@ -3,13 +3,13 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `9bc97b61df20bfe74fb624170e841cc1688e4cf6` |
+| **Based on** | `610ddcdc60c6116815eadaeb37b26d22bee24fc8` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 00 §§2.4, 3.2, 4.1, 4.2, 5.2, 7.3, 8, 9 and 10; Part 01 §§2.1, 2.2, 3.8, 3.9, 3.17, 3.23 and 3.24; Part 02 §§8.2, 8.3, 8.6, 10.3 and 12; Part 03 §9; Part 04 §5.3; Part 05 §§1, 2, 3.4, 3.7, 4.3, 4.4, 5.3, 10, 11, 13, 14.3 and 15; Part 06 §§3, 4, 6, 7 and 8; Part 07's title and §§1, 5, 6 and 7; Part 08's introduction and §§1 and 5; Part 09 §5.7; Part 10 §1; Part 12 §3 |
-| **Depends on** | R32 §§2–6; R35 §§2 and 4–6; R39 §§2.1–2.4; R43 §2; R61 §§2.1, 2.2 and 3; R79 §2.1; R93 §3.5; R105 §3.3; R135 §3.1 |
+| **Amends** | Part 00 §§2.4, 3.2, 4.1, 4.2, 5.2, 7.3, 8, 9 and 10; Part 01 §§2.1, 2.2, 2.5, 3.5, 3.8, 3.9, 3.12, 3.17, 3.18, 3.23 and 3.24; Part 02 §§8.2, 8.3, 8.6, 10.3, 12 and 12.7; Part 03 §§3.2 and 9; Part 04 §5.3; Part 05 §§1, 2, 3.4, 3.7, 4.3, 4.4, 5.3, 10, 11, 13, 14.3 and 15; Part 06 §§3, 4, 6, 7 and 8; Part 07's title and §§1, 5, 6 and 7; Part 08's introduction and §§1 and 5; Part 09 §5.7; Part 10; Part 12 §3 |
+| **Depends on** | R32 §§2–6; R35 §§2 and 4–6; R39 §§2.1–2.4; R43 §2; R61 §§2.1, 2.2 and 3; R79 §2.1; R93 §3.5; R105 §3.3; R135 §3.1; R145 §3.9 |
 | **Profile** | all |
-| **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6 |
+| **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6; §3.7; §3.8 |
 
 Section 3 is normative. Sections 1, 2, 5 and 6 are informative.
 
@@ -23,34 +23,37 @@ sit in a part whose subject they are not, where an editor changing the owner has
 
 - restatements of rules other parts own;
 - a writer's procedure in Part 01, and a reader's and a validator's in Part 02;
+- tables, rows and columns in Part 01, which defines meaning without selecting a resource shape;
 - amendment, revalidation and cleanup rules that depend on no storage property, stated in Part 03,
   which binds only packets under the portable profile;
 - dataset counts, benchmark timings and records of v0.1 withdrawals in normative text, several of
   them stale; and
-- implementation planning in Parts 00, 07 and 08.
+- implementation planning and developer instructions in Parts 00, 07 and 08.
 
 Part 05 also never says which actors it binds, and its writer-conformance definition asks a writer
-to satisfy the whole part, validator and reader rules included. Two statements disagree with their
-owners: Part 00 §4.1 says `core.intervals` holds one row per trial, and Part 01 §3.8 requires a
-coordinate to carry a value on every axis of its frame, where R105 §3.3 lets it omit an axis its
-source does not state. One rule has no
-statement in prose: R39 accepted a session's time origin, and the reference validator enforces it,
-but no part defines it.
+to satisfy the whole part, validator and reader rules included. Several requirements name no actor,
+among them Part 04 §5.3's reader rule and most of Part 03 §9. A physical profile is not required to
+say how an amendment is realized under it. Two statements disagree with their owners: Part 00 §4.1
+says `core.intervals` holds one row per trial, and Part 01 §3.8 requires a coordinate to carry a
+value on every axis of its frame, where R105 §3.3 lets it omit an axis its source does not state.
+One rule has no statement in prose: R39 accepted a session's time origin, and the reference
+validator enforces it, but no part defines it.
 
 This revision moves each statement to its owner and has every other part cite it. It states the
-time origin and its check, has Part 05 name its actors, widens the amendment rules to every
-profile, and moves the measurements behind Part 06's materialization rules to Part 10. No
-registry document, schema or packet changes, and no verdict changes.
+time origin and its check, has Part 05 name its actors, names the actor of each moved requirement,
+widens the amendment rules to every profile and has each profile say how it realizes them, and
+divides the measurements behind Part 06's rules between Parts 10 and 07. No registry document,
+schema or packet changes, and no verdict changes.
 
 The change is structural. Appending would leave each misplaced statement standing beside its
 relocation, which is the defect being repaired.
 
 ### 1.1 Structural crosswalk
 
-The anchor bootstrap `9bc97b6` gave a canonical anchor to every section this revision moves,
-retires, renumbers or revises that had none. Part 05 §1 is replaced under its number with a scope
-section, `ew-validation-import-scope`. Four sections are added, each with a new canonical anchor,
-and are cited by name in this revision since they do not yet have numbers:
+The anchor bootstraps `9bc97b6` and `610ddcd` gave a canonical anchor to every section this revision
+moves, retires, renumbers or revises that had none. Part 05 §1 is replaced under its number with a
+scope section, `ew-validation-import-scope`. Four sections are added, each with a new canonical
+anchor, and are cited by name in this revision since they do not yet have numbers:
 
 - **the atlas-annotation subsection**, "A coordinate's atlas annotation", the last subsection of
   Part 02 §12 (`ew-coordinate-atlas-annotation`);
@@ -73,24 +76,29 @@ moved subsection keeps its canonical anchor, and a retired section's anchor is n
 | Part 00 §4.1, the grain paragraph | replace with a citation | Part 02 §11 | none; Part 02 §11 declares each core resource's grain | — |
 | Part 00 §4.2 | retire | Part 01 §3.14; the core registry's `core.units` columns and their rule | none; the v0.1 withdrawal is history | — |
 | Part 00 §5.2 | retire | Part 06 §7; Part 00 §5.1 cites Part 06 | none | — |
+| Part 00 §7.3, a profile's obligations | add one | same section | a profile says how it realizes an amendment | §3.2 |
 | Part 00 §7.3, the `packet_version` paragraph | delete | the amendment section's "What an amendment is" | none | §3.2 |
 | Part 00 §8 | retire | Part 07 §2 describes the distributions | none | — |
 | Part 00 §§9 and 10 | renumber | one lower | none | — |
 | Part 01 §2.1, "MUST carry a `*_name` column" | replace with a citation | Part 02 §8.2 | none | — |
 | Part 01 §2.2 | revise in place | same section | states the origin, its absence and seconds | §3.3 |
+| Part 01 §§2.5, 3.5, 3.9, 3.12, 3.17, 3.18 and 3.23, tables, rows and columns | revise in place | same sections, as §2.3 lists | none | — |
 | Part 01 §3.8, "MUST carry one value per axis" | revise in place | same section | a coordinate may omit an axis | §3.6 |
 | Part 01 §3.8, "one row per axis" | replace with a citation | Part 02 §12.7 | none | — |
-| Part 01 §3.8, the atlas-column prohibition | move | the atlas-annotation subsection | none; a table's columns are its declaration's | — |
-| Part 01 §3.9, the acquisition-order rule | move | Part 05 §4.3 | none; an importer is a writer | — |
-| Part 01 §3.17, "nullable" and the array count | revise in place | same section | none | — |
+| Part 01 §3.8, the atlas-column prohibition | move | the atlas-annotation subsection | binds a registry document | §3.7 |
+| Part 01 §3.8, "the row that is there" | revise in place | same section, as §2.3 lists | none | — |
+| Part 01 §3.9, the acquisition-order rule | move | Part 05 §4.3 | none; Part 00 §2.4 makes an importer a writer | — |
+| Part 01 §3.17, "nullable" and the array count | revise in place | same section, as §2.3 lists | none | — |
 | Part 01 §3.23, the calibration ages and module count | delete | none | none | — |
 | Part 01 §3.24, "one row per axis", the coordinate counts and the struck columns | revise in place | same section | none | — |
 | Part 02 §8.2, the column counts and the script | revise in place | same section | none | — |
 | Part 02 §8.3, the reader's resolution | move | the discriminator-resolution subsection | none | — |
 | Part 02 §8.6, the band counts, measurements, key count and script | revise in place | same section | none | — |
-| Part 02 §8.6, the unfilled-column report | move | Part 05 §5.3 | none | — |
+| Part 02 §8.6, the unfilled-column report | move | Part 05 §5.3 | names its check ID and registry | §3.8 |
 | Part 02 §10.3, the second sentence | delete | Part 05 §5.3 states it | none | — |
-| none | add | the atlas-annotation subsection | none | — |
+| Part 02 §12.7, the struck-columns sentence | delete | none | none | — |
+| none | add | the atlas-annotation subsection | none | §3.7 |
+| Part 03 §3.2 | revise in place | same section | names the writer | §3.7 |
 | Part 03 §9 | retitle and replace the body | same section, "Amendment and retention" | the portable realization only | §3.2 |
 | Part 03 §9.1 | move, split | the amendment section's "What an amendment is"; a new file per gaining resource stays in Part 03 §9 | binds every profile | §3.2 |
 | Part 03 §9.2 | move | the amendment section's "What an amendment may change" | binds every profile | §3.2 |
@@ -98,7 +106,7 @@ moved subsection keeps its canonical anchor, and a retired section's anchor is n
 | Part 03 §9.4 | move | the amendment section's "Scope of revalidation" | binds every profile | §3.2 |
 | Part 03 §9.5 | move, split | the amendment section's "Cleanup"; the stray's definition stays in Part 03 §9 | binds every profile | §3.2 |
 | Part 03 §9.6 | merge | the amendment section's "What an amendment is" | binds every writer | §3.2 |
-| Part 04 §5.3, the last paragraph | move | Part 05 §14.3 | none | — |
+| Part 04 §5.3, the last paragraph | move | Part 05 §14.3 | binds a reader | §3.7 |
 | Part 05 §1 | replace | same number, "Scope" | names the actors | §3.1 |
 | Part 05 §1, its former content | merge | Part 05 §2's opening | none | — |
 | Part 05 §3.4, the declared-fact list | replace with a citation | Part 12 §7 | none | — |
@@ -106,26 +114,26 @@ moved subsection keeps its canonical anchor, and a retired section's anchor is n
 | Part 05 §4.3 | add a paragraph | same section | none | — |
 | Part 05 §4.4, the empty arrival | replace with a citation | Part 12 §5 | none | — |
 | Part 05 §4.4, the per-protocol failure channel | move | a column of Part 12 §3's table | none | — |
-| Part 05 §5.3 | add two paragraphs | same section | the origin check; the unfilled-column report | §3.4 |
+| Part 05 §5.3 | add two paragraphs | same section | the origin check; the unfilled-column report | §§3.4 and 3.8 |
 | Part 05 §10, the writer class | revise in place | same section | a writer's obligations only | §3.1 |
 | Part 05 §11, the lead sentence | revise in place | same section | the criteria are necessary | §3.1 |
 | none | add | the discriminator-resolution subsection | none | — |
-| Part 05 §14.3 | add a paragraph | same section | none | — |
+| Part 05 §14.3 | add a paragraph | same section | binds a reader | §3.7 |
 | none | add | the amendment section | every profile | §3.2 |
 | Part 05 §15 | renumber | one higher, after the amendment section | none | — |
-| Part 06 §3, the measurements | move | the materialization measurements | none | §3.5 |
+| Part 06 §3, the size of a copy | move | the materialization measurements | none | §3.5 |
+| Part 06 §3, the alignment and trial-table timings | move | Part 07 §7, renumbered one lower | none | §3.5 |
 | Part 06 §4, the population-window measurement | move | the materialization measurements | none | §3.5 |
 | Part 06 §6 | retire | Part 09 §3 places task-shaped columns | none | — |
 | Part 06 §§7 and 8 | renumber | one lower | none | — |
 | Part 07's title, §1 "and the phase plan" | revise in place | same | none | — |
 | Part 07 §5 | retire | none | none | — |
 | Part 07 §6, the instruction | delete; renumber one lower | same content | none | — |
-| Part 07 §7, the opening | revise in place; renumber one lower | same content | none | — |
+| Part 07 §7, the opening and the imperatives | revise in place; renumber one lower | same content, as §2.7 lists | none | — |
 | Part 08's introduction | revise in place | same, citing Part 05 §10 | none | — |
-| Part 08 §1, the spike tables' columns | revise in place | same section | none | — |
+| Part 08 §1, the figures and the spike tables' columns | revise in place | same section, as §2.7 lists | none | — |
 | Part 08 §5 | retire | Part 05 §10 | none | — |
 | Part 09 §5.7, "remains the route every implementation supports" | replace with a citation | Part 12 §3 | none | — |
-| Part 10 §1 | revise in place | same section | none | §3.5 |
 | none | add | the materialization measurements | none | §3.5 |
 
 ## 2. Background
@@ -163,7 +171,7 @@ not a finding.
 Part 00 §4.1's `core.intervals` grain is a stale description rather than a rule: no check counts
 rows per trial, and Part 02 §11's declaration governs.
 
-### 2.3 Operational rules in Parts 01 and 02
+### 2.3 Operational rules and representation terms in Parts 01 and 02
 
 Part 01 §3.9 obliges an importer to examine a source in acquisition order. That is a writer's
 normalization procedure, which Part 05 §4.3 owns. The consumer rules of the same section state what
@@ -172,11 +180,42 @@ a converted value means and stay.
 Part 02 §8.3 says a reader should offer a discriminator's resolution, and Part 02 §8.6 says a
 validator should report a `metadata` column that no row fills. Part 05 §13 owns reader operations,
 and Part 05 §5.3 already states the comparable `columns_duplicated` report. The reference validator
-implements the second as `<resource_id>.metadata_unfilled`.
+implements the second as `<resource_id>.metadata_unfilled`, reports it at `info` where a table
+resource's file omits the column or leaves it null in every row, and attributes it to the registry
+owning the resource's declaration. No part names the check ID.
 
-Part 01 §3.8 forbids a table to carry an atlas structure's full name or ancestry path as columns,
-which constrains a declaration. Part 01 §3.17 calls `semantic_type` "nullable", Part 02's presence
-term, where the semantic statement is that a writer leaves it unfilled.
+Part 01 §3.8 says "a table must not carry a structure's full name or its ancestry path as columns",
+which constrains a declaration and names no actor. Part 02 §12.7 ends by saying what "a null in the
+struck `x_um`, `y_um` and `z_um` said", which is history.
+
+Part 00 §3.1.1 makes the semantic standard independent of whether a concept is a table or an array,
+and Part 00 §9 has Part 01 define meaning without selecting a resource shape. These statements of
+Part 01 select one, and each has a statement that does not:
+
+| location | text | semantic statement |
+|---|---|---|
+| Part 01 §2.5 | "A unit is declared on the column, not left to the column's name." | A quantity's unit is declared, not left to the quantity's name. |
+| Part 01 §3.5 | "a second device row for one instrument" | a second device for one instrument |
+| Part 01 §3.5 | "What a device row does not carry is where an instrument was pointed: a camera's target is a fact about the instrument that `core.devices` has no column for" | A device does not record where an instrument was pointed: this standard defines no fact for a camera's target |
+| Part 01 §3.8 | "which run produced the row that is there — and not a choice between rows" | which run produced the coordinate, and not a choice between coordinates |
+| Part 01 §3.9 | "so a converted table has the same row count as its source with nulls where the mapping is undefined. A row that vanishes in conversion" | so a conversion returns a result for every tick it is given, marked undefined where the mapping is. A tick that vanishes in conversion |
+| Part 01 §3.9 | "how many rows it dropped" | how many ticks it dropped |
+| Part 01 §3.12 | "a table specialising its events"; "that named table's to declare" | a declaration specialising its events; that named declaration's to declare |
+| Part 01 §3.17 | "It is also nullable, and null is the ordinary case: a writer must not fill it where the row's declared facts already say what the asset holds. Requiring it is what made it a duplicate — a column carrying no contract that every row must fill is one a writer invents a value for, and `ElectricalSeries` stood on 22 of 25 arrays where the unit, the channel map and the dimensions already said voltage per channel over time." | It is also optional, and absent is the ordinary case: a writer must not state it where the asset's other declared facts already say what it holds. A label that carries no contract and that every asset must state is one a writer invents a value for. |
+| Part 01 §3.17 | "answered by a column of its own" | answered by a fact of its own |
+| Part 01 §3.18 | "An image or video with frame timing carried in tables." | An image or video, and the timing of its frames. |
+| Part 01 §3.18 | "should carry a frame table where synchronization matters" | should record each frame's timing where synchronization matters |
+| Part 01 §3.18 | "A frame row is indexed by presentation order: row *n* describes the frame the asset presents nth" | A frame is indexed by presentation order: index *n* is the frame the asset presents nth |
+| Part 01 §3.18 | "gets no row and no reserved index; what went missing is recorded in the columns that carry timing" | is not recorded and reserves no index; what went missing is recorded in the frames' timing |
+| Part 01 §3.18 | "to seek the frame a row describes" | to seek the frame it was recorded for |
+| Part 01 §3.18 | "Where the source states no device the column is null" | Where the source states no device, none is recorded |
+| Part 01 §3.23 | "must read such a row as unrecorded"; "gets no row" | must read such a calibration as unrecorded; records none |
+
+Part 01 §2.1's reference rule, which says a reference never names "a row's position in a file",
+contrasts a reference with a representation rather than selecting one, and stays.
+
+Part 03 §3.2 says `schemas/semantic_version.txt` "is struck", under a heading forbidding it, and
+names no actor.
 
 ### 2.4 Amendment in the portable profile
 
@@ -187,6 +226,15 @@ two digests under one registry ID and version, the scope of revalidation, cleanu
 protection of strays and the retention floors. The portable profile's own part is how an amendment is
 realized: a resource that gains rows becomes a new file, superseded manifests live under
 `manifests/`, and a stray is a file under the packet root.
+
+Part 00 §7.3 requires a physical profile to declare a `profile_id`, to bind only packets declaring
+it, and to say how each logical resource is stored. It does not require a profile to say how an
+amendment is realized, so moving the rules out of Part 03 would leave a later profile free to stay
+silent on where a gaining resource's rows go.
+
+Part 03 §9's rules mostly bind the amendment itself: "an amendment must not modify any file",
+"an amendment must validate the whole packet", "an amendment must not rewrite either", and "cleanup
+… must proceed orphans first". Part 00 §2.4 counts neither as an actor.
 
 Part 00 §9 gives Part 05 the publication of a packet, and an amendment publishes one. Only one
 profile exists, so widening the rules changes no packet, writer or validator. Leaving them in Part 03
@@ -201,13 +249,17 @@ revalidation, Part 05 §§6 and 8, and Part 07 §3.
 
 Part 05 §1 opens "Validation is importation", a build rule. The part first names an actor class in
 Part 05 §10, which calls a writer conforming "when it satisfies this part", a definition R79 §2.1
-wrote. The part also binds validators (Part 05 §§5, 9, 10 and 14.5) and readers (Part 05 §§13 and
-14.3), so no writer can satisfy all of it, and Part 00 §2.4 calls the writer "the actor Part 05
-binds throughout". The sections already group by actor, so one scope section states the boundary
-without renumbering Part 05's fifteen sections and their citers.
+wrote. The part also binds validators (Part 05 §§5, 9, 10 and 14.5), readers (Part 05 §§13 and
+14.3) and consumers (Part 05 §12), so no writer can satisfy all of it, and Part 00 §2.4 calls the
+writer "the actor Part 05 binds throughout". The sections already group by actor, so one scope
+section states the boundary without renumbering Part 05's fifteen sections and their citers.
 
 Part 05 §11 opens "A writer conforms when it:", which reads as sufficient, where Part 05 §10 adds
 every writer obligation of the part.
+
+Part 04 §5.3 ends with a paragraph whose subjects are operations: "opening the manifest, resolving
+declarations, listing resources, and selecting a session must not require a validation receipt".
+The reader named in its second sentence is the actor, and Part 05 §14.3 owns reader independence.
 
 ### 2.6 Evidence and history
 
@@ -218,23 +270,60 @@ every writer obligation of the part.
 | Part 01 §3.24 | 8,448 of 27,557 coordinate rows | recorded in R105 |
 | Part 02 §8.2 | 16 name columns, 6 naming a kind; `registry/check.py` sorts them | `registry/check.py` now reports 16 and 10; the registry-document contract checks the name pairing as `registry.identity.name` |
 | Part 02 §8.6 | 17 and 3 tables per band; 286,896,563 unfilled rows; 1.9 kB and 394.6 ms; 20 keys; `registry/check.py` enforces the bands | a recount under the section's definition gives 16 and 5; the contract checks the bands as `registry.metadata.eligibility` |
-| Part 06 §§3 and 4 | alignment timings, a 100.6% size ratio, a 708-row view, a population window at 0.025 s against 7.7 s | measurements, which Part 10 owns |
+| Part 06 §§3 and 4 | alignment timings, a 100.6% size ratio, a 708-row view, a population window at 0.025 s against 7.7 s | measurements |
 | Part 06 §6 | four v0.1 resources withdrawn | history; its last sentence repeats Part 09 §3 |
 
 Every count and measurement deleted from a part remains in the accepted revision that measured it.
-R93 §3.5 kept R43's timings in Part 06 because "what they justify is a materialization rule rather
-than a storage choice". Part 10 §1 already carries a number supporting a rule stated elsewhere, and
-it records each measurement's date where Part 06 records none.
 
-### 2.7 Implementation planning
+R93 §3.5 divides measurements by whose property a number is: Part 10 carries what follows from
+Parquet, Zarr or the object store, and Part 07 §7 what follows from one implementation's code or
+libraries. It then kept R43's timings in Part 06 because "what they justify is a materialization
+rule rather than a storage choice", an exception its own test does not make. Under that test R43's
+four numbers divide. A materialized copy's row count and the population window's cost follow from
+the data and its layout. The alignment timing is two numpy `searchsorted` calls per unit, and the
+708-row trial table is one DuckDB query (R43 §6). Part 10 §1 already carries numbers supporting
+rules stated elsewhere, and records each measurement's date where Part 06 records none.
+
+### 2.7 Implementation planning and the example packet
 
 Part 00 §8 lists five components of "the first implementation", which Part 07 §2's three
 distributions no longer match. Part 07 §5 is a phase-status table, Part 07 §6 instructs developers
-when to run the corpus, and Part 07 §7 opens by stating where a number belongs. Part 08 §5 is a
-six-item conformance checklist beside Part 05 §10's definition. Part 08 §1 says the spike tables
-carry "four identifiers, a tick, and a clock per row"; the registry declares `session_id`,
-`unit_id`, `t_tick` and `amplitude` on `core.spike_events`, and `session_id`, `unit_id`, `t_tick`,
-`clock_id` and `time_bucket_tick` on `analysis.spike_events`.
+when to run the corpus, and Part 07 §7 opens by stating where a number belongs. Part 07 §7's five
+bullets are instructions to a developer; each becomes what the reference implementation does, its
+reason unchanged:
+
+- the reference writer converts no column to host objects inside a per-batch loop;
+- it reads a large table in batches;
+- it bounds memory explicitly where a job's working set is data-dependent, and gives its SQL engine
+  a spill directory;
+- it does not measure every column's encoding at write time; and
+- its reader projects a constant rather than joining for it.
+
+Part 07 §7's opening becomes "These are properties of the reference implementation and the libraries
+it uses, not requirements. Part 10 carries what follows from Parquet, Zarr or an object store."
+
+Part 08 §5 is a six-item conformance checklist beside Part 05 §10's definition. Part 08 §1 says the
+spike tables carry "four identifiers, a tick, and a clock per row"; the registry declares
+`session_id`, `unit_id`, `t_tick` and `amplitude` on `core.spike_events`, and `session_id`,
+`unit_id`, `t_tick`, `clock_id` and `time_bucket_tick` on `analysis.spike_events`. Its figures
+describe an earlier build. The reference writer's build of subject 786867's session on 2026-09-26,
+read without modification, gives:
+
+| | Part 08 §1 | the 2026-09-26 build |
+|---|---|---|
+| resources | 42 | 58, 14 of them referenced |
+| owned bytes | 482 MB | 605 MB |
+| referenced bytes | 4.25 GB, not copied | 14.4 GB, not copied |
+| spikes | 131,396,535 | 131,396,535 |
+| units | 4,505 across 10 sorting runs | 4,505 across 10 sorting runs |
+| build | 2 min 9 s | 10 min 16 s |
+| `core.spike_events` | 232 MB | 345 MB, 2.62 bytes per spike, a third of them the amplitude |
+| `analysis.spike_events` | 247 MB | 246 MB |
+| the two spike tables' share of owned bytes | 99.3% | 97.6% |
+
+Part 08 §1 takes the build's figures, and its closing sentence names the two spike tables' sizes,
+their share, and `core.spike_events`'s bytes per spike over two identifiers, a tick and an
+amplitude.
 
 ### 2.8 The time origin
 
@@ -245,6 +334,10 @@ rate and admits negative values, and R39 §2.4 forbids a writer that cannot map 
 origin. The ledger places R39 §§2.2–2.4 in Part 01 §2.2 and R39 §2.1 in the registry, whose
 `t_zero_tick` description names the earliest observed tick. Part 01 §2.2 states only that seconds
 derive from the origin, that a consumer lacking one refuses, and R39 §2.4.
+
+R39 §2.2 states its absence rule per packet, while R39 §2.1 defines the origin per session. A
+session with no observation interval has no minimum to take, even where another session of its
+packet has one, so the rule R39 §2.1 implies is per session.
 
 The reference validator reports `time.origin_not_earliest` at `error` where a declared `t_zero_tick`
 differs from the mapped minimum by more than one reference-clock tick, and `time.origin_unmappable`
@@ -262,22 +355,23 @@ either check.
 
 ## 3. Decision
 
-Six clauses change what a part states; §1.1 places every other statement without changing its
+Eight clauses change what a part states; §1.1 places every other statement without changing its
 meaning.
 
 ### 3.1 Part 05 names the actors it binds
 
-Part 05 binds three actors of Part 00 §2.4. Part 05 §1 states which of its sections bind each:
+Part 05 binds all four actors of Part 00 §2.4. Part 05 §1 states which of its sections bind each:
 
 | actor | sections |
 |---|---|
 | a writer, for each build it performs and each adapter it ships | Part 05 §§2–4, 6–8, 9.2, 9.3, 11, 12 and 14.4, and the amendment section |
 | a validator | Part 05 §§5, 9, 10 and 14.5, and the amendment section's "Scope of revalidation" |
 | a reader | Part 05 §§13 and 14.3 |
+| a consumer | Part 05 §12 |
 
 Part 05 §3 also constrains a recipe, Part 05 §6 what a reader observes of a commit, Part 05 §12 a
-packet and a consumer, and Part 05 §§14.1, 14.2 and 14.6 every implementation. Part 05 §10 defines
-the two conformance claims. Part 00 §2.4 cites Part 05 §1 for the actors Part 05 binds.
+packet, and Part 05 §§14.1, 14.2 and 14.6 every implementation. Part 05 §10 defines the two
+conformance claims. Part 00 §2.4 cites Part 05 §1 for the actors Part 05 binds.
 
 A writer conforms when it satisfies every obligation Part 05 places on a writer, on a build it
 performs or on an adapter it ships, which includes recording provenance (Part 05 §7), and meets Part
@@ -286,26 +380,33 @@ performs or on an adapter it ships, which includes recording provenance (Part 05
 
 ### 3.2 Amendment rules bind every profile
 
-The rules of Part 03 §§9.1–9.6 that depend on no storage property bind a writer and a validator under
-every profile, and the amendment section states them:
+The amendment section states the rules of Part 03 §§9.1–9.6 that depend on no storage property. They
+bind under every profile, and each names its actor:
 
-- what an amendment is: a new version of an existing packet that MUST NOT modify the bytes of any
-  resource a superseded manifest names, and whose `packet_version` MUST sort strictly after the
-  superseded one as a semantic version;
-- what an amendment may and MUST NOT change, with Part 03 §9.2's table, asymmetry and provenance
-  exception, where adding rows to a provenance table is permitted without saying how they are stored;
-- that every superseded manifest is retained with its own `created_at` and validation record, the
-  superseded registry copy retained at the path its manifest records, and a writer MUST refuse an
-  amendment binding two digests under one registry ID and version;
-- Part 03 §9.4's scope of revalidation, unchanged; and
-- cleanup's order, the protection of strays, the prohibition on an amendment deleting anything, and
-  the retention floors.
+- An amendment produces a new version of an existing packet. A writer performing one MUST NOT modify
+  the bytes of any resource a superseded manifest names, and MUST set a `packet_version` that sorts
+  strictly after the superseded one as a semantic version.
+- Part 03 §9.2's table, asymmetry and provenance exception state what a writer performing an
+  amendment MAY and MUST NOT change. Adding rows to a provenance table is permitted without saying
+  how they are stored.
+- Every superseded manifest is retained with its own `created_at` and validation record, which a
+  writer performing an amendment MUST NOT rewrite. Where an amendment binds a different registry
+  document, the superseded copy is retained at the path its manifest records, and a writer MUST
+  refuse an amendment binding two digests under one registry ID and version.
+- Part 03 §9.4's scope of revalidation is unchanged, except that its first sentence binds a writer
+  performing an amendment to validate the whole packet.
+- A writer performing cleanup MUST remove orphans before superseded manifests, and MUST NOT remove a
+  stray. A writer performing an amendment MUST NOT delete anything as part of amending, other than a
+  staging area as Part 05 §2 permits and the paths Part 05 §6 lets it remove when it acts on a
+  promotion record. Retention's floors are unchanged.
 
 `packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's
 rows. This one rule replaces Part 00 §7.3's paragraph and Part 03 §9.6.
 
-A stray is a file no manifest ever named, as the packet's profile defines it. Part 03 §9 keeps the
-portable profile's realization and cites the amendment section for the rules:
+A physical profile MUST say how an amendment is realized under it: how a resource that gains rows is
+stored, where superseded manifests are retained, and what a stray is. Part 00 §7.3 states this
+beside a profile's other obligations. Part 03 §9 meets it for the portable profile and cites the
+amendment section for the rules:
 
 - a resource that gains rows, a provenance table included, is written as a new file that the
   amended manifest names;
@@ -344,20 +445,26 @@ clock to the reference, within the alignment bound Part 02 §12.6 records. It MU
 The tolerance is one tick because a writer's estimator may fit anchors the writer does not record.
 Both findings belong to the core registry under Part 05 §9.5. Part 05 §5.3 states this rule.
 
-### 3.5 Part 10 carries the measurements behind Part 06's materialization rules
+### 3.5 R43's measurements move to Parts 10 and 07
 
-Part 10's materialization measurements record what supports Part 06 §§2–4, each with its date:
+Part 06 states no measurement, and Part 06 §§3 and 4 cite where each now sits.
 
-- aligning all 6,781 units' spikes of subject 776259's session to one event and window costs 0.13 s
-  to 1.72 s against trains already in memory, and a materialized copy of four alignments is
-  288,550,992 rows, 100.6% of the spike table (by 2026-09-01; toolchain not kept);
-- a wide trial table is 708 rows returned in 7.5 ms as a view (the same); and
+Part 10's materialization measurements record what follows from the data and its layout, each with
+its date:
+
+- a materialized copy of four alignments of all 6,781 units' spikes of subject 776259's session is
+  288,550,992 rows, 100.6% of the spike table (by 2026-09-01); and
 - a ten-second window over all 4,505 units of subject 786867's session costs 0.025 s from
   `analysis.spike_events` against 7.719 s from the source NWB's per-unit spike times
   (2026-09-03; toolchain not kept).
 
-Part 10 §1's scope includes a measurement supporting an analysis rule. Part 06 states no
-measurement, and Part 06 §4 is normative throughout.
+Part 07's performance notes record what follows from the libraries measured:
+
+- aligning those 6,781 units' spikes to one event and window costs 0.13 s to 1.72 s with numpy, two
+  `searchsorted` calls per unit against trains already in memory (by 2026-09-01; versions not
+  kept); and
+- a wide trial table of 708 rows returns in 7.5 ms from DuckDB as a view (by 2026-09-01; versions
+  not kept).
 
 ### 3.6 A coordinate carries values on the axes its source states
 
@@ -365,42 +472,72 @@ A coordinate MUST carry each of its values on an axis its frame declares, and MA
 fewer axes than the frame declares where its source states none on the rest. Part 01 §3.8 states
 this in place of one value on every axis, and cites Part 02 §12.7 for the values' rows.
 
+### 3.7 A moved requirement names the actor it binds
+
+Part 05 §14.3 states: "A reader MUST NOT require a validation receipt or physical inspection of
+every resource to open a packet's manifest, resolve its declarations, list its resources or select a
+session. Before exposing a resource's logical values it inspects only the metadata that resource
+needs, and fails that resource alone where it lacks support."
+
+The atlas-annotation subsection states: "A registry document MUST NOT declare a column holding an
+atlas structure's full name or its ancestry path: both derive from the structure's identifier, and
+an ancestry path is a list, which Part 02 §5.2 forbids in a delimited string. No checker verifies
+this."
+
+Part 03 §3.2 states: "A writer MUST NOT write `schemas/semantic_version.txt`, which would restate
+`semantic_standard_version`, a field the manifest is required to carry. No checker verifies
+this."
+
+### 3.8 A validator reports an unfilled `metadata` column at `info`
+
+A validator SHOULD report a declared `metadata` column that a table resource's file omits or leaves
+null in every row, at `info` under the check ID `<resource_id>.metadata_unfilled`. It MUST NOT
+report such a column at `error`. The finding concerns one resource, so Part 05 §9.5 attributes it to
+the registry whose declaration the resource's entry names. Part 05 §5.3 states this rule, and Part
+02 §8.6 cites it as the evidence against which a declaration is revisited.
+
 ## 5. Consequence
 
 No registry document, schema, descriptor or packet changes, so no identifier advances and no packet
 is rebuilt. No verdict changes. §3.1 narrows what writer conformance asks without changing a
-packet's claim. §3.2 changes nothing under the one profile that exists. §§3.3 and 3.4 state what R39
-accepted and the reference validator enforces. §3.6 restores R105 §3.3's permission in Part 01, and
-every shipped packet states every axis.
+packet's claim. §3.2 changes nothing under the one profile that exists, which already says how it
+realizes an amendment. §§3.3 and 3.4 state what R39 accepted and the reference validator enforces.
+§3.6 restores R105 §3.3's permission in Part 01, and every shipped packet states every axis. §3.7
+names the actor of requirements that named none. §3.8 names the check ID and attribution the
+reference validator already uses.
 
 R79 §2.1 is superseded in part by §3.1: writer conformance no longer includes validator and reader
-obligations. R93 §3.5 is superseded in part by §3.5: R43's timings move to Part 10, and R93 §3.5's
-rule for Part 07's own numbers stands. R43 §2 becomes `rationale`: no part declares the withdrawn
-table, so nothing is left to bind.
+obligations. R93 §3.5 is superseded in part by §3.5: its sentence keeping R43's query timings in Part
+06 is withdrawn, and the timings divide by R93 §3.5's own test. R39 §2.2 gains a note that §3.3
+states its absence rule per session, as R39 §2.1's per-session origin implies. R43 §2 becomes
+`rationale`: no part declares the withdrawn table, so nothing is left to bind.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
-| semantic prose | Part 01 §2.2 takes §3.3 and Part 01 §3.8 takes §3.6; §1.1's relocations and deletions apply to Part 01 §§2.1, 3.8, 3.9, 3.17, 3.23 and 3.24. | The evidence record names `ew-time-basis` and `ew-coordinate-concept`. |
-| logical prose and registry | Part 02 §§8.2, 8.3, 8.6 and 10.3 follow §1.1, and the atlas-annotation subsection is added. No declaration changes; the `t_zero_tick` description already names the earliest tick. | `registry/check.py` passes unchanged. |
-| physical profiles | Part 03 §9 keeps the portable realization and cites the amendment section; §§9.1–9.6 are removed and §§10–12 keep their numbers. The descriptor is unchanged. | The evidence record names `ew-portable-amendment`. |
+| semantic prose | Part 01 §2.2 takes §3.3 and Part 01 §3.8 takes §3.6; §1.1's relocations, deletions and rewordings apply to Part 01 §§2.1, 2.5, 3.5, 3.8, 3.9, 3.12, 3.17, 3.18, 3.23 and 3.24. | The evidence record names `ew-time-basis` and `ew-coordinate-concept`. |
+| logical prose and registry | Part 02 §§8.2, 8.3, 8.6, 10.3 and 12.7 follow §1.1, and the atlas-annotation subsection takes §3.7's rule. No declaration changes; the `t_zero_tick` description already names the earliest tick. | `registry/check.py` passes unchanged. |
+| physical profiles | Part 00 §7.3 takes §3.2's profile obligation. Part 03 §9 keeps the portable realization and cites the amendment section; §§9.1–9.6 are removed and §§10–12 keep their numbers. Part 03 §3.2 takes §3.7's rule. The descriptor is unchanged. | The evidence record names `ew-later-physical-profiles`, `ew-portable-amendment` and `ew-portable-forbidden-files`. |
 | packet manifest and JSON Schemas | Unchanged. Part 04 §5.3 loses a reader paragraph and its citers of Part 03 §9 cite the amendment section. | None required. |
-| validation and import | Part 05 §1 becomes its scope (§3.1), Part 05 gains the discriminator-resolution subsection, the amendment section (§3.2) and two Part 05 §5.3 paragraphs (§3.4 and the moved report), Part 05 §§10 and 11 follow §3.1, and Part 05 §15 is renumbered. | The evidence record names each new anchor. |
+| validation and import | Part 05 §1 becomes its scope (§3.1), Part 05 gains the discriminator-resolution subsection, the amendment section (§3.2), two Part 05 §5.3 paragraphs (§§3.4 and 3.8) and a Part 05 §14.3 paragraph (§3.7), Part 05 §§10 and 11 follow §3.1, and Part 05 §15 is renumbered. | The evidence record names each new anchor. |
 | extensions | Unchanged. Part 09 §5.7 cites Part 12 §3; no extension registry or adapter changes. | None required. |
-| reader, writer, validator, adapters | The validator maps an origin through a transform and a parent chain, and evaluates each session against its own reference clock, where it now maps through anchors onto the parent and takes the packet's first reference clock. Code comments and messages citing Part 03 §9, Part 01 §2.2 for the check, and "Part 01 §3.9's tolerance of one parent tick" cite the amendment section and Part 05 §5.3. The writer and reader change only citations. | The validator suite with the cases of §6. |
-| conformance fixtures and tests | Validator tests for both origin checks, and a corpus variant for each, as §6 names. | `fixtures/corpus.py` and the validator suite. |
-| revision process and tooling | Ledger destinations follow their text: clauses placed in Part 03 §§9.1–9.6, Part 01 §§3.8 and 3.9, Part 02 §§8.3 and 8.6, Part 04 §5.3, Part 05 §§1 and 10, Part 06 §6 and Part 07 §7 move to their new anchors. R39 §2.1 becomes `applied` at `ew-time-basis`, and R39 §2.4 gains `ew-validation-shim`. R79 §2.1 and R93 §3.5 gain notes; R43 §2 becomes `rationale`. The placement-defect inventory closes PD-007, PD-009 to PD-019 and PD-029 to PD-032. | `ledger.py`, `evidence.py`, `repoint.py` and `revisions/PLACEMENT-DEFECTS.md`. |
-| generated publications and developer documentation | The combined specification and heading index regenerate. Citers of Part 00 §§9 and 10 follow the renumbering: Parts 02, 03, 04 and 12, the specification README and the roadmap. | `verify.py`. |
+| reader, writer, validator, adapters | The validator maps an origin through a transform and a parent chain, and evaluates each session against its own reference clock, where it now maps through anchors onto the parent and takes the packet's first reference clock. Code comments and messages citing Part 03 §9, Part 01 §2.2 for the check, "Part 01 §3.9's tolerance of one parent tick", and Part 02 §8.6 for the unfilled-column report cite the amendment section and Part 05 §5.3. The writer and reader change only citations. | The validator suite with the cases of §6. |
+| conformance fixtures and tests | Validator tests for both origin checks, and a corpus variant for each, as §6 names. The unfilled-column test asserts the finding's registry. | `fixtures/corpus.py` and the validator suite. |
+| revision process and tooling | Ledger destinations follow their text: clauses placed in Part 03 §§9.1–9.6, Part 01 §§3.8 and 3.9, Part 02 §§8.3 and 8.6, Part 04 §5.3, Part 05 §§1 and 10, Part 06 §§3, 4 and 6 and Part 07 §7 move to their new anchors. R39 §2.1 becomes `applied` at `ew-time-basis`, and R39 §2.4 gains `ew-validation-shim`. R39 §2.2, R79 §2.1 and R93 §3.5 gain notes; R43 §2 becomes `rationale`. The placement-defect inventory closes PD-007, PD-009 to PD-019 and PD-029 to PD-032. | `ledger.py`, `evidence.py`, `repoint.py` and `revisions/PLACEMENT-DEFECTS.md`. |
+| generated publications and developer documentation | The combined specification and heading index regenerate. Citers of Part 00 §§9 and 10 follow the renumbering: Parts 02, 03, 04 and 12, the specification README and the roadmap. Part 08 §1 takes §2.7's figures. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
 Each clause is `applied` by canonical anchor:
 
 - §3.1 at `ew-validation-import-scope`, `ew-conformance-classes` and `ew-writer-acceptance-criteria`;
-- §3.2 at `ew-packet-amendment` and `ew-portable-amendment`;
+- §3.2 at `ew-packet-amendment`, `ew-portable-amendment` and `ew-later-physical-profiles`;
 - §3.3 at `ew-time-basis`;
 - §3.4 at `ew-validation-shim`;
-- §3.5 at `ew-materialization-measurements`; and
-- §3.6 at `ew-coordinate-concept`.
+- §3.5 at `ew-materialization-measurements` and `ew-reference-performance-notes`;
+- §3.6 at `ew-coordinate-concept`;
+- §3.7 at `ew-reader-registry-independence`, `ew-coordinate-atlas-annotation` and
+  `ew-portable-forbidden-files`; and
+- §3.8 at `ew-validation-shim`.
 
 These cases distinguish §3.4 from the current specification, which states no check:
 
@@ -416,7 +553,12 @@ These cases distinguish §3.4 from the current specification, which states no ch
 Both AIND packets pass unchanged. §3.6's evidence is a corpus packet whose coordinate omits one axis
 of its frame, which passes, as it does today.
 
-§§3.1, 3.2 and 3.5 change no verdict, so their evidence is review of Parts 03, 05 and 10 against
-each clause and the rerun of the writer's amendment and cleanup suites after their citations move.
-§3.3's rule for a session with no observation interval is unchecked, and no corpus packet declares
-an origin.
+§3.8's evidence is the validator's existing tests, in which a table whose declared `metadata` column
+no row fills draws one `info` finding under `<resource_id>.metadata_unfilled` and one filled row
+draws none. One gains the assertion that the finding is attributed to the core registry.
+
+§§3.1, 3.2, 3.5 and 3.7 change no verdict, so their evidence is review of Parts 00, 03, 05, 07 and 10
+against each clause and the rerun of the writer's amendment and cleanup suites after their citations
+move. §3.2's profile obligation binds the text of a profile, which review checks when one is
+proposed. §3.3's rule for a session with no observation interval is unchecked, and no corpus packet
+declares an origin.

@@ -612,6 +612,12 @@ section = "4.4"
 title = "When a source's delivery is complete"
 aliases = []
 
+[anchor.ew-device-concept]
+part = "01"
+section = "3.5"
+title = "Device"
+aliases = []
+
 [anchor.ew-discriminator-semantics]
 part = "02"
 section = "8.3"
@@ -622,6 +628,12 @@ aliases = []
 part = "05"
 section = "9.2"
 title = "Error policy"
+aliases = []
+
+[anchor.ew-event-stream-concept]
+part = "01"
+section = "3.12"
+title = "Event stream"
 aliases = []
 
 [anchor.ew-example-acceptance-checklist]
@@ -1012,6 +1024,12 @@ aliases = []
 part = "03"
 section = "3.3"
 title = "Bound registries"
+aliases = []
+
+[anchor.ew-portable-forbidden-files]
+part = "03"
+section = "3.2"
+title = "Files that MUST NOT be written"
 aliases = []
 
 [anchor.ew-portable-packet-layout]
@@ -1481,6 +1499,12 @@ part = "02"
 section = "12.1"
 title = "Unit identity"
 aliases = ["ew-unit-identity-architecture"]
+
+[anchor.ew-units-of-measure]
+part = "01"
+section = "2.5"
+title = "Units of measure"
+aliases = []
 
 [anchor.ew-validation-extensions]
 part = "05"
