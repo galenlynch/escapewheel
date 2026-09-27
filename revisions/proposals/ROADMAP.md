@@ -291,10 +291,13 @@ P1 authority framework
         P10.1 registry source and integration matrix
                       |
                       v
-        P10.2 release-candidate field test
+        P10.2 release-candidate field test ---- P10.2a summaries agree with owners
+                      |                              (beside the field test)
+                      v
+        P10.2b placement cleanup
                       |
                       v
-        P10.3 final identifiers
+        P10.3 final identifiers (after P10.2a and P10.2b)
                       |
                       v
         P11 immutable v0.2 publication
@@ -319,7 +322,9 @@ P1 authority framework
 | P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | [R135](../accepted/R135-a-build-owns-its-staging-area-and-validates-everything-it-stages-before-publishing.md); [R136](../accepted/R136-every-packet-owned-resource-records-a-named-whole-object-digest.md); [R137](../accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md); [R138](../accepted/R138-a-recipe-names-each-extension-registry-once.md); [R139](../accepted/R139-a-float-column-declares-whether-it-admits-non-finite-values.md); [R140](../accepted/R140-a-nomenclature-that-governs-an-open-core-column-has-a-reference-entry.md); [R141](../accepted/R141-the-core-vocabulary-targets-extracellular-electrophysiology.md); [R142](../accepted/R142-a-build-supplies-an-adapter-a-persistent-source-cache.md); [R143](../accepted/R143-a-packet-owned-opaque-resource-crosses-as-its-bytes-in-a-directory-named-by-its-resource-id.md); [R144](../accepted/R144-the-adapter-interface-is-its-own-part-at-the-physical-level.md) |
 | P10.1 | Direct registry source and release integration matrix | P2, P2.1, and P3–P9 | Ordinary maintenance unless the contract changes |
 | P10.2 | Release-candidate field test | P10.1 | Revisions for what the field finds; the user ends the test |
-| P10.3 | Final identifiers and registry binding | P10.2 | Proposal |
+| P10.2a | Summaries in Parts 00, 01 and 06 agree with the parts owning their rules | P10.1; runs beside P10.2 | Proposal |
+| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2, P10.2a | Structural revision; verbatim duplicates as maintenance |
+| P10.3 | Final identifiers and registry binding | P10.2, P10.2a, P10.2b | Proposal |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
 ### P0 — Revision-process foundation
@@ -784,6 +789,22 @@ Build and use packets from the candidate in the field. What the test finds retur
 ordinary lifecycle: a defect in a numbered part, registry, or schema is a revision, and an
 implementation defect is maintenance. The user decides when the test ends; P10.3 does not start
 before then.
+
+#### P10.2a — Summaries agree with the parts owning their rules
+
+The placement-defect inventory, re-appraised after P10.1, found statements in Parts 00, 01 and 06
+that contradict the part or accepted revision owning the rule (PD-023 to PD-028). Resolving them
+toward their owners changes no packet's verdict, so the work runs beside the field test. Only a
+checked reference-direction rule would change registry bytes, by advancing the meta-schema's
+development identifier.
+
+#### P10.2b — Placement cleanup
+
+The same inventory's remaining entries are placement: duplicates, operational rules in logical
+parts, evidence and history in normative text, and Part 05's organization by actor. A statement
+restating its owner word for word is removed as maintenance; the rest is one structural placement
+revision after the field test and before final identifiers, since P11's gate requires one owner
+for each fact.
 
 #### P10.3 — Final identifiers and registry binding
 
