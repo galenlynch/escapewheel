@@ -2,6 +2,7 @@
 
 Informative. Part version **0.1.0**.
 
+<a id="ew-performance-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part carries what a packet's bytes make true under `escapewheel-portable-v0.1`: what an

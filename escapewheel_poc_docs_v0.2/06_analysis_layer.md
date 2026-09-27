@@ -28,6 +28,7 @@ An analysis resource MUST NOT be the only place a fact exists. Anything a consum
 not recomputable from the canonical resources belongs among them; which canonical layer
 it belongs to is decided by Part 09 §3's test, not by this rule.
 
+<a id="ew-analysis-layout-criterion" data-spec-anchor="canonical"></a>
 ## 3. A derived product earns its place by layout
 
 Arithmetic does not earn it. Where the computation is cheap against data already held, a view is the correct answer and a materialized copy is a maintenance liability.
@@ -73,6 +74,7 @@ records one, the row's parameters MUST carry every transform parameter the outpu
 A singleton analysis catalog table and each analysis instance it catalogs are distinct packet
 resources, each recording its own declaration-selected lineage.
 
+<a id="ew-withdrawn-analysis-resources" data-spec-anchor="canonical"></a>
 ## 6. Withdrawn resources
 
 Four resources proposed in v0.1 are withdrawn. They were specified before anything measured them:

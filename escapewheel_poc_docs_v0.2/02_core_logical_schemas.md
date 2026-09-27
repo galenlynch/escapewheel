@@ -862,6 +862,7 @@ change whether a packet passed**. A validator MUST expose the choice, and a repo
 advisory rules were run: two reports over one packet may legitimately differ, and one that does
 not say which mode produced it cannot be compared with the other.
 
+<a id="ew-tier-2-exclusions" data-spec-anchor="canonical"></a>
 ### 10.3 What is not a rule
 
 A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
@@ -1059,6 +1060,7 @@ Three facts about how a packet's clocks were aligned are columns, because a cons
 
 `core.processing_runs.parameters` keeps the evidence behind each decision and none of the three facts themselves. A writer SHOULD record there the tolerance it judged its alignment against and, where it measured its error (Part 01 §3.9), the distance and the measurement. A writer recording the measurement MUST record its median, p95 and maximum together, so a consumer can judge the packet by a stricter rule than the writer applied. No checker verifies the record, since `parameters` names no key for it. A consumer needs the bound to place a tick and not the residual that justified it.
 
+<a id="ew-frame-axes" data-spec-anchor="canonical"></a>
 ### 12.7 A frame's axes
 
 A frame declares one row of `core.coordinate_frame_axes` per axis it has, and two axes of one frame MUST NOT carry the same `axis_name`, which `core.coordinate_frame_axes.axis_names_distinct` checks. An axis name is the source's own word for the field the values came from, so two axes sharing one means a writer put two quantities under one name and the packet cannot say which value is on which axis.

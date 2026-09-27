@@ -4,6 +4,7 @@ Informative. §1 and the results in §4 are measured on a real packet the refere
 built from one AIND session. §§2–3 show a small packet the reference writer builds from the current
 registries: the conformance corpus's session, with one resource of each kind.
 
+<a id="ew-example-packet-shape" data-spec-anchor="canonical"></a>
 ## 1. Shape
 
 One ecephys session with behaviour, ten probes, and two extensions.

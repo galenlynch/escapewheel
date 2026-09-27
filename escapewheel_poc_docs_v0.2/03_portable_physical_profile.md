@@ -397,14 +397,17 @@ This promise is what allows an amendment to skip revalidating untouched files, s
 
 This specification promises nothing about bytes the packet does not own. What a packet records about an external resource is what was true when it was checked, not a claim about now.
 
+<a id="ew-portable-amendment" data-spec-anchor="canonical"></a>
 ## 9. Amendment, versioning, and retention
 
+<a id="ew-amendment-definition" data-spec-anchor="canonical"></a>
 ### 9.1 What an amendment is
 
 An **amendment** produces a new version of an existing packet and MUST NOT modify any file the superseded manifest names. A table that gains rows is written as a **new file**, and the amended manifest names the new file; no byte of the old one changes. Immutability is thereby a property of files, and a resource's *content* may be superseded by naming different bytes.
 
 An amendment MUST set a `packet_version` that sorts strictly after the superseded one, compared as a semantic version.
 
+<a id="ew-amendment-scope" data-spec-anchor="canonical"></a>
 ### 9.2 What an amendment may and may not do
 
 | | |
@@ -479,6 +482,7 @@ having removed something.
 
 A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
 
+<a id="ew-packet-version-scope" data-spec-anchor="canonical"></a>
 ### 9.6 What a version is not
 
 `packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile.

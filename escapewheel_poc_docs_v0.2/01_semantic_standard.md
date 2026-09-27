@@ -27,6 +27,7 @@ Each identifier declares its **identity**:
 
 A writer MUST NOT encode meaning in the value of an identifier it assigns. No checker verifies this. An assigned identifier's owning table MUST carry a `*_name` column holding the name it was assigned from, so that a process outside the packet can reference the row without knowing the number.
 
+<a id="ew-time-basis" data-spec-anchor="canonical"></a>
 ### 2.2 Time basis
 
 Every event, interval, spike time, dense time axis, and media frame timing record MUST declare a time basis: an integer tick and a `clock_id`.
@@ -134,6 +135,7 @@ One recording contact.
 - MUST belong to one probe.
 - MAY have a position in one or more coordinate frames.
 
+<a id="ew-coordinate-concept" data-spec-anchor="canonical"></a>
 ### 3.8 Coordinate
 
 A position of an electrode or unit in a declared frame.
@@ -322,6 +324,7 @@ A processing run that produced units from a recording, declaring the clock its t
 
 A named state of a sorting's unit set, optionally derived from a parent curation.
 
+<a id="ew-calibration-concept" data-spec-anchor="canonical"></a>
 ### 3.23 Calibration
 
 What someone measured about an instrument so that its numbers can be interpreted: how many microlitres a valve delivers when held open for 30 ms, how much light a fibre emits at a given drive, where a manipulator's own coordinates sit in the rig, where a camera is mounted.
@@ -337,6 +340,7 @@ One calibration covers many devices — six manipulator modules cite one file an
 
 A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made. A calibration with no recorded content is still a calibration, and a consumer MUST read such a row as **unrecorded** rather than as absent. A source stating that no calibration was performed gets no row: the absence of a calibration is not a calibration.
 
+<a id="ew-coordinate-frame-concept" data-spec-anchor="canonical"></a>
 ### 3.24 Coordinate frame
 
 The space a coordinate is a position in, together with its axes.

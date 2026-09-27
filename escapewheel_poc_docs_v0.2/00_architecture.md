@@ -295,6 +295,7 @@ Core resources are normalized enough to avoid drift and no further. One row per 
 `core.intervals`; one row per unit in a sorting and curation context in `core.units`; one row per
 spike in `core.spike_events`.
 
+<a id="ew-spike-representation" data-spec-anchor="canonical"></a>
 ### 4.2 Spike representation
 
 `core.spike_events`, one row per spike with primitive columns only, is the sole canonical spike

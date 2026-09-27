@@ -2,6 +2,7 @@
 
 Informative.
 
+<a id="ew-reference-implementation-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
 This part describes the reference implementation's shape and the phase plan. Nothing here constrains a conforming implementation.
@@ -64,6 +65,7 @@ An adapter that produces a dense array across a protocol writes it to the locati
 
 A build reports a `metadata` key whose value equals a column of the same row, which is how Part 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the same duplicate-value comparison used between two columns, applied to a key and a column; three keys in the packaged sessions restated a column.
 
+<a id="ew-reference-phases" data-spec-anchor="canonical"></a>
 ## 5. Phases
 
 | phase | scope | state |
@@ -77,6 +79,7 @@ A build reports a `metadata` key whose value equals a column of the same row, wh
 | 6 | release and version discipline | specified (03 §9); pruning implemented, amendment partial |
 | 7 | Iceberg profile experiment | not started |
 
+<a id="ew-reference-testing" data-spec-anchor="canonical"></a>
 ## 6. Testing
 
 A conformance corpus holds one conforming packet and a set of variants, each with its expected finding recorded as data rather than as a test body. The corpus runs against the reference validator rather than reimplementing the checks.

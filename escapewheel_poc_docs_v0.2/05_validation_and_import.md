@@ -201,6 +201,7 @@ The comparison needs the source read, so it happens as each source is built, and
 
 A fact the source **derives** is the source's. `core.sessions.session_start_time` and `session_end_time` come from the session source's declared stream windows, and a writer MUST use the source's value where a session source is present and MUST report a declaration it did not use rather than discarding it silently.
 
+<a id="ew-source-command" data-spec-anchor="canonical"></a>
 ### 3.7 When a source runs a command
 
 A command that exits non-zero MUST fail the build, and a build MUST name the source whose command failed together with the resources that source owns, rather than reporting the first resource it then finds missing. A command belongs to a source and a source is not an extension: one command may produce tables of several extensions, so a finding naming one of them would be wrong about the rest.
@@ -251,6 +252,7 @@ A build reads each source's delivery where it supplied it (§2), which need not 
 and writes what it normalizes from it into the staging area (§4.3). A writer MUST stream a table
 whose row count is large rather than materializing it as host objects.
 
+<a id="ew-import-normalization" data-spec-anchor="canonical"></a>
 ### 4.3 Normalize
 
 Map source objects onto the logical schemas: assign identifiers packet-wide before any table is written, apply the declared sort, and coerce types to the registry's.
@@ -261,6 +263,7 @@ An interval is closed (01 §2.3). A writer MUST convert a source whose intervals
 
 An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
 
+<a id="ew-delivery-completeness" data-spec-anchor="canonical"></a>
 ### 4.4 When a source's delivery is complete
 
 What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean.
