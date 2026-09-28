@@ -513,6 +513,12 @@ section = "14.1"
 title = "Checked registry context"
 aliases = []
 
+[anchor.ew-climbing-integer-marks]
+part = "10"
+section = "2.9"
+title = "Declarations mark the integers that climb within groups"
+aliases = []
+
 [anchor.ew-clock-alignment-record]
 part = "02"
 section = "12.6"

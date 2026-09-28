@@ -4503,6 +4503,7 @@ between `core.clock_anchors.session_id` at 41,275 rows, where the two are within
 better than plain: it is never more than 6 bytes larger in either packet, and plain is up to 5.9x
 larger, `core.array_channels.axis_index` being 546 bytes plain and 93 under delta.
 
+<a id="ew-climbing-integer-marks" data-spec-anchor="canonical"></a>
 ### 2.9 Declarations mark the integers that climb within groups
 
 A count over a whole column sees a climb only where the table is sorted by that column.
