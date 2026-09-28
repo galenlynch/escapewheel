@@ -226,8 +226,47 @@ def test_a_unit_matching_nothing_and_a_unit_masked_nowhere_are_counted_apart(tmp
     source.array_assets()
     assert source.notes == [
         "units: 1 analyzer unit(s) match no unit in the packet's sorting; skipped",
-        "units: 1 analyzer unit(s) are sparse on no contact at all; skipped",
+        "units: 1 analyzer unit(s) are sparse on no contact at all; stored with no channels",
     ]
+    assert source.values.shape[0] == 2
+
+
+# -- which unit a position is ----------------------------------------------------------
+
+
+def _live(values: np.ndarray) -> list[int]:
+    """How many channels of each position hold anything, which is its support's size here."""
+    return [int(n) for n in (np.abs(values).max(axis=2) > 0).sum(axis=1)]
+
+
+def test_positions_follow_unit_id_not_analyzer_order(asset: Path) -> None:
+    """The analyzer's rows are labels 0, 1, 2; numbered 2, 0, 1 they are stored as labels 1, 2, 0.
+
+    Supports of sizes 2, 3 and 1 make each position's unit visible from the values alone.
+    """
+    numbered = {"0": 2, "1": 0, "2": 1}
+    source = WaveformSource(
+        asset,
+        session_id="s1",
+        units=[{"device_name": "probeA", "local_unit_label": k, "unit_id": v} for k, v in numbered.items()],
+    )
+    assert _live(source.values) == [3, 1, 2]
+    rows = source.unit_electrodes()
+    assert [sum(r["unit_id"] == u for r in rows) for u in range(UNITS)] == [3, 1, 2]
+
+
+def test_a_unit_with_no_template_keeps_its_position(asset: Path) -> None:
+    """Unit 1 is in the sorting and not the analyzer, so skipping it would shift unit 2 into its place."""
+    units = [
+        {"device_name": "probeA", "local_unit_label": "0", "unit_id": 0},
+        {"device_name": "probeB", "local_unit_label": "0", "unit_id": 1},
+        {"device_name": "probeA", "local_unit_label": "1", "unit_id": 2},
+        {"device_name": "probeA", "local_unit_label": "2", "unit_id": 3},
+    ]
+    source = WaveformSource(asset, session_id="s1", units=units)
+    assert _live(source.values) == [2, 0, 3, 1]
+    assert not [r for r in source.unit_electrodes() if r["unit_id"] == 1]
+    assert source.notes == ["units: 1 unit(s) of the packet's sorting have no template; stored with no channels"]
 
 
 @pytest.mark.parametrize("prefix", ["", "A_"])

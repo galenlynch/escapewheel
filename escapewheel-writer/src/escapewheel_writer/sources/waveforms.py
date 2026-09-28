@@ -52,21 +52,28 @@ MEAN, DEVIATION = "average", "std"
 
 
 @dataclass
+class _Template:
+    """One unit's template cut to its own contacts, and the ordinal of its trough contact."""
+
+    electrodes: list[str]
+    primary: int
+    slab: NDArray[np.float64]
+    sd_slab: NDArray[np.float64] | None
+
+
+@dataclass
 class _Kept:
-    """What the pass over every stream kept, and the two separate reasons it kept less.
+    """What the pass over every stream kept, keyed by unit, and the separate reasons it kept less.
 
     A unit matching nothing means the build's sorting and this analyzer disagree about which
     units exist; one sparse on no contact means the mask says the template was computed nowhere.
     One count covering both would hide the first behind the second.
     """
 
-    identity: list[dict[str, Any]] = field(default_factory=list)
-    electrodes: list[list[str]] = field(default_factory=list)
-    primary: list[int] = field(default_factory=list)
-    slabs: list[NDArray[np.float64]] = field(default_factory=list)
-    sd_slabs: list[NDArray[np.float64]] = field(default_factory=list)
+    templates: dict[Any, _Template] = field(default_factory=dict)
     peak: float = 0.0
     sd_peak: float = 0.0
+    empty: set[Any] = field(default_factory=set)
     missed: int = 0
     blank: int = 0
 
@@ -93,7 +100,8 @@ class WaveformSource:
     units : sequence of Mapping
         One record per unit, as the build supplies it: `device_name` and `local_unit_label`, which
         are the stream's probe and the sorter's own label for the unit, and the `unit_id` assigned.
-        A unit the packet's sorting does not contain is skipped rather than stored as padding.
+        A unit the packet's sorting does not contain is skipped rather than stored as padding, and
+        every unit it does contain has a position, stored with no channels where it has no template.
     experiment : str, optional
         Restrict to one experiment, as `SorterSource` does. Each experiment restarts its sample
         index, so its streams are not comparable with another's.
@@ -248,6 +256,13 @@ class WaveformSource:
     def _read(self) -> dict[str, Any]:
         """Cut every unit's template down to its own contacts, one chunk row at a time.
 
+        The unit axis holds every unit of the session in `unit_id` order, which is the sorted
+        order of the names `PacketWriter._preassign` numbers, so in a one-session packet position
+        *k* is `unit_id` *k*. The axis declares no coordinates and `core.unit_electrodes`, which
+        labels the channel axis, is keyed by `unit_id`, so nothing else in the packet says which
+        unit a position is. Analyzer order would not do: analyzers and sorting runs are named
+        differently and sort differently.
+
         The block is the source's own chunk along the unit axis, so every chunk is read once and
         none twice. What survives is the slabs, two orders smaller than the block that produced
         them: 0.38 GB dense a stream against 0.025 GB on the mask. They stay float64, because the
@@ -265,12 +280,19 @@ class WaveformSource:
             units.add(self._unit(stream))
             samples.add(self._cut(stream, kept))
 
-        if not kept.slabs:
+        if not kept.templates:
             raise SourceDefect("no unit in the analyzer's templates matches the packet's sorting")
         if kept.missed:
             self.notes.append(f"units: {kept.missed} analyzer unit(s) match no unit in the packet's sorting; skipped")
         if kept.blank:
-            self.notes.append(f"units: {kept.blank} analyzer unit(s) are sparse on no contact at all; skipped")
+            self.notes.append(
+                f"units: {kept.blank} analyzer unit(s) are sparse on no contact at all; stored with no channels"
+            )
+        order = sorted(set(self.units.values()), key=str)
+        if absent := sum(unit not in kept.templates and unit not in kept.empty for unit in order):
+            self.notes.append(
+                f"units: {absent} unit(s) of the packet's sorting have no template; stored with no channels"
+            )
         if len(samples) != 1 or len(windows) != 1:
             raise SourceDefect(f"the streams disagree about the template window: {sorted(samples)}, {sorted(windows)}")
         if len(units) != 1:
@@ -280,14 +302,16 @@ class WaveformSource:
 
         held = samples.pop()
         nbefore, rate = windows.pop()
-        width = max(s.shape[0] for s in kept.slabs)
-        values, scale = _quantise(kept.slabs, kept.peak, width, held)
+        nothing = _Template([], -1, np.zeros((0, held)), None)
+        templates = [kept.templates.get(unit, nothing) for unit in order]
+        width = max(t.slab.shape[0] for t in templates)
+        values, scale = _quantise([t.slab for t in templates], kept.peak, width, held)
         self._built = {
             "values": values,
             "scale": scale,
-            "identity": kept.identity,
-            "electrodes": kept.electrodes,
-            "primary": kept.primary,
+            "identity": [{"unit_id": unit} for unit in order],
+            "electrodes": [t.electrodes for t in templates],
+            "primary": [t.primary for t in templates],
             "samples": held,
             "nbefore": nbefore,
             "rate": rate,
@@ -296,7 +320,8 @@ class WaveformSource:
         if self.sd:
             if not kept.sd_peak:
                 raise SourceDefect("every deviation is zero over the mean's support")
-            sd_values, sd_scale = _quantise(kept.sd_slabs, kept.sd_peak, width, held)
+            sd_slabs = [t.sd_slab if t.sd_slab is not None else np.zeros((0, held)) for t in templates]
+            sd_values, sd_scale = _quantise(sd_slabs, kept.sd_peak, width, held)
             self._built |= {"sd_values": sd_values, "sd_scale": sd_scale}
         return self._built
 
@@ -327,20 +352,22 @@ class WaveformSource:
                 if found is None:
                     kept.missed += 1
                     continue
+                if found in kept.templates or found in kept.empty:
+                    raise SourceDefect(f"{stream.key}: unit {found} has a template in more than one analyzer row")
                 live = np.flatnonzero(mask[row])
                 if not live.size:
                     kept.blank += 1
+                    kept.empty.add(found)
                     continue
                 slab = dense[offset][:, live].T.copy()
                 kept.peak = max(kept.peak, float(np.abs(slab).max()))
-                kept.identity.append({"unit_id": found})
-                kept.electrodes.append([channels[int(c)] for c in live])
-                kept.primary.append(int(slab.min(axis=1).argmin()))
-                kept.slabs.append(slab)
+                sd_slab = None
                 if deviation is not None:
                     sd_slab = deviation[offset][:, live].T.copy()
                     kept.sd_peak = max(kept.sd_peak, float(np.abs(sd_slab).max()))
-                    kept.sd_slabs.append(sd_slab)
+                kept.templates[found] = _Template(
+                    [channels[int(c)] for c in live], int(slab.min(axis=1).argmin()), slab, sd_slab
+                )
             del dense, deviation
         return int(array.shape[1])
 
