@@ -323,7 +323,7 @@ P1 authority framework
 | P10.1 | Direct registry source and release integration matrix | P2, P2.1, and P3–P9 | Ordinary maintenance unless the contract changes |
 | P10.2 | Release-candidate field test | P10.1 | Revisions for what the field finds; the user ends the test |
 | P10.2a | Summaries in Parts 00, 01 and 06 agree with the parts owning their rules | P10.1; runs beside P10.2 | [R145](../accepted/R145-each-rule-is-stated-by-its-owner-and-a-canonical-resource-depends-only-on-canonical-resources.md) |
-| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2a; runs beside P10.2 | [Draft](../drafts/each-statement-sits-in-the-part-that-owns-its-subject.md); structural revision, verbatim duplicates as maintenance |
+| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2a; runs beside P10.2 | [R146](../accepted/R146-each-statement-sits-in-the-part-that-owns-its-subject.md); structural revision, verbatim duplicates as maintenance |
 | P10.3 | Final identifiers and registry binding | P10.2, P10.2a, P10.2b | Proposal |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
@@ -477,7 +477,7 @@ evidence manifest, and process/documentation updates were incorporated atomicall
 
 Account separately for every statement in Part 00 §§10.1–10.4. Remove repository-maintenance and
 citation-presentation rules after their current process owners exist in
-`revisions/CONTRIBUTING.md`; and remove revision provenance. Part 00 §9 and Part 02 §1 already carry
+`revisions/CONTRIBUTING.md`; and remove revision provenance. Part 00 §8 and Part 02 §1 already carry
 the current-contract ownership meaning that remains before P1, so §§10.1–10.4 need no temporary
 normative replacement. Remove the specification README's revision-status projection and the stale
 provisional `RELEASE.json`; move its useful digest experiment to non-writing prototype tooling. P1
@@ -813,6 +813,11 @@ toward the owners, the placement changes no packet's verdict and no registry byt
 beside the field test rather than after it, and a field-test revision reads the reorganized parts.
 The revision also states R39's time origin, which no part's prose carries, and the check the
 reference validator makes of it.
+
+**Completed as R146 on 2026-09-27.** Part 05 opens with the actors each of its sections binds, the
+amendment rules bind every profile from Part 05 §15, and measurements sit in Parts 10 and 07. The
+origin is defined per session, and a validator checks a declared one through transforms and parent
+chains. No registry byte changes, so packets built for the field test stay valid.
 
 #### P10.3 — Final identifiers and registry binding
 

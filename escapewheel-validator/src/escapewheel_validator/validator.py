@@ -533,16 +533,95 @@ def registry_meta_schema() -> dict[str, Any]:
     return parsed
 
 
-def _check_time_origin(packet: Packet, report: Report) -> None:
-    """Layer 1d: `t_zero_tick` is the earliest observation start on the reference clock (Part 01 §2.2).
+class _Unmappable(ValueError):
+    """A tick has no defined value on the clock it is being carried to."""
 
-    Not SQL, and for the reason Part 01 §2.2 gives: the minimum is taken across clocks, and getting
-    a clock's `start_tick` onto the reference is R13's anchor-based mapping -- arithmetic no
-    query expresses. A packet declaring no origin is conforming and is not checked; one that
-    declares a *wrong* origin silently shifts every second a consumer derives, which is why the
-    check exists at all.
+
+def _clock_graph(packet: Packet) -> dict[int, dict[str, Any]]:
+    """Each clock's parent and the transform onto it, from `core.clocks`."""
+    clocks = packet.table("core.clocks")
+    names = clocks.column_names
+    columns = {c: clocks.column(c).to_pylist() for c in ("parent_clock_id", "transform_slope", "transform_offset")}
+    graph: dict[int, dict[str, Any]] = {}
+    for row, clock in enumerate(clocks.column("clock_id").to_pylist()):
+        graph[clock] = {c: (columns[c][row] if c in names else None) for c in columns}
+    return graph
+
+
+def _ancestry(clock: int, graph: Mapping[int, Mapping[str, Any]]) -> list[int]:
+    """Walk from `clock` through its parents to the root, stopping where a cycle repeats."""
+    chain = [clock]
+    while (parent := graph.get(chain[-1], {}).get("parent_clock_id")) is not None and parent not in chain:
+        chain.append(parent)
+    return chain
+
+
+def _step(
+    tick: int,
+    child: int,
+    graph: Mapping[int, Mapping[str, Any]],
+    by_clock: Mapping[int, tuple[Any, Any]],
+    bound: float,
+    *,
+    upward: bool,
+) -> int:
+    """Carry one tick across the edge from `child` to its parent, or back down it."""
+    from escapewheel_reader.clocks import Unanchored, align
+
+    edge = graph[child]
+    if edge["transform_slope"] is not None and edge["transform_offset"] is not None:
+        slope, offset = float(edge["transform_slope"]), float(edge["transform_offset"])
+        return int(np.rint(offset + slope * tick if upward else (tick - offset) / slope))
+    if child not in by_clock:
+        raise _Unmappable(f"{child} declares neither a transform nor anchors onto its parent")
+    anchor_t, anchor_p = by_clock[child]
+    try:
+        converted, defined = align(
+            np.array([tick], dtype=np.int64),
+            *((anchor_t, anchor_p) if upward else (anchor_p, anchor_t)),
+            bound=bound,
+        )
+    except (Unanchored, ValueError) as refused:
+        raise _Unmappable(f"{child}'s anchors do not map: {refused}") from refused
+    if not defined[0]:
+        raise _Unmappable(f"tick {tick} lies beyond the alignment bound of {child}'s anchors")
+    return int(converted[0])
+
+
+def _onto(
+    tick: int,
+    clock: int,
+    reference: int,
+    graph: Mapping[int, Mapping[str, Any]],
+    by_clock: Mapping[int, tuple[Any, Any]],
+    bound: float,
+) -> int:
+    """Carry a tick from `clock` to `reference` along the parent chain joining them.
+
+    The path climbs from `clock` to the nearest clock it shares with the reference's ancestry, then
+    descends to the reference through the inverse of each edge, so a reference that is itself a
+    child clock is reached as well as one at the root.
     """
-    from escapewheel_reader.clocks import align, anchors, declared_bound, reference_clock
+    up, down = _ancestry(clock, graph), _ancestry(reference, graph)
+    shared = next((c for c in up if c in down), None)
+    if shared is None:
+        raise _Unmappable(f"{clock} and {reference} share no ancestor, so no path joins them")
+    for child in up[: up.index(shared)]:
+        tick = _step(tick, child, graph, by_clock, bound, upward=True)
+    for child in reversed(down[: down.index(shared)]):
+        tick = _step(tick, child, graph, by_clock, bound, upward=False)
+    return tick
+
+
+def _check_time_origin(packet: Packet, report: Report) -> None:
+    """Part 05 §5.3: each declared `t_zero_tick` is its session's earliest observation start.
+
+    Not SQL: the minimum is taken across clocks, and carrying a start onto the reference walks the
+    parent chain through each clock's anchors or transform, which no query expresses. Each session
+    is judged on its own reference clock and alignment bound. A session declaring no origin is not
+    checked; one declaring a wrong origin shifts every second a consumer derives.
+    """
+    from escapewheel_reader.clocks import BOUND, anchors
 
     try:
         sessions = packet.table("core.sessions")
@@ -551,63 +630,68 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
         return
     if "t_zero_tick" not in sessions.column_names or not intervals.num_rows:
         return
-    declared = [t for t in sessions.column("t_zero_tick").to_pylist() if t is not None]
-    if not declared:
-        return
+
+    def column(table: pa.Table, name: str) -> list[Any]:
+        return table.column(name).to_pylist() if name in table.column_names else [None] * table.num_rows
+
+    starts_by_session: dict[Any, list[tuple[int, int]]] = {}
+    for session, clock, start in zip(
+        column(intervals, "session_id"), column(intervals, "clock_id"), column(intervals, "start_tick"), strict=True
+    ):
+        if start is not None:
+            starts_by_session.setdefault(session, []).append((clock, int(start)))
 
     try:
-        reference, by_clock = reference_clock(packet), anchors(packet)
-        bound = declared_bound(packet)
-    except (PacketError, ValueError) as refused:
-        report.add("error", "time.origin_unmappable", f"t_zero_tick is declared but {refused}", registry="core")
-        return
+        graph, by_clock = _clock_graph(packet), anchors(packet)
+    except (PacketError, ValueError):
+        graph, by_clock = {}, {}
 
-    starts: list[int] = []
-    for clock, start in zip(
-        intervals.column("clock_id").to_pylist(), intervals.column("start_tick").to_pylist(), strict=True
+    for session, stated, reference, bound in zip(
+        column(sessions, "session_id"),
+        column(sessions, "t_zero_tick"),
+        column(sessions, "reference_clock_id"),
+        column(sessions, "alignment_bound"),
+        strict=True,
     ):
-        if start is None:
+        # Part 01 §2.2 forbids an origin where the session observed nothing; no checker verifies it.
+        if stated is None or not (starts := starts_by_session.get(session)):
             continue
-        if clock == reference:
-            starts.append(int(start))
-            continue
-        if clock not in by_clock:
+        if reference is None:
             report.add(
                 "error",
                 "time.origin_unmappable",
-                f"{clock} declares an observation window but no anchors, so the minimum Part 01 §2.2 "
-                "defines cannot be taken",
-                [(clock,)],
+                f"session {session} declares t_zero_tick but no reference clock to state it on",
+                [(str(session),)],
                 registry="core",
             )
-            return
-        converted, defined = align(np.array([start], dtype=np.int64), *by_clock[clock], bound=bound)
-        if not defined[0]:
-            report.add(
-                "error",
-                "time.origin_unmappable",
-                f"{clock}'s observation start does not map to {reference} within the alignment "
-                "bound, so no origin is defined (Part 01 §2.2)",
-                [(clock, str(start))],
-                registry="core",
-            )
-            return
-        starts.append(int(converted[0]))
-
-    expected = min(starts)
-    for stated in declared:
-        # The writer's own estimator is not bit-reproducible from the packet -- it may have
-        # fitted over anchors it then withheld -- so agreement is judged at Part 01 §3.9's
-        # tolerance of one parent tick rather than exactly.
-        if abs(int(stated) - expected) > 1:
-            report.add(
-                "error",
-                "time.origin_not_earliest",
-                f"t_zero_tick is {stated} but the earliest observation start on {reference} "
-                f"is {expected} (Part 01 §2.2)",
-                [(str(stated), str(expected))],
-                registry="core",
-            )
+            continue
+        mapped = []
+        for clock, start in starts:
+            try:
+                mapped.append(_onto(start, clock, reference, graph, by_clock, BOUND if bound is None else float(bound)))
+            except _Unmappable as refused:
+                report.add(
+                    "error",
+                    "time.origin_unmappable",
+                    f"session {session}: {clock}'s observation start {start} does not map to {reference}, "
+                    f"so no origin is defined ({refused})",
+                    [(str(session), str(clock), str(start))],
+                    registry="core",
+                )
+                break
+        else:
+            expected = min(mapped)
+            # A writer's estimator may fit anchors it does not record, so one reference tick of
+            # disagreement is rounding rather than a wrong origin.
+            if abs(int(stated) - expected) > 1:
+                report.add(
+                    "error",
+                    "time.origin_not_earliest",
+                    f"session {session} declares t_zero_tick {stated} but its earliest observation start "
+                    f"on {reference} is {expected}",
+                    [(str(session), str(stated), str(expected))],
+                    registry="core",
+                )
 
 
 def _codec_names(pipeline: Iterable[Any]) -> set[str]:
@@ -868,7 +952,7 @@ def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool =
     A disagreement is an **error**, where the external equivalent is one too but means something
     weaker. An external resource that changed is the world moving under a packet that never
     promised otherwise (Part 03 §8); a packet-owned file that changed is the packet being wrong
-    about itself, and it is the premise Part 03 §9.4 spends to bound revalidation.
+    about itself, and it is the premise Part 05 §15.4 spends to bound revalidation.
 
     An entry recording no digest is `packet.resource.digest_missing`, which the `entries` phase
     reports and which withholds this one. `owned.verified` names each digest's route.
@@ -902,7 +986,7 @@ def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool =
                 "owned.digest",
                 f"{resource.resource_id}: {found.algorithm} gives {found.value[:16]}…, manifest records "
                 f"{str(claimed['value'])[:16]}… — a packet-owned resource is immutable (Part 03 §8.1) and "
-                "Part 03 §9.4 bounds revalidation on that",
+                "Part 05 §15.4 bounds revalidation on that",
                 registry=report.resource_owner(resource.resource_id),
             )
     if checked:
@@ -1632,11 +1716,10 @@ def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], re
 
 
 def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
-    """Part 02 §8.6. A declared `metadata` column that no row of the packet fills, at `info`.
+    """Part 05 §5.3. A declared `metadata` column a resource's file omits or leaves null, at `info`.
 
     Whether a table in Part 02 §8.6's middle band declares one is a judgement, and this is the
-    evidence against which it is revisited: `core.spike_events` carried the column on
-    286,896,563 rows that no adapter ever filled. Never a failure — Part 02 §6 makes an optional
+    evidence against which it is revisited. Never a failure — Part 02 §6 makes an optional
     column's absence conforming, and a source with nothing unmodelled to say is the ordinary case.
 
     Bounded by the footer. A null count per row group is what Parquet already records, so no
@@ -2405,10 +2488,10 @@ def validate(
         handed to Parquet were ordered" and "the file is ordered", and that gap is closed by
         `_write_stream` making each batch exactly one row group.
     recheck : collection of str, optional
-        Resources this call has just written, restricting the rules to those Part 03 §9.4 obliges to
+        Resources this call has just written, restricting the rules to those Part 05 §15.4 obliges to
         run: the ones attached to such a resource, and the ones whose query names one. `None`,
         the default, runs every rule, which is what a first commit and a packet of unknown
-        provenance both need. An amendment passes what it writes, because Part 03 §9.2 forbids it
+        provenance both need. An amendment passes what it writes, because Part 05 §15.2 forbids it
         modifying anything else and Part 03 §8.1 declares those bytes immutable, so a rule reading
         only them is already answered.
     external : bool, default False

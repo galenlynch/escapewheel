@@ -189,7 +189,7 @@ def test_committing_over_a_packet_is_refused(tmp_path, registry, minimal):
 
 
 def test_committing_over_an_interrupted_promotion_is_refused(tmp_path, registry, minimal):
-    """A promoted directory with no manifest is a stray a writer may not remove (Part 03 §9.5), and
+    """A promoted directory with no manifest is a stray a writer may not remove (Part 05 §15.5), and
     promoting into it would nest the new one inside."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
@@ -448,7 +448,7 @@ def test_an_amendment_adds_a_resource(tmp_path, registry, minimal):
 
 
 def test_an_amendment_re_runs_only_the_rules_its_resources_implicate(tmp_path, registry, minimal):
-    """Part 03 §9.4. What it writes is what it must re-check; everything else is immutable."""
+    """Part 05 §15.4. What it writes is what it must re-check; everything else is immutable."""
     import escapewheel_writer.writer as module
 
     root = tmp_path / "s001"
@@ -487,7 +487,7 @@ def test_an_amendment_bumps_the_version(tmp_path, registry, minimal):
 
 
 def test_an_amendment_keeps_packet_level_fields(tmp_path, registry, minimal):
-    """Part 03 §9.3: derived from the superseded manifest, not rebuilt. A writer handed only the
+    """Part 05 §15.3: derived from the superseded manifest, not rebuilt. A writer handed only the
     added resource knows nothing about the sessions the packet already declared."""
     root = tmp_path / "s001"
     _write(root, registry, minimal, description="a packet")
@@ -514,7 +514,7 @@ def test_amending_an_uncommitted_root_is_refused(tmp_path, registry, minimal):
 
 
 def test_an_amendment_may_not_replace_a_core_resource(tmp_path, registry, minimal):
-    """Part 03 §9.2: a packet whose core data changes is a new packet, not a new version."""
+    """Part 05 §15.2: a packet whose core data changes is a new packet, not a new version."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     with pytest.raises(ValueError, match="new packet"):
@@ -539,7 +539,7 @@ def test_a_failed_amendment_leaves_the_packet_at_its_old_version(tmp_path, regis
 
 
 def test_an_amendment_installs_a_newer_registry_and_retains_the_old(tmp_path, registry, minimal):
-    """Part 03 §9.3: the bound registry must describe the added resource, and the superseded one
+    """Part 05 §15.3: the bound registry must describe the added resource, and the superseded one
     stays where its manifest names it, so a packet at the old version stays interpretable."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
@@ -581,7 +581,7 @@ def test_a_registry_that_changed_without_its_version_is_refused(tmp_path, regist
 
 
 def test_a_registry_colliding_with_a_retained_copy_is_refused(tmp_path, registry, minimal):
-    """Part 03 §9.3: two digests under one registry ID and version would make the packet's own
+    """Part 05 §15.3: two digests under one registry ID and version would make the packet's own
     retained manifests name bytes that no longer exist."""
     import copy
 
@@ -1326,7 +1326,7 @@ def test_inefficient_reports_a_string_a_dictionary_does_not_pay_for(registry, he
 
 
 def test_a_retained_binding_elsewhere_still_fixes_its_digest(tmp_path, registry, minimal):
-    """Part 03 §9.3 judges two digests across every manifest, not only the file at one path."""
+    """Part 05 §15.3 judges two digests across every manifest, not only the file at one path."""
     import copy
 
     root = tmp_path / "s001"

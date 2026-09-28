@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "revision": "R146",
+  "based_on": "610ddcdc60c6116815eadaeb37b26d22bee24fc8",
+  "clauses": {
+    "R146 \u00a73.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-import-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-conformance-classes"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-writer-acceptance-criteria"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no verdict changes: the scope assigns sections Part 05 already binds to their actors, and a writer's conformance loses only obligations no writer could meet"
+      },
+      "implementations": {
+        "unchanged": "no implementation reads which actor a section binds"
+      },
+      "documentation": {
+        "unchanged": "Part 08's acceptance checklist is retired inside the specification; no guide outside it restates writer conformance"
+      }
+    },
+    "R146 \u00a73.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-packet-amendment"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-amendment"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/00_architecture.md",
+          "anchor": "ew-later-physical-profiles"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no verdict changes: one profile exists and its amendment rules are unchanged; the writer's amendment and cleanup suites pass with their citations moved, and a later profile's obligation is checked by review when one is proposed"
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/prune.py",
+          "escapewheel-writer/src/escapewheel_writer/scripts/cli.py",
+          "escapewheel-writer/src/escapewheel_writer/verify.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification states where the amendment rules live"
+      }
+    },
+    "R146 \u00a73.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/01_semantic_standard.md",
+          "anchor": "ew-time-basis"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_each_session_is_judged_on_its_own_reference_clock"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_a_session_that_observed_nothing_is_not_checked"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification defines the origin"
+      }
+    },
+    "R146 \u00a73.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_an_origin_within_one_reference_tick_passes[799]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_an_origin_within_one_reference_tick_passes[800]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_an_origin_within_one_reference_tick_passes[801]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_an_origin_two_ticks_from_the_earliest_start_is_not_earliest[798]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_an_origin_two_ticks_from_the_earliest_start_is_not_earliest[802]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_an_origin_two_ticks_from_the_earliest_start_is_not_earliest[1000]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_a_window_on_an_unanchored_clock_is_unmappable"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_a_start_beyond_the_anchors_bound_is_unmappable"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_an_origin_but_no_reference_clock_is_unmappable"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_a_linear_transform_maps_the_start"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_a_chain_of_parents_maps_through_every_clock"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_time_origin.py::test_a_reference_below_the_root_is_reached_through_the_inverse"
+          },
+          {
+            "kind": "fixture",
+            "packet": "origin_not_earliest",
+            "finding": "time.origin_not_earliest"
+          },
+          {
+            "kind": "fixture",
+            "packet": "origin_unmappable",
+            "finding": "time.origin_unmappable"
+          },
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "origin_through_transform"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R146 \u00a73.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/10_performance_notes.md",
+          "anchor": "ew-materialization-measurements"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/07_reference_implementation.md",
+          "anchor": "ew-reference-performance-notes"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "measurements are informative and change no verdict"
+      },
+      "implementations": {
+        "unchanged": "the measurements move between parts; no code computes or reads them"
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification quotes the measurements"
+      }
+    },
+    "R146 \u00a73.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/01_semantic_standard.md",
+          "anchor": "ew-coordinate-concept"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "coordinate_omits_an_axis"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R146 \u00a73.7": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-reader-registry-independence"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-coordinate-atlas-annotation"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-forbidden-files"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "no verdict changes: each requirement moved to the part that owns its subject and names the actor it already bound; the atlas and semantic_version.txt rules are unchecked"
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/discriminators.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification states these requirements"
+      }
+    },
+    "R146 \u00a73.8": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_declared_metadata_column_no_row_fills_is_reported"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_filled_metadata_column_is_not_reported"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes the unfilled-column report"
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-"""Cleanup over a committed packet (Part 03 §9.5).
+"""Cleanup over a committed packet (Part 05 §15.5).
 
 Two removals, in one order. **Orphans first**: a manifest identifies the orphans of its own
 version, so expiring it before they are removed makes an orphan and a stray indistinguishable and
@@ -10,7 +10,7 @@ unpublished promotion record claims -- is reported and never removed. A packet m
 specification does not govern, and cleanup that deletes the ungoverned is a data-loss operation
 wearing a maintenance name. Files a build or amendment owns are reported apart, and left to it.
 
-Nothing is removed unless a caller asks. Part 03 §9.5 makes reporting the default because the
+Nothing is removed unless a caller asks. Part 05 §15.5 makes reporting the default because the
 alternative is a delete whose blast radius is a listing the caller has not read.
 """
 
@@ -27,7 +27,7 @@ from escapewheel_reader.uri import decode, is_absolute
 
 from .writer import MANIFEST, MANIFESTS, STAGING, NotCommitted, PromotionRecordUnreadable, read_promotion, semver
 
-#: Part 03 §9.3. One superseded manifest, and no age limit: a packet is an archival artifact where a
+#: Part 05 §15.5. One superseded manifest, and no age limit: a packet is an archival artifact where a
 #: table is an operational one, so age alone never expires one.
 KEEP_VERSIONS = 1
 KEEP_DAYS: float | None = None
@@ -44,7 +44,7 @@ class Plan:
     expired : tuple of Path
         Superseded manifests the retention policy no longer keeps.
     strays : tuple of Path
-        Files no manifest has ever named, outside every build's own paths (Part 03 §9.5).
+        Files no manifest has ever named, outside every build's own paths (Part 03 §9).
         Reported, never removed.
     staged : tuple of Path
         Files in the staging area (Part 03 §3.4), which the next build or amendment owns.
@@ -93,7 +93,7 @@ def _names(manifest: Mapping[str, Any]) -> set[str]:
     An external resource is not named: Part 04 §5.1 puts its bytes outside the packet, so cleanup has
     no standing over them. A relative `uri` is decoded to the names it appends (Part 03 §4). Each
     bound registry is named, because a retained manifest is uninterpretable without the registries
-    its descriptors bind (Part 03 §9.3).
+    its descriptors bind (Part 05 §15.3).
     """
     named = set()
     for resource in manifest.get("resources", []):
@@ -133,7 +133,7 @@ def prune(
     apply: bool = False,
     now: datetime | None = None,
 ) -> Plan:
-    """Plan cleanup over a committed packet, and carry it out where asked (Part 03 §9.5).
+    """Plan cleanup over a committed packet, and carry it out where asked (Part 05 §15.5).
 
     Parameters
     ----------
@@ -141,7 +141,7 @@ def prune(
         A committed packet.
     keep_versions, keep_days : optional
         Override the packet's declared retention. Both are floors: a manifest is expired only
-        where both permit it (Part 03 §9.3).
+        where both permit it (Part 05 §15.5).
     apply : bool, default False
         Remove. The default reports.
 
@@ -169,7 +169,7 @@ def prune(
 
     # Retention is decided first, because an orphan is judged against the manifests that
     # *survive*: a file named only by a manifest being kept is still needed, and deleting it
-    # would leave that manifest uninterpretable -- which is the property Part 03 §9.3 retains for.
+    # would leave that manifest uninterpretable -- which is the property Part 05 §15.3 retains for.
     moment = now or datetime.now(tz=timezone.utc)
     keep, expire, notes = [], [], []
     for index, (path, manifest) in enumerate(reversed(superseded)):  # newest first
@@ -228,7 +228,7 @@ def prune(
     )
     if not apply:
         return plan
-    for path in plan.orphans:  # Part 03 §9.5: orphans before the manifests that identify them
+    for path in plan.orphans:  # Part 05 §15.5: orphans before the manifests that identify them
         path.unlink(missing_ok=True)
     for path in plan.expired:
         path.unlink(missing_ok=True)

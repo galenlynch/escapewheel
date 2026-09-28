@@ -1,4 +1,4 @@
-"""Resolving a discriminator, which Part 02 §8.3 asks a reader to offer."""
+"""Resolving a discriminator, which Part 05 §13.4 asks a reader to offer."""
 
 from __future__ import annotations
 

@@ -126,7 +126,7 @@ def verify(
     candidate["packet_version"] = packet_version or _bump(superseded["packet_version"])
 
     # Level 3 against what was just recorded, and nothing else. This writes no file and adds no
-    # resource, so every packet-owned verdict is determined by immutability exactly as Part 03 §9.4
+    # resource, so every packet-owned verdict is determined by immutability exactly as Part 05 §15.4
     # says -- `scan` and `recheck` are empty for the same reason an amendment narrows them to
     # what it wrote, and here that is nothing. What is worth checking is what just changed.
     report = validate(

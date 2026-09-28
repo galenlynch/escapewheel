@@ -9,7 +9,7 @@ This part defines the Escapewheel specification framework: its authority and con
 architectural classifications, numbered-part ownership and status, and publication conventions. It
 also states the cross-cutting architecture of an Escapewheel packet. Detailed concept meanings,
 logical declarations, physical encodings, manifest fields, and construction and validation rules
-belong to the subject-owning parts listed in §9.
+belong to the subject-owning parts listed in §8.
 
 This specification defines a portable data packet as a small semantic and logical standard over
 commodity storage formats. Its packet mechanism comprises the packet manifest (Part 04), the logical
@@ -119,8 +119,8 @@ specification release MUST NOT contain an unresolved ownership conflict.
 Requirements in this specification apply to four actors. Every requirement binds one of them or
 states a property of an artifact.
 
-A **writer** produces a packet from sources. It stages, validates and commits, and it is the actor
-Part 05 binds throughout.
+A **writer** produces a packet from sources. It stages, validates and commits. Part 05 §1 states
+which of Part 05's sections bind each actor.
 
 A **reader** opens a committed packet and returns its resources — rows, arrays, resolved references.
 It is bound by what it returns.
@@ -203,15 +203,7 @@ which form the physical level, are the only parts whose rules may.
 ### 3.2 Packet content classes
 
 The specification MUST call content's architectural relationship to a packet its **packet content
-class**.
-
-| serialized value | contents | canonical | required by class |
-|---|---|:---:|:---:|
-| `core` | normalized facts of the core vocabulary | yes | no |
-| `extension` | typed facts a domain owns (Part 09) | yes | no |
-| `analysis` | products reproducible from canonical resources | no | no |
-| `compatibility_projection` | a projection into another representation | no | no |
-| `documentation` | human-readable sidecars that assert no semantic or conformance fact | no | no |
+class**. Part 02 §2.2 defines the five classes, their serialized values, and which are canonical.
 
 Part 02 §2.2 owns which content classes a declaration may reference, require, or bind to, and
 Part 09 §§6.1–6.2 own which registry it may reference and how a discriminator names a resource
@@ -291,19 +283,8 @@ A fact belongs in core when common interpretation, validation, joining or analys
 without it (Part 09 §3). A fact a single domain owns belongs in that domain's extension, typed,
 with its own vocabularies and rules — not in core, and not in a free-form column.
 
-Core resources are normalized enough to avoid drift and no further. One row per trial in
-`core.intervals`; one row per unit in a sorting and curation context in `core.units`; one row per
-spike in `core.spike_events`.
-
-<a id="ew-spike-representation" data-spec-anchor="canonical"></a>
-### 4.2 Spike representation
-
-`core.spike_events`, one row per spike with primitive columns only, is the sole canonical spike
-representation. The ragged chunked representation of v0.1 is withdrawn, as is the manifest's
-`canonical_representations` block.
-
-`core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that
-a validator checks against `core.spike_events`.
+Core resources are normalized enough to avoid drift and no further. Part 02 §11 declares each core
+resource's grain.
 
 <a id="ew-analysis-content-class" data-spec-anchor="canonical"></a>
 ## 5. Analysis content class
@@ -312,14 +293,9 @@ a validator checks against `core.spike_events`.
 ### 5.1 Requirements
 
 The analysis content class MAY contain denormalized, prejoined, binned, aligned, or otherwise
-transformed products. Part 06 owns its disposability and its exact lineage, realization, and
-promotion requirements and its optional run provenance.
-
-<a id="ew-analysis-materialization-criterion" data-spec-anchor="canonical"></a>
-### 5.2 Materialization is justified by layout, not by arithmetic
-
-A materialization is a physical realization of an analysis resource, not a logical kind. Part 06
-defines when analysis views and materializations are justified and how their lineage is recorded.
+transformed products. Part 06 owns its disposability, when a view or a materialization is
+justified, and its exact lineage, realization, and promotion requirements and its optional run
+provenance.
 
 ## 6. Deferred NWB projection
 
@@ -352,31 +328,16 @@ evolution, concurrent writers, catalog integration, and reproducible release tag
 implementation of this specification MUST NOT require it.
 
 A physical profile — Iceberg's or any other — MUST declare a `profile_id` that a packet's manifest
-names, MUST bind only the packets declaring it, and MUST say how each logical resource of Part 02
-is stored. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the
+names, MUST bind only the packets declaring it, MUST say how each logical resource of Part 02
+is stored, and MUST say how an amendment (Part 05 §15) is realized under it: how a resource that
+gains rows is stored, where superseded manifests are retained, and what a stray is. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the
 defect is in those parts rather than in the profile. A physical profile's adapter interface binds a
 build only while the build writes a packet declaring the profile, and binds an adapter only while
 such a build reaches it. No clause of Part 01 or Part 02 may depend on a clause of Part 03 or
 Part 12.
 
-`packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A writer
-MUST NOT increment `packet_version` for a rewrite of rows.
-
-<a id="ew-implementation-thesis" data-spec-anchor="canonical"></a>
-## 8. Implementation thesis
-
-The first implementation is not a generic NWB backend. It is:
-
-1. a specification of core logical resources;
-2. a validator generated from that specification;
-3. an importer that turns source data into validated resources;
-4. a packet manifest recording the committed resources;
-5. a small access library querying tables and arrays with standard engines.
-
-An import succeeds only when validation succeeds (Part 05 §1).
-
 <a id="ew-numbered-part-ownership" data-spec-anchor="canonical"></a>
-## 9. Part subjects and normative status
+## 8. Part subjects and normative status
 
 Part 00 MUST assign the subject and normative status of every numbered part. A local status line
 MUST be a checked projection of this table and MUST NOT become a precedence source. A disagreement
@@ -431,7 +392,7 @@ A future release manifest MAY record numbered-part status, but that value MUST b
 projection of this section. The manifest MUST NOT become a second owner of numbered-part status.
 
 <a id="ew-normative-references" data-spec-anchor="canonical"></a>
-## 10. Normative-reference policy and shared references
+## 9. Normative-reference policy and shared references
 
 Part 00 MUST own the specification-wide policy for external normative references. An external
 authority that normative prose in exactly one numbered part invokes directly MUST have its

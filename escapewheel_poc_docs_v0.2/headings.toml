@@ -28,18 +28,15 @@
 "3.6" = "Resource identity"
 "4" = "Core content class"
 "4.1" = "Requirements"
-"4.2" = "Spike representation"
 "5" = "Analysis content class"
 "5.1" = "Requirements"
-"5.2" = "Materialization is justified by layout, not by arithmetic"
 "6" = "Deferred NWB projection"
 "7" = "Storage stance"
 "7.1" = "Portable profile first"
 "7.2" = "Referencing"
 "7.3" = "Iceberg later"
-"8" = "Implementation thesis"
-"9" = "Part subjects and normative status"
-"10" = "Normative-reference policy and shared references"
+"8" = "Part subjects and normative status"
+"9" = "Normative-reference policy and shared references"
 
 ["01"]
 "1" = "Scope"
@@ -135,6 +132,7 @@
 "12.5" = "A clock's observation window"
 "12.6" = "A clock's alignment record"
 "12.7" = "A frame's axes"
+"12.8" = "A coordinate's atlas annotation"
 "13" = "Normative references"
 
 ["03"]
@@ -163,13 +161,7 @@
 "8" = "Immutability"
 "8.1" = "Packet-owned bytes"
 "8.2" = "External bytes"
-"9" = "Amendment, versioning, and retention"
-"9.1" = "What an amendment is"
-"9.2" = "What an amendment may and may not do"
-"9.3" = "The manifest"
-"9.4" = "Scope of revalidation"
-"9.5" = "Cleanup"
-"9.6" = "What a version is not"
+"9" = "Amendment and retention"
 "10" = "Checksums"
 "11" = "Opaque storage"
 "12" = "Normative references"
@@ -196,7 +188,7 @@
 "11" = "Normative references"
 
 ["05"]
-"1" = "Core principle"
+"1" = "Scope"
 "2" = "Pipeline"
 "3" = "The session recipe"
 "3.1" = "Purpose"
@@ -234,6 +226,7 @@
 "13.1" = "Session presentation and correlation"
 "13.2" = "Exact unit selection and currency"
 "13.3" = "Declared identifier types"
+"13.4" = "Discriminator resolution"
 "14" = "Registry-document conformance boundaries"
 "14.1" = "Checked registry context"
 "14.2" = "Required boundaries"
@@ -241,7 +234,13 @@
 "14.4" = "Producer and authoring reactions"
 "14.5" = "Validator reactions"
 "14.6" = "Portable reporting"
-"15" = "Normative references"
+"15" = "Amendment"
+"15.1" = "What an amendment is"
+"15.2" = "What an amendment may change"
+"15.3" = "Superseded manifests"
+"15.4" = "Scope of revalidation"
+"15.5" = "Cleanup"
+"16" = "Normative references"
 
 ["06"]
 "1" = "Scope"
@@ -249,9 +248,8 @@
 "3" = "A derived product earns its place by layout"
 "4" = "`analysis.spike_events`"
 "5" = "Provenance of a materialization"
-"6" = "Withdrawn resources"
-"7" = "Views versus materialized products"
-"8" = "Promotion into core"
+"6" = "Views versus materialized products"
+"7" = "Promotion into core"
 
 ["07"]
 "1" = "Scope"
@@ -260,16 +258,14 @@
 "2.2" = "Dependency discipline"
 "3" = "Command line"
 "4" = "Object model"
-"5" = "Phases"
-"6" = "Testing"
-"7" = "Performance notes"
+"5" = "Testing"
+"6" = "Performance notes"
 
 ["08"]
 "1" = "Shape"
 "2" = "Layout"
 "3" = "Manifest excerpt"
 "4" = "Queries"
-"5" = "Acceptance checklist"
 
 ["09"]
 "1" = "Scope"
@@ -311,6 +307,7 @@
 "4.1" = "An endpoint plateaus at about 120 requests a second"
 "4.2" = "One file beats a partitioned prefix on the engine that matters"
 "5" = "The Zarr codec floor is version-specific"
+"6" = "Materialization measurements"
 
 ["11"]
 "1" = "Language identity, authority, and selection"
@@ -367,15 +364,15 @@ title = "What an adapter may state about its own run"
 aliases = []
 
 [anchor.ew-amendment-definition]
-part = "03"
-section = "9.1"
+part = "05"
+section = "15.1"
 title = "What an amendment is"
-aliases = []
+aliases = ["ew-packet-version-scope"]
 
 [anchor.ew-amendment-scope]
-part = "03"
-section = "9.2"
-title = "What an amendment may and may not do"
+part = "05"
+section = "15.2"
+title = "What an amendment may change"
 aliases = []
 
 [anchor.ew-analysis-content-class]
@@ -396,12 +393,6 @@ section = "3"
 title = "A derived product earns its place by layout"
 aliases = []
 
-[anchor.ew-analysis-materialization-criterion]
-part = "00"
-section = "5.2"
-title = "Materialization is justified by layout, not by arithmetic"
-aliases = []
-
 [anchor.ew-analysis-materialization-provenance]
 part = "06"
 section = "5"
@@ -410,7 +401,7 @@ aliases = []
 
 [anchor.ew-analysis-promotion]
 part = "06"
-section = "8"
+section = "7"
 title = "Promotion into core"
 aliases = []
 
@@ -440,7 +431,7 @@ aliases = []
 
 [anchor.ew-analysis-views-and-materializations]
 part = "06"
-section = "7"
+section = "6"
 title = "Views versus materialized products"
 aliases = []
 
@@ -552,6 +543,12 @@ section = "10"
 title = "Two conformance classes"
 aliases = []
 
+[anchor.ew-coordinate-atlas-annotation]
+part = "02"
+section = "12.8"
+title = "A coordinate's atlas annotation"
+aliases = []
+
 [anchor.ew-coordinate-concept]
 part = "01"
 section = "3.8"
@@ -634,12 +631,6 @@ aliases = []
 part = "01"
 section = "3.12"
 title = "Event stream"
-aliases = []
-
-[anchor.ew-example-acceptance-checklist]
-part = "08"
-section = "5"
-title = "Acceptance checklist"
 aliases = []
 
 [anchor.ew-example-packet-catalog]
@@ -756,12 +747,6 @@ section = "8.2"
 title = "Identity"
 aliases = []
 
-[anchor.ew-implementation-thesis]
-part = "00"
-section = "8"
-title = "Implementation thesis"
-aliases = []
-
 [anchor.ew-import-commit]
 part = "05"
 section = "6"
@@ -790,7 +775,7 @@ aliases = []
 part = "05"
 section = "2"
 title = "Pipeline"
-aliases = []
+aliases = ["ew-import-validation-principle"]
 
 [anchor.ew-import-provenance]
 part = "05"
@@ -810,12 +795,6 @@ section = "5"
 title = "Validate"
 aliases = []
 
-[anchor.ew-import-validation-principle]
-part = "05"
-section = "1"
-title = "Core principle"
-aliases = []
-
 [anchor.ew-in-process-opt-in]
 part = "05"
 section = "3.9"
@@ -829,8 +808,8 @@ title = "Incomplete validation"
 aliases = []
 
 [anchor.ew-incremental-revalidation]
-part = "03"
-section = "9.4"
+part = "05"
+section = "15.4"
 title = "Scope of revalidation"
 aliases = []
 
@@ -870,6 +849,12 @@ section = "3.1.2"
 title = "Logical standard"
 aliases = []
 
+[anchor.ew-materialization-measurements]
+part = "10"
+section = "6"
+title = "Materialization measurements"
+aliases = []
+
 [anchor.ew-media-asset-concept]
 part = "01"
 section = "3.18"
@@ -884,13 +869,13 @@ aliases = []
 
 [anchor.ew-normative-references]
 part = "00"
-section = "10"
+section = "9"
 title = "Normative-reference policy and shared references"
 aliases = []
 
 [anchor.ew-numbered-part-ownership]
 part = "00"
-section = "9"
+section = "8"
 title = "Part subjects and normative status"
 aliases = []
 
@@ -918,6 +903,12 @@ section = "3.3"
 title = "Packet"
 aliases = []
 
+[anchor.ew-packet-amendment]
+part = "05"
+section = "15"
+title = "Amendment"
+aliases = []
+
 [anchor.ew-packet-catalog]
 part = "00"
 section = "3.4"
@@ -943,8 +934,8 @@ title = "Scope"
 aliases = []
 
 [anchor.ew-packet-cleanup]
-part = "03"
-section = "9.5"
+part = "05"
+section = "15.5"
 title = "Cleanup"
 aliases = []
 
@@ -990,12 +981,6 @@ section = "9"
 title = "Validation block"
 aliases = []
 
-[anchor.ew-packet-version-scope]
-part = "03"
-section = "9.6"
-title = "What a version is not"
-aliases = []
-
 [anchor.ew-parquet-reader-floor]
 part = "03"
 section = "5.5"
@@ -1017,7 +1002,7 @@ aliases = []
 [anchor.ew-portable-amendment]
 part = "03"
 section = "9"
-title = "Amendment, versioning, and retention"
+title = "Amendment and retention"
 aliases = []
 
 [anchor.ew-portable-bound-registries]
@@ -1092,6 +1077,12 @@ section = "13.3"
 title = "Declared identifier types"
 aliases = []
 
+[anchor.ew-reader-discriminator-resolution]
+part = "05"
+section = "13.4"
+title = "Discriminator resolution"
+aliases = []
+
 [anchor.ew-reader-operations]
 part = "05"
 section = "13"
@@ -1148,19 +1139,13 @@ aliases = []
 
 [anchor.ew-reference-performance-notes]
 part = "07"
-section = "7"
+section = "6"
 title = "Performance notes"
-aliases = []
-
-[anchor.ew-reference-phases]
-part = "07"
-section = "5"
-title = "Phases"
 aliases = []
 
 [anchor.ew-reference-testing]
 part = "07"
-section = "6"
+section = "5"
 title = "Testing"
 aliases = []
 
@@ -1356,12 +1341,6 @@ section = "2.1"
 title = "Specification candidate and release"
 aliases = []
 
-[anchor.ew-spike-representation]
-part = "00"
-section = "4.2"
-title = "Spike representation"
-aliases = []
-
 [anchor.ew-stable-identity]
 part = "01"
 section = "2.1"
@@ -1375,9 +1354,9 @@ title = "The staging area"
 aliases = []
 
 [anchor.ew-superseded-manifest-retention]
-part = "03"
-section = "9.3"
-title = "The manifest"
+part = "05"
+section = "15.3"
+title = "Superseded manifests"
 aliases = []
 
 [anchor.ew-table-encoding]
@@ -1512,9 +1491,15 @@ section = "5.4"
 title = "Extensions"
 aliases = []
 
+[anchor.ew-validation-import-scope]
+part = "05"
+section = "1"
+title = "Scope"
+aliases = []
+
 [anchor.ew-validation-normative-references]
 part = "05"
-section = "15"
+section = "16"
 title = "Normative references"
 aliases = []
 
@@ -1534,12 +1519,6 @@ aliases = []
 part = "05"
 section = "9.5"
 title = "Verdicts"
-aliases = []
-
-[anchor.ew-withdrawn-analysis-resources]
-part = "06"
-section = "6"
-title = "Withdrawn resources"
 aliases = []
 
 [anchor.ew-writer-acceptance-criteria]

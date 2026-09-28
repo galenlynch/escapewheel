@@ -335,11 +335,11 @@ def _write_stream(
     return written
 
 
-#: Core tables an amendment may extend (Part 03 §9.2). Append-only by nature: a row records that
+#: Core tables an amendment may extend (Part 05 §15.2). Append-only by nature: a row records that
 #: something ran, and a later run does not change what an earlier one did.
 PROVENANCE = ("core.processing_runs", "core.source_files", "core.processing_run_inputs")
 
-#: Where superseded manifests are retained (Part 03 §9.3).
+#: Where superseded manifests are retained (Part 03 §9).
 MANIFESTS = "manifests"
 
 
@@ -430,8 +430,8 @@ def _bump(version: str) -> str:
     """Return the next packet version.
 
     Patch level, so a packet under development stays inside one minor series while the
-    structure moves. Part 03 §9.1 requires only that the new version sort strictly after the
-    superseded one, and §8 leaves what it *means* open, so nothing here rests on the choice.
+    structure moves. Part 05 §15.1 requires only that the new version sort strictly after the
+    superseded one, and Part 03 §8 leaves what it *means* open, so nothing here rests on the choice.
     """
     major, minor, patch, *_ = (*version.split("."), "0", "0", "0")
     return f"{int(major)}.{int(minor)}.{int(patch) + 1}"
@@ -550,7 +550,7 @@ def _refuse_occupied(root: Path) -> None:
     """Refuse a root holding a committed manifest or a directory commit would promote into.
 
     Called after `_act_on_promotion`, so what remains is a promoted directory no promotion record
-    claims: a stray a writer may not remove (Part 03 §9.5), and moving another into it would nest
+    claims: a stray a writer may not remove (Part 05 §15.5), and moving another into it would nest
     the new one inside.
     """
     if (root / MANIFEST).exists():
@@ -566,7 +566,7 @@ def _digest(path: Path) -> dict[str, str]:
     """Part 04 §4.3: what the packet says its own bytes are, under SHA-256.
 
     Required of every packet-owned resource, because the promise it makes checkable is not optional
-    either: Part 03 §8.1 declares these bytes immutable and Part 03 §9.4 spends that, bounding
+    either: Part 03 §8.1 declares these bytes immutable and Part 05 §15.4 spends that, bounding
     revalidation after an amendment to what the amendment wrote. Costs 0.5% of a build -- the bytes
     were just written, so they are in page cache and hash at ~2 GB/s.
 
@@ -688,7 +688,7 @@ class PacketWriter:
         self._description = description
         self._tables: dict[str, list[Mapping[str, Any]]] = {}
         self._batches: dict[str, Iterable[pa.RecordBatch]] = {}
-        #: Part 03 §9.3's retention policy, written into every manifest. One kept version and no age
+        #: Part 05 §15.5's retention policy, written into every manifest. One kept version and no age
         #: limit: a packet that is never amended retains nothing, and a packet is archival where
         #: a table is operational, so age alone never expires a manifest.
         self._retention: dict[str, Any] = {"keep_versions": 1}
@@ -1455,7 +1455,7 @@ class PacketWriter:
             "created_at": now,
             "sessions": sessions,
             "resources": [dict(e) for e in entries],
-            # Part 03 §9.3: declared rather than left to a default, because `prune` reads it and a
+            # Part 05 §15.5: declared rather than left to a default, because `prune` reads it and a
             # packet that says nothing makes the operator's policy invisible to the operation.
             "retention": dict(self._retention),
             "validation": validation,
@@ -1711,14 +1711,14 @@ class PacketWriter:
         packet_version : str, optional
             The new version. Defaults to bumping the minor component.
         limits : Mapping, optional
-            DuckDB settings bounding validation. Part 03 §9.4 narrows an amendment to the rules
+            DuckDB settings bounding validation. Part 05 §15.4 narrows an amendment to the rules
             attached to a written resource or naming one, but every table is still registered
             alongside it, so a surviving rule may read anything the packet holds.
 
         Returns
         -------
         Report
-            The validation report for the **whole** packet, not only what was added (Part 03 §9.4).
+            The validation report for the **whole** packet, not only what was added (Part 05 §15.4).
 
         Raises
         ------
@@ -1726,7 +1726,7 @@ class PacketWriter:
             If `root` holds no committed manifest. Use `commit` to create a packet.
         ValueError
             If the amendment would replace a core resource other than a provenance table, which
-            is a new packet rather than a new version of this one (Part 03 §9.2).
+            is a new packet rather than a new version of this one (Part 05 §15.2).
         CommitRefused
             If validation found errors. The packet stays at its previous version, and nothing
             was written outside the staging area.
@@ -1743,7 +1743,7 @@ class PacketWriter:
         standing = {e["resource_id"] for e in superseded["resources"]}
         if clash := sorted(r for r in added & standing if not r.startswith("analysis.") and r not in PROVENANCE):
             raise ValueError(
-                f"amending would replace {clash}; a packet whose core data changes is a new packet (Part 03 §9.2)"
+                f"amending would replace {clash}; a packet whose core data changes is a new packet (Part 05 §15.2)"
             )
 
         self._absorb_provenance(root, superseded)
@@ -1757,7 +1757,7 @@ class PacketWriter:
         # Validate with the added resources still under staging/, so nothing occupies a final
         # path until it has passed. The candidate is derived from the superseded manifest, not
         # rebuilt: every packet-level field this amendment does not change carries over, which
-        # is what keeps the session inventory and description from silently vanishing (Part 03 §9.3).
+        # is what keeps the session inventory and description from silently vanishing (Part 05 §15.3).
         kept = [e for e in superseded["resources"] if e["resource_id"] not in added]
         candidate = dict(superseded)
         candidate["resources"] = kept + [dict(e, uri=f"staging/{e['uri']}") for e in entries]
@@ -1765,7 +1765,7 @@ class PacketWriter:
 
         # The registries go in before validation, not after: the validator acquires each through
         # the candidate's descriptor (Part 04 §10). A version the packet already stores stays where
-        # it is, so a superseded manifest still binds the bytes it named (Part 03 §9.3); a new one
+        # it is, so a superseded manifest still binds the bytes it named (Part 05 §15.3); a new one
         # is bound under staging/ until it has passed, like the resources.
         candidate["registries"], added_registries = self._store_registries(root, staging=staging)
         # Both halves of the amendment are bounded by what it writes (R35). Physical order is
@@ -1821,7 +1821,7 @@ class PacketWriter:
         return report
 
     def _absorb_provenance(self, root: Path, superseded: Mapping[str, Any]) -> None:
-        """Carry a provenance table's existing rows into the amendment (Part 03 §9.2).
+        """Carry a provenance table's existing rows into the amendment (Part 05 §15.2).
 
         R32 permits *adding rows* to these tables, and a resource is staged from whatever this
         writer holds -- so amending with one new run and nothing else would rewrite the table
@@ -1839,12 +1839,12 @@ class PacketWriter:
             if collide:
                 raise ValueError(
                     f"amending {resource_id} would rewrite existing row(s) {collide[:3]}; an amendment adds "
-                    "rows to a provenance table, it does not revise them (Part 03 §9.2)"
+                    "rows to a provenance table, it does not revise them (Part 05 §15.2)"
                 )
             self._tables[resource_id] = [*existing, *self._tables[resource_id]]
 
     def _retain(self, root: Path, superseded: Mapping[str, Any], amended: Mapping[str, Any]) -> None:
-        """Keep every manifest a packet has had (Part 03 §9.3).
+        """Keep every manifest a packet has had (Part 05 §15.3).
 
         A superseded file is only interpretable if the manifest that named it still exists;
         without these, an orphan and a stray are indistinguishable and a recorded `digest` points
@@ -1866,7 +1866,7 @@ class PacketWriter:
 
         The digest covers the exact serialized bytes (Part 04 §10). A registry ID and version that
         the packet's current or a retained manifest already binds is reused where the digest
-        matches and refused where it differs (Part 03 §9.3), so every manifest keeps naming bytes
+        matches and refused where it differs (Part 05 §15.3), so every manifest keeps naming bytes
         that exist.
 
         Parameters
@@ -1905,7 +1905,7 @@ class PacketWriter:
             if (earlier is not None and earlier["sha256"] != digest) or stored not in {None, digest}:
                 raise ValueError(
                     f"this packet already binds a different {registry_id} {version} at {relative}; two digests "
-                    "under one registry ID and version cannot both be retained (Part 03 §9.3). Bump registry_version."
+                    "under one registry ID and version cannot both be retained (Part 05 §15.3). Bump registry_version."
                 )
             if stored is None:
                 if staging is not None:

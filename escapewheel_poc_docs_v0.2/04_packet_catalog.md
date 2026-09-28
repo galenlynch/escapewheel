@@ -18,7 +18,7 @@ incorporated schema makes the specification candidate internally inconsistent. T
 §§3, 4.1, 8, and 9 are informative projections of the schema.
 
 Its requirements directly invoke the shared JSON, URI, JSON Schema, and RFC 1952 authorities
-identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the SHA-256, CRC64NVME,
+identified in [Part 00 §9](00_architecture.md#ew-normative-references) and the SHA-256, CRC64NVME,
 and CRC32C authorities identified in [Part 04 §11](#ew-packet-catalog-normative-references). The
 application columns in those sections state their extent.
 
@@ -44,7 +44,7 @@ The manifest records the semantic-standard identifier owned by Part 01, the logi
 identifier owned by Part 02, the bound registries of §8, and the physical-profile identifier owned
 by Part 03. The fields below record those identifiers; they do not redefine their values or
 meaning. Every object the incorporated schema declares is closed, so a manifest MUST NOT carry a
-member the schema does not declare. Part 03 §9.5 owns the meaning of `retention`.
+member the schema does not declare. [Part 05 §15.5](05_validation_and_import.md#ew-packet-cleanup) owns the meaning of `retention`.
 
 <!-- BEGIN GENERATED MANIFEST FIELDS: manifest -->
 | member | JSON type | required | constraint |
@@ -118,7 +118,7 @@ it, its **algorithm**, which is one of:
 
 [Part 04 §11](#ew-packet-catalog-normative-references) identifies the editions of FIPS 180-4, the
 NVM Command Set Specification, RFC 9260, and RFC 8785, and
-[Part 00 §10](00_architecture.md#ew-normative-references) that of RFC 1952.
+[Part 00 §9](00_architecture.md#ew-normative-references) that of RFC 1952.
 
 A single object's digest value is the function of the object's bytes, written as lowercase
 hexadecimal of exactly the width above, most significant digit first. For a CRC, the digits are the
@@ -197,11 +197,6 @@ either route. Level 3b remains the comparison of recorded store digests (§5.4).
 When an external resource is unavailable, its physical version, codec pipeline, compression,
 encoding, dtype, shape, and chunking are unassessed; a validator MUST NOT infer them from its URI,
 the packet, an adapter claim, or a stand-in.
-
-Opening the manifest, resolving declarations, listing resources, and selecting a session MUST NOT
-require a validation receipt or physical inspection of every resource. Before exposing logical
-values, a reader inspects only the metadata needed for the selected resource and fails that
-resource specifically when support is absent.
 
 <a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources

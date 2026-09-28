@@ -2,19 +2,31 @@
 
 Normative.
 
-<a id="ew-import-validation-principle" data-spec-anchor="canonical"></a>
-## 1. Core principle
+<a id="ew-validation-import-scope" data-spec-anchor="canonical"></a>
+## 1. Scope
 
-**Validation is importation.** Copying bytes into a packet directory is staging, not import.
+This part binds all four actors of [Part 00 §2.4](00_architecture.md#ew-specification-actors). Its
+sections bind each as follows:
 
-A resource is imported when a build has staged it, validated it with the whole staged packet,
-promoted it, and published a manifest naming it, in the order §2 states.
+| actor | sections |
+|---|---|
+| a writer, for each build it performs and each adapter it ships | §§2–4, 6–8, 9.2, 9.3, 11, 12, 14.4 and 15 |
+| a validator | §§5, 9, 10, 14.5 and 15.4 |
+| a reader | §§13 and 14.3 |
+| a consumer | §12 |
 
-A staged resource MUST NOT appear in the committed manifest. Validation state does not change the
-content class or canonicality selected by its declaration; publication is the gate.
+§3 also constrains a recipe, §6 what a reader observes of a commit, §12 a packet, and §§14.1, 14.2
+and 14.6 every implementation. §10 defines the two conformance claims.
 
+<a id="ew-import-validation-principle" data-spec-anchor="alias"></a>
 <a id="ew-import-pipeline" data-spec-anchor="canonical"></a>
 ## 2. Pipeline
+
+**Validation is importation.** Copying bytes into a packet directory is staging, not import. A
+resource is imported when a build has staged it, validated it with the whole staged packet,
+promoted it, and published a manifest naming it, in the order this section states. A staged
+resource MUST NOT appear in the committed manifest. Validation state does not change the content
+class or canonicality selected by its declaration; publication is the gate.
 
 A build MUST perform these steps in this order:
 
@@ -137,7 +149,7 @@ A preference MUST NOT name a resource only one source produces. Such an entry ar
 
 Every source adapter MUST declare the set of resource identifiers it can supply. It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-An adapter declares six such facts, all read before any source is opened: the resources it can supply; those of them whose rows it supplies only in part, such as the clocks of its own streams; the recipe fields it can state (§3.6); the values a build must supply it (Part 12 §4); the options it reads and can run without, and the one term it may accept, `source_cache` (Part 12 §4); and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 12 §7 specifies, where they are `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
+An adapter's static declarations, all read before any source is opened, are those Part 12 §7 specifies: among them the resources it can supply, those whose rows it supplies only in part, and the recipe fields it can state (§3.6). The kinds whose output an adapter reads order a build.
 
 A build MUST read a source entry that declares no `owns` as follows. Of the resources its adapter declares it can supply, leaving out any another entry declares under `owns` and any a preference gives to another source, the entry contributes those its adapter supplies only in part and owns the rest. It also contributes every resource its own `contributes` names, and owns none of those. An entry that declares `owns` owns exactly what it names and contributes what its `contributes` names. **A recipe states what it narrows; silence means the whole.**
 
@@ -208,7 +220,7 @@ A command that exits non-zero MUST fail the build, and a build MUST name the sou
 
 A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string. A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
 
-Where the command is one a build reaches a source through (Part 12 §4), the build MUST write what it supplies that source to the command's standard input and MUST close the stream when it has, without waiting for the command to exit, and MUST read what the command produces while it writes. A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
+Where the command is one a build reaches a source through, the build supplies that source on its standard input as Part 12 §4 requires, without waiting for the command to exit, and MUST read what the command produces while it writes. A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
 
 A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards. Where the recipe puts rows on standard output (Part 12 §3), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one. Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
@@ -263,18 +275,20 @@ An interval is closed (01 §2.3). A writer MUST convert a source whose intervals
 
 An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
 
+A writer MUST examine a source in acquisition order and MUST NOT assume monotonicity. A reset is visible only in the order the samples arrived; sorting first hides it.
+
 <a id="ew-delivery-completeness" data-spec-anchor="canonical"></a>
 ### 4.4 When a source's delivery is complete
 
 What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean.
 
-A resource an adapter owns and has nothing for MUST arrive empty rather than not arriving (Part 12 §5). That is what makes the test usable: a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
+Part 12 §5 has a resource an adapter owns and has nothing for arrive empty, so a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
 
 A non-zero exit is a failure whatever arrived. A build MUST report one as a failure even where every resource is present, because an adapter saying it failed is not overruled by its own output, and a command dying between two resources delivers the first one complete and valid.
 
 A build MUST report a delivery it cannot parse as a failure where the command exited zero, naming what was short. What no protocol catches is a short table from a run that exits zero: where an adapter declares a row count a build MUST check it, and an adapter that cannot know its size before it sends declares none, which a build MUST read as unknown rather than as zero.
 
-A build MUST report everything the protocol it used carries about a failure — standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its detail for `flight-v0.1`, where a failing adapter writes nothing to standard error because the diagnosis travels on the connection it was asked over. A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
+A build MUST report everything the protocol it used carries about a failure, on the channel Part 12 §3 gives that protocol. A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
 
 <a id="ew-import-validation" data-spec-anchor="canonical"></a>
 ## 5. Validate
@@ -340,7 +354,7 @@ the resource, the path under the packet root of the directory holding the names,
 packet is conformant: each name holds its own file under the packet root, and it fails only on a
 copy to a filesystem that folds case or normalization or that Windows governs. The finding concerns
 one resource, so [§9.5](#ew-verdict-composition) attributes it to the registry whose declaration the
-resource's entry names. §15 identifies the Unicode Standard, Version 15.0.0, as an exact reference
+resource's entry names. §16 identifies the Unicode Standard, Version 15.0.0, as an exact reference
 for canonical caseless matching.
 
 A validator MUST report each external resource whose interface declares a reader floor and whose
@@ -369,6 +383,27 @@ row, where those values are not all the same, at `info` under the check ID
 independently numbered identifiers can coincide, which is a fact about a packet rather than a
 defect in it. The finding concerns one resource, so [§9.5](#ew-verdict-composition) attributes it
 to the registry whose declaration the resource's entry names.
+
+A validator SHOULD report a declared `metadata` column that a table resource's file omits or leaves
+null in every row, at `info` under the check ID `<resource_id>.metadata_unfilled`. It MUST NOT
+report such a column at `error`. The finding concerns one resource, so
+[§9.5](#ew-verdict-composition) attributes it to the registry whose declaration the resource's
+entry names.
+
+A validator MUST check each session's declared time origin
+([Part 01 §2.2](01_semantic_standard.md#ew-time-basis)) by mapping each of the session's
+observation starts onto its reference clock, through the anchors or transform of every clock on the
+path from that start's clock to the reference, within the alignment bound
+[Part 02 §12.6](02_core_logical_schemas.md#ew-clock-alignment-record) records. It MUST report, at
+`error`:
+
+- under the check ID `time.origin_unmappable`, a session that declares an origin but no reference
+  clock, or whose observation start does not map; and
+- under the check ID `time.origin_not_earliest`, a declared origin more than one reference-clock
+  tick from the earliest mapped start.
+
+The tolerance is one tick because a writer's estimator may fit anchors the writer does not record.
+Both findings belong to the core registry under [§9.5](#ew-verdict-composition).
 
 <a id="ew-validation-extensions" data-spec-anchor="canonical"></a>
 ### 5.4 Extensions
@@ -408,7 +443,7 @@ directory the writer will create outside the staging area before it publishes, o
 manifest. For an import these are the promoted resource directories, the bound registries, the
 source resolution document, and any file publication writes before it installs the manifest; for
 an amendment, every file it writes and the superseded manifest it retains
-([Part 03 §9.3](03_portable_physical_profile.md#ew-superseded-manifest-retention)). A writer MUST
+([§15.3](#ew-superseded-manifest-retention)). A writer MUST
 refuse to promote where a path its record lists already exists, naming the path, and MUST NOT
 create outside the staging area a path its record neither lists nor places inside a listed
 directory. This specification does not fix the record's format.
@@ -448,7 +483,7 @@ Materialization is step 5 of §2: a build opens the staged packet, computes each
 from it, and writes the result to the staging area, so step 6 validates it with core before
 anything is promoted.
 
-Deriving into an already-committed packet is an amendment (03 §9.1), not part of an import.
+Deriving into an already-committed packet is an amendment (§15.1), not part of an import.
 
 ## 9. Reporting
 
@@ -543,14 +578,14 @@ registry is the data-driven route for a resource core does not define.
 
 **Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming.
 
-**Writer conformance** is a property of a process. A writer conforms when it satisfies this part, which includes recording provenance for the import activity and the inputs it read. A packet is not judged by it.
+**Writer conformance** is a property of a process. A writer conforms when it satisfies every obligation this part places on a writer, on a build it performs or on an adapter it ships, which includes recording provenance for the import activity and the inputs it read (§7), and meets §11's criteria. A packet is not judged by it.
 
 A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only a writer. Where it also checks writer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately, as it already does for core and extension verdicts.
 
 <a id="ew-writer-acceptance-criteria" data-spec-anchor="canonical"></a>
 ## 11. Minimum acceptance criteria
 
-A writer conforms when it:
+A conforming writer at least:
 
 1. refuses a recipe that cannot produce a valid packet, before opening any source;
 2. produces a packet that passes Tier 1, Tier 2, and the shim;
@@ -639,6 +674,14 @@ scalar type from the incorporated registry's declared logical type. It MUST NOT 
 an `_id` suffix or apply a logical-table identifier mapping to a catalog, manifest, vocabulary, or
 discriminator-scope name governed by another declaration.
 
+<a id="ew-reader-discriminator-resolution" data-spec-anchor="canonical"></a>
+### 13.4 Discriminator resolution
+
+A reader SHOULD offer a discriminator's resolution in the shape
+[Part 02 §8.3](02_core_logical_schemas.md#ew-discriminator-semantics) declares: read the kind, take
+that resource's key from the registry, and join. A discriminator nothing reads is a free-form name
+with extra steps, which is the observed fate of the mechanism it replaces.
+
 <a id="ew-registry-conformance-boundaries" data-spec-anchor="canonical"></a>
 
 ## 14. Registry-document conformance boundaries
@@ -693,6 +736,11 @@ An unusable declaration need not produce a result for a reader operation. Its lo
 partial-access behavior is not defined here, but ordinary analysis MUST NOT acquire a general
 validation-receipt prerequisite.
 
+A reader MUST NOT require a validation receipt or physical inspection of every resource to open a
+packet's manifest, resolve its declarations, list its resources or select a session. Before exposing
+a resource's logical values it inspects only the metadata that resource needs, and fails that
+resource alone where it lacks support.
+
 <a id="ew-registry-producer-boundary" data-spec-anchor="canonical"></a>
 
 ### 14.4 Producer and authoring reactions
@@ -746,8 +794,110 @@ identity. The result schema begins at version 0.1.0; this boundary and reporting
 itself change a registry meta-schema, core registry, extension registry, packet manifest, or their
 version identifiers.
 
+<a id="ew-packet-amendment" data-spec-anchor="canonical"></a>
+## 15. Amendment
+
+An amendment publishes a new version of an existing packet. This section binds under every profile.
+[Part 00 §7.3](00_architecture.md#ew-later-physical-profiles) has each profile say how it realizes
+an amendment, and [Part 03 §9](03_portable_physical_profile.md#ew-portable-amendment) does so for
+the portable profile.
+
+<a id="ew-packet-version-scope" data-spec-anchor="alias"></a>
+<a id="ew-amendment-definition" data-spec-anchor="canonical"></a>
+### 15.1 What an amendment is
+
+An **amendment** produces a new version of an existing packet. A writer performing one MUST NOT
+modify the bytes of any resource a superseded manifest names, and MUST set a `packet_version` that
+sorts strictly after the superseded one, compared as a semantic version.
+
+`packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's
+rows.
+
+<a id="ew-amendment-scope" data-spec-anchor="canonical"></a>
+### 15.2 What an amendment may change
+
+A writer performing an amendment MAY make, and MUST NOT make, these changes:
+
+| | |
+|---|---|
+| Add an analysis resource | MAY |
+| Add rows to a provenance table (`core.processing_runs`, `core.source_files`, `core.processing_run_inputs`) | MAY |
+| Remove an analysis resource | MAY — Part 06 makes them disposable |
+| Add a core resource | MAY |
+| Change the content of a core resource other than the provenance tables | MUST NOT |
+| Remove a core resource | MUST NOT |
+| Change `packet_id`, `profile_id`, or the standard versions | MUST NOT |
+
+The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A
+packet whose core data was wrong is a new packet, not a new version of an old one, because anything
+already derived from the old core is silently invalidated and nothing in the format can detect that.
+
+Provenance tables are the exception because they are append-only by nature — a row records that
+something ran, and a later run does not change what an earlier one did.
+
+<a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
+### 15.3 Superseded manifests
+
+Every superseded manifest is retained, so a later cleanup can distinguish a file an old version
+named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own
+validation record, which a writer performing an amendment MUST NOT rewrite.
+
+Where an amendment binds a different registry document, the packet retains the superseded copy at
+the path the superseded manifest records. A writer MUST refuse an amendment that would bind,
+anywhere in the packet's current and retained manifests, two different digests under the same
+registry ID and version, because that version would then be ambiguous within one packet.
+
+<a id="ew-incremental-revalidation" data-spec-anchor="canonical"></a>
+### 15.4 Scope of revalidation
+
+A writer performing an amendment MUST validate the whole packet, not only what it added. What is
+bounded is the *work*, not the verdict: the resources an amendment did not write are immutable, so
+their verdict is determined rather than assumed, and re-establishing it costs nothing.
+
+A writer performing an amendment MUST establish the physical order of the resources it writes, and a
+validator MUST NOT require it to re-establish that order for any other packet-owned resource.
+
+A validator MUST derive a complete input set from the layer that owns each check. A generated
+Tier 1 check takes its inputs from the registry declarations that generated it: the attached
+resource, both ends of a foreign key, and every specialization or discriminator branch it reads.
+A Tier 2 check takes its inputs from the parsed base-resource set Part 11 §3 requires static
+validation to return. A §5.3 shim check declares its inputs explicitly.
+
+A validator MUST re-run a check when it is attached to a resource the amendment writes or any
+member of its input set was written. A Tier 2 dependency MUST NOT be inferred by searching query
+text: an alias, common table expression, literal, or comment that resembles a resource does not
+create one. The session-inventory shim declares the packet manifest and `core.sessions`; installing
+a manifest writes the manifest input for this purpose. A shim without a complete declaration MUST
+run rather than be skipped.
+
+A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name
+inside a string literal or a comment re-runs a check that did not need it, which costs time; failing
+to match one costs correctness. A validator that cannot show an input is immutable MUST run the
+check: skipping a check whose inputs *could* have changed stays forbidden.
+
+<a id="ew-packet-cleanup" data-spec-anchor="canonical"></a>
+### 15.5 Cleanup
+
+Cleanup is a separate operation. A writer performing cleanup MUST remove orphans before superseded
+manifests: expiring a manifest first would make an orphan indistinguishable from a stray,
+permanently.
+
+A writer MUST NOT remove a stray, which the packet's profile defines. A packet may carry files this
+specification does not govern, and cleanup that deletes the ungoverned is a data-loss bug wearing an
+operation's name. The operation reports by default and acts only when asked.
+
+A writer performing an amendment **MUST NOT** delete anything as part of amending, other than a
+staging area as §2 permits and the paths §6 lets it remove when it acts on a promotion record. A
+file that no manifest version names any longer MAY be deleted, but by cleanup, as a separate
+operation — which is what keeps an amendment's failure from having removed something.
+
+A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests
+to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is
+expired only when both permit it — and both default to one kept version and no age limit, because a
+packet is archival where a table is operational.
+
 <a id="ew-validation-normative-references" data-spec-anchor="canonical"></a>
-## 15. Normative references
+## 16. Normative references
 
 The application column states the extent to which this part invokes each external authority:
 

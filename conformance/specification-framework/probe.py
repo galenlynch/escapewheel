@@ -212,8 +212,8 @@ def main() -> int:
         "reference copied into an unallocated section",
         _replace(
             "05_validation_and_import.md",
-            "## 15. Normative references\n",
-            "## 15. Normative references\n\n- [RFC 3986](https://www.rfc-editor.org/info/rfc3986)\n",
+            "## 16. Normative references\n",
+            "## 16. Normative references\n\n- [RFC 3986](https://www.rfc-editor.org/info/rfc3986)\n",
         ),
         "RFC 3986 normative reference appears in Parts 00, 05",
     )

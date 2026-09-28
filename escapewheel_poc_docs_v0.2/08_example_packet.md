@@ -2,23 +2,25 @@
 
 Informative. §1 and the results in §4 are measured on a real packet the reference implementation
 built from one AIND session. §§2–3 show a small packet the reference writer builds from the current
-registries: the conformance corpus's session, with one resource of each kind.
+registries: the conformance corpus's session, with one resource of each kind. Part 05 §10 defines
+when a packet conforms.
 
 <a id="ew-example-packet-shape" data-spec-anchor="canonical"></a>
 ## 1. Shape
 
-One ecephys session with behaviour, ten probes, and two extensions.
+One ecephys session with behaviour, ten probes, and two extensions, as the reference writer built it
+on 2026-09-26.
 
 | | |
 |---|---|
-| resources | 42 |
-| owned bytes | 482 MB |
-| referenced bytes | 4.25 GB, not copied |
+| resources | 58, 14 of them referenced |
+| owned bytes | 605 MB |
+| referenced bytes | 14.4 GB, not copied |
 | spikes | 131,396,535 |
 | units | 4,505 across 10 sorting runs |
-| build | 2 min 9 s |
+| build | 10 min 16 s |
 
-Two files are 99.3% of what the packet owns: `core.spike_events` at 232 MB and `analysis.spike_events` at 247 MB, which is 1.76 bytes per spike while carrying four identifiers, a tick, and a clock per row.
+Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `analysis.spike_events` at 246 MB. The first is 2.62 bytes per spike carrying two identifiers, a tick and an amplitude, and the amplitude is a third of it.
 
 <a id="ew-example-packet-layout" data-spec-anchor="canonical"></a>
 ## 2. Layout
@@ -156,15 +158,3 @@ A population time window, which is what `analysis.spike_events` exists for:
 SELECT count(*) FROM analysis_spike_events
 WHERE t_tick BETWEEN ? AND ?;
 ```
-
-<a id="ew-example-acceptance-checklist" data-spec-anchor="canonical"></a>
-## 5. Acceptance checklist
-
-A packet of this shape is conforming when:
-
-1. the manifest validates against the manifest schema;
-2. every declared resource exists at its URI, or is declared external;
-3. every packet-owned resource records a `digest`, and each holds;
-4. Tier 1 and Tier 2 produce no error;
-5. every table is in its declared physical order;
-6. each bound registry is present, matches its descriptor, and validates on its own terms.

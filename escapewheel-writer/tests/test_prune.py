@@ -1,4 +1,4 @@
-"""Cleanup over a committed packet (Part 03 §9.5)."""
+"""Cleanup over a committed packet (Part 05 §15.5)."""
 
 import json
 from datetime import datetime, timedelta, timezone
@@ -70,7 +70,7 @@ def test_a_stray_is_reported_and_never_removed(packet):
 
 
 def test_orphans_go_before_the_manifests_that_identify_them(packet):
-    """Part 03 §9.5. Expiring first would make the orphan indistinguishable from a stray, so a second
+    """Part 05 §15.5. Expiring first would make the orphan indistinguishable from a stray, so a second
     run over an already-pruned packet must find nothing rather than a new stray."""
     first = prune(packet, apply=True)
     assert first.orphans and first.expired
@@ -108,7 +108,7 @@ def test_an_argument_overrides_what_the_packet_declares(packet):
 
 
 def test_both_floors_must_permit_an_expiry(packet):
-    """Part 03 §9.3: keep_versions and keep_days are floors, not alternatives."""
+    """Part 05 §15.5: keep_versions and keep_days are floors, not alternatives."""
     assert prune(packet, keep_versions=0, keep_days=365, now=datetime(2026, 2, 1, tzinfo=timezone.utc)).expired == ()
     old = datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(days=400)
     assert prune(packet, keep_versions=0, keep_days=365, now=old).expired
@@ -133,7 +133,7 @@ def test_a_retained_registry_lives_as_long_as_the_manifest_naming_it_survives(pa
 
 
 def test_a_manifest_deleted_out_of_band_strands_its_registry(packet):
-    """Which is why Part 03 §9.5 puts orphans first: nothing names the file any more, so it is a
+    """Which is why Part 05 §15.5 puts orphans first: nothing names the file any more, so it is a
     stray, and a stray is never removed."""
     (packet / MANIFESTS / "nwb.packet.0.1.0.json").unlink()
     plan = prune(packet)
@@ -173,7 +173,7 @@ def _record(root, version, paths):
 
 
 def test_a_leftover_staging_area_holds_no_stray(packet):
-    """Part 03 §9.5: the staging area is the next build's to empty, and apply leaves it."""
+    """Part 03 §9: the staging area is the next build's to empty, and apply leaves it."""
     (packet / STAGING / "tables" / "core").mkdir(parents=True)
     (packet / STAGING / "tables" / "core" / "partial.parquet").write_text("x")
     _record(packet, "0.4.0", ["tables/core/new.parquet"])

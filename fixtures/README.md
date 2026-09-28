@@ -1,10 +1,12 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-four more conforming packets that record Part 04 §4.3's other digests, forty-four variants
+four more conforming packets that record Part 04 §4.3's other digests, forty-six variants
 each violating exactly one rule, two conforming packets that each draw a per-resource `info`
 finding, two conforming packets that carry no extracellular data, four conforming packets that
-each own an opaque payload, and two conforming packets whose payload names draw warnings.
+each own an opaque payload, two conforming packets whose payload names draw warnings, one conforming
+packet whose origin is the earliest start only once a transform carries it, and one conforming
+packet whose unit coordinate omits an axis its frame declares.
 Together they are the conformance corpus: expected findings recorded as data, so any
 implementation can be checked against the same evidence rather than against a prose description
 of what should happen.
@@ -70,6 +72,8 @@ description, and is not all of them.
 | `member_digest_width` | a CRC32C-width member digest under a CRC64NVME entry | `packet.manifest.schema` |
 | `owned_opaque_one_byte_off` | a packet-owned opaque file's recorded SHA-256 is of other bytes | `owned.digest`, with checksums |
 | `uri_raw_space`, `uri_lowercase_hex`, `uri_encoded_unreserved`, `uri_dot_segment` | a `uri` outside Part 03 §4's one form: a raw space, `%c3%a9`, `%41`, a `..` segment | `packet.resource.uri_form` |
+| `origin_not_earliest` | `t_zero_tick` is the reference's own start, not the earlier one the behavior clock's transform gives | `time.origin_not_earliest` |
+| `origin_unmappable` | the behavior clock's start lies twenty intervals before its first anchor | `time.origin_unmappable` |
 | `outside_table_floor` | `core.intervals` written as Parquet format 1.0, whose dictionary pages are `PLAIN_DICTIONARY` | `physical.outside_reader_floor` (warning) |
 
 `crc64nvme`, `crc32c`, and `crc32` record every owned resource's digest under that algorithm, and

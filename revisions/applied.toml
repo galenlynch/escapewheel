@@ -141,7 +141,10 @@ note = "a column, key or reference the registry declares"
 
 [clause."R61 §2.2"]
 disposition = "applied"
-where = [{ part = "03", section = "9.3" }]
+where = [
+  { part = "05", anchor = "ew-packet-cleanup", note = "the retention floors" },
+  { part = "03", anchor = "ew-portable-amendment", note = "a packet never amended carries no manifests/" },
+]
 note = "restored 2026-09-04; the default survived, the declaration did not"
 
 [clause."R63 §2.3"]
@@ -238,19 +241,25 @@ where = [{ part = "03", section = "5.4" }]
 
 [clause."R32 §2"]
 disposition = "applied"
-where = [{ part = "03", section = "9.1" }]
+where = [
+  { part = "05", anchor = "ew-amendment-definition" },
+  { part = "03", anchor = "ew-portable-amendment", note = "a table that gains rows is a new file" },
+]
 
 [clause."R32 §3"]
 disposition = "applied"
-where = [{ part = "03", section = "9.2" }]
+where = [{ part = "05", anchor = "ew-amendment-scope" }]
 
 [clause."R32 §4"]
 disposition = "applied"
-where = [{ part = "03", section = "9.3" }]
+where = [
+  { part = "05", anchor = "ew-superseded-manifest-retention" },
+  { part = "03", anchor = "ew-portable-amendment", note = "retained under manifests/" },
+]
 
 [clause."R32 §4.1"]
 disposition = "applied"
-where = [{ part = "03", section = "9.3" }]
+where = [{ part = "05", anchor = "ew-superseded-manifest-retention" }]
 
 [clause."R71 §2.1"]
 disposition = "applied"
@@ -362,7 +371,7 @@ note = "no analysis resource must name a producing run; R130 §3.7"
 
 [clause."R35 §2"]
 disposition = "applied"
-where = [{ part = "03", section = "9.4" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
 note = "restored 2026-09-04; only the second of the two re-run conditions had survived"
 
 [clause."R57 §2.2"]
@@ -529,16 +538,16 @@ note = "states that the digest covers what R14 §2.3 already scopes"
 
 [clause."R52 §2.4"]
 disposition = "applied"
-where = [{ part = "03", section = "9.4" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
 
 [clause."R32 §5"]
 disposition = "applied"
-where = [{ part = "03", section = "9.4" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
 note = "restored 2026-09-04; the whole-packet baseline R35 bounds was absent"
 
 [clause."R32 §6"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-packet-cleanup" }]
+where = [{ part = "05", anchor = "ew-packet-cleanup" }]
 note = "restored 2026-09-04; an amendment deletes nothing, narrowed by R135 §3.5 to admit a staging area and the paths a promotion record makes its own"
 
 [clause."R32 §7"]
@@ -546,16 +555,16 @@ disposition = "rationale"
 
 [clause."R35 §4"]
 disposition = "applied"
-where = [{ part = "03", section = "9.4" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
 
 [clause."R35 §5"]
 disposition = "applied"
-where = [{ part = "03", section = "9.4" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
 note = "restored 2026-09-04; the over-inclusive requirement was absent"
 
 [clause."R35 §6"]
 disposition = "applied"
-where = [{ part = "03", section = "9.4" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
 note = "restored 2026-09-04; the fallback when immutability cannot be shown was absent"
 
 [clause."R35 §7"]
@@ -563,7 +572,10 @@ disposition = "rationale"
 
 [clause."R61 §2.1"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-packet-cleanup" }]
+where = [
+  { part = "05", anchor = "ew-packet-cleanup", note = "the order and the protection of strays" },
+  { part = "03", anchor = "ew-portable-amendment", note = "what a stray is" },
+]
 note = "a stray, narrowed by R135 §3.5 to lie outside the staging area and every path an unpublished promotion record lists"
 
 [clause."R61 §2.3"]
@@ -571,7 +583,7 @@ disposition = "rationale"
 
 [clause."R61 §3"]
 disposition = "applied"
-where = [{ part = "03", section = "9.6" }]
+where = [{ part = "05", anchor = "ew-amendment-definition" }]
 
 [clause."R6 §4"]
 disposition = "applied"
@@ -605,7 +617,7 @@ note = "restored 2026-09-04; the prohibition on a reset within one clock was abs
 
 [clause."R27 §6.1"]
 disposition = "applied"
-where = [{ part = "01", section = "3.9" }]
+where = [{ part = "05", anchor = "ew-import-normalization" }]
 note = "restored 2026-09-04; acquisition order is how a reset is visible at all"
 
 [clause."R27 §6.2"]
@@ -650,16 +662,21 @@ disposition = "registry"
 note = "within_observation, in rules.json"
 
 [clause."R39 §2.1"]
-disposition = "registry"
-note = "the description of core.sessions.t_zero_tick; the validator's shim checks the minimum as time.origin_not_earliest"
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-time-basis" }]
+note = "the origin is the earliest observation on the reference clock, per session (R146 §3.3); the validator's shim checks it as time.origin_not_earliest"
 
 [clause."R39 §2.2"]
 disposition = "applied"
 where = [{ part = "01", section = "2.2" }]
+note = "R146 §3.3 states the absence rule per session, as R39 §2.1's per-session origin implies"
 
 [clause."R39 §2.4"]
 disposition = "applied"
-where = [{ part = "01", section = "2.2" }]
+where = [
+  { part = "01", section = "2.2" },
+  { part = "05", anchor = "ew-validation-shim", note = "time.origin_unmappable" },
+]
 note = "the shim checks it, not a SQL rule (R12 §4)"
 
 [clause."R40 §2.1"]
@@ -774,7 +791,7 @@ note = "R60 §2.2 strikes it: one coordinate exists per electrode, frame and bas
 
 [clause."R59 §2.3"]
 disposition = "applied"
-where = [{ part = "01", section = "3.8" }]
+where = [{ part = "02", anchor = "ew-coordinate-atlas-annotation" }]
 
 [clause."R59 §2.4"]
 disposition = "applied"
@@ -1018,8 +1035,8 @@ where = [{ part = "06", section = "4" }]
 note = "restored 2026-09-04; the MUST survived only as its consequence"
 
 [clause."R43 §2"]
-disposition = "applied"
-where = [{ part = "06", section = "6" }]
+disposition = "rationale"
+note = "R146 retired Part 06 §6: no part declares the withdrawn table, so nothing is left to bind"
 
 [clause."R43 §2.1"]
 disposition = "rationale"
@@ -1333,7 +1350,8 @@ note = "the four withdrawals stand; they failed the first two grounds"
 
 [clause."R79 §2.1"]
 disposition = "applied"
-where = [{ part = "05", section = "10" }]
+where = [{ part = "05", anchor = "ew-conformance-classes" }]
+note = "superseded in part by R146 §3.1: writer conformance no longer includes validator and reader obligations"
 
 [clause."R79 §2.2"]
 disposition = "applied"
@@ -1523,7 +1541,7 @@ where = [{ part = "00", anchor = "ew-packet" }]
 disposition = "applied"
 where = [
   { part = "05", anchor = "ew-reader-session-presentation" },
-  { part = "07", section = "7" },
+  { part = "07", anchor = "ew-reference-performance-notes" },
 ]
 
 [clause."R87 §2.1"]
@@ -1635,7 +1653,10 @@ where = [{ part = "02", section = "8.3" }]
 
 [clause."R90 §3.5"]
 disposition = "applied"
-where = [{ part = "02", section = "8.3" }]
+where = [
+  { part = "02", section = "8.3", note = "the three resolution shapes" },
+  { part = "05", anchor = "ew-reader-discriminator-resolution", note = "a reader offers the resolution" },
+]
 
 [clause."R90 §3.6"]
 disposition = "applied"
@@ -1747,8 +1768,8 @@ note = "Part 10 added, informative, versioned; each measurement records its date
 
 [clause."R93 §3.5"]
 disposition = "applied"
-where = [{ part = "07", section = "7" }]
-note = "the boundary with Part 10: a number that would change with this implementation stays in 07"
+where = [{ part = "07", anchor = "ew-reference-performance-notes" }]
+note = "the boundary with Part 10: a number that would change with this implementation stays in 07. Superseded in part by R146 §3.5, which withdraws the sentence keeping R43's query timings in Part 06"
 
 [clause."R93 §3.6"]
 disposition = "applied"
@@ -1856,7 +1877,10 @@ note = "1.9 kB of footer unprojected, 11.95x projected, over 5,000,000 rows shap
 
 [clause."R97 §3.1"]
 disposition = "applied"
-where = [{ part = "02", section = "8.6" }]
+where = [
+  { part = "02", section = "8.6" },
+  { part = "05", anchor = "ew-validation-shim", note = "the info report of an unfilled column" },
+]
 note = "the key decides both bounds; build.py emits the column from it and check.py enforces it against core and every extension, which added one to aind_opto.stimulations and dynamic_foraging.blocks. The info report is escapewheel_validator._check_unfilled_metadata"
 
 [clause."R97 §3.3"]
@@ -2419,9 +2443,9 @@ where = [
     { part = "03", anchor = "ew-parquet-reader-floor" },
     { part = "03", section = "6.2" },
     { part = "03", section = "8.1" },
-    { part = "03", section = "9.4" },
-    { part = "03", anchor = "ew-packet-cleanup" },
-    { part = "03", section = "9.6" },
+    { part = "05", anchor = "ew-incremental-revalidation" },
+    { part = "05", anchor = "ew-packet-cleanup" },
+    { part = "05", anchor = "ew-amendment-definition" },
     { part = "04", anchor = "ew-prefix-resources" },
     { part = "04", anchor = "ew-source-resolution" },
     { part = "05", section = "2" },
@@ -2981,7 +3005,7 @@ note = "catalog-to-session comparison is a shim check rather than a hidden SQL r
 
 [clause."R125 §3.10"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-incremental-revalidation" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
 note = "each validation layer supplies its own dependency facts"
 
 [clause."R125 §3.11"]
@@ -3204,7 +3228,7 @@ note = "packet and delivery documents omit redundant physical selectors and summ
 
 [clause."R129 §3.7"]
 disposition = "applied"
-where = [{ part = "04", anchor = "ew-external-resource-verification" }]
+where = [{ part = "05", anchor = "ew-reader-registry-independence" }]
 note = "ordinary packet access is lazy and requires neither validation receipt nor whole-packet inspection"
 
 [clause."R129 §3.8"]
@@ -3249,7 +3273,7 @@ note = "every registry document carries registry_id; the extension equality is r
 
 [clause."R130 §3.5"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-portable-bound-registries" }, { part = "03", anchor = "ew-portable-packet-layout" }, { part = "03", anchor = "ew-superseded-manifest-retention" }, { part = "03", anchor = "ew-portable-profile-normative-references" }]
+where = [{ part = "03", anchor = "ew-portable-bound-registries" }, { part = "03", anchor = "ew-portable-packet-layout" }, { part = "05", anchor = "ew-superseded-manifest-retention" }, { part = "03", anchor = "ew-portable-profile-normative-references" }]
 note = "each bound registry is one gzip member; retention is judged by registry ID, version, and digest"
 
 [clause."R130 §3.6"]
@@ -3388,11 +3412,10 @@ note = "out of process a build reaches an adapter by a protocol it declares, in 
 disposition = "applied"
 where = [
   { part = "05", anchor = "ew-import-pipeline" },
-  { part = "05", anchor = "ew-import-validation-principle" },
   { part = "05", anchor = "ew-import-delivery" },
   { part = "05", anchor = "ew-import-materialization" },
 ]
-note = "one eight-step order in Part 05 §2, promotion only after a passed verdict; §1, §4.2, and §8 state their part of it"
+note = "one eight-step order in Part 05 §2, promotion only after a passed verdict; §§4.2 and 8 state their part of it"
 
 [clause."R135 §3.2"]
 disposition = "applied"
@@ -3416,7 +3439,10 @@ note = "one core.source_files row per distinct recipe root, as the recipe states
 
 [clause."R135 §3.5"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-packet-cleanup" }]
+where = [
+  { part = "05", anchor = "ew-packet-cleanup" },
+  { part = "03", anchor = "ew-portable-amendment", note = "what a stray is" },
+]
 note = "a stray lies outside the staging area and every path an unpublished promotion record lists"
 
 [clause."R136 §3.1"]
@@ -3426,7 +3452,7 @@ where = [
   { part = "04", anchor = "ew-packet-catalog-normative-references" },
   { part = "00", anchor = "ew-normative-references" },
 ]
-note = "four admitted algorithms, each single-object value's width and check value; the NVMe and RFC 9260 rows in Part 04 §11, RFC 1952 shared in Part 00 §10"
+note = "four admitted algorithms, each single-object value's width and check value; the NVMe and RFC 9260 rows in Part 04 §11, RFC 1952 shared in Part 00 §9"
 
 [clause."R136 §3.2"]
 disposition = "applied"
@@ -3746,3 +3772,50 @@ where = [{ part = "06", anchor = "ew-analysis-spike-events" }]
 [clause."R145 §3.9"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-validation-shim" }]
+
+[clause."R146 §3.1"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-validation-import-scope", note = "the four actors and the sections binding each" },
+  { part = "05", anchor = "ew-conformance-classes", note = "a writer's obligations only" },
+  { part = "05", anchor = "ew-writer-acceptance-criteria", note = "the criteria are necessary" },
+]
+
+[clause."R146 §3.2"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-packet-amendment", note = "the rules every profile's amendment follows" },
+  { part = "03", anchor = "ew-portable-amendment", note = "how the portable profile realizes one" },
+  { part = "00", anchor = "ew-later-physical-profiles", note = "a profile says how it realizes an amendment" },
+]
+
+[clause."R146 §3.3"]
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-time-basis" }]
+
+[clause."R146 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim", note = "the origin check" }]
+
+[clause."R146 §3.5"]
+disposition = "applied"
+where = [
+  { part = "10", anchor = "ew-materialization-measurements", note = "the copy's size and the population window" },
+  { part = "07", anchor = "ew-reference-performance-notes", note = "the alignment and trial-table timings" },
+]
+
+[clause."R146 §3.6"]
+disposition = "applied"
+where = [{ part = "01", anchor = "ew-coordinate-concept" }]
+
+[clause."R146 §3.7"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-reader-registry-independence", note = "a reader offers discriminator resolution" },
+  { part = "02", anchor = "ew-coordinate-atlas-annotation", note = "a registry document's atlas columns" },
+  { part = "03", anchor = "ew-portable-forbidden-files", note = "a writer's semantic_version.txt" },
+]
+
+[clause."R146 §3.8"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim", note = "the unfilled-column report" }]

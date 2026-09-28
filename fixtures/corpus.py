@@ -59,6 +59,10 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
         "core.electrode_coordinate_values."
         "session_id_coordinate_frame_axis_index_resolves",
     ),
+    "coordinate_omits_an_axis": None,
+    "origin_through_transform": None,
+    "origin_not_earliest": ("error", "time.origin_not_earliest"),
+    "origin_unmappable": ("error", "time.origin_unmappable"),
     "crc64nvme": None,
     "crc32c": None,
     "crc32": None,

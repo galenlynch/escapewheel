@@ -64,7 +64,7 @@ def test_an_interrupted_commit_is_undone_and_published_on_retry(tmp_path, regist
 
 
 def test_a_promoted_directory_with_no_record_is_refused_and_kept(tmp_path, registry, minimal):
-    """No record means no build claims it, so it is a stray (Part 03 §9.5)."""
+    """No record means no build claims it, so it is a stray (Part 03 §9)."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     (root / MANIFEST).unlink()

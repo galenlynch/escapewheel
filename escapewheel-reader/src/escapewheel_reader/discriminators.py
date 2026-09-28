@@ -1,6 +1,6 @@
 """Resolve a discriminator: read the kind, take that resource's key, join.
 
-Part 02 §8.3 asks a reader to offer this, and gives the reason: a discriminator nothing reads is a
+Part 05 §13.4 asks a reader to offer this, and gives the reason: a discriminator nothing reads is a
 free-form name with extra steps, which is what became of the mechanism it replaces. Without an
 offer here every consumer of `core.intervals.interval_kind` writes the join again, and the join is
 not obvious -- it takes three shapes, and reading one as another is what Part 02 §8.3's exclusion

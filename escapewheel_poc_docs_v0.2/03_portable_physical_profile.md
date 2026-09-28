@@ -18,7 +18,7 @@ MAY cache that result and MUST NOT revalidate an unchanged bundled descriptor fo
 The portable physical profile defined by this part is identified by
 `escapewheel-portable-v0.1`.
 Its requirements directly invoke the shared JSON, URI, JSON Schema, Parquet, and RFC 1952
-authorities identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the
+authorities identified in [Part 00 §9](00_architecture.md#ew-normative-references) and the
 portable-profile authorities identified in [Part 03 §12](#ew-portable-profile-normative-references).
 The application columns in those sections state their extent. The `digest` field belongs to
 [Part 04 §4.1](04_packet_catalog.md#ew-packet-resource-entry-fields), and its functions, a prefix's
@@ -94,7 +94,7 @@ The manifest MUST record the actual layout. A reader MUST resolve resources thro
 <a id="ew-portable-forbidden-files" data-spec-anchor="canonical"></a>
 ### 3.2 Files that MUST NOT be written
 
-`schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the manifest is required to carry, and so bought no otherwise-available access.
+A writer MUST NOT write `schemas/semantic_version.txt`, which would restate `semantic_standard_version`, a field the manifest is required to carry. No checker verifies this.
 
 <a id="ew-portable-bound-registries" data-spec-anchor="canonical"></a>
 ### 3.3 Bound registries
@@ -109,7 +109,7 @@ ignore them.
 A conforming packet MUST contain every bound registry. A writer MUST NOT bind a registry by remote
 location or omit the stored copy, and a reader or validator MUST NOT resolve a bound registry from
 anywhere else. A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
-of §§8.1, 9.1, and 9.5.
+of §8.1 and [Part 05 §15](05_validation_and_import.md#ew-packet-amendment).
 
 <a id="ew-staging-area" data-spec-anchor="canonical"></a>
 ### 3.4 The staging area
@@ -118,7 +118,8 @@ In this profile a build's staging area ([Part 05 §2](05_validation_and_import.m
 is the directory `staging/` directly under the packet root, and a writer MUST stage an import or an
 amendment there and nowhere else under the packet root. Under the packet root, promotion moves a
 staged resource to its final path by a rename within one filesystem; the fixed name lets a writer
-and a cleanup tell a staging area from a directory this specification does not govern (§9.5).
+and a cleanup tell a staging area from a directory this specification does not govern
+([Part 05 §15.5](05_validation_and_import.md#ew-packet-cleanup)).
 
 <a id="ew-portable-uri-rules" data-spec-anchor="canonical"></a>
 ## 4. URI rules
@@ -399,94 +400,23 @@ This promise is what allows an amendment to skip revalidating untouched files, s
 This specification promises nothing about bytes the packet does not own. What a packet records about an external resource is what was true when it was checked, not a claim about now.
 
 <a id="ew-portable-amendment" data-spec-anchor="canonical"></a>
-## 9. Amendment, versioning, and retention
+## 9. Amendment and retention
 
-<a id="ew-amendment-definition" data-spec-anchor="canonical"></a>
-### 9.1 What an amendment is
+[Part 05 §15](05_validation_and_import.md#ew-packet-amendment) states what an amendment is and may
+change, what it retains, what it revalidates, and how cleanup proceeds. This section is how this
+profile realizes an amendment, as Part 00 §7.3 requires of a profile.
 
-An **amendment** produces a new version of an existing packet and MUST NOT modify any file the superseded manifest names. A table that gains rows is written as a **new file**, and the amended manifest names the new file; no byte of the old one changes. Immutability is thereby a property of files, and a resource's *content* may be superseded by naming different bytes.
+A resource that gains rows, a provenance table included, is written as a **new file** that the
+amended manifest names; no byte of the old one changes. Immutability is thereby a property of
+files, and a resource's *content* may be superseded by naming different bytes.
 
-An amendment MUST set a `packet_version` that sorts strictly after the superseded one, compared as a semantic version.
-
-<a id="ew-amendment-scope" data-spec-anchor="canonical"></a>
-### 9.2 What an amendment may and may not do
-
-| | |
-|---|---|
-| Add an analysis resource | MAY |
-| Add rows to a provenance table (`core.processing_runs`, `core.source_files`, `core.processing_run_inputs`), as a new file | MAY |
-| Remove an analysis resource | MAY — Part 06 makes them disposable |
-| Add a core resource | MAY |
-| Change the content of a core resource other than the provenance tables | MUST NOT |
-| Remove a core resource | MUST NOT |
-| Change `packet_id`, `profile_id`, or the standard versions | MUST NOT |
-
-The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A packet whose core data was wrong is a new packet, not a new version of an old one, because anything already derived from the old core is silently invalidated and nothing in the format can detect that.
-
-Provenance tables are the exception because they are append-only by nature — a row records that something ran, and a later run does not change what an earlier one did.
-
-<a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
-### 9.3 The manifest
-
-Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
-
-Where an amendment binds a different registry document, the packet retains the superseded copy at
-the path the superseded manifest records. A writer MUST refuse an amendment that would bind,
-anywhere in the packet's current and retained manifests, two different digests under the same
-registry ID and version, because that version would then be ambiguous within one packet.
-
-<a id="ew-incremental-revalidation" data-spec-anchor="canonical"></a>
-### 9.4 Scope of revalidation
-
-An amendment MUST validate the whole packet, not only what it added. What is bounded is the
-*work*, not the verdict: the resources an amendment did not write are immutable, so their
-verdict is determined rather than assumed, and re-establishing it costs nothing.
-
-A writer performing an amendment MUST establish the physical order of the resources it writes, and a validator MUST NOT
-require it to re-establish that order for any other packet-owned resource.
-
-A validator MUST derive a complete input set from the layer that owns each check. A generated
-Tier 1 check takes its inputs from the registry declarations that generated it: the attached
-resource, both ends of a foreign key, and every specialization or discriminator branch it reads.
-A Tier 2 check takes its inputs from the parsed base-resource set Part 11 §3 requires static
-validation to return. A Part 05 shim check declares its inputs explicitly.
-
-A validator MUST re-run a check when it is attached to a resource the amendment writes or any
-member of its input set was written. A Tier 2 dependency MUST NOT be inferred by searching query
-text: an alias, common table expression, literal, or comment that resembles a resource does not
-create one. The session-inventory shim declares the packet manifest and `core.sessions`; installing
-a manifest writes the manifest input for this purpose. A shim without a complete declaration MUST
-run rather than be skipped.
-
-A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name inside
-a string literal or a comment re-runs a check that did not need it, which costs time; failing to
-match one costs correctness. A validator that cannot show an input is immutable MUST run the
-check: skipping a check whose inputs *could* have changed stays forbidden.
-
-<a id="ew-packet-cleanup" data-spec-anchor="canonical"></a>
-### 9.5 Cleanup
-
-Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second. Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
+Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file
+an old version named from a file nothing ever named. A packet never amended retains nothing and
+carries no `manifests/` directory at all, so the common case costs nothing.
 
 A **stray** is a file under the packet root that no manifest ever named, that lies outside the
 staging area (§3.4), and that neither is listed by nor lies inside a directory listed by a promotion
 record whose `packet_version` is unpublished ([Part 05 §6](05_validation_and_import.md#ew-import-commit)).
-A writer MUST NOT remove a stray. A packet may carry files this specification does not govern, and
-cleanup that deletes the ungoverned is a data-loss bug wearing an operation's name. The operation
-reports by default and acts only when asked.
-
-An amendment **MUST NOT** delete anything as part of amending, other than a staging area as
-[Part 05 §2](05_validation_and_import.md#ew-import-pipeline) permits and the paths Part 05 §6 lets it
-remove when it acts on a promotion record. A file that no manifest version names any longer MAY be
-deleted, but by cleanup, as a separate operation — which is what keeps an amendment's failure from
-having removed something.
-
-A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
-
-<a id="ew-packet-version-scope" data-spec-anchor="canonical"></a>
-### 9.6 What a version is not
-
-`packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile.
 
 <a id="ew-owned-resource-digests" data-spec-anchor="canonical"></a>
 ## 10. Checksums

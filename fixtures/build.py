@@ -952,6 +952,35 @@ def variants():
             if r["clock_id"] != "imec_ap_s001"
         ]
 
+    # Part 05 §5.3: a declared origin is the session's earliest observation start on its reference.
+    def origin_through_transform(c):
+        # Behavior started 3000 reference ticks before the probe, so its start, carried through
+        # the transform, is the minimum and the origin sits before the reference's own start.
+        child(c)["transform_offset"] = -3000.0
+        c["core.sessions"][0]["t_zero_tick"] = -3000
+
+    def origin_not_earliest(c):
+        # The reference's own start, which is what an origin read without the transform gives.
+        child(c)["transform_offset"] = -3000.0
+        c["core.sessions"][0]["t_zero_tick"] = 0
+
+    def origin_unmappable(c):
+        # Anchors that begin twenty intervals after the behavior clock's start, so the start
+        # has no reference tick to be compared at.
+        child(c)["transform_slope"] = None
+        child(c)["transform_offset"] = None
+        c["core.clock_anchors"] = [
+            {
+                "session_id": "s001",
+                "clock_id": "behavior_s001",
+                "anchor_index": i,
+                "t_tick": t,
+                "parent_tick": t * 30,
+            }
+            for i, t in enumerate(range(20_000, 25_000, 1000))
+        ]
+        c["core.sessions"][0]["t_zero_tick"] = 0
+
     def frame_without_axes(c):
         # Part 01 §3.8: the frame declares two axes where its coordinates carry three, so every
         # `ccf_dv` value names an axis no frame declares and Tier 1's anti-join returns it.
@@ -959,6 +988,15 @@ def variants():
             r
             for r in c["core.coordinate_frame_axes"]
             if not (r["coordinate_frame"] == "ccf" and r["axis_index"] == 2)
+        ]
+
+    def coordinate_omits_an_axis(c):
+        # Part 01 §3.8: a coordinate carries values only on the axes its source states, so a unit
+        # whose `ccf_dv` value is absent conforms; nothing requires a value on every axis.
+        c["core.unit_coordinate_values"] = [
+            r
+            for r in c["core.unit_coordinate_values"]
+            if not (r["unit_id"] == 1 and r["coordinate_frame"] == "ccf" and r["axis_index"] == 2)
         ]
 
     def undeclared_currency(c):
@@ -1030,6 +1068,10 @@ def variants():
         "unscoped_runs": unscoped_runs,
         "clock_without_window": clock_without_window,
         "frame_without_axes": frame_without_axes,
+        "coordinate_omits_an_axis": coordinate_omits_an_axis,
+        "origin_through_transform": origin_through_transform,
+        "origin_not_earliest": origin_not_earliest,
+        "origin_unmappable": origin_unmappable,
     }
 
 

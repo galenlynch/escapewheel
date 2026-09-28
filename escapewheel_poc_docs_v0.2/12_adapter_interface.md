@@ -24,7 +24,7 @@ defines each of those members, and the entry's conditional shape, exactly as the
 makes the specification candidate internally inconsistent.
 
 Its requirements directly invoke the shared JSON, URI, JSON Schema, and Parquet authorities
-identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the Arrow authorities
+identified in [Part 00 §9](00_architecture.md#ew-normative-references) and the Arrow authorities
 identified in [§11](#ew-adapter-interface-normative-references). The application columns in those
 sections state their extent.
 
@@ -46,11 +46,11 @@ An **adapter** here is code that reads one source, whether the reference impleme
 
 A profile names a **group** for each way rows cross a process boundary, and the protocols in it. `escapewheel-portable-v0.1` names one group, out of process, holding three:
 
-| protocol | rows cross as |
-|---|---|
-| `files-v0.1` | Parquet in `delivery_root`, one file per resource, named by its resource identifier with the suffix `.parquet` |
-| `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
-| `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource |
+| protocol | rows cross as | a failure's diagnosis travels on |
+|---|---|---|
+| `files-v0.1` | Parquet in `delivery_root`, one file per resource, named by its resource identifier with the suffix `.parquet` | standard error |
+| `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource | standard error |
+| `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource | the error's message and detail, on the connection the adapter was asked over; a failing adapter writes nothing to standard error |
 
 An adapter **released independently of a build** MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names. The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting such an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
 

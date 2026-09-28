@@ -366,11 +366,13 @@ def test_nullable_foreign_keys_are_guarded(packet_root):
 
 
 def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
-    """Part 02 §8.6, at `info`. The column may be absent from the file, so this can never fail."""
+    """Part 05 §5.3, at `info`. The column may be absent from the file, so this can never fail."""
     report = validate(open_packet(packet_root))
     assert report.passed
     finding = next(f for f in report.findings if f.check == "core.trials.metadata_unfilled")
     assert finding.level == "info"
+    # Part 05 §9.5: a finding about one resource belongs to the registry declaring it.
+    assert finding.registry == "core"
 
 
 def test_a_filled_metadata_column_is_not_reported(packet_root):
@@ -1030,7 +1032,7 @@ def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
     assert [f.check for f in report.findings] == ["schema.column_type"]
 
 
-# -- Part 03 §9.4: an amendment re-runs only the rules its own resources implicate ---------------
+# -- Part 05 §15.4: an amendment re-runs only the rules its own resources implicate ---------------
 
 
 def _check(sql, resource="core.units", dependencies=()):
@@ -1059,7 +1061,7 @@ def test_a_rule_reading_only_untouched_resources_may_be_skipped():
 
 
 def test_resource_text_in_a_comment_is_not_a_dependency():
-    """Part 03 §9.4: comments do not create Tier 2 dependencies."""
+    """Part 05 §15.4: comments do not create Tier 2 dependencies."""
     sql = "SELECT * FROM core_units -- nothing to do with analysis_spike_events"
     assert not concerns(_check(sql), {"analysis.spike_events"})
 
@@ -1491,7 +1493,7 @@ def test_packet_owned_digests_are_checked(packet_root, algorithm):
 
 @pytest.mark.parametrize("algorithm", ["sha256", "crc64nvme", "crc32c", "crc32"])
 def test_a_packet_owned_file_one_byte_off_is_an_error(packet_root, algorithm):
-    """Part 03 §9.4 bounds revalidation on immutability. This is what checks the premise.
+    """Part 05 §15.4 bounds revalidation on immutability. This is what checks the premise.
 
     The recorded value is of the file with one byte flipped, so the file itself stays readable.
     """

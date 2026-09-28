@@ -338,7 +338,7 @@ def _verify(args: argparse.Namespace) -> int:
 
 
 def _prune(args: argparse.Namespace) -> int:
-    """Remove what a committed packet no longer names (Part 03 §9.5)."""
+    """Remove what a committed packet no longer names (Part 05 §15.5)."""
     from ..prune import prune
 
     plan = prune(

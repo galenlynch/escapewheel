@@ -656,7 +656,7 @@ def test_the_writer_spells_its_own_relative_uris_in_one_form(tmp_path, registry,
 
 
 def test_cleanup_reads_a_payload_s_uri_decoded_and_a_prefix_as_its_files(tmp_path, registry, minimal):
-    """Part 03 §9.5: a payload's files are named by its entry, so none is a stray."""
+    """Part 03 §9: a payload's files are named by its entry, so none is a stray."""
     from escapewheel_writer.prune import prune
 
     root, _ = _commit_one(tmp_path, registry, minimal, "core.report", {QC_NAME: PDF})

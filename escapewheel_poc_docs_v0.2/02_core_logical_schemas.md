@@ -389,7 +389,7 @@ A table that merely carries or references an assigned identifier MUST NOT declar
 `*_name` column. A carried identifier likewise gets no corresponding name column: its value is
 already the source's own identity.
 
-An assigned identifier's `*_name` MUST be unique within its packet — the 16 name columns in core and analysis that pair with one, not the 6 that name a kind of thing and are expected to repeat, such as `core.sorting_runs.sorter_name`. `registry/check.py` sorts them and requires the second kind to be declared. No rule can check it: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct case where four streams naming one serial become one device. The obligation falls on whatever composes the name.
+An assigned identifier's `*_name` MUST be unique within its packet. A name column pairing with no assigned identifier names a kind of thing, such as `core.sorting_runs.sorter_name`, and is expected to repeat. The registry-document contract checks the pairing as `registry.identity.name`. No rule can check uniqueness: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct case where four streams naming one serial become one device. The obligation falls on whatever composes the name.
 
 <a id="ew-discriminator-semantics" data-spec-anchor="canonical"></a>
 ### 8.3 Discriminator
@@ -423,9 +423,8 @@ both or neither. A row declaring neither is **undeterminable**, which a
 consumer MUST report apart from a row whose value resolves to nothing: the fix for one is to record
 the missing half, and for the other to correct what it names.
 
-**How it resolves.** A reader SHOULD offer the resolution: read the kind, take that resource's key
-from the registry, join. A discriminator nothing reads is a free-form name with extra steps, which
-is the observed fate of the mechanism this one replaces. Three shapes exist:
+**How it resolves.** Resolution reads the kind, takes that resource's key from the registry, and
+joins; Part 05 §13.4 has a reader offer it. Three shapes exist:
 
 - **Shared key.** The discriminated row and the named resource share a key, so the join is on that
   key. A resource a shared-key discriminator may name MUST declare a reference back to the
@@ -516,15 +515,15 @@ A column named `metadata` MUST be an optional `json_string` data column with thi
 description: “What the source stated about this row that the standard does not model, carried in
 the source's own vocabulary and read by no rule.”
 
-A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise. An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Seventeen core tables fall in the first band and three in the second. Both bounds are decidable from the registry with no packet in hand, and `registry/check.py` enforces both against core and against every extension.
+A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise. An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Both bounds are decidable from the registry with no packet in hand, and the registry-document contract checks them as `registry.metadata.eligibility` against core and against every extension.
 
-A validator SHOULD report, at `info`, a declared `metadata` column that no row of the packet fills. Where the key neither requires the column nor forbids it, declaring one is a judgement, and this is the evidence against which it is revisited: `core.spike_events` carried the column on 286,896,563 rows that no adapter ever filled.
+Where the key neither requires the column nor forbids it, declaring one is a judgement, and Part 05 §5.3's report of an unfilled `metadata` column is the evidence against which it is revisited.
 
-A writer MAY fill `metadata` on every row of a table that declares it. Parquet reads the columns a query projects and no others, so the column costs a consumer who does not ask for it 1.9 kB of extra footer over 5,000,000 rows, and one who does 394.6 ms against 29.6 ms.
+A writer MAY fill `metadata` on every row of a table that declares it. Parquet reads the columns a query projects and no others, so a consumer who does not project the column does not read it.
 
 A writer MUST NOT emit a `metadata` key holding a fact that a column of the logical schema holds, unless the duplication buys access that is otherwise unavailable, and MUST NOT emit one that contradicts such a column under any circumstance. The same otherwise-unavailable-access exception applies throughout the schema, so the bag is exactly as strict as the schema around it; a contradiction takes no exception, since it buys nothing by definition. A fact required to interpret the data belongs in a column, never in a key.
 
-No rule checks either half and none is added. The content is schemaless by design, so a constraint on it is unenforceable in principle rather than merely in practice, and an adapter names a key in the source's vocabulary where core names a column in its own — across both packaged sessions, zero of the 20 distinct keys share a name with any column in the registry. The obligation binds the writer, which is the only party that knows what it put in the bag.
+No rule checks either half and none is added. The content is schemaless by design, so a constraint on it is unenforceable in principle rather than merely in practice, and an adapter names a key in the source's vocabulary where core names a column in its own. The obligation binds the writer, which is the only party that knows what it put in the bag.
 
 A writer SHOULD put prose in a prose column where the table has one, and not in `metadata`. A human-readable string has no structure to preserve, so a JSON envelope costs a serialisation, puts the value where no rule reads it and no filter uses it, and buys none of the otherwise-unavailable access the exception above requires.
 
@@ -615,7 +614,7 @@ A value MAY be reserved only where it is read **whole**: where a consumer compar
 An `open` column MUST carry a nonempty description stating the form its values take. A string data
 column with an open or closed vocabulary MAY declare `authority`, a nonempty array whose entries
 each carry a human-readable `name` and an absolute `uri` as RFC 3986
-([Part 00 §10](00_architecture.md#ew-normative-references)) defines one. No URI may occur twice in one
+([Part 00 §9](00_architecture.md#ew-normative-references)) defines one. No URI may occur twice in one
 array. An authority URI is identity rather than a fetch instruction: a validator MUST NOT
 dereference one when checking a registry or a packet, and MUST NOT reject a value for being absent
 from its column's authority. Neither this rule nor the `open` row above covers a unit column's value
@@ -865,7 +864,7 @@ not say which mode produced it cannot be compared with the other.
 <a id="ew-tier-2-exclusions" data-spec-anchor="canonical"></a>
 ### 10.3 What is not a rule
 
-A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
+A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. These are checked by the shim of Part 05 §5.3.
 
 <a id="ew-core-resource-index" data-spec-anchor="canonical"></a>
 ## 11. Core resource index
@@ -1067,9 +1066,16 @@ A frame declares one row of `core.coordinate_frame_axes` per axis it has, and tw
 
 A coordinate's values reference the axis rows of their own frame on `(session_id, coordinate_frame, axis_index)`, so a value on an axis the frame never declared is an orphan Tier 1 reports, and a frame's axis count cannot disagree with the shape of its coordinates.
 
-A coordinate MAY carry values on fewer axes than its frame declares, where its source states none on the rest, and a consumer MUST NOT read an absent axis row as a zero: it is a position the source did not state on that axis. That is what a null in the struck `x_um`, `y_um` and `z_um` said, in the form the child table has.
+A coordinate MAY carry values on fewer axes than its frame declares, where its source states none on the rest, and a consumer MUST NOT read an absent axis row as a zero: it is a position the source did not state on that axis.
 
 `axis_value` declares `unit_from` of `core.coordinate_frame_axes.unit`, resolved one hop through that reference (§8.4): the unit is the axis's, so a frame stated in millimetres needs no second set of columns and no column name carries a unit.
+
+<a id="ew-coordinate-atlas-annotation" data-spec-anchor="canonical"></a>
+### 12.8 A coordinate's atlas annotation
+
+A registry document MUST NOT declare a column holding an atlas structure's full name or its
+ancestry path: both derive from the structure's identifier, and an ancestry path is a list, which
+§5.2 forbids in a delimited string. No checker verifies this. Part 01 §3.8 defines the annotation.
 
 <a id="ew-logical-schema-normative-references" data-spec-anchor="canonical"></a>
 ## 13. Normative references

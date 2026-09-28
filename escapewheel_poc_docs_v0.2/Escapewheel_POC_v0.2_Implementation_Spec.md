@@ -16,7 +16,7 @@ This document set describes a proof-of-principle portable data packet: a small s
 standard over commodity storage formats, whose packet mechanism confines no packet to a recording
 modality and whose core vocabulary targets extracellular electrophysiology.
 [Part 00 §1](00_architecture.md#ew-architecture-scope) defines its scope, and
-[Part 00 §9](00_architecture.md#ew-numbered-part-ownership) assigns the subject and status of
+[Part 00 §8](00_architecture.md#ew-numbered-part-ownership) assigns the subject and status of
 every numbered part.
 
 The design tests whether recorded data can be represented over commodity substrates:
@@ -41,7 +41,7 @@ resolution is defined by Parts 03 and 04, and extension independence by Part 09.
 ## 3. Numbered parts
 
 This table is an informative projection of
-[Part 00 §9](00_architecture.md#ew-numbered-part-ownership).
+[Part 00 §8](00_architecture.md#ew-numbered-part-ownership).
 
 | part | title | status |
 |---|---|---|
@@ -52,7 +52,7 @@ This table is an informative projection of
 | 04 | Packet manifest | normative |
 | 05 | Validation, import, and reader operations | normative |
 | 06 | Analysis layer | informative except §§2, 4, and 5, which are normative |
-| 07 | Reference implementation and plan | informative |
+| 07 | Reference implementation | informative |
 | 08 | Example packet | informative |
 | 09 | Metadata minimalism and extensions | normative |
 | 10 | Performance notes | informative |
@@ -88,7 +88,7 @@ Part 04 §§3 and 8 define the manifest fields that record these identifiers.
 - [Apache Iceberg table specification](https://iceberg.apache.org/spec/), for the deferred
   lakehouse profile discussed in Part 00.
 
-[Part 00 §10](00_architecture.md#ew-normative-references) defines normative-reference policy and
+[Part 00 §9](00_architecture.md#ew-normative-references) defines normative-reference policy and
 lists shared external authorities, among them RFC 1952, which the portable profile and the packet
 manifest both invoke, and Parquet, which the portable profile and its adapter interface both invoke.
 The Arrow authorities invoked by the adapter interface are in
@@ -117,7 +117,7 @@ This part defines the Escapewheel specification framework: its authority and con
 architectural classifications, numbered-part ownership and status, and publication conventions. It
 also states the cross-cutting architecture of an Escapewheel packet. Detailed concept meanings,
 logical declarations, physical encodings, manifest fields, and construction and validation rules
-belong to the subject-owning parts listed in §9.
+belong to the subject-owning parts listed in §8.
 
 This specification defines a portable data packet as a small semantic and logical standard over
 commodity storage formats. Its packet mechanism comprises the packet manifest (Part 04), the logical
@@ -227,8 +227,8 @@ specification release MUST NOT contain an unresolved ownership conflict.
 Requirements in this specification apply to four actors. Every requirement binds one of them or
 states a property of an artifact.
 
-A **writer** produces a packet from sources. It stages, validates and commits, and it is the actor
-Part 05 binds throughout.
+A **writer** produces a packet from sources. It stages, validates and commits. Part 05 §1 states
+which of Part 05's sections bind each actor.
 
 A **reader** opens a committed packet and returns its resources — rows, arrays, resolved references.
 It is bound by what it returns.
@@ -311,15 +311,7 @@ which form the physical level, are the only parts whose rules may.
 ### 3.2 Packet content classes
 
 The specification MUST call content's architectural relationship to a packet its **packet content
-class**.
-
-| serialized value | contents | canonical | required by class |
-|---|---|:---:|:---:|
-| `core` | normalized facts of the core vocabulary | yes | no |
-| `extension` | typed facts a domain owns (Part 09) | yes | no |
-| `analysis` | products reproducible from canonical resources | no | no |
-| `compatibility_projection` | a projection into another representation | no | no |
-| `documentation` | human-readable sidecars that assert no semantic or conformance fact | no | no |
+class**. Part 02 §2.2 defines the five classes, their serialized values, and which are canonical.
 
 Part 02 §2.2 owns which content classes a declaration may reference, require, or bind to, and
 Part 09 §§6.1–6.2 own which registry it may reference and how a discriminator names a resource
@@ -399,19 +391,8 @@ A fact belongs in core when common interpretation, validation, joining or analys
 without it (Part 09 §3). A fact a single domain owns belongs in that domain's extension, typed,
 with its own vocabularies and rules — not in core, and not in a free-form column.
 
-Core resources are normalized enough to avoid drift and no further. One row per trial in
-`core.intervals`; one row per unit in a sorting and curation context in `core.units`; one row per
-spike in `core.spike_events`.
-
-<a id="ew-spike-representation" data-spec-anchor="canonical"></a>
-### 4.2 Spike representation
-
-`core.spike_events`, one row per spike with primitive columns only, is the sole canonical spike
-representation. The ragged chunked representation of v0.1 is withdrawn, as is the manifest's
-`canonical_representations` block.
-
-`core.units` carries `n_spikes`, `first_spike_tick` and `last_spike_tick` as a denormalization that
-a validator checks against `core.spike_events`.
+Core resources are normalized enough to avoid drift and no further. Part 02 §11 declares each core
+resource's grain.
 
 <a id="ew-analysis-content-class" data-spec-anchor="canonical"></a>
 ## 5. Analysis content class
@@ -420,14 +401,9 @@ a validator checks against `core.spike_events`.
 ### 5.1 Requirements
 
 The analysis content class MAY contain denormalized, prejoined, binned, aligned, or otherwise
-transformed products. Part 06 owns its disposability and its exact lineage, realization, and
-promotion requirements and its optional run provenance.
-
-<a id="ew-analysis-materialization-criterion" data-spec-anchor="canonical"></a>
-### 5.2 Materialization is justified by layout, not by arithmetic
-
-A materialization is a physical realization of an analysis resource, not a logical kind. Part 06
-defines when analysis views and materializations are justified and how their lineage is recorded.
+transformed products. Part 06 owns its disposability, when a view or a materialization is
+justified, and its exact lineage, realization, and promotion requirements and its optional run
+provenance.
 
 ## 6. Deferred NWB projection
 
@@ -460,31 +436,16 @@ evolution, concurrent writers, catalog integration, and reproducible release tag
 implementation of this specification MUST NOT require it.
 
 A physical profile — Iceberg's or any other — MUST declare a `profile_id` that a packet's manifest
-names, MUST bind only the packets declaring it, and MUST say how each logical resource of Part 02
-is stored. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the
+names, MUST bind only the packets declaring it, MUST say how each logical resource of Part 02
+is stored, and MUST say how an amendment (Part 05 §15) is realized under it: how a resource that
+gains rows is stored, where superseded manifests are retained, and what a stray is. It MUST NOT require an amendment to Part 01 or Part 02; where one would be needed, the
 defect is in those parts rather than in the profile. A physical profile's adapter interface binds a
 build only while the build writes a packet declaring the profile, and binds an adapter only while
 such a build reaches it. No clause of Part 01 or Part 02 may depend on a clause of Part 03 or
 Part 12.
 
-`packet_version` versions the bundle; an Iceberg snapshot would version a table's rows. A writer
-MUST NOT increment `packet_version` for a rewrite of rows.
-
-<a id="ew-implementation-thesis" data-spec-anchor="canonical"></a>
-## 8. Implementation thesis
-
-The first implementation is not a generic NWB backend. It is:
-
-1. a specification of core logical resources;
-2. a validator generated from that specification;
-3. an importer that turns source data into validated resources;
-4. a packet manifest recording the committed resources;
-5. a small access library querying tables and arrays with standard engines.
-
-An import succeeds only when validation succeeds (Part 05 §1).
-
 <a id="ew-numbered-part-ownership" data-spec-anchor="canonical"></a>
-## 9. Part subjects and normative status
+## 8. Part subjects and normative status
 
 Part 00 MUST assign the subject and normative status of every numbered part. A local status line
 MUST be a checked projection of this table and MUST NOT become a precedence source. A disagreement
@@ -539,7 +500,7 @@ A future release manifest MAY record numbered-part status, but that value MUST b
 projection of this section. The manifest MUST NOT become a second owner of numbered-part status.
 
 <a id="ew-normative-references" data-spec-anchor="canonical"></a>
-## 10. Normative-reference policy and shared references
+## 9. Normative-reference policy and shared references
 
 Part 00 MUST own the specification-wide policy for external normative references. An external
 authority that normative prose in exactly one numbered part invokes directly MUST have its
@@ -632,16 +593,16 @@ Each identifier declares its **identity**:
 | `carried` | the source's own value, reproduced unchanged, whatever the source encoded in it |
 | `assigned` | chosen by the writer when the packet was built |
 
-A writer MUST NOT encode meaning in the value of an identifier it assigns. No checker verifies this. An assigned identifier's owning table MUST carry a `*_name` column holding the name it was assigned from, so that a process outside the packet can reference the row without knowing the number.
+A writer MUST NOT encode meaning in the value of an identifier it assigns. No checker verifies this. An assigned identifier is paired with the name it was assigned from, so that a process outside the packet can reference the object without knowing the number; Part 02 §8.2 declares the pairing.
 
 <a id="ew-time-basis" data-spec-anchor="canonical"></a>
 ### 2.2 Time basis
 
 Every event, interval, spike time, dense time axis, and media frame timing record MUST declare a time basis: an integer tick and a `clock_id`.
 
-Floating-point seconds MUST NOT be the canonical representation. Seconds MAY be derived, and are defined from the session's time origin. A consumer lacking that origin MUST refuse to derive seconds rather than assume one.
+A session's **time origin** is a tick of its reference clock: the earliest observation-interval start among the session's clocks, each mapped onto the reference clock (§3.9). A writer declaring an origin MUST declare that one. A writer MUST NOT declare an origin for a session with no observation interval, and no checker verifies this. A writer unable to map one of the session's observation starts onto the reference clock MUST NOT declare an origin: an origin it could not compute shifts every second a consumer derives. Part 05 §5.3 states how a validator checks a declared origin.
 
-Where a writer cannot map one of its clocks' observation starts onto the reference, it MUST NOT declare a time origin. An origin it could not compute shifts every second a consumer derives.
+Floating-point seconds MUST NOT be the canonical representation. Seconds MAY be derived: a tick's seconds are its distance in ticks from the origin on the reference clock, divided by that clock's rational rate, and are negative for a tick before the origin. A consumer lacking an origin MUST refuse to derive seconds rather than assume one.
 
 A tick is a coordinate, not a label and not a quantity. A writer MUST NOT re-base a source's sample index: for a sample clock, tick 0 is sample 0.
 
@@ -664,7 +625,7 @@ Provenance is a source-file record, a processing-run record, and a link between 
 
 A measured quantity SHOULD declare its unit. A stored integer requiring conversion to physical units MUST declare the conversion.
 
-A unit is declared on the column, not left to the column's name.
+A quantity's unit is declared, not left to the quantity's name.
 
 ### 2.6 Currency
 
@@ -722,13 +683,13 @@ A consumer MAY walk from a probe to the hardware that acquired it, and MAY group
 
 Attachment names a device, and which place on that device a child occupied is a second fact. A device SHOULD declare the port, dock or slot of its parent it attached to, where a source states one. Where it declares none the coordinate is **unrecorded**, and a consumer MUST report it as such rather than parse it out of a name. Two devices sharing a parent and a port are not one device, and nothing declares that they are: the four bases of a quad-base probe occupy a single dock, so a port says where something was plugged in and not what it was.
 
-A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT create a second device row for one instrument. Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor.
+A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT record a second device for one instrument. Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor.
 
 A writer records both versions **verbatim** as the source stated them, and MUST NOT normalise, pad, or parse them into components. Neither is ordered: a consumer MAY compare two version strings for equality and MUST NOT compare them for precedence, because different manufacturers' schemes share none.
 
 Where an element of an acquisition chain reports its own versions, it is its own device. A value the source gives as unknown is recorded as the source gave it, which is distinct from a source that said nothing.
 
-This standard names no kinds of device, so a writer MUST record every instrument its source declares — a camera on the same terms as a headstage — and identity is the serial the source states. What a device row does not carry is where an instrument was pointed: a camera's target is a fact about the instrument that `core.devices` has no column for, and it stays in `metadata` until something has to read it.
+This standard names no kinds of device, so a writer MUST record every instrument its source declares — a camera on the same terms as a headstage — and identity is the serial the source states. A device does not record where an instrument was pointed: this standard defines no fact for a camera's target, and it stays in `metadata` until something has to read it.
 
 ### 3.6 Probe
 
@@ -750,7 +711,8 @@ One recording contact.
 A position of an electrode or unit in a declared frame.
 
 - MUST name a frame the packet declares (§3.24).
-- MUST carry one value per axis that frame declares, each on the axis it sits on.
+- MUST carry each of its values on an axis that frame declares, and MAY carry values on fewer axes
+  than the frame declares where its source states none on the rest.
 - MUST declare the **basis** of its claim:
 
 | basis | meaning |
@@ -761,15 +723,15 @@ A position of an electrode or unit in a declared frame.
 
 The vocabulary is open. A consumer that does not recognise a basis MUST NOT treat the coordinate as `measured`.
 
-A position is as many numbers as its frame has axes, so the values are one row per axis rather than a fixed three. Each value's unit is the axis's, and its meaning is what the axis says it holds.
+A position is as many numbers as its frame has axes rather than a fixed three, each a value Part 02 §12.7 represents. Each value's unit is the axis's, and its meaning is what the axis says it holds.
 
 A coordinate MAY carry an atlas annotation: the structure the position falls in, as an identifier and a label. An electrode is not in a region; a position is, so the annotation belongs to the coordinate rather than to the contact.
 
-Where the identifier is present the label SHOULD be too, so a consumer without the atlas can still read the annotation. A table MUST NOT carry a structure's full name or its ancestry path as columns: both are derivable from the identifier, and an ancestry path is a list, which Part 02 §5.2 forbids in a delimited string.
+Where the identifier is present the label SHOULD be too, so a consumer without the atlas can still read the annotation. Part 02 §12.8 limits what a registry document declares for it.
 
 A validator MUST NOT treat an absent annotation as a finding. Where a position falls outside any declared structure, or no registration covered it, the packet records a fact about the session.
 
-A coordinate SHOULD name the processing run that produced it where the writer knows it. That is provenance — which run produced the row that is there — and not a choice between rows.
+A coordinate SHOULD name the processing run that produced it where the writer knows it. That is provenance — which run produced the coordinate — and not a choice between coordinates.
 
 <a id="ew-clock-concept" data-spec-anchor="canonical"></a>
 ### 3.9 Clock
@@ -792,9 +754,6 @@ Where a wall-clock binding is derived rather than declared, the tick it is ancho
 in the same epoch as the instant it is paired with — a binding computed across a reset
 describes neither clock.
 
-An importer MUST examine a source in acquisition order and MUST NOT assume monotonicity. A reset is
-visible only in the order the samples arrived; sorting first hides it.
-
 A tick's zero is where the clock's declared origin says it is — for a sample clock whose origin is
 sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a source's sample
 index and a consumer MUST NOT assume any base beyond what the origin declares; that
@@ -804,7 +763,7 @@ Alignment beyond the terminal anchors is defined only while the estimator's erro
 
 A writer reaching past one median anchor interval MUST measure its error; no checker verifies that it did. Part 02 §12.6 owns what the writer records of the tolerance and the measurement.
 
-A consumer MUST **report** ticks it cannot map rather than omitting them, so a converted table has the same row count as its source with nulls where the mapping is undefined. A row that vanishes in conversion is indistinguishable from one that was never there. It MUST record how many rows it dropped for falling outside the bound **even when that count is zero**: silence is what lets a reader and a writer disagree about which rows exist.
+A consumer MUST **report** ticks it cannot map rather than omitting them, so a conversion returns a result for every tick it is given, marked undefined where the mapping is. A tick that vanishes in conversion is indistinguishable from one that was never there. It MUST record how many ticks it dropped for falling outside the bound **even when that count is zero**: silence is what lets a reader and a writer disagree about which values exist.
 
 ### 3.10 Interval
 
@@ -837,10 +796,10 @@ The context a class of events was observed in: what produced them, on what clock
 event they are, and where anything further about them lives.
 
 - MUST declare an event type, from an open vocabulary, and the clock its events are timed on.
-- MAY name a device, a processing run, and a table specialising its events.
+- MAY name a device, a processing run, and a declaration specialising its events.
 
 A stream emits **one kind** of event, so a source emitting several on one channel is written as
-several streams. What a stream's events carry beyond a tick is that named table's to declare, not
+several streams. What a stream's events carry beyond a tick is that named declaration's to declare, not
 core's: how many marks an event has and of what type is a property of what produced it.
 
 <a id="ew-unit-concept" data-spec-anchor="canonical"></a>
@@ -883,9 +842,9 @@ An array asset holds **any** sampled quantity, whatever instrument produced it. 
 
 `semantic_type` is open. A value this standard does not define is a label and carries no contract, which is the honest state of affairs for a quantity whose meaning lives in the device rather than in the format.
 
-It is also **nullable**, and null is the ordinary case: a writer MUST NOT fill it where the row's declared facts already say what the asset holds. Requiring it is what made it a duplicate — a column carrying no contract that every row must fill is one a writer invents a value for, and `ElectricalSeries` stood on 22 of 25 arrays where the unit, the channel map and the dimensions already said voltage per channel over time. What remains is what the facts cannot express: which statistic of a waveform an array holds, or what a video shows, neither of which any other column carries.
+It is also **optional**, and absent is the ordinary case: a writer MUST NOT state it where the asset's other declared facts already say what it holds. A label that carries no contract and that every asset must state is one a writer invents a value for. What remains is what the facts cannot express: which statistic of a waveform an array holds, or what a video shows, neither of which any other fact carries.
 
-Which **band** of a signal an array holds is a separate question, answered by a column of its own: `wideband`, `ap` and `lfp` are reserved for the corresponding signal bands, the vocabulary is open, and an array not split into bands declares none. A band value is a conventional shorthand for a filter the packet does not record, so a consumer MUST NOT read it as a statement of the filter's corners, and MUST NOT infer a band from an asset's `semantic_type`, its device or its sampling rate — a signal can be decimated without being filtered and filtered without being decimated.
+Which **band** of a signal an array holds is a separate question, answered by a fact of its own: `wideband`, `ap` and `lfp` are reserved for the corresponding signal bands, the vocabulary is open, and an array not split into bands declares none. A band value is a conventional shorthand for a filter the packet does not record, so a consumer MUST NOT read it as a statement of the filter's corners, and MUST NOT infer a band from an asset's `semantic_type`, its device or its sampling rate — a signal can be decimated without being filtered and filtered without being decimated.
 
 An array asset SHOULD name the device that produced it, where the writer knows which one did. A
 consumer MAY then resolve any array to its instrument without knowing what kind of array it is,
@@ -896,25 +855,25 @@ Parts 03 and 04 own physical encoding, location, and packet binding.
 <a id="ew-media-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.18 Media asset
 
-An image or video with frame timing carried in tables.
+An image or video, and the timing of its frames.
 
 - MUST have a stable media asset ID.
-- SHOULD carry a frame table where synchronization matters.
+- SHOULD record each frame's timing where synchronization matters.
 
-A frame row is indexed by **presentation order**: row *n* describes the frame the asset presents nth, counting from 0. A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
+A frame is indexed by **presentation order**: index *n* is the frame the asset presents nth, counting from 0. A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
 
-The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing gets no row and no reserved index; what went missing is recorded in the columns that carry timing, not as a gap in the numbering.
+The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing is not recorded and reserves no index; what went missing is recorded in the frames' timing, not as a gap in the numbering.
 
 A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim. A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets or use it to measure elapsed time; what it locates is the frame inside the file.
 
-A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame a row describes, which is the exact route and assumes nothing about ordering.
+A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame it was recorded for, which is the exact route and assumes nothing about ordering.
 
 The asset declares the **rate** those timestamps count at, as an exact rational — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have.
 
 A media asset SHOULD name the device that recorded it where its source states one, as an array
 asset does. Nothing else separates two such assets: a behaviour video and a movie from a
 head-mounted microscope may both be written by a camera, and `semantic_type` and the asset's name
-are labels rather than references. Where the source states no device the column is null, and a
+are labels rather than references. Where the source states no device, none is recorded, and a
 consumer MUST report the instrument as unrecorded rather than read one out of the asset's name.
 Parts 02–04 own its declaration, physical encoding, location, and packet binding.
 
@@ -944,11 +903,11 @@ What someone measured about an instrument so that its numbers can be interpreted
 - SHOULD declare when it was measured, where the source states one.
 - MAY name the devices it covers, carry the points of its curve, or name the array holding it.
 
-A calibration is a standing property of an instrument rather than an activity of this packet, so a session reports it as **in force** rather than as having happened, and it is not a Processing run. Both packaged sessions cite water calibrations measured 133 and 302 days before the recording, one of them by two sessions six months apart.
+A calibration is a standing property of an instrument rather than an activity of this packet, so a session reports it as **in force** rather than as having happened, and it is not a Processing run.
 
-One calibration covers many devices — six manipulator modules cite one file and one timestamp between them — so which devices it covers is recorded per device and not as a property of the calibration.
+One calibration may cover many devices, so which devices it covers is recorded per device and not as a property of the calibration.
 
-A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made. A calibration with no recorded content is still a calibration, and a consumer MUST read such a row as **unrecorded** rather than as absent. A source stating that no calibration was performed gets no row: the absence of a calibration is not a calibration.
+A source states a calibration in at least four ways: as a curve, as an array, as a date and nothing else, and as an assertion that none was made. A calibration with no recorded content is still a calibration, and a consumer MUST read such a calibration as **unrecorded** rather than as absent. A source stating that no calibration was performed records none: the absence of a calibration is not a calibration.
 
 <a id="ew-coordinate-frame-concept" data-spec-anchor="canonical"></a>
 ### 3.24 Coordinate frame
@@ -956,11 +915,12 @@ A source states a calibration in at least four ways: as a curve, as an array, as
 The space a coordinate is a position in, together with its axes.
 
 - MUST have a name, which is the session's own name for that space.
-- MUST declare one row per axis it has, each carrying the source's own name for what that axis holds.
+- MUST declare each axis it has, each carrying the source's own name for what that axis holds;
+  Part 02 §12.7 represents them.
 - MAY name the published atlas the space is, and the version of that atlas.
 - MAY declare which way an axis's values increase, and MUST leave that undeclared where the source does not state it.
 
-A frame has as many axes as it has: two for a shank, five for a rendering space. Three was what the column names `x_um`, `y_um` and `z_um` claimed, and of the two packaged sessions' 27,557 coordinate rows, 8,448 are shank positions that leave the third empty.
+A frame has as many axes as it has: two for a shank, five for a rendering space.
 
 An axis's name is the source's word for the field its values came from, carried verbatim — `ccf_ml` where the source's electrodes table has a column of that name. It records where the value came from and not what the quantity is conventionally taken to be, so a consumer needing to know which way an axis runs, where no direction is declared, MUST report the coordinate unusable for that purpose rather than assume a convention.
 
@@ -1363,7 +1323,7 @@ A table that merely carries or references an assigned identifier MUST NOT declar
 `*_name` column. A carried identifier likewise gets no corresponding name column: its value is
 already the source's own identity.
 
-An assigned identifier's `*_name` MUST be unique within its packet — the 16 name columns in core and analysis that pair with one, not the 6 that name a kind of thing and are expected to repeat, such as `core.sorting_runs.sorter_name`. `registry/check.py` sorts them and requires the second kind to be declared. No rule can check it: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct case where four streams naming one serial become one device. The obligation falls on whatever composes the name.
+An assigned identifier's `*_name` MUST be unique within its packet. A name column pairing with no assigned identifier names a kind of thing, such as `core.sorting_runs.sorter_name`, and is expected to repeat. The registry-document contract checks the pairing as `registry.identity.name`. No rule can check uniqueness: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct case where four streams naming one serial become one device. The obligation falls on whatever composes the name.
 
 <a id="ew-discriminator-semantics" data-spec-anchor="canonical"></a>
 ### 8.3 Discriminator
@@ -1397,9 +1357,8 @@ both or neither. A row declaring neither is **undeterminable**, which a
 consumer MUST report apart from a row whose value resolves to nothing: the fix for one is to record
 the missing half, and for the other to correct what it names.
 
-**How it resolves.** A reader SHOULD offer the resolution: read the kind, take that resource's key
-from the registry, join. A discriminator nothing reads is a free-form name with extra steps, which
-is the observed fate of the mechanism this one replaces. Three shapes exist:
+**How it resolves.** Resolution reads the kind, takes that resource's key from the registry, and
+joins; Part 05 §13.4 has a reader offer it. Three shapes exist:
 
 - **Shared key.** The discriminated row and the named resource share a key, so the join is on that
   key. A resource a shared-key discriminator may name MUST declare a reference back to the
@@ -1490,15 +1449,15 @@ A column named `metadata` MUST be an optional `json_string` data column with thi
 description: “What the source stated about this row that the standard does not model, carried in
 the source's own vocabulary and read by no rule.”
 
-A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise. An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Seventeen core tables fall in the first band and three in the second. Both bounds are decidable from the registry with no packet in hand, and `registry/check.py` enforces both against core and against every extension.
+A table's registry entry MUST declare `metadata` where its primary key includes an `identifier` column that is not part of a declared reference, MUST NOT declare one where every key column is part of a declared reference, and MAY declare one otherwise. An identifier of the table's own is what makes a row a thing rather than a statement about other things; a key made entirely of other tables' identifiers makes it a relationship, and nothing can be said about a relationship that is not a fact about one of its ends. Both bounds are decidable from the registry with no packet in hand, and the registry-document contract checks them as `registry.metadata.eligibility` against core and against every extension.
 
-A validator SHOULD report, at `info`, a declared `metadata` column that no row of the packet fills. Where the key neither requires the column nor forbids it, declaring one is a judgement, and this is the evidence against which it is revisited: `core.spike_events` carried the column on 286,896,563 rows that no adapter ever filled.
+Where the key neither requires the column nor forbids it, declaring one is a judgement, and Part 05 §5.3's report of an unfilled `metadata` column is the evidence against which it is revisited.
 
-A writer MAY fill `metadata` on every row of a table that declares it. Parquet reads the columns a query projects and no others, so the column costs a consumer who does not ask for it 1.9 kB of extra footer over 5,000,000 rows, and one who does 394.6 ms against 29.6 ms.
+A writer MAY fill `metadata` on every row of a table that declares it. Parquet reads the columns a query projects and no others, so a consumer who does not project the column does not read it.
 
 A writer MUST NOT emit a `metadata` key holding a fact that a column of the logical schema holds, unless the duplication buys access that is otherwise unavailable, and MUST NOT emit one that contradicts such a column under any circumstance. The same otherwise-unavailable-access exception applies throughout the schema, so the bag is exactly as strict as the schema around it; a contradiction takes no exception, since it buys nothing by definition. A fact required to interpret the data belongs in a column, never in a key.
 
-No rule checks either half and none is added. The content is schemaless by design, so a constraint on it is unenforceable in principle rather than merely in practice, and an adapter names a key in the source's vocabulary where core names a column in its own — across both packaged sessions, zero of the 20 distinct keys share a name with any column in the registry. The obligation binds the writer, which is the only party that knows what it put in the bag.
+No rule checks either half and none is added. The content is schemaless by design, so a constraint on it is unenforceable in principle rather than merely in practice, and an adapter names a key in the source's vocabulary where core names a column in its own. The obligation binds the writer, which is the only party that knows what it put in the bag.
 
 A writer SHOULD put prose in a prose column where the table has one, and not in `metadata`. A human-readable string has no structure to preserve, so a JSON envelope costs a serialisation, puts the value where no rule reads it and no filter uses it, and buys none of the otherwise-unavailable access the exception above requires.
 
@@ -1589,7 +1548,7 @@ A value MAY be reserved only where it is read **whole**: where a consumer compar
 An `open` column MUST carry a nonempty description stating the form its values take. A string data
 column with an open or closed vocabulary MAY declare `authority`, a nonempty array whose entries
 each carry a human-readable `name` and an absolute `uri` as RFC 3986
-([Part 00 §10](00_architecture.md#ew-normative-references)) defines one. No URI may occur twice in one
+([Part 00 §9](00_architecture.md#ew-normative-references)) defines one. No URI may occur twice in one
 array. An authority URI is identity rather than a fetch instruction: a validator MUST NOT
 dereference one when checking a registry or a packet, and MUST NOT reject a value for being absent
 from its column's authority. Neither this rule nor the `open` row above covers a unit column's value
@@ -1839,7 +1798,7 @@ not say which mode produced it cannot be compared with the other.
 <a id="ew-tier-2-exclusions" data-spec-anchor="canonical"></a>
 ### 10.3 What is not a rule
 
-A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. A query cannot observe them, so a storage-layer check written as SQL fails silently rather than loudly. These are checked by the shim of Part 05 §5.3.
+A Tier 2 rule MUST NOT express physical order, file presence, Parquet types, Zarr rank and codecs, or checksums. These are checked by the shim of Part 05 §5.3.
 
 <a id="ew-core-resource-index" data-spec-anchor="canonical"></a>
 ## 11. Core resource index
@@ -2041,9 +2000,16 @@ A frame declares one row of `core.coordinate_frame_axes` per axis it has, and tw
 
 A coordinate's values reference the axis rows of their own frame on `(session_id, coordinate_frame, axis_index)`, so a value on an axis the frame never declared is an orphan Tier 1 reports, and a frame's axis count cannot disagree with the shape of its coordinates.
 
-A coordinate MAY carry values on fewer axes than its frame declares, where its source states none on the rest, and a consumer MUST NOT read an absent axis row as a zero: it is a position the source did not state on that axis. That is what a null in the struck `x_um`, `y_um` and `z_um` said, in the form the child table has.
+A coordinate MAY carry values on fewer axes than its frame declares, where its source states none on the rest, and a consumer MUST NOT read an absent axis row as a zero: it is a position the source did not state on that axis.
 
 `axis_value` declares `unit_from` of `core.coordinate_frame_axes.unit`, resolved one hop through that reference (§8.4): the unit is the axis's, so a frame stated in millimetres needs no second set of columns and no column name carries a unit.
+
+<a id="ew-coordinate-atlas-annotation" data-spec-anchor="canonical"></a>
+### 12.8 A coordinate's atlas annotation
+
+A registry document MUST NOT declare a column holding an atlas structure's full name or its
+ancestry path: both derive from the structure's identifier, and an ancestry path is a list, which
+§5.2 forbids in a delimited string. No checker verifies this. Part 01 §3.8 defines the annotation.
 
 <a id="ew-logical-schema-normative-references" data-spec-anchor="canonical"></a>
 ## 13. Normative references
@@ -2095,7 +2061,7 @@ MAY cache that result and MUST NOT revalidate an unchanged bundled descriptor fo
 The portable physical profile defined by this part is identified by
 `escapewheel-portable-v0.1`.
 Its requirements directly invoke the shared JSON, URI, JSON Schema, Parquet, and RFC 1952
-authorities identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the
+authorities identified in [Part 00 §9](00_architecture.md#ew-normative-references) and the
 portable-profile authorities identified in [Part 03 §12](#ew-portable-profile-normative-references).
 The application columns in those sections state their extent. The `digest` field belongs to
 [Part 04 §4.1](04_packet_catalog.md#ew-packet-resource-entry-fields), and its functions, a prefix's
@@ -2171,7 +2137,7 @@ The manifest MUST record the actual layout. A reader MUST resolve resources thro
 <a id="ew-portable-forbidden-files" data-spec-anchor="canonical"></a>
 ### 3.2 Files that MUST NOT be written
 
-`schemas/semantic_version.txt` is struck. It restated `semantic_standard_version`, which the manifest is required to carry, and so bought no otherwise-available access.
+A writer MUST NOT write `schemas/semantic_version.txt`, which would restate `semantic_standard_version`, a field the manifest is required to carry. No checker verifies this.
 
 <a id="ew-portable-bound-registries" data-spec-anchor="canonical"></a>
 ### 3.3 Bound registries
@@ -2186,7 +2152,7 @@ ignore them.
 A conforming packet MUST contain every bound registry. A writer MUST NOT bind a registry by remote
 location or omit the stored copy, and a reader or validator MUST NOT resolve a bound registry from
 anywhere else. A descriptor's `path` names a file for the immutability, amendment, and cleanup rules
-of §§8.1, 9.1, and 9.5.
+of §8.1 and [Part 05 §15](05_validation_and_import.md#ew-packet-amendment).
 
 <a id="ew-staging-area" data-spec-anchor="canonical"></a>
 ### 3.4 The staging area
@@ -2195,7 +2161,8 @@ In this profile a build's staging area ([Part 05 §2](05_validation_and_import.m
 is the directory `staging/` directly under the packet root, and a writer MUST stage an import or an
 amendment there and nowhere else under the packet root. Under the packet root, promotion moves a
 staged resource to its final path by a rename within one filesystem; the fixed name lets a writer
-and a cleanup tell a staging area from a directory this specification does not govern (§9.5).
+and a cleanup tell a staging area from a directory this specification does not govern
+([Part 05 §15.5](05_validation_and_import.md#ew-packet-cleanup)).
 
 <a id="ew-portable-uri-rules" data-spec-anchor="canonical"></a>
 ## 4. URI rules
@@ -2476,94 +2443,23 @@ This promise is what allows an amendment to skip revalidating untouched files, s
 This specification promises nothing about bytes the packet does not own. What a packet records about an external resource is what was true when it was checked, not a claim about now.
 
 <a id="ew-portable-amendment" data-spec-anchor="canonical"></a>
-## 9. Amendment, versioning, and retention
+## 9. Amendment and retention
 
-<a id="ew-amendment-definition" data-spec-anchor="canonical"></a>
-### 9.1 What an amendment is
+[Part 05 §15](05_validation_and_import.md#ew-packet-amendment) states what an amendment is and may
+change, what it retains, what it revalidates, and how cleanup proceeds. This section is how this
+profile realizes an amendment, as Part 00 §7.3 requires of a profile.
 
-An **amendment** produces a new version of an existing packet and MUST NOT modify any file the superseded manifest names. A table that gains rows is written as a **new file**, and the amended manifest names the new file; no byte of the old one changes. Immutability is thereby a property of files, and a resource's *content* may be superseded by naming different bytes.
+A resource that gains rows, a provenance table included, is written as a **new file** that the
+amended manifest names; no byte of the old one changes. Immutability is thereby a property of
+files, and a resource's *content* may be superseded by naming different bytes.
 
-An amendment MUST set a `packet_version` that sorts strictly after the superseded one, compared as a semantic version.
-
-<a id="ew-amendment-scope" data-spec-anchor="canonical"></a>
-### 9.2 What an amendment may and may not do
-
-| | |
-|---|---|
-| Add an analysis resource | MAY |
-| Add rows to a provenance table (`core.processing_runs`, `core.source_files`, `core.processing_run_inputs`), as a new file | MAY |
-| Remove an analysis resource | MAY — Part 06 makes them disposable |
-| Add a core resource | MAY |
-| Change the content of a core resource other than the provenance tables | MUST NOT |
-| Remove a core resource | MUST NOT |
-| Change `packet_id`, `profile_id`, or the standard versions | MUST NOT |
-
-The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A packet whose core data was wrong is a new packet, not a new version of an old one, because anything already derived from the old core is silently invalidated and nothing in the format can detect that.
-
-Provenance tables are the exception because they are append-only by nature — a row records that something ran, and a later run does not change what an earlier one did.
-
-<a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
-### 9.3 The manifest
-
-Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file an old version named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own validation record; an amendment MUST NOT rewrite either.
-
-Where an amendment binds a different registry document, the packet retains the superseded copy at
-the path the superseded manifest records. A writer MUST refuse an amendment that would bind,
-anywhere in the packet's current and retained manifests, two different digests under the same
-registry ID and version, because that version would then be ambiguous within one packet.
-
-<a id="ew-incremental-revalidation" data-spec-anchor="canonical"></a>
-### 9.4 Scope of revalidation
-
-An amendment MUST validate the whole packet, not only what it added. What is bounded is the
-*work*, not the verdict: the resources an amendment did not write are immutable, so their
-verdict is determined rather than assumed, and re-establishing it costs nothing.
-
-A writer performing an amendment MUST establish the physical order of the resources it writes, and a validator MUST NOT
-require it to re-establish that order for any other packet-owned resource.
-
-A validator MUST derive a complete input set from the layer that owns each check. A generated
-Tier 1 check takes its inputs from the registry declarations that generated it: the attached
-resource, both ends of a foreign key, and every specialization or discriminator branch it reads.
-A Tier 2 check takes its inputs from the parsed base-resource set Part 11 §3 requires static
-validation to return. A Part 05 shim check declares its inputs explicitly.
-
-A validator MUST re-run a check when it is attached to a resource the amendment writes or any
-member of its input set was written. A Tier 2 dependency MUST NOT be inferred by searching query
-text: an alias, common table expression, literal, or comment that resembles a resource does not
-create one. The session-inventory shim declares the packet manifest and `core.sessions`; installing
-a manifest writes the manifest input for this purpose. A shim without a complete declaration MUST
-run rather than be skipped.
-
-A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name inside
-a string literal or a comment re-runs a check that did not need it, which costs time; failing to
-match one costs correctness. A validator that cannot show an input is immutable MUST run the
-check: skipping a check whose inputs *could* have changed stays forbidden.
-
-<a id="ew-packet-cleanup" data-spec-anchor="canonical"></a>
-### 9.5 Cleanup
-
-Cleanup is a separate operation and MUST proceed orphans first, superseded manifests second. Expiring a manifest first would make an orphan indistinguishable from a stray, permanently.
+Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file
+an old version named from a file nothing ever named. A packet never amended retains nothing and
+carries no `manifests/` directory at all, so the common case costs nothing.
 
 A **stray** is a file under the packet root that no manifest ever named, that lies outside the
 staging area (§3.4), and that neither is listed by nor lies inside a directory listed by a promotion
 record whose `packet_version` is unpublished ([Part 05 §6](05_validation_and_import.md#ew-import-commit)).
-A writer MUST NOT remove a stray. A packet may carry files this specification does not govern, and
-cleanup that deletes the ungoverned is a data-loss bug wearing an operation's name. The operation
-reports by default and acts only when asked.
-
-An amendment **MUST NOT** delete anything as part of amending, other than a staging area as
-[Part 05 §2](05_validation_and_import.md#ew-import-pipeline) permits and the paths Part 05 §6 lets it
-remove when it acts on a promotion record. A file that no manifest version names any longer MAY be
-deleted, but by cleanup, as a separate operation — which is what keeps an amendment's failure from
-having removed something.
-
-A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is expired only when both permit it — and both default to one kept version and no age limit, because a packet is archival where a table is operational. A packet never amended retains nothing and carries no `manifests/` directory at all, so the common case costs nothing.
-
-<a id="ew-packet-version-scope" data-spec-anchor="canonical"></a>
-### 9.6 What a version is not
-
-`packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's rows under a future lakehouse profile.
 
 <a id="ew-owned-resource-digests" data-spec-anchor="canonical"></a>
 ## 10. Checksums
@@ -2646,7 +2542,7 @@ incorporated schema makes the specification candidate internally inconsistent. T
 §§3, 4.1, 8, and 9 are informative projections of the schema.
 
 Its requirements directly invoke the shared JSON, URI, JSON Schema, and RFC 1952 authorities
-identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the SHA-256, CRC64NVME,
+identified in [Part 00 §9](00_architecture.md#ew-normative-references) and the SHA-256, CRC64NVME,
 and CRC32C authorities identified in [Part 04 §11](#ew-packet-catalog-normative-references). The
 application columns in those sections state their extent.
 
@@ -2672,7 +2568,7 @@ The manifest records the semantic-standard identifier owned by Part 01, the logi
 identifier owned by Part 02, the bound registries of §8, and the physical-profile identifier owned
 by Part 03. The fields below record those identifiers; they do not redefine their values or
 meaning. Every object the incorporated schema declares is closed, so a manifest MUST NOT carry a
-member the schema does not declare. Part 03 §9.5 owns the meaning of `retention`.
+member the schema does not declare. [Part 05 §15.5](05_validation_and_import.md#ew-packet-cleanup) owns the meaning of `retention`.
 
 <!-- BEGIN GENERATED MANIFEST FIELDS: manifest -->
 | member | JSON type | required | constraint |
@@ -2746,7 +2642,7 @@ it, its **algorithm**, which is one of:
 
 [Part 04 §11](#ew-packet-catalog-normative-references) identifies the editions of FIPS 180-4, the
 NVM Command Set Specification, RFC 9260, and RFC 8785, and
-[Part 00 §10](00_architecture.md#ew-normative-references) that of RFC 1952.
+[Part 00 §9](00_architecture.md#ew-normative-references) that of RFC 1952.
 
 A single object's digest value is the function of the object's bytes, written as lowercase
 hexadecimal of exactly the width above, most significant digit first. For a CRC, the digits are the
@@ -2825,11 +2721,6 @@ either route. Level 3b remains the comparison of recorded store digests (§5.4).
 When an external resource is unavailable, its physical version, codec pipeline, compression,
 encoding, dtype, shape, and chunking are unassessed; a validator MUST NOT infer them from its URI,
 the packet, an adapter claim, or a stand-in.
-
-Opening the manifest, resolving declarations, listing resources, and selecting a session MUST NOT
-require a validation receipt or physical inspection of every resource. Before exposing logical
-values, a reader inspects only the metadata needed for the selected resource and fails that
-resource specifically when support is absent.
 
 <a id="ew-prefix-resources" data-spec-anchor="canonical"></a>
 ### 5.4 Prefix resources
@@ -3070,19 +2961,31 @@ The application column states the extent to which this part invokes each externa
 
 Normative.
 
-<a id="ew-import-validation-principle" data-spec-anchor="canonical"></a>
-## 1. Core principle
+<a id="ew-validation-import-scope" data-spec-anchor="canonical"></a>
+## 1. Scope
 
-**Validation is importation.** Copying bytes into a packet directory is staging, not import.
+This part binds all four actors of [Part 00 §2.4](00_architecture.md#ew-specification-actors). Its
+sections bind each as follows:
 
-A resource is imported when a build has staged it, validated it with the whole staged packet,
-promoted it, and published a manifest naming it, in the order §2 states.
+| actor | sections |
+|---|---|
+| a writer, for each build it performs and each adapter it ships | §§2–4, 6–8, 9.2, 9.3, 11, 12, 14.4 and 15 |
+| a validator | §§5, 9, 10, 14.5 and 15.4 |
+| a reader | §§13 and 14.3 |
+| a consumer | §12 |
 
-A staged resource MUST NOT appear in the committed manifest. Validation state does not change the
-content class or canonicality selected by its declaration; publication is the gate.
+§3 also constrains a recipe, §6 what a reader observes of a commit, §12 a packet, and §§14.1, 14.2
+and 14.6 every implementation. §10 defines the two conformance claims.
 
+<a id="ew-import-validation-principle" data-spec-anchor="alias"></a>
 <a id="ew-import-pipeline" data-spec-anchor="canonical"></a>
 ## 2. Pipeline
+
+**Validation is importation.** Copying bytes into a packet directory is staging, not import. A
+resource is imported when a build has staged it, validated it with the whole staged packet,
+promoted it, and published a manifest naming it, in the order this section states. A staged
+resource MUST NOT appear in the committed manifest. Validation state does not change the content
+class or canonicality selected by its declaration; publication is the gate.
 
 A build MUST perform these steps in this order:
 
@@ -3205,7 +3108,7 @@ A preference MUST NOT name a resource only one source produces. Such an entry ar
 
 Every source adapter MUST declare the set of resource identifiers it can supply. It is static: a property of the adapter, readable with nothing open, and distinct from what a particular source root happens to hold.
 
-An adapter declares six such facts, all read before any source is opened: the resources it can supply; those of them whose rows it supplies only in part, such as the clocks of its own streams; the recipe fields it can state (§3.6); the values a build must supply it (Part 12 §4); the options it reads and can run without, and the one term it may accept, `source_cache` (Part 12 §4); and the kinds whose output it reads, which is what orders a build. An adapter a build cannot import publishes them as the declaration document Part 12 §7 specifies, where they are `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`; what an implementation calls them in code is Part 07 §4's.
+An adapter's static declarations, all read before any source is opened, are those Part 12 §7 specifies: among them the resources it can supply, those whose rows it supplies only in part, and the recipe fields it can state (§3.6). The kinds whose output an adapter reads order a build.
 
 A build MUST read a source entry that declares no `owns` as follows. Of the resources its adapter declares it can supply, leaving out any another entry declares under `owns` and any a preference gives to another source, the entry contributes those its adapter supplies only in part and owns the rest. It also contributes every resource its own `contributes` names, and owns none of those. An entry that declares `owns` owns exactly what it names and contributes what its `contributes` names. **A recipe states what it narrows; silence means the whole.**
 
@@ -3276,7 +3179,7 @@ A command that exits non-zero MUST fail the build, and a build MUST name the sou
 
 A recipe MUST carry a command as an argument list, and a build MUST NOT derive one by splitting a string. A parse is a quoting convention the recipe never declared: POSIX rules applied on every host eat a backslash everywhere, so `C:\Python\python.exe` becomes `C:Pythonpython.exe` and fails as a missing executable rather than as a malformed command. A list needs no convention, because the host's own process interface takes one.
 
-Where the command is one a build reaches a source through (Part 12 §4), the build MUST write what it supplies that source to the command's standard input and MUST close the stream when it has, without waiting for the command to exit, and MUST read what the command produces while it writes. A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
+Where the command is one a build reaches a source through, the build supplies that source on its standard input as Part 12 §4 requires, without waiting for the command to exit, and MUST read what the command produces while it writes. A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
 
 A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards. Where the recipe puts rows on standard output (Part 12 §3), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one. Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
 
@@ -3331,18 +3234,20 @@ An interval is closed (01 §2.3). A writer MUST convert a source whose intervals
 
 An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
 
+A writer MUST examine a source in acquisition order and MUST NOT assume monotonicity. A reset is visible only in the order the samples arrived; sorting first hides it.
+
 <a id="ew-delivery-completeness" data-spec-anchor="canonical"></a>
 ### 4.4 When a source's delivery is complete
 
 What a build expects of a source is the set of resources it owns, settled from `owns` and what the adapter declares before any I/O (§3.4). A run succeeded when every resource in that set arrived and the process exited clean.
 
-A resource an adapter owns and has nothing for MUST arrive empty rather than not arriving (Part 12 §5). That is what makes the test usable: a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
+Part 12 §5 has a resource an adapter owns and has nothing for arrive empty, so a build reads a resource that did not arrive as the run having failed, and never as the source having had nothing to say.
 
 A non-zero exit is a failure whatever arrived. A build MUST report one as a failure even where every resource is present, because an adapter saying it failed is not overruled by its own output, and a command dying between two resources delivers the first one complete and valid.
 
 A build MUST report a delivery it cannot parse as a failure where the command exited zero, naming what was short. What no protocol catches is a short table from a run that exits zero: where an adapter declares a row count a build MUST check it, and an adapter that cannot know its size before it sends declares none, which a build MUST read as unknown rather than as zero.
 
-A build MUST report everything the protocol it used carries about a failure — standard error for `files-v0.1` and `stream-v0.1`, and the error's message together with its detail for `flight-v0.1`, where a failing adapter writes nothing to standard error because the diagnosis travels on the connection it was asked over. A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
+A build MUST report everything the protocol it used carries about a failure, on the channel Part 12 §3 gives that protocol. A build SHOULD try every resource it was waiting for and report every failure together rather than stopping at the first: the answer a person wants is which resources did not arrive, not which one did not arrive first.
 
 <a id="ew-import-validation" data-spec-anchor="canonical"></a>
 ## 5. Validate
@@ -3408,7 +3313,7 @@ the resource, the path under the packet root of the directory holding the names,
 packet is conformant: each name holds its own file under the packet root, and it fails only on a
 copy to a filesystem that folds case or normalization or that Windows governs. The finding concerns
 one resource, so [§9.5](#ew-verdict-composition) attributes it to the registry whose declaration the
-resource's entry names. §15 identifies the Unicode Standard, Version 15.0.0, as an exact reference
+resource's entry names. §16 identifies the Unicode Standard, Version 15.0.0, as an exact reference
 for canonical caseless matching.
 
 A validator MUST report each external resource whose interface declares a reader floor and whose
@@ -3437,6 +3342,27 @@ row, where those values are not all the same, at `info` under the check ID
 independently numbered identifiers can coincide, which is a fact about a packet rather than a
 defect in it. The finding concerns one resource, so [§9.5](#ew-verdict-composition) attributes it
 to the registry whose declaration the resource's entry names.
+
+A validator SHOULD report a declared `metadata` column that a table resource's file omits or leaves
+null in every row, at `info` under the check ID `<resource_id>.metadata_unfilled`. It MUST NOT
+report such a column at `error`. The finding concerns one resource, so
+[§9.5](#ew-verdict-composition) attributes it to the registry whose declaration the resource's
+entry names.
+
+A validator MUST check each session's declared time origin
+([Part 01 §2.2](01_semantic_standard.md#ew-time-basis)) by mapping each of the session's
+observation starts onto its reference clock, through the anchors or transform of every clock on the
+path from that start's clock to the reference, within the alignment bound
+[Part 02 §12.6](02_core_logical_schemas.md#ew-clock-alignment-record) records. It MUST report, at
+`error`:
+
+- under the check ID `time.origin_unmappable`, a session that declares an origin but no reference
+  clock, or whose observation start does not map; and
+- under the check ID `time.origin_not_earliest`, a declared origin more than one reference-clock
+  tick from the earliest mapped start.
+
+The tolerance is one tick because a writer's estimator may fit anchors the writer does not record.
+Both findings belong to the core registry under [§9.5](#ew-verdict-composition).
 
 <a id="ew-validation-extensions" data-spec-anchor="canonical"></a>
 ### 5.4 Extensions
@@ -3476,7 +3402,7 @@ directory the writer will create outside the staging area before it publishes, o
 manifest. For an import these are the promoted resource directories, the bound registries, the
 source resolution document, and any file publication writes before it installs the manifest; for
 an amendment, every file it writes and the superseded manifest it retains
-([Part 03 §9.3](03_portable_physical_profile.md#ew-superseded-manifest-retention)). A writer MUST
+([§15.3](#ew-superseded-manifest-retention)). A writer MUST
 refuse to promote where a path its record lists already exists, naming the path, and MUST NOT
 create outside the staging area a path its record neither lists nor places inside a listed
 directory. This specification does not fix the record's format.
@@ -3516,7 +3442,7 @@ Materialization is step 5 of §2: a build opens the staged packet, computes each
 from it, and writes the result to the staging area, so step 6 validates it with core before
 anything is promoted.
 
-Deriving into an already-committed packet is an amendment (03 §9.1), not part of an import.
+Deriving into an already-committed packet is an amendment (§15.1), not part of an import.
 
 ## 9. Reporting
 
@@ -3611,14 +3537,14 @@ registry is the data-driven route for a resource core does not define.
 
 **Packet conformance** is a property of the bytes. It is evaluated on a packet regardless of how the packet was produced, and it is what `validate` reports. Provenance is SHOULD within it: a packet carrying none is conforming.
 
-**Writer conformance** is a property of a process. A writer conforms when it satisfies this part, which includes recording provenance for the import activity and the inputs it read. A packet is not judged by it.
+**Writer conformance** is a property of a process. A writer conforms when it satisfies every obligation this part places on a writer, on a build it performs or on an adapter it ships, which includes recording provenance for the import activity and the inputs it read (§7), and meets §11's criteria. A packet is not judged by it.
 
 A validator MUST report packet conformance, and MUST NOT report a packet as non-conforming for an obligation that binds only a writer. Where it also checks writer obligations — a build-time run inside `import`, which has the process in hand — it MUST report the two separately, as it already does for core and extension verdicts.
 
 <a id="ew-writer-acceptance-criteria" data-spec-anchor="canonical"></a>
 ## 11. Minimum acceptance criteria
 
-A writer conforms when it:
+A conforming writer at least:
 
 1. refuses a recipe that cannot produce a valid packet, before opening any source;
 2. produces a packet that passes Tier 1, Tier 2, and the shim;
@@ -3707,6 +3633,14 @@ scalar type from the incorporated registry's declared logical type. It MUST NOT 
 an `_id` suffix or apply a logical-table identifier mapping to a catalog, manifest, vocabulary, or
 discriminator-scope name governed by another declaration.
 
+<a id="ew-reader-discriminator-resolution" data-spec-anchor="canonical"></a>
+### 13.4 Discriminator resolution
+
+A reader SHOULD offer a discriminator's resolution in the shape
+[Part 02 §8.3](02_core_logical_schemas.md#ew-discriminator-semantics) declares: read the kind, take
+that resource's key from the registry, and join. A discriminator nothing reads is a free-form name
+with extra steps, which is the observed fate of the mechanism it replaces.
+
 <a id="ew-registry-conformance-boundaries" data-spec-anchor="canonical"></a>
 
 ## 14. Registry-document conformance boundaries
@@ -3761,6 +3695,11 @@ An unusable declaration need not produce a result for a reader operation. Its lo
 partial-access behavior is not defined here, but ordinary analysis MUST NOT acquire a general
 validation-receipt prerequisite.
 
+A reader MUST NOT require a validation receipt or physical inspection of every resource to open a
+packet's manifest, resolve its declarations, list its resources or select a session. Before exposing
+a resource's logical values it inspects only the metadata that resource needs, and fails that
+resource alone where it lacks support.
+
 <a id="ew-registry-producer-boundary" data-spec-anchor="canonical"></a>
 
 ### 14.4 Producer and authoring reactions
@@ -3814,8 +3753,110 @@ identity. The result schema begins at version 0.1.0; this boundary and reporting
 itself change a registry meta-schema, core registry, extension registry, packet manifest, or their
 version identifiers.
 
+<a id="ew-packet-amendment" data-spec-anchor="canonical"></a>
+## 15. Amendment
+
+An amendment publishes a new version of an existing packet. This section binds under every profile.
+[Part 00 §7.3](00_architecture.md#ew-later-physical-profiles) has each profile say how it realizes
+an amendment, and [Part 03 §9](03_portable_physical_profile.md#ew-portable-amendment) does so for
+the portable profile.
+
+<a id="ew-packet-version-scope" data-spec-anchor="alias"></a>
+<a id="ew-amendment-definition" data-spec-anchor="canonical"></a>
+### 15.1 What an amendment is
+
+An **amendment** produces a new version of an existing packet. A writer performing one MUST NOT
+modify the bytes of any resource a superseded manifest names, and MUST set a `packet_version` that
+sorts strictly after the superseded one, compared as a semantic version.
+
+`packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's
+rows.
+
+<a id="ew-amendment-scope" data-spec-anchor="canonical"></a>
+### 15.2 What an amendment may change
+
+A writer performing an amendment MAY make, and MUST NOT make, these changes:
+
+| | |
+|---|---|
+| Add an analysis resource | MAY |
+| Add rows to a provenance table (`core.processing_runs`, `core.source_files`, `core.processing_run_inputs`) | MAY |
+| Remove an analysis resource | MAY — Part 06 makes them disposable |
+| Add a core resource | MAY |
+| Change the content of a core resource other than the provenance tables | MUST NOT |
+| Remove a core resource | MUST NOT |
+| Change `packet_id`, `profile_id`, or the standard versions | MUST NOT |
+
+The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A
+packet whose core data was wrong is a new packet, not a new version of an old one, because anything
+already derived from the old core is silently invalidated and nothing in the format can detect that.
+
+Provenance tables are the exception because they are append-only by nature — a row records that
+something ran, and a later run does not change what an earlier one did.
+
+<a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
+### 15.3 Superseded manifests
+
+Every superseded manifest is retained, so a later cleanup can distinguish a file an old version
+named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own
+validation record, which a writer performing an amendment MUST NOT rewrite.
+
+Where an amendment binds a different registry document, the packet retains the superseded copy at
+the path the superseded manifest records. A writer MUST refuse an amendment that would bind,
+anywhere in the packet's current and retained manifests, two different digests under the same
+registry ID and version, because that version would then be ambiguous within one packet.
+
+<a id="ew-incremental-revalidation" data-spec-anchor="canonical"></a>
+### 15.4 Scope of revalidation
+
+A writer performing an amendment MUST validate the whole packet, not only what it added. What is
+bounded is the *work*, not the verdict: the resources an amendment did not write are immutable, so
+their verdict is determined rather than assumed, and re-establishing it costs nothing.
+
+A writer performing an amendment MUST establish the physical order of the resources it writes, and a
+validator MUST NOT require it to re-establish that order for any other packet-owned resource.
+
+A validator MUST derive a complete input set from the layer that owns each check. A generated
+Tier 1 check takes its inputs from the registry declarations that generated it: the attached
+resource, both ends of a foreign key, and every specialization or discriminator branch it reads.
+A Tier 2 check takes its inputs from the parsed base-resource set Part 11 §3 requires static
+validation to return. A §5.3 shim check declares its inputs explicitly.
+
+A validator MUST re-run a check when it is attached to a resource the amendment writes or any
+member of its input set was written. A Tier 2 dependency MUST NOT be inferred by searching query
+text: an alias, common table expression, literal, or comment that resembles a resource does not
+create one. The session-inventory shim declares the packet manifest and `core.sessions`; installing
+a manifest writes the manifest input for this purpose. A shim without a complete declaration MUST
+run rather than be skipped.
+
+A validator **MUST make that test over-inclusive where it is uncertain**. Matching a resource name
+inside a string literal or a comment re-runs a check that did not need it, which costs time; failing
+to match one costs correctness. A validator that cannot show an input is immutable MUST run the
+check: skipping a check whose inputs *could* have changed stays forbidden.
+
+<a id="ew-packet-cleanup" data-spec-anchor="canonical"></a>
+### 15.5 Cleanup
+
+Cleanup is a separate operation. A writer performing cleanup MUST remove orphans before superseded
+manifests: expiring a manifest first would make an orphan indistinguishable from a stray,
+permanently.
+
+A writer MUST NOT remove a stray, which the packet's profile defines. A packet may carry files this
+specification does not govern, and cleanup that deletes the ungoverned is a data-loss bug wearing an
+operation's name. The operation reports by default and acts only when asked.
+
+A writer performing an amendment **MUST NOT** delete anything as part of amending, other than a
+staging area as §2 permits and the paths §6 lets it remove when it acts on a promotion record. A
+file that no manifest version names any longer MAY be deleted, but by cleanup, as a separate
+operation — which is what keeps an amendment's failure from having removed something.
+
+A packet MAY declare its own retention, and a writer SHOULD emit one: how many superseded manifests
+to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is
+expired only when both permit it — and both default to one kept version and no age limit, because a
+packet is archival where a table is operational.
+
 <a id="ew-validation-normative-references" data-spec-anchor="canonical"></a>
-## 15. Normative references
+## 16. Normative references
 
 The application column states the extent to which this part invokes each external authority:
 
@@ -3863,14 +3904,14 @@ it belongs to is decided by Part 09 §3's test, not by this rule.
 
 Arithmetic does not earn it. Where the computation is cheap against data already held, a view is the correct answer and a materialized copy is a maintenance liability.
 
-Measured on a real session, the arithmetic of aligning spikes to an event and a window costs 0.13 to 1.72 s against trains already in memory, while a materialized copy of four alignments comes to 100.6% of the spike table itself. A wide trial table is 708 rows in 7.5 ms.
+[Part 10 §6](10_performance_notes.md#ew-materialization-measurements) records what a materialized copy of aligned spikes costs, and [Part 07 §6](07_reference_implementation.md#ew-reference-performance-notes) what aligning them and returning a trial table as a view cost.
 
 The test is therefore: does materializing change the *shape* of access, or only pre-compute a cheap step?
 
 <a id="ew-analysis-spike-events" data-spec-anchor="canonical"></a>
 ## 4. `analysis.spike_events`
 
-Normative, except its measurement of a population window.
+Normative.
 
 Core keeps each spike on the clock of the probe that measured it, sorted unit-major. That layout answers "this unit's spikes" well and "every unit's spikes in this window" not at all, because a window across many clocks means nothing.
 
@@ -3892,7 +3933,7 @@ The bucket width cannot be recovered from the data, so it is a parameter of a re
 
 **A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and where it records the run, it MUST record the reason among the run's parameters as it does for omitted rows. A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
 
-*Informative.* Measured on one session, a ten-second population window costs 0.025 s here against 7.7 s over a ragged per-unit representation.
+[Part 10 §6](10_performance_notes.md#ew-materialization-measurements) records what a population window costs from this table.
 
 <a id="ew-analysis-materialization-provenance" data-spec-anchor="canonical"></a>
 ## 5. Provenance of a materialization
@@ -3904,22 +3945,8 @@ records one, the row's parameters MUST carry every transform parameter the outpu
 A singleton analysis catalog table and each analysis instance it catalogs are distinct packet
 resources, each recording its own declaration-selected lineage.
 
-<a id="ew-withdrawn-analysis-resources" data-spec-anchor="canonical"></a>
-## 6. Withdrawn resources
-
-Four resources proposed in v0.1 are withdrawn. They were specified before anything measured them:
-
-| resource | disposition |
-|---|---|
-| `analysis.spikes_by_trial` | withdrawn; a table per (event, window) pair, and the alignment is cheap |
-| `analysis.trials_wide` | withdrawn; 708 rows in 7.5 ms as a view |
-| `analysis.unit_condition_rates` | withdrawn; its columns are a task's shape, not a format's |
-| `analysis.good_units` | withdrawn; a filter, not a table |
-
-The columns those tables carried — `condition_id`, `stimulus_id`, `block_id` — describe a particular task rather than the format, and belong in an extension (Part 09).
-
 <a id="ew-analysis-views-and-materializations" data-spec-anchor="canonical"></a>
-## 7. Views versus materialized products
+## 6. Views versus materialized products
 
 Prefer a view where the query prunes and the result is small. Prefer a materialized product where
 the physical layout of core cannot serve the access pattern at all, which in practice means a
@@ -3927,7 +3954,7 @@ different sort order or a different clock. View and materialization are realizat
 kind, not kinds themselves.
 
 <a id="ew-analysis-promotion" data-spec-anchor="canonical"></a>
-## 8. Promotion into core
+## 7. Promotion into core
 
 Promotion changes the resource declaration's content class through an explicit revision of this
 specification or its owning extension registry. It is a schema decision, not an operational
@@ -3937,14 +3964,14 @@ Boolean or a validation-state transition.
 
 <!-- BEGIN 07_reference_implementation.md -->
 
-# Part 07 — Reference Implementation and Plan
+# Part 07 — Reference Implementation
 
 Informative.
 
 <a id="ew-reference-implementation-scope" data-spec-anchor="canonical"></a>
 ## 1. Scope
 
-This part describes the reference implementation's shape and the phase plan. Nothing here constrains a conforming implementation.
+This part describes the reference implementation's shape. Nothing here constrains a conforming implementation.
 
 ## 2. Distribution layout
 
@@ -3977,7 +4004,7 @@ escapewheel import <recipe> --check    every problem, before any I/O (05 §3.5)
 escapewheel import <recipe> --strict   refuse anything an adapter worked around
 escapewheel import <recipe>            steps 2 to 8 (05 §2)
 escapewheel verify <packet>            record what is true of external resources
-escapewheel prune <packet>             remove what the packet no longer names (03 §9.3)
+escapewheel prune <packet>             remove what the packet no longer names (05 §15.5)
 ```
 
 <a id="ew-reference-object-model" data-spec-anchor="canonical"></a>
@@ -4004,44 +4031,34 @@ An adapter that produces a dense array across a protocol writes it to the locati
 
 A build reports a `metadata` key whose value equals a column of the same row, which is how Part 02 §8.6's prohibition on restating a column reaches whoever wrote the bag. No rule can do it: the content is schemaless, and an adapter names a key in the source's vocabulary where core names a column in its own. The comparison is the same duplicate-value comparison used between two columns, applied to a key and a column; three keys in the packaged sessions restated a column.
 
-<a id="ew-reference-phases" data-spec-anchor="canonical"></a>
-## 5. Phases
-
-| phase | scope | state |
-|---|---|---|
-| 0 | hand-built fixture packet | complete |
-| 1 | manifest and table reader | complete |
-| 2 | validator | complete |
-| 3 | source importer and recipe | complete |
-| 4 | analysis materializations | complete; four of five resources withdrawn (06 §6) |
-| 5 | dense arrays | complete, owned and referenced |
-| 6 | release and version discipline | specified (03 §9); pruning implemented, amendment partial |
-| 7 | Iceberg profile experiment | not started |
-
 <a id="ew-reference-testing" data-spec-anchor="canonical"></a>
-## 6. Testing
+## 5. Testing
 
 A conformance corpus holds one conforming packet and a set of variants, each with its expected finding recorded as data rather than as a test body. The corpus runs against the reference validator rather than reimplementing the checks.
 
-Run it after changing the registry, the generator, or any rule.
-
 <a id="ew-reference-performance-notes" data-spec-anchor="canonical"></a>
-## 7. Performance notes
+## 6. Performance notes
 
-These are properties of the reference implementation, not requirements. A number that would change if this implementation were replaced belongs here; one that follows from Parquet, Zarr or an object store belongs to Part 10, and this section does not repeat it.
+These are properties of the reference implementation and the libraries it uses, not requirements. Part 10 carries what follows from Parquet, Zarr or an object store.
 
-- **Never convert a column to host objects inside a per-batch loop.** Every performance defect found in the reference writer has been this.
-- **Read a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
-- **Bound memory explicitly** where a job's working set is data-dependent, and give the SQL engine a spill directory: a memory limit without one bounds nothing.
-- **Do not measure every column's encoding at write time.** Writing each column three ways over a
+- **The reference writer converts no column to host objects inside a per-batch loop.** Every performance defect found in it has been one.
+- **It reads a large table in batches.** A 10⁸-row spike table decodes to many gigabytes if read whole.
+- **It bounds memory explicitly** where a job's working set is data-dependent, and gives its SQL engine a spill directory: a memory limit without one bounds nothing.
+- **It does not measure every column's encoding at write time.** Writing each column three ways over a
   65,536-row sample and keeping the smallest costs about **0.4 s** for a whole packet against a
   467 s build, so cost is not what refuses it: a measured choice records no reason for itself, and
   it differs between a `--sample` build and a full one. Counting each column instead, as
-  Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count
- .
-- **Project a constant rather than joining for it.** The reference reader adds session identity to a
+  Part 03 §5.5's rules do, costs 0.12 s to 0.20 s a packet and states its reason in the count.
+- **Its reader projects a constant rather than joining for it.** It adds session identity to a
   view as a scalar expression over `session_id`. An engine can prune a projection a query does not
   select; it generally cannot prune a join whose output might filter or duplicate rows.
+
+Part 06 §3's test weighs two costs of subject 776259's session of 6,781 units, which follow from the
+libraries measured (by 2026-09-01; versions not kept):
+
+- aligning all its units' spikes to one event and window costs **0.13 s to 1.72 s** with numpy, two
+  `searchsorted` calls per unit against trains already in memory; and
+- a wide trial table of **708 rows** returns in **7.5 ms** from DuckDB as a view.
 
 <!-- END 07_reference_implementation.md -->
 
@@ -4051,23 +4068,25 @@ These are properties of the reference implementation, not requirements. A number
 
 Informative. §1 and the results in §4 are measured on a real packet the reference implementation
 built from one AIND session. §§2–3 show a small packet the reference writer builds from the current
-registries: the conformance corpus's session, with one resource of each kind.
+registries: the conformance corpus's session, with one resource of each kind. Part 05 §10 defines
+when a packet conforms.
 
 <a id="ew-example-packet-shape" data-spec-anchor="canonical"></a>
 ## 1. Shape
 
-One ecephys session with behaviour, ten probes, and two extensions.
+One ecephys session with behaviour, ten probes, and two extensions, as the reference writer built it
+on 2026-09-26.
 
 | | |
 |---|---|
-| resources | 42 |
-| owned bytes | 482 MB |
-| referenced bytes | 4.25 GB, not copied |
+| resources | 58, 14 of them referenced |
+| owned bytes | 605 MB |
+| referenced bytes | 14.4 GB, not copied |
 | spikes | 131,396,535 |
 | units | 4,505 across 10 sorting runs |
-| build | 2 min 9 s |
+| build | 10 min 16 s |
 
-Two files are 99.3% of what the packet owns: `core.spike_events` at 232 MB and `analysis.spike_events` at 247 MB, which is 1.76 bytes per spike while carrying four identifiers, a tick, and a clock per row.
+Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `analysis.spike_events` at 246 MB. The first is 2.62 bytes per spike carrying two identifiers, a tick and an amplitude, and the amplitude is a third of it.
 
 <a id="ew-example-packet-layout" data-spec-anchor="canonical"></a>
 ## 2. Layout
@@ -4206,18 +4225,6 @@ SELECT count(*) FROM analysis_spike_events
 WHERE t_tick BETWEEN ? AND ?;
 ```
 
-<a id="ew-example-acceptance-checklist" data-spec-anchor="canonical"></a>
-## 5. Acceptance checklist
-
-A packet of this shape is conforming when:
-
-1. the manifest validates against the manifest schema;
-2. every declared resource exists at its URI, or is declared external;
-3. every packet-owned resource records a `digest`, and each holds;
-4. Tier 1 and Tier 2 produce no error;
-5. every table is in its declared physical order;
-6. each bound registry is present, matches its descriptor, and validates on its own terms.
-
 <!-- END 08_example_packet.md -->
 
 <!-- BEGIN 09_metadata_and_extensions.md -->
@@ -4317,7 +4324,7 @@ A writer MAY accept an extension that ships code — an adapter registered under
 <a id="ew-extension-delivery" data-spec-anchor="canonical"></a>
 ### 5.7 How an extension's document and rows reach a build
 
-An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet written under the `delivery_root` a build supplies (`files-v0.1`) is one way and remains the route every implementation supports; an extension MAY deliver over any protocol of the group its profile names (Part 12 §3), since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that. Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how.
+An extension delivers a registry document in the format of Part 02 and, per table it declares, rows. Parquet written under the `delivery_root` a build supplies (`files-v0.1`) is one way. A build supports every protocol of the group its profile names (Part 12 §3), and an extension MAY deliver over any of them, since what the requirement rests on is a dependency closure that must not become the writer's and the process boundary is what answers that. Where a raw source needs converting first, a recipe names a command: an argument list carried as a list and run in the source's own root, never a shell line (Part 05 §3.7), so an extension isolates its dependencies however it likes and a build states no opinion about how.
 
 An extension's registry document and Part 12 §7's declaration document are different things for different readers, and neither substitutes for the other: the first declares logical resources, while the second declares what the adapter carrying them produces, states, needs, and speaks.
 
@@ -4603,6 +4610,18 @@ unsupported.
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
 changing to show it. That is what Part 03 §6.4's per-version reader floor exists to state as a rule,
 and what this table exists to explain.
+
+<a id="ew-materialization-measurements" data-spec-anchor="canonical"></a>
+## 6. Materialization measurements
+
+Part 06 §§3 and 4 decide when an analysis resource is materialized. These readings follow from the
+data and its layout:
+
+- a materialized copy of four alignments of all 6,781 units' spikes of subject 776259's session is
+  **288,550,992 rows, 100.6%** of the spike table (by 2026-09-01; toolchain not kept); and
+- a ten-second window over all 4,505 units of subject 786867's session costs **0.025 s** from
+  `analysis.spike_events` against **7.719 s** from the source NWB's per-unit spike times
+  (2026-09-03; toolchain not kept).
 
 <!-- END 10_performance_notes.md -->
 
@@ -4900,7 +4919,7 @@ defines each of those members, and the entry's conditional shape, exactly as the
 makes the specification candidate internally inconsistent.
 
 Its requirements directly invoke the shared JSON, URI, JSON Schema, and Parquet authorities
-identified in [Part 00 §10](00_architecture.md#ew-normative-references) and the Arrow authorities
+identified in [Part 00 §9](00_architecture.md#ew-normative-references) and the Arrow authorities
 identified in [§11](#ew-adapter-interface-normative-references). The application columns in those
 sections state their extent.
 
@@ -4922,11 +4941,11 @@ An **adapter** here is code that reads one source, whether the reference impleme
 
 A profile names a **group** for each way rows cross a process boundary, and the protocols in it. `escapewheel-portable-v0.1` names one group, out of process, holding three:
 
-| protocol | rows cross as |
-|---|---|
-| `files-v0.1` | Parquet in `delivery_root`, one file per resource, named by its resource identifier with the suffix `.parquet` |
-| `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource |
-| `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource |
+| protocol | rows cross as | a failure's diagnosis travels on |
+|---|---|---|
+| `files-v0.1` | Parquet in `delivery_root`, one file per resource, named by its resource identifier with the suffix `.parquet` | standard error |
+| `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource | standard error |
+| `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource | the error's message and detail, on the connection the adapter was asked over; a failing adapter writes nothing to standard error |
 
 An adapter **released independently of a build** MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names. The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting such an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
 

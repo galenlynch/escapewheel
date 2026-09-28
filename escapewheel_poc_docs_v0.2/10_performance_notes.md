@@ -225,3 +225,15 @@ unsupported.
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
 changing to show it. That is what Part 03 §6.4's per-version reader floor exists to state as a rule,
 and what this table exists to explain.
+
+<a id="ew-materialization-measurements" data-spec-anchor="canonical"></a>
+## 6. Materialization measurements
+
+Part 06 §§3 and 4 decide when an analysis resource is materialized. These readings follow from the
+data and its layout:
+
+- a materialized copy of four alignments of all 6,781 units' spikes of subject 776259's session is
+  **288,550,992 rows, 100.6%** of the spike table (by 2026-09-01; toolchain not kept); and
+- a ten-second window over all 4,505 units of subject 786867's session costs **0.025 s** from
+  `analysis.spike_events` against **7.719 s** from the source NWB's per-unit spike times
+  (2026-09-03; toolchain not kept).

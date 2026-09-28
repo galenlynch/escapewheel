@@ -8,7 +8,7 @@ This document set describes a proof-of-principle portable data packet: a small s
 standard over commodity storage formats, whose packet mechanism confines no packet to a recording
 modality and whose core vocabulary targets extracellular electrophysiology.
 [Part 00 §1](00_architecture.md#ew-architecture-scope) defines its scope, and
-[Part 00 §9](00_architecture.md#ew-numbered-part-ownership) assigns the subject and status of
+[Part 00 §8](00_architecture.md#ew-numbered-part-ownership) assigns the subject and status of
 every numbered part.
 
 The design tests whether recorded data can be represented over commodity substrates:
@@ -33,7 +33,7 @@ resolution is defined by Parts 03 and 04, and extension independence by Part 09.
 ## 3. Numbered parts
 
 This table is an informative projection of
-[Part 00 §9](00_architecture.md#ew-numbered-part-ownership).
+[Part 00 §8](00_architecture.md#ew-numbered-part-ownership).
 
 | part | title | status |
 |---|---|---|
@@ -44,7 +44,7 @@ This table is an informative projection of
 | 04 | Packet manifest | normative |
 | 05 | Validation, import, and reader operations | normative |
 | 06 | Analysis layer | informative except §§2, 4, and 5, which are normative |
-| 07 | Reference implementation and plan | informative |
+| 07 | Reference implementation | informative |
 | 08 | Example packet | informative |
 | 09 | Metadata minimalism and extensions | normative |
 | 10 | Performance notes | informative |
@@ -80,7 +80,7 @@ Part 04 §§3 and 8 define the manifest fields that record these identifiers.
 - [Apache Iceberg table specification](https://iceberg.apache.org/spec/), for the deferred
   lakehouse profile discussed in Part 00.
 
-[Part 00 §10](00_architecture.md#ew-normative-references) defines normative-reference policy and
+[Part 00 §9](00_architecture.md#ew-normative-references) defines normative-reference policy and
 lists shared external authorities, among them RFC 1952, which the portable profile and the packet
 manifest both invoke, and Parquet, which the portable profile and its adapter interface both invoke.
 The Arrow authorities invoked by the adapter interface are in
