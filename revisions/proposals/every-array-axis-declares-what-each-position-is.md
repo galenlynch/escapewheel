@@ -180,8 +180,10 @@ together. R100 §2.2 added the second. Only their messages differ.
   record R20 §3's permission as superseded.** Silence then means nothing, so an omission is
   reported, and an axis no form can describe fails its build instead of shipping unlabelled; §2.2's
   defect would have surfaced as the missing unit coordinate table. An axis whose positions mean
-  only their order declares the numeric form with origin 0, step 1 and `coordinate_unit` `1`,
-  UCUM's dimensionless unit, which states that position *k* is *k* and needs no schema change. The
+  only their order declares the numeric form with step 1 and `coordinate_unit` `1`, UCUM's
+  dimensionless unit, and needs no schema change. Its origin is the number the source gives the
+  first position, so components a source calls 1 to 3 keep those numbers, and 0 where the source
+  numbers none. The
   rule cannot catch a wrong form declared on purpose, such as that form on an entity axis; it
   catches the omission, which is the failure observed. Affected: 3 axes in the two packets and 10
   fixture axes. **Preferred direction.**
