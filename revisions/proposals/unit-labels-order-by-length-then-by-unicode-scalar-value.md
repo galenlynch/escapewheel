@@ -119,7 +119,7 @@ rule language in the release.
 | order by Unicode scalar value alone | checked with Part 11 unchanged; renumbers 4,486 and 6,757 units within their runs, whose `unit_id` values then stop following the sorter's numbering |
 | order as numbers where every label of a run is a canonical decimal, and as text otherwise | Part 11 would need a pattern predicate and a guarded `CAST` that relies on `CASE` leaving its untaken branch unevaluated; a label longer than 38 digits overflows, and a second order still covers the rest |
 | order by length, then by Unicode scalar value, unchecked | no language change, and a requirement no rule verifies |
-| drop the label and require only run-major, curation-major numbering | numbers units as the build numbers any assigned identifier, but leaves a run's order to each writer where the draft `an-interval-is-numbered-by-its-packet` fixes a full order for intervals |
+| drop the label and require only run-major, curation-major numbering | numbers units as the build numbers any assigned identifier, but leaves a run's order to each writer where the draft `an-interval-is-numbered-by-its-packet` fixes an order for intervals |
 
 Part 11 §1 requires a changed language contract to take a new language ID. Two ways follow for the
 registries. Under the preferred direction every repository registry names the new language, and
@@ -132,9 +132,9 @@ only as `CHARACTER_LENGTH` with one argument; `LENGTH` stays outside the profile
 spelling. It returns `BIGINT`, as `COUNT` does, and a null argument gives null, which Part 11 orders
 last, so a null label follows every other in its run and ties among null labels admit either order.
 
-The interval draft breaks ties between intervals of one kind with equal bounds by Unicode scalar
-value alone. It is ordered before this change and cannot use the routine; neither packet has such
-a tie, so its order is left as drafted.
+The interval draft numbers intervals by session, kind and bounds, and admits either order for
+intervals of one kind with equal bounds, so no label enters it. The order proposed here is then the
+only label order Part 02 states.
 
 ## 5. Impact sketch
 
