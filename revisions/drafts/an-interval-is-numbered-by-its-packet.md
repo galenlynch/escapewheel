@@ -77,8 +77,8 @@ one clock; a source numbering each kind from zero gives 120 numbers to two inter
 ### 2.2 R81 resolved the same shape for units
 
 R81 §1.2 found a carried unit label recurring across sorting runs, and a unit's identity grown to
-four columns to keep it unique. R81 §2.1 made `unit_id` assigned and the whole key, which Part 02
-§12.1 now states, and a consumer relates a unit to its source through (`sorting_run_id`,
+four columns to keep it unique. R81 §2.1 made `unit_id` assigned and the whole key, which
+Part 02 §12.1 now states, and a consumer relates a unit to its source through (`sorting_run_id`,
 `local_unit_label`). The carried interval number recurs across kinds in the same way, and the key
 has grown `interval_kind` to keep it unique.
 
@@ -86,14 +86,14 @@ has grown `interval_kind` to keep it unique.
 
 Numbering each packet's intervals from zero by ascending (`session_id`, `interval_kind`,
 `start_tick`, `stop_tick`) reproduces every existing `interval_id`, 450 of 450 and 708 of 708. No
-two intervals of one kind in one session share both bounds in either packet, so the label that
-breaks such a tie decides nothing there.
+two intervals of one kind in one session share both bounds in either packet, so no tie arises
+there.
 
-Part 02 §12.1 numbers units by ascending `local_unit_label`, a string, and the reference writer
-compares it as a number. The two orders differ for 4,486 of 4,505 units in `ecephys_786867` and
-6,757 of 6,781 in `ecephys_776259`, since as a string `"10"` precedes `"2"`. The interval order
-compares a label only between intervals of one kind with equal bounds, where any fixed order
-serves, and Part 11 fixes one: ascending Unicode scalar value, with null after every value.
+The order uses no label. Part 02 §12.1 numbers units by ascending `local_unit_label`, a string, and
+the reference writer compares it as a number. The two orders differ for 4,486 of 4,505 units in
+`ecephys_786867` and 6,757 of 6,781 in `ecephys_776259`, since as a string `"10"` precedes `"2"`.
+An interval's bounds already order it, so a label could only break a tie between intervals of one
+kind with equal bounds, and neither packet holds one.
 
 ### 2.4 Three extension tables reference intervals through the composite key
 
@@ -119,7 +119,8 @@ Each packet's `core.intervals` was renumbered by §3.2's order, with its source 
 still names an interval. §3.2's rule and the revised `contains_its_trials` both pass the Part 11
 static check and return no rows. Swapping two identifiers draws 2 rows from §3.2's rule, a gap
 after the hundredth identifier draws 350 and 608, and moving one trial's start outside its block
-draws 1 from `contains_its_trials`. The 17 `vr_foraging.sites` rules pass the static check against
+draws 1 from `contains_its_trials`. Two trials with equal bounds draw no row from §3.2's rule
+whichever is numbered first. The 17 `vr_foraging.sites` rules pass the static check against
 the revised declarations.
 
 ### 2.6 Alternatives
@@ -131,6 +132,7 @@ the revised declarations.
 | add an assigned identifier beside the composite key | each row has two keys, and each reference picks one |
 | label a trial axis through `dynamic_foraging.trials` | a core axis names only core resources, and that table's key is composite too |
 | number by (`session_id`, `interval_kind`, `local_interval_label`), as Part 02 §12.1 orders units | the label is a string read two ways (§2.3), and a source numbering nothing leaves the order undefined |
+| break ties between equal bounds by `local_interval_label` | it decides no identifier in either packet, and it needs an order for labels that Part 02 §12.1 leaves unstated for units |
 | number in the order the source lists intervals | nothing in the packet records that order, so no rule can check it |
 | number in time order across kinds | the kinds interleave in the stored table, and reading one kind scans all of them |
 
@@ -163,10 +165,9 @@ remains a `required` discriminator resolving `required` by a shared key, which i
 ### 3.2 Intervals are numbered by kind and time
 
 A writer MUST number a packet's intervals from 0, in ascending order of `session_id`,
-`interval_kind`, `start_tick`, `stop_tick` and `local_interval_label`, comparing strings by Unicode
-scalar value and placing a null label after every other. Intervals equal in all five MAY be
-numbered in either order. `core.intervals` is stored in its key's order (Part 03 §5.3), so each
-kind of one session is one contiguous run.
+`interval_kind`, `start_tick` and `stop_tick`, comparing kinds by Unicode scalar value. Intervals of
+one session and kind with equal bounds MAY be numbered in either order. `core.intervals` is stored
+in its key's order (Part 03 §5.3), so each kind of one session is one contiguous run.
 
 The incorporated core registry MUST declare this rule on `core.intervals`, at level `error`:
 
@@ -178,7 +179,7 @@ The incorporated core registry MUST declare this rule on `core.intervals`, at le
 SELECT interval_id, expected
 FROM (
   SELECT interval_id,
-    ROW_NUMBER() OVER (ORDER BY session_id, interval_kind, start_tick, stop_tick, local_interval_label, interval_id) - 1 AS expected
+    ROW_NUMBER() OVER (ORDER BY session_id, interval_kind, start_tick, stop_tick, interval_id) - 1 AS expected
   FROM core.intervals
 ) AS numbered
 WHERE interval_id <> expected
@@ -254,13 +255,13 @@ constant columns are struck and the whole key is now `interval_id`. Their rules 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. Part 01 §3.10 requires an interval's session, bounds and kind, and all three stay. | None required. |
-| logical prose and registry | Part 02 §8.3 takes §3.3's sentence; §12 gains *Interval identity* with its anchor; §9.2 takes §3.4's version. The core registry source declares §3.1's columns and key and §3.2's rule. `registry/check.py`'s naming exceptions for `dynamic_foraging.trials.interval_kind` and `vr_foraging.sites.interval_kind` are removed with the columns, and its expected core version follows. | `evidence/R<N>.json` names each anchor and registry pointer; `registry/check.py` passes. |
+| logical prose and registry | Part 02 §8.3 takes §3.3's sentence, Part 02 §12 gains *Interval identity* with its anchor, and Part 02 §9.2 takes §3.4's version. The core registry source declares §3.1's columns and key and §3.2's rule. `registry/check.py`'s naming exceptions for `dynamic_foraging.trials.interval_kind` and `vr_foraging.sites.interval_kind` are removed with the columns, and its expected core version follows. | `evidence/R<N>.json` names each anchor and registry pointer; `registry/check.py` passes. |
 | physical profiles | Unchanged. Part 03 §5.3 already stores `core.intervals` in its key's order. | None required. |
 | packet manifest and JSON Schemas | Unchanged. No manifest field names an interval. | None required. |
 | validation and import | Unchanged prose. Part 05 §4.3 already has a writer assign identifiers packet-wide before any table is written, which covers `interval_id`. | The corpus variants below. |
 | extensions | `dynamic_foraging` and `vr_foraging` take §3.3's declarations and advance their versions. `aind_opto` and `aind_unit_qc` reference no interval. | `registry/check.py` over every extension registry. |
 | reader, writer, validator, adapters | The writer's NWB source hands over the NWB's `id` as the label for the interval and its trial row; its numbering assigns `interval_id` by §3.2 and composes `interval_name`. The reader's interval accessor and discriminator resolution join on `interval_id` alone. The validator's generated reference checks follow the registry, and its join-name comment for `dynamic_foraging.trials` follows the new reference. No `escapewheel-aind` adapter produces an interval table. | The writer, reader and validator suites; both session packets rebuilt and validated with no error. |
-| conformance fixtures and tests | `fixtures/build.py` writes the new columns and numbers from 0. A positive variant holds two kinds numbered alike by their source; negative variants hold a misordered numbering and a gap, each drawing `core.intervals.numbered_in_order`, which `dup_pk`'s repeated interval also draws. `conformance/interval-kinds/probe.py` and `prototype/registry-codegen/` follow the declarations. | `fixtures/corpus.py`. |
+| conformance fixtures and tests | `fixtures/build.py` writes the new columns and numbers from 0. Positive variants hold two kinds numbered alike by their source, and two trials with equal bounds numbered in each order; negative variants hold a misordered numbering and a gap, each drawing `core.intervals.numbered_in_order`, which `dup_pk`'s repeated interval also draws. `conformance/interval-kinds/probe.py` and `prototype/registry-codegen/` follow the declarations. | `fixtures/corpus.py`. |
 | revision process and tooling | The ordinary ledger and evidence records, and the superseded and annotated clauses above. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | `registry/tables.md` renders the new columns; Part 08 §§2 and 3 regenerate with the new registry versions; the specification README's identifier table, `framework.py`'s expected version, the combined specification and the heading index follow. | `verify.py`. |
 
@@ -274,6 +275,8 @@ These cases distinguish the new rules from the current ones:
 
 - a packet holding trial 0 and optotagging pulse 0 of one session, numbered by §3.2 and both
   labelled `"0"`, is conforming, as it is today only through the composite key;
+- a packet holding two trials of one session with equal bounds is conforming whichever is numbered
+  first;
 - a packet whose two trials are numbered 1 and 2 draws `core.intervals.numbered_in_order`, where
   the current registry accepts it;
 - a packet numbering a later trial before an earlier one draws the same rule;
