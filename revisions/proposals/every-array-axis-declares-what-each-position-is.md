@@ -33,6 +33,10 @@ Part 03 §6.3. Commit `4ce6f09`, which compiled v0.2 from v0.1 and the first 64 
 the requirement there and dropped the permission. No rule checks either statement, so the unit axis
 breaks the current text without any validator noticing.
 
+A silent axis can mean two things. R20 §3 read it as positions that carry only their order. The
+waveform unit axis is silent for a different reason: its positions stand for units and no form
+could say so. A consumer cannot tell the two apart.
+
 ## 2. Evidence
 
 ### 2.1 The two session packets
@@ -172,11 +176,20 @@ together. R100 §2.2 added the second. Only their messages differ.
 
 ### 4.3 Whether an axis may declare nothing
 
-- **Keep Part 03 §6.3's requirement, add a rule reporting an axis with no form, and record R20 §3's
-  permission as superseded.** Affected: 3 axes in the two packets and 10 fixture axes.
-  **Preferred direction.**
-- **Restore R20 §3's permission in Part 03 §6.3.** This matches the accepted revision, but it keeps
-  §2.2's defect conforming.
+- **Keep Part 03 §6.3's requirement, add a rule reporting an axis with no form at error, and
+  record R20 §3's permission as superseded.** Silence then means nothing, so an omission is
+  reported, and an axis no form can describe fails its build instead of shipping unlabelled; §2.2's
+  defect would have surfaced as the missing unit coordinate table. An axis whose positions mean
+  only their order declares the numeric form with origin 0, step 1 and `coordinate_unit` `1`,
+  UCUM's dimensionless unit, which states that position *k* is *k* and needs no schema change. The
+  rule cannot catch a wrong form declared on purpose, such as that form on an entity axis; it
+  catches the omission, which is the failure observed. Affected: 3 axes in the two packets and 10
+  fixture axes. **Preferred direction.**
+- **Keep the requirement and add a fifth, ordinal form.** It says what the dimensionless numeric
+  form says, at the cost of another column or flag and another completeness rule. It is worth adding
+  only if the numeric form misleads for some real axis, and no such axis exists.
+- **Restore R20 §3's permission in Part 03 §6.3.** This changes the current text back to the
+  accepted revision, and it keeps silence ambiguous and §2.2's defect conforming.
 
 Under each preferred option, R20 §2.4's keying rule becomes a stated rule. A coordinate table's rows
 are narrowed to one axis by the array's key, or by a declared scope axis, and by nothing else. The
@@ -214,9 +227,6 @@ is replaced when the revision is accepted.
 2. **Whether the new table covers units only.** R20 §2.4 argues against a generic entity table,
    because the typed key differs in width. R20 §7 left trial coordinate tables to a
    materialization. The preferred direction is units only.
-3. **Whether any axis has positions that mean only their order.** None was found in the packets or
-   fixtures other than the defect above. If one exists, requiring a form would need a fifth form
-   for an ordinal axis. The preferred direction adds none.
 
 ## 7. Promotion criteria
 
