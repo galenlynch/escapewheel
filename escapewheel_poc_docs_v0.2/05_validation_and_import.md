@@ -201,6 +201,7 @@ A build MUST report as a **warning**:
 
 A warning is not an error because narrowing is legitimate, and only the recipe's author knows whether this one was meant.
 
+<a id="ew-declared-fact-authority" data-spec-anchor="canonical"></a>
 ### 3.6 Authority for a declared fact
 
 Where a recipe declares a fact and a source the same recipe reads states that fact, a build MUST report a difference between the two, naming the field, the declared value, the source's value and the file it came from. A build MUST refuse only where the fact identifies something a reader resolves across packets; otherwise it proceeds, and `--strict` refuses. `[subject].subject_id` is that case and the only one: a subject is not scoped to a session, so a wrong one agrees with another packet's animal instead of colliding with the true value.
@@ -623,6 +624,7 @@ a validator MUST NOT judge a packet non-conforming for lacking one.
 A recorded digest therefore says what a packet's bytes **are**, not what a second build would
 produce. Two conforming builds of one dataset may record different digests for the same rows.
 
+<a id="ew-alternatives-resolved" data-spec-anchor="canonical"></a>
 ## 12. Alternatives are resolved before a commit
 
 Where two or more `core.processing_runs` rows share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not. Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
