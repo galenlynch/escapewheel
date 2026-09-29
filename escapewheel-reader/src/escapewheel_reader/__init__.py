@@ -11,6 +11,17 @@ from __future__ import annotations
 from importlib.metadata import version
 
 from .alignment import ClockMismatch, aligned_spikes, assigned_spikes, windows_disjoint
+from .axes import (
+    ArrayDescription,
+    Axis,
+    IrregularAxis,
+    LabelledAxis,
+    NumericAxis,
+    Scaling,
+    TickAxis,
+    UnresolvableAxis,
+    describe,
+)
 from .channels import ChannelsUndeclared, electrode_at, kept_channels, runs_without_channels
 from .clocks import BOUND, NotAligned, Unanchored, align, on_clock, origin, seconds
 from .dataset import (
@@ -69,17 +80,22 @@ __all__ = [
     "STORED",
     "Ambiguity",
     "AmbiguousRun",
+    "ArrayDescription",
     "ArrayResource",
+    "Axis",
     "ChannelsUndeclared",
     "ClockMismatch",
     "Dataset",
     "Discriminator",
+    "IrregularAxis",
+    "LabelledAxis",
     "Location",
     "Manifest",
     "ManifestError",
     "MultiSessionUnresolved",
     "NoTimeOrigin",
     "NotAligned",
+    "NumericAxis",
     "Packet",
     "PacketError",
     "Predicate",
@@ -88,10 +104,13 @@ __all__ = [
     "Resource",
     "ResourceNotFoundError",
     "ResourceUnreadableError",
+    "Scaling",
     "Session",
     "StaleSupport",
     "TableResource",
+    "TickAxis",
     "Unanchored",
+    "UnresolvableAxis",
     "UnresolvableChannelIndex",
     "Unresolved",
     "UnresolvedSource",
@@ -104,6 +123,7 @@ __all__ = [
     "check_sources",
     "clock_windows",
     "declared",
+    "describe",
     "electrode_at",
     "interface_for",
     "kept_channels",

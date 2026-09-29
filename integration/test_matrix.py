@@ -11,7 +11,7 @@ import re
 import jsonschema
 import numpy as np
 import pytest
-from escapewheel_reader import open_packet
+from escapewheel_reader import NumericAxis, Scaling, describe, open_packet
 from escapewheel_validator import RegistryRejected, validate
 from escapewheel_writer import CommitRefused
 
@@ -124,6 +124,26 @@ def test_an_external_array_is_recorded_and_not_copied(packet_root):
     assert not (packet_root / "arrays" / "core" / "probe0_lfp.zarr").exists()
     unassessed = [f for f in validate(open_packet(packet_root)).findings if f.check == "external.physical_unassessed"]
     assert [row[0] for f in unassessed for row in f.rows] == [example.EXTERNAL]
+
+
+def test_an_owned_array_names_each_units_own_contacts(packet_root):
+    """The writer's labels, read under the shipped registry: the second unit's last channel is padding."""
+    unit, channel, sample = (axis.coordinates for axis in describe(open_packet(packet_root), example.OWNED).axes)
+    assert unit.rows["local_unit_label"].to_pylist() == ["17", "42"]
+    assert channel.depends_on == 0
+    names = channel.rows["electrode_name"].to_pylist()
+    assert names == ["elec_000", "elec_001", "elec_003", "elec_001", "elec_003", None]
+    assert channel.labels().mask.tolist() == [[False, False, False], [False, False, True]]
+    assert sample == NumericAxis(-3.0, 1.0, "{sample}")
+
+
+def test_a_derived_array_reads_its_labels_from_the_analysis_table(packet_root):
+    """Its unit axis is labelled through `analysis.array_labels`, and its rates keep their unit."""
+    described = describe(open_packet(packet_root), example.DERIVED)
+    unit, time_bin = (axis.coordinates for axis in described.axes)
+    assert unit.rows["local_unit_label"].to_pylist() == ["17", "42"]
+    assert time_bin == NumericAxis(0.0, 1.0, "1")
+    assert described.scaling == Scaling("Hz", 1.0, 0.0)
 
 
 # -- Part 08 -------------------------------------------------------------------------------

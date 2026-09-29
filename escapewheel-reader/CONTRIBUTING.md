@@ -48,6 +48,7 @@ revisions.** Almost all of them are about time:
 | several runs may have produced the same thing | R41, R44 | `runs.ambiguities`, `runs.preferred_run` |
 | an ASOF and a range join differ where windows overlap | R43 | `alignment.aligned_spikes` |
 | a channel index counts the channels a run kept, not contacts | R83 | `channels.electrode_at`, `channels.runs_without_channels` |
+| an array position names a row only through its own array's labels, which vary along the axis they depend on | R147 | `axes.describe` |
 
 That table is the justification for the module list. If you are adding something, either it
 extends a row or it adds one — and adding one means naming the revision that makes it a hazard.

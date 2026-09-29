@@ -40,4 +40,5 @@ fails when they no longer match it.
 | invalid extension | a row breaking an extension rule is committed, or a registry the contract rejects reaches the writer |
 | derived resource | a derived array loses its lineage, or one without lineage is committed |
 | external resource | an external array is copied, carries a digest, or goes unreported as unassessed |
+| array axes | a labelled position names another array's or another unit's row, padding reads as a row, or a declared unit is lost |
 | Part 08 | §§2–3 differ from this packet, or a §4 query fails or returns other rows |
