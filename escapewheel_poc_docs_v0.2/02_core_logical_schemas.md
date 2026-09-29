@@ -241,7 +241,7 @@ from a `_kind` suffix. Column order, adjacency, reserved-word preferences, plura
 and the vocabulary of same-spelled columns are authoring conventions rather than registry
 conformance requirements.
 
-A source-provenance label — `local_electrode_label`, `local_channel_label`, `local_unit_label` — is a `string` carrying whatever base the producing software used, and a consumer MUST NOT use it as an offset into any packet resource.
+A source-provenance label — `local_electrode_label`, `local_channel_label`, `local_unit_label`, `local_interval_label` — is a `string` carrying whatever base the producing software used, and a consumer MUST NOT use it as an offset into any packet resource.
 
 ## 5. Type system
 
@@ -435,10 +435,13 @@ joins; Part 05 §13.4 has a reader offer it. Two shapes exist, and a discriminat
   discriminated table, and that reference MUST cover the discriminated table's **whole key**. A
   reference on part of it targets a set that is not unique — it identifies a row of some kind,
   which is not a foreign key, and the generated anti-join passes while resolving to several rows.
-  A detail table therefore carries the discriminator's value as a constant column, restating in
-  every row what its own identity implies; a column holding one value costs almost nothing once
-  encoded, and what it buys is a reference that identifies a row. The reference runs extension →
-  core, so a discriminator names downward while the integrity constraint points upward.
+  A detail table carries the discriminator's value as a constant column only where the
+  discriminator is a member of that key, restating in every row what its own identity implies; a
+  column holding one value costs almost nothing once encoded, and what it buys is a reference that
+  identifies a row. `core.intervals.interval_kind` is no member of its table's key, so a table
+  specialising an interval references `core.intervals.interval_id` alone and carries no
+  `interval_kind`. The reference runs extension → core, so a discriminator names downward while the
+  integrity constraint points upward.
 - **Paired value.** A column holds the named row's key, and the discriminator MUST declare
   `discriminates` naming that column. Where the discriminator declares `discriminates_via`, the
   column belongs to the table `discriminates_via` names, whose rows the discriminator specialises;
@@ -577,7 +580,7 @@ profile stores a bound registry.
 The incorporated registry meta-schema has `$id`
 `https://escapewheel.org/schemas/registry/0.9.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.9.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.10.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.1`.
 
@@ -1086,6 +1089,25 @@ A coordinate MAY carry values on fewer axes than its frame declares, where its s
 A registry document MUST NOT declare a column holding an atlas structure's full name or its
 ancestry path: both derive from the structure's identifier, and an ancestry path is a list, which
 §5.2 forbids in a delimited string. No checker verifies this. Part 01 §3.8 defines the annotation.
+
+<a id="ew-interval-identity" data-spec-anchor="canonical"></a>
+### 12.9 Interval identity
+
+`interval_id` identifies an interval on its own. A writer assigns it, and records the number or
+name its source gave the interval in `local_interval_label`, null where the source gave none. A
+consumer relating an interval to anything outside the packet uses `(session_id, interval_kind,
+local_interval_label)`, and `core.intervals.label_unique_within_kind` draws each label two
+intervals of one session and kind share.
+
+A writer MUST number a packet's intervals densely from 0. It MUST number each session's intervals
+of one kind consecutively, in ascending order of `clock_id`, `start_tick` and `stop_tick`, and MUST
+number the intervals one build adds session by session and kind by kind, in ascending order of
+`session_id`, then `interval_kind` compared by Unicode scalar value. Intervals of one session, kind
+and clock with equal bounds MAY be numbered in any order. `core.intervals` is stored in its key's
+order (Part 03 §5.3), so each kind of one session is one contiguous run, and within it each clock's
+intervals are in tick order. `core.intervals.numbered_in_order` checks that identifiers are dense
+from 0 and that each session's intervals of one kind are numbered consecutively in order; the order
+of sessions and kinds binds the writer alone, and no rule checks it.
 
 <a id="ew-logical-schema-normative-references" data-spec-anchor="canonical"></a>
 ## 13. Normative references

@@ -30,11 +30,11 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.9.0.json.gz
+    core/             0.10.0.json.gz
     aind_opto/        0.9.0.json.gz
     aind_unit_qc/     0.10.0.json.gz
-    dynamic_foraging/ 0.10.0.json.gz
-    vr_foraging/      0.9.0.json.gz
+    dynamic_foraging/ 0.11.0.json.gz
+    vr_foraging/      0.10.0.json.gz
   tables/
     core/             sessions, subjects, session_experimenters, devices, probes, electrodes,
                       sorting_run_channels, unit_electrodes, coordinate_frames,
@@ -71,11 +71,11 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.9.0", "path": "registries/core/0.9.0.json.gz", "sha256": "…"},
+    "core": {"role": "core", "version": "0.10.0", "path": "registries/core/0.10.0.json.gz", "sha256": "…"},
     "aind_opto": {"role": "extension", "version": "0.9.0", "path": "registries/aind_opto/0.9.0.json.gz", "sha256": "…"},
     "aind_unit_qc": {"role": "extension", "version": "0.10.0", "path": "registries/aind_unit_qc/0.10.0.json.gz", "sha256": "…"},
-    "dynamic_foraging": {"role": "extension", "version": "0.10.0", "path": "registries/dynamic_foraging/0.10.0.json.gz", "sha256": "…"},
-    "vr_foraging": {"role": "extension", "version": "0.9.0", "path": "registries/vr_foraging/0.9.0.json.gz", "sha256": "…"}
+    "dynamic_foraging": {"role": "extension", "version": "0.11.0", "path": "registries/dynamic_foraging/0.11.0.json.gz", "sha256": "…"},
+    "vr_foraging": {"role": "extension", "version": "0.10.0", "path": "registries/vr_foraging/0.10.0.json.gz", "sha256": "…"}
   },
   "created_at": "…",
   "sessions": ["s001"],

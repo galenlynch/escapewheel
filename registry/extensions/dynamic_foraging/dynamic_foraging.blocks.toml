@@ -111,7 +111,6 @@ FROM dynamic_foraging.trials AS t
 JOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id
   AND b.block_id = t.block_id
 JOIN core.intervals AS c ON c.session_id = t.session_id
-  AND c.interval_kind = t.interval_kind
   AND c.interval_id = t.trial_id
 WHERE c.start_tick < b.start_tick
   OR c.stop_tick > b.stop_tick'''

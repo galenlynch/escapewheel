@@ -3,7 +3,7 @@ kind = "table"
 instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
-primary_key = ["session_id", "interval_kind", "interval_id"]
+primary_key = ["interval_id"]
 
 [[columns]]
 name = "session_id"
@@ -15,6 +15,22 @@ references = "core.sessions"
 description = "Session ID."
 
 [[columns]]
+name = "interval_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "Interval ID, assigned by the packet; a session's intervals of one kind are numbered consecutively by clock and bounds."
+
+[[columns]]
+name = "interval_name"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "What `interval_id` stands for: the name a source or an earlier packet used for this interval. The only bridge between two packets that numbered it differently (Part 05 §4.3)."
+
+[[columns]]
 name = "interval_kind"
 type = "string"
 presence = "required"
@@ -23,26 +39,26 @@ resolves = "required"
 description = "The resource that specialises this interval, as a dotted resource ID, resolved as Part 02 §8.3's shared key."
 
 [[columns]]
-name = "interval_id"
-type = "int32"
-presence = "required"
-role = "identifier"
-identity = "carried"
-description = "Stable trial ID."
+name = "local_interval_label"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "The source's own number or name for this interval; undefined base, not an offset."
 
 [[columns]]
 name = "start_tick"
 type = "int64"
 presence = "required"
 role = "coordinate"
-description = "First tick of the trial, inclusive, on `clock_id`."
+description = "First tick of the interval, inclusive, on `clock_id`."
 
 [[columns]]
 name = "stop_tick"
 type = "int64"
 presence = "required"
 role = "coordinate"
-description = "Last tick of the trial, inclusive, on `clock_id`."
+description = "Last tick of the interval, inclusive, on `clock_id`."
 
 [[columns]]
 name = "clock_id"
@@ -64,3 +80,37 @@ description = "What the source stated about this row that the standard does not 
 use = "interval"
 start = "start_tick"
 stop = "stop_tick"
+
+[[rules]]
+id = "core.intervals.label_unique_within_kind"
+level = "error"
+message = "two intervals of one session and kind carry the same local_interval_label"
+sql = '''
+SELECT session_id, interval_kind, local_interval_label, COUNT(*) AS n
+FROM core.intervals
+WHERE local_interval_label IS NOT NULL
+GROUP BY session_id, interval_kind, local_interval_label
+HAVING COUNT(*) > 1'''
+
+[[rules]]
+id = "core.intervals.numbered_in_order"
+level = "error"
+message = "interval_id is not dense from 0, or does not number a session's intervals of one kind consecutively by clock and bounds"
+sql = '''
+SELECT numbered.interval_id
+FROM (
+  SELECT interval_id, session_id, interval_kind,
+    ROW_NUMBER() OVER (ORDER BY interval_id) - 1 AS dense,
+    ROW_NUMBER() OVER (
+      PARTITION BY session_id, interval_kind
+      ORDER BY clock_id, start_tick, stop_tick, interval_id) - 1 AS rank_in_kind
+  FROM core.intervals
+) AS numbered
+JOIN (
+  SELECT session_id, interval_kind, MIN(interval_id) AS first_id
+  FROM core.intervals
+  GROUP BY session_id, interval_kind
+) AS kinds
+  ON kinds.session_id = numbered.session_id AND kinds.interval_kind = numbered.interval_kind
+WHERE numbered.interval_id <> numbered.dense
+   OR numbered.interval_id <> CAST(kinds.first_id AS DECIMAL(38,0)) + numbered.rank_in_kind'''

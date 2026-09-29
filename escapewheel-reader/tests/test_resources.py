@@ -15,7 +15,16 @@ def test_handle_reads_and_describes(packet_root):
 
 def test_schema_without_reading_data(packet_root):
     schema = open_packet(packet_root).table_resource("core.intervals").schema()
-    assert schema.names == ["session_id", "interval_kind", "interval_id", "start_tick", "stop_tick", "clock_id"]
+    assert schema.names == [
+        "session_id",
+        "interval_id",
+        "interval_name",
+        "interval_kind",
+        "local_interval_label",
+        "start_tick",
+        "stop_tick",
+        "clock_id",
+    ]
     assert str(schema.field("start_tick").type) == "int64"
 
 

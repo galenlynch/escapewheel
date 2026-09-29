@@ -263,8 +263,10 @@ def resolved(packet: Any, resource_id: str, kind: str, *, column: str | None = N
     # Against the **discriminated** table, which `discriminates_via` moves away from the one
     # carrying the column: a detail table shares a key with the rows it specialises.
     theirs, ours = _reference_back(packet, kind, found.specialised)
-    # The discriminator column is in the key for a shared-key join, so the join itself keeps
-    # rows of other kinds out and no filter is needed.
+    # The key need not hold the kind -- `core.intervals` keys on `interval_id` alone -- so the rows
+    # are filtered to it, and a column both tables carry, such as `session_id`, is kept once.
+    rows = rows.filter(pc.equal(rows.column(found.column), kind))
+    named = named.select([c for c in named.column_names if c in theirs or c not in rows.column_names])
     return rows.join(named, keys=ours, right_keys=theirs, join_type="inner")
 
 

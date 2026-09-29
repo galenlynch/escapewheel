@@ -16,16 +16,19 @@ has and NWB holds badly, since `nwbfile.trials` is the one table tools read.
 
 ```
 base table (R54)
-  every interval             520 rows   1 scan of one known name         0.93 ms
-  one kind, with detail      120 rows   filter + declared join           2.18 ms
+  every interval             520 rows   1 scan of one known name         1.22 ms
+  one kind, with detail      120 rows   filter + declared join           2.82 ms
 
 concrete tables
-  every interval             520 rows   2 found by guessing at columns   1.74 ms
-    ...and wrongly             4 rows   core.clock_observation_intervals,
+  every interval             520 rows   2 found by guessing at columns   2.25 ms
+    ...and wrongly             3 rows   core.clock_observation_intervals,
                                         core.event_stream_observation_intervals,
-                                        core.trials, core.unit_observation_intervals
-  one kind, with detail      120 rows   1 scan, name known ahead         0.43 ms
+                                        core.unit_observation_intervals
+  one kind, with detail      120 rows   1 scan, name known ahead         0.56 ms
 ```
+
+The base shape is the registry's own `core.intervals`, keyed by the `interval_id` the packet
+assigns (Part 02 §12.9), and each detail table references that identifier alone.
 
 **Timing decides nothing** — everything is under 3 ms, and concrete is *faster* for the query
 where the consumer already knows the name.
@@ -33,8 +36,8 @@ where the consumer already knows the name.
 **Discovery decides it.** Under concrete tables nothing declares that a resource is an alignable
 interval set, so a consumer that has not heard of the extensions can only guess from columns —
 and the guess is wrong. It matches the three observation-interval tables, which hold intervals a
-*measurement* found rather than a *design* declared (R54 §3), and `core.trials`, which is the
-table R54 replaces. A declaration that fixed this would be a discriminator by another name.
+*measurement* found rather than a *design* declared (R54 §3). A declaration that fixed this would
+be a discriminator by another name.
 
 Under the base table it is one scan of one name the consumer already knows, and the detail join
 is mechanical: the kind **is** the resource ID, the registry gives the reference, and no extension
@@ -46,5 +49,3 @@ is named anywhere in the reading code.
   measurement under the root TODO's **Measured, for reuse** is the one that speaks to that.
 - **That two kinds is common.** One synthetic session. The case is drawn from what a real session
   holds — a task, optotagging, inactivation windows — not from a packet that carries it.
-- **Anything about R55.** `interval_kind` is declared `role: data` here, because the
-  `discriminator` role R55 proposes does not exist yet.

@@ -1,0 +1,336 @@
+{
+  "version": 1,
+  "revision": "R148",
+  "based_on": "4d4501063a42b2c9815f8a0dd97555c4dcc5f2e3",
+  "clauses": {
+    "R148 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-interval-identity"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-logical-column-naming"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.intervals/table/primary_key"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.intervals/table/columns/1"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.intervals/table/columns/2"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.intervals/table/columns/4"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.intervals/table/rules/1"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "repeated_interval_label",
+            "finding": "core.intervals.label_unique_within_kind"
+          },
+          {
+            "kind": "fixture",
+            "packet": "orphan_trial",
+            "finding": "dynamic_foraging.trials.trial_id_resolves"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "a name column names an assigned identifier, or is declared to name a kind of thing"
+          },
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "136 shipped rules statically check, bind, and execute empty"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_nwb_source.py::test_the_nwb_id_is_a_label_and_the_name_is_unique_in_the_packet"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_nwb_source.py::test_the_records_commit_as_a_valid_packet"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_three_extensions_at_once"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_every_shipped_rule_passes_static_profile_check"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.intervals.toml",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/nwb.py",
+          "escapewheel-writer/src/escapewheel_writer/keys.py",
+          "escapewheel-reader/src/escapewheel_reader/packet.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py",
+          "prototype/registry-codegen/registry.json",
+          "prototype/registry-codegen/fixture.py",
+          "conformance/interval-kinds/probe.py",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md",
+          "conformance/interval-kinds/README.md"
+        ]
+      }
+    },
+    "R148 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-interval-identity"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.intervals/table/rules/2"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "trials_numbered_from_one",
+            "finding": "core.intervals.numbered_in_order"
+          },
+          {
+            "kind": "fixture",
+            "packet": "trials_misordered",
+            "finding": "core.intervals.numbered_in_order"
+          },
+          {
+            "kind": "fixture",
+            "packet": "trials_numbered_by_tick",
+            "finding": "core.intervals.numbered_in_order"
+          },
+          {
+            "kind": "fixture",
+            "packet": "interval_numbering_gap",
+            "finding": "core.intervals.numbered_in_order"
+          },
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "136 shipped rules statically check, bind, and execute empty"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_three_extensions_at_once"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_every_shipped_rule_passes_static_profile_check"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.intervals.toml",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/keys.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py",
+          "prototype/registry-codegen/registry.json",
+          "prototype/registry-codegen/fixture.py",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R148 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-discriminator-semantics"
+        },
+        {
+          "path": "registry/extensions/dynamic_foraging.json",
+          "pointer": "/resources/dynamic_foraging.trials/table/primary_key"
+        },
+        {
+          "path": "registry/extensions/dynamic_foraging.json",
+          "pointer": "/resources/dynamic_foraging.trials/table/references/1"
+        },
+        {
+          "path": "registry/extensions/dynamic_foraging.json",
+          "pointer": "/resources/dynamic_foraging.trials/table/rules/0"
+        },
+        {
+          "path": "registry/extensions/dynamic_foraging.json",
+          "pointer": "/resources/dynamic_foraging.blocks/table/rules/2"
+        },
+        {
+          "path": "registry/extensions/vr_foraging.json",
+          "pointer": "/resources/vr_foraging.sites/table/primary_key"
+        },
+        {
+          "path": "registry/extensions/vr_foraging.json",
+          "pointer": "/resources/vr_foraging.sites/table/references/1"
+        },
+        {
+          "path": "registry/extensions/vr_foraging.json",
+          "pointer": "/resources/vr_foraging.sites/table/rules/0"
+        },
+        {
+          "path": "registry/extensions/vr_foraging.json",
+          "pointer": "/resources/vr_foraging.site_odors/table/references/1"
+        },
+        {
+          "path": "registry/extensions/vr_foraging.json",
+          "pointer": "/resources/vr_foraging.site_odors/table/rules/0"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every declared naming exception still exists and still breaks a convention"
+          },
+          {
+            "kind": "fixture",
+            "packet": "orphan_trial",
+            "finding": "dynamic_foraging.trials.trial_id_resolves"
+          },
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "136 shipped rules statically check, bind, and execute empty"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_discriminators.py::test_a_key_without_the_kind_resolves_only_rows_of_that_kind"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_discriminators.py::test_the_join_crosses_into_the_named_resource"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_extensions.py::test_three_extensions_at_once"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_nwb_source.py::test_the_records_commit_as_a_valid_packet"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/extensions/dynamic_foraging/dynamic_foraging.trials.toml",
+          "registry/extensions/dynamic_foraging/dynamic_foraging.blocks.toml",
+          "registry/extensions/vr_foraging/vr_foraging.sites.toml",
+          "registry/extensions/vr_foraging/vr_foraging.site_odors.toml",
+          "registry/check.py",
+          "escapewheel-reader/src/escapewheel_reader/discriminators.py",
+          "fixtures/build.py",
+          "conformance/interval-kinds/probe.py",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "conformance/interval-kinds/README.md"
+        ]
+      }
+    },
+    "R148 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md",
+          "registry/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "core registry version is 0.10.0"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/registry.toml",
+          "registry/check.py",
+          "escapewheel_poc_docs_v0.2/framework.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the version appears outside the specification only in generated fact regions and vendored copies"
+      }
+    }
+  }
+}

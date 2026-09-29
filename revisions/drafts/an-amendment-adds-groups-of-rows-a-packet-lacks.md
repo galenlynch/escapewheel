@@ -7,7 +7,7 @@
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§1, 2.3, 9.2 and 9.4, and a new subsection of Part 02 §2; Part 03 §§5.3 and 9; Part 05 §§1, 3.1, 3.3, 3.5, 3.6, 4.3, 7, 8, 11, 12, 15.1 and 15.2, and a new subsection of Part 05 §15; Part 08 §§2 and 3; the registry meta-schema; the registry-contract descriptor; the recipe schema; the core registry; the four extension registries |
-| **Depends on** | `an-interval-is-numbered-by-its-packet` §3.2 and `unit-labels-order-by-length-then-by-unicode-scalar-value` §3.1 (the per-group numbering an amending build continues); `unit-labels-order-by-length-then-by-unicode-scalar-value` §§3.3 and 3.4 (the rule language and the registry identifiers this advances from) |
+| **Depends on** | R148 §3.2 and `unit-labels-order-by-length-then-by-unicode-scalar-value` §3.1 (the per-group numbering an amending build continues); `unit-labels-order-by-length-then-by-unicode-scalar-value` §§3.3 and 3.4 (the rule language and the registry identifiers this advances from) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6; §3.7; §3.8; §3.9; §3.10 |
 
@@ -43,10 +43,9 @@ Three further gaps stand between a packet and an amendment adding a group:
 This revision has each table declare the groups an amendment may add, restates Part 05 §15.2 by
 content class, and lets a recipe perform an amendment through the adapters any build uses. It
 exempts imports from Part 05 §12, has a validator compare an amendment with the version it
-supersedes, and gives a recipe a member declaring the preferred runs Part 05 §12 requires. The
-drafts `an-interval-is-numbered-by-its-packet` and
-`unit-labels-order-by-length-then-by-unicode-scalar-value` check their numbering within each group,
-so an amending build continues it.
+supersedes, and gives a recipe a member declaring the preferred runs Part 05 §12 requires. R148 and
+the draft `unit-labels-order-by-length-then-by-unicode-scalar-value` check their numbering within
+each group, so an amending build continues it.
 
 The change is structural because it replaces Part 05 §15.2's table and revises rules inside
 Part 05 §§4.3, 7, 8, 11 and 12 and Part 03 §9. Appended sections would leave Part 05 §15.2
@@ -90,7 +89,7 @@ Section 2 is informative. The measurements use the `packet-r147` builds of the t
 - `ecephys_786867`: ten probes, 450 trials, and 4,505 units in 10 sorting runs;
 - `ecephys_776259`: twelve probes, 708 trials, and 6,781 units in 12 sorting runs.
 
-Each packet's intervals were first numbered by `an-interval-is-numbered-by-its-packet` §3.2, which
+Each packet's intervals were first numbered by R148 §3.2, which
 reproduces every existing identifier. Queries ran in DuckDB 1.5.5 over the packets' Parquet tables.
 
 ### 2.1 Seven additions change no row, and Part 05 §15.2 forbids each
@@ -129,7 +128,7 @@ identifier, and two rules were run over the result:
 
 - a rule checking one order across the packet, by session, kind, clock and bounds for intervals, and
   by run, curation and label for units;
-- the per-group rule of `an-interval-is-numbered-by-its-packet` §3.2 and
+- the per-group rule of R148 §3.2 and
   `unit-labels-order-by-length-then-by-unicode-scalar-value` §3.1, which checks that identifiers are
   dense from 0, and that each group's are contiguous and in the group's order.
 
@@ -264,7 +263,7 @@ compatibility-projection or documentation resource.
 | list the groups an amendment may add in Part 05 §15.2 | an extension cannot declare its own, and each new case needs a revision of Part 05 |
 | let an amendment add rows to any group | a group a consumer read whole, such as a session's trials, grows, and nothing records which results read it |
 | record which amendment added each row, and number by that first | a column in every table that can gain rows, and a single build over the same sources still numbers differently |
-| split `core.intervals` into one resource per kind | adding a kind becomes adding a resource, and no single identifier names an interval, which `an-interval-is-numbered-by-its-packet` exists to give |
+| split `core.intervals` into one resource per kind | adding a kind becomes adding a resource, and no single identifier names an interval, which R148 exists to give |
 | amend only through resources a caller stages, with no recipe | no adapter delivers into an amendment, so every addition in §2.1 needs code outside the pipeline Part 12 binds |
 | check an amendment's scope only in the writer | a validator given an amended packet cannot tell whether a row changed |
 | hold a group only where the superseded version holds one of its rows | a held stream without events, or held units in a table the packet lacks, could gain rows a consumer read as absent |

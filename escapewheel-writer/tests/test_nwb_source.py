@@ -393,6 +393,13 @@ def test_an_interval_carries_its_bounds_and_names_its_kind(source):
     assert trial["interval_kind"] == KIND
 
 
+def test_the_nwb_id_is_a_label_and_the_name_is_unique_in_the_packet(source):
+    """Part 02 §12.9: the NWB numbers only its trials, so its `id` labels an interval and does not identify one."""
+    trial = source.records()["core.intervals"][0]
+    assert trial["local_interval_label"] == "0"
+    assert trial["interval_id"] == f"{SESSION}/{KIND}/0"
+
+
 def test_a_task_column_is_not_a_core_column(source):
     """R54 §2.3 struck them: a task's shape is the extension's, not the format's."""
     trial = source.records()["core.intervals"][0]
@@ -448,29 +455,18 @@ TASK_EXTENSION = {
                         "description": "Session identity.",
                     },
                     {
-                        "name": "interval_kind",
-                        "type": "string",
-                        "presence": "required",
-                        "role": "discriminator",
-                        "resolves": "required",
-                        "description": "Interval kind declaration.",
-                    },
-                    {
-                        "name": "interval_id",
+                        "name": "trial_id",
                         "type": "int32",
                         "presence": "required",
                         "role": "identifier",
-                        "identity": "carried",
-                        "description": "Source interval identity.",
+                        "identity": "assigned",
+                        "description": "The trial, and the interval it occupies in core.",
                     },
                 ],
-                "primary_key": ["session_id", "interval_id"],
+                "primary_key": ["trial_id"],
                 "references": [
-                    {
-                        "columns": ["session_id", "interval_kind", "interval_id"],
-                        "resource": "core.intervals",
-                        "resource_columns": ["session_id", "interval_kind", "interval_id"],
-                    }
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+                    {"columns": ["trial_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
                 ],
                 "rules": [],
             },
@@ -488,7 +484,7 @@ def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
     writer.add(
         "task.trials",
         [
-            {"session_id": SESSION, "interval_kind": KIND, "interval_id": t["interval_id"]}
+            {"session_id": SESSION, "trial_id": t["interval_id"]}
             for t in source.records()["core.intervals"]
         ],
     )

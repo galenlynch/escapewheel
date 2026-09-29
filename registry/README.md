@@ -7,7 +7,7 @@ Part 03 §3.3).
 
 <!-- BEGIN generated: counts -->
 ```
-48 resources, 45 tables, 358 columns, 116 references, 86 Tier 2 rules
+48 resources, 45 tables, 360 columns, 116 references, 88 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -108,7 +108,7 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-174 required column, not null
+175 required column, not null
 116 reference, resolves
 45  primary key, unique
 4   closed vocabulary, member of
@@ -136,7 +136,7 @@ selects `escapewheel-rule-sql-v0.1`; individual rules cannot override it. Inline
 table's whole logical contract readable in one declaration.
 
 <!-- BEGIN generated: rules -->
-86 rules over 29 tables: 77 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
+88 rules over 29 tables: 79 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
@@ -147,6 +147,7 @@ table's whole logical contract readable in one declaration.
 | `core.units` | 5 |
 | `core.clock_anchors` | 4 |
 | `core.sessions` | 4 |
+| `core.intervals` | 3 |
 | `core.media_assets` | 3 |
 | `core.preferred_runs` | 3 |
 | `analysis.array_labels` | 2 |
@@ -167,7 +168,6 @@ table's whole logical contract readable in one declaration.
 | `core.coordinate_frame_axes` | 1 |
 | `core.event_streams` | 1 |
 | `core.events` | 1 |
-| `core.intervals` | 1 |
 | `core.unit_quality_labels` | 1 |
 <!-- END generated: rules -->
 

@@ -14,6 +14,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from escapewheel_reader.ordering import stored_order
 
@@ -38,6 +39,11 @@ SPECS = {
 
 #: The interval kind the fixture declares, which is the extension table that carries it.
 KIND = "dynamic_foraging.trials"
+
+
+def trial(label: int) -> str:
+    """Name a trial as a writer does: its session and kind, then its source's label."""
+    return f"s001/{KIND}/{label}"
 
 ARROW = {
     "string": pa.string(),
@@ -207,9 +213,30 @@ def preassign(tables: dict[str, list[dict]]) -> None:
                     kind = (readers[name](r) if name in readers else None) or target.get(name, name)
                     pending.setdefault(kind, set()).add(str(r[name]))
     for kind in sorted(pending):
+        if kind == "interval_id":
+            continue
         within = KEYS.setdefault(kind, {})
         for value in sorted(pending[kind]):
             within.setdefault(value, len(within))
+    # Part 02 §12.9 numbers intervals by session, kind, clock and bounds, which only their rows
+    # hold, so the rows order the names; a name no interval row carries is an orphan and follows.
+    within = KEYS.setdefault("interval_id", {})
+    for r in sorted(tables.get("core.intervals", []), key=interval_order):
+        within.setdefault(str(r["interval_id"]), len(within))
+    for value in sorted(pending.get("interval_id", ())):
+        within.setdefault(value, len(within))
+
+
+def interval_order(row: dict) -> tuple:
+    """Where one `core.intervals` row falls in Part 02 §12.9's numbering."""
+    return (
+        KEYS["session_id"][str(row["session_id"])],
+        row["interval_kind"],
+        KEYS["clock_id"][str(row["clock_id"])],
+        row["start_tick"],
+        row["stop_tick"],
+        str(row["interval_id"]),
+    )
 
 
 def spikes(unit, run, cur, clock, ticks):
@@ -450,7 +477,8 @@ def content() -> dict[str, list[dict]]:
             {
                 "session_id": "s001",
                 "interval_kind": KIND,
-                "interval_id": 1,
+                "interval_id": trial(1),
+                "local_interval_label": "1",
                 "start_tick": 1000,
                 "stop_tick": 5000,
                 "clock_id": "behavior_s001",
@@ -458,7 +486,8 @@ def content() -> dict[str, list[dict]]:
             {
                 "session_id": "s001",
                 "interval_kind": KIND,
-                "interval_id": 2,
+                "interval_id": trial(2),
+                "local_interval_label": "2",
                 "start_tick": 6000,
                 "stop_tick": 10000,
                 "clock_id": "behavior_s001",
@@ -467,16 +496,14 @@ def content() -> dict[str, list[dict]]:
         KIND: [
             {
                 "session_id": "s001",
-                "interval_kind": KIND,
-                "trial_id": 1,
+                "trial_id": trial(1),
                 "animal_response": "left",
                 "rewarded_history_left": True,
                 "rewarded_history_right": False,
             },
             {
                 "session_id": "s001",
-                "interval_kind": KIND,
-                "trial_id": 2,
+                "trial_id": trial(2),
                 "animal_response": "right",
                 "rewarded_history_left": False,
                 "rewarded_history_right": False,
@@ -689,17 +716,15 @@ def sql_name(resource):
     return resource.replace(".", "_")
 
 
-def sort_rows(resource: str, rows: list[dict]) -> list[dict]:
-    """Apply the registry's declared physical ordering (Part 03 §5.3), as a writer should.
+def sort_table(resource: str, t: pa.Table) -> pa.Table:
+    """Apply the stored order (Part 03 §5.3), as a writer should: the key's, unless §5.4 overrides it.
 
-    A resource declaring no sort takes its primary key's order, which Part 03 §5.3 requires of it:
-    before that rule the thirteen tables with `sort: null` were written in insertion order and
-    the validator scanned none of them.
+    Sorted by number rather than by name, since Part 02 §12.9 numbers intervals by their bounds.
     """
-    keys = stored_order(resource, SPECS[resource])
+    keys = [k for k in stored_order(resource, SPECS[resource]) if k in t.column_names]
     if not keys:
-        return rows
-    return sorted(rows, key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in keys))
+        return t
+    return t.take(pc.sort_indices(t, sort_keys=[(k, "ascending") for k in keys], null_placement="at_end"))
 
 
 def crc(polynomial: int, bits: int, data: bytes) -> int:
@@ -738,22 +763,29 @@ def write_packet(
     unsorted: frozenset = frozenset(),
     algorithm: str = "sha256",
     extensions: tuple = (),
+    numbers: dict[str, int] | None = None,
 ):
     """Write a packet in 03's portable layout. `raw` supplies pre-built Arrow tables for
     variants that must violate the registry's own schema; `unsorted` names resources
     written in insertion order, for variants that must violate Part 03 §5.3. Every resource
     records its `digest` under `algorithm`. `extensions` are registry documents bound beside
-    core and `dynamic_foraging`."""
+    core and `dynamic_foraging`. `numbers` replaces Part 02 §12.9's interval numbering, for
+    variants that must number intervals otherwise."""
     if out.exists():
         shutil.rmtree(out)
     KEYS.clear()
     preassign(tables)
+    if numbers is not None:
+        KEYS["interval_id"] = dict(numbers)
     (out / "tables" / "core").mkdir(parents=True)
 
     resources = []
     for resource, rows in tables.items():
-        ordered = rows if resource in unsorted else sort_rows(resource, rows)
-        t = (raw or {}).get(resource) or table(resource, ordered, paired_readers(tables, resource))
+        t = (raw or {}).get(resource)
+        if t is None:
+            t = table(resource, rows, paired_readers(tables, resource))
+            if resource not in unsorted:
+                t = sort_table(resource, t)
         namespace, name = resource.split(".", 1)
         rel = f"tables/{namespace}/{name}.parquet"
         (out / "tables" / namespace).mkdir(exist_ok=True)
@@ -1193,6 +1225,7 @@ def main():
     digest_variants(root)
     floor_variants(root)
     axis_variants(root)
+    interval_variants(root)
     opaque_variants(root)
 
 
@@ -1577,6 +1610,120 @@ def axis_variants(root: Path) -> None:
         named = None if name == "array_without_dimension_names" else LABELLED_AXES
         entry = array_entry(out, "waveform_mean", "default", LABELLED_SHAPE, named)
         edit_manifest(out, lambda m, entry=entry: m["resources"].append(entry))
+        print(f"{name:26s}written")
+
+
+#: A fixture-local extension declaring a second kind of interval, whose resource ID sorts before
+#: `KIND` so a numbering by kind puts its intervals first.
+CUE_EXTENSION = {
+    "$schema": EXTENSION["$schema"],
+    "registry_id": "cue",
+    "registry_version": "0.1.0",
+    "logical_standard_version": EXTENSION["logical_standard_version"],
+    "rule_language": EXTENSION["rule_language"],
+    "extension_id": "cue",
+    "resources": {
+        "cue.tones": {
+            "content_class": "extension",
+            "kind": "table",
+            "instances": {"mode": "singleton", "presence": "optional"},
+            "requires": [],
+            "lineage": "optional",
+            "table": {
+                "columns": [
+                    {
+                        "name": "session_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                        "description": "Session ID.",
+                    },
+                    {
+                        "name": "tone_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                        "description": "The tone, and the interval it occupies in core.",
+                    },
+                ],
+                "primary_key": ["tone_id"],
+                "references": [
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+                    {"columns": ["tone_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
+                ],
+                "rules": [],
+            },
+        }
+    },
+}
+SPECS["cue.tones"] = CUE_EXTENSION["resources"]["cue.tones"]["table"]
+
+
+def interval_variants(root: Path) -> None:
+    """Part 02 §12.9's numbering: packets numbering intervals in each admitted order, and one per defect."""
+
+    def with_tone(c):
+        # A tone the cue source labels "1", as the task source labels the first trial.
+        c["core.intervals"].append(
+            {
+                "session_id": "s001",
+                "interval_kind": "cue.tones",
+                "interval_id": "s001/cue.tones/1",
+                "local_interval_label": "1",
+                "start_tick": 500,
+                "stop_tick": 900,
+                "clock_id": "behavior_s001",
+            }
+        )
+        c["cue.tones"] = [{"session_id": "s001", "tone_id": "s001/cue.tones/1"}]
+
+    def equal_bounds(c):
+        c["core.intervals"][1] |= {"start_tick": 1000, "stop_tick": 5000}
+
+    def second_trial_on_the_probe_clock(c):
+        # Earlier in ticks than the first trial, on the clock numbered after the behavior clock.
+        c["core.intervals"][1] |= {"clock_id": "imec_ap_s001", "start_tick": 500, "stop_tick": 900}
+
+    def repeated_label(c):
+        c["core.intervals"][1]["local_interval_label"] = "1"
+
+    def orphan_trial(c):
+        c[KIND].append({**c[KIND][1], "trial_id": trial(3)})
+
+    def trial_labelled_axis(c):
+        labelled_array(c)
+        axis = c["core.array_dimensions"][0]
+        axis["coordinate_resource"] = "core.intervals"
+        for r, name in zip(
+            (r for r in c["core.array_labels"] if r["axis_index"] == 0), (trial(1), trial(2)), strict=True
+        ):
+            r["label_id"] = name
+
+    tone, first, second = "s001/cue.tones/1", trial(1), trial(2)
+    cue = (CUE_EXTENSION,)
+    for name, mutate, options in (
+        ("two_kinds_one_label", with_tone, {"extensions": cue}),
+        ("kinds_out_of_unicode_order", with_tone, {"extensions": cue, "numbers": {first: 0, second: 1, tone: 2}}),
+        ("equal_bounds", equal_bounds, {}),
+        ("equal_bounds_swapped", equal_bounds, {"numbers": {second: 0, first: 1}}),
+        ("trial_labelled_axis", trial_labelled_axis, {}),
+        ("trials_numbered_from_one", None, {"numbers": {first: 1, second: 2}}),
+        ("trials_misordered", None, {"numbers": {second: 0, first: 1}}),
+        ("trials_numbered_by_tick", second_trial_on_the_probe_clock, {"numbers": {second: 0, first: 1}}),
+        ("interval_numbering_gap", None, {"numbers": {first: 0, second: 2}}),
+        ("repeated_interval_label", repeated_label, {}),
+        ("orphan_trial", orphan_trial, {}),
+    ):
+        c = content()
+        if mutate is not None:
+            mutate(c)
+        out = root / name
+        write_packet(out, c, **options)
+        if name == "trial_labelled_axis":
+            entry = array_entry(out, "waveform_mean", "default", LABELLED_SHAPE, LABELLED_AXES)
+            edit_manifest(out, lambda m, entry=entry: m["resources"].append(entry))
         print(f"{name:26s}written")
 
 

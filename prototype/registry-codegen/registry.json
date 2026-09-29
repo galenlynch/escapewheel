@@ -107,6 +107,20 @@
             "identity": "assigned"
           },
           {
+            "name": "interval_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned"
+          },
+          {
+            "name": "interval_name",
+            "type": "string",
+            "presence": "required",
+            "role": "data",
+            "vocabulary": "free"
+          },
+          {
             "name": "interval_kind",
             "type": "string",
             "presence": "required",
@@ -114,11 +128,11 @@
             "resolves": "required"
           },
           {
-            "name": "interval_id",
-            "type": "int32",
-            "presence": "required",
-            "role": "identifier",
-            "identity": "carried"
+            "name": "local_interval_label",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "vocabulary": "free"
           },
           {
             "name": "start_tick",
@@ -141,8 +155,6 @@
           }
         ],
         "primary_key": [
-          "session_id",
-          "interval_kind",
           "interval_id"
         ],
         "references": [
@@ -170,7 +182,7 @@
             "id": "core.intervals.interval_valid",
             "level": "error",
             "message": "stop_tick precedes start_tick",
-            "sql": "SELECT session_id, interval_kind, interval_id, start_tick, stop_tick FROM core.intervals WHERE stop_tick < start_tick"
+            "sql": "SELECT session_id, interval_id, start_tick, stop_tick FROM core.intervals WHERE stop_tick < start_tick"
           }
         ]
       }

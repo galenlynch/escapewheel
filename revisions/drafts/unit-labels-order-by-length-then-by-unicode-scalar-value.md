@@ -7,7 +7,7 @@
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§1, 9.2, 9.4 and 12.1; Part 08 §§2 and 3; Part 11 §§1, 2 and 5; the rule-language descriptor; the registry-contract descriptor; the core registry; the four extension registries |
-| **Depends on** | `an-interval-is-numbered-by-its-packet` §3.4 (the core registry version this advances from); R147 §3.8 (the registry-contract descriptor this advances from) |
+| **Depends on** | R148 §3.4 (the core registry version this advances from); R147 §3.8 (the registry-contract descriptor this advances from) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4 |
 
@@ -118,7 +118,7 @@ node type.
 | order by Unicode scalar value alone | checkable with Part 11 unchanged, but it renumbers 4,486 and 6,757 units within their runs, whose `unit_id` values then stop following the sorter's numbering |
 | order as numbers where every label of a run is a canonical decimal, and by scalar value otherwise | Part 11 would need a pattern predicate and a guarded `CAST` relying on `CASE` leaving its untaken branch unevaluated; a label of more than 38 digits overflows, and a second order still covers the rest |
 | order by length, then by scalar value, without a rule | a requirement no rule verifies |
-| drop the label and require only run-major, curation-major numbering | it leaves a run's order to each writer, where `an-interval-is-numbered-by-its-packet` fixes an order for intervals |
+| drop the label and require only run-major, curation-major numbering | it leaves a run's order to each writer, where R148 fixes an order for intervals |
 | check one order across the packet, the order of curations included | a curation added after the packet was built, numbered after the largest identifier, fails the check wherever it sorts before a curation the packet holds: a curation of the first sorting run draws 4,505 and 6,781 rows |
 | add `CHARACTER_LENGTH` under a new language ID and keep `escapewheel-rule-sql-v0.1` beside it | the four extension registries stay unchanged, but a validator implements two languages differing by one routine, neither of them released |
 
@@ -195,7 +195,7 @@ These incorporated identifiers MUST advance:
 | artifact | from | to |
 |---|---|---|
 | registry-contract descriptor ID | `escapewheel-registry-contract-v0.6`, which R147 assigns | `escapewheel-registry-contract-v0.7` |
-| core registry `registry_version` | `0.10.0`, which `an-interval-is-numbered-by-its-packet` assigns | `0.11.0` |
+| core registry `registry_version` | `0.10.0`, which R148 assigns | `0.11.0` |
 | core registry `rule_language` | `escapewheel-rule-sql-v0.1` | `escapewheel-rule-sql-v0.2` |
 
 Part 02 §1 incorporates the descriptor as
@@ -217,7 +217,7 @@ The rule language's other routines, type bindings and execution settings are unc
 ## 5. Consequence
 
 No `unit_id` changes in either session packet or in any fixture packet. Every packet binds core
-registry 0.11.0 and is rebuilt at the rebuild `an-interval-is-numbered-by-its-packet` already
+registry 0.11.0 and is rebuilt at the rebuild R148 already
 requires. The release carries one rule language: every repository registry names the new one, and
 the four repository extension registries advance their versions without changing a rule. A registry
 naming `escapewheel-rule-sql-v0.1` selects no descriptor, so its evaluation is unsupported

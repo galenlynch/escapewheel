@@ -27,7 +27,6 @@ def _with_detail(packet_root, *, kind="task.trials"):
     detail = pa.table(
         {
             "session_id": intervals.column("session_id"),
-            "interval_kind": intervals.column("interval_kind"),
             "trial_id": intervals.column("interval_id"),
             "outcome": pa.array(["hit", "miss"]),
         }
@@ -54,17 +53,13 @@ def _with_detail(packet_root, *, kind="task.trials"):
         "table": {
             "columns": [
                 {"name": "session_id", "type": "int32", "presence": "required", "role": "identifier"},
-                {"name": "interval_kind", "type": "string", "presence": "required", "role": "data"},
                 {"name": "trial_id", "type": "int32", "presence": "required", "role": "identifier"},
                 {"name": "outcome", "type": "string", "presence": "optional", "role": "data"},
             ],
-            "primary_key": ["session_id", "trial_id"],
+            "primary_key": ["trial_id"],
             "references": [
-                {
-                    "columns": ["session_id", "interval_kind", "trial_id"],
-                    "resource": "core.intervals",
-                    "resource_columns": ["session_id", "interval_kind", "interval_id"],
-                }
+                {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+                {"columns": ["trial_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
             ],
             "rules": [],
         },
@@ -97,6 +92,18 @@ def test_the_join_crosses_into_the_named_resource(packet_root):
     assert table.num_rows == 2
     assert set(table.column("outcome").to_pylist()) == {"hit", "miss"}
     assert "start_tick" in table.column_names  # the discriminated row's own columns survive
+    assert table.column_names.count("session_id") == 1  # a column both tables carry is kept once
+
+
+def test_a_key_without_the_kind_resolves_only_rows_of_that_kind(packet_root):
+    """`core.intervals` keys on `interval_id` alone, so the kind filters the rows before the join."""
+    _with_detail(packet_root)
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    kinds_column = intervals.schema.get_field_index("interval_kind")
+    relabelled = intervals.set_column(kinds_column, "interval_kind", pa.array(["task.trials", "task.pulses"]))
+    pq.write_table(relabelled, packet_root / "tables" / "core" / "intervals.parquet")
+    table = resolved(open_packet(packet_root), "core.intervals", "task.trials")
+    assert table.column("interval_id").to_pylist() == [0]
 
 
 def test_resolution_is_keyed_by_kind_because_two_kinds_do_not_concatenate(packet_root):

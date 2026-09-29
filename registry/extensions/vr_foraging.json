@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
   "registry_id": "vr_foraging",
-  "registry_version": "0.9.0",
+  "registry_version": "0.10.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "vr_foraging",
@@ -127,7 +127,7 @@
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "identity": "carried",
+            "identity": "assigned",
             "description": "The site these concentrations were set for."
           },
           {
@@ -155,17 +155,30 @@
         "references": [
           {
             "columns": [
-              "session_id",
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
               "site_id"
             ],
             "resource": "vr_foraging.sites",
             "resource_columns": [
-              "session_id",
               "site_id"
             ]
           }
         ],
         "rules": [
+          {
+            "id": "vr_foraging.site_odors.in_its_sites_session",
+            "level": "error",
+            "message": "a site's odor concentrations name a session other than the site's",
+            "sql": "SELECT o.session_id, o.site_id, s.session_id AS site_session_id\nFROM vr_foraging.site_odors AS o\nJOIN vr_foraging.sites AS s ON s.site_id = o.site_id\nWHERE s.session_id <> o.session_id"
+          },
           {
             "id": "vr_foraging.site_odors.every_site_gets_every_channel",
             "level": "error",
@@ -207,20 +220,12 @@
             "description": "Session ID."
           },
           {
-            "name": "interval_kind",
-            "type": "string",
-            "presence": "required",
-            "role": "data",
-            "description": "Always `vr_foraging.sites`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know.",
-            "vocabulary": "open"
-          },
-          {
             "name": "site_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "identity": "carried",
-            "description": "The site, and the interval it occupies in core. The source numbers sites from 0 within a session and uses that number as the site's identity, so no separate site_index is carried."
+            "identity": "assigned",
+            "description": "The site, and the interval it occupies in core. The source numbers sites from 0 within a session, and that number is the interval's `local_interval_label`, so no separate site_index is carried."
           },
           {
             "name": "site_label",
@@ -418,25 +423,35 @@
           }
         ],
         "primary_key": [
-          "session_id",
           "site_id"
         ],
         "references": [
           {
             "columns": [
-              "session_id",
-              "interval_kind",
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
               "site_id"
             ],
             "resource": "core.intervals",
             "resource_columns": [
-              "session_id",
-              "interval_kind",
               "interval_id"
             ]
           }
         ],
         "rules": [
+          {
+            "id": "vr_foraging.sites.in_its_intervals_session",
+            "level": "error",
+            "message": "a site's session is not the session of the interval it occupies",
+            "sql": "SELECT s.session_id, s.site_id, c.session_id AS interval_session_id\nFROM vr_foraging.sites AS s\nJOIN core.intervals AS c ON c.interval_id = s.site_id\nWHERE c.session_id <> s.session_id"
+          },
           {
             "id": "vr_foraging.sites.site_index_in_patch_counts_what_it_says",
             "level": "error",

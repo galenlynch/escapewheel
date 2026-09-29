@@ -1180,12 +1180,14 @@ class NWBSource(Compensates):
         varying = self._trial_parameters(columns, unmapped, len(start))
         rows = []
         for index in range(len(start)):
+            label = str(int(identifiers[index]))
             row: dict[str, Any] = {
                 "session_id": self.session_id,
-                # Carried (R53 §2.3): intervals/trials/id is already int64 and already 0..n,
-                # so the writer passes it through rather than composing a string from it.
                 "interval_kind": self.interval_kind,
-                "interval_id": int(identifiers[index]),
+                # The NWB numbers only its trials, so its `id` is a label and the name carries the
+                # session and kind that make it unique in the packet (Part 02 §8.2).
+                "interval_id": f"{self.prefix}{self.session_id}/{self.interval_kind}/{label}",
+                "local_interval_label": label,
                 "start_tick": int(start[index]),
                 "stop_tick": int(stop[index]),
                 "clock_id": self.clock.clock_id,

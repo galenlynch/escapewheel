@@ -5,15 +5,16 @@ number. Shared across adapters on purpose: the recipe exists because four source
 produce `core.probes`, and two of them numbering the same probe differently would be a defect no
 foreign key could see -- both values resolve, to different rows.
 
-A **carried** identifier does not come through here at all. `core.intervals.interval_id` is the
-NWB's own `id`, so the writer passes it through rather than choosing. `core.units.unit_id` was
-one until R81 §2.1: a sorter numbers from zero within each run, so its label named several units
-and only the packet can say which is which.
+A **carried** identifier does not come through here at all: `region_id` is the atlas's own
+structure number, so the writer passes it through rather than choosing. A source's number for a
+unit or an interval is a label and not a carried identifier, since a sorter numbers from zero within
+each run and a source numbers each kind of interval separately, so only the packet can say which
+row a number names.
 
-Numbers are assigned in first-seen order and start at 0. Nothing depends on the order -- Part 05 §4.3
-requires only that a key not move once committed -- but a deterministic one makes two builds of
-the same sources produce the same packet, which is what lets a rebuild be compared to what it
-replaced.
+Numbers are assigned in first-seen order and start at 0. Part 05 §4.3 requires only that a key not
+move once committed, and a deterministic order makes two builds of the same sources produce the
+same packet, which is what lets a rebuild be compared to what it replaced. Where Part 02 orders a
+kind's numbers -- units in §12.1, intervals in §12.9 -- the caller asks in that order.
 """
 
 from __future__ import annotations

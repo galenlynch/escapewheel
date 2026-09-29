@@ -98,6 +98,17 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "dependent_axis_unlabelled": ("error", "core.array_dimensions.dependent_axis_labelled"),
     "label_outside_core": ("error", "core.array_dimensions.coordinate_resource_is_core"),
     "array_without_dimension_names": ("error", "array.dimension_names"),
+    "two_kinds_one_label": None,
+    "kinds_out_of_unicode_order": None,
+    "equal_bounds": None,
+    "equal_bounds_swapped": None,
+    "trial_labelled_axis": None,
+    "trials_numbered_from_one": ("error", "core.intervals.numbered_in_order"),
+    "trials_misordered": ("error", "core.intervals.numbered_in_order"),
+    "trials_numbered_by_tick": ("error", "core.intervals.numbered_in_order"),
+    "interval_numbering_gap": ("error", "core.intervals.numbered_in_order"),
+    "repeated_interval_label": ("error", "core.intervals.label_unique_within_kind"),
+    "orphan_trial": ("error", "dynamic_foraging.trials.trial_id_resolves"),
     "no_extracellular": None,
     "one_clock": None,
     "sessions_only": None,
@@ -134,7 +145,10 @@ ABSENT: dict[str, set[str]] = {
 
 #: Packets whose expected finding belongs to an extension (Part 05 §9.5), which must fail that
 #: extension and the packet and leave core passed.
-EXTENSION_FINDINGS: dict[str, str] = {"extension_bad_type": "dynamic_foraging"}
+EXTENSION_FINDINGS: dict[str, str] = {
+    "extension_bad_type": "dynamic_foraging",
+    "orphan_trial": "dynamic_foraging",
+}
 
 #: Packets whose expected finding is advisory (Part 02 §10.2). Advisory rules are off by default --
 #: enabling them must never change whether a packet passed -- so these run with them on, and

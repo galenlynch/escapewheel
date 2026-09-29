@@ -63,8 +63,10 @@ def valid(out: Path):
         pa.table(
             {
                 "session_id": pa.array([1, 1, 1], I32),
+                "interval_id": pa.array([0, 1, 2], I32),
+                "interval_name": [f"s1/{KIND}/{n}" for n in (1, 2, 3)],
                 "interval_kind": [KIND] * 3,
-                "interval_id": pa.array([1, 2, 3], I32),
+                "local_interval_label": ["1", "2", "3"],
                 "start_tick": [1000, 6000, 11000],
                 "stop_tick": [5000, 10000, 15000],
                 "clock_id": pa.array([1, 1, 1], I32),
@@ -83,8 +85,10 @@ def broken(out: Path):
         pa.table(
             {
                 "session_id": pa.array([1, 1, 1, 1], I32),
+                "interval_id": pa.array([0, 0, 2, 3], I32),
+                "interval_name": [f"s1/{KIND}/{n}" for n in (1, 2, 3, 4)],
                 "interval_kind": [KIND] * 4,
-                "interval_id": pa.array([1, 1, 3, 4], I32),
+                "local_interval_label": ["1", "2", "3", "4"],
                 "start_tick": [1000, 2000, 9000, 4000],
                 "stop_tick": [5000, 6000, 7000, 8000],
                 "clock_id": pa.array([1, 1, 1, 99], I32),

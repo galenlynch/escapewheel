@@ -37,20 +37,12 @@ EXTENSION = {
                         "description": "Session identity.",
                     },
                     {
-                        "name": "interval_kind",
-                        "type": "string",
-                        "presence": "required",
-                        "role": "discriminator",
-                        "resolves": "required",
-                        "description": "Interval kind declaration.",
-                    },
-                    {
                         "name": "trial_id",
                         "type": "int32",
                         "presence": "required",
                         "role": "identifier",
-                        "identity": "carried",
-                        "description": "Source trial identity.",
+                        "identity": "assigned",
+                        "description": "The trial, and the interval it occupies in core.",
                     },
                     {
                         "name": "choice",
@@ -62,13 +54,10 @@ EXTENSION = {
                         "description": "Choice.",
                     },
                 ],
-                "primary_key": ["session_id", "trial_id"],
+                "primary_key": ["trial_id"],
                 "references": [
-                    {
-                        "columns": ["session_id", "interval_kind", "trial_id"],
-                        "resource": "core.intervals",
-                        "resource_columns": ["session_id", "interval_kind", "interval_id"],
-                    }
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+                    {"columns": ["trial_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
                 ],
                 "rules": [],
             },
@@ -81,7 +70,8 @@ TRIALS = [
     {
         "session_id": "s001",
         "interval_kind": "task.trials",
-        "interval_id": 0,
+        "interval_id": "s001/task.trials/0",
+        "local_interval_label": "0",
         "clock_id": "harp_s001",
         "start_tick": 0,
         "stop_tick": 99,
@@ -89,7 +79,8 @@ TRIALS = [
     {
         "session_id": "s001",
         "interval_kind": "task.trials",
-        "interval_id": 1,
+        "interval_id": "s001/task.trials/1",
+        "local_interval_label": "1",
         "clock_id": "harp_s001",
         "start_tick": 200,
         "stop_tick": 299,
@@ -107,7 +98,6 @@ def _commit(root, registry, minimal, *, choice="left", extension=EXTENSION):
         [
             {
                 "session_id": t["session_id"],
-                "interval_kind": "task.trials",
                 "trial_id": t["interval_id"],
                 "choice": choice,
             }
@@ -451,22 +441,25 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
     kinds = (("vr_foraging", "sites"), ("opto_tagging", "pulses"), ("unit_qc", "metrics"))
-    # Each kind numbers its own intervals, which is what putting the kind in the key buys
-    # (R54 §2.2): site 0 and pulse 0 are different rows of `core.intervals`.
+
+    def interval(extension_id, table, t):
+        return f"s001/{extension_id}.{table}/{t['local_interval_label']}"
+
+    # Each source numbers its own kind from 0, so site 0 and pulse 0 are two intervals labelled
+    # "0", and the packet numbers them apart (Part 02 §12.9).
     writer.add(
         "core.intervals",
-        [{**t, "interval_kind": f"{e}.{table}"} for e, table in kinds for t in TRIALS],
+        [
+            {**t, "interval_kind": f"{e}.{table}", "interval_id": interval(e, table, t)}
+            for e, table in kinds
+            for t in TRIALS
+        ],
     )
     for extension_id, table in kinds:
         writer.add(
             f"{extension_id}.{table}",
             [
-                {
-                    "session_id": t["session_id"],
-                    "interval_kind": f"{extension_id}.{table}",
-                    "trial_id": t["interval_id"],
-                    "choice": "left",
-                }
+                {"session_id": t["session_id"], "trial_id": interval(extension_id, table, t), "choice": "left"}
                 for t in TRIALS
             ],
         )
@@ -477,6 +470,14 @@ def test_three_extensions_at_once(tmp_path, registry, minimal):
     assert set(packet.extensions()) == {"vr_foraging", "opto_tagging", "unit_qc"}
     assert packet.table("vr_foraging.sites").num_rows == 2
     assert packet.table("unit_qc.metrics").num_rows == 2
+    intervals = packet.table("core.intervals")
+    # Kinds follow one another in Unicode order, each numbered consecutively from where the last ended.
+    assert intervals.column("interval_id").to_pylist() == list(range(6))
+    assert intervals.column("interval_kind").to_pylist() == [
+        kind for kind in ("opto_tagging.pulses", "unit_qc.metrics", "vr_foraging.sites") for _ in TRIALS
+    ]
+    assert intervals.column("local_interval_label").to_pylist() == ["0", "1"] * 3
+    assert packet.table("vr_foraging.sites").column("trial_id").to_pylist() == [4, 5]
 
 
 # -- a recipe names each extension once (Part 05 §3.1) ----------------------------------------
@@ -487,7 +488,7 @@ def _task_version(version):
     document = copy.deepcopy(EXTENSION)
     document["registry_version"] = version
     if version != EXTENSION["registry_version"]:
-        choice = document["resources"]["task.trials"]["table"]["columns"][3]
+        choice = next(c for c in document["resources"]["task.trials"]["table"]["columns"] if c["name"] == "choice")
         choice["enum"] = [*choice["enum"], "none"]
     return document
 

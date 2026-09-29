@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
   "registry_id": "core",
-  "registry_version": "0.9.0",
+  "registry_version": "0.10.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
@@ -3227,6 +3227,22 @@
             "description": "Session ID."
           },
           {
+            "name": "interval_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Interval ID, assigned by the packet; a session's intervals of one kind are numbered consecutively by clock and bounds."
+          },
+          {
+            "name": "interval_name",
+            "type": "string",
+            "presence": "required",
+            "role": "data",
+            "description": "What `interval_id` stands for: the name a source or an earlier packet used for this interval. The only bridge between two packets that numbered it differently (Part 05 \u00a74.3).",
+            "vocabulary": "free"
+          },
+          {
             "name": "interval_kind",
             "type": "string",
             "presence": "required",
@@ -3235,26 +3251,26 @@
             "description": "The resource that specialises this interval, as a dotted resource ID, resolved as Part 02 \u00a78.3's shared key."
           },
           {
-            "name": "interval_id",
-            "type": "int32",
-            "presence": "required",
-            "role": "identifier",
-            "identity": "carried",
-            "description": "Stable trial ID."
+            "name": "local_interval_label",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The source's own number or name for this interval; undefined base, not an offset.",
+            "vocabulary": "free"
           },
           {
             "name": "start_tick",
             "type": "int64",
             "presence": "required",
             "role": "coordinate",
-            "description": "First tick of the trial, inclusive, on `clock_id`."
+            "description": "First tick of the interval, inclusive, on `clock_id`."
           },
           {
             "name": "stop_tick",
             "type": "int64",
             "presence": "required",
             "role": "coordinate",
-            "description": "Last tick of the trial, inclusive, on `clock_id`."
+            "description": "Last tick of the interval, inclusive, on `clock_id`."
           },
           {
             "name": "clock_id",
@@ -3273,8 +3289,6 @@
           }
         ],
         "primary_key": [
-          "session_id",
-          "interval_kind",
           "interval_id"
         ],
         "references": [
@@ -3302,7 +3316,19 @@
             "id": "core.intervals.interval_valid",
             "level": "error",
             "message": "stop_tick precedes start_tick",
-            "sql": "SELECT session_id, interval_kind, interval_id, start_tick, stop_tick\nFROM core.intervals\nWHERE stop_tick < start_tick"
+            "sql": "SELECT interval_id, start_tick, stop_tick\nFROM core.intervals\nWHERE stop_tick < start_tick"
+          },
+          {
+            "id": "core.intervals.label_unique_within_kind",
+            "level": "error",
+            "message": "two intervals of one session and kind carry the same local_interval_label",
+            "sql": "SELECT session_id, interval_kind, local_interval_label, COUNT(*) AS n\nFROM core.intervals\nWHERE local_interval_label IS NOT NULL\nGROUP BY session_id, interval_kind, local_interval_label\nHAVING COUNT(*) > 1"
+          },
+          {
+            "id": "core.intervals.numbered_in_order",
+            "level": "error",
+            "message": "interval_id is not dense from 0, or does not number a session's intervals of one kind consecutively by clock and bounds",
+            "sql": "SELECT numbered.interval_id\nFROM (\n  SELECT interval_id, session_id, interval_kind,\n    ROW_NUMBER() OVER (ORDER BY interval_id) - 1 AS dense,\n    ROW_NUMBER() OVER (\n      PARTITION BY session_id, interval_kind\n      ORDER BY clock_id, start_tick, stop_tick, interval_id) - 1 AS rank_in_kind\n  FROM core.intervals\n) AS numbered\nJOIN (\n  SELECT session_id, interval_kind, MIN(interval_id) AS first_id\n  FROM core.intervals\n  GROUP BY session_id, interval_kind\n) AS kinds\n  ON kinds.session_id = numbered.session_id AND kinds.interval_kind = numbered.interval_kind\nWHERE numbered.interval_id <> numbered.dense\n   OR numbered.interval_id <> CAST(kinds.first_id AS DECIMAL(38,0)) + numbered.rank_in_kind"
           }
         ]
       }

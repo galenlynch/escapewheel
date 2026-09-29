@@ -3,7 +3,7 @@ kind = "table"
 instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
-primary_key = ["session_id", "site_id"]
+primary_key = ["site_id"]
 
 [[columns]]
 name = "session_id"
@@ -11,23 +11,17 @@ type = "int32"
 presence = "required"
 role = "identifier"
 identity = "assigned"
+references = "core.sessions"
 description = "Session ID."
-
-[[columns]]
-name = "interval_kind"
-type = "string"
-presence = "required"
-role = "data"
-vocabulary = "open"
-description = "Always `vr_foraging.sites`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know."
 
 [[columns]]
 name = "site_id"
 type = "int32"
 presence = "required"
 role = "identifier"
-identity = "carried"
-description = "The site, and the interval it occupies in core. The source numbers sites from 0 within a session and uses that number as the site's identity, so no separate site_index is carried."
+identity = "assigned"
+references = { resource = "core.intervals", column = "interval_id" }
+description = "The site, and the interval it occupies in core. The source numbers sites from 0 within a session, and that number is the interval's `local_interval_label`, so no separate site_index is carried."
 
 [[columns]]
 name = "site_label"
@@ -223,10 +217,15 @@ presence = "required"
 role = "sequence_position"
 description = "Position among this block's patches sharing this patch_label, from 0."
 
-[[references]]
-columns = ["session_id", "interval_kind", "site_id"]
-resource = "core.intervals"
-resource_columns = ["session_id", "interval_kind", "interval_id"]
+[[rules]]
+id = "vr_foraging.sites.in_its_intervals_session"
+level = "error"
+message = "a site's session is not the session of the interval it occupies"
+sql = '''
+SELECT s.session_id, s.site_id, c.session_id AS interval_session_id
+FROM vr_foraging.sites AS s
+JOIN core.intervals AS c ON c.interval_id = s.site_id
+WHERE c.session_id <> s.session_id'''
 
 [[rules]]
 id = "vr_foraging.sites.site_index_in_patch_counts_what_it_says"

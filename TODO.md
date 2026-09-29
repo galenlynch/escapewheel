@@ -9,13 +9,13 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R147 accepted. R42 and R73 withdrawn. 2 proposals and 3 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R148 accepted. R42 and R73 withdrawn. 2 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
-45 tables, 358 columns, 116 references, 86 Tier 2 rules (2 advisory)
+45 tables, 360 columns, 116 references, 88 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
-76 conformance packets
+87 conformance packets
 <!-- END facts: corpus -->
 
 <!-- BEGIN facts: extensions -->

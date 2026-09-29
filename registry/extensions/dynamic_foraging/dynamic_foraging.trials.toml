@@ -3,7 +3,7 @@ kind = "table"
 instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
-primary_key = ["session_id", "trial_id"]
+primary_key = ["trial_id"]
 
 [[columns]]
 name = "session_id"
@@ -11,22 +11,16 @@ type = "int32"
 presence = "required"
 role = "identifier"
 identity = "assigned"
+references = "core.sessions"
 description = "Session ID."
-
-[[columns]]
-name = "interval_kind"
-type = "string"
-presence = "required"
-role = "data"
-vocabulary = "open"
-description = "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know."
 
 [[columns]]
 name = "trial_id"
 type = "int32"
 presence = "required"
 role = "identifier"
-identity = "carried"
+identity = "assigned"
+references = { resource = "core.intervals", column = "interval_id" }
 description = "The trial, and the interval it occupies in core."
 
 [[columns]]
@@ -194,14 +188,19 @@ unit = "um"
 description = "Lickspout position."
 
 [[references]]
-columns = ["session_id", "interval_kind", "trial_id"]
-resource = "core.intervals"
-resource_columns = ["session_id", "interval_kind", "interval_id"]
-
-[[references]]
 columns = ["session_id", "block_id"]
 resource = "dynamic_foraging.blocks"
 resource_columns = ["session_id", "block_id"]
+
+[[rules]]
+id = "dynamic_foraging.trials.in_its_intervals_session"
+level = "error"
+message = "a trial's session is not the session of the interval it occupies"
+sql = '''
+SELECT t.session_id, t.trial_id, c.session_id AS interval_session_id
+FROM dynamic_foraging.trials AS t
+JOIN core.intervals AS c ON c.interval_id = t.trial_id
+WHERE c.session_id <> t.session_id'''
 
 [[rules]]
 id = "dynamic_foraging.trials.the_cue_follows_the_delay"

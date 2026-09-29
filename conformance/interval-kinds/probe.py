@@ -5,8 +5,9 @@ interval in a session without knowing the paradigm -- and R54 §5 records that n
 yet, so the argument is unmeasured. This builds both shapes over the same rows and asks what each
 costs a consumer.
 
-Neither shape is in the registry: R54 is proposed. Both are constructed here from a copy, which is
-what makes this a probe rather than an implementation.
+The base shape is the registry's own `core.intervals`, keyed by the `interval_id` a packet assigns
+(Part 02 §12.9); the concrete shape removes it from a copy, which is what makes this a probe rather
+than an implementation.
 """
 
 import json
@@ -35,66 +36,21 @@ def col(name, type_, presence, role, **extra):
     return {**entry, **extra}
 
 
-def base_registry():
-    """Part 01 §3.10: one `core.intervals`, keyed by (session, kind, id)."""
+def concrete_registry():
+    """The registry without `core.intervals`, so each kind carries its own intervals."""
     registry = json.loads(json.dumps(REGISTRY))
-    registry["resources"]["core.intervals"] = {
-        "content_class": "core",
-        "kind": "table",
-        "instances": {"mode": "singleton", "presence": "optional"},
-        "requires": [],
-        "lineage": "optional",
-        "table": {
-            "columns": [
-                col("session_id", "int32", "required", "identifier"),
-                # R55 would make this `discriminator`; that role does not exist yet, so `data`.
-                col("interval_kind", "string", "required", "data"),
-                col(
-                    "interval_id", "int32", "required", "identifier", identity="carried"
-                ),
-                col("clock_id", "int32", "required", "identifier"),
-                col(
-                    "start_tick",
-                    "int64",
-                    "required",
-                    "coordinate",
-                    clock_from="clock_id",
-                ),
-                col(
-                    "stop_tick",
-                    "int64",
-                    "required",
-                    "coordinate",
-                    clock_from="clock_id",
-                ),
-            ],
-            "primary_key": ["session_id", "interval_kind", "interval_id"],
-            "references": [
-                {
-                    "columns": ["session_id"],
-                    "resource": "core.sessions",
-                    "resource_columns": ["session_id"],
-                },
-                {
-                    "columns": ["clock_id"],
-                    "resource": "core.clocks",
-                    "resource_columns": ["clock_id"],
-                },
-            ],
-            "sort": ["session_id", "interval_kind", "interval_id"],
-            "rules": [],
-        },
-    }
+    del registry["resources"]["core.intervals"]
     return registry
 
 
 def detail(extension_id, table, extra, *, based):
     """One kind's detail table. Under the base shape it references `core.intervals` and carries no
     interval of its own; under the concrete shape it carries the interval too."""
-    key = ["session_id", f"{'interval' if based else table[:-1]}_id"]
+    key = ["interval_id"] if based else ["session_id", f"{table[:-1]}_id"]
     columns = [
         col("session_id", "int32", "required", "identifier"),
-        col(key[1], "int32", "required", "identifier", identity="carried"),
+        # A concrete table keeps its source's number; a detail table names the interval the packet numbered.
+        col(key[-1], "int32", "required", "identifier", **({} if based else {"identity": "carried"})),
     ]
     references = [
         {
@@ -108,9 +64,9 @@ def detail(extension_id, table, extra, *, based):
         # join mechanical rather than inferred from names matching.
         references.append(
             {
-                "columns": ["session_id", "interval_id"],
+                "columns": ["interval_id"],
                 "resource": "core.intervals",
-                "resource_columns": ["session_id", "interval_id"],
+                "resource_columns": ["interval_id"],
             }
         )
     else:
@@ -118,6 +74,15 @@ def detail(extension_id, table, extra, *, based):
             col("clock_id", "int32", "required", "identifier"),
             col("start_tick", "int64", "required", "coordinate", clock_from="clock_id"),
             col("stop_tick", "int64", "required", "coordinate", clock_from="clock_id"),
+            # Part 02 §8.6: a table owning its key carries what its source stated beyond the model.
+            col(
+                "metadata",
+                "json_string",
+                "optional",
+                "data",
+                description="What the source stated about this row that the standard does not model, "
+                "carried in the source's own vocabulary and read by no rule.",
+            ),
         ]
         references.append(
             {
@@ -144,7 +109,6 @@ def detail(extension_id, table, extra, *, based):
                     "columns": columns + extra,
                     "primary_key": key,
                     "references": references,
-                    "sort": key,
                     "rules": [],
                 },
             }
@@ -153,7 +117,7 @@ def detail(extension_id, table, extra, *, based):
 
 
 TASK_COLUMNS = [
-    col("choice", "string", "nullable", "data", enum=["left", "right", "none"]),
+    col("choice", "string", "nullable", "data", vocabulary="closed", enum=["left", "right", "none"]),
     col("rewarded", "bool", "nullable", "data"),
 ]
 OPTO_COLUMNS = [
@@ -167,12 +131,14 @@ def rows(based):
     intervals, task, opto = [], [], []
     for i in range(N_TRIALS):
         start = i * 10_000
+        name = f"{SESSION}/dynamic_foraging.trials/{i}"
         if based:
             intervals.append(
                 {
                     "session_id": SESSION,
                     "interval_kind": "dynamic_foraging.trials",
-                    "interval_id": i,
+                    "interval_id": name,
+                    "local_interval_label": str(i),
                     "clock_id": "harp",
                     "start_tick": start,
                     "stop_tick": start + 8_000,
@@ -181,7 +147,7 @@ def rows(based):
         task.append(
             {
                 "session_id": SESSION,
-                ("interval_id" if based else "trial_id"): i,
+                **({"interval_id": name} if based else {"trial_id": i}),
                 "choice": ["left", "right", "none"][i % 3],
                 "rewarded": i % 4 == 0,
                 **(
@@ -197,12 +163,14 @@ def rows(based):
         )
     for j in range(N_PULSES):
         start = 5_000 + j * 33_000
+        name = f"{SESSION}/optotagging.pulses/{j}"
         if based:
             intervals.append(
                 {
                     "session_id": SESSION,
                     "interval_kind": "optotagging.pulses",
-                    "interval_id": j,
+                    "interval_id": name,
+                    "local_interval_label": str(j),
                     "clock_id": "harp",
                     "start_tick": start,
                     "stop_tick": start + 50,
@@ -211,7 +179,7 @@ def rows(based):
         opto.append(
             {
                 "session_id": SESSION,
-                ("interval_id" if based else "pulse_id"): j,
+                **({"interval_id": name} if based else {"pulse_id": j}),
                 "wavelength_nm": 473,
                 "power_mw": 2.5 + (j % 3),
                 **(
@@ -231,7 +199,7 @@ def rows(based):
 def build(root, *, based):
     from escapewheel_writer import PacketWriter
 
-    registry = base_registry() if based else json.loads(json.dumps(REGISTRY))
+    registry = json.loads(json.dumps(REGISTRY)) if based else concrete_registry()
     extensions = [
         detail("dynamic_foraging", "trials", TASK_COLUMNS, based=based),
         detail("optotagging", "pulses", OPTO_COLUMNS, based=based),
@@ -258,11 +226,15 @@ def build(root, *, based):
             {
                 "clock_id": "harp",
                 "session_id": SESSION,
-                "name": "HARP",
                 "tick_rate_hz": 31250.0,
                 "origin": "HARP epoch",
             }
         ],
+    )
+    # Part 02 §12.5: the reference clock declares when it was observing.
+    writer.add(
+        "core.clock_observation_intervals",
+        [{"session_id": SESSION, "clock_id": "harp", "start_tick": 0, "stop_tick": N_TRIALS * 10_000}],
     )
     intervals, task, opto = rows(based)
     if based:

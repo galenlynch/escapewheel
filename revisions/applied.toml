@@ -1002,10 +1002,12 @@ note = "core.clock_anchors keeps anchor_index"
 [clause."R54 §2.1"]
 disposition = "applied"
 where = [{ part = "01", section = "3.10" }]
+note = "R148 §3.1 replaces the identity and key it declared"
 
 [clause."R54 §2.2"]
-disposition = "registry"
-note = "interval_kind is part of the primary key"
+disposition = "superseded"
+by = "R148"
+note = "R148 §§3.1 and 3.2 key an interval by the interval_id a packet assigns and keep the source's number as a label; was interval_kind in the primary key"
 
 [clause."R54 §2.3"]
 disposition = "registry"
@@ -1647,7 +1649,7 @@ note = "`discriminates_via` in registry.schema.json, checked by registry/check.p
 [clause."R90 §3.3"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-discriminator-semantics" }]
-note = "struck the role on dynamic_foraging.trials.interval_kind and vr_foraging.sites.interval_kind; the R48 §2.3 exemption is in check.py"
+note = "core.intervals' whole key is interval_id under R148 §3.1, so a detail table carries no constant column for it, and the two columns whose role this struck are gone; the R48 §2.3 exemption is in the validator's registry-document check"
 
 [clause."R90 §3.4"]
 disposition = "applied"
@@ -1664,6 +1666,7 @@ note = "narrowed by R147 §3.3: the by-position shape is retired, and a paired v
 [clause."R90 §3.6"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-discriminator-semantics" }]
+note = "core.intervals' whole key is interval_id under R148 §3.1, so a detail table carries no constant column for it"
 
 [clause."R90 §3.7"]
 disposition = "applied"
@@ -3868,3 +3871,24 @@ where = [
   { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.6" },
   { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
 ]
+
+[clause."R148 §3.1"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-interval-identity", note = "the assigned identifier, the label and what a consumer relates outside the packet" },
+  { part = "02", anchor = "ew-logical-column-naming", note = "local_interval_label is a source-provenance label" },
+]
+note = "the registry's core.intervals declares the key, interval_name, local_interval_label and core.intervals.label_unique_within_kind"
+
+[clause."R148 §3.2"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-interval-identity", note = "the numbering order" }]
+note = "the registry's core.intervals declares core.intervals.numbered_in_order"
+
+[clause."R148 §3.3"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-discriminator-semantics", note = "the constant column, only where the discriminator is a key member" }]
+
+[clause."R148 §3.4"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.10.0" }]

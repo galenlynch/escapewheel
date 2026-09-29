@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See the repository
 [authority model](../README.md#authority) for the sources that bind.
 
 ```text
-48 resources, 45 tables, 358 columns, 116 references, 86 Tier 2 rules
-registry 0.9.0   logical standard escapewheel-logical-v0.1
+48 resources, 45 tables, 360 columns, 116 references, 88 Tier 2 rules
+registry 0.10.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -652,23 +652,27 @@ registry 0.9.0   logical standard escapewheel-logical-v0.1
 | Column | Type | Presence | Declares | Description |
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
+| `interval_id` | int32 | **required** | — | Interval ID, assigned by the packet; a session's intervals of one kind are numbered consecutively by clock and bounds. |
+| `interval_name` | string | **required** | free | What `interval_id` stands for: the name a source or an earlier packet used for this interval. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `interval_kind` | string | **required** | resolves required | The resource that specialises this interval, as a dotted resource ID, resolved as Part 02 §8.3's shared key. |
-| `interval_id` | int32 | **required** | — | Stable trial ID. |
-| `start_tick` | int64 | **required** | — | First tick of the trial, inclusive, on `clock_id`. |
-| `stop_tick` | int64 | **required** | — | Last tick of the trial, inclusive, on `clock_id`. |
+| `local_interval_label` | string | nullable | free | The source's own number or name for this interval; undefined base, not an offset. |
+| `start_tick` | int64 | **required** | — | First tick of the interval, inclusive, on `clock_id`. |
+| `stop_tick` | int64 | **required** | — | Last tick of the interval, inclusive, on `clock_id`. |
 | `clock_id` | int32 | **required** | — | Clock for start/stop ticks. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
-**Primary key** — `session_id`, `interval_kind`, `interval_id`  
+**Primary key** — `interval_id`  
 
 **References**
 
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 1
+**Tier 2 rules** — 3
 
 - `core.intervals.interval_valid` — error: stop_tick precedes start_tick
+- `core.intervals.label_unique_within_kind` — error: two intervals of one session and kind carry the same local_interval_label
+- `core.intervals.numbered_in_order` — error: interval_id is not dense from 0, or does not number a session's intervals of one kind consecutively by clock and bounds
 
 ### `core.media_assets`
 

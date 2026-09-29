@@ -133,6 +133,7 @@
 "12.6" = "A clock's alignment record"
 "12.7" = "A frame's axes"
 "12.8" = "A coordinate's atlas annotation"
+"12.9" = "Interval identity"
 "13" = "Normative references"
 
 ["03"]
@@ -829,6 +830,12 @@ aliases = []
 part = "05"
 section = "15.4"
 title = "Scope of revalidation"
+aliases = []
+
+[anchor.ew-interval-identity]
+part = "02"
+section = "12.9"
+title = "Interval identity"
 aliases = []
 
 [anchor.ew-later-physical-profiles]

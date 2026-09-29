@@ -104,8 +104,8 @@ check(
     [] if META_ID == "https://escapewheel.org/schemas/registry/0.9.0" else [META_ID],
 )
 check(
-    "core registry version is 0.9.0",
-    [] if REG.get("registry_version") == "0.9.0" else [REG.get("registry_version")],
+    "core registry version is 0.10.0",
+    [] if REG.get("registry_version") == "0.10.0" else [REG.get("registry_version")],
 )
 check(
     "every shipped registry selects the incorporated rule language",
@@ -265,11 +265,6 @@ NAMING_EXCEPTIONS = {
     # for, and R48 §3 measured that a role says what a name cannot, which is why R55 added the role.
     "core.array_dimensions.coordinate_resource": "names the table whose rows the axis's positions stand for, not a kind of thing (Part 03 §6.3)",
     "analysis.array_dimensions.coordinate_resource": "as core.array_dimensions.coordinate_resource",
-    # Part 02 §8.3: each carries `core.intervals.interval_kind` as part of the shared key, so it holds
-    # a discriminator's value without being one -- and the name must match the parent's column for
-    # the composite reference to read.
-    "dynamic_foraging.trials.interval_kind": "carries core.intervals.interval_kind as a shared-key column, not a discriminator (Part 02 §8.3)",
-    "vr_foraging.sites.interval_kind": "as dynamic_foraging.trials.interval_kind",
 }
 
 NAMING = {

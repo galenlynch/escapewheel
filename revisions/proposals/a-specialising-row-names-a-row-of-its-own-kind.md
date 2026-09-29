@@ -34,8 +34,8 @@ Each table specialising an interval carries its interval's kind as a constant co
 reference covers (`session_id`, `interval_kind`, `interval_id`). Where the column holds the table's
 own resource ID, the reference forces the interval's kind to match. Nothing checks that it does:
 `dynamic_foraging.trials.interval_kind` is `data` with an `open` vocabulary, and "Always
-`dynamic_foraging.trials`" is its description rather than a rule. Under the draft
-`an-interval-is-numbered-by-its-packet`, the column goes and the reference covers `interval_id`
+`dynamic_foraging.trials`" is its description rather than a rule. Under R148, the
+column goes and the reference covers `interval_id`
 alone, so a specialising row states no kind at all.
 
 ### 1.2 The other shared-key discriminators generate no check
@@ -104,9 +104,9 @@ of two sorts:
   per calibration and whose keys begin with the reference's columns as Part 02 §8.3 has a detail
   table's key begin.
 
-Under the interval draft, any reference on `interval_id` is a whole-key reference to
+Under R148, any reference on `interval_id` is a whole-key reference to
 `core.intervals`, so a table naming the trial an event fell in would qualify as well. None of the
-11 references comes from a table keyed by exactly its columns today. After the interval draft, the
+11 references comes from a table keyed by exactly its columns today. After R148, the
 two from specialising tables do, since Part 02 §8.3's detail-table key then leaves those tables
 keyed by their interval's identifier.
 
@@ -123,15 +123,15 @@ A resolution lets a validator report a specialising row whose discriminated row 
 or none, for every shared-key discriminator. It identifies specialising tables without taking a
 table that names a discriminated row, or holds several rows per one, for a specialisation. It keeps
 core checkable alone: core names an extension's table through a discriminator and never references
-one (Part 02 §8.3). It holds under the interval draft, where a specialising row carries no kind.
+one (Part 02 §8.3). It holds under R148, where a specialising row carries no kind.
 
 ## 4. Options and tradeoffs
 
 | option | effect |
 |---|---|
-| keep Part 02 §8.3 as written | Part 01 §3.10's kind binds a writer and no check tests it; after the interval draft, a writer mapping a source's trial numbers to the wrong interval identifiers builds a packet that validates wherever no interval is left unspecialised |
-| generate a kind check for every table with a whole-key reference | no new declaration; the tables behind 9 of the 11 references today, and every table naming an interval after the interval draft, would draw a finding for each row whose discriminated row is not of the referencing table's kind |
-| generate it for every table keyed by exactly a whole-key reference | no new declaration, and it finds both shipped specialising tables once the interval draft re-keys them; a table holding one row per interval without being a kind, such as a quality flag for every interval, would be taken for a specialisation and draw a finding for every interval of another kind |
+| keep Part 02 §8.3 as written | Part 01 §3.10's kind binds a writer and no check tests it; after R148, a writer mapping a source's trial numbers to the wrong interval identifiers builds a packet that validates wherever no interval is left unspecialised |
+| generate a kind check for every table with a whole-key reference | no new declaration; the tables behind 9 of the 11 references today, and every table naming an interval after R148, would draw a finding for each row whose discriminated row is not of the referencing table's kind |
+| generate it for every table keyed by exactly a whole-key reference | no new declaration, and it finds both shipped specialising tables once R148 re-keys them; a table holding one row per interval without being a kind, such as a quality flag for every interval, would be taken for a specialisation and draw a finding for every interval of another kind |
 | a specialising table declares what it specialises (preferred direction) | one registry field, on the whole-key reference Part 02 §8.3 already requires, and the check is generated for declared specialisations only; the registry meta-schema changes, and each specialising table declares it, two extension tables today |
 | each extension declares a Tier 2 rule | no core change; an extension omitting the rule passes in silence, which Part 02 §8.3's generation over every declared resource exists to prevent |
 
@@ -154,13 +154,13 @@ that clause is recorded as rationale, and no current part states it.
 | surface | effect |
 |---|---|
 | semantic prose | Unchanged. Part 01 §3.10 already defines an interval's kind as the resource that specialises it. |
-| logical prose and registry | Part 02 §8.3 states the declaration and adds the check to *What is generated*. The registry meta-schema gains the field, so the registry-contract descriptor advances after the drafts `an-interval-is-numbered-by-its-packet` and `unit-labels-order-by-length-then-by-unicode-scalar-value`. The core registry declares no specialising table, so its declarations are unchanged. |
+| logical prose and registry | Part 02 §8.3 states the declaration and adds the check to *What is generated*. The registry meta-schema gains the field, so the registry-contract descriptor advances after R148 and the draft `unit-labels-order-by-length-then-by-unicode-scalar-value`. The core registry declares no specialising table, so its declarations are unchanged. |
 | physical profiles | Unchanged. The check reads two tables and changes no storage. |
 | packet manifest and JSON Schemas | The registry meta-schema, as above. The packet manifest is unchanged. |
 | validation and import | One generated check per declared specialisation. Part 05 §15.4's input set is unchanged. |
 | extensions | `dynamic_foraging.trials` and `vr_foraging.sites` each declare what they specialise, in their own registry version. `aind_opto` and `aind_unit_qc` specialise nothing. |
 | reader, writer, validator, adapters | The validator's generator emits the check from the declaration, and can take its reverse-check candidates from it. The writer is unchanged. Unknown: whether the reader's discriminator resolution should use the declaration. Adapters are unchanged. |
-| existing packets | Both session packets draw no finding, and the interval draft rebuilds them anyway. |
+| existing packets | Both session packets draw no finding, and R148 rebuilds them anyway. |
 | conformance fixtures and tests | A fixture-local extension with a second specialising table, as in §2.1: a conforming packet with two kinds, and a misdirected trial and a misdirected pulse, each drawing the check. |
 | revision process and tooling | Unchanged. |
 | generated publications and developer documentation | `registry/tables.md` renders the declaration, and the registry guide documents the field. |

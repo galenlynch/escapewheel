@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
   "registry_id": "dynamic_foraging",
-  "registry_version": "0.10.0",
+  "registry_version": "0.11.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
   "extension_id": "dynamic_foraging",
@@ -132,7 +132,7 @@
             "id": "dynamic_foraging.blocks.contains_its_trials",
             "level": "error",
             "message": "a trial names a block whose interval does not contain it",
-            "sql": "SELECT t.session_id, t.trial_id\nFROM dynamic_foraging.trials AS t\nJOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id\n  AND b.block_id = t.block_id\nJOIN core.intervals AS c ON c.session_id = t.session_id\n  AND c.interval_kind = t.interval_kind\n  AND c.interval_id = t.trial_id\nWHERE c.start_tick < b.start_tick\n  OR c.stop_tick > b.stop_tick"
+            "sql": "SELECT t.session_id, t.trial_id\nFROM dynamic_foraging.trials AS t\nJOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id\n  AND b.block_id = t.block_id\nJOIN core.intervals AS c ON c.session_id = t.session_id\n  AND c.interval_id = t.trial_id\nWHERE c.start_tick < b.start_tick\n  OR c.stop_tick > b.stop_tick"
           }
         ]
       }
@@ -454,19 +454,11 @@
             "description": "Session ID."
           },
           {
-            "name": "interval_kind",
-            "type": "string",
-            "presence": "required",
-            "role": "data",
-            "description": "Always `dynamic_foraging.trials`. Carries `core.intervals.interval_kind` as part of the shared key, so the reference to `core.intervals` covers that table's whole key. Not a discriminator: it resolves nothing a consumer of this row does not already know.",
-            "vocabulary": "open"
-          },
-          {
             "name": "trial_id",
             "type": "int32",
             "presence": "required",
             "role": "identifier",
-            "identity": "carried",
+            "identity": "assigned",
             "description": "The trial, and the interval it occupies in core."
           },
           {
@@ -639,20 +631,24 @@
           }
         ],
         "primary_key": [
-          "session_id",
           "trial_id"
         ],
         "references": [
           {
             "columns": [
-              "session_id",
-              "interval_kind",
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
               "trial_id"
             ],
             "resource": "core.intervals",
             "resource_columns": [
-              "session_id",
-              "interval_kind",
               "interval_id"
             ]
           },
@@ -669,6 +665,12 @@
           }
         ],
         "rules": [
+          {
+            "id": "dynamic_foraging.trials.in_its_intervals_session",
+            "level": "error",
+            "message": "a trial's session is not the session of the interval it occupies",
+            "sql": "SELECT t.session_id, t.trial_id, c.session_id AS interval_session_id\nFROM dynamic_foraging.trials AS t\nJOIN core.intervals AS c ON c.interval_id = t.trial_id\nWHERE c.session_id <> t.session_id"
+          },
           {
             "id": "dynamic_foraging.trials.the_cue_follows_the_delay",
             "level": "error",

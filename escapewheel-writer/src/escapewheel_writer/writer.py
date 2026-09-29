@@ -1444,8 +1444,27 @@ class PacketWriter:
                         kind = (paired[name](r) if name in paired else None) or target.get(name, name)
                         pending.setdefault(kind, set()).add(str(r[name]))
         for kind in sorted(pending):
+            if kind == "interval_id":
+                continue
             for value in sorted(pending[kind]):
                 self.keys.of(kind, value)
+        # Part 02 §12.9 numbers intervals by session, kind, clock and bounds, which only their rows
+        # hold, so the rows order the names; a name no interval row carries is an orphan and follows.
+        for row in sorted(self._tables.get("core.intervals", []), key=self._interval_order):
+            self.keys.of("interval_id", str(row["interval_id"]))
+        for value in sorted(pending.get("interval_id", ())):
+            self.keys.of("interval_id", value)
+
+    def _interval_order(self, row: Mapping[str, Any]) -> tuple[int, str, int, int, int, str]:
+        """Return where one `core.intervals` row falls in Part 02 §12.9's numbering."""
+        return (
+            self.keys.of("session_id", str(row["session_id"])),
+            str(row["interval_kind"]),
+            self.keys.of("clock_id", str(row["clock_id"])),
+            int(row["start_tick"]),
+            int(row["stop_tick"]),
+            str(row["interval_id"]),
+        )
 
     def _paired_kinds(self, resource_id: str) -> dict[str, Callable[[Mapping[str, Any]], str | None]]:
         """Map each identifier paired value on a table to the numbering its row's kind names.

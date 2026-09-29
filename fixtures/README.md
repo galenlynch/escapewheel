@@ -104,6 +104,19 @@ depend on the sample axis; `independent_label_off_zero` adds a unit label at
 `label_outside_core` labels the unit axis with `analysis.array_assets`, every label null; and
 `array_without_dimension_names` writes the array without `dimension_names` (Part 03 §6.5).
 
+Eleven packets exercise how Part 02 §12.9 numbers intervals. `two_kinds_one_label` adds a tone of
+the fixture-local extension `cue`, labelled `"1"` as the first trial is, and numbers it first,
+since `cue.tones` sorts before `dynamic_foraging.trials`; `kinds_out_of_unicode_order` numbers it
+after the trials; `equal_bounds` gives the two trials one pair of bounds, and `equal_bounds_swapped`
+numbers them the other way round; and `trial_labelled_axis` labels `padded_labels`' unit axis with
+the two trials. All five are clean. `trials_numbered_from_one`, `trials_misordered`,
+`interval_numbering_gap`, and `trials_numbered_by_tick`, which moves the second trial onto the probe
+clock at ticks below the first trial's and numbers it first, each draw
+`core.intervals.numbered_in_order`. `repeated_interval_label` labels both trials `"1"` and draws
+`core.intervals.label_unique_within_kind`, and `orphan_trial` adds a trial naming no interval and
+draws `dynamic_foraging.trials.trial_id_resolves`, filed under `dynamic_foraging`, which fails
+while core passes.
+
 Four packets each add one packet-owned opaque payload at `opaque/<resource_id>/<name>` (Part 03
 §11), and are clean with checksums: `owned_opaque_object` a single file, `owned_opaque_prefix` a
 directory digested as a prefix, `owned_opaque_singleton` a file bound to an opaque singleton of

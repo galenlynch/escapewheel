@@ -168,8 +168,8 @@ def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
     assert "registry_version" not in manifest
     descriptor = manifest["registries"]["core"]
     assert descriptor["role"] == "core"
-    assert descriptor["version"] == registry["registry_version"] == "0.9.0"
-    assert descriptor["path"] == "registries/core/0.9.0.json.gz"
+    assert descriptor["version"] == registry["registry_version"] == "0.10.0"
+    assert descriptor["path"] == "registries/core/0.10.0.json.gz"
     body = gzip.decompress((root / descriptor["path"]).read_bytes())
     assert hashlib.sha256(body).hexdigest() == descriptor["sha256"]
     assert json.loads(body) == dict(registry)
@@ -563,7 +563,7 @@ def test_a_failed_amendment_restores_the_registry(tmp_path, registry, minimal):
     writer.add("core.processing_runs", _runs(status="bogus"))
     with pytest.raises(CommitRefused):
         writer.amend(root)
-    assert json.loads((root / "packet.json").read_text())["registries"]["core"]["version"] == "0.9.0"
+    assert json.loads((root / "packet.json").read_text())["registries"]["core"]["version"] == "0.10.0"
     assert not (root / "registries" / "core" / "9.9.9.json.gz").exists()
 
 

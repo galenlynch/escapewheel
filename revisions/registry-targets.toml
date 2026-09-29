@@ -228,9 +228,6 @@ locations = [
 [target."R47 §2.4"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.clock_anchors/table" }]
 
-[target."R54 §2.2"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table" }]
-
 [target."R54 §2.3"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.intervals/table" }]
 

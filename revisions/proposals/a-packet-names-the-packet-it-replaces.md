@@ -50,7 +50,7 @@ builds' manifests:
 
 `core.units` and `core.intervals` keep one digest across these four builds of each session, so
 these rebuilds kept every unit and interval identifier, and nothing in either packet says so. A
-rebuild can also renumber. Under the draft `an-interval-is-numbered-by-its-packet`, a rebuild adding
+rebuild can also renumber. Under R148, a rebuild adding
 a kind of interval that sorts before the trials moves every trial's identifier, as §2.2 of the
 proposal `an-amendment-adds-groups-of-rows-a-packet-lacks` measured, and the rebuild still carries
 the same `packet_id` and `packet_version`.

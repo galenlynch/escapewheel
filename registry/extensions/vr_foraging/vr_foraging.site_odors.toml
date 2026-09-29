@@ -11,6 +11,7 @@ type = "int32"
 presence = "required"
 role = "identifier"
 identity = "assigned"
+references = "core.sessions"
 description = "Session ID."
 
 [[columns]]
@@ -18,7 +19,8 @@ name = "site_id"
 type = "int32"
 presence = "required"
 role = "identifier"
-identity = "carried"
+identity = "assigned"
+references = { resource = "vr_foraging.sites", column = "site_id" }
 description = "The site these concentrations were set for."
 
 [[columns]]
@@ -37,10 +39,15 @@ finite = true
 unit = "%"
 description = "Concentration commanded on this channel. Zero where the channel was not used: the source emits one value per channel whether or not an odor is on it, so a missing row is a missing channel rather than a silent one."
 
-[[references]]
-columns = ["session_id", "site_id"]
-resource = "vr_foraging.sites"
-resource_columns = ["session_id", "site_id"]
+[[rules]]
+id = "vr_foraging.site_odors.in_its_sites_session"
+level = "error"
+message = "a site's odor concentrations name a session other than the site's"
+sql = '''
+SELECT o.session_id, o.site_id, s.session_id AS site_session_id
+FROM vr_foraging.site_odors AS o
+JOIN vr_foraging.sites AS s ON s.site_id = o.site_id
+WHERE s.session_id <> o.session_id'''
 
 [[rules]]
 id = "vr_foraging.site_odors.every_site_gets_every_channel"

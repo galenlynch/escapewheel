@@ -599,8 +599,8 @@ class Packet:
     def intervals(self, *, session_id: int | None = None, interval_kind: str | None = None) -> pa.Table:
         """Read ``core.intervals``, optionally filtered (Part 01 §3.10).
 
-        Filtering by kind prunes rather than scans: the kind is the second key column, so each
-        kind is a contiguous run in the file's order.
+        Filtering by kind prunes rather than scans: Part 02 §12.9 numbers each session's intervals
+        of one kind consecutively, so each is a contiguous run in the file's order.
 
         Parameters
         ----------
