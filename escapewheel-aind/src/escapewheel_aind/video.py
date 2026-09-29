@@ -283,11 +283,16 @@ class VideoSource(Compensates):
         counter = table.column(COLUMNS[1]).to_numpy(zero_copy_only=False).astype(np.int64)
 
         pts = self._presentation(video)
-        step = int(np.median(np.diff(pts))) if pts.size > 1 else 1
-        # Each surviving frame carries its original row in its own timestamp: the encoder kept
-        # the timeline and dropped pictures within it. That is what makes a transcode loss
-        # identifiable rather than a silent renumbering.
-        rows = (pts - pts[0]) // step
+        if pts.size == counter.size:
+            # A complete video is read in order: timestamps can skip where a transcode was
+            # stitched from chunks without any picture going missing.
+            rows = np.arange(pts.size, dtype=np.int64)
+        else:
+            # A short video's surviving frames carry their original row in their timestamps: an
+            # encoder that drops pictures keeps the timeline, which is what makes the loss
+            # identifiable rather than a silent renumbering.
+            step = int(np.median(np.diff(pts))) if pts.size > 1 else 1
+            rows = (pts - pts[0]) // step
         inside = rows < counter.size
         if not inside.all():
             self.notes.append(f"{video.name}: {int((~inside).sum())} frame(s) index past the timing file; dropped")

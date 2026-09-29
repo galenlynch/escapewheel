@@ -74,6 +74,25 @@ def test_a_prefixed_video_binds_to_its_own_asset_row(root):
     assert {f["media_asset_id"] for f in _frames(source)} <= {r["media_asset_id"] for r in rows}
 
 
+def test_a_complete_video_is_read_in_order_across_a_timestamp_skip(root, monkeypatch):
+    """A stitched transcode skips timestamps without losing a picture."""
+    answers = {"stream=time_base": "1/90000\n", "packet=pts": "0\n3000\n12000\n"}
+    monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
+    frames = _frames(_source(root))
+    assert [f["frame_index"] for f in frames] == [0, 1, 2]
+    assert [f["t_tick"] for f in frames] == [31250, 31312, 31532]
+
+
+def test_a_short_video_places_each_frame_by_its_timestamp(root, monkeypatch):
+    """A transcode that drops a picture keeps the timeline, so the survivors keep their rows."""
+    (root / "bottom_camera.csv").write_text("".join(f"{1 + 0.002 * i},{100 + i},0\n" for i in range(5)))
+    answers = {"stream=time_base": "1/90000\n", "packet=pts": "0\n3000\n6000\n12000\n"}
+    monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
+    source = _source(root)
+    assert [f["t_tick"] for f in _frames(source)] == [31250, 31312, 31375, 31500]
+    assert any("absent from the video" in note for note in source.notes)
+
+
 #: Part 04 §4.1's resource-ID pattern.
 RESOURCE_ID = re.compile(r"^[a-z][a-z0-9_]*\.[a-z0-9_.-]+$")
 
