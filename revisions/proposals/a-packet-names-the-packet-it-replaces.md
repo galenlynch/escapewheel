@@ -141,7 +141,7 @@ same version, just as nothing keeps two amendments from doing so (R32 §7).
 | logical prose and registry | Unchanged. The link is a manifest fact, read before any table (Part 04 §2), and no table records it. |
 | physical profiles | Part 03 §8.1's sentence on corrections cites the replacement rule. Part 03 §9 is unchanged. |
 | packet manifest and JSON Schemas | Part 04 §3 gains an optional member naming the replaced packets and states its meaning, and the manifest schema declares it. The recipe schema Part 05 §3.1 incorporates gains a member naming the packets a build replaces. |
-| validation and import | Part 05 states what a replacement is and its major-version rule. §9.3 compares against the packets a recipe names, §15.1 has an amendment keep its major version and the link, and §15.2's correction becomes a replacement. The proposal `an-amendment-adds-groups-of-rows-a-packet-lacks` states that identifiers are stable across a packet's versions; under the preferred direction that holds within a major version. |
+| validation and import | Part 05 states what a replacement is and its major-version rule. §9.3 compares against the packets a recipe names, §15.1 has an amendment keep its major version and the link, and §15.2's correction becomes a replacement. The proposal `an-amendment-adds-groups-of-rows-a-packet-lacks` states that identifiers are stable across a packet's amendments, which are then the versions sharing a major version. |
 | extensions | Unchanged. |
 | reader, writer, validator, adapters | The writer reads each named manifest, records the link, sets the version, and compares against the named packets; today it compares against a packet its caller names, records nothing, and sets 0.1.0 for every build. The validator checks the major-version rule and, holding a named packet, its digest. A reader may expose the link. Adapters are unchanged. |
 | existing packets | They conform unchanged, since the member is optional. The field test's builds would name the builds they replace. |
@@ -151,11 +151,10 @@ same version, just as nothing keeps two amendments from doing so (R32 §7).
 
 ## 6. Open questions
 
-1. **Does a replacement keep `packet_id`, or take a new one?** The preferred direction keeps it and
-   takes a greater major version (§4). `packet_id` then names the dataset as every recipe in §2.1
-   already uses it, and the version says both which publication is current and where identifiers
-   may have changed. A new `packet_id` keeps every version of a packet at one root, and leaves a
-   dataset's packets connected only by links that run backward.
+1. **Does a replacement keep `packet_id`, or take a new one?** Resolved 2026-09-29: it keeps
+   `packet_id` and takes a greater major version (§4). `packet_id` then names the dataset as every
+   recipe in §2.1 already uses it, and the version says both which publication is current and where
+   identifiers may have changed.
 
 ## 7. Promotion criteria
 
@@ -165,7 +164,7 @@ same version, just as nothing keeps two amendments from doing so (R32 §7).
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
-- [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.

@@ -334,8 +334,9 @@ absent. A result derived outside the packet remains its holder's to track by pac
 The cost is that identifiers depend on a packet's history as well as its sources. A single build
 over all an amended packet's sources orders its groups by their columns. Where an added group sorts
 before an existing one, the build's identifiers therefore differ from the amended packet's. Every
-identifier is stable across the versions of one packet, which is where references outside it are
-made. Part 05 §11 is therefore stated over that history: a packet's identifiers are a function of
+identifier is stable across a packet's amendments, which is where references outside it are made;
+under the proposal `a-packet-names-the-packet-it-replaces`, those are the versions sharing a major
+version. Part 05 §11 is therefore stated over that history: a packet's identifiers are a function of
 the sequence of recipes that built and amended it and of their sources. Each import run records its
 recipe (Part 05 §3.2), so the packet states the sequence, and replaying it reproduces the packet's
 identifiers. A single build over the same sources reproduces them only where no added group sorts
