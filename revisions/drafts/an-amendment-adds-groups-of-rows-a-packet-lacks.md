@@ -111,7 +111,8 @@ rows.
 Some tables serve two additions. `core.unit_coordinates` gains rows for a new curation's units in an
 existing frame, and for existing units in a new registration. `core.electrode_coordinates` gains
 rows for a new registration of existing electrodes, and for a new probe's electrodes in an existing
-frame.
+frame. Both packets hold `measured` electrode coordinates in a frame named `ccf` and no `planned`
+ones, so a plan recorded after the build arrives as a new basis in a frame the packet holds.
 
 A row the packet holds may have no rows of its own in a table that describes it. Both packets hold
 three event streams without events, `FIP_falling_time`, `FIP_rising_time` and `optogenetics_time`,
@@ -267,7 +268,8 @@ compatibility-projection or documentation resource.
 | amend only through resources a caller stages, with no recipe | no adapter delivers into an amendment, so every addition in §2.1 needs code outside the pipeline Part 12 binds |
 | check an amendment's scope only in the writer | a validator given an amended packet cannot tell whether a row changed |
 | hold a group only where the superseded version holds one of its rows | a held stream without events, or held units in a table the packet lacks, could gain rows a consumer read as absent |
-| name each group list's parent in the registry | a second declaration per list, where the references a list's columns carry already name the parent |
+| let a list carry every reference whose source columns it includes | a held frame would hold every basis in it, so a plan added to either packet's `ccf` frame, 3,840 and 4,224 rows, would be refused or take a second frame for the same space |
+| name each group list's parent in the registry | a second declaration per list, where the references a list carries (§3.1) already name its parent |
 | exempt materialization runs from Part 05 §12, as §3.7 exempts imports | two materialization runs of one scope would stand unresolved, where Part 05 §12 exists to name the current one |
 | make `amendment_groups` optional, absent meaning none | an absent declaration would claim that a table gains no rows, where Part 02 §9.3 makes every absent vocabulary a defect for the same reason |
 
@@ -285,15 +287,19 @@ Every `table` object carries `amendment_groups`, an array of **group lists**, be
 primary key, references and rules. A group list is a nonempty array of distinct column names of the
 table. Under one group list, the rows whose listed columns hold equal values, a null equal to a
 null, form one **group**. A group list **carries** each declared reference whose source columns are
-all members of the list. A version **holds** a group where it holds a row of the group, or where the
-list carries at least one declared reference to a table that does not declare `[]` and each such
-reference resolves, on the group's values, to a row that version holds. A canonical table a
-version's manifest does not name holds no rows in that version. A table an amendment may not add
-rows to declares `[]`. Part 05 §15.2 lets an amendment add rows to a table only in groups its
-superseded version does not hold.
+all members of the list, where the referenced table has a column named by each other member: the
+referenced row is then the one the group describes. A version **holds** a group where it holds a row
+of the group, or where the list carries at least one declared reference to a table that does not
+declare `[]` and each such reference resolves, on the group's values, to a row that version holds. A
+canonical table a version's manifest does not name holds no rows in that version. A table an
+amendment may not add rows to declares `[]`. Part 05 §15.2 lets an amendment add rows to a table
+only in groups its superseded version does not hold.
 
 A packet holding a stream therefore holds the stream's group of `core.events` before the stream has
-an event, since that table's list carries `stream_id`'s reference to `core.event_streams`.
+an event, since that table's list carries `stream_id`'s reference to `core.event_streams`. A packet
+holding a frame holds a basis's group of `core.electrode_coordinates` only where it holds
+coordinates in that basis, since the table's first list carries no reference to
+`core.coordinate_frames`, which has no `coordinate_basis` column.
 
 A group list MUST name only columns whose presence is `required` or `nullable`. Two group lists of
 one table MUST NOT name the same set of columns. A table whose content class is not canonical MUST
@@ -357,8 +363,9 @@ It MUST declare these group lists, in this order, on these tables:
 | `core.processing_run_inputs` | `[["processing_run_id"]]` |
 
 Every list in the table above carries a reference to the row its groups describe, except the list of
-`core.intervals` and the second of `core.unit_quality_labels`, whose interval kind and label source
-name no row; a group under those is held only by its rows.
+`core.intervals`, the second of `core.unit_quality_labels`, the first of
+`core.electrode_coordinates` and the second of `core.unit_coordinates`, whose interval kind, label
+source and coordinate basis name no row; a group under those is held only by its rows.
 
 Every other table it declares MUST declare `[]`: `core.sessions`, `core.subjects` and
 `core.session_experimenters`, which identify the packet, and the four analysis tables.
@@ -636,11 +643,9 @@ and a clock cannot move under an added parent; each is a correction. `core.sessi
 session's time origin and alignment bound and changes in no amendment, so an added clock whose
 observation starts before the origin, or does not map onto the reference clock within the bound,
 draws `time.origin_not_earliest` or `time.origin_unmappable` (Part 05 §5.3), and adding it is a
-correction too. Coordinates in a new basis of a frame the packet holds are refused, since the frame
-holds their group; a registration made later takes a frame of its own. A canonical resource whose
-`derived_from` reaches a table an amendment wrote is left as it is, since no amendment changes a
-canonical resource. Part 03 §5.2's member files stay deferred, so a table gaining a group is
-rewritten whole.
+correction too. A canonical resource whose `derived_from` reaches a table an amendment wrote is left
+as it is, since no amendment changes a canonical resource. Part 03 §5.2's member files stay
+deferred, so a table gaining a group is rewritten whole.
 
 ## 5. Consequence
 
@@ -714,6 +719,9 @@ These cases distinguish the new rules from the current ones:
 - an amendment adding events to a stream the packet holds without events, or adding
   `core.unit_observation_intervals` for units the packet holds, draws `amendment.group_grown`, and a
   writer refuses to build it;
+- an amendment adding `planned` electrode coordinates in a frame whose `measured` ones the packet
+  holds is conforming, and one adding `measured` coordinates in that frame for an electrode the
+  packet holds without them draws `amendment.group_grown`;
 - an amendment changing one trial's bounds draws `amendment.row_changed` and
   `amendment.group_grown`, and one removing a trial draws `amendment.row_changed`;
 - an amendment adding a curation and keeping an analysis resource derived from `core.units` at its
