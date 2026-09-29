@@ -246,8 +246,8 @@ the language and adds E021-04, and that their obligations carry to the new ident
 
 ## 6. Conformance and implementation evidence
 
-§3.1 is `applied` at Part 02 §12.1 and `registry` for its rule. §3.2 is `applied` at Part 11 §§2 and
-5. §3.3 is `applied` at Part 11 §1 and `registry` for each registry's `rule_language`. §3.4 is
+§3.1 is `applied` at Part 02 §12.1 and `registry` for its rule. §3.2 is `applied` at Part 11 §§2
+and 5. §3.3 is `applied` at Part 11 §1 and `registry` for each registry's `rule_language`. §3.4 is
 `applied` at Part 02 §§1, 9.2 and 9.4. Each is placed by canonical anchor.
 
 These cases distinguish the new rules from the current ones:

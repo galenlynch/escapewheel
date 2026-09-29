@@ -77,7 +77,7 @@ created with theirs. No section moves, splits, merges or retires.
 | Part 05 §7, the import run | revise in place | same section | an import run's activity is `import`; an amending build adds only new roots | §3.7 |
 | Part 05 §8, derivation into a committed packet | revise in place | same section | an amending build derives from the staged amended packet | §3.5 |
 | Part 05 §11, the fifth criterion | revise in place | same section | determinism is over the recipe, the sources and the packet version amended | §3.9 |
-| Part 05 §12, alternatives | revise in place | same section | import runs are not alternatives; a build writes the preferences its recipe declares | §3.7; §3.8 |
+| Part 05 §12, alternatives | revise in place | same section | import runs are not alternatives; a build writes the preferences its recipe declares, and an amending build prefers each run it adds to a held run's scope | §3.7; §3.8 |
 | Part 05 §15.1, what an amendment is | extend in place | same section | what an amendment writes, and what an amending build is | §3.3; §3.5 |
 | Part 05 §15.2, the scope table and its rationale | replace in place | same section | the scope is stated by content class and by group, a preference may be replaced, and a stale derived resource is derived again or removed | §3.3 |
 | none | add | a new final subsection of Part 05 §15, *Comparison with the superseded version*, anchor `ew-amendment-comparison` | a writer and a validator compare an amendment with the version it supersedes | §3.4 |
@@ -112,6 +112,13 @@ Some tables serve two additions. `core.unit_coordinates` gains rows for a new cu
 existing frame, and for existing units in a new registration. `core.electrode_coordinates` gains
 rows for a new registration of existing electrodes, and for a new probe's electrodes in an existing
 frame.
+
+A row the packet holds may have no rows of its own in a table that describes it. Both packets hold
+three event streams without events, `FIP_falling_time`, `FIP_rising_time` and `optogenetics_time`,
+and neither holds `core.unit_observation_intervals`; the first also lacks `core.clock_phase_steps`.
+Of their array axes, 11 and 14 carry no labels, and 13 and 18 no channels. Events added to one of
+those streams, or observation intervals added for units the packet holds, would change what a
+consumer read: a stream it read as silent, or the span a unit's firing rate divides by.
 
 ### 2.2 A packet-wide order moves identifiers when a group sorts first
 
@@ -178,6 +185,15 @@ No recipe member declares a preferred run, and neither the reference writer nor 
 repository writes `core.preferred_runs`, although Part 05 §12 requires a row wherever a build yields
 two runs sharing a scope. The recipe's `preference` table arbitrates between sources (Part 05 §3.3)
 and chooses no run.
+
+An amendment adds such runs. A curation of a held sorting run shares that run's scope with the held
+curation, and deriving a resource again records a second materialization run scoped to the session.
+The reference writer names every materialization of `analysis.spike_events`
+`materialize.analysis.spike_events`, so a build numbering by name would take the second run for the
+held one. Neither packet holds `core.preferred_runs`, and `core.preferred_runs.activity_matches_run`
+checks a preference's activity against its run but not its scope. The rule §3.8 declares for the
+scope passes the Part 11 static check, returns no rows where a preference names a run of its own
+scope, and draws the preference where it names another's.
 
 `core.processing_runs.scope` is a `string` paired value, which Part 02 §8.3 has hold the scoped
 row's `*_name` where that row's key is assigned. Both packets' sorting runs carry a probe's
@@ -250,23 +266,34 @@ compatibility-projection or documentation resource.
 | split `core.intervals` into one resource per kind | adding a kind becomes adding a resource, and no single identifier names an interval, which `an-interval-is-numbered-by-its-packet` exists to give |
 | amend only through resources a caller stages, with no recipe | no adapter delivers into an amendment, so every addition in §2.1 needs code outside the pipeline Part 12 binds |
 | check an amendment's scope only in the writer | a validator given an amended packet cannot tell whether a row changed |
+| hold a group only where the superseded version holds one of its rows | a held stream without events, or held units in a table the packet lacks, could gain rows a consumer read as absent |
+| name each group list's parent in the registry | a second declaration per list, where the references a list's columns carry already name the parent |
+| exempt materialization runs from Part 05 §12, as §3.7 exempts imports | two materialization runs of one scope would stand unresolved, where Part 05 §12 exists to name the current one |
 | make `amendment_groups` optional, absent meaning none | an absent declaration would claim that a table gains no rows, where Part 02 §9.3 makes every absent vocabulary a defect for the same reason |
 
 ## 3. Decision
 
 Ten subsections define the groups a table declares, declare them on the core tables, restate what an
 amendment may change, check it against the version it supersedes, let a recipe amend a packet,
-continue its numbering, separate imports from alternatives, declare preferred runs, state
-determinism over the amended packet, and advance the registry identifiers. The crosswalk in §1.1
-places each.
+continue its numbering, separate imports from alternatives and prefer the alternatives an amendment
+adds, declare preferred runs, state determinism over the amended packet, and advance the registry
+identifiers. The crosswalk in §1.1 places each.
 
 ### 3.1 A table declares the groups an amendment may add
 
 Every `table` object carries `amendment_groups`, an array of **group lists**, beside its columns,
 primary key, references and rules. A group list is a nonempty array of distinct column names of the
 table. Under one group list, the rows whose listed columns hold equal values, a null equal to a
-null, form one **group**. A table an amendment may not add rows to declares `[]`. Part 05 §15.2 lets
-an amendment add rows to a table only in groups its superseded version lacks.
+null, form one **group**. A group list **carries** each declared reference whose source columns are
+all members of the list. A version **holds** a group where it holds a row of the group, or where the
+list carries at least one declared reference to a table that does not declare `[]` and each such
+reference resolves, on the group's values, to a row that version holds. A canonical table a
+version's manifest does not name holds no rows in that version. A table an amendment may not add
+rows to declares `[]`. Part 05 §15.2 lets an amendment add rows to a table only in groups its
+superseded version does not hold.
+
+A packet holding a stream therefore holds the stream's group of `core.events` before the stream has
+an event, since that table's list carries `stream_id`'s reference to `core.event_streams`.
 
 A group list MUST name only columns whose presence is `required` or `nullable`. Two group lists of
 one table MUST NOT name the same set of columns. A table whose content class is not canonical MUST
@@ -315,16 +342,23 @@ It MUST declare these group lists, in this order, on these tables:
 | `core.events` | `[["session_id", "stream_id"]]` |
 | `core.event_stream_observation_intervals` | `[["event_stream_id"]]` |
 | `core.coordinate_frame_axes` | `[["session_id", "coordinate_frame"]]` |
-| `core.electrode_coordinates`, `core.electrode_coordinate_values` | `[["session_id", "coordinate_frame", "coordinate_basis"], ["electrode_id"]]` |
-| `core.unit_coordinates`, `core.unit_coordinate_values` | `[["session_id", "unit_id"], ["session_id", "coordinate_frame", "coordinate_basis"]]` |
+| `core.electrode_coordinates` | `[["session_id", "coordinate_frame", "coordinate_basis"], ["electrode_id"]]` |
+| `core.electrode_coordinate_values` | `[["electrode_id", "coordinate_frame", "coordinate_basis"]]` |
+| `core.unit_coordinates` | `[["session_id", "unit_id"], ["session_id", "coordinate_frame", "coordinate_basis"]]` |
+| `core.unit_coordinate_values` | `[["session_id", "unit_id", "coordinate_frame", "coordinate_basis"]]` |
 | `core.unit_quality_labels` | `[["session_id", "unit_id"], ["session_id", "source"]]` |
-| `core.array_dimensions`, `core.array_labels`, `core.array_channels` | `[["array_asset_id"]]` |
+| `core.array_dimensions` | `[["array_asset_id"]]` |
+| `core.array_labels`, `core.array_channels` | `[["array_asset_id", "axis_index"]]` |
 | `core.media_frames` | `[["media_asset_id"]]` |
 | `core.clock_anchors` | `[["clock_id"]]` |
 | `core.clock_observation_intervals`, `core.clock_phase_steps` | `[["session_id", "clock_id"]]` |
 | `core.electrodes` | `[["probe_id"]]` |
 | `core.calibration_points`, `core.calibration_devices` | `[["calibration_id"]]` |
 | `core.processing_run_inputs` | `[["processing_run_id"]]` |
+
+Every list in the table above carries a reference to the row its groups describe, except the list of
+`core.intervals` and the second of `core.unit_quality_labels`, whose interval kind and label source
+name no row; a group under those is held only by its rows.
 
 Every other table it declares MUST declare `[]`: `core.sessions`, `core.subjects` and
 `core.session_experimenters`, which identify the packet, and the four analysis tables.
@@ -339,8 +373,8 @@ A writer performing an amendment MAY make, and MUST NOT make, these changes:
 
 | change | |
 |---|---|
-| Add a resource the superseded manifest does not name | MAY |
-| Add to a canonical table rows each forming, under at least one of the table's group lists, a group the superseded version lacks | MAY |
+| Add a resource the superseded manifest does not name, other than a canonical table | MAY |
+| Add to a canonical table, whether or not the superseded manifest names it, rows each forming, under at least one of the table's group lists, a group the superseded version does not hold (§3.1) | MAY |
 | Replace a `core.preferred_runs` row with a row of the same primary key | MAY |
 | Remove or replace an analysis, compatibility-projection or documentation resource | MAY — Part 06 makes analysis resources disposable |
 | Change or remove any other row of a canonical table | MUST NOT |
@@ -350,10 +384,11 @@ A writer performing an amendment MAY make, and MUST NOT make, these changes:
 A table's group lists are those its declaration carries in the registry the amended manifest binds.
 Every added row forms a new group under at least one of them, so a group a table declares under its
 only list, such as a session's trials or a curation's units, never grows: nothing in a packet
-records which derived results read which rows. Under a table's other lists an added row may join a
-held group, as a new registration's coordinates join each held unit's under `core.unit_coordinates`'
-first list. A packet whose canonical data was wrong is therefore a new packet, not a new version of
-an old one.
+records which derived results read which rows. A group a held row describes is held before it has
+rows, so a stream the packet holds gains no events and a unit it holds no observation intervals,
+even where the packet holds none. Under a table's other lists an added row may join a held group, as
+a new registration's coordinates join each held unit's under `core.unit_coordinates`' first list. A
+packet whose canonical data was wrong is therefore a new packet, not a new version of an old one.
 
 A preference is the one row an amendment may replace. Replacing one changes no row a run produced,
 and the superseded version keeps the replaced row. An amendment removes no preference, so an
@@ -377,7 +412,7 @@ one, and MUST report each of these at `error`:
 | `amendment.identity_changed` | the two manifests differ in `packet_id`, `profile_id`, `semantic_standard_version` or `logical_standard_version` |
 | `amendment.resource_changed` | a canonical resource the superseded manifest names that the current manifest does not name, or names at another `uri` where the resource is not a table |
 | `amendment.row_changed` | a row of a canonical table both manifests name and the amendment wrote, which the superseded version holds and the current version does not hold unchanged |
-| `amendment.group_grown` | a row of such a table that the current version holds and the superseded version does not, where the table declares no group list, or where under every group list some superseded row shares its values |
+| `amendment.group_grown` | a row of a canonical table the amendment wrote, which the current version holds and the superseded version does not, where the table declares no group list, or where under every group list the superseded version holds the row's group (§3.1) |
 | `amendment.derived_resource_stale` | an analysis or compatibility-projection resource both manifests name at the same `uri`, whose `derived_from` chain in either manifest reaches a canonical table the amendment wrote other than the three provenance tables |
 
 A table's rows are compared as a multiset over the columns the amended manifest's registry declares,
@@ -434,23 +469,22 @@ An amending build takes the packet's rows as delivered and normalized before any
 terms of Part 12 §4 include them. It numbers a name the packet holds with the packet's identifier
 for it, and every other name from one past the largest value the packet holds for that identifier,
 or from 0 where it holds none. It orders the names it adds as a build orders a new packet's, so the
-units of a curation it adds are numbered after every unit the packet holds, and
-`core.spike_events`, stored in key order (Part 03 §5.3), clusters each curation's spikes rather than
-each probe's.
+units of a curation it adds are numbered after every unit the packet holds, and `core.spike_events`,
+stored in key order (Part 03 §5.3), clusters each curation's spikes rather than each probe's.
 
 It then settles against the packet each delivered row that ownership keeps (Part 05 §3.3):
 
-- a row of a table the packet's manifest does not name is added;
+- a row of a non-canonical table the packet's manifest does not name is added;
 - a row of `core.sessions` or `core.subjects` is dropped, the packet's row prevailing (§3.5);
 - a row equal to one the packet holds, compared as §3.4 compares rows but for `metadata`, is
   dropped, together with any catalog instance the row catalogues;
 - any other row is added where it forms, under at least one group list of its table (§3.3), a group
-  the packet lacks.
+  the packet does not hold (§3.1).
 
 An amending build MUST refuse every other delivered row, naming the table and the row. A table to
 which it adds no row keeps its resource entry, so the amendment does not write it.
 
-### 3.7 An import run is no alternative to another
+### 3.7 An import run is no alternative, and an added alternative is preferred
 
 A writer MUST record the import's `core.processing_runs` row with `activity_type` `import`. An
 amending build records a `core.source_files` row only for a root among its recipe's sources whose
@@ -481,6 +515,13 @@ WHERE NOT EXISTS(
     AND (p.session_id = g.session_id OR (p.session_id IS NULL AND g.session_id IS NULL))
 )
 ```
+
+An amending build MUST give every run it records a `processing_run_name` the packet does not hold.
+Where a run it records, of an activity other than `import`, shares its session, `activity_type`,
+`scope_kind` and `scope` with a run the packet holds, the build MUST write a `core.preferred_runs`
+row naming it, unless its recipe declares a preference of that key (§3.8). A materialization run
+deriving a resource again (§3.3) is such a run, as is the run of a curation added to a held sorting
+run.
 
 ### 3.8 A recipe declares preferred runs
 
@@ -529,6 +570,21 @@ row replaces the packet's row with the same primary key. A build MUST refuse, be
 source, a recipe with two entries sharing `activity_type`, `scope_kind` and `scope`. It MUST refuse,
 naming the entry, an entry whose `processing_run_name` names no run the packet holds or the build
 records, or names a run whose `activity_type`, `scope_kind` or `scope` differs from the entry's.
+
+The incorporated core registry MUST declare this rule on `core.preferred_runs`, at level `error`.
+
+| id | message |
+|---|---|
+| `core.preferred_runs.scope_matches_run` | `a preference names a run whose scope_kind or scope differs from the preference's` |
+
+```sql
+SELECT p.session_id, p.activity_type, p.scope_kind AS preferred_scope_kind,
+  p.scope AS preferred_scope, r.scope_kind AS run_scope_kind, r.scope AS run_scope
+FROM core.preferred_runs AS p
+JOIN core.processing_runs AS r USING (processing_run_id)
+WHERE r.scope_kind IS DISTINCT FROM p.scope_kind
+   OR r.scope IS DISTINCT FROM p.scope
+```
 
 An entry's `scope` names the scoped row as Part 02 §8.3 has a `string` paired value name it. The
 incorporated core registry MUST describe `scope`, on `core.processing_runs` and
@@ -580,9 +636,11 @@ and a clock cannot move under an added parent; each is a correction. `core.sessi
 session's time origin and alignment bound and changes in no amendment, so an added clock whose
 observation starts before the origin, or does not map onto the reference clock within the bound,
 draws `time.origin_not_earliest` or `time.origin_unmappable` (Part 05 §5.3), and adding it is a
-correction too. A canonical resource whose `derived_from` reaches a table an amendment wrote is left
-as it is, since no amendment changes a canonical resource. Part 03 §5.2's member files stay
-deferred, so a table gaining a group is rewritten whole.
+correction too. Coordinates in a new basis of a frame the packet holds are refused, since the frame
+holds their group; a registration made later takes a frame of its own. A canonical resource whose
+`derived_from` reaches a table an amendment wrote is left as it is, since no amendment changes a
+canonical resource. Part 03 §5.2's member files stay deferred, so a table gaining a group is
+rewritten whole.
 
 ## 5. Consequence
 
@@ -619,13 +677,13 @@ These accepted clauses change:
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. Part 01 states no amendment rule. | None required. |
-| logical prose and registry | Part 02 §2.3 names the member, Part 02 gains *Amendment groups* with its anchor, and Part 02 §§1, 9.2 and 9.4 take §3.10's identifiers and §3.1's invariant. `registry/registry.schema.json` requires the member; the core registry source declares §3.2's lists, §3.7's rule and §3.8's descriptions; `registry/check.py` implements the invariant and follows the new identifiers. | `evidence/R<N>.json` names each anchor and registry pointer; `registry/check.py` passes. |
+| logical prose and registry | Part 02 §2.3 names the member, Part 02 gains *Amendment groups* with its anchor, and Part 02 §§1, 9.2 and 9.4 take §3.10's identifiers and §3.1's invariant. `registry/registry.schema.json` requires the member; the core registry source declares §3.2's lists, §3.7's rule, and §3.8's rule and descriptions; `registry/check.py` implements the invariant and follows the new identifiers. | `evidence/R<N>.json` names each anchor and registry pointer; `registry/check.py` passes. |
 | physical profiles | Part 03 §9's sentence covers every resource an amendment writes, and Part 03 §5.3's clusters a curation's spikes. Part 03 §5.2 is unchanged. | `evidence/R<N>.json` names the anchor. |
 | packet manifest and JSON Schemas | The registry meta-schema, as above, and `registry/recipe.schema.json`, which admits `amends` and `preferred_run` and names `chosen_at` among the values its description leaves untyped; `registry/recipe.example.toml`, which exercises every top-level member; `registry/build.py` copies the recipe schema into the writer. The manifest schema is unchanged. | `registry/build.py` regenerates byte-identically. |
 | validation and import | Part 05 §§1, 3.1, 3.3, 3.5, 3.6, 4.3, 7, 8, 11, 12, 15.1 and 15.2 take §§3.3–3.9, and Part 05 gains *Comparison with the superseded version*. Part 12 is unchanged. | `evidence/R<N>.json` names each anchor. |
 | extensions | Each of the four repository extension registries declares `amendment_groups` on its tables and advances its `registry_version`; the core specification does not choose either. | `registry/check.py` over every extension registry. |
-| reader, writer, validator, adapters | The writer runs a recipe with `amends` as an amending build: it seeds its numbering from the packet, drops delivered rows the packet holds, refuses a row growing a group, binds the packet's registries, records a new source file only for a new root, writes `core.preferred_runs` from the recipe, derives again or drops each stale derived resource, and runs §3.4's comparison. Its amendment API's refusal to replace other than analysis and provenance resources follows §3.3's table, and its sorter source names a curation apart from its sorting run, so a recipe can add a curation of a held run. The validator reads the last superseded manifest and makes the same comparison. The writer's and validator's citations of Part 05 §15.2 follow its new content. The reader reads the current manifest; its description of a preference's scope follows §3.8, and its report of ambiguous runs exempts imports as §3.7 does. `escapewheel-aind`'s adapters are unchanged. | The writer and validator suites; both session packets rebuilt and validated with no error; an amending build of each adding intervals and a curation. |
-| conformance fixtures and tests | Amended fixture packets as §6 lists, each carrying its superseded manifest. Negative registry variants for `registry.amendment_groups.resolves` and a table object lacking the member. Writer tests for each refusal of §§3.5, 3.6 and 3.8. | `fixtures/corpus.py`; the registry-conformance vectors. |
+| reader, writer, validator, adapters | The writer runs a recipe with `amends` as an amending build: it seeds its numbering from the packet, drops delivered rows the packet holds, refuses a row growing a group, binds the packet's registries, records a new source file only for a new root, writes `core.preferred_runs` from the recipe, names every run it records apart from the packet's and prefers each run it adds to a held run's scope, derives again or drops each stale derived resource, and runs §3.4's comparison. Its amendment API's refusal to replace other than analysis and provenance resources follows §3.3's table, and its sorter source names a curation apart from its sorting run, so a recipe can add a curation of a held run. The validator reads the last superseded manifest and makes the same comparison. The writer's and validator's citations of Part 05 §15.2 follow its new content. The reader reads the current manifest; its description of a preference's scope follows §3.8, and its report of ambiguous runs exempts imports as §3.7 does. `escapewheel-aind`'s adapters are unchanged. | The writer and validator suites; both session packets rebuilt and validated with no error; an amending build of each adding intervals and a curation. |
+| conformance fixtures and tests | Amended fixture packets as §6 lists, each carrying its superseded manifest. Negative registry variants for `registry.amendment_groups.resolves` and a table object lacking the member. Writer tests for each refusal of §§3.5, 3.6 and 3.8. A negative corpus variant whose preference names a run of another scope. | `fixtures/corpus.py`; the registry-conformance vectors. |
 | revision process and tooling | The ordinary ledger and evidence records, R32 §3's supersession, and the notes above. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | `registry/tables.md` renders each table's group lists; Part 08 §§2 and 3 regenerate with the new registry versions; the registry guide documents the member; the writer's guide documents `amends` and `preferred_run`; the specification README's identifier table, `framework.py`'s expected version, the combined specification and the heading index follow. | `verify.py`. |
 
@@ -635,7 +693,7 @@ These accepted clauses change:
 `applied` at Part 05 §§15.1 and 15.2 and Part 03 §9, and §3.4 at Part 05 §1 and *Comparison with the
 superseded version*. §3.5 is `applied` at Part 05 §§3.1, 3.3, 3.5, 3.6, 8 and 15.1, and §3.6 at
 Part 05 §4.3 and Part 03 §5.3. §3.7 is `applied` at Part 05 §§7 and 12 and `registry` for its rule.
-§3.8 is `applied` at Part 05 §§3.1, 3.5 and 12 and `registry` for its descriptions, §3.9 at
+§3.8 is `applied` at Part 05 §§3.1, 3.5 and 12 and `registry` for its rule and descriptions, §3.9 at
 Part 05 §§4.3 and 11, and §3.10 at Part 02 §§1, 9.2 and 9.4 and Part 05 §3.1. Each is placed by
 canonical anchor.
 
@@ -644,13 +702,18 @@ These cases distinguish the new rules from the current ones:
 - an amendment adding 120 intervals of a kind a fixture-local extension declares, sorting before the
   packet's trials and numbered after the largest identifier, is conforming and draws nothing from
   §3.4, where Part 05 §15.2 forbids it today;
-- an amendment adding a curation of the first sorting run, with its units, spikes, unit electrodes
-  and the preference Part 05 §12 requires, is conforming;
+- an amendment adding a curation of the first sorting run, with its units, spikes and unit
+  electrodes, a preference for its curation run, and `analysis.spike_events` derived again under a
+  new materialization run it prefers, is conforming and draws no
+  `core.processing_runs.undeclared_currency`;
 - an amendment replacing a `core.preferred_runs` row is conforming;
 - a packet holding two import runs sharing a session and scope draws no
   `core.processing_runs.undeclared_currency`, where today it draws the rule;
 - an amendment adding a trial to a session's trials draws `amendment.group_grown`, and a writer
   refuses to build it;
+- an amendment adding events to a stream the packet holds without events, or adding
+  `core.unit_observation_intervals` for units the packet holds, draws `amendment.group_grown`, and a
+  writer refuses to build it;
 - an amendment changing one trial's bounds draws `amendment.row_changed` and
   `amendment.group_grown`, and one removing a trial draws `amendment.row_changed`;
 - an amendment adding a curation and keeping an analysis resource derived from `core.units` at its
@@ -665,13 +728,14 @@ These cases distinguish the new rules from the current ones:
 - an amending recipe whose `amends` names another version than the packet's current one, that
   carries a `[subject]` or `[overrides]` member, or that redeclares a clock the packet holds, is
   refused before any source opens, as is a recipe with two `preferred_run` entries sharing a key;
-- a `preferred_run` entry naming a run of another scope is refused;
+- a `preferred_run` entry naming a run of another scope is refused, and a packet holding such a
+  preference draws `core.preferred_runs.scope_matches_run`;
 - an amending build whose source states a session fact differing from the packet's reports it and
   keeps the packet's row; and
 - an amending build whose source delivers the packet's rows again drops them, adds only the new
   groups, and leaves the entry of every table it adds no row to unchanged.
 
 The positive cases also include the two rebuilt session packets and the valid corpus packet.
-Feasibility rests on §2's measurements: both per-group numbering rules and §3.7's rule pass the Part
-11 static check, and §3.4's comparison ran over the second packet's `core.spike_events`, the largest
-table in either, in 12.0 s.
+Feasibility rests on §2's measurements: the Part 11 static check passes both per-group numbering
+rules and the rules of §§3.7 and 3.8, and §3.4's comparison ran over the second packet's
+`core.spike_events`, the largest table in either, in 12.0 s.
