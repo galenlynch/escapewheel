@@ -128,8 +128,8 @@ clock, so choosing by counts alone writes both plain: `anchor_index` 28x to 67x 
 the best across both packets before any exception (2026-09-15; toolchain as above). The
 `_tick` suffix, the `structural_index` and `sequence_position` roles and `assigned` identity mark
 such columns. None states a distribution, so §2.7 stands, and a mark is wrong in places:
-`core.unit_electrodes.channel_index` is a structural index cycling through 26 positions in every
-unit.
+`core.units.first_spike_tick` and `last_spike_tick` are ticks in a table sorted by unit rather than
+by time, and delta writes them 1.10x to 1.28x larger than plain (2026-09-28; toolchain as above).
 
 ### 2.10 A count sees repetition that a declaration cannot
 

@@ -16,9 +16,6 @@ locations = [
 [target."R20 §2.3"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
-[target."R20 §2.4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
-
 [target."R33 §2.1"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
@@ -340,7 +337,7 @@ locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/cor
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.sorting_run_channels/table" }]
 
 [target."R83 §2.4"]
-locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.unit_electrodes/table/rules/2/id", equals = "core.unit_electrodes.electrode_is_a_run_channel" }]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.unit_electrodes/table/rules/1/id", equals = "core.unit_electrodes.electrode_is_a_run_channel" }]
 
 [target."R85 §2.1"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.devices/table" }]
@@ -425,18 +422,6 @@ locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.clock_phase_steps/table/rules/0/id", equals = "core.clock_phase_steps.step_needs_parent" },
 ]
 
-[target."R100 §2.1"]
-locations = [
-  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" },
-  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table" },
-]
-
-[target."R100 §2.2"]
-locations = [
-  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/rules/7/id", equals = "core.array_dimensions.coordinate_pair_complete" },
-  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/rules/0/id", equals = "analysis.array_dimensions.coordinate_pair_complete" },
-]
-
 [target."R100 §2.4"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table" }]
 
@@ -488,12 +473,12 @@ locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table/columns/11/finite", equals = true },
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table/columns/12/name", equals = "offset" },
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_assets/table/columns/12/finite", equals = true },
-  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/6/name", equals = "inter_sample_shift" },
-  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/6/finite", equals = true },
-  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/8/name", equals = "offset" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/5/name", equals = "inter_sample_shift" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/5/finite", equals = true },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/7/name", equals = "offset" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/7/finite", equals = true },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/8/name", equals = "conversion" },
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/8/finite", equals = true },
-  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/9/name", equals = "conversion" },
-  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table/columns/9/finite", equals = true },
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/columns/8/name", equals = "step_value" },
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/columns/8/finite", equals = true },
   { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/columns/9/name", equals = "origin_value" },
@@ -528,3 +513,41 @@ locations = [
 
 [target."R139 §3.5"]
 locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/core.clocks/table/rules/11/id", equals = "core.clocks.transform_slope_positive" }]
+
+[target."R147 §3.1"]
+locations = [
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_labels/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_labels/table" },
+]
+
+[target."R147 §3.2"]
+locations = [
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/columns/4/name", equals = "coordinate_resource" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/columns/4/discriminates_via", equals = "core.array_labels.axis_index" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/columns/5/name", equals = "depends_on_axis_index" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/references/4/resource", equals = "core.array_dimensions" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/columns/4/name", equals = "coordinate_resource" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/columns/4/discriminates_via", equals = "analysis.array_labels.axis_index" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/columns/5/name", equals = "depends_on_axis_index" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/references/4/resource", equals = "analysis.array_dimensions" },
+]
+
+[target."R147 §3.5"]
+locations = [
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_channels/table" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_electrodes/table" },
+]
+
+[target."R147 §3.7"]
+locations = [
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/rules/1/id", equals = "core.array_dimensions.one_coordinate_form" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/rules/6/id", equals = "core.array_dimensions.dependent_axis_labelled" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_dimensions/table/rules/7/id", equals = "core.array_dimensions.dependency_not_chained" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_labels/table/rules/0/id", equals = "core.array_labels.independent_depends_on_position_zero" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/core.array_labels/table/rules/1/id", equals = "core.array_labels.one_position_per_row" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/rules/1/id", equals = "analysis.array_dimensions.one_coordinate_form" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/rules/5/id", equals = "analysis.array_dimensions.dependent_axis_labelled" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_dimensions/table/rules/6/id", equals = "analysis.array_dimensions.dependency_not_chained" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_labels/table/rules/0/id", equals = "analysis.array_labels.independent_depends_on_position_zero" },
+  { path = "registry/logical_schemas.json", pointer = "/resources/analysis.array_labels/table/rules/1/id", equals = "analysis.array_labels.one_position_per_row" },
+]

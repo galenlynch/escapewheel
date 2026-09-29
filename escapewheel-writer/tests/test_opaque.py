@@ -24,7 +24,7 @@ QC_URI = "opaque/core.report/QC%20report%20%C3%A9.pdf"
 
 #: An extension declaring one opaque singleton, which binds a payload with no catalog row.
 QC = {
-    "$schema": "https://escapewheel.org/schemas/registry/0.8.0",
+    "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
     "registry_id": "qc",
     "registry_version": "0.1.0",
     "logical_standard_version": "escapewheel-logical-v0.1",

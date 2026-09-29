@@ -20,8 +20,8 @@ that in three integers, on the clock the spikes are already on, and both defects
 rather than being carried forward.
 
 **The channel axis is a labelled one.** LFP keeps every fourth contact -- 96 of 384 -- so the
-axis cannot be described by a range. `core.array_channels` names the electrode behind each
-position and R20 §2's labelled form points the axis at it.
+axis cannot be described by a range. The axis names `core.electrodes`, and its labels name the
+electrode behind each position.
 
 **`inter_sample_shift` is the per-channel quantity R19 was for.** It takes eight distinct
 values within a series, because a Neuropixels ADC samples its channels in turn rather than at
@@ -104,6 +104,7 @@ class LFPSource(Compensates):
             "core.array_assets",
             "core.array_channels",
             "core.array_dimensions",
+            "core.array_labels",
         }
     )
 
@@ -113,6 +114,7 @@ class LFPSource(Compensates):
         {
             "core.array_assets",
             "core.array_dimensions",
+            "core.array_labels",
         }
     )
 
@@ -356,7 +358,7 @@ class LFPSource(Compensates):
         return rows
 
     def array_dimensions(self) -> list[dict[str, Any]]:
-        """`core.array_dimensions`: a regular tick axis, then a labelled channel axis (R20 §2)."""
+        """`core.array_dimensions`: a regular tick axis, then a labelled channel axis (Part 03 §6.3)."""
         rows = []
         for series in self._series:
             clock_id = self._clock(series)
@@ -383,8 +385,7 @@ class LFPSource(Compensates):
                     "array_asset_id": self.array_asset_id(series),
                     "axis_index": 1,
                     "dimension_name": "channel",
-                    "coordinate_resource": "core.array_channels",
-                    "coordinate_position_column": "channel_index",
+                    "coordinate_resource": "core.electrodes",
                 }
             )
             if len(meta["shape"]) != 2:
@@ -398,10 +399,8 @@ class LFPSource(Compensates):
             raise SourceDefect(f"{clock_id}: no declared tick rate, so an axis step in ticks cannot be derived")
         return float(rate)
 
-    def array_channels(self) -> list[dict[str, Any]]:
-        """`core.array_channels`, one row per channel of every series (R19 §2)."""
-        if not self._series:
-            return []
+    def _electrodes(self) -> tuple[Path, dict[str, Any], list[str]]:
+        """Return the electrode table, its columns and each source row's contact name."""
         table = self.root / "general/extracellular_ephys/electrodes"
         # One rule for naming a contact, shared with the adapter owning `core.electrodes`: a second
         # spelling here would mint a second electrode and leave this axis pointing at neither.
@@ -409,6 +408,33 @@ class LFPSource(Compensates):
         names, note = contact_ids(columns, self.prefix)
         if note is not None and note not in self.notes:
             self.notes.append(note)
+        return table, columns, names
+
+    def array_labels(self) -> list[dict[str, Any]]:
+        """`core.array_labels`, the electrode at each channel position of every series (Part 03 §6.3).
+
+        A label is the contact's name, which the writer numbers in `core.electrodes`' numbering.
+        """
+        if not self._series:
+            return []
+        _, _, names = self._electrodes()
+        return [
+            {
+                "array_asset_id": self.array_asset_id(series),
+                "axis_index": 1,
+                "depends_on_position_index": 0,
+                "position_index": index,
+                "label_id": names[source_row],
+            }
+            for series in self._series
+            for index, source_row in enumerate(int(r) for r in self.store.array(series / "electrodes"))
+        ]
+
+    def array_channels(self) -> list[dict[str, Any]]:
+        """`core.array_channels`, one row per channel of every series (R19 §2)."""
+        if not self._series:
+            return []
+        table, columns, _ = self._electrodes()
         channel = columns.get("channel_name")
         shift = self.store.array(table / "inter_sample_shift") if (table / "inter_sample_shift").is_dir() else None
         if shift is None:
@@ -422,7 +448,6 @@ class LFPSource(Compensates):
                         "array_asset_id": self.array_asset_id(series),
                         "axis_index": 1,
                         "channel_index": index,
-                        "electrode_id": names[source_row],
                         "channel_label": str(channel[source_row]) if channel is not None else None,
                         "inter_sample_shift": float(shift[source_row]) if shift is not None else None,
                     }
@@ -434,21 +459,21 @@ class LFPSource(Compensates):
         return {
             "core.array_assets": self.array_assets(),
             "core.array_dimensions": self.array_dimensions(),
+            "core.array_labels": self.array_labels(),
             "core.array_channels": self.array_channels(),
         }
 
     def offers(self) -> dict[str, int]:
         """Part 05 §4.1: how many rows of each resource this source can supply.
 
-        `core.array_channels` is counted from each series' electrode region, which is what
-        `array_channels` iterates. It is offered whether or not an electrode map was given:
-        without one the rows still exist and name no electrode, so omitting it here would
-        under-report the source against the resource a recipe has it own.
+        `core.array_channels` and `core.array_labels` are counted from each series' electrode
+        region, which is what both iterate.
         """
         channels = sum(len(self.store.array(series / "electrodes")) for series in self._series)
         return {
             "core.array_assets": len(self._series),
             "core.array_dimensions": 2 * len(self._series),
+            "core.array_labels": channels,
             "core.array_channels": channels,
         }
 

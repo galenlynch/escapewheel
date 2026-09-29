@@ -297,6 +297,42 @@ A rational step is a numerator and a denominator. `step_tick_den`, where present
 
 Where an array declares both a sampling rate and a regular tick axis, the two describe the same thing and MUST agree. The rate is retained as a validated denormalization, not as a second source of truth.
 
+A writer MUST declare an axis whose positions carry only their order in the numeric form, with
+`step_value` 1, `coordinate_unit` `1` and `origin_value` the number its source gives the first
+position, or 0 where the source numbers none. A principal-component axis is one. No rule can tell
+an order-only axis from a measured one, so nothing checks this.
+
+No form labels a position with text. An axis whose positions are categories that are not rows of a
+resource is declared order-only, or the array is split along it into one array per category, each
+naming its category in `semantic_type`
+([Part 01 §3.17](01_semantic_standard.md#ew-array-asset-concept)).
+
+An axis is **labelled** where its row declares `coordinate_resource`, and each of its positions
+then stands for the row its label names, or for none. Its labels are rows of the table that
+`coordinate_resource`'s `discriminates_via` names: `core.array_labels` for a core array and
+`analysis.array_labels` for an analysis one. A label's `label_id` is the identifier of the row its
+position stands for, in the resource `coordinate_resource` names, and a null `label_id` stands for
+no row, which is how a packet states padding.
+
+An axis is **dependent** where its row declares `depends_on_axis_index`: which row each of its
+positions stands for changes along the axis `depends_on_axis_index` names, and each label row's
+`depends_on_position_index` is the position on that axis. A packet MUST satisfy each of these:
+
+- a labelled axis has one label row at each of its positions, and a dependent axis one at each of
+  its positions for each position of the axis it depends on;
+- a dependent axis is labelled;
+- the axis a dependent axis names is not itself dependent, which excludes an axis naming itself;
+- every label row of an axis that is not dependent has `depends_on_position_index` 0; and
+- no two label rows of one axis at one `depends_on_position_index` hold one non-null `label_id`, so
+  a row is at most one position.
+
+A core axis MUST name a `core` resource. A label must resolve, and an analysis resource may be
+deleted ([Part 06 §2](06_analysis_layer.md#ew-analysis-rules)), which would leave a core array's
+positions standing for nothing. A core axis has no need to name an extension resource: a kind of
+interval an extension specialises is a row of `core.intervals`. Only a core axis is limited to core
+resources, so an analysis array may instead label a category axis with a resource whose rows are
+the categories, such as an extension's table.
+
 <a id="ew-array-codecs" data-spec-anchor="canonical"></a>
 ### 6.4 Codecs
 
@@ -367,9 +403,11 @@ names it. The schema declares the v3 floor with these definitions:
 
 `core.array_assets` MUST NOT carry dtype or shape. The Zarr array declares them, and restating them buys no otherwise-unavailable access.
 
-The declaration-selected axes table carries axis names, because a Zarr binding in another language
-cannot see them. A physical checker resolves that table from the dense-array declaration rather
-than from a fixed namespace or resource ID.
+The declaration-selected axes table owns axis names, since a Zarr v2 array has no field for them.
+A packet-owned array MUST carry Zarr v3 `dimension_names`, holding at each position the
+`dimension_name` of the axes-table row with that `axis_index`. A referenced array may carry other
+names or none, and its axes-table rows govern. A physical checker resolves that table from the
+dense-array declaration rather than from a fixed namespace or resource ID.
 
 Zarr attributes MAY duplicate helpful metadata. Logical and scientific facts required for
 validation MUST also be represented in their logical resources or packet fields. Self-describing

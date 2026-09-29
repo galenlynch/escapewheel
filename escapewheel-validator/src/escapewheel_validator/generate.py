@@ -113,6 +113,7 @@ def _discriminator(
     included: Collection[str],
     specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
     specs: Mapping[str, Any] | None = None,
+    keys: Mapping[str, Mapping[str, Any] | None] | None = None,
 ) -> list[Check]:
     """Build the checks one discriminator column implies (Part 02 §8.3).
 
@@ -148,40 +149,6 @@ def _discriminator(
         )
     )
 
-    # Part 02 §8.3: the third shape. The named resource's rows *are* the positions, so there is no key
-    # correspondence and Part 02 §8.3's reverse check does not apply -- which R90 said twice and neither
-    # sentence could be acted on, by-position and shared-key being indistinguishable until
-    # `positions_in` declared the difference. What is checkable instead is that the column named
-    # holds a position: the registry knows each resource's `structural_index` columns, so they
-    # become literals here, as the declared resources do in `kind_declared`.
-    if (positions := column.get("positions_in")) is not None:
-        legal = {
-            kind: sorted(
-                c["name"] for c in (specs or {}).get(kind, {}).get("columns", []) if c.get("role") == "structural_index"
-            )
-            for kind in sorted(kinds)
-        }
-        branches = " OR ".join(
-            f"({col} = '{kind}' AND {quote(positions)} NOT IN ({', '.join(repr(c) for c in cols)}))"
-            for kind, cols in legal.items()
-            if cols
-        )
-        unpositioned = [kind for kind, cols in legal.items() if not cols]
-        if unpositioned:
-            branches = " OR ".join(filter(None, [branches, f"{col} IN ({', '.join(repr(k) for k in unpositioned)})"]))
-        if branches:
-            checks.append(
-                Check(
-                    f"{resource}.{column['name']}.position_column_indexes",
-                    "error",
-                    f"{positions} does not name a structural_index column of the resource "
-                    f"{column['name']} names (R100 §2.2)",
-                    f"SELECT DISTINCT {col}, {quote(positions)} FROM {name} WHERE {branches}",
-                    resource,
-                )
-            )
-        return checks
-
     # A paired value lives in the named table's key space (Part 02 §8.3), so it resolves value-to-key.
     paired = column.get("discriminates")
     if paired is None:
@@ -212,31 +179,125 @@ def _discriminator(
                 )
             )
         return checks
-    # Only a resource a paired value can actually name: one with a single-column key, which is
-    # what `_resolve_column` returns a column for (Part 02 §8.3).
-    joinable = {k: key for k, key in kinds.items() if k in included and key is not None}
-    if not joinable:
-        return checks
-    # CAST both sides. A paired value is a string, because one column resolves against several
-    # kinds and a carried key is a number where an assigned one's name is not -- so the union
-    # mixes types by construction. Uncast, DuckDB coerces the string and *raises* on one that is
-    # not a number, turning a finding into a check that could not run.
-    union = " UNION ALL ".join(
-        f"SELECT '{k}' AS kind, CAST({quote(key)} AS VARCHAR) AS id FROM {k}" for k, key in sorted(joinable.items())
-    )
-    val = quote(paired)
-    return checks + [
-        Check(
-            f"{resource}.{column['name']}.resolves",
-            "error",
-            f"{paired} names no row of the resource {column['name']} declares",
-            f"WITH known AS ({union}) SELECT DISTINCT r.{col}, r.{val} FROM {name} r "
-            f"WHERE r.{col} IN (SELECT DISTINCT kind FROM known) AND NOT EXISTS "
-            f"(SELECT 1 FROM known k WHERE k.kind = r.{col} AND k.id = CAST(r.{val} AS VARCHAR))",
-            resource,
-            dependencies=frozenset({resource, *joinable}),
+    return checks + _paired_value(resource, name, column, paired, kinds, included, specs or {}, keys)
+
+
+def _key_column(kind: str, specs: Mapping[str, Any], keys: Mapping[str, Mapping[str, Any] | None] | None) -> Any:
+    """Return a named resource's one key column, or None where its key is not one column."""
+    if keys is not None and kind in keys:
+        return keys[kind]
+    key = (specs.get(kind) or {}).get("primary_key") or []
+    if len(key) != 1:
+        return None
+    return next((c for c in specs[kind]["columns"] if c["name"] == key[0]), None)
+
+
+def _paired_value(
+    resource: str,
+    name: str,
+    column: Mapping[str, Any],
+    paired: str,
+    kinds: Mapping[str, str | None],
+    included: Collection[str],
+    specs: Mapping[str, Any],
+    keys: Mapping[str, Mapping[str, Any] | None] | None,
+) -> list[Check]:
+    """Build a paired value's checks: its named keys' shape, one anti-join per kind, and its kind.
+
+    The value sits on the discriminator's own table, or on the specialised table that
+    `discriminates_via` names, which reaches the discriminator's row through its one reference
+    (Part 02 §8.3). A `string` value matches the named key, or its `*_name` where the key is
+    assigned; an `identifier` value holds the key's own value, so both sides share a type.
+    """
+    col = quote(column["name"])
+    via = column.get("discriminates_via")
+    holder = resource if via is None else str(via).rsplit(".", 1)[0]
+    value = next((c for c in (specs.get(holder) or {}).get("columns", []) if c["name"] == paired), None)
+    if value is None:
+        return []
+    identifier = value.get("role") == "identifier"
+
+    fits: dict[str, str] = {}
+    misfits: list[str] = []
+    for kind in sorted(kinds):
+        key = _key_column(kind, specs, keys)
+        if identifier:
+            ok = key is not None and all(key.get(field) == value.get(field) for field in ("type", "identity"))
+            if ok:
+                fits[kind] = key["name"]
+        else:
+            ok = kinds[kind] is not None
+            if ok:
+                fits[kind] = str(kinds[kind])
+        if not ok:
+            misfits.append(kind)
+
+    checks: list[Check] = []
+    required = column.get("resolves") == "required"
+    if required and misfits:
+        checks.append(
+            Check(
+                f"{resource}.{column['name']}.key_fits_paired_value",
+                "error",
+                f"{column['name']} names a resource whose primary key is not one column {paired} can hold "
+                "(Part 02 §8.3)",
+                f"SELECT DISTINCT {col} FROM {name} WHERE {col} IN ({', '.join(repr(k) for k in misfits)})",
+                resource,
+            )
         )
-    ]
+    if via is None:
+        rows, join, kind_of = f"{name} r", "", f"r.{col}"
+        selected = f"r.{col}, r.{quote(paired)}"
+    else:
+        spec = specs[holder]
+        via_column = str(via).rsplit(".", 1)[1]
+        reference = next(
+            (ref for ref in spec.get("references", []) if ref["resource"] == resource and via_column in ref["columns"]),
+            None,
+        )
+        # A via table that does not reach its discriminator, or that the packet does not carry,
+        # has no value to check; the registry check reports the first.
+        if reference is None or holder not in included:
+            return checks
+        pairs = zip(reference["columns"], reference["resource_columns"], strict=True)
+        on = " AND ".join(f"r.{quote(a)} = d.{quote(b)}" for a, b in pairs)
+        rows, join, kind_of = f"{holder} r", f" JOIN {name} d ON {on}", f"d.{col}"
+        selected = ", ".join([*(f"r.{quote(c)}" for c in spec.get("primary_key") or []), f"r.{quote(paired)}"])
+    for kind, target in sorted(fits.items()):
+        if kind not in included:
+            continue
+        # Per kind, so an identifier value compares with its key in the key's own type. A string
+        # value is cast on both sides: a carried key may be a number, and DuckDB raises on a string
+        # it cannot coerce rather than reporting it.
+        match = (
+            f"t.{quote(target)} = r.{quote(paired)}"
+            if identifier
+            else f"CAST(t.{quote(target)} AS VARCHAR) = CAST(r.{quote(paired)} AS VARCHAR)"
+        )
+        checks.append(
+            Check(
+                f"{resource}.{column['name']}.{sql_name(kind)}_resolves",
+                "error",
+                f"{paired} names no row of {kind}, which {column['name']} names (Part 02 §8.3)",
+                f"SELECT DISTINCT {selected} FROM {rows}{join} "
+                f"WHERE {kind_of} = '{kind}' AND r.{quote(paired)} IS NOT NULL "
+                f"AND NOT EXISTS (SELECT 1 FROM {kind} t WHERE {match})",
+                resource,
+                dependencies=frozenset({resource, holder, kind}),
+            )
+        )
+    if required and via is not None:
+        checks.append(
+            Check(
+                f"{resource}.{column['name']}.specialised_row_has_kind",
+                "error",
+                f"a {holder} row pairs {paired} with no kind, since its {column['name']} is null (Part 02 §8.3)",
+                f"SELECT {selected} FROM {rows}{join} WHERE {kind_of} IS NULL",
+                resource,
+                dependencies=frozenset({resource, holder}),
+            )
+        )
+    return checks
 
 
 def _generate(
@@ -249,6 +310,7 @@ def _generate(
     kinds: Mapping[str, str | None] | None = None,
     specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
     declared: bool = True,
+    keys: Mapping[str, Mapping[str, Any] | None] | None = None,
 ) -> list[Check]:
     """Build every check a registry implies.
 
@@ -273,6 +335,10 @@ def _generate(
         §2.3.3). Supplied by the caller rather than read from this registry, because Part 02 §8.3
         requires the resolution to reach the packet's *extension* kinds -- the case Part 02 §8.3
         designed the mechanism for and whose hand-written union quietly matched no branch.
+    keys : Mapping, optional
+        Every resource a discriminator may name, mapped to its one key column's declaration, or
+        None where its key is not one column. An identifier paired value must share that
+        column's type and identity (Part 02 §8.3). Absent, this registry's own tables supply it.
 
     Returns
     -------
@@ -338,7 +404,7 @@ def _generate(
         for column in table["columns"]:
             if column.get("role") != "discriminator":
                 continue
-            checks.extend(_discriminator(resource, name, table, column, kinds, included, specialises, tables))
+            checks.extend(_discriminator(resource, name, table, column, kinds, included, specialises, tables, keys))
 
         by_scan = adjacency_settles_uniqueness(resource, table) and resource not in (aggregate or set())
         if (key := table.get("primary_key")) and not by_scan:
@@ -393,6 +459,7 @@ def generate(
     kinds: Mapping[str, str | None] | None = None,
     specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
     declared: bool = True,
+    keys: Mapping[str, Mapping[str, Any] | None] | None = None,
 ) -> list[Check]:
     """Build checks only from a valid context bound to the registry it checked."""
     if not isinstance(registry, CheckedRegistryContext):
@@ -411,4 +478,5 @@ def generate(
         kinds=kinds,
         specialises=specialises,
         declared=declared,
+        keys=keys,
     )

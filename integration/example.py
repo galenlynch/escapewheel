@@ -41,6 +41,9 @@ SESSION = "s001"
 #: The array the packet owns, the one it references, and the one derived from its spikes.
 OWNED, EXTERNAL, DERIVED = "core.waveform_mean", "core.probe0_lfp", "analysis.unit_rates"
 
+#: The waveform array's channel axis, as long as the most contacts any unit has.
+CHANNELS = 3
+
 #: What the derived array and its catalog rows were computed from.
 LINEAGE = ["core.spike_events", "core.units"]
 
@@ -68,10 +71,53 @@ def tables() -> dict[str, list[dict[str, Any]]]:
             "band": "lfp",
         },
     ]
+    wave, lfp = {"array_asset_id": "waveform_mean"}, {"array_asset_id": "probe0_lfp"}
     rows["core.array_dimensions"] = [
-        {"array_asset_id": asset, "axis_index": index, "dimension_name": name}
-        for asset, axes in (("waveform_mean", ("unit", "channel", "sample")), ("probe0_lfp", ("time", "channel")))
-        for index, name in enumerate(axes)
+        {**wave, "axis_index": 0, "dimension_name": "unit", "coordinate_resource": "core.units"},
+        {
+            **wave,
+            "axis_index": 1,
+            "dimension_name": "channel",
+            "coordinate_resource": "core.electrodes",
+            "depends_on_axis_index": 0,
+        },
+        {
+            **wave,
+            "axis_index": 2,
+            "dimension_name": "sample",
+            "origin_value": -3.0,
+            "step_value": 1.0,
+            "coordinate_unit": "{sample}",
+        },
+        {
+            **lfp,
+            "axis_index": 0,
+            "dimension_name": "time",
+            "clock_id": "imec_ap_s001",
+            "origin_tick": 0,
+            "step_tick_num": 24,
+        },
+        {**lfp, "axis_index": 1, "dimension_name": "channel", "coordinate_resource": "core.electrodes"},
+    ]
+    # Each unit's contacts along the waveform's channel axis, padded with null to its length.
+    contacts: dict[Any, list[Any]] = {}
+    for link in rows["core.unit_electrodes"]:
+        contacts.setdefault(link["unit_id"], []).append(link["electrode_id"])
+    electrodes = [e["electrode_id"] for e in rows["core.electrodes"]]
+    rows["core.array_labels"] = [
+        *(
+            {**wave, "axis_index": 0, "depends_on_position_index": 0, "position_index": k, "label_id": unit}
+            for k, unit in enumerate(contacts)
+        ),
+        *(
+            {**wave, "axis_index": 1, "depends_on_position_index": k, "position_index": j, "label_id": label}
+            for k, held in enumerate(contacts.values())
+            for j, label in enumerate(held + [None] * (CHANNELS - len(held)))
+        ),
+        *(
+            {**lfp, "axis_index": 1, "depends_on_position_index": 0, "position_index": j, "label_id": e}
+            for j, e in enumerate(electrodes)
+        ),
     ]
     rows["analysis.array_assets"] = [
         {
@@ -81,9 +127,21 @@ def tables() -> dict[str, list[dict[str, Any]]]:
             "unit": "Hz",
         },
     ]
+    rates = {"array_asset_id": "unit_rates"}
     rows["analysis.array_dimensions"] = [
-        {"array_asset_id": "unit_rates", "axis_index": index, "dimension_name": name}
-        for index, name in enumerate(("unit", "time_bin"))
+        {**rates, "axis_index": 0, "dimension_name": "unit", "coordinate_resource": "core.units"},
+        {
+            **rates,
+            "axis_index": 1,
+            "dimension_name": "time_bin",
+            "origin_value": 0.0,
+            "step_value": 1.0,
+            "coordinate_unit": "1",
+        },
+    ]
+    rows["analysis.array_labels"] = [
+        {**rates, "axis_index": 0, "depends_on_position_index": 0, "position_index": k, "label_id": unit}
+        for k, unit in enumerate(contacts)
     ]
     return rows
 
@@ -101,11 +159,11 @@ def writer(
     built.add_array(
         OWNED,
         StagedArray(
-            values=np.arange(2 * 3 * 10, dtype="int16").reshape(2, 3, 10),
+            values=np.arange(2 * CHANNELS * 10, dtype="int16").reshape(2, CHANNELS, 10),
             resource_id=OWNED,
             declaration_id="core.array_asset_instances",
             array_asset_id="waveform_mean",
-            chunks=(1, 3, 10),
+            chunks=(1, CHANNELS, 10),
         ),
     )
     built.reference_array(
@@ -131,7 +189,7 @@ def writer(
         ),
     )
     if lineage:
-        for resource_id in ("analysis.array_assets", "analysis.array_dimensions", DERIVED):
+        for resource_id in ("analysis.array_assets", "analysis.array_dimensions", "analysis.array_labels", DERIVED):
             built.derives(resource_id, LINEAGE)
     return built
 

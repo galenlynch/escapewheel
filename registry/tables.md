@@ -7,15 +7,15 @@ This generated rendering is not a standalone specification. See the repository
 [authority model](../README.md#authority) for the sources that bind.
 
 ```text
-46 resources, 43 tables, 348 columns, 111 references, 77 Tier 2 rules
-registry 0.8.0   logical standard escapewheel-logical-v0.1
+48 resources, 45 tables, 358 columns, 116 references, 86 Tier 2 rules
+registry 0.9.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
 
-**analysis** (3) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.spike_events`](#analysisspike_events)
+**analysis** (4) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.array_labels`](#analysisarray_labels) · [`analysis.spike_events`](#analysisspike_events)
 
-**core** (40) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clock_phase_steps`](#coreclock_phase_steps) · [`core.clocks`](#coreclocks) · [`core.coordinate_frame_axes`](#corecoordinate_frame_axes) · [`core.coordinate_frames`](#corecoordinate_frames) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinate_values`](#coreelectrode_coordinate_values) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinate_values`](#coreunit_coordinate_values) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+**core** (41) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.array_labels`](#corearray_labels) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clock_phase_steps`](#coreclock_phase_steps) · [`core.clocks`](#coreclocks) · [`core.coordinate_frame_axes`](#corecoordinate_frame_axes) · [`core.coordinate_frames`](#corecoordinate_frames) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinate_values`](#coreelectrode_coordinate_values) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinate_values`](#coreunit_coordinate_values) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
 ## `analysis`
 
@@ -55,8 +55,8 @@ registry 0.8.0   logical standard escapewheel-logical-v0.1
 | `array_asset_id` | int32 | **required** | — | Array asset ID. |
 | `axis_index` | int64 | **required** | — | 0-based axis position in stored order (Part 03 §6.2). |
 | `dimension_name` | string | **required** | free | Axis name. |
-| `coordinate_position_column` | string | nullable | free | Which column of that resource holds the 0-based position. |
-| `coordinate_resource` | string | nullable | resolves required | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`. |
+| `coordinate_resource` | string | nullable | resolves required | The table whose rows this axis's positions stand for, as a dotted resource ID. Each position's row is named by its label in `analysis.array_labels`. |
+| `depends_on_axis_index` | int64 | nullable | — | The axis of this array whose position, with this axis's own, decides each label. Null where this axis's position alone decides it. |
 | `coordinate_array_asset_id` | int32 | nullable | — | A 1-D array holding one value per position (irregular axis). |
 | `coordinate_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of this axis's coordinate values, as a UCUM code. |
 | `step_value` | float64 | nullable | finite | Increment per position. |
@@ -74,10 +74,40 @@ registry 0.8.0   logical standard escapewheel-logical-v0.1
 - `array_asset_id` → `analysis.array_assets` (`array_asset_id`)
 - `coordinate_array_asset_id` → `analysis.array_assets` (`array_asset_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `array_asset_id`, `depends_on_axis_index` → `analysis.array_dimensions` (`array_asset_id`, `axis_index`)
 
-**Tier 2 rules** — 1
+**Tier 2 rules** — 7
 
-- `analysis.array_dimensions.coordinate_pair_complete` — error: an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them
+- `analysis.array_dimensions.axis_index_contiguous` — error: axis_index is not contiguous from 0
+- `analysis.array_dimensions.one_coordinate_form` — error: an axis declares no coordinate form, or more than one
+- `analysis.array_dimensions.tick_axis_complete` — error: a regular tick axis needs clock_id, origin_tick and step_tick_num
+- `analysis.array_dimensions.numeric_axis_complete` — error: a regular numeric axis needs origin_value, step_value and coordinate_unit
+- `analysis.array_dimensions.step_denominator_positive` — error: a step denominator is not positive, so the step it defines is meaningless
+- `analysis.array_dimensions.dependent_axis_labelled` — error: an axis depends on another axis and has no labels
+- `analysis.array_dimensions.dependency_not_chained` — error: an axis depends on an axis that itself depends on another
+
+### `analysis.array_labels`
+
+| Column | Type | Presence | Declares | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | — | Session ID. |
+| `array_asset_id` | int32 | **required** | — | The array whose axis this position is on. |
+| `axis_index` | int64 | **required** | — | The labelled axis, in stored order. |
+| `depends_on_position_index` | int64 | **required** | — | The position on the axis this axis's labels depend on, and 0 where they depend on none. |
+| `position_index` | int64 | **required** | — | The position on the labelled axis. |
+| `label_id` | int32 | nullable | — | The identifier of the row this position stands for, in the resource the axis row's `coordinate_resource` names; null where it stands for none. |
+
+**Primary key** — `array_asset_id`, `axis_index`, `depends_on_position_index`, `position_index`  
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `array_asset_id`, `axis_index` → `analysis.array_dimensions` (`array_asset_id`, `axis_index`)
+
+**Tier 2 rules** — 2
+
+- `analysis.array_labels.independent_depends_on_position_zero` — error: a label on an axis that depends on no other has a nonzero depends_on_position_index
+- `analysis.array_labels.one_position_per_row` — error: an axis names one row at two positions
 
 ### `analysis.spike_events`
 
@@ -145,7 +175,6 @@ registry 0.8.0   logical standard escapewheel-logical-v0.1
 | `array_asset_id` | int32 | **required** | — | Array asset ID. |
 | `axis_index` | int64 | **required** | — | Axis that channel_index indexes, in stored order. |
 | `channel_index` | int64 | **required** | — | Channel dimension index. |
-| `electrode_id` | int32 | nullable | — | Electrode ID. |
 | `channel_label` | string | nullable | free | Human-readable channel label. |
 | `inter_sample_shift` | float64 | nullable | finite | Acquisition time offset within one sample period, in sample periods. |
 | `unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of the converted value, as a UCUM code. |
@@ -157,7 +186,6 @@ registry 0.8.0   logical standard escapewheel-logical-v0.1
 **References**
 
 - `session_id` → `core.sessions` (`session_id`)
-- `electrode_id` → `core.electrodes` (`electrode_id`)
 - `array_asset_id`, `axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
 
 **Tier 2 rules** — 1
@@ -172,8 +200,8 @@ registry 0.8.0   logical standard escapewheel-logical-v0.1
 | `array_asset_id` | int32 | **required** | — | Array asset ID. |
 | `axis_index` | int64 | **required** | — | 0-based axis position in stored order (Part 03 §6.2). |
 | `dimension_name` | string | **required** | free | Axis name. |
-| `coordinate_position_column` | string | nullable | free | Which column of that resource holds the 0-based position. |
-| `coordinate_resource` | string | nullable | resolves required | The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`. |
+| `coordinate_resource` | string | nullable | resolves required | The table whose rows this axis's positions stand for, as a dotted resource ID. Each position's row is named by its label in `core.array_labels`. |
+| `depends_on_axis_index` | int64 | nullable | — | The axis of this array whose position, with this axis's own, decides each label. Null where this axis's position alone decides it. |
 | `coordinate_array_asset_id` | int32 | nullable | — | A 1-D array holding one value per position (irregular axis). |
 | `coordinate_unit` | string | nullable | open; [UCUM](https://ucum.org/ucum) | The physical unit of this axis's coordinate values, as a UCUM code. |
 | `step_value` | float64 | nullable | finite | Increment per position. |
@@ -191,17 +219,41 @@ registry 0.8.0   logical standard escapewheel-logical-v0.1
 - `array_asset_id` → `core.array_assets` (`array_asset_id`)
 - `coordinate_array_asset_id` → `core.array_assets` (`array_asset_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+- `array_asset_id`, `depends_on_axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
 
 **Tier 2 rules** — 8
 
 - `core.array_dimensions.axis_index_contiguous` — error: axis_index is not contiguous from 0
-- `core.array_dimensions.one_coordinate_form` — error: an axis declares more than one coordinate form
+- `core.array_dimensions.one_coordinate_form` — error: an axis declares no coordinate form, or more than one
 - `core.array_dimensions.tick_axis_complete` — error: a regular tick axis needs clock_id, origin_tick and step_tick_num
 - `core.array_dimensions.numeric_axis_complete` — error: a regular numeric axis needs origin_value, step_value and coordinate_unit
-- `core.array_dimensions.labelled_axis_complete` — error: coordinate_resource and coordinate_position_column must be present together
 - `core.array_dimensions.coordinate_resource_is_core` — error: a core axis points outward at a non-core resource
 - `core.array_dimensions.step_denominator_positive` — error: a step denominator is not positive, so the step it defines is meaningless
-- `core.array_dimensions.coordinate_pair_complete` — error: an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them
+- `core.array_dimensions.dependent_axis_labelled` — error: an axis depends on another axis and has no labels
+- `core.array_dimensions.dependency_not_chained` — error: an axis depends on an axis that itself depends on another
+
+### `core.array_labels`
+
+| Column | Type | Presence | Declares | Description |
+|---|---|:---:|---|---|
+| `session_id` | int32 | **required** | — | Session ID. |
+| `array_asset_id` | int32 | **required** | — | The array whose axis this position is on. |
+| `axis_index` | int64 | **required** | — | The labelled axis, in stored order. |
+| `depends_on_position_index` | int64 | **required** | — | The position on the axis this axis's labels depend on, and 0 where they depend on none. |
+| `position_index` | int64 | **required** | — | The position on the labelled axis. |
+| `label_id` | int32 | nullable | — | The identifier of the row this position stands for, in the resource the axis row's `coordinate_resource` names; null where it stands for none. |
+
+**Primary key** — `array_asset_id`, `axis_index`, `depends_on_position_index`, `position_index`  
+
+**References**
+
+- `session_id` → `core.sessions` (`session_id`)
+- `array_asset_id`, `axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
+
+**Tier 2 rules** — 2
+
+- `core.array_labels.independent_depends_on_position_zero` — error: a label on an axis that depends on no other has a nonzero depends_on_position_index
+- `core.array_labels.one_position_per_row` — error: an axis names one row at two positions
 
 ### `core.calibration_devices`
 
@@ -963,7 +1015,6 @@ registry 0.8.0   logical standard escapewheel-logical-v0.1
 | `session_id` | int32 | **required** | — | Session ID. |
 | `unit_id` | int32 | **required** | — | Unit ID. |
 | `electrode_id` | int32 | **required** | — | An electrode this unit was detected on. |
-| `channel_index` | int64 | nullable | — | 0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it. Nothing joins on it. |
 | `is_primary` | bool | nullable | — | Whether this is the unit's peak electrode. |
 
 **Primary key** — `session_id`, `unit_id`, `electrode_id`  
@@ -974,10 +1025,9 @@ registry 0.8.0   logical standard escapewheel-logical-v0.1
 - `unit_id` → `core.units` (`unit_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
 
-**Tier 2 rules** — 3
+**Tier 2 rules** — 2
 
 - `core.unit_electrodes.one_primary` — warning: a unit designates more than one peak electrode
-- `core.unit_electrodes.channel_index_contiguous` — error: channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there
 - `core.unit_electrodes.electrode_is_a_run_channel` — error: a unit sits on an electrode its sorting run did not use
 
 ### `core.unit_observation_intervals`

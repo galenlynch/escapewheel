@@ -1,0 +1,80 @@
+content_class = "core"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "optional"
+primary_key = ["array_asset_id", "axis_index", "depends_on_position_index", "position_index"]
+
+[[columns]]
+name = "session_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+references = "core.sessions"
+description = "Session ID."
+
+[[columns]]
+name = "array_asset_id"
+type = "int32"
+presence = "required"
+role = "identifier"
+identity = "assigned"
+description = "The array whose axis this position is on."
+
+[[columns]]
+name = "axis_index"
+type = "int64"
+presence = "required"
+role = "structural_index"
+description = "The labelled axis, in stored order."
+
+[[columns]]
+name = "depends_on_position_index"
+type = "int64"
+presence = "required"
+role = "structural_index"
+description = "The position on the axis this axis's labels depend on, and 0 where they depend on none."
+
+[[columns]]
+name = "position_index"
+type = "int64"
+presence = "required"
+role = "structural_index"
+description = "The position on the labelled axis."
+
+[[columns]]
+name = "label_id"
+type = "int32"
+presence = "nullable"
+role = "identifier"
+identity = "assigned"
+description = "The identifier of the row this position stands for, in the resource the axis row's `coordinate_resource` names; null where it stands for none."
+
+[[references]]
+columns = ["array_asset_id", "axis_index"]
+resource = "core.array_dimensions"
+resource_columns = ["array_asset_id", "axis_index"]
+
+[[rules]]
+id = "core.array_labels.independent_depends_on_position_zero"
+level = "error"
+message = "a label on an axis that depends on no other has a nonzero depends_on_position_index"
+sql = '''
+SELECT l.array_asset_id, l.axis_index, l.depends_on_position_index, l.position_index
+FROM core.array_labels AS l
+JOIN core.array_dimensions AS d ON d.array_asset_id = l.array_asset_id
+  AND d.axis_index = l.axis_index
+WHERE d.depends_on_axis_index IS NULL
+  AND l.depends_on_position_index <> 0'''
+
+[[rules]]
+id = "core.array_labels.one_position_per_row"
+level = "error"
+message = "an axis names one row at two positions"
+sql = '''
+SELECT array_asset_id, axis_index, depends_on_position_index, label_id, COUNT(*) AS n
+FROM core.array_labels
+WHERE label_id IS NOT NULL
+GROUP BY array_asset_id, axis_index, depends_on_position_index, label_id
+HAVING COUNT(*) > 1'''

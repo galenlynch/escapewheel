@@ -460,6 +460,9 @@ class StagedArray:
     shard: tuple[int, ...] | None = None
     codecs: tuple[str, ...] = ("blosc",)
     fill_value: Any = 0
+    #: Each axis's `dimension_name`, in stored order (Part 03 §6.5). Unset, staging takes them
+    #: from the axes records this array's catalog row has.
+    dimension_names: tuple[str, ...] | None = None
     #: Where an adapter already wrote this array, for one delivered out of process (Part 03
     #: §11.3). Set, the layout above is the array's own and is read back off it rather than
     #: applied: staging moves the directory where it would have written one.
@@ -1251,6 +1254,8 @@ class PacketWriter:
                 shutil.move(str(spec.written), str(path))
                 size = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
             else:
+                if spec.dimension_names is None:
+                    spec = replace(spec, dimension_names=self._dimension_names(spec))
                 size = write_zarr(path, spec)
             entries.append(
                 {
@@ -1263,6 +1268,16 @@ class PacketWriter:
                 }
             )
         return entries
+
+    def _dimension_names(self, spec: StagedArray) -> tuple[str, ...] | None:
+        """Return a staged array's axis names from its axes records, or None where it has none."""
+        declaration = self.declaration(spec.declaration_id) or {}
+        axes = (declaration.get("array") or {}).get("axes_resource")
+        rows = sorted(
+            (r for r in self._tables.get(str(axes), []) if str(r.get("array_asset_id")) == spec.array_asset_id),
+            key=lambda r: int(r["axis_index"]),
+        )
+        return tuple(str(r["dimension_name"]) for r in rows) or None
 
     def _stage_payloads(self, staging: Path, bound: Sequence[tuple[opaque.StagedPayload, str]]) -> list[dict[str, Any]]:
         """Move each bound payload's resource directory under `staging` and return its manifest entries.
@@ -1365,7 +1380,7 @@ class PacketWriter:
                 if sort_key(resource_id, spec):
                     self._ordered.add(resource_id)
             else:
-                table = build(resource_id, spec, self._tables[resource_id], self.keys)
+                table = build(resource_id, spec, self._tables[resource_id], self.keys, self._paired_kinds(resource_id))
                 self.rows_written[resource_id] = table.num_rows
                 # No `row_group_size`: pyarrow's default is min(rows, 2**20), which puts each
                 # of these tables in one row group, and that is the right answer — they are
@@ -1419,16 +1434,60 @@ class PacketWriter:
                 for ref in spec.get("references", [])
                 for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
             }
+            paired = self._paired_kinds(resource_id)
             for column in spec["columns"]:
+                name = column["name"]
                 if column.get("role") != "identifier" or column.get("identity") != "assigned":
                     continue
-                kind = target.get(column["name"], column["name"])
-                pending.setdefault(kind, set()).update(
-                    str(r[column["name"]]) for r in rows if r.get(column["name"]) is not None
-                )
+                for r in rows:
+                    if r.get(name) is not None:
+                        kind = (paired[name](r) if name in paired else None) or target.get(name, name)
+                        pending.setdefault(kind, set()).add(str(r[name]))
         for kind in sorted(pending):
             for value in sorted(pending[kind]):
                 self.keys.of(kind, value)
+
+    def _paired_kinds(self, resource_id: str) -> dict[str, Callable[[Mapping[str, Any]], str | None]]:
+        """Map each identifier paired value on a table to the numbering its row's kind names.
+
+        Part 02 §8.3 lets an identifier hold the key of whichever resource its row's discriminator
+        names, so its map is chosen per row: the named resource's one key column, which is the map
+        that resource numbers its own key in. The kind is read off the records, which still hold
+        names, so a value on a specialised table reaches its discriminator row by the names its
+        reference carries.
+        """
+        found: dict[str, Callable[[Mapping[str, Any]], str | None]] = {}
+        documents = [self._registry, *self._extensions.values()]
+        for owner, declaration in ((n, d) for doc in documents for n, d in doc["resources"].items()):
+            if declaration.get("kind") != "table":
+                continue
+            for column in declaration["table"]["columns"]:
+                if column.get("role") != "discriminator" or column.get("discriminates") is None:
+                    continue
+                via = column.get("discriminates_via")
+                holder = owner if via is None else str(via).rsplit(".", 1)[0]
+                if holder != resource_id:
+                    continue
+                found[column["discriminates"]] = self._kind_reader(owner, column["name"], resource_id)
+        return found
+
+    def _kind_reader(self, owner: str, discriminator: str, holder: str) -> Callable[[Mapping[str, Any]], str | None]:
+        """Return a function from a `holder` row to the key column of the resource its kind names."""
+
+        def key_of(resource: Any) -> str | None:
+            spec = self.spec(str(resource)) if resource is not None else None
+            key = list((spec or {}).get("primary_key") or [])
+            return key[0] if len(key) == 1 else None
+
+        if owner == holder:
+            return lambda row: key_of(row.get(discriminator))
+        spec = self.spec(holder) or {}
+        reference = next((r for r in spec.get("references", []) if r["resource"] == owner), None)
+        if reference is None:
+            return lambda row: None
+        ours, theirs = list(reference["columns"]), list(reference["resource_columns"])
+        kinds = {tuple(str(r.get(c)) for c in theirs): r.get(discriminator) for r in self._tables.get(owner, [])}
+        return lambda row: key_of(kinds.get(tuple(str(row.get(c)) for c in ours)))
 
     def _manifest(
         self,

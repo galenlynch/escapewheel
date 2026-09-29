@@ -119,3 +119,129 @@ def test_naming_a_kind_the_packet_lacks_says_so(packet_root):
 def test_a_table_with_no_discriminator_says_so(packet_root):
     with pytest.raises(LookupError, match="declares no discriminator"):
         kinds(open_packet(packet_root), "core.units")
+
+
+def _demo_table(columns, key, references=()):
+    return {
+        "content_class": "extension",
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "requires": [],
+        "lineage": "optional",
+        "table": {"columns": columns, "primary_key": key, "references": list(references), "rules": []},
+    }
+
+
+def _add_tables(packet_root, declarations, tables):
+    """Declare and write demo tables, returning the reopened packet."""
+    entry = json.loads((packet_root / "packet.json").read_text())
+    rows = read_registry(packet_root)
+    (packet_root / "tables" / "demo").mkdir(parents=True, exist_ok=True)
+    for name, table in tables.items():
+        uri = f"tables/demo/{name.split('.')[1]}.parquet"
+        pq.write_table(table, packet_root / uri)
+        entry["resources"].append({"resource_id": name, "declaration_id": name, "uri": uri})
+        rows["resources"][name] = declarations[name]
+    (packet_root / "packet.json").write_text(json.dumps(entry))
+    install_registry(packet_root, rows)
+    return open_packet(packet_root)
+
+
+def _identifier(name, presence="required", identity="assigned"):
+    return {"name": name, "type": "int32", "presence": presence, "role": "identifier", "identity": identity}
+
+
+def _labelled(packet_root):
+    """Two axes: one labelled by units, one by sessions, with each position's row in `demo.labels`.
+
+    Label 1 names a unit on the first axis and nothing on the second, where the only session is
+    another number: a value resolves in its own row's kind.
+    """
+    session = open_packet(packet_root).table("core.sessions").column("session_id")[0].as_py()
+    unit = open_packet(packet_root).table("core.units").column("unit_id")[0].as_py()
+    axes = _demo_table(
+        [
+            _identifier("axis_id", identity="carried"),
+            {
+                "name": "names",
+                "type": "string",
+                "presence": "nullable",
+                "role": "discriminator",
+                "resolves": "required",
+                "discriminates_via": "demo.labels.axis_id",
+                "discriminates": "label_id",
+            },
+        ],
+        ["axis_id"],
+    )
+    labels = _demo_table(
+        [
+            _identifier("axis_id", identity="carried"),
+            {"name": "position_index", "type": "int64", "presence": "required", "role": "structural_index"},
+            _identifier("label_id", presence="nullable"),
+        ],
+        ["axis_id", "position_index"],
+        [{"columns": ["axis_id"], "resource": "demo.axes", "resource_columns": ["axis_id"]}],
+    )
+    return _add_tables(
+        packet_root,
+        {"demo.axes": axes, "demo.labels": labels},
+        {
+            "demo.axes": pa.table(
+                {"axis_id": pa.array([1, 2], type=pa.int32()), "names": pa.array(["core.units", "core.sessions"])}
+            ),
+            "demo.labels": pa.table(
+                {
+                    "axis_id": pa.array([1, 1, 2, 2], type=pa.int32()),
+                    "position_index": pa.array([0, 1, 0, 1], type=pa.int64()),
+                    "label_id": pa.array([unit, None, session, unit], type=pa.int32()),
+                }
+            ),
+        },
+    )
+
+
+def test_an_identifier_paired_value_resolves_through_the_specialised_table(packet_root):
+    """Part 02 §8.3: the value sits on the table `discriminates_via` names and holds the key itself."""
+    packet = _labelled(packet_root)
+    units = resolved(packet, "demo.axes", "core.units")
+    assert units.column("position_index").to_pylist() == [0], "a null value names no row"
+    assert "quality_label" in units.column_names
+    sessions = resolved(packet, "demo.axes", "core.sessions")
+    assert sessions.column("position_index").to_pylist() == [0], "a unit's number is not a session's"
+
+
+def test_a_string_paired_value_joins_an_assigned_keys_name(packet_root):
+    """On its own table, a string value names an assigned key's row by its `*_name` (Part 02 §8.3)."""
+    name = open_packet(packet_root).table("core.sessions").column("session_name")[0].as_py()
+    runs = _demo_table(
+        [
+            _identifier("run_id", identity="carried"),
+            {
+                "name": "scope_kind",
+                "type": "string",
+                "presence": "required",
+                "role": "discriminator",
+                "resolves": "optional",
+                "discriminates": "scope",
+            },
+            {"name": "scope", "type": "string", "presence": "required", "role": "data"},
+        ],
+        ["run_id"],
+    )
+    packet = _add_tables(
+        packet_root,
+        {"demo.runs": runs},
+        {
+            "demo.runs": pa.table(
+                {
+                    "run_id": pa.array([1, 2], type=pa.int32()),
+                    "scope_kind": pa.array(["core.sessions", "demo.rigs"]),
+                    "scope": pa.array([name, name]),
+                }
+            )
+        },
+    )
+    joined = resolved(packet, "demo.runs", "core.sessions")
+    assert joined.column("run_id").to_pylist() == [1]
+    assert "session_start_time" in joined.column_names

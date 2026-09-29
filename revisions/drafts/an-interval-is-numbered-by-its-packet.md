@@ -7,7 +7,7 @@
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§8.3, 9.2 and 12; Part 08 §§2 and 3; the core registry; the `dynamic_foraging` and `vr_foraging` extension registries |
-| **Depends on** | `every-array-axis-declares-what-each-position-is` §3.8 (the core registry version this advances from) |
+| **Depends on** | R147 §3.8 (the core registry version this advances from) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4 |
 
@@ -27,8 +27,7 @@ can hold a trial 0 and a pulse 0.
 Three columns therefore identify an interval, and two consequences follow:
 
 - **No single identifier names an interval.** A paired value of Part 02 §8.3 holds one identifier,
-  and so does an axis label under the draft `every-array-axis-declares-what-each-position-is`,
-  ordered before this one, so no array axis can stand for trials.
+  and so does an axis label under R147, so no array axis can stand for trials.
 - **Each specialising table carries a constant column.** Part 02 §8.3 requires a specialising
   table's reference to cover the discriminated table's whole key, so `dynamic_foraging.trials` and
   `vr_foraging.sites` each carry an `interval_kind` holding its own resource ID in every row.
@@ -228,7 +227,7 @@ reference, so neither table owns it (Part 02 §8.2).
 ### 3.4 The core registry version advances
 
 The incorporated core registry's `registry_version` MUST advance from `0.9.0`, which
-`every-array-axis-declares-what-each-position-is` assigns, to `0.10.0`. The `dynamic_foraging` and
+R147 assigns, to `0.10.0`. The `dynamic_foraging` and
 `vr_foraging` registries advance their own versions, which the core specification does not assign
 (Part 09 §5.5).
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -240,7 +240,12 @@ def _is_string_carried_identifier(column: Mapping[str, Any]) -> bool:
     )
 
 
-def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> None:
+#: For an identifier paired value, the map a row's value is numbered in, or None where its row
+#: names no kind (Part 02 §8.3).
+Paired = Mapping[str, Callable[[Mapping[str, Any]], str | None]]
+
+
+def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paired: Paired | None = None) -> None:
     """Normalize identifier values as their declarations require, in place.
 
     Done here rather than in each adapter because the invariant is cross-adapter: the recipe
@@ -253,6 +258,8 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> No
     the table owns an assigned identifier -- it is in the primary key and is not exported through
     a reference -- the matching `*_name` is filled in with the name that was mapped, which is
     what R53 §2.3.1 requires and what nothing else could supply by the time the row is written.
+    An identifier paired value in `paired` is numbered in the map its row's kind names, since it
+    holds the key of whichever resource that is.
     """
     exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
     primary = set(spec.get("primary_key") or [])
@@ -267,33 +274,26 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> No
         for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
     }
     identifiers = [c for c in spec["columns"] if c.get("role") == "identifier"]
-    # Collect every name before assigning any, so the numbers do not depend on which column the
-    # loop reaches first: `parent_clock_id` and `clock_id` share a map, and whichever was seen
-    # first would otherwise decide the numbering.
-    pending: dict[str, set[str]] = {}
-    for column in identifiers:
-        if column.get("identity") != "assigned":
-            continue
-        kind = target.get(column["name"], column["name"])
-        pending.setdefault(kind, set()).update(
-            str(r[column["name"]]) for r in rows if r.get(column["name"]) is not None
-        )
-    for kind in sorted(pending):
-        for known in sorted(pending[kind]):
-            keys.of(kind, known)
+    # Read before any column is numbered: a row reaches its kind through its own references, and
+    # once those hold numbers the kind is lost and the value falls into a map of its own.
+    kinds = {name: [reader(row) for row in rows] for name, reader in (paired or {}).items()}
+
+    def kind_of(name: str, index: int) -> str:
+        return (kinds[name][index] if name in kinds else None) or target.get(name, name)
+
+    _number_names([c["name"] for c in identifiers if c.get("identity") == "assigned"], rows, kind_of, keys)
 
     for column in identifiers:
         name = column["name"]
-        kind = target.get(name, name)
         assigned = column.get("identity") == "assigned"
         owns = assigned and name in primary and name not in exported
         named: str | None = f"{name.removesuffix('_id')}_name" if owns else None
-        for row in rows:
+        for index, row in enumerate(rows):
             value = row.get(name)
             if value is None:
                 continue
             if assigned:
-                row[name] = keys.of(kind, str(value))
+                row[name] = keys.of(kind_of(name, index), str(value))
                 if named is not None and named in declared and row.get(named) is None:
                     row[named] = str(value)
             elif _is_string_carried_identifier(column):
@@ -308,6 +308,27 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any) -> No
                         f"integer and the adapter is composing a string from it, or the column is "
                         f"assigned rather than carried and the registry says otherwise."
                     ) from None
+
+
+def _number_names(
+    columns: Sequence[str],
+    rows: Sequence[Mapping[str, Any]],
+    kind_of: Callable[[str, int], str],
+    keys: Any,
+) -> None:
+    """Assign every name the columns hold before any is written, in sorted order within each map.
+
+    Otherwise the numbers depend on which column the loop reaches first: `parent_clock_id` and
+    `clock_id` share a map, and whichever was seen first would decide the numbering.
+    """
+    pending: dict[str, set[str]] = {}
+    for name in columns:
+        for index, row in enumerate(rows):
+            if row.get(name) is not None:
+                pending.setdefault(kind_of(name, index), set()).add(str(row[name]))
+    for kind in sorted(pending):
+        for known in sorted(pending[kind]):
+            keys.of(kind, known)
 
 
 def _number_dictionary(values: pa.Array, column: Mapping[str, Any], kind: str, keys: Any) -> pa.Array:
@@ -370,7 +391,13 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
     return pa.RecordBatch.from_arrays(list(columns.values()), names=list(columns))
 
 
-def build(resource: str, spec: Mapping[str, Any], records: Sequence[Mapping[str, Any]], keys: Any = None) -> pa.Table:
+def build(
+    resource: str,
+    spec: Mapping[str, Any],
+    records: Sequence[Mapping[str, Any]],
+    keys: Any = None,
+    paired: Paired | None = None,
+) -> pa.Table:
     """Build a sorted Arrow table for one resource.
 
     Parameters
@@ -382,6 +409,8 @@ def build(resource: str, spec: Mapping[str, Any], records: Sequence[Mapping[str,
     keys : Keys, optional
         Assigns the integers identifier columns hold (R53). Absent, identifiers are left as
         given -- which only a caller building a table with no identifier in it can want.
+    paired : Mapping, optional
+        For each identifier paired value, the map its row's kind numbers it in (see `number`).
 
     Returns
     -------
@@ -397,7 +426,7 @@ def build(resource: str, spec: Mapping[str, Any], records: Sequence[Mapping[str,
     if keys is not None:
         # Before the sort, not after: Part 03 §5.3 orders by the primary key, and the key is the
         # number. Sorting the names would order `unit_10` between `unit_1` and `unit_2`.
-        number(spec, rows, keys)
+        number(spec, rows, keys, paired)
     if order := sort_key(resource, spec):
         # None sorts first and consistently; a nullable sort column is legal.
         rows.sort(key=lambda r: tuple((r.get(k) is None, r.get(k)) for k in order))

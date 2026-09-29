@@ -82,6 +82,8 @@ STEPS = [
         set(),
         {"core.unit_coordinate_values"},
     ),
+    ("Part 03 §6.3 + core.array_labels", set(), {"core.array_labels"}),
+    ("Part 03 §6.3 + analysis.array_labels", set(), {"analysis.array_labels"}),
 ]
 
 if not PARSED.exists():

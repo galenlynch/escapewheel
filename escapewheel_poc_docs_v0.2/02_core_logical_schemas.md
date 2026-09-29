@@ -18,7 +18,7 @@ This part expressly incorporates the following artifacts:
 |---|---|
 | `registry/registry.schema.json` | exact local JSON structure and conditional shape constraints |
 | `registry/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
-| `registry/registry_contracts/escapewheel-registry-contract-v0.2.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `registry/registry_contracts/escapewheel-registry-contract-v0.6.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
 | `registry/logical_schemas.json` | exact current core and analysis resource declarations, including table columns, keys, references, vocabularies, and rules |
 
 The generated core registry is what a packet embeds. `registry/tables.md` is a generated,
@@ -213,7 +213,7 @@ other fields the column requires or permits.
 | `identity` | for identifiers | §8.2 |
 | `finite` | for `float32` and `float64` columns | §5.4 |
 | `enum` | for closed vocabularies | §9.3 |
-| `resolves`, `discriminates`, `positions_in`, `discriminates_via` | as applicable for discriminators | §8.3 |
+| `resolves`, `discriminates`, `discriminates_via` | as applicable for discriminators | §8.3 |
 | `unit`, `unit_from`, `clock_from` | where applicable | §8.4 |
 | `authority` | where named nomenclatures cover the column | §9.3 |
 | `description` | for an open vocabulary | §9.3 |
@@ -417,14 +417,18 @@ mismatch a reference may carry.
 | `required` | a defect: the row is uninterpretable |
 | `optional` | a fact: the packet does not hold that resource |
 
-Where a discriminator is paired with a value column, the two columns have the same `required` or
+A paired value (below) on the discriminator's own table has the discriminator's `required` or
 `nullable` presence; neither may be optional. Their values MUST agree on presence — a row declares
 both or neither. A row declaring neither is **undeterminable**, which a
 consumer MUST report apart from a row whose value resolves to nothing: the fix for one is to record
-the missing half, and for the other to correct what it names.
+the missing half, and for the other to correct what it names. A paired value on the specialised
+table is `required` or `nullable`. Its kind comes from the discriminator's row, so a null value
+there is not undeterminable: the specialised row names no row of that kind. A packet MUST NOT hold
+a specialised row whose discriminator is null, since that row would pair a value with no kind.
 
 **How it resolves.** Resolution reads the kind, takes that resource's key from the registry, and
-joins; Part 05 §13.4 has a reader offer it. Three shapes exist:
+joins; Part 05 §13.4 has a reader offer it. Two shapes exist, and a discriminator MUST NOT declare
+`positions_in`:
 
 - **Shared key.** The discriminated row and the named resource share a key, so the join is on that
   key. A resource a shared-key discriminator may name MUST declare a reference back to the
@@ -435,29 +439,31 @@ joins; Part 05 §13.4 has a reader offer it. Three shapes exist:
   every row what its own identity implies; a column holding one value costs almost nothing once
   encoded, and what it buys is a reference that identifies a row. The reference runs extension →
   core, so a discriminator names downward while the integrity constraint points upward.
-- **Paired value.** A separate column holds an identifier in the named resource's key space, and
-  the discriminator MUST declare `discriminates` naming that column. A paired value holds one
-  identifier, so the named resource's primary key MUST be a single column, and the value MUST be a
-  `string` matching that key where it is `carried` or its `*_name` where it is `assigned`.
-- **By position.** The named resource's rows are the positions the discriminated column indexes,
-  located by a column that resource declares. Resolution is neither a key join nor a value-to-key
-  join, so the joinability rules above do not apply, and a consumer MUST NOT read them as applying. The
-  discriminator MUST declare `positions_in`, naming the column of its own table whose value is that
-  position column, and MUST NOT declare it beside `discriminates`. Without the
-  declaration this shape and the shared key are indistinguishable, and the exclusion above binds a
-  reader while a generator reads every discriminator without a paired value as shared-key.
+- **Paired value.** A column holds the named row's key, and the discriminator MUST declare
+  `discriminates` naming that column. Where the discriminator declares `discriminates_via`, the
+  column belongs to the table `discriminates_via` names, whose rows the discriminator specialises;
+  otherwise it belongs to the discriminator's own table. A paired value holds one key, so the named
+  resource's primary key MUST be one column, and the paired value MUST take one of two forms:
+  - a `string` `data` column, whose value matches the named key where that key is `carried` and
+    its `*_name` where the key is `assigned`; or
+  - an `identifier` column whose type and identity equal the named key's, holding that key's value.
+    A writer MUST fill it with the identifier it assigned the named row, as it fills any reference
+    to that resource ([Part 05 §4.3](05_validation_and_import.md#ew-import-normalization)).
 
-**What is generated.** Where `resolves` is `required`, two checks follow from the structure: a
-forward anti-join against the resources the manifest declares, and a reverse check per named kind
-returning every row of the discriminating table whose key has no counterpart in the resource its
-discriminator names, both at **error**. The reverse check is generated over the kinds a packet's
-rows actually name, and applies to the shared-key shape alone. Where `resolves` is `optional`,
-neither is generated and an unresolvable value is reported as `info`.
+**What is generated.** Where `resolves` is `required`, every discriminator gets a forward anti-join
+against the resources the manifest declares, and each shape adds its own checks. All are at
+**error**, and each per-kind check is generated over the kinds a packet's rows actually name:
 
-A by-position discriminator gets a third instead of the reverse one: the column `positions_in`
-names MUST hold a column of the named resource whose role is `structural_index`, and the registry
-supplies each named resource's such columns as literals. A role is invisible to a
-query and visible to whatever writes one.
+- a shared-key discriminator gets a reverse check per named kind, returning every row of the
+  discriminating table whose key has no counterpart in the resource its discriminator names;
+- a paired-value discriminator gets a check reporting a named resource whose primary key is not one
+  column of the paired value's form, built from the registry's key declarations as literals; an
+  anti-join per named kind, returning every row whose paired value is not null and matches no row
+  of the named resource; and, where the paired value is on the specialised table, a check returning
+  every specialised row whose discriminator is null.
+
+Where `resolves` is `optional`, none of these is generated and an unresolvable value is reported
+as `info`.
 
 Every generated check MUST be built over **every resource the packet declares, extensions
 included**. Building them over core alone lets an extension kind match no branch and pass in
@@ -569,9 +575,9 @@ A packet binds each registry that declares its resources under
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.8.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.9.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.8.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.9.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.1`.
 
@@ -579,7 +585,7 @@ An extension's `registry_version` identifies that extension registry and advance
 the core registry's version. An extension conforming to the incorporated meta-schema MUST carry
 the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
 The core specification does not assign an extension's version. An extension registry migrated to
-meta-schema 0.8.0 MUST carry a `registry_version` different from the one it carried under 0.7.0.
+meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0.
 No checker verifies this, since a checker reads only the document before it and not the version
 that document replaced.
 
@@ -648,7 +654,7 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.5` and selects the 0.8.0
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.6` and selects the 0.9.0
 meta-schema. That meta-schema MUST declare `finite` as a boolean member of a column, require it
 where `type` is `float32` or `float64`, and forbid it otherwise; the `shape` phase therefore decides
 §5.4's declaration rule, and the descriptor adds no invariant for it. A checker MUST evaluate its
@@ -773,11 +779,13 @@ lowercase snake-case identifier containing no dot. A non-null primary key has un
 each member resolves once to a required column. A null key admits duplicate rows and cannot be a
 reference target.
 
-Every `determined_by` member resolves locally. A discriminator selects exactly one shape: paired
-value through `discriminates`, by position through `positions_in`, or shared key through neither;
-it MUST NOT declare both fields. The selected companion is a string data column with matching
-non-optional presence. Target-specific row resolution remains packet validation, not registry
-conformance.
+Every `determined_by` member resolves locally. A discriminator selects the paired-value shape by
+declaring `discriminates` and the shared-key shape by not declaring it. The column `discriminates`
+names resolves on the table `discriminates_via` names where the discriminator declares it, and on
+the discriminator's own table otherwise; it is one `string` `data` column or one `identifier`
+column; and it has the discriminator's non-optional presence on the discriminator's own table and
+`required` or `nullable` presence on another. Target-specific row resolution remains packet
+validation, not registry conformance.
 
 In a core registry, no table other than `core.devices` may have a non-null primary key whose first
 member is `device_id`. This structural condition reserves device-detail tables for extensions.
@@ -933,7 +941,8 @@ common declaration fields are in the registry.
 | `core.array_assets` | catalog rows describing core dense-array instances |
 | `core.array_asset_instances` | dense-array resources catalogued by `core.array_assets.resource_id`, with axes in `core.array_dimensions` |
 | `core.array_dimensions` | one row per logical axis, bound to its array catalog row |
-| `core.array_channels` | per-channel scaling, shift, and electrode |
+| `core.array_labels` | the row each position of a labelled axis stands for |
+| `core.array_channels` | per-channel scaling and acquisition shift |
 | `core.media_assets` | catalog rows describing image and video instances |
 | `core.media_asset_instances` | opaque resources catalogued by `core.media_assets.resource_id` |
 | `core.media_frames` | frame timing |
@@ -956,6 +965,7 @@ common declaration fields are in the registry.
 | `analysis.array_assets` | catalog rows describing derived dense-array instances |
 | `analysis.array_asset_instances` | analysis dense-array resources catalogued by `analysis.array_assets.resource_id` |
 | `analysis.array_dimensions` | their logical axes |
+| `analysis.array_labels` | the row each position of their labelled axes stands for |
 
 ### 11.9 Space
 

@@ -162,10 +162,10 @@ def test_contacts_are_named_as_the_sorting_run_names_them(asset: Path) -> None:
 
 
 def test_the_primary_contact_is_the_templates_own_trough(asset: Path) -> None:
-    """The deepest trough, per unit, in the channel positions the packet actually stores."""
+    """The deepest trough, per unit, among the contacts the packet actually stores."""
     rows = _source(asset).unit_electrodes()
-    primary = {r["unit_id"]: r["channel_index"] for r in rows if r["is_primary"]}
-    assert primary == {unit: len(channels) - 1 for unit, channels in SUPPORT.items()}
+    primary = {r["unit_id"]: r["electrode_id"] for r in rows if r["is_primary"]}
+    assert primary == {unit: f"probeA.CH{channels[-1]}" for unit, channels in SUPPORT.items()}
 
 
 def test_every_unit_gets_exactly_one_primary(asset: Path) -> None:
@@ -174,6 +174,50 @@ def test_every_unit_gets_exactly_one_primary(asset: Path) -> None:
     for row in rows:
         counts[row["unit_id"]] += bool(row["is_primary"])
     assert counts == {unit: 1 for unit in SUPPORT}
+
+
+# -- the labels say what each position is -----------------------------------------------
+
+
+def test_the_unit_and_channel_axes_are_labelled_and_the_channel_axis_depends_on_the_unit(asset: Path) -> None:
+    """Which contact a channel position means is per unit, so no coordinate array can say it (Part 03 §6.3)."""
+    axes = {a["axis_index"]: a for a in _source(asset).array_dimensions()}
+    assert (axes[0]["coordinate_resource"], axes[1]["coordinate_resource"]) == ("core.units", "core.electrodes")
+    assert axes[1]["depends_on_axis_index"] == 0
+    assert "coordinate_resource" not in axes[2]
+
+
+def test_each_unit_position_is_labelled_with_its_unit(asset: Path) -> None:
+    rows = [r for r in _source(asset).array_labels() if r["axis_index"] == 0]
+    assert [(r["depends_on_position_index"], r["position_index"], r["label_id"]) for r in rows] == [
+        (0, k, k) for k in range(UNITS)
+    ]
+
+
+def test_each_units_channel_positions_name_its_contacts_then_pad(asset: Path) -> None:
+    """Every position of the dependent axis has a row, and one past a unit's support is padding."""
+    rows = [r for r in _source(asset).array_labels() if r["axis_index"] == 1]
+    width = max(len(channels) for channels in SUPPORT.values())
+    by_unit = {unit: [r["label_id"] for r in rows if r["depends_on_position_index"] == unit] for unit in range(UNITS)}
+    assert by_unit == {
+        unit: [f"probeA.CH{c}" for c in channels] + [None] * (width - len(channels))
+        for unit, channels in SUPPORT.items()
+    }
+
+
+def test_the_deviation_repeats_the_means_labels(asset: Path) -> None:
+    rows = _source(asset, sd=True).array_labels()
+
+    def labels(asset_id: str) -> list[tuple]:
+        return [(r["axis_index"], r["position_index"], r["label_id"]) for r in rows if r["array_asset_id"] == asset_id]
+
+    assert labels("waveform_sd") == labels("waveform_mean")
+
+
+def test_a_staged_array_names_its_axes(asset: Path) -> None:
+    """Part 03 §6.5: a packet-owned array's `dimension_names` are the axes' own names."""
+    staged = _source(asset, sd=True).staged_arrays()
+    assert {s.dimension_names for s in staged} == {("unit", "channel", "sample")}
 
 
 # -- what the analyzer states and the export does not ----------------------------------

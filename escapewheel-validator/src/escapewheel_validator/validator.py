@@ -769,7 +769,7 @@ def _check_parquet_floor(resource: Any, metadata: Any, report: Report) -> None:
         )
 
 
-def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], report: Report) -> None:
+def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAxes], report: Report) -> None:
     """Check one packet-owned array against the metadata document in its own store."""
     try:
         metadata = handle.metadata()
@@ -820,31 +820,26 @@ def _check_one_array(resource: Any, handle: Any, extents: Mapping[str, Any], rep
             registry=report.resource_owner(resource.resource_id),
         )
 
-    if not (declared := extents.get(resource.resource_id, {})):
+    if (axes := declared.get(resource.resource_id)) is None:
         return
-    if set(declared) != set(range(rank)):
+    shape = [int(n) for n in handle.shape]
+    if set(axes.names) != set(range(rank)):
         report.add(
             "error",
             "array.rank_disagrees_with_dimensions",
             f"{resource.resource_id} has rank {rank} but its declaration-selected axes resource "
-            f"gives axis_index {sorted(declared) or 'none'}; Part 03 §6.2 requires one row per stored axis",
+            f"gives axis_index {sorted(axes.names) or 'none'}; Part 03 §6.2 requires one row per stored axis",
             registry=report.resource_owner(resource.resource_id),
         )
         return
-    # An axis whose coordinates are a table has one row per position, so that count is its length.
-    # The external path checks this too; a packet-owned array gets the stronger check for free,
-    # since its shape is already in hand.
-    offending = [
-        (axis, length, int(handle.shape[axis]))
-        for axis, length in sorted(declared.items())
-        if length is not None and int(handle.shape[axis]) != length
-    ]
-    if offending:
+    _report_axes(resource, shape, axes, "array.", report)
+    names = [axes.names[axis] for axis in range(rank)]
+    if metadata.get("dimension_names") != names:
         report.add(
             "error",
-            "array.shape_disagrees_with_coordinates",
-            f"{resource.resource_id}: {len(offending)} axis/axes are not the length their coordinate table gives them",
-            [(f"axis {axis}", f"{rows} rows", f"stored {stored}") for axis, rows, stored in offending],
+            "array.dimension_names",
+            f"{resource.resource_id} stores dimension_names {metadata.get('dimension_names')!r} where its axes "
+            f"resource names {names!r}; Part 03 §6.5 requires a packet-owned array to carry them",
             registry=report.resource_owner(resource.resource_id),
         )
 
@@ -866,8 +861,8 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     owned = [r for r in packet.resources(kind="dense_array") if not r.is_external and r.source is None]
     if not owned:
         return
-    extents = _declared_extents(packet)
-    if not extents:
+    declared = _declared_axes(packet)
+    if not declared:
         report.add(
             "error",
             "array.no_array_dimensions_table",
@@ -886,7 +881,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
             continue
         except StoreUnreachable:
             pass  # `_check_one_array` reports what it cannot read
-        _check_one_array(resource, packet.array_resource(resource.resource_id), extents, report)
+        _check_one_array(resource, packet.array_resource(resource.resource_id), declared, report)
 
 
 def _check_packet_owned_opaque(packet: Packet, report: Report) -> None:
@@ -1122,7 +1117,7 @@ def _resolve_external(
     routes: list[tuple[str, str, str]] = []
     # Only read core.array_dimensions where an external array would use it.
     external_arrays = [r for r in packet.resources(kind="dense_array") if r.is_external]
-    extents = _declared_extents(packet) if external_arrays else {}
+    axes_by_array = _declared_axes(packet) if external_arrays else {}
     for resource in packet.resources():
         if not resource.is_external:
             continue
@@ -1138,7 +1133,7 @@ def _resolve_external(
             )
             continue
         fields = _compare_external(
-            resource, uri, report, checksums, store_digests, extents, store_checksums, routes, assessed
+            resource, uri, report, checksums, store_digests, axes_by_array, store_checksums, routes, assessed
         )
         if fields is None:
             continue
@@ -1172,7 +1167,7 @@ def _compare_external(
     report: Report,
     checksums: bool,
     store_digests: bool = False,
-    extents: Mapping[str, Any] | None = None,
+    axes_by_array: Mapping[str, _ArrayAxes] | None = None,
     store_checksums: bool = True,
     routes: list[tuple[str, str, str]] | None = None,
     assessed: set[str] | None = None,
@@ -1212,8 +1207,8 @@ def _compare_external(
         _check_zarr_floor(resource, metadata, report)
         if assessed is not None:
             assessed.add(resource.resource_id)
-        if extents:
-            fields.extend(_compare_shape(resource, metadata, extents, report))
+        if axes_by_array:
+            fields.extend(_compare_shape(resource, metadata, axes_by_array, report))
     if checksums and isinstance(claimed := entry.get("digest"), Mapping):
         try:
             found_digest = digest_resource(uri, str(claimed["algorithm"]), store_checksums=store_checksums)
@@ -1329,14 +1324,57 @@ def _stored_metadata(uri: str, found: Any) -> Mapping[str, Any] | None:
     return None
 
 
-def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:  # noqa: C901
-    """Resolve each dense array's axes through its declaration and catalog row."""
+@dataclass
+class _ArrayAxes:
+    """What a packet's tables assert about one dense array's axes (Part 03 §6.3).
+
+    Keyed by stored `axis_index`. `labels` holds each labelled axis's rows as
+    (`depends_on_position_index`, `position_index`), and `channels` holds `core.array_channels`
+    rows as (`axis_index`, `channel_index`).
+    """
+
+    names: dict[int, Any] = field(default_factory=dict)
+    depends: dict[int, int] = field(default_factory=dict)
+    labelled: set[int] = field(default_factory=set)
+    labels: dict[int, list[tuple[int, int]]] = field(default_factory=dict)
+    channels: list[tuple[int, int]] = field(default_factory=list)
+
+
+def _rows_by_array(
+    packet: Packet, table_id: str, key: Sequence[str], columns: Sequence[str], cache: dict[Any, Any]
+) -> dict[tuple[Any, ...], list[tuple[Any, ...]]]:
+    """Read a table once and group the named columns by the array key, or return {} if unreadable."""
+    if (table_id, tuple(key), tuple(columns)) in cache:
+        return cache[table_id, tuple(key), tuple(columns)]
+    grouped: dict[tuple[Any, ...], list[tuple[Any, ...]]] = {}
+    try:
+        present = set(packet.table_resource(table_id).schema().names)
+        wanted = [*key, *(c for c in columns if c in present)]
+        rows = packet.table(table_id, columns=list(dict.fromkeys(wanted)))
+    except (PacketError, OSError, pa.ArrowException):
+        cache[table_id, tuple(key), tuple(columns)] = grouped
+        return grouped
+    values = [rows.column(c).to_pylist() if c in rows.column_names else [None] * rows.num_rows for c in columns]
+    for row in zip(*(rows.column(c).to_pylist() for c in key), *values, strict=True):
+        grouped.setdefault(tuple(row[: len(key)]), []).append(tuple(row[len(key) :]))
+    cache[table_id, tuple(key), tuple(columns)] = grouped
+    return grouped
+
+
+def _declared_axes(packet: Packet) -> dict[str, _ArrayAxes]:  # noqa: C901
+    """Resolve each dense array's axes, labels and channels through its declaration and catalog row.
+
+    The label rows are in the table the axes table's `coordinate_resource` names as its
+    `discriminates_via` (Part 03 §6.3); they and `core.array_channels` reach the array through their
+    reference to the axes table.
+    """
     declarations: dict[str, Mapping[str, Any]] = {}
     for document in (packet.registry, *packet.extensions().values()):
         if isinstance(document, Mapping):
             declarations.update(document.get("resources", {}))
 
-    extents: dict[str, dict[int, int | None]] = {}
+    cache: dict[Any, Any] = {}
+    found: dict[str, _ArrayAxes] = {}
     for resource in packet.resources(kind="dense_array"):
         declaration = declarations.get(resource.declaration_id)
         if declaration is None:
@@ -1349,9 +1387,8 @@ def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:  # no
         axes_declaration = declarations.get(axes_id)
         if catalog_declaration is None or axes_declaration is None:
             continue
-        catalog_table = catalog_declaration["table"]
+        catalog_key = list(catalog_declaration["table"]["primary_key"] or [])
         axes_table = axes_declaration["table"]
-        catalog_key = list(catalog_table["primary_key"] or [])
         binding = next(
             (
                 reference
@@ -1362,109 +1399,160 @@ def _declared_extents(packet: Packet) -> dict[str, dict[int, int | None]]:  # no
         )
         if binding is None:
             continue
-        try:
-            catalog_rows = packet.table(catalog_id, columns=[resource_column, *catalog_key])
-            axes_names = set(packet.table_resource(axes_id).schema().names)
-            axes_columns = [*binding["columns"], "axis_index"]
-            if "coordinate_resource" in axes_names:
-                axes_columns.append("coordinate_resource")
-            axes_rows = packet.table(axes_id, columns=axes_columns)
-        except (PacketError, OSError, pa.ArrowException):
+        catalog = _rows_by_array(packet, catalog_id, [resource_column], catalog_key, cache)
+        if not (keys := catalog.get((resource.resource_id,))):
             continue
-        key_by_resource = {
-            str(values[0]): tuple(values[1:])
-            for values in zip(
-                catalog_rows.column(resource_column).to_pylist(),
-                *(catalog_rows.column(name).to_pylist() for name in catalog_key),
-                strict=True,
-            )
-            if values[0] is not None
-        }
-        wanted_key = key_by_resource.get(resource.resource_id)
-        if wanted_key is None:
-            continue
-        coordinates = (
-            axes_rows.column("coordinate_resource").to_pylist()
-            if "coordinate_resource" in axes_rows.column_names
-            else [None] * axes_rows.num_rows
-        )
-        wanted_coordinates: list[tuple[str, int]] = []
-        for values, coordinate in zip(
-            zip(
-                *(axes_rows.column(name).to_pylist() for name in binding["columns"]),
-                axes_rows.column("axis_index").to_pylist(),
-                strict=True,
-            ),
-            coordinates,
-            strict=True,
+        wanted_key = keys[0]
+        axes = _ArrayAxes()
+        extra = ["axis_index", "dimension_name", "coordinate_resource", "depends_on_axis_index"]
+        for axis, name, coordinate, depends in _rows_by_array(packet, axes_id, binding["columns"], extra, cache).get(
+            wanted_key, []
         ):
-            if tuple(values[:-1]) == wanted_key and values[-1] is not None:
-                axis = int(values[-1])
-                extents.setdefault(resource.resource_id, {})[axis] = None
-                if coordinate:
-                    wanted_coordinates.append((str(coordinate), axis))
-        for coordinate_id, axis in wanted_coordinates:
-            try:
-                coordinate_names = set(packet.table_resource(coordinate_id).schema().names)
-            except PacketError:
+            if axis is None:
                 continue
-            needed = [*binding["columns"], "axis_index"]
-            if not set(needed) <= coordinate_names:
-                continue
-            coordinate_rows = packet.table(coordinate_id, columns=needed)
-            count = sum(
-                1
-                for values in zip(
-                    *(coordinate_rows.column(name).to_pylist() for name in binding["columns"]),
-                    coordinate_rows.column("axis_index").to_pylist(),
-                    strict=True,
-                )
-                if tuple(values[:-1]) == wanted_key and values[-1] == axis
+            axes.names[int(axis)] = name
+            if coordinate is not None:
+                axes.labelled.add(int(axis))
+            if depends is not None:
+                axes.depends[int(axis)] = int(depends)
+        if not axes.names:
+            continue
+        found[resource.resource_id] = axes
+
+        labels_id = next(
+            (
+                str(c["discriminates_via"]).rsplit(".", 1)[0]
+                for c in axes_table["columns"]
+                if c["name"] == "coordinate_resource" and c.get("discriminates_via")
+            ),
+            None,
+        )
+        for table_id, columns in (
+            (labels_id, ["depends_on_position_index", "position_index"]),
+            ("core.array_channels", ["channel_index"]),
+        ):
+            table = (declarations.get(table_id or "") or {}).get("table")
+            reference = next(
+                (r for r in (table or {}).get("references", []) if r["resource"] == axes_id),
+                None,
             )
-            if count:
-                extents[resource.resource_id][axis] = count
-    return extents
+            if reference is None:
+                continue
+            mapped = dict(zip(reference["resource_columns"], reference["columns"], strict=True))
+            if "axis_index" not in mapped or not set(binding["columns"]) <= set(mapped):
+                continue
+            key = [mapped[c] for c in binding["columns"]]
+            rows = _rows_by_array(packet, str(table_id), key, [mapped["axis_index"], *columns], cache)
+            for row in rows.get(wanted_key, []):
+                if any(value is None for value in row):
+                    continue
+                if table_id == labels_id:
+                    axes.labels.setdefault(int(row[0]), []).append((int(row[1]), int(row[2])))
+                else:
+                    axes.channels.append((int(row[0]), int(row[1])))
+    return found
 
 
-def _compare_shape(resource: Any, metadata: Mapping[str, Any], extents: Mapping[str, Any], report: Report) -> list[str]:
-    """Check an external array's stored shape against what the packet's tables assert (Part 02 §6).
+#: Examples a finding carries per axis, so a wholly unlabelled axis does not list every position.
+_EXAMPLES = 20
+
+
+def _axis_findings(shape: Sequence[int], axes: _ArrayAxes) -> dict[str, list[tuple[Any, ...]]]:
+    """Compare one array's shape with its label and channel rows, by check name (Part 03 §6.3)."""
+    length = dict(enumerate(shape))
+    found: dict[str, list[tuple[Any, ...]]] = {
+        "label_position_out_of_range": [],
+        "depends_on_position_out_of_range": [],
+        "label_missing": [],
+        "channel_index_out_of_range": [],
+    }
+    for axis in sorted(axes.labelled | set(axes.labels)):
+        if axis not in length:
+            continue
+        outer = axes.depends.get(axis)
+        outer_length = length.get(outer, 0) if outer is not None else None
+        seen: set[tuple[int, int]] = set()
+        for depends_on, position in axes.labels.get(axis, []):
+            if not 0 <= position < length[axis]:
+                found["label_position_out_of_range"].append(
+                    (f"axis_index {axis}", f"position_index {position}", f"length {length[axis]}")
+                )
+            elif outer_length is not None and not 0 <= depends_on < outer_length:
+                found["depends_on_position_out_of_range"].append(
+                    (f"axis_index {axis}", f"depends_on_position_index {depends_on}", f"length {outer_length}")
+                )
+            else:
+                seen.add((depends_on if outer_length is not None else 0, position))
+        if axis not in axes.labelled:
+            continue
+        outer_positions = outer_length if outer_length is not None else 1
+        # `seen` holds only in-range pairs, and the key makes each unique, so the count is exact.
+        if not (missing := outer_positions * length[axis] - len(seen)):
+            continue
+        pairs = itertools.product(range(outer_positions), range(length[axis]))
+        for depends_on, position in itertools.islice((p for p in pairs if p not in seen), _EXAMPLES):
+            where = f"position_index {position}"
+            if outer_length is not None:
+                where = f"depends_on_position_index {depends_on}, {where}"
+            found["label_missing"].append((f"axis_index {axis}", where, f"{missing} missing"))
+    for axis, channel in axes.channels:
+        if axis in length and not 0 <= channel < length[axis]:
+            found["channel_index_out_of_range"].append(
+                (f"axis_index {axis}", f"channel_index {channel}", f"length {length[axis]}")
+            )
+    return found
+
+
+_AXIS_MESSAGES = {
+    "label_position_out_of_range": "label row(s) name a position_index beyond the axis (Part 03 §6.3)",
+    "depends_on_position_out_of_range": (
+        "label row(s) name a depends_on_position_index beyond the axis depended on (Part 03 §6.3)"
+    ),
+    "label_missing": "position(s) of a labelled axis have no label row (Part 03 §6.3)",
+    "channel_index_out_of_range": "core.array_channels row(s) name a channel_index beyond their axis (Part 05 §5.3)",
+}
+
+
+def _report_axes(resource: Any, shape: Sequence[int], axes: _ArrayAxes, prefix: str, report: Report) -> None:
+    """Report each way an array's label and channel rows disagree with its shape, under `prefix`."""
+    for name, rows in _axis_findings(shape, axes).items():
+        if rows:
+            report.add(
+                "error",
+                f"{prefix}{name}",
+                f"{resource.resource_id}: {_AXIS_MESSAGES[name]}",
+                rows,
+                registry=report.resource_owner(resource.resource_id),
+            )
+
+
+def _compare_shape(
+    resource: Any, metadata: Mapping[str, Any], declared: Mapping[str, _ArrayAxes], report: Report
+) -> list[str]:
+    """Check an external array's stored shape against what the packet's tables assert (Part 03 §6.3).
 
     This is the check that catches a change actually invalidating the packet. A re-generated
-    array with a different channel count leaves `core.array_channels` describing positions that
-    are not there; one at a different sample rate leaves `core.array_dimensions` wrong. Neither
-    changes what the packet claims about the array's *values*, which it claims nothing about --
-    which is why this and not a content digest is what an external array needs verified.
+    array with a different channel count leaves its label rows naming positions that are not
+    there, or positions with none; neither changes what the packet claims about the array's
+    values, which is why this and not a content digest is what an external array needs verified.
 
     Cheap: one request for the metadata document the array's store already holds.
     """
-    if not (declared := extents.get(resource.resource_id)):
+    if (axes := declared.get(resource.resource_id)) is None or not axes.names:
         return []
     if not isinstance(shape := metadata.get("shape"), list):
         return []
-    if len(shape) != len(declared):
+    if set(axes.names) != set(range(len(shape))):
         report.add(
             "error",
             "external.array_rank",
             f"{resource.resource_id} is stored with rank {len(shape)} but its declaration-selected "
-            f"axes resource gives axis_index {sorted(declared)}; Part 03 §6.2 requires one row per stored axis",
+            f"axes resource gives axis_index {sorted(axes.names)}; Part 03 §6.2 requires one row per stored axis",
             registry=report.resource_owner(resource.resource_id),
         )
         return ["rank"]
-    offending = [
-        (axis, length, int(shape[axis]))
-        for axis, length in sorted(declared.items())
-        if length is not None and axis < len(shape) and int(shape[axis]) != length
-    ]
-    if offending:
-        report.add(
-            "error",
-            "external.array_shape",
-            f"{resource.resource_id}: {len(offending)} axis/axes are not the length the packet's "
-            "coordinate tables give them",
-            [(f"axis {axis}", f"{rows} rows", f"stored {stored}") for axis, rows, stored in offending],
-            registry=report.resource_owner(resource.resource_id),
-        )
-    return ["rank", "shape"] if any(length is not None for length in declared.values()) else ["rank"]
+    _report_axes(resource, [int(n) for n in shape], axes, "external.array_", report)
+    return ["rank", *(["labels"] if axes.labelled else []), *(["channels"] if axes.channels else [])]
 
 
 def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> dict[str, Any]:
@@ -2122,6 +2210,7 @@ def _run_rules(
             unreadable = _install_rule_relations(packet, connection, [registry, *extension_documents])
 
             kinds = _declared_kinds(packet, registry, extension_documents)
+            keys = _declared_keys(packet, registry, extension_documents)
             tier1 = generate(
                 core_context,
                 only=set(present),
@@ -2130,6 +2219,7 @@ def _run_rules(
                 kinds=kinds,
                 specialises=_specialisations(packet, registry, extension_documents),
                 declared=False,
+                keys=keys,
             )
             tier2 = _tier2_checks(registry, registry, report, "core", advisory)
             checks = [*tier1, *tier2]
@@ -2150,6 +2240,7 @@ def _run_rules(
                 unreadable,
                 recheck,
                 unsound,
+                keys,
             )
         finally:
             with contextlib.suppress(Exception):
@@ -2319,27 +2410,50 @@ def _resolve_column(spec: Mapping[str, Any]) -> str | None:
     return named if any(c["name"] == named for c in spec["columns"]) else None
 
 
-def _declared_kinds(
+def _namable(
     packet: Packet, registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
-) -> dict[str, str | None]:
-    """Every resource a discriminator may name, mapped to the column a paired value joins to.
+) -> dict[str, Any]:
+    """Every table a discriminator may name: core's, and the carried tables of each extension.
 
-    Built from the packet's registry *and* the extension registries it carries, because Part 02 §8.3
-    lets a kind name an extension table and Part 02 §8.3 makes that the case the check must reach --
-    the one whose hand-written union over core matched no branch and passed in silence.
+    Part 02 §8.3 lets a kind name an extension table, and that is the case a check must reach.
+    Core's absent tables get empty stand-ins in _layer4, so all of them can be joined; an
+    extension's do not, so only what the packet carries can be.
     """
     tables = dict(_tables(registry))
-    # Core's absent tables get empty stand-ins in _layer4, so all of them can be joined. An
-    # extension's do not, so only what the packet carries can appear in the union.
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
     for document in extensions:
         if isinstance(_tables(document), Mapping):
             tables.update({n: t for n, t in _tables(document).items() if n in carried})
-    # Every declarable resource, whether or not a *paired* value could name it. Part 02 §8.3's
-    # single-column-key rule governs the paired shape alone; R54's shared-key discriminator
-    # names tables whose key is composite by construction, and dropping them here made a
-    # correctly declared `interval_kind` read as naming nothing.
-    return {name: _resolve_column(spec) for name, spec in tables.items()}
+    return tables
+
+
+def _declared_kinds(
+    packet: Packet, registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
+) -> dict[str, str | None]:
+    """Every resource a discriminator may name, mapped to the column a string paired value joins to.
+
+    Every declarable resource, whether or not a paired value could name it: a shared-key
+    discriminator names tables whose key is composite by construction.
+    """
+    return {name: _resolve_column(spec) for name, spec in _namable(packet, registry, extensions).items()}
+
+
+def _declared_keys(
+    packet: Packet, registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
+) -> dict[str, Any]:
+    """Every resource a discriminator may name, mapped to its one key column, or None.
+
+    An identifier paired value holds that column's value, so it must share its type and identity
+    (Part 02 §8.3).
+    """
+    found: dict[str, Any] = {}
+    for name, spec in _namable(packet, registry, extensions).items():
+        key = spec.get("primary_key")
+        column = None
+        if isinstance(key, list) and len(key) == 1:
+            column = next((c for c in spec["columns"] if c["name"] == key[0]), None)
+        found[name] = column
+    return found
 
 
 def _specialisations(
@@ -2381,6 +2495,7 @@ def _check_extensions(
     unreadable: set[str] | None = None,
     recheck: Collection[str] | None = None,
     unsound: set[str] | None = None,
+    keys: Mapping[str, Any] | None = None,
 ) -> None:
     """Run each directing extension registry's generated and declared checks (Part 05 §5.4).
 
@@ -2418,6 +2533,7 @@ def _check_extensions(
             resolvable=set(_tables(registry)),
             kinds=kinds,
             declared=False,
+            keys=keys,
         )
         tier2 = _tier2_checks(document, registry, report, extension_id, advisory)
         checks = [*tier1, *tier2]

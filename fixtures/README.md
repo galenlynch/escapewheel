@@ -1,12 +1,13 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-four more conforming packets that record Part 04 §4.3's other digests, forty-six variants
+four more conforming packets that record Part 04 §4.3's other digests, fifty-seven variants
 each violating exactly one rule, two conforming packets that each draw a per-resource `info`
 finding, two conforming packets that carry no extracellular data, four conforming packets that
 each own an opaque payload, two conforming packets whose payload names draw warnings, one conforming
-packet whose origin is the earliest start only once a transform carries it, and one conforming
-packet whose unit coordinate omits an axis its frame declares.
+packet whose origin is the earliest start only once a transform carries it, one conforming
+packet whose unit coordinate omits an axis its frame declares, and one conforming packet whose
+labelled array pads a unit's channels.
 Together they are the conformance corpus: expected findings recorded as data, so any
 implementation can be checked against the same evidence rather than against a prose description
 of what should happen.
@@ -29,7 +30,7 @@ uv run --project ../escapewheel-validator escapewheel validate packets/valid
 
 ## The valid packet
 
-30 of the registry's 43 tables, 142 rows. One session, one subject, two clocks with a
+30 of the registry's 45 tables, 142 rows. One session, one subject, two clocks with a
 declared transform between them, one probe with four electrodes, two trials, four events,
 one sorting run, one curation version, two units and their spikes, and provenance.
 
@@ -86,7 +87,22 @@ sharded, and delta-filtered pipelines; only the delta one is outside the v3 read
 `physical.outside_reader_floor` fires once, at `info`. `unresolved_externals` references two
 external arrays and draws one `external.physical_unassessed` per array. Both packets conform,
 and `corpus.py` checks the count; `valid` must draw neither finding (Part 05 §5.3). Each array is
-a `zarr.json` with no chunk written, so no Zarr library is needed to build the corpus.
+a `zarr.json` with no chunk written, so no Zarr library is needed to build the corpus. Every axis
+of these five arrays is only an order, which Part 03 §6.3 declares in the numeric form.
+
+`padded_labels` adds `core.waveform_mean`, a packet-owned array of two units by four channels by
+three samples. Its unit axis is labelled with `core.units`, and its channel axis with
+`core.electrodes` and depends on the unit axis; the second unit has two contacts, so its last two
+channel positions are rows with a null label (Part 03 §6.3). It is clean. Twelve variants each break
+one rule of it, and each draws one error: `axis_without_form` and `axis_with_two_forms` break the
+sample axis's form; `label_naming_no_row` names `elec_009`; `label_on_unlabelled_axis` puts a label
+row on the sample axis; `label_missing` drops a padding row; `chained_dependency` has the unit axis
+depend on the sample axis; `independent_label_off_zero` adds a unit label at
+`depends_on_position_index` 1; `one_row_two_positions` names one contact twice under one unit;
+`label_beyond_axis` adds a channel label at `position_index` 4, one past the axis's end;
+`dependent_axis_unlabelled` has the sample axis depend on the unit axis without labels;
+`label_outside_core` labels the unit axis with `analysis.array_assets`, every label null; and
+`array_without_dimension_names` writes the array without `dimension_names` (Part 03 §6.5).
 
 Four packets each add one packet-owned opaque payload at `opaque/<resource_id>/<name>` (Part 03
 §11), and are clean with checksums: `owned_opaque_object` a single file, `owned_opaque_prefix` a

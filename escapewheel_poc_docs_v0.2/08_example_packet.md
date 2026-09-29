@@ -30,11 +30,11 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.8.0.json.gz
-    aind_opto/        0.8.0.json.gz
-    aind_unit_qc/     0.9.0.json.gz
-    dynamic_foraging/ 0.9.0.json.gz
-    vr_foraging/      0.8.0.json.gz
+    core/             0.9.0.json.gz
+    aind_opto/        0.9.0.json.gz
+    aind_unit_qc/     0.10.0.json.gz
+    dynamic_foraging/ 0.10.0.json.gz
+    vr_foraging/      0.9.0.json.gz
   tables/
     core/             sessions, subjects, session_experimenters, devices, probes, electrodes,
                       sorting_run_channels, unit_electrodes, coordinate_frames,
@@ -43,8 +43,9 @@ packet_root/
                       event_streams, event_stream_observation_intervals, events, sorting_runs,
                       curation_versions, units, unit_quality_labels, clock_observation_intervals,
                       unit_observation_intervals, spike_events, source_files,
-                      processing_run_inputs, array_assets, array_dimensions, processing_runs
-    analysis/         array_assets, array_dimensions, spike_events
+                      processing_run_inputs, array_assets, array_dimensions, array_labels,
+                      processing_runs
+    analysis/         array_assets, array_dimensions, array_labels, spike_events
     aind_unit_qc/     metrics
     dynamic_foraging/ trials
   arrays/
@@ -60,7 +61,7 @@ it, with `external: true` and an absolute URI.
 ## 3. Manifest excerpt
 
 <!-- BEGIN GENERATED EXAMPLE PACKET: manifest -->
-The packet carries 39 resources, 38 of them packet-owned; the excerpt shows one entry of each kind.
+The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one entry of each kind.
 
 ```json
 {
@@ -70,11 +71,11 @@ The packet carries 39 resources, 38 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.8.0", "path": "registries/core/0.8.0.json.gz", "sha256": "…"},
-    "aind_opto": {"role": "extension", "version": "0.8.0", "path": "registries/aind_opto/0.8.0.json.gz", "sha256": "…"},
-    "aind_unit_qc": {"role": "extension", "version": "0.9.0", "path": "registries/aind_unit_qc/0.9.0.json.gz", "sha256": "…"},
-    "dynamic_foraging": {"role": "extension", "version": "0.9.0", "path": "registries/dynamic_foraging/0.9.0.json.gz", "sha256": "…"},
-    "vr_foraging": {"role": "extension", "version": "0.8.0", "path": "registries/vr_foraging/0.8.0.json.gz", "sha256": "…"}
+    "core": {"role": "core", "version": "0.9.0", "path": "registries/core/0.9.0.json.gz", "sha256": "…"},
+    "aind_opto": {"role": "extension", "version": "0.9.0", "path": "registries/aind_opto/0.9.0.json.gz", "sha256": "…"},
+    "aind_unit_qc": {"role": "extension", "version": "0.10.0", "path": "registries/aind_unit_qc/0.10.0.json.gz", "sha256": "…"},
+    "dynamic_foraging": {"role": "extension", "version": "0.10.0", "path": "registries/dynamic_foraging/0.10.0.json.gz", "sha256": "…"},
+    "vr_foraging": {"role": "extension", "version": "0.9.0", "path": "registries/vr_foraging/0.9.0.json.gz", "sha256": "…"}
   },
   "created_at": "…",
   "sessions": ["s001"],
@@ -91,7 +92,7 @@ The packet carries 39 resources, 38 of them packet-owned; the excerpt shows one 
       "declaration_id": "core.array_asset_instances",
       "uri": "arrays/core/waveform_mean.zarr",
       "validation_state": "passed",
-      "size_bytes": 880,
+      "size_bytes": 948,
       "digest": {"algorithm": "sha256", "value": "…"}
     },
     {
@@ -99,7 +100,7 @@ The packet carries 39 resources, 38 of them packet-owned; the excerpt shows one 
       "declaration_id": "analysis.array_asset_instances",
       "uri": "arrays/analysis/unit_rates.zarr",
       "validation_state": "passed",
-      "size_bytes": 759,
+      "size_bytes": 814,
       "digest": {"algorithm": "sha256", "value": "…"},
       "derived_from": ["core.spike_events", "core.units"]
     },

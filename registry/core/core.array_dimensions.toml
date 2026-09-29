@@ -39,21 +39,21 @@ vocabulary = "free"
 description = "Axis name."
 
 [[columns]]
-name = "coordinate_position_column"
-type = "string"
-presence = "nullable"
-role = "data"
-vocabulary = "free"
-description = "Which column of that resource holds the 0-based position."
-
-[[columns]]
 name = "coordinate_resource"
 type = "string"
 presence = "nullable"
 role = "discriminator"
 resolves = "required"
-positions_in = "coordinate_position_column"
-description = "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`."
+discriminates_via = "core.array_labels.axis_index"
+discriminates = "label_id"
+description = "The table whose rows this axis's positions stand for, as a dotted resource ID. Each position's row is named by its label in `core.array_labels`."
+
+[[columns]]
+name = "depends_on_axis_index"
+type = "int64"
+presence = "nullable"
+role = "structural_index"
+description = "The axis of this array whose position, with this axis's own, decides each label. Null where this axis's position alone decides it."
 
 [[columns]]
 name = "coordinate_array_asset_id"
@@ -121,6 +121,11 @@ identity = "assigned"
 references = "core.clocks"
 description = "Clock the ticks are counted on (regular tick axis)."
 
+[[references]]
+columns = ["array_asset_id", "depends_on_axis_index"]
+resource = "core.array_dimensions"
+resource_columns = ["array_asset_id", "axis_index"]
+
 [[rules]]
 id = "core.array_dimensions.axis_index_contiguous"
 level = "error"
@@ -135,7 +140,7 @@ HAVING MAX(axis_index) <> COUNT(*) - 1
 [[rules]]
 id = "core.array_dimensions.one_coordinate_form"
 level = "error"
-message = "an axis declares more than one coordinate form"
+message = "an axis declares no coordinate form, or more than one"
 sql = '''
 SELECT array_asset_id, axis_index
 FROM core.array_dimensions
@@ -144,7 +149,7 @@ WHERE (
   + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END
   + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END
   + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END
-) > 1'''
+) <> 1'''
 
 [[rules]]
 id = "core.array_dimensions.tick_axis_complete"
@@ -167,15 +172,6 @@ WHERE origin_value IS NOT NULL
   AND (step_value IS NULL OR coordinate_unit IS NULL)'''
 
 [[rules]]
-id = "core.array_dimensions.labelled_axis_complete"
-level = "error"
-message = "coordinate_resource and coordinate_position_column must be present together"
-sql = '''
-SELECT array_asset_id, axis_index
-FROM core.array_dimensions
-WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)'''
-
-[[rules]]
 id = "core.array_dimensions.coordinate_resource_is_core"
 level = "error"
 message = "a core axis points outward at a non-core resource"
@@ -196,10 +192,22 @@ WHERE step_tick_den IS NOT NULL
   AND step_tick_den <= 0'''
 
 [[rules]]
-id = "core.array_dimensions.coordinate_pair_complete"
+id = "core.array_dimensions.dependent_axis_labelled"
 level = "error"
-message = "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them"
+message = "an axis depends on another axis and has no labels"
 sql = '''
-SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column
+SELECT array_asset_id, axis_index, depends_on_axis_index
 FROM core.array_dimensions
-WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)'''
+WHERE depends_on_axis_index IS NOT NULL
+  AND coordinate_resource IS NULL'''
+
+[[rules]]
+id = "core.array_dimensions.dependency_not_chained"
+level = "error"
+message = "an axis depends on an axis that itself depends on another"
+sql = '''
+SELECT d.array_asset_id, d.axis_index, d.depends_on_axis_index
+FROM core.array_dimensions AS d
+JOIN core.array_dimensions AS o ON o.array_asset_id = d.array_asset_id
+  AND o.axis_index = d.depends_on_axis_index
+WHERE o.depends_on_axis_index IS NOT NULL'''

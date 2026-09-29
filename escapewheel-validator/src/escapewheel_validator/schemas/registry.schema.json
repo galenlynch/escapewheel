@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/registry/0.8.0",
+  "$id": "https://escapewheel.org/schemas/registry/0.9.0",
   "title": "Escapewheel schema registry",
   "description": "Local shape of an Escapewheel core or extension registry document.",
   "type": "object",
@@ -152,7 +152,6 @@
         "finite": {"type": "boolean"},
         "resolves": {"enum": ["required", "optional"]},
         "discriminates": {"$ref": "#/$defs/name"},
-        "positions_in": {"$ref": "#/$defs/name"},
         "discriminates_via": {"type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"},
         "description": {"type": "string"},
         "vocabulary": {"enum": ["closed", "open", "free"]},
@@ -190,7 +189,6 @@
             "not": {"anyOf": [
               {"required": ["resolves"]},
               {"required": ["discriminates"]},
-              {"required": ["positions_in"]},
               {"required": ["discriminates_via"]}
             ]}
           }

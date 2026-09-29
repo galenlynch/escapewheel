@@ -7,7 +7,7 @@
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§1, 9.2, 9.4 and 12.1; Part 08 §§2 and 3; Part 11 §§1, 2 and 5; the rule-language descriptor; the registry-contract descriptor; the core registry; the four extension registries |
-| **Depends on** | `an-interval-is-numbered-by-its-packet` §3.4 (the core registry version this advances from); `every-array-axis-declares-what-each-position-is` §3.8 (the registry-contract descriptor this advances from) |
+| **Depends on** | `an-interval-is-numbered-by-its-packet` §3.4 (the core registry version this advances from); R147 §3.8 (the registry-contract descriptor this advances from) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4 |
 
@@ -179,7 +179,7 @@ These incorporated identifiers MUST advance:
 
 | artifact | from | to |
 |---|---|---|
-| registry-contract descriptor ID | `escapewheel-registry-contract-v0.6`, which `every-array-axis-declares-what-each-position-is` assigns | `escapewheel-registry-contract-v0.7` |
+| registry-contract descriptor ID | `escapewheel-registry-contract-v0.6`, which R147 assigns | `escapewheel-registry-contract-v0.7` |
 | core registry `registry_version` | `0.10.0`, which `an-interval-is-numbered-by-its-packet` assigns | `0.11.0` |
 | core registry `rule_language` | `escapewheel-rule-sql-v0.1` | `escapewheel-rule-sql-v0.2` |
 
@@ -202,7 +202,7 @@ alike. The rule language's other routines, type bindings and execution settings 
 ## 5. Consequence
 
 No `unit_id` changes in either session packet or in any fixture packet. Every packet binds core
-registry 0.11.0 and is rebuilt at the rebuild `every-array-axis-declares-what-each-position-is`
+registry 0.11.0 and is rebuilt at the rebuild R147
 already requires. The release carries one rule language: every repository registry names the new
 one, and the four repository extension registries advance their versions without changing a rule.
 A registry naming `escapewheel-rule-sql-v0.1` selects no descriptor, so its evaluation is

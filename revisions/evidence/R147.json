@@ -1,0 +1,728 @@
+{
+  "version": 1,
+  "revision": "R147",
+  "based_on": "b1fb70bfab14c19296aa03dea2429332a2731a71",
+  "clauses": {
+    "R147 \u00a73.1": {
+      "owners": [
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_labels/table"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_labels/table"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md",
+          "registry/README.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "corpus: every packet behaves as specified",
+            "id": "padded_labels"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: the column tables come from the registry",
+            "id": "columns"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_label_is_numbered_as_the_row_its_axis_names_and_padding_stays_null"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_waveforms.py::test_each_unit_position_is_labelled_with_its_unit"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_waveforms.py::test_each_units_channel_positions_name_its_contacts_then_pad"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_lfp.py::test_each_channel_position_is_labelled_with_its_electrode"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.array_labels.toml",
+          "registry/core/analysis.array_labels.toml",
+          "conformance/spec-sweep/tables.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/waveforms.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/lfp.py",
+          "escapewheel-writer/src/escapewheel_writer/encoding.py",
+          "integration/example.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md",
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R147 \u00a73.2": {
+      "owners": [
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/columns/4"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/columns/5"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/references/4"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/columns/4"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/columns/5"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/references/4"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-array-axis-coordinates"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "label_naming_no_row",
+            "finding": "core.array_dimensions.coordinate_resource.core_electrodes_resolves"
+          },
+          {
+            "kind": "fixture",
+            "packet": "label_on_unlabelled_axis",
+            "finding": "core.array_dimensions.coordinate_resource.specialised_row_has_kind"
+          },
+          {
+            "kind": "fixture",
+            "packet": "chained_dependency",
+            "finding": "core.array_dimensions.dependency_not_chained"
+          },
+          {
+            "kind": "fixture",
+            "packet": "dependent_axis_unlabelled",
+            "finding": "core.array_dimensions.dependent_axis_labelled"
+          },
+          {
+            "kind": "fixture",
+            "packet": "independent_label_off_zero",
+            "finding": "core.array_labels.independent_depends_on_position_zero"
+          },
+          {
+            "kind": "fixture",
+            "packet": "one_row_two_positions",
+            "finding": "core.array_labels.one_position_per_row"
+          },
+          {
+            "kind": "fixture",
+            "packet": "label_outside_core",
+            "finding": "core.array_dimensions.coordinate_resource_is_core"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_label_naming_no_row_is_caught"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_label_on_an_unlabelled_axis_is_caught"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_label_naming_no_row_refuses_the_commit"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_waveforms.py::test_the_unit_and_channel_axes_are_labelled_and_the_channel_axis_depends_on_the_unit"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_lfp.py::test_the_channel_axis_is_labelled_with_electrodes"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.array_dimensions.toml",
+          "registry/core/analysis.array_dimensions.toml",
+          "registry/check.py",
+          "escapewheel-writer/src/escapewheel_writer/arrow.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/waveforms.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/lfp.py",
+          "integration/example.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R147 \u00a73.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-discriminator-semantics"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-column-declaration"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_by_position_discriminator_is_not_a_shape"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_paired_value_is_a_string_or_an_identifier"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_an_identifier_paired_value_may_sit_on_the_specialised_table"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_string_paired_value_is_cast_on_both_sides"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_each_named_kind_gets_its_own_anti_join"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_identifier_paired_value_joins_its_key_uncast"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_key_an_identifier_value_cannot_hold_is_reported"
+          },
+          {
+            "kind": "fixture",
+            "packet": "label_naming_no_row",
+            "finding": "core.array_dimensions.coordinate_resource.core_electrodes_resolves"
+          },
+          {
+            "kind": "fixture",
+            "packet": "label_on_unlabelled_axis",
+            "finding": "core.array_dimensions.coordinate_resource.specialised_row_has_kind"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_discriminators.py::test_an_identifier_paired_value_resolves_through_the_specialised_table"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_discriminators.py::test_a_string_paired_value_joins_an_assigned_keys_name"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_label_is_numbered_as_the_row_its_axis_names_and_padding_stays_null"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/generate.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "escapewheel-reader/src/escapewheel_reader/discriminators.py",
+          "escapewheel-writer/src/escapewheel_writer/arrow.py",
+          "registry/check.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide outside the specification describes how a paired value resolves"
+      }
+    },
+    "R147 \u00a73.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-array-axis-coordinates"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "axis_without_form",
+            "finding": "core.array_dimensions.one_coordinate_form"
+          },
+          {
+            "kind": "fixture",
+            "packet": "axis_with_two_forms",
+            "finding": "core.array_dimensions.one_coordinate_form"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_written_array_carries_its_axes_names"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/sources/waveforms.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/lfp.py",
+          "integration/example.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R147 \u00a73.5": {
+      "owners": [
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_channels/table"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.unit_electrodes/table"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: the column tables come from the registry",
+            "id": "columns"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_lfp.py::test_channels_carry_the_acquisition_offset_and_no_electrode"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.array_channels.toml",
+          "registry/core/core.unit_electrodes.toml",
+          "escapewheel-writer/src/escapewheel_writer/sources/lfp.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/waveforms.py",
+          "escapewheel-writer/src/escapewheel_writer/encoding.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/10_performance_notes.md"
+        ]
+      }
+    },
+    "R147 \u00a73.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-array-metadata-placement"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "label_missing",
+            "finding": "array.label_missing"
+          },
+          {
+            "kind": "fixture",
+            "packet": "label_beyond_axis",
+            "finding": "array.label_position_out_of_range"
+          },
+          {
+            "kind": "fixture",
+            "packet": "array_without_dimension_names",
+            "finding": "array.dimension_names"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_an_external_axis_is_checked_against_its_labels"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_axis_is_checked_against_its_labels"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_dependent_axis_is_labelled_at_every_pair_of_positions"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_carries_its_axes_names"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_packet_owned_array_without_dimension_names_is_caught"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_referenced_array_may_name_its_axes_otherwise"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_validation.py::test_a_channel_index_beyond_its_axis_is_caught"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_written_array_carries_its_axes_names"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_dependent_position_with_no_label_row_refuses_the_commit"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_waveforms.py::test_a_staged_array_names_its_axes"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-writer/src/escapewheel_writer/arrays.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/waveforms.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R147 \u00a73.7": {
+      "owners": [
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/rules/1"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/rules/6"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/rules/7"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_labels/table/rules/0"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_labels/table/rules/1"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/rules/1"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/rules/5"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/rules/6"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_labels/table/rules/0"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_labels/table/rules/1"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md",
+          "registry/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "axis_without_form",
+            "finding": "core.array_dimensions.one_coordinate_form"
+          },
+          {
+            "kind": "fixture",
+            "packet": "dependent_axis_unlabelled",
+            "finding": "core.array_dimensions.dependent_axis_labelled"
+          },
+          {
+            "kind": "fixture",
+            "packet": "chained_dependency",
+            "finding": "core.array_dimensions.dependency_not_chained"
+          },
+          {
+            "kind": "fixture",
+            "packet": "independent_label_off_zero",
+            "finding": "core.array_labels.independent_depends_on_position_zero"
+          },
+          {
+            "kind": "fixture",
+            "packet": "one_row_two_positions",
+            "finding": "core.array_labels.one_position_per_row"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_every_shipped_rule_passes_static_profile_check"
+          },
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "131 shipped rules statically check, bind, and execute empty"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.array_dimensions.toml",
+          "registry/core/analysis.array_dimensions.toml",
+          "registry/core/core.array_labels.toml",
+          "registry/core/analysis.array_labels.toml",
+          "registry/core/core.unit_electrodes.toml",
+          "fixtures/build.py",
+          "fixtures/corpus.py",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R147 \u00a73.8": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-core-logical-schema-scope"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.6.json",
+          "pointer": "/id"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.6.json",
+          "pointer": "/registry_schema"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.6.json",
+          "registry/extensions/aind_opto.json",
+          "registry/extensions/aind_unit_qc.json",
+          "registry/extensions/dynamic_foraging.json",
+          "registry/extensions/vr_foraging.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "registry meta-schema identity is 0.9.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "core registry version is 0.9.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every shipped registry names the current meta-schema"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the incorporated registry contract validates against its schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_reference_registry_has_one_complete_valid_result"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_registry_naming_the_superseded_meta_schema_is_unsupported"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_discriminator_companion_has_matching_declaration"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_by_position_discriminator_is_not_a_shape"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[aind_opto]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[aind_unit_qc]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[dynamic_foraging]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_every_repository_extension_satisfies_the_same_contract[vr_foraging]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/registry.toml",
+          "registry/extensions/aind_opto/registry.toml",
+          "registry/extensions/aind_unit_qc/registry.toml",
+          "registry/extensions/dynamic_foraging/registry.toml",
+          "registry/extensions/vr_foraging/registry.toml",
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "facts.py",
+          "prototype/registry-codegen/registry.json",
+          "conformance/interval-kinds/probe.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the identifiers appear outside the specification only in generated fact regions and vendored copies"
+      }
+    }
+  }
+}

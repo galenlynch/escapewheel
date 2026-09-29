@@ -7,7 +7,7 @@ Part 03 §3.3).
 
 <!-- BEGIN generated: counts -->
 ```
-46 resources, 43 tables, 348 columns, 111 references, 77 Tier 2 rules
+48 resources, 45 tables, 358 columns, 116 references, 86 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -21,7 +21,7 @@ history and rationale but are not current normative owners.
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
 | `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
-| `registry_contracts/escapewheel-registry-contract-v0.5.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
+| `registry_contracts/escapewheel-registry-contract-v0.6.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.1.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | Incorporated closed schema for `packet.json` (Part 04). |
@@ -108,9 +108,9 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-164 required column, not null
-111 reference, resolves
-43  primary key, unique
+174 required column, not null
+116 reference, resolves
+45  primary key, unique
 4   closed vocabulary, member of
 26  finite column, no NaN or infinity
 8   discriminator, resolvable
@@ -136,21 +136,23 @@ selects `escapewheel-rule-sql-v0.1`; individual rules cannot override it. Inline
 table's whole logical contract readable in one declaration.
 
 <!-- BEGIN generated: rules -->
-77 rules over 27 tables: 68 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
+86 rules over 29 tables: 77 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
 | `core.clocks` | 12 |
 | `core.array_dimensions` | 8 |
+| `analysis.array_dimensions` | 7 |
 | `core.processing_runs` | 7 |
 | `core.units` | 5 |
 | `core.clock_anchors` | 4 |
 | `core.sessions` | 4 |
 | `core.media_assets` | 3 |
 | `core.preferred_runs` | 3 |
-| `core.unit_electrodes` | 3 |
+| `analysis.array_labels` | 2 |
 | `analysis.spike_events` | 2 |
 | `core.array_assets` | 2 |
+| `core.array_labels` | 2 |
 | `core.calibrations` | 2 |
 | `core.clock_observation_intervals` | 2 |
 | `core.devices` | 2 |
@@ -158,8 +160,8 @@ table's whole logical contract readable in one declaration.
 | `core.media_frames` | 2 |
 | `core.sorting_run_channels` | 2 |
 | `core.spike_events` | 2 |
+| `core.unit_electrodes` | 2 |
 | `core.unit_observation_intervals` | 2 |
-| `analysis.array_dimensions` | 1 |
 | `core.array_channels` | 1 |
 | `core.clock_phase_steps` | 1 |
 | `core.coordinate_frame_axes` | 1 |

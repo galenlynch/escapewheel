@@ -277,6 +277,7 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
         compressors=compressors,
         filters=filters if spec.shard is None else None,
         fill_value=spec.fill_value,
+        dimension_names=spec.dimension_names,
     )
     array[:] = spec.values
     return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())

@@ -320,6 +320,23 @@ types and footer features, Zarr version, rank and codecs, and checksums outside 
 observe them, so such a check written as SQL fails silently rather than loudly. Dense-array checks
 obtain the axes table from the resolved declaration.
 
+For each dense array whose metadata it reads, a validator MUST report at `error`:
+
+- a label row whose `position_index` is negative or not less than its axis's length;
+- a label row whose `depends_on_position_index` is negative or not less than the length of the axis
+  its axis row's `depends_on_axis_index` names;
+- a position of a labelled axis with no label row, or, on a dependent axis, a pair of its position
+  and a position of the axis it depends on with no label row;
+- a `core.array_channels` row whose `channel_index` is negative or not less than the length of the
+  axis its `axis_index` names; and
+- for a packet-owned array, `dimension_names` that is absent or differs at any position from the
+  axes table.
+
+A validator finds an axis's label rows in the table that the `discriminates_via` of the axes
+table's `coordinate_resource` names
+([Part 03 §6.3](03_portable_physical_profile.md#ew-array-axis-coordinates)), and its names under
+[Part 03 §6.5](03_portable_physical_profile.md#ew-array-metadata-placement).
+
 A validator MUST assess floor membership for every packet-owned resource whose interface declares a
 reader floor, and for every external one whose format-owned metadata it reads under
 [Part 04 §5.3](04_packet_catalog.md#ew-external-resource-verification). Membership is judged under

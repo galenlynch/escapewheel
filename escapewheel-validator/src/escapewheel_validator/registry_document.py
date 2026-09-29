@@ -23,7 +23,7 @@ from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, ch
 SCHEMAS = Path(__file__).resolve().parent / "schemas"
 SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
-CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.5.json"
+CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.6.json"
 RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
 UCUM_URI = "https://ucum.org/ucum"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
@@ -1294,33 +1294,31 @@ def _discriminator_declarations(
 ) -> list[Outcome]:
     del universe, class_name, core_usable
     outcomes: list[Outcome] = []
-    for resource, table in _tables(document).items():
-        columns = _columns(table)
+    tables = _tables(document)
+    for resource, table in tables.items():
         for index, column in enumerate(table["columns"]):
-            if column["role"] != "discriminator":
+            if column["role"] != "discriminator" or (companion_name := column.get("discriminates")) is None:
                 continue
-            paired = "discriminates" in column
-            positioned = "positions_in" in column
-            if paired and positioned:
-                outcomes.append(
-                    _invalid(
-                        "registry.discriminator.declaration",
-                        _pointer(("tables", resource, "columns", index)),
-                        resource,
-                        "a discriminator selects both paired-value and by-position shapes",
-                    )
-                )
-                continue
-            companion_name = column.get("discriminates") or column.get("positions_in")
-            if companion_name is None:
-                continue
-            matches = columns.get(companion_name, [])
+            # Part 02 §8.3: the paired value sits on the specialised table where `discriminates_via`
+            # names one, and there a null value names no row of the row's kind rather than leaving
+            # the kind undeterminable, so it may be nullable whatever the discriminator's presence.
+            via = column.get("discriminates_via")
+            if via is None:
+                holder, allowed = table, {column["presence"]} & {"required", "nullable"}
+            else:
+                holder = tables.get(str(via).rsplit(".", 1)[0])
+                if holder is None:
+                    continue  # `registry.discriminator.path` reports a target that does not resolve
+                allowed = {"required", "nullable"}
+            matches = _columns(holder).get(companion_name, [])
+            companion = matches[0][1] if len(matches) == 1 else None
             correct = (
-                len(matches) == 1
-                and matches[0][1]["type"] == "string"
-                and matches[0][1]["role"] == "data"
-                and matches[0][1]["presence"] == column["presence"]
-                and column["presence"] in {"required", "nullable"}
+                companion is not None
+                and (
+                    (companion["type"] == "string" and companion["role"] == "data")
+                    or companion["role"] == "identifier"
+                )
+                and companion["presence"] in allowed
             )
             if not correct:
                 outcomes.append(
@@ -1328,7 +1326,8 @@ def _discriminator_declarations(
                         "registry.discriminator.declaration",
                         _pointer(("tables", resource, "columns", index)),
                         resource,
-                        f"companion {companion_name!r} is not one matching string data column",
+                        f"companion {companion_name!r} is not one string data or identifier column "
+                        "with the presence Part 02 §8.3 requires",
                     )
                 )
     return outcomes

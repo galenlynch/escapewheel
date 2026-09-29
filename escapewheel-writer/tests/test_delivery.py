@@ -476,6 +476,7 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
             array_asset_id="waveform_mean",
             chunks=(1, 3, 4),
             shard=(2, 3, 4),
+            dimension_names=("unit", "channel", "sample"),
         ),
     )
     writer = PacketWriter(registry, packet_id="s001", session="s001")
@@ -497,7 +498,15 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
     writer.add(
         "core.array_dimensions",
         [
-            {"session_id": "s001", "array_asset_id": "waveform_mean", "axis_index": axis, "dimension_name": name}
+            {
+                "session_id": "s001",
+                "array_asset_id": "waveform_mean",
+                "axis_index": axis,
+                "dimension_name": name,
+                "origin_value": 0.0,
+                "step_value": 1.0,
+                "coordinate_unit": "1",
+            }
             for axis, name in enumerate(("unit", "channel", "sample"))
         ],
     )

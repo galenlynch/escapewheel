@@ -39,21 +39,21 @@ vocabulary = "free"
 description = "Axis name."
 
 [[columns]]
-name = "coordinate_position_column"
-type = "string"
-presence = "nullable"
-role = "data"
-vocabulary = "free"
-description = "Which column of that resource holds the 0-based position."
-
-[[columns]]
 name = "coordinate_resource"
 type = "string"
 presence = "nullable"
 role = "discriminator"
 resolves = "required"
-positions_in = "coordinate_position_column"
-description = "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`."
+discriminates_via = "analysis.array_labels.axis_index"
+discriminates = "label_id"
+description = "The table whose rows this axis's positions stand for, as a dotted resource ID. Each position's row is named by its label in `analysis.array_labels`."
+
+[[columns]]
+name = "depends_on_axis_index"
+type = "int64"
+presence = "nullable"
+role = "structural_index"
+description = "The axis of this array whose position, with this axis's own, decides each label. Null where this axis's position alone decides it."
 
 [[columns]]
 name = "coordinate_array_asset_id"
@@ -121,11 +121,83 @@ identity = "assigned"
 references = "core.clocks"
 description = "Clock the ticks are counted on (regular tick axis)."
 
+[[references]]
+columns = ["array_asset_id", "depends_on_axis_index"]
+resource = "analysis.array_dimensions"
+resource_columns = ["array_asset_id", "axis_index"]
+
 [[rules]]
-id = "analysis.array_dimensions.coordinate_pair_complete"
+id = "analysis.array_dimensions.axis_index_contiguous"
 level = "error"
-message = "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them"
+message = "axis_index is not contiguous from 0"
 sql = '''
-SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column
+SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis
 FROM analysis.array_dimensions
-WHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)'''
+GROUP BY array_asset_id
+HAVING MAX(axis_index) <> COUNT(*) - 1
+  OR MIN(axis_index) <> 0'''
+
+[[rules]]
+id = "analysis.array_dimensions.one_coordinate_form"
+level = "error"
+message = "an axis declares no coordinate form, or more than one"
+sql = '''
+SELECT array_asset_id, axis_index
+FROM analysis.array_dimensions
+WHERE (
+  CASE WHEN origin_tick IS NOT NULL THEN 1 ELSE 0 END
+  + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END
+  + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END
+  + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END
+) <> 1'''
+
+[[rules]]
+id = "analysis.array_dimensions.tick_axis_complete"
+level = "error"
+message = "a regular tick axis needs clock_id, origin_tick and step_tick_num"
+sql = '''
+SELECT array_asset_id, axis_index
+FROM analysis.array_dimensions
+WHERE origin_tick IS NOT NULL
+  AND (step_tick_num IS NULL OR clock_id IS NULL)'''
+
+[[rules]]
+id = "analysis.array_dimensions.numeric_axis_complete"
+level = "error"
+message = "a regular numeric axis needs origin_value, step_value and coordinate_unit"
+sql = '''
+SELECT array_asset_id, axis_index
+FROM analysis.array_dimensions
+WHERE origin_value IS NOT NULL
+  AND (step_value IS NULL OR coordinate_unit IS NULL)'''
+
+[[rules]]
+id = "analysis.array_dimensions.step_denominator_positive"
+level = "error"
+message = "a step denominator is not positive, so the step it defines is meaningless"
+sql = '''
+SELECT array_asset_id, axis_index, step_tick_den
+FROM analysis.array_dimensions
+WHERE step_tick_den IS NOT NULL
+  AND step_tick_den <= 0'''
+
+[[rules]]
+id = "analysis.array_dimensions.dependent_axis_labelled"
+level = "error"
+message = "an axis depends on another axis and has no labels"
+sql = '''
+SELECT array_asset_id, axis_index, depends_on_axis_index
+FROM analysis.array_dimensions
+WHERE depends_on_axis_index IS NOT NULL
+  AND coordinate_resource IS NULL'''
+
+[[rules]]
+id = "analysis.array_dimensions.dependency_not_chained"
+level = "error"
+message = "an axis depends on an axis that itself depends on another"
+sql = '''
+SELECT d.array_asset_id, d.axis_index, d.depends_on_axis_index
+FROM analysis.array_dimensions AS d
+JOIN analysis.array_dimensions AS o ON o.array_asset_id = d.array_asset_id
+  AND o.axis_index = d.depends_on_axis_index
+WHERE o.depends_on_axis_index IS NOT NULL'''

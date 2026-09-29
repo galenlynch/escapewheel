@@ -100,12 +100,12 @@ check(
     ],
 )
 check(
-    "registry meta-schema identity is 0.8.0",
-    [] if META_ID == "https://escapewheel.org/schemas/registry/0.8.0" else [META_ID],
+    "registry meta-schema identity is 0.9.0",
+    [] if META_ID == "https://escapewheel.org/schemas/registry/0.9.0" else [META_ID],
 )
 check(
-    "core registry version is 0.8.0",
-    [] if REG.get("registry_version") == "0.8.0" else [REG.get("registry_version")],
+    "core registry version is 0.9.0",
+    [] if REG.get("registry_version") == "0.9.0" else [REG.get("registry_version")],
 )
 check(
     "every shipped registry selects the incorporated rule language",
@@ -260,14 +260,14 @@ NAMING_EXCEPTIONS = {
     "aind_unit_qc.metrics.rp_violations": "the sorter's own metric name; a count of violations",
     "aind_unit_qc.waveform_metrics.num_negative_peaks": "the sorter's own metric name; a count of peaks",
     "aind_unit_qc.waveform_metrics.num_positive_peaks": "as num_negative_peaks",
+    # Part 03 §6.3: `_kind` reads as a category and every column carrying it holds one -- an
+    # interval's kind, a run's scope kind. This holds the table whose rows an axis's positions stand
+    # for, and R48 §3 measured that a role says what a name cannot, which is why R55 added the role.
+    "core.array_dimensions.coordinate_resource": "names the table whose rows the axis's positions stand for, not a kind of thing (Part 03 §6.3)",
+    "analysis.array_dimensions.coordinate_resource": "as core.array_dimensions.coordinate_resource",
     # Part 02 §8.3: each carries `core.intervals.interval_kind` as part of the shared key, so it holds
     # a discriminator's value without being one -- and the name must match the parent's column for
     # the composite reference to read.
-    # R100 §2.1: `_kind` reads as a category and every column carrying it holds one -- an
-    # interval's kind, a run's scope kind. This holds the table whose rows are the data, and R48
-    # §3 measured that a role says what a name cannot, which is why R55 added the role.
-    "core.array_dimensions.coordinate_resource": "names the table whose rows are the axis's positions, not a kind of thing (R100 §2.1)",
-    "analysis.array_dimensions.coordinate_resource": "as core.array_dimensions.coordinate_resource",
     "dynamic_foraging.trials.interval_kind": "carries core.intervals.interval_kind as a shared-key column, not a discriminator (Part 02 §8.3)",
     "vr_foraging.sites.interval_kind": "as dynamic_foraging.trials.interval_kind",
 }
@@ -416,7 +416,7 @@ print(
 )
 # A single-column key is necessary and not sufficient. An assigned identifier a table does not
 # *own* -- it is exported through a reference, so R53 §2.3.1 puts the name on the owner -- has no
-# column a value written before the build could match, so the resource is simply not namable.
+# column a value written before the build could match, so no string paired value can name it.
 # vr_foraging.sessions is the instance: its session_id belongs to core.sessions.
 _unnamable = sorted(
     _r
@@ -534,7 +534,7 @@ try:
     jsonschema.Draft202012Validator.check_schema(_contract_schema)
     _contract = json.loads(
         (
-            HERE / "registry_contracts/escapewheel-registry-contract-v0.5.json"
+            HERE / "registry_contracts/escapewheel-registry-contract-v0.6.json"
         ).read_text()
     )
     _contract_errors = list(

@@ -50,13 +50,15 @@ NO_DICTIONARY: dict[str, tuple[str, ...]] = {
     "core.clock_observation_intervals": ("stop_tick",),
     # Summaries in unit order rather than time order: plain 1.10x to 1.28x over delta.
     "core.units": ("first_spike_tick", "last_spike_tick"),
+    # Identifiers of each unit's contacts in turn: plain 1.04x to 1.20x over delta.
+    "core.array_labels": ("label_id",),
 }
 
 #: Columns keeping the dictionary the rules would take away, each measured.
 DICTIONARY_COLUMNS: dict[str, tuple[str, ...]] = {
-    # Twenty-six channel positions cycling through every unit's support, declared a structural
-    # index: a dictionary 1.39x to 1.41x over delta.
-    "core.unit_electrodes": ("channel_index",),
+    # Two axes in runs tens of thousands of rows long, which the run rule gives plain: a dictionary
+    # 66x to 75x smaller than plain, and delta within 1.13x of it.
+    "core.array_labels": ("axis_index",),
 }
 
 #: Rows at which a column of one value repays its dictionary page: a constant is 1.12x smaller
@@ -64,7 +66,7 @@ DICTIONARY_COLUMNS: dict[str, tuple[str, ...]] = {
 ONE_VALUE_ROWS = 50_000
 
 #: Rows a value covers on average -- per run for an ordered integer, per distinct value otherwise
-#: -- from which repetition decides. Over both packaged sessions the exceptions stay at 15 from 32
+#: -- from which repetition decides. Over both packaged sessions the exceptions stay at 16 from 32
 #: to 50 rows a value and from 50 to 200 a run.
 REPEATS = 50
 
@@ -140,8 +142,8 @@ def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None,
 
     Part 03 §5.5's four rules, over what the writer holds when it chooses, the first that applies
     deciding. Measured
-    over both packaged sessions' columns they leave 15 of 381 more than 1.15x off their best
-    encoding, and each of those is an exception above or in a recipe.
+    over both packaged sessions' columns they leave 16 more than 1.15x off their best encoding,
+    and each of those is an exception above or in a recipe.
 
     **No value is plain**: a dictionary page costs 27 bytes before it indexes anything.
 

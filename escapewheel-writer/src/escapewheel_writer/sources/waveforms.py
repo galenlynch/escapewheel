@@ -25,7 +25,7 @@ float64, and `(unit, channel, sample)` rather than `(unit, sample, channel)`. Th
 decisions this adapter makes; the three above were losses it used to work around.
 
 `waveform_sd` is the same array of a different quantity, cut on the mean's support rather than its
-own, so one `core.unit_electrodes` describes both channel axes.
+own, so its label rows repeat the mean's.
 """
 
 from __future__ import annotations
@@ -126,6 +126,7 @@ class WaveformSource:
         {
             "core.array_assets",
             "core.array_dimensions",
+            "core.array_labels",
             "core.unit_electrodes",
         }
     )
@@ -136,6 +137,7 @@ class WaveformSource:
         {
             "core.array_assets",
             "core.array_dimensions",
+            "core.array_labels",
         }
     )
 
@@ -256,12 +258,9 @@ class WaveformSource:
     def _read(self) -> dict[str, Any]:
         """Cut every unit's template down to its own contacts, one chunk row at a time.
 
-        The unit axis holds every unit of the session in `unit_id` order, which is the sorted
-        order of the names `PacketWriter._preassign` numbers, so in a one-session packet position
-        *k* is `unit_id` *k*. The axis declares no coordinates and `core.unit_electrodes`, which
-        labels the channel axis, is keyed by `unit_id`, so nothing else in the packet says which
-        unit a position is. Analyzer order would not do: analyzers and sorting runs are named
-        differently and sort differently.
+        The unit axis holds every unit of the session in the sorted order of the names
+        `PacketWriter._preassign` numbers, and its labels name each position's unit. Analyzer
+        order would not do: analyzers and sorting runs are named differently and sort differently.
 
         The block is the source's own chunk along the unit axis, so every chunk is read once and
         none twice. What survives is the slabs, two orders smaller than the block that produced
@@ -430,13 +429,18 @@ class WaveformSource:
         else:
             sample_axis |= {"clock_id": clock_id, "origin_tick": start, "step_tick_num": 1}
         return [
-            {"array_asset_id": asset_id, "axis_index": 0, "dimension_name": "unit"},
+            {
+                "array_asset_id": asset_id,
+                "axis_index": 0,
+                "dimension_name": "unit",
+                "coordinate_resource": "core.units",
+            },
             {
                 "array_asset_id": asset_id,
                 "axis_index": 1,
                 "dimension_name": "channel",
-                "coordinate_resource": "core.unit_electrodes",
-                "coordinate_position_column": "channel_index",
+                "coordinate_resource": "core.electrodes",
+                "depends_on_axis_index": 0,
             },
             sample_axis,
         ]
@@ -444,9 +448,9 @@ class WaveformSource:
     def array_dimensions(self, clock_id: str | None = None, origin: int | None = None) -> list[dict[str, Any]]:
         """`core.array_dimensions`, one row per axis of each array, in stored order (Part 03 §6.2).
 
-        The channel axis takes R20 §2's labelled form, pointing at `core.unit_electrodes`, because
-        which contact a position means is per unit and no coordinate array can say it. Both arrays
-        point at the same rows, the deviation being cut on the mean's support.
+        The unit axis is labelled with `core.units`. The channel axis is labelled with
+        `core.electrodes` and depends on the unit axis, because which contact a position means is
+        per unit and no coordinate array can say it.
 
         The sample axis takes the **numeric** form, in samples, and not the tick form. A waveform
         window is not positioned on any session clock: position *k* is *k - origin* samples from
@@ -459,11 +463,50 @@ class WaveformSource:
             axes += self._axes(self.sd_asset_id, clock_id, origin)
         return axes
 
+    def _labels(self, asset_id: str) -> list[dict[str, Any]]:
+        """One array's label rows: each unit position's unit, then each unit's contacts, padded with null."""
+        built = self._read()
+        width = int(built["values"].shape[1])
+        common = {"session_id": self.session_id, "array_asset_id": asset_id}
+        rows = [
+            {
+                **common,
+                "axis_index": 0,
+                "depends_on_position_index": 0,
+                "position_index": k,
+                "label_id": unit["unit_id"],
+            }
+            for k, unit in enumerate(built["identity"])
+        ]
+        for unit, contacts in enumerate(built["electrodes"]):
+            rows.extend(
+                {
+                    **common,
+                    "axis_index": 1,
+                    "depends_on_position_index": unit,
+                    "position_index": channel,
+                    "label_id": contacts[channel] if channel < len(contacts) else None,
+                }
+                for channel in range(width)
+            )
+        return rows
+
+    def array_labels(self) -> list[dict[str, Any]]:
+        """`core.array_labels`, every position of both labelled axes of each array (Part 03 §6.3).
+
+        A label is the name the writer numbers, so it resolves in the numbering of the resource the
+        axis names. The deviation is cut on the mean's support and repeats its rows.
+        """
+        rows = self._labels(self.array_asset_id)
+        if self.sd:
+            rows += self._labels(self.sd_asset_id)
+        return rows
+
     def unit_electrodes(self) -> list[dict[str, Any]]:
         """`core.unit_electrodes`, one row per unit per contact it has signal on (R28).
 
-        This is the array's channel axis written down, and it is the analyzer's `sparsity_mask`
-        rather than an inspection of the values: the export pads to every channel, so a reader of
+        These are the contacts the channel axis's labels name, and they are the analyzer's
+        `sparsity_mask` rather than an inspection of the values: the export pads to every channel, so a reader of
         it can only recover the support by looking for zeros, which cannot tell a contact that was
         never computed from one whose template happens to be flat.
 
@@ -484,7 +527,6 @@ class WaveformSource:
                         "session_id": self.session_id,
                         **identity,
                         "electrode_id": electrode,
-                        "channel_index": ordinal,
                         "is_primary": ordinal == built["primary"][position],
                     }
                 )
@@ -514,6 +556,7 @@ class WaveformSource:
                     array_asset_id=asset_id,
                     chunks=chunks,
                     shard=shard_for(values.shape, chunks, self.compressed_per_chunk),
+                    dimension_names=("unit", "channel", "sample"),
                 )
             )
         return staged
@@ -527,6 +570,7 @@ class WaveformSource:
         built = {
             "core.array_assets": self.array_assets(),
             "core.array_dimensions": self.array_dimensions(clock_id=clock_id),
+            "core.array_labels": self.array_labels(),
             "core.unit_electrodes": self.unit_electrodes(),
         }
         return {resource: rows for resource, rows in built.items() if rows}

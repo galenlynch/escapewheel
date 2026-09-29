@@ -1,7 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.8.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
   "registry_id": "core",
-  "registry_version": "0.8.0",
+  "registry_version": "0.9.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.1",
@@ -244,21 +244,21 @@
             "vocabulary": "free"
           },
           {
-            "name": "coordinate_position_column",
-            "type": "string",
-            "presence": "nullable",
-            "role": "data",
-            "description": "Which column of that resource holds the 0-based position.",
-            "vocabulary": "free"
-          },
-          {
             "name": "coordinate_resource",
             "type": "string",
             "presence": "nullable",
             "role": "discriminator",
             "resolves": "required",
-            "positions_in": "coordinate_position_column",
-            "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`."
+            "discriminates": "label_id",
+            "discriminates_via": "analysis.array_labels.axis_index",
+            "description": "The table whose rows this axis's positions stand for, as a dotted resource ID. Each position's row is named by its label in `analysis.array_labels`."
+          },
+          {
+            "name": "depends_on_axis_index",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "structural_index",
+            "description": "The axis of this array whose position, with this axis's own, decides each label. Null where this axis's position alone decides it."
           },
           {
             "name": "coordinate_array_asset_id",
@@ -370,14 +370,162 @@
             "resource_columns": [
               "clock_id"
             ]
+          },
+          {
+            "columns": [
+              "array_asset_id",
+              "depends_on_axis_index"
+            ],
+            "resource": "analysis.array_dimensions",
+            "resource_columns": [
+              "array_asset_id",
+              "axis_index"
+            ]
           }
         ],
         "rules": [
           {
-            "id": "analysis.array_dimensions.coordinate_pair_complete",
+            "id": "analysis.array_dimensions.axis_index_contiguous",
             "level": "error",
-            "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them",
-            "sql": "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column\nFROM analysis.array_dimensions\nWHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
+            "message": "axis_index is not contiguous from 0",
+            "sql": "SELECT array_asset_id, COUNT(*) AS n_axes, MAX(axis_index) AS max_axis\nFROM analysis.array_dimensions\nGROUP BY array_asset_id\nHAVING MAX(axis_index) <> COUNT(*) - 1\n  OR MIN(axis_index) <> 0"
+          },
+          {
+            "id": "analysis.array_dimensions.one_coordinate_form",
+            "level": "error",
+            "message": "an axis declares no coordinate form, or more than one",
+            "sql": "SELECT array_asset_id, axis_index\nFROM analysis.array_dimensions\nWHERE (\n  CASE WHEN origin_tick IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END\n) <> 1"
+          },
+          {
+            "id": "analysis.array_dimensions.tick_axis_complete",
+            "level": "error",
+            "message": "a regular tick axis needs clock_id, origin_tick and step_tick_num",
+            "sql": "SELECT array_asset_id, axis_index\nFROM analysis.array_dimensions\nWHERE origin_tick IS NOT NULL\n  AND (step_tick_num IS NULL OR clock_id IS NULL)"
+          },
+          {
+            "id": "analysis.array_dimensions.numeric_axis_complete",
+            "level": "error",
+            "message": "a regular numeric axis needs origin_value, step_value and coordinate_unit",
+            "sql": "SELECT array_asset_id, axis_index\nFROM analysis.array_dimensions\nWHERE origin_value IS NOT NULL\n  AND (step_value IS NULL OR coordinate_unit IS NULL)"
+          },
+          {
+            "id": "analysis.array_dimensions.step_denominator_positive",
+            "level": "error",
+            "message": "a step denominator is not positive, so the step it defines is meaningless",
+            "sql": "SELECT array_asset_id, axis_index, step_tick_den\nFROM analysis.array_dimensions\nWHERE step_tick_den IS NOT NULL\n  AND step_tick_den <= 0"
+          },
+          {
+            "id": "analysis.array_dimensions.dependent_axis_labelled",
+            "level": "error",
+            "message": "an axis depends on another axis and has no labels",
+            "sql": "SELECT array_asset_id, axis_index, depends_on_axis_index\nFROM analysis.array_dimensions\nWHERE depends_on_axis_index IS NOT NULL\n  AND coordinate_resource IS NULL"
+          },
+          {
+            "id": "analysis.array_dimensions.dependency_not_chained",
+            "level": "error",
+            "message": "an axis depends on an axis that itself depends on another",
+            "sql": "SELECT d.array_asset_id, d.axis_index, d.depends_on_axis_index\nFROM analysis.array_dimensions AS d\nJOIN analysis.array_dimensions AS o ON o.array_asset_id = d.array_asset_id\n  AND o.axis_index = d.depends_on_axis_index\nWHERE o.depends_on_axis_index IS NOT NULL"
+          }
+        ]
+      }
+    },
+    "analysis.array_labels": {
+      "content_class": "analysis",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "required",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Session ID."
+          },
+          {
+            "name": "array_asset_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "The array whose axis this position is on."
+          },
+          {
+            "name": "axis_index",
+            "type": "int64",
+            "presence": "required",
+            "role": "structural_index",
+            "description": "The labelled axis, in stored order."
+          },
+          {
+            "name": "depends_on_position_index",
+            "type": "int64",
+            "presence": "required",
+            "role": "structural_index",
+            "description": "The position on the axis this axis's labels depend on, and 0 where they depend on none."
+          },
+          {
+            "name": "position_index",
+            "type": "int64",
+            "presence": "required",
+            "role": "structural_index",
+            "description": "The position on the labelled axis."
+          },
+          {
+            "name": "label_id",
+            "type": "int32",
+            "presence": "nullable",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "The identifier of the row this position stands for, in the resource the axis row's `coordinate_resource` names; null where it stands for none."
+          }
+        ],
+        "primary_key": [
+          "array_asset_id",
+          "axis_index",
+          "depends_on_position_index",
+          "position_index"
+        ],
+        "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "array_asset_id",
+              "axis_index"
+            ],
+            "resource": "analysis.array_dimensions",
+            "resource_columns": [
+              "array_asset_id",
+              "axis_index"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "analysis.array_labels.independent_depends_on_position_zero",
+            "level": "error",
+            "message": "a label on an axis that depends on no other has a nonzero depends_on_position_index",
+            "sql": "SELECT l.array_asset_id, l.axis_index, l.depends_on_position_index, l.position_index\nFROM analysis.array_labels AS l\nJOIN analysis.array_dimensions AS d ON d.array_asset_id = l.array_asset_id\n  AND d.axis_index = l.axis_index\nWHERE d.depends_on_axis_index IS NULL\n  AND l.depends_on_position_index <> 0"
+          },
+          {
+            "id": "analysis.array_labels.one_position_per_row",
+            "level": "error",
+            "message": "an axis names one row at two positions",
+            "sql": "SELECT array_asset_id, axis_index, depends_on_position_index, label_id, COUNT(*) AS n\nFROM analysis.array_labels\nWHERE label_id IS NOT NULL\nGROUP BY array_asset_id, axis_index, depends_on_position_index, label_id\nHAVING COUNT(*) > 1"
           }
         ]
       }
@@ -738,14 +886,6 @@
             "description": "Channel dimension index."
           },
           {
-            "name": "electrode_id",
-            "type": "int32",
-            "presence": "nullable",
-            "role": "identifier",
-            "identity": "assigned",
-            "description": "Electrode ID."
-          },
-          {
             "name": "channel_label",
             "type": "string",
             "presence": "nullable",
@@ -805,15 +945,6 @@
             "resource": "core.sessions",
             "resource_columns": [
               "session_id"
-            ]
-          },
-          {
-            "columns": [
-              "electrode_id"
-            ],
-            "resource": "core.electrodes",
-            "resource_columns": [
-              "electrode_id"
             ]
           },
           {
@@ -881,21 +1012,21 @@
             "vocabulary": "free"
           },
           {
-            "name": "coordinate_position_column",
-            "type": "string",
-            "presence": "nullable",
-            "role": "data",
-            "description": "Which column of that resource holds the 0-based position.",
-            "vocabulary": "free"
-          },
-          {
             "name": "coordinate_resource",
             "type": "string",
             "presence": "nullable",
             "role": "discriminator",
             "resolves": "required",
-            "positions_in": "coordinate_position_column",
-            "description": "The table whose rows are this axis's positions, as a dotted resource ID. The column of it holding the 0-based position is `coordinate_position_column`."
+            "discriminates": "label_id",
+            "discriminates_via": "core.array_labels.axis_index",
+            "description": "The table whose rows this axis's positions stand for, as a dotted resource ID. Each position's row is named by its label in `core.array_labels`."
+          },
+          {
+            "name": "depends_on_axis_index",
+            "type": "int64",
+            "presence": "nullable",
+            "role": "structural_index",
+            "description": "The axis of this array whose position, with this axis's own, decides each label. Null where this axis's position alone decides it."
           },
           {
             "name": "coordinate_array_asset_id",
@@ -1007,6 +1138,17 @@
             "resource_columns": [
               "clock_id"
             ]
+          },
+          {
+            "columns": [
+              "array_asset_id",
+              "depends_on_axis_index"
+            ],
+            "resource": "core.array_dimensions",
+            "resource_columns": [
+              "array_asset_id",
+              "axis_index"
+            ]
           }
         ],
         "rules": [
@@ -1019,8 +1161,8 @@
           {
             "id": "core.array_dimensions.one_coordinate_form",
             "level": "error",
-            "message": "an axis declares more than one coordinate form",
-            "sql": "SELECT array_asset_id, axis_index\nFROM core.array_dimensions\nWHERE (\n  CASE WHEN origin_tick IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END\n) > 1"
+            "message": "an axis declares no coordinate form, or more than one",
+            "sql": "SELECT array_asset_id, axis_index\nFROM core.array_dimensions\nWHERE (\n  CASE WHEN origin_tick IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN origin_value IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN coordinate_array_asset_id IS NOT NULL THEN 1 ELSE 0 END\n  + CASE WHEN coordinate_resource IS NOT NULL THEN 1 ELSE 0 END\n) <> 1"
           },
           {
             "id": "core.array_dimensions.tick_axis_complete",
@@ -1035,12 +1177,6 @@
             "sql": "SELECT array_asset_id, axis_index\nFROM core.array_dimensions\nWHERE origin_value IS NOT NULL\n  AND (step_value IS NULL OR coordinate_unit IS NULL)"
           },
           {
-            "id": "core.array_dimensions.labelled_axis_complete",
-            "level": "error",
-            "message": "coordinate_resource and coordinate_position_column must be present together",
-            "sql": "SELECT array_asset_id, axis_index\nFROM core.array_dimensions\nWHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
-          },
-          {
             "id": "core.array_dimensions.coordinate_resource_is_core",
             "level": "error",
             "message": "a core axis points outward at a non-core resource",
@@ -1053,10 +1189,117 @@
             "sql": "SELECT array_asset_id, axis_index, step_tick_den\nFROM core.array_dimensions\nWHERE step_tick_den IS NOT NULL\n  AND step_tick_den <= 0"
           },
           {
-            "id": "core.array_dimensions.coordinate_pair_complete",
+            "id": "core.array_dimensions.dependent_axis_labelled",
             "level": "error",
-            "message": "an axis declares one half of its labelled coordinates; the resource says where the positions are and the column says which of its columns holds them",
-            "sql": "SELECT array_asset_id, axis_index, coordinate_resource, coordinate_position_column\nFROM core.array_dimensions\nWHERE (coordinate_resource IS NULL) <> (coordinate_position_column IS NULL)"
+            "message": "an axis depends on another axis and has no labels",
+            "sql": "SELECT array_asset_id, axis_index, depends_on_axis_index\nFROM core.array_dimensions\nWHERE depends_on_axis_index IS NOT NULL\n  AND coordinate_resource IS NULL"
+          },
+          {
+            "id": "core.array_dimensions.dependency_not_chained",
+            "level": "error",
+            "message": "an axis depends on an axis that itself depends on another",
+            "sql": "SELECT d.array_asset_id, d.axis_index, d.depends_on_axis_index\nFROM core.array_dimensions AS d\nJOIN core.array_dimensions AS o ON o.array_asset_id = d.array_asset_id\n  AND o.axis_index = d.depends_on_axis_index\nWHERE o.depends_on_axis_index IS NOT NULL"
+          }
+        ]
+      }
+    },
+    "core.array_labels": {
+      "content_class": "core",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "optional",
+      "table": {
+        "columns": [
+          {
+            "name": "session_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "Session ID."
+          },
+          {
+            "name": "array_asset_id",
+            "type": "int32",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "The array whose axis this position is on."
+          },
+          {
+            "name": "axis_index",
+            "type": "int64",
+            "presence": "required",
+            "role": "structural_index",
+            "description": "The labelled axis, in stored order."
+          },
+          {
+            "name": "depends_on_position_index",
+            "type": "int64",
+            "presence": "required",
+            "role": "structural_index",
+            "description": "The position on the axis this axis's labels depend on, and 0 where they depend on none."
+          },
+          {
+            "name": "position_index",
+            "type": "int64",
+            "presence": "required",
+            "role": "structural_index",
+            "description": "The position on the labelled axis."
+          },
+          {
+            "name": "label_id",
+            "type": "int32",
+            "presence": "nullable",
+            "role": "identifier",
+            "identity": "assigned",
+            "description": "The identifier of the row this position stands for, in the resource the axis row's `coordinate_resource` names; null where it stands for none."
+          }
+        ],
+        "primary_key": [
+          "array_asset_id",
+          "axis_index",
+          "depends_on_position_index",
+          "position_index"
+        ],
+        "references": [
+          {
+            "columns": [
+              "session_id"
+            ],
+            "resource": "core.sessions",
+            "resource_columns": [
+              "session_id"
+            ]
+          },
+          {
+            "columns": [
+              "array_asset_id",
+              "axis_index"
+            ],
+            "resource": "core.array_dimensions",
+            "resource_columns": [
+              "array_asset_id",
+              "axis_index"
+            ]
+          }
+        ],
+        "rules": [
+          {
+            "id": "core.array_labels.independent_depends_on_position_zero",
+            "level": "error",
+            "message": "a label on an axis that depends on no other has a nonzero depends_on_position_index",
+            "sql": "SELECT l.array_asset_id, l.axis_index, l.depends_on_position_index, l.position_index\nFROM core.array_labels AS l\nJOIN core.array_dimensions AS d ON d.array_asset_id = l.array_asset_id\n  AND d.axis_index = l.axis_index\nWHERE d.depends_on_axis_index IS NULL\n  AND l.depends_on_position_index <> 0"
+          },
+          {
+            "id": "core.array_labels.one_position_per_row",
+            "level": "error",
+            "message": "an axis names one row at two positions",
+            "sql": "SELECT array_asset_id, axis_index, depends_on_position_index, label_id, COUNT(*) AS n\nFROM core.array_labels\nWHERE label_id IS NOT NULL\nGROUP BY array_asset_id, axis_index, depends_on_position_index, label_id\nHAVING COUNT(*) > 1"
           }
         ]
       }
@@ -4830,13 +5073,6 @@
             "description": "An electrode this unit was detected on."
           },
           {
-            "name": "channel_index",
-            "type": "int64",
-            "presence": "nullable",
-            "role": "structural_index",
-            "description": "0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it. Nothing joins on it."
-          },
-          {
             "name": "is_primary",
             "type": "bool",
             "presence": "nullable",
@@ -4884,12 +5120,6 @@
             "level": "warning",
             "message": "a unit designates more than one peak electrode",
             "sql": "SELECT unit_id, COUNT(*) AS n\nFROM core.unit_electrodes\nWHERE is_primary\nGROUP BY unit_id\nHAVING COUNT(*) > 1"
-          },
-          {
-            "id": "core.unit_electrodes.channel_index_contiguous",
-            "level": "error",
-            "message": "channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there",
-            "sql": "SELECT unit_id, COUNT(*) AS n, MAX(channel_index) AS hi\nFROM core.unit_electrodes\nWHERE channel_index IS NOT NULL\nGROUP BY unit_id\nHAVING MAX(channel_index) <> COUNT(*) - 1\n  OR MIN(channel_index) <> 0"
           },
           {
             "id": "core.unit_electrodes.electrode_is_a_run_channel",

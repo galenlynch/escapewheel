@@ -168,8 +168,8 @@ def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
     assert "registry_version" not in manifest
     descriptor = manifest["registries"]["core"]
     assert descriptor["role"] == "core"
-    assert descriptor["version"] == registry["registry_version"] == "0.8.0"
-    assert descriptor["path"] == "registries/core/0.8.0.json.gz"
+    assert descriptor["version"] == registry["registry_version"] == "0.9.0"
+    assert descriptor["path"] == "registries/core/0.9.0.json.gz"
     body = gzip.decompress((root / descriptor["path"]).read_bytes())
     assert hashlib.sha256(body).hexdigest() == descriptor["sha256"]
     assert json.loads(body) == dict(registry)
@@ -563,7 +563,7 @@ def test_a_failed_amendment_restores_the_registry(tmp_path, registry, minimal):
     writer.add("core.processing_runs", _runs(status="bogus"))
     with pytest.raises(CommitRefused):
         writer.amend(root)
-    assert json.loads((root / "packet.json").read_text())["registries"]["core"]["version"] == "0.8.0"
+    assert json.loads((root / "packet.json").read_text())["registries"]["core"]["version"] == "0.9.0"
     assert not (root / "registries" / "core" / "9.9.9.json.gz").exists()
 
 
@@ -614,7 +614,7 @@ def _waveforms(units=8, channels=4, samples=10):
 
 
 def _array_tables(asset_id: str = "wf") -> dict[str, list[dict]]:
-    """The rows an array must be accompanied by: Part 03 §6.2 requires every axis to be named."""
+    """The rows an array must be accompanied by: every axis named, and counted in steps of 1 (Part 03 §6.3)."""
     return {
         "core.array_assets": [
             {
@@ -625,7 +625,14 @@ def _array_tables(asset_id: str = "wf") -> dict[str, list[dict]]:
             }
         ],
         "core.array_dimensions": [
-            {"array_asset_id": asset_id, "axis_index": i, "dimension_name": n}
+            {
+                "array_asset_id": asset_id,
+                "axis_index": i,
+                "dimension_name": n,
+                "origin_value": 0.0,
+                "step_value": 1.0,
+                "coordinate_unit": "1",
+            }
             for i, n in enumerate(("unit", "channel", "sample"))
         ],
     }
@@ -692,6 +699,112 @@ def test_the_array_reads_back_identically(tmp_path, registry, minimal):
     writer.commit(root)
     back = zarr.open_array(str(root / "arrays" / "core" / "waveform_means.zarr"), mode="r")
     assert np.array_equal(np.asarray(back[:]), values)
+
+
+def test_a_written_array_carries_its_axes_names(tmp_path, registry, minimal):
+    """Part 03 §6.5: the names come from `core.array_dimensions`, so no source has to repeat them."""
+    import zarr
+
+    from escapewheel_writer.writer import StagedArray
+
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id=root.name)
+    for resource_id, records in {**minimal, **_array_tables()}.items():
+        writer.add(resource_id, records)
+    writer.add_array(
+        "core.waveform_means",
+        StagedArray(
+            values=_waveforms(),
+            resource_id="core.waveform_means",
+            declaration_id="core.array_asset_instances",
+            array_asset_id="wf",
+            chunks=(1, 4, 10),
+            shard=(4, 4, 10),
+        ),
+    )
+    writer.commit(root)
+    back = zarr.open_array(str(root / "arrays" / "core" / "waveform_means.zarr"), mode="r")
+    assert back.metadata.dimension_names == ("unit", "channel", "sample")
+
+
+#: Each unit position's contacts, by name; a unit with fewer contacts than the axis is long pads.
+CONTACTS = {0: ("e2", "e3", None), 1: ("e1", None, None)}
+
+
+def _labelled_writer(registry, minimal, contacts=CONTACTS, electrodes=("e1", "e2", "e3")):
+    """A writer holding an array whose channel axis depends on its unit axis (Part 03 §6.3)."""
+    import numpy as np
+
+    from escapewheel_writer.writer import StagedArray
+
+    tables = _array_tables()
+    axes = tables["core.array_dimensions"]
+    for axis in ("origin_value", "step_value", "coordinate_unit"):
+        del axes[1][axis]
+    axes[1] |= {"coordinate_resource": "core.electrodes", "depends_on_axis_index": 0}
+    tables["core.electrodes"] = [{"session_id": "s001", "electrode_id": e} for e in electrodes]
+    tables["core.array_labels"] = [
+        {
+            "session_id": "s001",
+            "array_asset_id": "wf",
+            "axis_index": 1,
+            "depends_on_position_index": unit,
+            "position_index": position,
+            "label_id": name,
+        }
+        for unit, names in contacts.items()
+        for position, name in enumerate(names)
+    ]
+    writer = PacketWriter(registry, packet_id="s001")
+    for resource_id, records in {**minimal, **tables}.items():
+        writer.add(resource_id, records)
+    values = np.zeros((len(contacts), 3, 4), dtype="int16")
+    writer.add_array(
+        "core.waveform_means",
+        StagedArray(
+            values=values,
+            resource_id="core.waveform_means",
+            declaration_id="core.array_asset_instances",
+            array_asset_id="wf",
+            chunks=(1, 3, 4),
+            shard=(2, 3, 4),
+        ),
+    )
+    return writer
+
+
+def test_a_label_is_numbered_as_the_row_its_axis_names_and_padding_stays_null(tmp_path, registry, minimal):
+    """A label holds the electrode's name, so it takes the number `core.electrodes` gives that name."""
+    root = tmp_path / "s001"
+    report = _labelled_writer(registry, minimal).commit(root)
+    assert report.passed
+    electrodes = pq.read_table(root / "tables/core/electrodes.parquet").to_pylist()
+    number = {row["electrode_name"]: row["electrode_id"] for row in electrodes}
+    labels = pq.read_table(root / "tables/core/array_labels.parquet").to_pylist()
+    got = {(r["depends_on_position_index"], r["position_index"]): r["label_id"] for r in labels}
+    assert got == {
+        (unit, position): None if name is None else number[name]
+        for unit, names in CONTACTS.items()
+        for position, name in enumerate(names)
+    }
+
+
+def test_a_label_naming_no_row_refuses_the_commit(tmp_path, registry, minimal):
+    """The name is numbered all the same, so only the generated anti-join can see it names nothing."""
+    writer = _labelled_writer(registry, minimal, electrodes=("e1", "e2"))
+    with pytest.raises(CommitRefused) as caught:
+        writer.commit(tmp_path / "s001")
+    failed = {f.check for f in caught.value.report.findings if f.level == "error"}
+    assert failed == {"core.array_dimensions.coordinate_resource.core_electrodes_resolves"}
+
+
+def test_a_dependent_position_with_no_label_row_refuses_the_commit(tmp_path, registry, minimal):
+    """Padding is a row whose label is null; a missing row leaves the position undeclared."""
+    writer = _labelled_writer(registry, minimal, contacts={0: ("e2", "e3", None), 1: ("e1",)})
+    with pytest.raises(CommitRefused) as caught:
+        writer.commit(tmp_path / "s001")
+    failed = {f.check for f in caught.value.report.findings if f.level == "error"}
+    assert failed == {"array.label_missing"}
 
 
 def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal):

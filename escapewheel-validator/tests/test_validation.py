@@ -384,57 +384,6 @@ def test_a_filled_metadata_column_is_not_reported(packet_root):
     assert not [f for f in report.findings if f.check == "core.trials.metadata_unfilled"]
 
 
-def test_a_by_position_discriminator_gets_no_reverse_check(packet_root):
-    """Part 02 §8.3. Part 02 §8.3 excludes the third shape, and `positions_in` is what says it is one."""
-    registry = read_registry(packet_root)
-    trials = registry["resources"]["core.trials"]["table"]
-    trials["columns"].append(
-        {
-            "name": "axis_of",
-            "type": "string",
-            "presence": "nullable",
-            "role": "discriminator",
-            "resolves": "required",
-            "positions_in": "axis_column",
-            "description": "d",
-        }
-    )
-    trials["columns"].append(
-        {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data", "description": "d"}
-    )
-    ids = {c.id for c in generate(registry, kinds={"core.units": None})}
-    assert "core.trials.axis_of.is_a_resource_id" in ids
-    assert "core.trials.axis_of.kind_declared" in ids
-    assert not [i for i in ids if i.startswith("core.trials.axis_of.") and "is_specialised" in i]
-
-
-def test_the_position_column_is_checked_against_the_registrys_roles(packet_root):
-    """R100 §2.2. A role is invisible to a query and visible to whatever writes one."""
-    registry = read_registry(packet_root)
-    trials = registry["resources"]["core.trials"]["table"]
-    trials["columns"] += [
-        {
-            "name": "axis_of",
-            "type": "string",
-            "presence": "nullable",
-            "role": "discriminator",
-            "resolves": "required",
-            "positions_in": "axis_column",
-            "description": "d",
-        },
-        {"name": "axis_column", "type": "string", "presence": "nullable", "role": "data", "description": "d"},
-    ]
-    registry["resources"]["core.units"]["table"]["columns"].append(
-        {"name": "seat_index", "type": "int64", "presence": "nullable", "role": "structural_index", "description": "d"}
-    )
-    check = next(
-        c
-        for c in generate(registry, kinds={"core.units": None})
-        if c.id == "core.trials.axis_of.position_column_indexes"
-    )
-    assert "'seat_index'" in check.sql and "core.units" in check.sql
-
-
 def test_retired_codec_summary_is_rejected_by_the_manifest_schema(packet_root):
     _add_family_declaration(packet_root, "core.test_payloads")
     path = packet_root / "packet.json"
@@ -648,6 +597,7 @@ def _zarr_v3(*, sharded=True, fill_value=0, grid="regular"):
             if sharded
             else codecs
         ),
+        "dimension_names": ["unit", "channel", "sample"],
     }
     if fill_value is not None:
         document["fill_value"] = fill_value
@@ -1327,143 +1277,274 @@ def test_a_matching_rank_passes_and_is_counted(packet_root):
     assert "1 rank" in next(f for f in report.findings if f.check == "external.verified").message
 
 
-def test_an_axis_length_is_taken_from_its_coordinate_table(packet_root):
-    """An axis whose coordinates are a table has one row per position, so the row count is the
-    length. This is what catches a re-generated array with a different channel count."""
-    root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
-    _coordinate_table(root, rows=2)  # axis 1 is 2 long in _zarr_v3's [4, 2, 3]
-    assert validate(open_packet(root), external=True).passed
-
-    _coordinate_table(root, rows=5)
-    report = validate(open_packet(root), external=True)
-    assert not report.passed
-    assert "external.array_shape" in {f.check for f in report.findings}
-
-
-def test_a_coordinate_table_not_keyed_by_axis_says_nothing_about_length(packet_root):
-    """`core.unit_electrodes` is a coordinate resource whose rows are a subset of an axis, not
-    an enumeration of it, so counting them would invent a disagreement."""
-    root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
-    _coordinate_table(root, rows=5, keyed=False)
-    assert validate(open_packet(root), external=True).passed
+def _manifest_table(root, manifest, name, table):
+    """Write a core table and declare it in `manifest`, once."""
+    path = f"tables/core/{name.removeprefix('core.')}.parquet"
+    pq.write_table(table, root / path)
+    manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != name]
+    manifest["resources"].append(
+        {
+            "resource_id": name,
+            "declaration_id": name,
+            "uri": path,
+            "digest": owned_digest(root, path),
+            "validation_state": "passed",
+        }
+    )
 
 
-def _coordinate_table(root, *, rows, keyed=True):
-    """Point axis 1 at a coordinate table and give that table `rows` positions."""
+def _index(name, **extra):
+    return {
+        "name": name,
+        "type": "int64",
+        "presence": "required",
+        "role": "structural_index",
+        "description": "d",
+        **extra,
+    }
+
+
+def _label_axis(root, labels, *, depends_on=None, kind="core.sessions"):
+    """Label axis 1 of the test array by `kind`'s rows (Part 03 §6.3).
+
+    `labels` holds (`depends_on_position_index`, `position_index`, `label_id`) rows; `depends_on`
+    makes axis 1 depend on that axis.
+    """
+    registry = read_registry(root)
+    dimensions = registry["resources"]["core.array_dimensions"]["table"]
+    replaced = {"coordinate_resource", "depends_on_axis_index"}
+    dimensions["columns"] = [c for c in dimensions["columns"] if c["name"] not in replaced] + [
+        {
+            "name": "coordinate_resource",
+            "type": "string",
+            "presence": "nullable",
+            "role": "discriminator",
+            "resolves": "required",
+            "discriminates_via": "core.array_labels.axis_index",
+            "discriminates": "label_id",
+            "description": "d",
+        },
+        _index("depends_on_axis_index", presence="nullable"),
+    ]
+    registry["resources"]["core.array_labels"] = {
+        "content_class": "core",
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "requires": [],
+        "lineage": "optional",
+        "table": {
+            "columns": [
+                {
+                    "name": "array_asset_id",
+                    "type": "int32",
+                    "presence": "required",
+                    "role": "identifier",
+                    "identity": "assigned",
+                    "description": "d",
+                },
+                _index("axis_index"),
+                _index("depends_on_position_index"),
+                _index("position_index"),
+                {
+                    "name": "label_id",
+                    "type": "int32",
+                    "presence": "nullable",
+                    "role": "identifier",
+                    "identity": "assigned",
+                    "description": "d",
+                },
+            ],
+            "primary_key": ["array_asset_id", "axis_index", "depends_on_position_index", "position_index"],
+            "references": [
+                {
+                    "columns": ["array_asset_id", "axis_index"],
+                    "resource": "core.array_dimensions",
+                    "resource_columns": ["array_asset_id", "axis_index"],
+                }
+            ],
+            "rules": [],
+        },
+    }
+    install_registry(root, registry)
     manifest = json.loads((root / "packet.json").read_text())
-    dimensions = pq.read_table(root / "tables" / "core" / "array_dimensions.parquet").to_pydict()
-    dimensions["coordinate_resource"] = [None, "core.array_channels", None]
-    pq.write_table(
+    current = pq.read_table(root / "tables" / "core" / "array_dimensions.parquet").to_pydict()
+    rank = len(current["axis_index"])
+    _manifest_table(
+        root,
+        manifest,
+        "core.array_dimensions",
         pa.table(
             {
-                "array_asset_id": pa.array(dimensions["array_asset_id"], type=pa.int32()),
-                "axis_index": pa.array(dimensions["axis_index"], type=pa.int64()),
-                "dimension_name": pa.array(dimensions["dimension_name"]),
-                "coordinate_resource": pa.array(dimensions["coordinate_resource"]),
+                "array_asset_id": pa.array(current["array_asset_id"], type=pa.int32()),
+                "axis_index": pa.array(current["axis_index"], type=pa.int64()),
+                "dimension_name": pa.array(current["dimension_name"]),
+                "coordinate_resource": pa.array([kind if axis == 1 else None for axis in range(rank)]),
+                "depends_on_axis_index": pa.array(
+                    [depends_on if axis == 1 else None for axis in range(rank)], type=pa.int64()
+                ),
             }
         ),
-        root / "tables" / "core" / "array_dimensions.parquet",
     )
-    columns = {"channel_label": pa.array([f"c{i}" for i in range(rows)])}
-    if keyed:
-        columns = {
-            "array_asset_id": pa.array([1] * rows, type=pa.int32()),
-            "axis_index": pa.array([1] * rows, type=pa.int64()),
-            "channel_index": pa.array(list(range(rows)), type=pa.int64()),
-            **columns,
-        }
-    pq.write_table(pa.table(columns), root / "tables" / "core" / "array_channels.parquet")
-    if not any(r["resource_id"] == "core.array_channels" for r in manifest["resources"]):
-        manifest["resources"].append(
+    _manifest_table(
+        root,
+        manifest,
+        "core.array_labels",
+        pa.table(
             {
-                "resource_id": "core.array_channels",
-                "declaration_id": "core.array_channels",
-                "uri": "tables/core/array_channels.parquet",
-                "digest": owned_digest(root, "tables/core/array_channels.parquet"),
-                "validation_state": "passed",
+                "array_asset_id": pa.array([1] * len(labels), type=pa.int32()),
+                "axis_index": pa.array([1] * len(labels), type=pa.int64()),
+                "depends_on_position_index": pa.array([row[0] for row in labels], type=pa.int64()),
+                "position_index": pa.array([row[1] for row in labels], type=pa.int64()),
+                "label_id": pa.array([row[2] for row in labels], type=pa.int32()),
             }
-        )
-        registry = read_registry(root)
-        registry["resources"]["core.array_channels"] = {
-            "content_class": "core",
-            "kind": "table",
-            "instances": {"mode": "singleton", "presence": "optional"},
-            "requires": [],
-            "lineage": "optional",
-            "table": {
-                "columns": [
-                    {
-                        "name": "array_asset_id",
-                        "type": "int32",
-                        "presence": "required",
-                        "role": "identifier",
-                        "identity": "assigned",
-                        "description": "Array row identity.",
-                    },
-                    {
-                        "name": "axis_index",
-                        "type": "int64",
-                        "presence": "required",
-                        "role": "structural_index",
-                        "description": "Axis index.",
-                    },
-                    {
-                        "name": "channel_label",
-                        "type": "string",
-                        "presence": "required",
-                        "role": "data",
-                        "vocabulary": "free",
-                        "description": "Channel label.",
-                    },
-                    {
-                        "name": "channel_index",
-                        "type": "int64",
-                        "presence": "required",
-                        "role": "structural_index",
-                        "description": "Channel index.",
-                    },
-                ]
-                if keyed
-                else [
-                    {
-                        "name": "channel_label",
-                        "type": "string",
-                        "presence": "required",
-                        "role": "data",
-                        "vocabulary": "free",
-                        "description": "Channel label.",
-                    }
-                ],
-                "primary_key": ["array_asset_id", "axis_index", "channel_index"] if keyed else None,
-                "references": (
-                    [
-                        {
-                            "columns": ["array_asset_id"],
-                            "resource": "core.array_assets",
-                            "resource_columns": ["array_asset_id"],
-                        }
-                    ]
-                    if keyed
-                    else []
-                ),
-                "rules": [],
-            },
-        }
-        (root / "packet.json").write_text(json.dumps(manifest))
-        install_registry(root, registry)
+        ),
+    )
+    (root / "packet.json").write_text(json.dumps(manifest))
+    return root
 
 
-def test_a_packet_owned_arrays_axis_length_is_checked_too(packet_root):
-    """The external path checked axis lengths and the packet-owned one only checked rank, though
-    the owned array's shape is already in hand. The two now derive extent the same way."""
+def test_an_external_axis_is_checked_against_its_labels(packet_root):
+    """A re-generated array with a different channel count leaves its labels naming positions that
+    are not there, or positions with none (Part 03 §6.3)."""
+    root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
+    _label_axis(root, [(0, 0, 1), (0, 1, 1)])  # axis 1 is 2 long in _zarr_v3's [4, 2, 3]
+    report = validate(open_packet(root), external=True)
+    assert report.passed, [f for f in report.findings if f.level == "error"]
+    assert "1 labels" in next(f for f in report.findings if f.check == "external.verified").message
+
+    _label_axis(root, [(0, 0, 1), (0, 1, 1), (0, 2, 1)])
+    assert "external.array_label_position_out_of_range" in _checks(validate(open_packet(root), external=True), "")
+
+    _label_axis(root, [(0, 0, 1)])
+    assert "external.array_label_missing" in _checks(validate(open_packet(root), external=True), "")
+
+
+def test_a_packet_owned_axis_is_checked_against_its_labels(packet_root):
+    """Checked without asking, unlike an external array, since the owned array's shape is in hand."""
     root = _add_array(packet_root, declared=["blosc", "sharding_indexed"], external=False, axes=3)
-    _coordinate_table(root, rows=2)  # _zarr_v3 is [4, 2, 3], so axis 1 is 2
+    _label_axis(root, [(0, 0, 1), (0, 1, 1)])
     assert validate(open_packet(root)).passed
 
-    _coordinate_table(root, rows=5)
-    report = validate(open_packet(root))
-    assert not report.passed, "an owned array is checked without asking, unlike an external one"
-    assert "array.shape_disagrees_with_coordinates" in {f.check for f in report.findings}
+    _label_axis(root, [(0, 0, 1), (0, 1, 1), (0, -1, 1)])
+    assert "array.label_position_out_of_range" in _checks(validate(open_packet(root)))
+
+
+def test_a_dependent_axis_is_labelled_at_every_pair_of_positions(packet_root):
+    """Axis 1 depends on axis 0, which is 4 long, so its 2 positions need 8 rows; padding is a row."""
+    root = _add_array(packet_root, declared=["blosc", "sharding_indexed"], external=False, axes=3)
+    full = [(outer, position, 1 if position == 0 else None) for outer in range(4) for position in range(2)]
+    _label_axis(root, full, depends_on=0)
+    assert validate(open_packet(root)).passed
+
+    _label_axis(root, full[:-1], depends_on=0)
+    missing = next(f for f in validate(open_packet(root)).findings if f.check == "array.label_missing")
+    assert missing.rows == (("axis_index 1", "depends_on_position_index 3, position_index 1", "1 missing"),)
+
+    _label_axis(root, [*full, (4, 0, 1)], depends_on=0)
+    assert "array.depends_on_position_out_of_range" in _checks(validate(open_packet(root)))
+
+
+def test_a_label_naming_no_row_is_caught(packet_root):
+    """Part 02 §8.3: the paired value on the specialised table resolves in the kind its axis names."""
+    root = _add_array(packet_root, declared=["blosc", "sharding_indexed"], external=False, axes=3)
+    _label_axis(root, [(0, 0, 1), (0, 1, 7)])
+    checks = {f.check for f in validate(open_packet(root)).findings if f.level == "error"}
+    assert checks == {"core.array_dimensions.coordinate_resource.core_sessions_resolves"}
+
+
+def test_a_label_on_an_unlabelled_axis_is_caught(packet_root):
+    """A label row whose axis names no kind has a value nothing can resolve (Part 02 §8.3)."""
+    root = _add_array(packet_root, declared=["blosc", "sharding_indexed"], external=False, axes=3)
+    _label_axis(root, [(0, 0, 1), (0, 1, 1)], kind=None)
+    checks = {f.check for f in validate(open_packet(root)).findings if f.level == "error"}
+    assert "core.array_dimensions.coordinate_resource.specialised_row_has_kind" in checks
+
+
+def test_a_packet_owned_array_carries_its_axes_names(packet_root):
+    """Part 03 §6.5: the axes table owns the names, and a packet-owned array repeats them."""
+    document = _zarr_v3()
+    document["dimension_names"] = ["unit", "sample", "channel"]
+    _add_array(packet_root, declared=["sharding_indexed", "blosc"], document=document)
+    assert "array.dimension_names" in _checks(validate(open_packet(packet_root)))
+
+
+def test_a_packet_owned_array_without_dimension_names_is_caught(packet_root):
+    document = _zarr_v3()
+    del document["dimension_names"]
+    _add_array(packet_root, declared=["sharding_indexed", "blosc"], document=document)
+    assert "array.dimension_names" in _checks(validate(open_packet(packet_root)))
+
+
+def test_a_referenced_array_may_name_its_axes_otherwise(packet_root):
+    """The axes table governs an external array's names, which its producer chose (Part 03 §6.5)."""
+    document = _zarr_v3()
+    del document["dimension_names"]
+    root = _add_array(packet_root, declared=["blosc", "sharding_indexed"], document=document, external=True)
+    assert validate(open_packet(root), external=True).passed
+
+
+def _channels(root, *, rows):
+    """Give axis 1 of the test array `rows` channels in `core.array_channels`."""
+    registry = read_registry(root)
+    registry["resources"]["core.array_channels"] = {
+        "content_class": "core",
+        "kind": "table",
+        "instances": {"mode": "singleton", "presence": "optional"},
+        "requires": [],
+        "lineage": "optional",
+        "table": {
+            "columns": [
+                {
+                    "name": "array_asset_id",
+                    "type": "int32",
+                    "presence": "required",
+                    "role": "identifier",
+                    "identity": "assigned",
+                    "description": "d",
+                },
+                _index("axis_index"),
+                _index("channel_index"),
+            ],
+            "primary_key": ["array_asset_id", "channel_index"],
+            "references": [
+                {
+                    "columns": ["array_asset_id", "axis_index"],
+                    "resource": "core.array_dimensions",
+                    "resource_columns": ["array_asset_id", "axis_index"],
+                }
+            ],
+            "rules": [],
+        },
+    }
+    install_registry(root, registry)
+    manifest = json.loads((root / "packet.json").read_text())
+    _manifest_table(
+        root,
+        manifest,
+        "core.array_channels",
+        pa.table(
+            {
+                "array_asset_id": pa.array([1] * rows, type=pa.int32()),
+                "axis_index": pa.array([1] * rows, type=pa.int64()),
+                "channel_index": pa.array(list(range(rows)), type=pa.int64()),
+            }
+        ),
+    )
+    (root / "packet.json").write_text(json.dumps(manifest))
+    return root
+
+
+def test_a_channel_index_beyond_its_axis_is_caught(packet_root):
+    """`core.array_channels` describes positions of an axis, so each must be one (Part 03 §6.5)."""
+    root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
+    _channels(root, rows=2)
+    report = validate(open_packet(root), external=True)
+    assert report.passed
+    assert "1 channels" in next(f for f in report.findings if f.check == "external.verified").message
+
+    _channels(root, rows=3)
+    report = validate(open_packet(root), external=True)
+    assert "external.array_channel_index_out_of_range" in _checks(report, "")
 
 
 # -- Part 04 §4.3 and §5.3: a packet-owned resource's digest ----------------------------------
@@ -1561,7 +1642,7 @@ def test_an_empty_packet_owned_prefix_is_missing(packet_root):
 def _extension(root, *, tables=None, mutate=None):
     """Give the packet an extension registry and a table conforming to it."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.8.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
         "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -1858,7 +1939,7 @@ def _required_extension(root, extension_id):
     install_registry(
         root,
         {
-            "$schema": "https://escapewheel.org/schemas/registry/0.8.0",
+            "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
             "registry_id": extension_id,
             "registry_version": "0.1.0",
             "logical_standard_version": "escapewheel-logical-v0.1",
@@ -1957,35 +2038,61 @@ def test_resolves_decides_the_level_not_whether_the_check_exists():
 def test_a_shared_key_discriminator_generates_no_value_resolution():
     """Part 02 §8.3: the named table's own reference carries that integrity, pointing the other way."""
     checks = generate(_discriminated(resolves="required"), kinds={"core.sessions": "session_id"})
-    assert not [c for c in checks if c.id.endswith("k_kind.resolves")]
+    assert not [c for c in checks if c.id.startswith("core.runs.k_kind.") and c.id.endswith("_resolves")]
 
 
-def test_the_paired_value_comparison_is_cast_on_both_sides():
-    """R53 §2.1 made keys int32 while the paired value stayed a string (R55 §4).
-
-    Without the cast DuckDB coerces the string to an integer and *raises* on one that is not a
-    number, which turns a finding into a check that could not run.
-    """
+def test_a_string_paired_value_is_cast_on_both_sides():
+    """A carried key may be a number where the string value is not one; uncast, DuckDB raises on it."""
     checks = generate(
         _discriminated(resolves="optional", discriminates="k"),
         only={"core.runs"},
         kinds={"core.runs": "run_id"},
     )
-    sql = next(c.sql for c in checks if c.id == "core.runs.k_kind.resolves")
+    sql = next(c.sql for c in checks if c.id == "core.runs.k_kind.core_runs_resolves")
     assert sql.count("CAST") == 2
 
 
-def test_a_kind_the_packet_does_not_declare_is_not_joined():
-    """Only a resource the packet carries can appear in the union; the rest are the declared-kind check."""
+def test_each_named_kind_gets_its_own_anti_join():
+    """Per kind, so a value resolves only in the kind its own row names (Part 02 §8.3)."""
     checks = generate(
         _discriminated(resolves="optional", discriminates="k"),
-        only={"core.runs"},
-        kinds={"core.runs": "run_id", "ext.absent": "absent_id"},
+        only={"core.runs", "core.sessions"},
+        kinds={"core.runs": "run_id", "core.sessions": "session_name", "ext.absent": "absent_id"},
     )
-    sql = next(c.sql for c in checks if c.id == "core.runs.k_kind.resolves")
-    assert "ext_absent" not in sql
+    ids = {c.id for c in checks}
+    assert {"core.runs.k_kind.core_runs_resolves", "core.runs.k_kind.core_sessions_resolves"} <= ids
+    assert not [i for i in ids if "ext_absent" in i], "a kind the packet does not carry is the declared-kind check's"
     declared = next(c.sql for c in checks if c.id == "core.runs.k_kind.kind_declared")
     assert "'ext.absent'" in declared
+
+
+def _identifier_paired(resolves="required"):
+    registry = _discriminated(resolves=resolves, discriminates="k")
+    columns = registry["resources"]["core.runs"]["table"]["columns"]
+    columns[2] = {"name": "k", "type": "int32", "presence": "nullable", "role": "identifier", "identity": "assigned"}
+    columns[0]["identity"] = "assigned"
+    return registry
+
+
+def test_an_identifier_paired_value_joins_its_key_uncast():
+    """An identifier value holds the named key's own value, so both sides share a type (Part 02 §8.3)."""
+    registry = _identifier_paired()
+    checks = generate(registry, only={"core.runs"}, kinds={"core.runs": None})
+    sql = next(c.sql for c in checks if c.id == "core.runs.k_kind.core_runs_resolves")
+    assert "CAST" not in sql and "run_id" in sql
+    assert "core.runs.k_kind.key_fits_paired_value" not in {c.id for c in checks}
+
+
+def test_a_key_an_identifier_value_cannot_hold_is_reported():
+    """A kind whose key is another type, or not one column, can name no row through the value."""
+    keys = {"core.runs": {"name": "run_id", "type": "int32", "identity": "assigned"}, "core.trials": None}
+    checks = generate(
+        _identifier_paired(), only={"core.runs"}, kinds={"core.runs": None, "core.trials": None}, keys=keys
+    )
+    shape = next(c for c in checks if c.id == "core.runs.k_kind.key_fits_paired_value")
+    assert shape.level == "error" and "'core.trials'" in shape.sql and "'core.runs'" not in shape.sql
+    optional = generate(_identifier_paired("optional"), only={"core.runs"}, kinds={"core.trials": None}, keys=keys)
+    assert "core.runs.k_kind.key_fits_paired_value" not in {c.id for c in optional}
 
 
 def _reference(root, **overrides):

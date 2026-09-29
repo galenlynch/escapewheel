@@ -33,13 +33,6 @@ references = "core.electrodes"
 description = "An electrode this unit was detected on."
 
 [[columns]]
-name = "channel_index"
-type = "int64"
-presence = "nullable"
-role = "structural_index"
-description = "0-based position of this electrode in the unit's channel list, where a dense array axis is indexed by it. Nothing joins on it."
-
-[[columns]]
 name = "is_primary"
 type = "bool"
 presence = "nullable"
@@ -56,18 +49,6 @@ FROM core.unit_electrodes
 WHERE is_primary
 GROUP BY unit_id
 HAVING COUNT(*) > 1'''
-
-[[rules]]
-id = "core.unit_electrodes.channel_index_contiguous"
-level = "error"
-message = "channel_index is not contiguous from 0, so a dense axis indexed by it addresses rows that are not there"
-sql = '''
-SELECT unit_id, COUNT(*) AS n, MAX(channel_index) AS hi
-FROM core.unit_electrodes
-WHERE channel_index IS NOT NULL
-GROUP BY unit_id
-HAVING MAX(channel_index) <> COUNT(*) - 1
-  OR MIN(channel_index) <> 0'''
 
 [[rules]]
 id = "core.unit_electrodes.electrode_is_a_run_channel"

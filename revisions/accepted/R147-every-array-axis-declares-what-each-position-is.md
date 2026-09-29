@@ -1,8 +1,8 @@
-# Every array axis declares what each position is
+# Every Array Axis Declares What Each Position Is
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-28 |
 | **Based on** | `b1fb70bfab14c19296aa03dea2429332a2731a71` |
 | **Decision domain** | specification |
 | **Change form** | structural |

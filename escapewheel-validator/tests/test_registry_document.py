@@ -95,7 +95,7 @@ def _ids(result):
 def test_reference_registry_has_one_complete_valid_result():
     result = check_registry(CORE)
     assert result.state == "valid"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.5"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.6"
     assert tuple(phase.phase for phase in result.phases) == PHASES
     assert result.phases[0].state == "skipped"
     assert result.phases[0].reason == "registry.phase.mapping_input"
@@ -165,7 +165,7 @@ def test_every_repository_extension_satisfies_the_same_contract(path):
 
 def test_byte_entry_rejects_a_nested_duplicate_at_its_containing_object():
     result = check_registry_bytes(
-        b'{"$schema":"https://escapewheel.org/schemas/registry/0.8.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
+        b'{"$schema":"https://escapewheel.org/schemas/registry/0.9.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
     )
     outcome = result.findings[0]
     assert result.state == "invalid"
@@ -212,7 +212,7 @@ def test_shape_failure_uses_schema_identity_and_location():
     result = check_registry(document, CORE)
     outcome = result.findings[0]
     assert result.state == "invalid"
-    assert outcome.id == "https://escapewheel.org/schemas/registry/0.8.0"
+    assert outcome.id == "https://escapewheel.org/schemas/registry/0.9.0"
     assert outcome.instance == "/resources/demo.rows/table/columns/1/type"
     assert outcome.schema_location
 
@@ -302,7 +302,7 @@ def test_meta_schema_owns_each_local_conditional(case):  # noqa: C901
     result = check_registry(document, CORE)
     shape = next(phase for phase in result.phases if phase.phase == "shape")
     assert shape.state == "invalid"
-    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.8.0"}
+    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.9.0"}
 
 
 def test_unknown_contract_tuple_is_unsupported():
@@ -327,7 +327,7 @@ def test_null_primary_key_is_a_valid_duplicate_row_declaration():
 def test_two_local_contracts_for_one_tuple_are_ambiguous():
     first = json.loads(CONTRACT.read_text())
     second = copy.deepcopy(first)
-    second["id"] = "escapewheel-registry-contract-v0.5"
+    second["id"] = "escapewheel-registry-contract-v0.6"
     result = check_registry(CORE, descriptors=[first, second])
     assert result.state == "unsupported"
     assert "registry.contract.selector_ambiguous" in _ids(result)
@@ -336,7 +336,7 @@ def test_two_local_contracts_for_one_tuple_are_ambiguous():
 def test_extension_without_core_runs_local_checks_and_is_incomplete():
     result = check_registry(_document())
     assert result.state == "incomplete"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.5"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.6"
     assert "registry.contract.core_context_unusable" in _ids(result)
 
     broken = _document()
@@ -689,6 +689,60 @@ def test_discriminator_reverse_path_must_resolve_once():
         )
     )
     assert "registry.discriminator.path" in _ids(check_registry(document, CORE))
+
+
+def test_a_by_position_discriminator_is_not_a_shape():
+    """Part 02 §8.3 has two shapes, and the meta-schema does not admit `positions_in`."""
+    document = _document()
+    _table(document)["columns"].extend(
+        [
+            _column("row_kind", type="string", role="discriminator", resolves="required", positions_in="row_column"),
+            _column("row_column", type="string", role="data", vocabulary="free"),
+        ]
+    )
+    result = check_registry(document, CORE)
+    assert result.state == "invalid"
+    assert json.loads(SCHEMA.read_text())["$id"] in _ids(result)
+
+
+def test_a_paired_value_is_a_string_or_an_identifier():
+    """A float column can hold neither a key's name nor its value (Part 02 §8.3)."""
+    document = _document()
+    _table(document)["columns"].extend(
+        [
+            _column("row_kind", type="string", role="discriminator", resolves="required", discriminates="row_value"),
+            _column("row_value", type="float64", role="data"),
+        ]
+    )
+    assert "registry.discriminator.declaration" in _ids(check_registry(document, CORE))
+
+
+def test_an_identifier_paired_value_may_sit_on_the_specialised_table():
+    """With `discriminates_via`, the value is on the table the path names, and null names no row."""
+    document = _document()
+    _table(document)["columns"].append(
+        _column(
+            "row_kind",
+            type="string",
+            role="discriminator",
+            resolves="required",
+            discriminates_via="demo.details.demo_id",
+            discriminates="label_id",
+        )
+    )
+    document["resources"]["demo.details"] = copy.deepcopy(document["resources"]["demo.rows"])
+    details = _table(document, "demo.details")
+    details["columns"] = [
+        _column("session_id"),
+        _column("demo_id", identity="carried"),
+        _column("label_id", presence="nullable"),
+    ]
+    details["references"] = [
+        {"columns": ["session_id", "demo_id"], "resource": "demo.rows", "resource_columns": ["session_id", "demo_id"]}
+    ]
+    details["rules"] = []
+    ids = _ids(check_registry(document, CORE))
+    assert not {i for i in ids if i.startswith("registry.discriminator.")}, ids
 
 
 def test_coordinate_context_source_must_resolve():

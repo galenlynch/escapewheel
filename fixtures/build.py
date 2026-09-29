@@ -55,7 +55,7 @@ START = datetime(2026, 8, 20, 14, 0, 0, tzinfo=timezone.utc)
 AP_HZ, BEH_HZ = 30_000, 1_000
 
 
-def table(resource: str, rows: list[dict]) -> pa.Table:
+def table(resource: str, rows: list[dict], readers=None) -> pa.Table:
     """Build an Arrow table for `resource` with exactly the registry's schema.
 
     Columns absent from `rows` are emitted as nulls unless the registry marks them
@@ -66,7 +66,7 @@ def table(resource: str, rows: list[dict]) -> pa.Table:
     declared = {c["name"] for c in spec["columns"]}
     if undeclared := sorted({key for row in rows for key in row} - declared):
         raise SystemExit(f"{resource}: no column declares {undeclared}, so it would be dropped")
-    rows = number(spec, [dict(r) for r in rows])
+    rows = number(spec, [dict(r) for r in rows], readers)
     arrays, fields = [], []
     for c in spec["columns"]:
         present = any(c["name"] in r for r in rows)
@@ -84,8 +84,11 @@ def table(resource: str, rows: list[dict]) -> pa.Table:
 KEYS: dict[str, dict[str, int]] = {}
 
 
-def number(spec, rows):
-    """Replace an identifier's name with its number, and fill in the `*_name` that records it."""
+def number(spec, rows, readers=None):
+    """Replace an identifier's name with its number, and fill in the `*_name` that records it.
+
+    `readers` maps an identifier paired value to a function from its row to the map it numbers in.
+    """
     exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
     primary = set(spec.get("primary_key") or [])
     declared = {c["name"] for c in spec["columns"]}
@@ -100,16 +103,21 @@ def number(spec, rows):
         )
     }
     identifiers = [c for c in spec["columns"] if c.get("role") == "identifier"]
+    # Read before anything is numbered: a row reaches its kind through its own references.
+    kinds = {name: [reader(r) for r in rows] for name, reader in (readers or {}).items()}
+
+    def kind_of(name, index):
+        return (kinds[name][index] if name in kinds else None) or target.get(name, name)
+
     # Collect every name before assigning any: `parent_clock_id` and `clock_id` share a map, and
     # whichever column the loop reached first would otherwise decide the numbering.
     pending = {}
     for column in identifiers:
         if column.get("identity") != "assigned":
             continue
-        kind = target.get(column["name"], column["name"])
-        pending.setdefault(kind, set()).update(
-            str(r[column["name"]]) for r in rows if r.get(column["name"]) is not None
-        )
+        for index, r in enumerate(rows):
+            if r.get(column["name"]) is not None:
+                pending.setdefault(kind_of(column["name"], index), set()).add(str(r[column["name"]]))
     for kind in sorted(pending):
         within = KEYS.setdefault(kind, {})
         for value in sorted(pending[kind]):
@@ -118,20 +126,54 @@ def number(spec, rows):
     for column in identifiers:
         name = column["name"]
         assigned = column.get("identity") == "assigned"
-        within = KEYS.setdefault(target.get(name, name), {})
         owns = assigned and name in primary and name not in exported
         named = f"{name.removesuffix('_id')}_name" if owns else None
-        for row in rows:
+        for index, row in enumerate(rows):
             if row.get(name) is None:
                 continue
             value = str(row[name])
             if named is not None and named in declared and row.get(named) is None:
                 row[named] = value
             if assigned:
-                row[name] = within[value]
+                row[name] = KEYS[kind_of(name, index)][value]
             elif column["type"] != "string":
                 row[name] = int(row[name])
     return rows
+
+
+def paired_readers(tables: dict[str, list[dict]], resource: str) -> dict:
+    """Map each identifier paired value `resource` holds to a function from its row to its map.
+
+    Part 02 §8.3 lets an identifier hold the key of whichever resource its row's kind names, so
+    its map is that resource's one key column, chosen per row. A value on a specialised table
+    reaches its kind through the reference back to the discriminator's table, by names.
+    """
+
+    def key_of(kind):
+        key = (SPECS.get(kind) or {}).get("primary_key") or []
+        return key[0] if len(key) == 1 else None
+
+    readers = {}
+    for owner, spec in SPECS.items():
+        for column in spec["columns"]:
+            if column.get("role") != "discriminator" or not column.get("discriminates"):
+                continue
+            via = column.get("discriminates_via")
+            if (owner if via is None else via.rsplit(".", 1)[0]) != resource:
+                continue
+            name = column["name"]
+            if via is None:
+                readers[column["discriminates"]] = lambda row, name=name: key_of(row.get(name))
+                continue
+            back = next(r for r in SPECS[resource]["references"] if r["resource"] == owner)
+            kinds = {
+                tuple(str(r.get(c)) for c in back["resource_columns"]): r.get(name)
+                for r in tables.get(owner, [])
+            }
+            readers[column["discriminates"]] = lambda row, kinds=kinds, ours=back["columns"]: key_of(
+                kinds.get(tuple(str(row.get(c)) for c in ours))
+            )
+    return readers
 
 
 def preassign(tables: dict[str, list[dict]]) -> None:
@@ -155,18 +197,15 @@ def preassign(tables: dict[str, list[dict]]) -> None:
                 ref["columns"], ref["resource_columns"], strict=True
             )
         }
+        readers = paired_readers(tables, resource)
         for column in spec["columns"]:
-            if (
-                column.get("role") != "identifier"
-                or column.get("identity") != "assigned"
-            ):
+            name = column["name"]
+            if column.get("role") != "identifier" or column.get("identity") != "assigned":
                 continue
-            kind = target.get(column["name"], column["name"])
-            pending.setdefault(kind, set()).update(
-                str(r[column["name"]])
-                for r in rows
-                if r.get(column["name"]) is not None
-            )
+            for r in rows:
+                if r.get(name) is not None:
+                    kind = (readers[name](r) if name in readers else None) or target.get(name, name)
+                    pending.setdefault(kind, set()).add(str(r[name]))
     for kind in sorted(pending):
         within = KEYS.setdefault(kind, {})
         for value in sorted(pending[kind]):
@@ -285,7 +324,6 @@ def content() -> dict[str, list[dict]]:
                 "session_id": "s001",
                 "unit_id": unit,
                 "electrode_id": f"elec_{e:03d}",
-                "channel_index": k,
                 "is_primary": f"elec_{e:03d}" == primary,
             }
             # Contacts drawn from the run's channel list only, which R83 2.4 requires:
@@ -294,7 +332,7 @@ def content() -> dict[str, list[dict]]:
                 (1, "elec_001", (0, 1, 3)),
                 (2, "elec_003", (1, 3)),
             )
-            for k, e in enumerate(contacts)
+            for e in contacts
         ],
         # Part 01 §3.24: which space a frame name means is a declared row. `ccf` names the atlas and
         # its version; `probe` is nobody's published atlas, so both are null and the description
@@ -715,7 +753,7 @@ def write_packet(
     resources = []
     for resource, rows in tables.items():
         ordered = rows if resource in unsorted else sort_rows(resource, rows)
-        t = (raw or {}).get(resource) or table(resource, ordered)
+        t = (raw or {}).get(resource) or table(resource, ordered, paired_readers(tables, resource))
         namespace, name = resource.split(".", 1)
         rel = f"tables/{namespace}/{name}.parquet"
         (out / "tables" / namespace).mkdir(exist_ok=True)
@@ -924,10 +962,6 @@ def variants():
         # electrode, so only the run's channel list can tell this from a valid row.
         c["core.unit_electrodes"][0]["electrode_id"] = "elec_002"
 
-    def gapped_ordinal(c):
-        # A dense waveform axis indexed by this addresses a row that is not there (R20 2).
-        c["core.unit_electrodes"][2]["channel_index"] = 7
-
     def wide_anchor_gap(c):
         # 1 kHz anchors with one 20x hole: inside the span, outside the bound (R27 5.3).
         child(c)["transform_slope"] = None
@@ -1062,7 +1096,6 @@ def variants():
         "unaligned_clock": unaligned_clock,
         "wide_anchor_gap": wide_anchor_gap,
         "two_primaries": two_primaries,
-        "gapped_ordinal": gapped_ordinal,
         "unit_off_the_run": unit_off_the_run,
         "undeclared_currency": undeclared_currency,
         "unscoped_runs": unscoped_runs,
@@ -1159,6 +1192,7 @@ def main():
 
     digest_variants(root)
     floor_variants(root)
+    axis_variants(root)
     opaque_variants(root)
 
 
@@ -1299,27 +1333,41 @@ PIPELINES = {
 }
 
 
-def zarr_metadata(codecs: list[dict]) -> bytes:
+#: The axes every catalogued array has unless a variant says otherwise.
+AXES = ("unit", "sample")
+
+#: Part 03 §6.3's numeric form for an axis that is only an order: position k is k.
+ORDER_ONLY = {"origin_value": 0.0, "step_value": 1.0, "coordinate_unit": "1"}
+
+
+def zarr_metadata(
+    codecs: list[dict], shape: tuple = (2, 3), dimension_names: tuple | None = AXES
+) -> bytes:
     """A Zarr v3 array with no chunk written, so every element is its fill value.
 
-    Its metadata is all a floor assessment reads, and the corpus needs no Zarr library to write it.
+    Its metadata is all a floor assessment or an axis check reads, and the corpus needs no Zarr
+    library to write it. Part 03 §6.5 has a packet-owned array name its axes.
     """
     document = {
         "zarr_format": 3,
         "node_type": "array",
-        "shape": [2, 3],
+        "shape": list(shape),
         "data_type": "int16",
-        "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [2, 3]}},
+        "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": list(shape)}},
         "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
         "fill_value": 0,
         "codecs": codecs,
         "attributes": {},
     }
+    if dimension_names is not None:
+        document["dimension_names"] = list(dimension_names)
     return (json.dumps(document, indent=2) + "\n").encode()
 
 
-def catalogue_arrays(tables: dict[str, list[dict]], names: list[str]) -> None:
-    """Catalogue one two-axis array per name, as `core.<name>` (Part 03 §6.3)."""
+def catalogue_arrays(
+    tables: dict[str, list[dict]], names: list[str], axes: tuple = AXES
+) -> None:
+    """Catalogue one array per name, as `core.<name>`, each axis only an order (Part 03 §6.3)."""
     tables["core.array_assets"] = [
         {"session_id": "s001", "array_asset_id": name, "resource_id": f"core.{name}"}
         for name in names
@@ -1330,13 +1378,16 @@ def catalogue_arrays(tables: dict[str, list[dict]], names: list[str]) -> None:
             "array_asset_id": name,
             "axis_index": axis,
             "dimension_name": dimension,
+            **ORDER_ONLY,
         }
         for name in names
-        for axis, dimension in enumerate(("unit", "sample"))
+        for axis, dimension in enumerate(axes)
     ]
 
 
-def array_entry(out: Path | None, name: str, pipeline: str) -> dict:
+def array_entry(
+    out: Path | None, name: str, pipeline: str, shape: tuple = (2, 3), dimension_names=AXES
+) -> dict:
     """A manifest entry for `core.<name>`; packet-owned and written under `out`, or external where None."""
     entry = {
         "resource_id": f"core.{name}",
@@ -1350,7 +1401,7 @@ def array_entry(out: Path | None, name: str, pipeline: str) -> dict:
             "external": True,
         }
     uri = f"arrays/core/{name}.zarr"
-    body = zarr_metadata(PIPELINES[pipeline])
+    body = zarr_metadata(PIPELINES[pipeline], shape, dimension_names)
     (out / uri).mkdir(parents=True)
     (out / uri / "zarr.json").write_bytes(body)
     rows = [("zarr.json", len(body), digest("sha256", body))]
@@ -1413,6 +1464,120 @@ def floor_variants(root: Path) -> None:
         ),
     )
     print(f"{'unresolved_externals':26s}written")
+
+
+#: A waveform-shaped array: two units, a channel axis four positions long, and three samples.
+LABELLED_SHAPE = (2, 4, 3)
+LABELLED_AXES = ("unit", "channel", "sample")
+
+#: Each unit's contacts along the channel axis. The second unit has two, so its last two
+#: positions are padding, which is what the one positive variant holds (Part 03 §6.3).
+LABELLED_CONTACTS = {
+    1: ("elec_000", "elec_001", "elec_003", None),
+    2: ("elec_001", "elec_003", None, None),
+}
+
+
+def labelled_array(tables: dict[str, list[dict]]) -> None:
+    """Catalogue `core.waveform_mean` with a unit axis and a channel axis that depends on it."""
+    catalogue_arrays(tables, ["waveform_mean"], LABELLED_AXES)
+    unit_axis, channel_axis, _ = tables["core.array_dimensions"]
+    for axis, kind in ((unit_axis, "core.units"), (channel_axis, "core.electrodes")):
+        for field in ORDER_ONLY:
+            del axis[field]
+        axis["coordinate_resource"] = kind
+    channel_axis["depends_on_axis_index"] = 0
+    common = {"session_id": "s001", "array_asset_id": "waveform_mean"}
+    tables["core.array_labels"] = [
+        {**common, "axis_index": 0, "depends_on_position_index": 0, "position_index": k, "label_id": unit}
+        for k, unit in enumerate(LABELLED_CONTACTS)
+    ] + [
+        {**common, "axis_index": 1, "depends_on_position_index": k, "position_index": j, "label_id": contact}
+        for k, contacts in enumerate(LABELLED_CONTACTS.values())
+        for j, contact in enumerate(contacts)
+    ]
+
+
+def axis_variants(root: Path) -> None:
+    """Part 03 §6.3's labelled axes: one packet that pads, and one per rule a label or axis breaks."""
+
+    def labels(c, axis, outer):
+        return [
+            r
+            for r in c["core.array_labels"]
+            if (r["axis_index"], r["depends_on_position_index"]) == (axis, outer)
+        ]
+
+    def axis_without_form(c):
+        for field in ORDER_ONLY:
+            del c["core.array_dimensions"][2][field]
+
+    def axis_with_two_forms(c):
+        c["core.array_dimensions"][2] |= {"clock_id": "imec_ap_s001", "origin_tick": 0, "step_tick_num": 1}
+
+    def label_naming_no_row(c):
+        # A real name, numbered like any other, so only the per-kind anti-join sees it names nothing.
+        labels(c, 1, 0)[0]["label_id"] = "elec_009"
+
+    def label_on_unlabelled_axis(c):
+        c["core.array_labels"].append({**labels(c, 1, 0)[0], "axis_index": 2})
+
+    def label_missing(c):
+        # The padding row goes, not the label: a null label still declares its position.
+        c["core.array_labels"].remove(labels(c, 1, 1)[-1])
+
+    def chained_dependency(c):
+        # Its labels repeat at each of the sample axis's positions, so completeness still holds.
+        c["core.array_dimensions"][0]["depends_on_axis_index"] = 2
+        units = labels(c, 0, 0)
+        c["core.array_labels"] += [
+            {**r, "depends_on_position_index": k} for k in range(1, LABELLED_SHAPE[2]) for r in units
+        ]
+
+    def independent_label_off_zero(c):
+        c["core.array_labels"].append({**labels(c, 0, 0)[0], "depends_on_position_index": 1})
+
+    def one_row_two_positions(c):
+        first, second, *_ = labels(c, 1, 0)
+        second["label_id"] = first["label_id"]
+
+    def label_beyond_axis(c):
+        c["core.array_labels"].append({**labels(c, 1, 1)[-1], "position_index": LABELLED_SHAPE[1]})
+
+    def dependent_axis_unlabelled(c):
+        c["core.array_dimensions"][2]["depends_on_axis_index"] = 0
+
+    def label_outside_core(c):
+        # Null labels name no row, so nothing but the resource's class is wrong.
+        c["core.array_dimensions"][0]["coordinate_resource"] = "analysis.array_assets"
+        for r in labels(c, 0, 0):
+            r["label_id"] = None
+
+    for name, mutate in {
+        "padded_labels": None,
+        "axis_without_form": axis_without_form,
+        "axis_with_two_forms": axis_with_two_forms,
+        "label_naming_no_row": label_naming_no_row,
+        "label_on_unlabelled_axis": label_on_unlabelled_axis,
+        "label_missing": label_missing,
+        "chained_dependency": chained_dependency,
+        "independent_label_off_zero": independent_label_off_zero,
+        "one_row_two_positions": one_row_two_positions,
+        "label_beyond_axis": label_beyond_axis,
+        "dependent_axis_unlabelled": dependent_axis_unlabelled,
+        "label_outside_core": label_outside_core,
+        "array_without_dimension_names": None,
+    }.items():
+        c = content()
+        labelled_array(c)
+        if mutate is not None:
+            mutate(c)
+        out = root / name
+        write_packet(out, c)
+        named = None if name == "array_without_dimension_names" else LABELLED_AXES
+        entry = array_entry(out, "waveform_mean", "default", LABELLED_SHAPE, named)
+        edit_manifest(out, lambda m, entry=entry: m["resources"].append(entry))
+        print(f"{name:26s}written")
 
 
 #: A fixture-local extension declaring an opaque singleton, which core does not.

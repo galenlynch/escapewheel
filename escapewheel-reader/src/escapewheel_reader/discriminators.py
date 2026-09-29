@@ -3,8 +3,7 @@
 Part 05 §13.4 asks a reader to offer this, and gives the reason: a discriminator nothing reads is a
 free-form name with extra steps, which is what became of the mechanism it replaces. Without an
 offer here every consumer of `core.intervals.interval_kind` writes the join again, and the join is
-not obvious -- it takes three shapes, and reading one as another is what Part 02 §8.3's exclusion
-exists to stop.
+not obvious -- it takes two shapes, and a paired value resolves in the kind of its own row.
 
 `declared` reports what a packet's own registries declare, core and extensions together, because a
 kind naming an extension table is the case the mechanism exists for. `kinds` says which values a
@@ -21,9 +20,10 @@ from dataclasses import dataclass
 from typing import Any
 
 import pyarrow as pa
+import pyarrow.compute as pc
 
-#: The fields a discriminator declares beyond its role, each naming one of the three shapes.
-SHAPES = {"discriminates": "paired value", "positions_in": "by position"}
+#: The field a discriminator declares beyond its role to take the paired-value shape.
+SHAPES = {"discriminates": "paired value"}
 
 
 @dataclass(frozen=True)
@@ -35,16 +35,10 @@ class Discriminator:
     resolves: str
     discriminates: str | None = None
     discriminates_via: str | None = None
-    positions_in: str | None = None
 
     @property
     def shape(self) -> str:
-        """Which of Part 02 §8.3's three resolutions applies.
-
-        A discriminator with neither `discriminates` nor `positions_in` is shared-key, which is
-        why Part 02 §8.3 requires `positions_in` be declared: without it a by-position
-        discriminator and a shared-key one are indistinguishable.
-        """
+        """Which of Part 02 §8.3's two resolutions applies: paired value, or shared key without one."""
         for field, name in SHAPES.items():
             if getattr(self, field) is not None:
                 return name
@@ -126,7 +120,6 @@ def declared(packet: Any) -> list[Discriminator]:
                     resolves=column.get("resolves", "required"),
                     discriminates=column.get("discriminates"),
                     discriminates_via=column.get("discriminates_via"),
-                    positions_in=column.get("positions_in"),
                 )
             )
     return found
@@ -199,17 +192,20 @@ def _key(packet: Any, resource: str) -> list[str]:
     return list(registries(packet).get(resource, {}).get("primary_key") or [])
 
 
-def _paired_target(packet: Any, kind: str) -> str:
-    """Find the column a paired value joins to: the key where it is carried, its name where assigned.
+def _paired_target(packet: Any, kind: str, found: Discriminator) -> str:
+    """Find the column a paired value joins to (Part 02 §8.3).
 
-    Part 02 §8.3 makes the value a `string`, and an assigned identifier is an `int32` a packet
-    mints, so the value can only be the `*_name` its owner carries (Part 02 §8.2).
+    An identifier value holds the named key's own value, so it joins the key. A string value joins
+    the key where it is carried, and where it is assigned the `*_name` its owner carries, since a
+    string cannot hold a number the packet mints (Part 02 §8.2).
     """
     key = _key(packet, kind)
     if len(key) != 1:
         raise LookupError(f"{kind} has a {len(key)}-column key, which a paired value cannot name")
+    holder = registries(packet).get(found.specialised, {}).get("columns", [])
+    value = next((c for c in holder if c["name"] == found.discriminates), {})
     declared_columns = {c["name"]: c for c in registries(packet).get(kind, {}).get("columns", [])}
-    if declared_columns.get(key[0], {}).get("identity") != "assigned":
+    if value.get("role") == "identifier" or declared_columns.get(key[0], {}).get("identity") != "assigned":
         return key[0]
     named = f"{key[0].removesuffix('_id')}_name"
     if named not in declared_columns:
@@ -236,10 +232,8 @@ def resolved(packet: Any, resource_id: str, kind: str, *, column: str | None = N
     Returns
     -------
     pyarrow.Table
-        The specialised rows with the named resource's columns joined on. For a by-position
-        discriminator the named resource's rows are returned as they are: Part 02 §8.3 makes that
-        shape neither a key join nor a value-to-key join, and forbids reading the joinability
-        rules as applying to it.
+        The specialised rows of that kind with the named resource's columns joined on. A paired
+        value that is null names no row, so its row is not returned.
 
     Raises
     ------
@@ -251,16 +245,20 @@ def resolved(packet: Any, resource_id: str, kind: str, *, column: str | None = N
         raise LookupError(f"the packet does not hold {kind}, which {found.resource}.{found.column} names")
     named = packet.table(kind)
 
-    if found.shape == "by position":
-        return named
-
     rows = packet.table(found.specialised)
     if found.shape == "paired value":
-        # The value is an identifier in the named resource's key space, and that key is one
-        # column because a paired value holds one identifier (Part 02 §8.3).
-        return rows.join(
-            named, keys=[found.discriminates], right_keys=[_paired_target(packet, kind)], join_type="inner"
-        )
+        if found.discriminates_via is None:
+            rows = rows.filter(pc.equal(rows.column(found.column), kind))
+        else:
+            # The kind is on the discriminator's row, one reference away from the value.
+            ours, theirs = _reference_back(packet, found.specialised, found.resource)
+            of_kind = packet.table(found.resource, columns=[*theirs, found.column])
+            of_kind = of_kind.filter(pc.equal(of_kind.column(found.column), kind)).select(theirs)
+            rows = rows.join(of_kind, keys=ours, right_keys=theirs, join_type="inner")
+        # Per kind, since the values of two kinds share one column and may coincide.
+        assert found.discriminates is not None
+        target = _paired_target(packet, kind, found)
+        return rows.join(named, keys=[found.discriminates], right_keys=[target], join_type="inner")
 
     # Against the **discriminated** table, which `discriminates_via` moves away from the one
     # carrying the column: a detail table shares a key with the rows it specialises.

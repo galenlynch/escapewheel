@@ -37,15 +37,6 @@ role = "structural_index"
 description = "Channel dimension index."
 
 [[columns]]
-name = "electrode_id"
-type = "int32"
-presence = "nullable"
-role = "identifier"
-identity = "assigned"
-references = "core.electrodes"
-description = "Electrode ID."
-
-[[columns]]
 name = "channel_label"
 type = "string"
 presence = "nullable"

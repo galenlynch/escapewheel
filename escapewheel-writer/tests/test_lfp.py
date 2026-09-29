@@ -134,17 +134,23 @@ def test_a_non_integer_decimation_is_refused(nwb):
         _source(root).records()
 
 
-def test_the_channel_axis_points_at_the_channel_table(nwb):
-    """LFP keeps every fourth contact, so the axis cannot be a range (R20 §2)."""
+def test_the_channel_axis_is_labelled_with_electrodes(nwb):
+    """LFP keeps every fourth contact, so the axis cannot be a range (Part 03 §6.3)."""
     axis = _source(nwb).records()["core.array_dimensions"][1]
-    assert axis["coordinate_resource"] == "core.array_channels"
-    assert axis["coordinate_position_column"] == "channel_index"
+    assert axis["coordinate_resource"] == "core.electrodes"
+    assert "depends_on_axis_index" not in axis
 
 
-def test_channels_name_electrodes_and_carry_the_acquisition_offset(nwb):
+def test_each_channel_position_is_labelled_with_its_electrode(nwb):
+    rows = _source(nwb).records()["core.array_labels"]
+    assert [(r["position_index"], r["label_id"]) for r in rows] == [(0, "45883-1.CH0"), (1, "45883-1.CH4")]
+    assert all((r["axis_index"], r["depends_on_position_index"]) == (1, 0) for r in rows)
+
+
+def test_channels_carry_the_acquisition_offset_and_no_electrode(nwb):
     rows = _source(nwb).records()["core.array_channels"]
-    assert [r["electrode_id"] for r in rows] == ["45883-1.CH0", "45883-1.CH4"]
-    assert all(r["axis_index"] == 1 for r in rows)
+    assert [r["channel_index"] for r in rows] == [0, 1]
+    assert all(r["axis_index"] == 1 and "electrode_id" not in r for r in rows)
 
 
 def test_conversion_stays_on_the_asset(nwb):
