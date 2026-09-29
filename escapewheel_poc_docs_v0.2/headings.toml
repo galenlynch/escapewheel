@@ -363,6 +363,12 @@ section = "9"
 title = "What an adapter may state about its own run"
 aliases = []
 
+[anchor.ew-alternatives-resolved]
+part = "05"
+section = "12"
+title = "Alternatives are resolved before a commit"
+aliases = []
+
 [anchor.ew-amendment-definition]
 part = "05"
 section = "15.1"
@@ -607,6 +613,12 @@ aliases = []
 part = "02"
 section = "11"
 title = "Core resource index"
+aliases = []
+
+[anchor.ew-declared-fact-authority]
+part = "05"
+section = "3.6"
+title = "Authority for a declared fact"
 aliases = []
 
 [anchor.ew-delivery-completeness]
