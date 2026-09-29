@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | Non-authoritative maintenance inventory |
-| **Updated** | 2026-09-27 |
+| **Updated** | 2026-09-29 |
 | **Review baseline** | `523685027ddbcf18b31e6891ada3034e09aac80f` |
 
 This document tracks statements that appear to occupy the wrong specification abstraction or to
@@ -67,6 +67,7 @@ The roadmap owns sequencing among work items; this file owns the observation-lev
 | PD-030 | Part 01 §2.2, Part 05 §5.3 and the description of `core.sessions.t_zero_tick` | R39 §§2.1–2.3 define the time origin as the earliest observation start on the reference clock and seconds through the reference clock's rational rate, admitting negatives. No part's prose states them; the registry description names the earliest tick, and the reference validator fails an origin more than one reference tick from the minimum, citing Part 01 §2.2, which does not state it. | Gap: an accepted rule and a validator check without a prose owner. State the definition in Part 01 §2.2 and the check and its tolerance in Part 05 §5.3. R146 stated the origin per session in Part 01 §2.2 and the check, its tolerance and its two check IDs in Part 05 §5.3. | Resolved: R146 |
 | PD-031 | Part 05 §§3.4, 3.7 and 4.4 | Restate Part 12 §§4, 5 and 7: an adapter's declarations, writing the supplied object to standard input, an owned resource arriving empty, and which stream carries a failure under each protocol. R144 §7 left them for placement. | Keep what a build does with an adapter's declarations and delivery; cite Part 12 for what the adapter declares and what each protocol carries. R146 replaced the restatements with citations of Part 12 §§4, 5 and 7, and moved each protocol's failure channel into Part 12 §3's table. | Resolved: R146 |
 | PD-032 | Part 00 §5.2 | Its body restates Part 06 §7: a materialization realizes an analysis resource and is not a logical kind. PD-008's resolution left the section as a pointer under a heading stating Part 06 §3's finding. | Retire it into Part 00 §5.1's citation of Part 06. R146 retired Part 00 §5.2 into Part 00 §5.1's citation of Part 06. | Resolved: R146 |
+| PD-033 | Part 00 §§3.3, 3.5 and 7.1 | Three lists describe a packet's contents in v0.1's categories: media, documents and sidecars, and analysis materializations beside dense arrays, and "ordinary media files, and text sidecars" as what the portable profile is. Part 00 §3.1.2 and Part 02 §2.3 name three logical kinds, and Part 03 §§2 and 11 store any packet-owned opaque payload. | Restate each list by logical kind; no rule changes. | Tracked: proposal `part-00-lists-a-packets-contents-by-logical-kind` |
 
 ## Closure record
 

@@ -5,7 +5,7 @@ which phase is in progress. The repository [authority model](README.md#authority
 file is not normative.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R147 accepted. R42 and R73 withdrawn. 3 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R147 accepted. R42 and R73 withdrawn. 4 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 358 columns, 116 references, 86 Tier 2 rules (2 advisory)
