@@ -6,7 +6,7 @@
 | **Opened** | 2026-09-29 |
 | **Based on** | `87a44339a1bb6bb215a1e6a9b8d6699a00a479df` |
 | **Decision domain** | specification |
-| **Affects** | Part 05 §15.2's amendment scope and §4.3's identifier assignment; Part 05's recipe (§§3.1 and 3.5), import run (§7) and alternatives (§12); Part 03 §9's realisation of a table that gains rows; the numbering rules of the drafts `an-interval-is-numbered-by-its-packet` and `unit-labels-order-by-length-then-by-unicode-scalar-value`; the registry meta-schema, the recipe schema and the core registry's declarations |
+| **Affects** | Part 05 §15.2's amendment scope and §4.3's identifier assignment; Part 05's recipe (§§3.1 and 3.5), import run (§7), determinism (§11), alternatives (§12) and revalidation (§15.4); Part 03 §9's realisation of a table that gains rows; the numbering rules of the drafts `an-interval-is-numbered-by-its-packet` and `unit-labels-order-by-length-then-by-unicode-scalar-value`; the registry meta-schema, the recipe schema and the core registry's declarations |
 
 ## 1. Problem
 
@@ -179,6 +179,35 @@ alternative to the other.
 The reference writer's amendment takes only resources a caller stages through its API. Its
 recipe-driven command builds a new packet, and its identifier numbering starts empty.
 
+### 2.7 Nothing compares an amendment with the version it supersedes
+
+Part 05 §15.4 has a writer validate the whole amended packet, and every check it re-runs reads the
+current version alone. Today a comparison of the two manifests shows most of what §15.2 asks, since
+§15.3 keeps the superseded manifest and a core resource that names the same file in both is
+unchanged. A table that gains a group is a new file (§2.4), so only a comparison of rows shows that
+no superseded row changed and no existing group grew. The reference validator reads no superseded
+manifest.
+
+That comparison has two parts: the superseded rows missing from the current table, and the added
+rows sharing their values under every declared list with some superseded row. On the first
+packet's `core.intervals`, grouped by session and kind:
+
+| amendment | superseded rows missing or changed | added rows in an existing group |
+|---|---:|---:|
+| a new kind, 120 intervals | 0 | 0 |
+| 120 trials added | 0 | 120 |
+| one trial's bounds changed | 1 | 1 |
+| one trial removed | 1 | 0 |
+
+On the second packet's `core.spike_events`, 286,896,563 rows and one added unit's spikes, grouped by
+session and unit, it drew nothing in 19.2 s on 24 threads under a 32 GB memory limit.
+
+Nothing reports a derived resource an amendment leaves stale either. R32 §7 recorded that nothing
+detected one, although Part 06 then asked for dependent resources to be invalidated when their
+sources change; Part 06 no longer says so. Part 02 §2.2 gives every analysis and
+compatibility-projection resource lineage, and Part 04 §7 records it as `derived_from`, so the
+amended manifest shows which of them read a table the amendment wrote.
+
 ## 3. Desired outcome and constraints
 
 A resolution lets an amendment add a group of rows to a canonical table without changing any row,
@@ -190,6 +219,8 @@ It also meets these constraints:
 
 - no identifier a packet holds moves;
 - numbering stays dense and checkable on one packet;
+- whether an amendment kept to its scope is checkable from the packet, which keeps the version it
+  superseded;
 - an extension can declare the same for its own tables, and core stays checkable alone;
 - the portable profile's realisation, a new file, stands, and no physical interface is added.
 
@@ -282,16 +313,39 @@ A recipe declares a preference by the run's name, its activity and its scope, wi
 and time where it states them. The member serves a build as well as an amendment, since no recipe
 can yet supply the row Part 05 §12 requires.
 
+An amendment is checked against the version it supersedes. For each table it wrote, every
+superseded row is present and unchanged, apart from a replaced preference, and every added row
+takes, under at least one declared list, values no superseded row shares. A writer performing an
+amendment makes the comparison as part of validating it (Part 05 §15.4), and so does a validator
+given an amended packet. Each version is compared with the one it superseded, which retention keeps
+by default (Part 05 §15.5), so the chain of comparisons covers the packet's history. Where that
+version's files have been removed, the comparison is an incomplete evaluation (Part 05 §9.4) and
+not a finding. It reads both versions of each written table whole, 19.2 s for the larger spike
+table (§2.7).
+
+An amendment that writes a canonical table removes every analysis and compatibility-projection
+resource whose lineage reaches that table, or derives it again. The provenance tables are exempt:
+they gain rows with every amendment, and those rows record what ran and not what was measured. Part
+02 §2.2 requires lineage of both classes and Part 06 makes an analysis resource disposable, so a
+consumer loses nothing it cannot recompute. The rule is checkable from the two manifests: a
+resource whose `derived_from` chain reaches a table named by a new file is itself a new file, or is
+absent. A result derived outside the packet remains its holder's to track by packet version.
+
 The cost is that identifiers depend on a packet's history as well as its sources. A single build
 over all an amended packet's sources orders its groups by their columns. Where an added group sorts
 before an existing one, the build's identifiers therefore differ from the amended packet's. Every
 identifier is stable across the versions of one packet, which is where references outside it are
-made. A build's determinism (Part 05 §11) is unchanged. An amendment's numbering is a function of
-the superseded packet and the amendment's own recipe and sources.
+made. Part 05 §11 is therefore stated over that history: a packet's identifiers are a function of
+the sequence of recipes that built and amended it and of their sources. Each import run records its
+recipe (Part 05 §3.2), so the packet states the sequence, and replaying it reproduces the packet's
+identifiers. A single build over the same sources reproduces them only where no added group sorts
+before an existing one.
 
 Adding only new groups has a second cost. An added row may reference rows the packet holds, but no
 row the packet holds can come to reference an added one. A stream written without a device cannot
-be attached to a device an amendment adds, and a clock cannot be moved under an added parent.
+be attached to a device an amendment adds, and a clock cannot be moved under an added parent. Each
+is a correction, which remains a new packet; the proposal `a-packet-names-the-packet-it-replaces`
+lets that packet name the one it replaces.
 
 ## 5. Impact sketch
 
@@ -301,11 +355,11 @@ be attached to a device an amendment adds, and a clock cannot be moved under an 
 | logical prose and registry | Part 02 states the group declaration and the per-group numbering. The interval draft's numbering rule and Part 02 §12.1's unit order, which the unit-label draft rewrites, become per-group. The registry meta-schema gains the field, so the registry-contract descriptor advances, as the proposal `a-specialising-row-names-a-row-of-its-own-kind` would also advance it. The core registry declares groups on the tables §6's second question settles. |
 | physical profiles | Part 03 §9 is unchanged in substance: a table gaining a group is a new file. Part 03 §5.2's partitioning stays deferred. |
 | packet manifest and JSON Schemas | The registry meta-schema, as above, and the recipe schema Part 05 §3.1 incorporates, which gains a member naming the packet version a recipe amends and one declaring a preferred run. The packet manifest is unchanged. |
-| validation and import | Part 05 §15.2 is restated by content class, gains groups, and lets an amendment replace a preference. An amendment may be performed from a recipe: Part 05 §§3.1 and 3.5 admit a recipe naming the packet it amends, §4.3 states how an amendment continues numbering, §7 records the amendment's import run, and §12 exempts one import from another. §15.4's re-run rule already covers a written table. Part 12 is unchanged, since an amendment from a recipe is a build. |
+| validation and import | Part 05 §15.2 is restated by content class, gains groups, and lets an amendment replace a preference. §15.2 also has an amendment remove or derive again each non-canonical resource whose lineage reaches a table it wrote. An amendment may be performed from a recipe: Part 05 §§3.1 and 3.5 admit a recipe naming the packet it amends, §4.3 states how an amendment continues numbering, §7 records the amendment's import run, §11 states determinism over the sequence of recipes, and §12 exempts one import from another. §15.4's re-run rule already covers a written table, and §15.4 gains the comparison with the superseded version. Part 12 is unchanged, since an amendment from a recipe is a build. |
 | extensions | Each extension may declare groups on its canonical tables in its own registry version, and none needs to. An extension resource a new kind names is added as a resource, which §15.2 already permits. |
-| reader, writer, validator, adapters | The writer's amendment takes new groups of canonical tables: it reads the superseded rows, numbers after the largest identifier, and refuses a row whose group exists. It also runs a recipe's sources into an amendment. Its build already stages every source's rows by name and numbers them at commit, so an amending build seeds that numbering from the packet's names, drops rows the packet holds, and hands the rest to its amendment in place of a new commit. It writes `core.preferred_runs` from the recipe, which it cannot today. The validator's generated checks are unchanged apart from the two numbering rules. The reader reads the current manifest and is unchanged. Adapters are unchanged: an adapter delivers the same way into an amendment as into a new packet. |
+| reader, writer, validator, adapters | The writer's amendment takes new groups of canonical tables: it reads the superseded rows, numbers after the largest identifier, and refuses a row whose group exists. It also runs a recipe's sources into an amendment. Its build already stages every source's rows by name and numbers them at commit, so an amending build seeds that numbering from the packet's names, drops rows the packet holds, and hands the rest to its amendment in place of a new commit. It writes `core.preferred_runs` from the recipe, which it cannot today, and drops or derives again the analysis resources whose lineage reaches a table it wrote. The validator's generated checks are unchanged apart from the two numbering rules, and it gains the comparison with the superseded version and the lineage check, reading a superseded manifest for the first time. The reader reads the current manifest and is unchanged. Adapters are unchanged: an adapter delivers the same way into an amendment as into a new packet. |
 | existing packets | Both session packets pass both per-group rules unchanged. The drafts rebuild them anyway. |
-| conformance fixtures and tests | An amended fixture packet gaining a kind that sorts before its trials, and a curation of its first run, both conforming. The drafts' negative variants carry over. A writer test refuses an amendment adding a trial. |
+| conformance fixtures and tests | An amended fixture packet gaining a kind that sorts before its trials, and a curation of its first run, both conforming. The drafts' negative variants carry over. A writer test refuses an amendment adding a trial. Amended fixture packets that grow an existing group, change a superseded row, or keep an analysis resource derived from a grown table each draw a finding, and one whose superseded files were removed reports the comparison incomplete. |
 | revision process and tooling | Unchanged. |
 | generated publications and developer documentation | `registry/tables.md` renders the groups, and the registry guide documents the field. |
 
@@ -349,6 +403,10 @@ be attached to a device an amendment adds, and a clock cannot be moved under an 
 4. **Is changing a preference part of this decision?** Resolved 2026-09-29: yes. Replacing a
    preference changes no row any run produced, so an amendment may replace one (§4), as R41 §2.5
    described.
+5. **Is an amendment's scope checked, and what becomes of results derived from a table it
+   writes?** Resolved 2026-09-29: a writer and a validator compare an amendment with the version it
+   supersedes, an amendment removes or derives again each non-canonical resource whose lineage
+   reaches a table it wrote, and Part 05 §11 states determinism over the sequence of recipes (§4).
 
 ## 7. Promotion criteria
 
