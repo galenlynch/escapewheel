@@ -344,8 +344,8 @@ packet entry names a declaration and MUST NOT repeat content class, kind, or can
 A **packet** is one concrete dataset bundle under a declared profile. It may be a local directory,
 an object-store prefix, or a manifest pointing at distributed assets.
 
-A packet contains a packet manifest, core tables, and any of: dense arrays, media, documents and
-sidecars, analysis materializations, and validation and provenance records.
+A packet contains a packet manifest, the registries it binds, and resources of the three logical
+kinds (§3.1.2), each in one content class (§3.2).
 
 A packet is primarily single-session. Multi-session packets are a permitted extension, and a
 packet declares its sessions in the manifest.
@@ -366,7 +366,7 @@ The packet's profile and the declaration's kind derive a generic physical interf
 ### 3.5 Iceberg catalog
 
 An **Iceberg catalog** is distinct from the packet manifest. It is relevant only to the lakehouse
-profile and manages only tabular resources. It does not catalog dense arrays, media, documents, or
+profile and manages only tabular resources. It does not catalog dense arrays, opaque payloads, or
 semantic relationships across a packet, and therefore does not replace the packet manifest.
 
 <a id="ew-resource-identity" data-spec-anchor="canonical"></a>
@@ -418,8 +418,9 @@ renaming.
 
 ### 7.1 Portable profile first
 
-The portable profile is a JSON manifest, Parquet tables, Zarr arrays, ordinary media files, and
-text sidecars. Part 03 §1 requires a packet under it to be readable without a server.
+The portable profile stores tables as Parquet, dense arrays as Zarr, and each packet-owned opaque
+payload as one file or one directory, under a JSON manifest. Part 03 §1 requires a packet under it
+to be readable without a server.
 
 <a id="ew-external-resource-referencing" data-spec-anchor="canonical"></a>
 ### 7.2 Referencing
