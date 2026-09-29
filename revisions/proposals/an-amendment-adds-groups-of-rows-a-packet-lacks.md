@@ -6,7 +6,7 @@
 | **Opened** | 2026-09-29 |
 | **Based on** | `87a44339a1bb6bb215a1e6a9b8d6699a00a479df` |
 | **Decision domain** | specification |
-| **Affects** | Part 05 §15.2's amendment scope and §4.3's identifier assignment; Part 03 §9's realisation of a table that gains rows; the numbering rules of the drafts `an-interval-is-numbered-by-its-packet` and `unit-labels-order-by-length-then-by-unicode-scalar-value`; the registry meta-schema and the core registry's declarations |
+| **Affects** | Part 05 §15.2's amendment scope and §4.3's identifier assignment; Part 05's recipe (§§3.1 and 3.5), import run (§7) and alternatives (§12); Part 03 §9's realisation of a table that gains rows; the numbering rules of the drafts `an-interval-is-numbered-by-its-packet` and `unit-labels-order-by-length-then-by-unicode-scalar-value`; the registry meta-schema, the recipe schema and the core registry's declarations |
 
 ## 1. Problem
 
@@ -144,6 +144,11 @@ forbids it.
 §15.2's table names only core and analysis resources. It does not say what an amendment may do to
 an extension, compatibility-projection or documentation resource.
 
+No recipe member declares a preferred run, and neither the reference writer nor any adapter in the
+repository writes `core.preferred_runs`, although Part 05 §12 requires a row wherever a build yields
+two runs sharing a scope. The recipe's `preference` table arbitrates between sources (Part 05 §3.3)
+and chooses no run.
+
 ### 2.6 An amendment cannot read a source
 
 Part 00 §2.4 defines a build as one execution of a writer against one recipe. Part 05 §2's pipeline
@@ -221,16 +226,28 @@ largest identifier. An added array thus names the clock or device the packet alr
 than a copy of it. A recipe performing an amendment names only the sources whose rows it adds, and
 its `owns` and preferences (Part 05 §3.3) govern only those rows.
 
-An amendment performed from a recipe is a build as Part 00 §2.4 defines one, so Part 05 §2's
-pipeline and Part 12 bind it unchanged. Four steps read the superseded packet:
+An amendment is implementable only where it can read a source, so the preferred direction
+performs one from a recipe, through the adapters a build uses. An amendment performed from a recipe
+is a build as Part 00 §2.4 defines one, so Part 05 §2's pipeline and Part 12 bind it unchanged, and
+an adapter delivers into an amendment as it delivers into a new packet. Each step also reads the
+superseded packet:
 
-- its recipe names the packet it amends, and its clock table declares only added clocks, each
-  parented to a clock the recipe or the packet declares;
+- the recipe names the packet version it amends, and a writer refuses it where the packet's current
+  version is another, so the amendment's numbering is reproducible from the recipe and two
+  amendments begun from one version cannot both publish;
+- the recipe names the session it amends and declares no session or subject fact, since those rows
+  cannot change, and its clock table declares only added clocks, each parented to a clock the
+  recipe or the packet declares;
 - Part 05 §3.5 counts what the packet holds, so a foreign key or clock parent the packet supplies
   is satisfied;
+- ownership and preferences (Part 05 §3.3) arbitrate among the recipe's sources only;
+- a delivered row equal to one the packet holds is dropped, and any other row is added only where
+  it forms a new group, and refused otherwise, so an adapter can deliver everything its source
+  states, the rig's existing devices included, without knowing what the packet holds;
 - Part 05 §4.3 numbers names against the packet, as above;
 - Part 05 §7 adds one import run with the amendment's recipe, and a `core.source_files` row for
-  each root the packet lacks.
+  each root the packet lacks; and
+- materialization derives into the amended packet, replacing an analysis resource it names.
 
 Part 05 §12 then needs to exempt one import from another. Two imports into one packet supply
 disjoint groups, which adding only new groups guarantees, so neither is an alternative to the
@@ -244,14 +261,26 @@ Where a declared rule numbers a table's assigned identifier, the numbering follo
   holds, ordered among themselves by the group's columns.
 
 No check on one packet can tell which groups arrived together, so that order binds the writer and
-no packet check tests it. A writer performing an amendment holds the superseded version, so it can
-refuse an added row whose group already exists.
+no packet check tests it.
 
 §15.2 is restated by content class (Part 02 §2.2):
 
 - a canonical resource, core or extension, may be added and may gain the groups it declares, and
-  is never changed or removed;
+  is never changed or removed, apart from a preference;
 - an analysis, compatibility-projection or documentation resource may be added or removed.
+
+A preference is the one row an amendment may replace. R41 §2.3 kept `core.preferred_runs` apart
+from the log of runs because a preference changes whenever someone changes their mind, and
+replacing one changes no row any run produced. A result derived under the old preference was
+derived from one run's rows, which stay as they were, so it remains correct about that run, and
+§15.2's reason for forbidding a change does not reach it. An amendment may add a preference or
+replace one, and removes none, so an alternative Part 05 §12 resolved stays resolved. The superseded
+version keeps the replaced row, so the packet's versions record the history of its choices, as R41
+§2.5 intended. The table's rules re-run on the amended packet (Part 05 §15.4).
+
+A recipe declares a preference by the run's name, its activity and its scope, with the row's reason
+and time where it states them. The member serves a build as well as an amendment, since no recipe
+can yet supply the row Part 05 §12 requires.
 
 The cost is that identifiers depend on a packet's history as well as its sources. A single build
 over all an amended packet's sources orders its groups by their columns. Where an added group sorts
@@ -271,10 +300,10 @@ be attached to a device an amendment adds, and a clock cannot be moved under an 
 | semantic prose | Unchanged. Part 01 states no amendment rule. |
 | logical prose and registry | Part 02 states the group declaration and the per-group numbering. The interval draft's numbering rule and Part 02 §12.1's unit order, which the unit-label draft rewrites, become per-group. The registry meta-schema gains the field, so the registry-contract descriptor advances, as the proposal `a-specialising-row-names-a-row-of-its-own-kind` would also advance it. The core registry declares groups on the tables §6's second question settles. |
 | physical profiles | Part 03 §9 is unchanged in substance: a table gaining a group is a new file. Part 03 §5.2's partitioning stays deferred. |
-| packet manifest and JSON Schemas | The registry meta-schema, as above. The packet manifest is unchanged. |
-| validation and import | Part 05 §15.2 is restated by content class and gains groups. An amendment may be performed from a recipe: Part 05 §§3.1 and 3.5 admit a recipe naming the packet it amends, §4.3 states how an amendment continues numbering, §7 records the amendment's import run, and §12 exempts one import from another. §15.4's re-run rule already covers a written table. Part 12 is unchanged, since an amendment from a recipe is a build. |
+| packet manifest and JSON Schemas | The registry meta-schema, as above, and the recipe schema Part 05 §3.1 incorporates, which gains a member naming the packet version a recipe amends and one declaring a preferred run. The packet manifest is unchanged. |
+| validation and import | Part 05 §15.2 is restated by content class, gains groups, and lets an amendment replace a preference. An amendment may be performed from a recipe: Part 05 §§3.1 and 3.5 admit a recipe naming the packet it amends, §4.3 states how an amendment continues numbering, §7 records the amendment's import run, and §12 exempts one import from another. §15.4's re-run rule already covers a written table. Part 12 is unchanged, since an amendment from a recipe is a build. |
 | extensions | Each extension may declare groups on its canonical tables in its own registry version, and none needs to. An extension resource a new kind names is added as a resource, which §15.2 already permits. |
-| reader, writer, validator, adapters | The writer's amendment takes new groups of canonical tables: it reads the superseded rows, numbers after the largest identifier, and refuses a row whose group exists. It also runs a recipe's sources into an amendment, seeding its numbering from the packet's names. The validator's generated checks are unchanged apart from the two numbering rules. The reader reads the current manifest and is unchanged. Adapters are unchanged: an adapter delivers the same way into an amendment as into a new packet. |
+| reader, writer, validator, adapters | The writer's amendment takes new groups of canonical tables: it reads the superseded rows, numbers after the largest identifier, and refuses a row whose group exists. It also runs a recipe's sources into an amendment. Its build already stages every source's rows by name and numbers them at commit, so an amending build seeds that numbering from the packet's names, drops rows the packet holds, and hands the rest to its amendment in place of a new commit. It writes `core.preferred_runs` from the recipe, which it cannot today. The validator's generated checks are unchanged apart from the two numbering rules. The reader reads the current manifest and is unchanged. Adapters are unchanged: an adapter delivers the same way into an amendment as into a new packet. |
 | existing packets | Both session packets pass both per-group rules unchanged. The drafts rebuild them anyway. |
 | conformance fixtures and tests | An amended fixture packet gaining a kind that sorts before its trials, and a curation of its first run, both conforming. The drafts' negative variants carry over. A writer test refuses an amendment adding a trial. |
 | revision process and tooling | Unchanged. |
@@ -285,15 +314,16 @@ be attached to a device an amendment adds, and a clock cannot be moved under an 
 1. **Does an amendment add only groups a packet lacks, or also rows to a group it holds?** Resolved
    2026-09-29: only groups it lacks, since a grown group changes what a consumer read whole (§3).
 2. **Which core tables declare groups in v0.2?** A v0.2 packet can gain only what v0.2 declares
-   (§1), so this is settled now or never for v0.2 packets. Resolved 2026-09-29 in part: the
-   additions of §2.1, including media and arrays. Devices and clocks are included as well, since a
-   source the original build had no adapter for, such as a sniff sensor, brings its device, its
-   clock and its array together:
+   (§1), so this is settled now or never for v0.2 packets. Resolved 2026-09-29: every core table
+   but those identifying the packet. That covers the additions of §2.1, media and arrays included.
+   It also covers devices and clocks, since a source the original build had no adapter for, such as
+   a sniff sensor, brings its device, its clock and its array together. Probes, electrodes and
+   calibrations are included by the same reasoning, though a probe added later is unlikely:
 
    | tables | group |
    |---|---|
    | `core.intervals` | session and kind |
-   | `core.sorting_runs`, `core.curation_versions`, `core.event_streams`, `core.coordinate_frames`, `core.preferred_runs`, `core.array_assets`, `core.media_assets`, `core.devices`, `core.clocks` | each row |
+   | `core.sorting_runs`, `core.curation_versions`, `core.event_streams`, `core.coordinate_frames`, `core.preferred_runs`, `core.array_assets`, `core.media_assets`, `core.devices`, `core.clocks`, `core.probes`, `core.calibrations` | each row |
    | `core.units` | run and curation |
    | `core.spike_events`, `core.unit_electrodes`, `core.unit_observation_intervals` | session and unit |
    | `core.sorting_run_channels` | session and run |
@@ -307,21 +337,18 @@ be attached to a device an amendment adds, and a clock cannot be moved under an 
    | `core.media_frames` | media asset |
    | `core.clock_anchors` | clock |
    | `core.clock_observation_intervals`, `core.clock_phase_steps` | session and clock |
+   | `core.electrodes` | probe |
+   | `core.calibration_points`, `core.calibration_devices` | calibration |
    | the provenance tables | each row, as today |
 
-   Still open: probes, electrodes and calibrations. The sniff sensor's reasoning applies equally to
-   a probe whose recording the original build had no adapter for, and to a calibration of an added
-   device. The preferred direction declares them too: `core.probes` and `core.calibrations` each
-   row, `core.electrodes` by probe, and `core.calibration_points` and `core.calibration_devices` by
-   calibration. Only `core.sessions`, `core.subjects` and `core.session_experimenters`, which
-   identify the packet, would then declare no group.
-3. **Is an amendment from a recipe part of this decision, or its own proposal?** Without it no
-   amendment reads a source (§2.6), so the sniff sensor's device, clock and array can be added only
-   by hand through a writer's API. The preferred direction keeps it here, since the groups this
-   proposal adds mostly come from sources.
-4. **Is changing a preference part of this decision?** R41 §2.5 described it as an amendment. It
-   revises a row, so the preferred direction leaves it forbidden here and treats it as a separate
-   proposal.
+   `core.sessions`, `core.subjects` and `core.session_experimenters` identify the packet and
+   declare no group.
+3. **Is an amendment from a recipe part of this decision, or its own proposal?** Resolved
+   2026-09-29: part of this decision. Without it no amendment reads a source (§2.6), so an
+   amendment adding groups is implementable only through a recipe whose sources adapters read.
+4. **Is changing a preference part of this decision?** Resolved 2026-09-29: yes. Replacing a
+   preference changes no row any run produced, so an amendment may replace one (§4), as R41 §2.5
+   described.
 
 ## 7. Promotion criteria
 
@@ -331,7 +358,7 @@ be attached to a device an amendment adds, and a clock cannot be moved under an 
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
-- [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
