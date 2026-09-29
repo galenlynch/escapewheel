@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `5537b79cb09e2854beb5baf88516f5b6313c58f7` |
+| **Based on** | `4d4501063a42b2c9815f8a0dd97555c4dcc5f2e3` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§8.3, 9.2 and 12; Part 08 §§2 and 3; the core registry |
@@ -34,8 +34,9 @@ Three columns therefore identify an interval, and two consequences follow:
 
 This revision has the packet number its intervals, as R81 has it number its units. `interval_id`
 becomes an assigned identifier and the whole key; the source's number moves to a label column; a
-writer numbers intervals in an order a declared rule checks; and a specialising table references
-an interval by `interval_id` alone, dropping its constant column.
+writer numbers each session's intervals of one kind consecutively, in an order a declared rule
+checks; and a specialising table references an interval by `interval_id` alone, dropping its
+constant column.
 
 The change is structural because it revises Part 02 §8.3's shared-key paragraph, which states that
 a detail table carries the discriminator's value as a constant column. An appended section would
@@ -126,11 +127,24 @@ extension declares its own change, and the core specification assigns no extensi
 ### 2.5 The numbering rule was run on both packets
 
 Each packet's `core.intervals` was renumbered by §3.2's order, with its source number as
-`local_interval_label`. §3.2's rule passes the Part 11 static check and returns no rows. Swapping
-two identifiers draws 2 rows from it, and a gap after the hundredth identifier draws 350 and 608.
-Two trials with equal bounds draw no row whichever is numbered first. Four trials on two clocks
-whose ticks interleave draw no row numbered clock by clock, and 2 numbered by tick value across the
-clocks.
+`local_interval_label`. §3.2's rule passes the Part 11 static check and returns no rows, in 1.6 and
+1.4 ms, the median of 9 runs. From misnumbered variants it draws these rows, the first packet's
+count and then the second's:
+
+| variant | rows drawn |
+|---|---:|
+| two identifiers swapped | 2 / 2 |
+| a gap after the hundredth identifier | 350 / 608 |
+| a numbering from 1 | 450 / 708 |
+| a second kind, numbered with the trials in time order across the two kinds | 565 / 820 |
+| one kind's intervals on two clocks, numbered by tick value across the clocks | 448 / 706 |
+| two trials with equal bounds, numbered in either order | 0 / 0 |
+
+120 intervals of `aind_opto.pulses`, a kind sorting before `dynamic_foraging.trials`, numbered after
+the trials draw nothing, since the rule checks each kind's numbering and not the order of kinds. A
+rule checking one order across the packet draws 570 and 828 rows from the same packets. Of the 76
+fixture packets, the 74 whose `core.intervals` carries every column the rule reads return no rows
+once numbered from 0; `missing_column` lacks `clock_id`.
 
 ### 2.6 Alternatives
 
@@ -145,7 +159,7 @@ clocks.
 | number in the order the source lists intervals | nothing in the packet records that order, so no rule can check it |
 | number in time order across kinds | the kinds interleave in the stored table, and reading one kind scans all of them |
 | number by bounds without the clock | ticks on two clocks do not compare, so the order is not chronological where one kind uses two clocks |
-| check only that identifiers are dense and ascend within each kind, so an amendment could append a kind | Part 05 §15.2 lets no amendment add an interval, and the check would no longer fix the order of kinds; a revision letting an amendment add intervals has to say how it continues the numbering |
+| check one order across the packet, the order of kinds included | a kind added after the packet was built, numbered after the largest identifier, fails the check wherever it sorts before a kind the packet holds, and numbered in the one order it moves every later identifier: 120 pulses sorting before the trials move every trial's identifier by 120; the draft `an-amendment-adds-groups-of-rows-a-packet-lacks` lets an amendment add a kind |
 
 ## 3. Decision
 
@@ -165,7 +179,7 @@ these changed or added columns, its other columns, references and rules unchange
 
 | column | type | presence | role | identity | vocabulary | description |
 |---|---|---|---|---|---|---|
-| `interval_id` | `int32` | `required` | `identifier` | `assigned` | — | Interval ID, assigned by the packet in order of session, kind, clock and bounds. |
+| `interval_id` | `int32` | `required` | `identifier` | `assigned` | — | Interval ID, assigned by the packet; a session's intervals of one kind are numbered consecutively by clock and bounds. |
 | `interval_name` | `string` | `required` | `data` | — | `free` | What `interval_id` stands for, unique within the packet. |
 | `local_interval_label` | `string` | `nullable` | `data` | — | `free` | The source's own number or name for this interval; undefined base, not an offset. |
 
@@ -175,26 +189,39 @@ remains a `required` discriminator resolving `required` by a shared key, which i
 
 ### 3.2 Intervals are numbered by kind, clock and bounds
 
-A writer MUST number a packet's intervals from 0, in ascending order of `session_id`,
-`interval_kind`, `clock_id`, `start_tick` and `stop_tick`, comparing kinds by Unicode scalar value.
-Intervals of one session, kind and clock with equal bounds MAY be numbered in either order.
-`core.intervals` is stored in its key's order (Part 03 §5.3), so each kind of one session is one
-contiguous run, and within it each clock's intervals are in tick order.
+A writer MUST number a packet's intervals densely from 0. It MUST number each session's intervals
+of one kind consecutively, in ascending order of `clock_id`, `start_tick` and `stop_tick`, and MUST
+number the kinds one build writes in ascending order of `session_id` and `interval_kind`, comparing
+kinds by Unicode scalar value. Intervals of one session, kind and clock with equal bounds MAY be
+numbered in either order. `core.intervals` is stored in its key's order (Part 03 §5.3), so each kind
+of one session is one contiguous run, and within it each clock's intervals are in tick order.
 
-The incorporated core registry MUST declare this rule on `core.intervals`, at level `error`:
+The incorporated core registry MUST declare this rule on `core.intervals`, at level `error`. It
+checks that identifiers are dense from 0 and that each session's intervals of one kind are numbered
+consecutively in order; the order of kinds binds the writer alone (§2.6).
 
 | id | message |
 |---|---|
-| `core.intervals.numbered_in_order` | `interval_id does not number intervals from 0 by session, kind, clock and bounds` |
+| `core.intervals.numbered_in_order` | `interval_id is not dense from 0, or does not number a session's intervals of one kind consecutively by clock and bounds` |
 
 ```sql
-SELECT interval_id, expected
+SELECT numbered.interval_id
 FROM (
-  SELECT interval_id,
-    ROW_NUMBER() OVER (ORDER BY session_id, interval_kind, clock_id, start_tick, stop_tick, interval_id) - 1 AS expected
+  SELECT interval_id, session_id, interval_kind,
+    ROW_NUMBER() OVER (ORDER BY interval_id) - 1 AS dense,
+    ROW_NUMBER() OVER (
+      PARTITION BY session_id, interval_kind
+      ORDER BY clock_id, start_tick, stop_tick, interval_id) - 1 AS rank_in_kind
   FROM core.intervals
 ) AS numbered
-WHERE interval_id <> expected
+JOIN (
+  SELECT session_id, interval_kind, MIN(interval_id) AS first_id
+  FROM core.intervals
+  GROUP BY session_id, interval_kind
+) AS kinds
+  ON kinds.session_id = numbered.session_id AND kinds.interval_kind = numbered.interval_kind
+WHERE numbered.interval_id <> numbered.dense
+   OR numbered.interval_id <> CAST(kinds.first_id AS DECIMAL(38,0)) + numbered.rank_in_kind
 ```
 
 ### 3.3 A specialising table references an interval by `interval_id` alone
@@ -242,7 +269,7 @@ numbered 0, which after §3.1 are two intervals labelled `"0"`.
 | validation and import | Unchanged prose. Part 05 §4.3 already has a writer assign identifiers packet-wide before any table is written, which covers `interval_id`. | The corpus variants below. |
 | extensions | Each shipped extension with a table specialising intervals, `dynamic_foraging` and `vr_foraging`, drops its constant column, references `interval_id` alone and is keyed by that column, declaring the change and its version itself (§2.4). `aind_opto` and `aind_unit_qc` specialise no interval. | `registry/check.py` over every extension registry. |
 | reader, writer, validator, adapters | The writer's NWB source hands over the NWB's `id` as the interval's label; its numbering assigns `interval_id` by §3.2 and composes `interval_name`. The reader's interval accessor and discriminator resolution join on `interval_id` alone. The validator's generated reference checks follow the registry. No `escapewheel-aind` adapter produces an interval table. | The writer, reader and validator suites; both session packets rebuilt and validated with no error. |
-| conformance fixtures and tests | `fixtures/build.py` writes the new columns and numbers from 0. Positive variants hold two kinds numbered alike by their source, two trials with equal bounds numbered in each order, and an array axis labelled with trials; negative variants hold a misordered numbering, a numbering by tick value across two clocks, and a gap, each drawing `core.intervals.numbered_in_order`, which `dup_pk`'s repeated interval also draws. `conformance/interval-kinds/probe.py` and `prototype/registry-codegen/` follow the declarations. | `fixtures/corpus.py`. |
+| conformance fixtures and tests | `fixtures/build.py` writes the new columns and numbers from 0. Positive variants hold two kinds numbered alike by their source, two kinds numbered out of Unicode order with each contiguous, two trials with equal bounds numbered in each order, and an array axis labelled with trials; negative variants hold a misordered numbering, a numbering by tick value across two clocks, and a gap, each drawing `core.intervals.numbered_in_order`, which `dup_pk`'s repeated interval also draws. `conformance/interval-kinds/probe.py` and `prototype/registry-codegen/` follow the declarations. | `fixtures/corpus.py`. |
 | revision process and tooling | The ordinary ledger and evidence records, and the superseded and annotated clauses above. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | `registry/tables.md` renders the new columns; Part 08 §§2 and 3 regenerate with the new registry versions; the specification README's identifier table, `framework.py`'s expected version, the combined specification and the heading index follow. | `verify.py`. |
 
@@ -265,6 +292,8 @@ These cases distinguish the new rules from the current ones:
   the current registry accepts it;
 - a packet numbering a later trial before an earlier one draws the same rule, as does one numbering
   a kind's intervals on two clocks by tick value across the clocks;
+- a packet numbering its `aind_opto.pulses` after its `dynamic_foraging.trials`, each kind
+  contiguous and in order, passes the rule, although the pulses' kind sorts first;
 - a packet repeating an `interval_id` draws the numbering rule beside the primary-key check; and
 - a row of a table specialising intervals that names no `interval_id` draws the generated
   reference check on `core.intervals.interval_id`.

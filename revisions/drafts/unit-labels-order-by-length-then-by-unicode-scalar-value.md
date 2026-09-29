@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `f2131f985d77a9dd6f989b34327c0df78e3104cc` |
+| **Based on** | `4d4501063a42b2c9815f8a0dd97555c4dcc5f2e3` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§1, 9.2, 9.4 and 12.1; Part 08 §§2 and 3; Part 11 §§1, 2 and 5; the rule-language descriptor; the registry-contract descriptor; the core registry; the four extension registries |
@@ -36,7 +36,8 @@ rule has three gaps:
 
 This revision orders labels by length, then by Unicode scalar value. That order equals numeric
 order on every label written as a decimal without leading zeros, and is a total order on any
-label. The revision states the start, declares a rule checking the numbering, and admits
+label. The revision states the start, numbers each curation's units consecutively, declares a rule
+checking the numbering within each curation, and admits
 `CHARACTER_LENGTH` in the rule language so the rule can state the order. Part 11 §1 gives a
 changed language contract a new language ID, so the language becomes `escapewheel-rule-sql-v0.2`,
 every registry selects it, and `escapewheel-rule-sql-v0.1` retires unreleased.
@@ -56,7 +57,7 @@ splits, merges or retires.
 | Part 02 §1, the incorporated descriptor file | revise in place | same section | the v0.7 descriptor is incorporated | §3.4 |
 | Part 02 §9.2, the core registry version and rule language | revise in place | same section | the version advances to 0.11.0 and the language to `escapewheel-rule-sql-v0.2`; an extension migrated to the new language changes its version | §3.4 |
 | Part 02 §9.4, the descriptor ID | revise in place | same section | the descriptor advances to v0.7 and admits only the new language | §3.4 |
-| Part 02 §12.1, the numbering clause | revise in place | same section | numbering starts at 0, and labels order by length, then by Unicode scalar value | §3.1 |
+| Part 02 §12.1, the numbering clause | revise in place | same section | numbering is dense from 0, each curation's units are consecutive, and labels order by length, then by Unicode scalar value | §3.1 |
 | Part 11 §1, the language ID and incorporated descriptor | revise in place | same section | the language is `escapewheel-rule-sql-v0.2` | §3.3 |
 | Part 11 §2, the scalar routines and their result domains | extend in place | same section | `CHARACTER_LENGTH` is admitted in one spelling and returns `BIGINT` | §3.2 |
 | Part 11 §5, the character semantics | extend in place | same section | `CHARACTER_LENGTH` counts Unicode scalars | §3.2 |
@@ -65,9 +66,9 @@ splits, merges or retires.
 ## 2. Background
 
 Section 2 is informative. The measurements use the two session packets the reference writer built
-at this baseline, the `packet-wf` builds: `ecephys_786867`, ten probes and 4,505 sorted units, and
-`ecephys_776259`, twelve probes and 6,781 sorted units. Queries ran in DuckDB 1.5.5 over their
-Parquet tables, with timings the median of 9 runs.
+under this baseline's registry, the `packet-r147` builds: `ecephys_786867`, ten probes and 4,505
+sorted units, and `ecephys_776259`, twelve probes and 6,781 sorted units. Queries ran in DuckDB
+1.5.5 over their Parquet tables, with timings the median of 9 runs.
 
 ### 2.1 Every label in both packets is a short decimal, numbered as a number
 
@@ -89,10 +90,12 @@ total order, and it places `"7"` before `"007"`, which numeric order would tie.
 
 ### 2.2 The numbering rule ran on both packets and the fixtures
 
-§3.1's rule returns no rows on either packet, in 1.3 and 1.6 ms. Renumbered by scalar-value order,
-the packets draw 4,486 and 6,757 rows, and numbered from 1, all 4,505 and 6,781. Of the 64 fixture
-packets under `fixtures/packets/`, 61 carry `core.units`, each holding two units labelled `"17"`
-and `"42"` in one run, and the rule returns no rows on any.
+§3.1's rule returns no rows on either packet, in 3.3 and 2.8 ms. Renumbered by scalar-value order
+within each curation, the packets draw 4,486 and 6,757 rows, and numbered from 1, all 4,505 and
+6,781. Numbered with their curations in reverse order, each curation's units consecutive and in
+order, they draw nothing, where a rule checking one order across the packet draws all 4,505 and
+6,781. Of the 76 fixture packets under `fixtures/packets/`, 73 carry `core.units`, each holding two
+units labelled `"17"` and `"42"` in one run, and the rule returns no rows on any.
 
 With `CHARACTER_LENGTH` admitted in a probe, the reference validator's static check passes the
 rule, including its proof that the window's ordering identifies one input row. The unchanged
@@ -118,6 +121,7 @@ node type.
 | order as numbers where every label of a run is a canonical decimal, and by scalar value otherwise | Part 11 would need a pattern predicate and a guarded `CAST` relying on `CASE` leaving its untaken branch unevaluated; a label of more than 38 digits overflows, and a second order still covers the rest |
 | order by length, then by scalar value, without a rule | a requirement no rule verifies |
 | drop the label and require only run-major, curation-major numbering | it leaves a run's order to each writer, where `an-interval-is-numbered-by-its-packet` fixes an order for intervals |
+| check one order across the packet, the order of curations included | a curation added after the packet was built, numbered after the largest identifier, fails the check wherever it sorts before a curation the packet holds: a curation of the first sorting run draws 4,505 and 6,781 rows; the draft `an-amendment-adds-groups-of-rows-a-packet-lacks` lets an amendment add a curation |
 | add `CHARACTER_LENGTH` under a new language ID and keep `escapewheel-rule-sql-v0.1` beside it | the four extension registries stay unchanged, but a validator implements two languages differing by one routine, neither of them released |
 
 ## 3. Decision
@@ -127,30 +131,44 @@ the routine, and advance the registry identifiers. The crosswalk in §1.1 places
 
 ### 3.1 Units are numbered from 0 by run, curation and label
 
-A writer MUST number a packet's units from 0, in ascending order of `sorting_run_id`,
-`curation_id` and `local_unit_label`. It MUST compare two labels by their length in Unicode
-scalars, shorter first, and two labels of equal length by Unicode scalar value (Part 11 §5). A null
-label follows every other label. Units that tie on all three, two null labels included, MAY be
-numbered in either order.
+A writer MUST number a packet's units densely from 0. It MUST number each curation's units, those
+sharing `sorting_run_id` and `curation_id`, consecutively in ascending order of `local_unit_label`,
+and MUST number the curations one build writes in ascending order of `sorting_run_id` and
+`curation_id`. It MUST compare two labels by their length in Unicode scalars, shorter first, and two
+labels of equal length by Unicode scalar value (Part 11 §5). A null label follows every other label.
+Units of one curation that tie on their label, two null labels included, MAY be numbered in either
+order.
 
-The incorporated core registry MUST declare this rule on `core.units`, at level `error`:
+The incorporated core registry MUST declare this rule on `core.units`, at level `error`. It checks
+that identifiers are dense from 0 and that each curation's units are numbered consecutively in
+label order; the order of curations binds the writer alone (§2.4).
 
 | id | message |
 |---|---|
-| `core.units.numbered_in_order` | `unit_id does not number units from 0 by run, curation and label` |
+| `core.units.numbered_in_order` | `unit_id is not dense from 0, or does not number a curation's units consecutively by label` |
 
 ```sql
-SELECT unit_id, expected
+SELECT numbered.unit_id
 FROM (
-  SELECT unit_id,
-    ROW_NUMBER() OVER (ORDER BY sorting_run_id, curation_id, label_length, local_unit_label, unit_id) - 1 AS expected
+  SELECT unit_id, sorting_run_id, curation_id,
+    ROW_NUMBER() OVER (ORDER BY unit_id) - 1 AS dense,
+    ROW_NUMBER() OVER (
+      PARTITION BY sorting_run_id, curation_id
+      ORDER BY label_length, local_unit_label, unit_id) - 1 AS rank_in_curation
   FROM (
     SELECT unit_id, sorting_run_id, curation_id, local_unit_label,
       CHARACTER_LENGTH(local_unit_label) AS label_length
     FROM core.units
   ) AS labelled
 ) AS numbered
-WHERE unit_id <> expected
+JOIN (
+  SELECT sorting_run_id, curation_id, MIN(unit_id) AS first_id
+  FROM core.units
+  GROUP BY sorting_run_id, curation_id
+) AS curations
+  ON curations.sorting_run_id = numbered.sorting_run_id AND curations.curation_id = numbered.curation_id
+WHERE numbered.unit_id <> numbered.dense
+   OR numbered.unit_id <> CAST(curations.first_id AS DECIMAL(38,0)) + numbered.rank_in_curation
 ```
 
 ### 3.2 The rule language admits `CHARACTER_LENGTH`
@@ -223,7 +241,7 @@ language and adds E021-04, and that their obligations carry to the new identifie
 | validation and import | Part 11 §1 takes §3.3, and Part 11 §§2 and 5 take §3.2. `registry/rule_languages/` holds the v0.2 descriptor in place of the v0.1 descriptor. | `evidence/R<N>.json` names the anchors; the rule-language vectors below. |
 | extensions | Each of the four repository extension registries names `escapewheel-rule-sql-v0.2` and advances its `registry_version`; no rule changes. | `registry/check.py` over every extension registry. |
 | reader, writer, validator, adapters | The validator admits `CHARACTER_LENGTH` in that spelling alone, rejecting `CHAR_LENGTH` and `LENGTH`, which its parser reads as the same node, and selects the v0.2 language and v0.7 contract descriptors. The writer already numbers its labels, non-negative integers written as canonical decimals, in this order; its test of the order a unit's name sorts in names the order, and its scaffold names the new language. The reader is unchanged, and no `escapewheel-aind` adapter numbers units (Part 12 §5). | The writer and validator suites; both session packets rebuilt and validated with no error. |
-| conformance fixtures and tests | New negative variants: a run whose units labelled `"2"` and `"10"` are numbered in scalar-value order, and a numbering from 1, each drawing `core.units.numbered_in_order`. A positive variant holds two null labels in one run, numbered in each order. The rule-language vectors take the new profile ID and gain cases counting a combining sequence and a null, and rejecting `CHAR_LENGTH`, `LENGTH` and `USING`. `conformance/interval-kinds/probe.py`, `prototype/registry-codegen/` and the package tests naming `escapewheel-rule-sql-v0.1` follow the new identifier. | `fixtures/corpus.py` and `conformance/rule-language/probe.py`. |
+| conformance fixtures and tests | New negative variants: a run whose units labelled `"2"` and `"10"` are numbered in scalar-value order, and a numbering from 1, each drawing `core.units.numbered_in_order`. Positive variants hold two null labels in one run, numbered in each order, and two curations numbered in reverse order with each contiguous. The rule-language vectors take the new profile ID and gain cases counting a combining sequence and a null, and rejecting `CHAR_LENGTH`, `LENGTH` and `USING`. `conformance/interval-kinds/probe.py`, `prototype/registry-codegen/` and the package tests naming `escapewheel-rule-sql-v0.1` follow the new identifier. | `fixtures/corpus.py` and `conformance/rule-language/probe.py`. |
 | revision process and tooling | The ordinary ledger and evidence records, and the notes on R81 §2.2 and on R125 §3.1, R125 §3.2 and R125 §3.11. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | `registry/tables.md` lists the rule; Part 08 §§2 and 3 regenerate with the new registry versions; the specification README's identifier table, `framework.py`'s expected version, `registry/README.md`, the validator's README, the combined specification and the heading index follow. | `verify.py`. |
 
@@ -238,6 +256,8 @@ These cases distinguish the new rules from the current ones:
 - a run whose units labelled `"2"` and `"10"` are numbered 1 and 0 draws
   `core.units.numbered_in_order`, where the current registry accepts it;
 - a packet numbering its units from 1 draws the same rule;
+- a packet numbering a later sorting run's curation before an earlier one's, each curation's units
+  consecutive and in order, passes the rule;
 - a unit labelled `"7"` is numbered before one labelled `"007"` in the same run, where numeric
   order ties them;
 - a run holding two units with null labels is conforming whichever is numbered first, and both
