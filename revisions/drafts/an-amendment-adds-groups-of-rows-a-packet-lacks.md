@@ -178,10 +178,12 @@ repository writes `core.preferred_runs`, although Part 05 §12 requires a row wh
 two runs sharing a scope. The recipe's `preference` table arbitrates between sources (Part 05 §3.3)
 and chooses no run.
 
-`core.processing_runs.scope` holds the scoped thing's name, not its assigned identifier: both
-packets' sorting runs carry a probe's `probe_name`, such as `46101`, and each curation carries its
-sorting run's name. A recipe author can therefore write a preference's scope before any identifier
-is assigned.
+`core.processing_runs.scope` is a `string` paired value, which Part 02 §8.3 has hold the scoped
+row's `*_name` where that row's key is assigned. Both packets' sorting runs carry a probe's
+`probe_name`, such as `46101`, and each curation carries its sorting run's name. A recipe author can
+therefore write a preference's scope before any identifier is assigned. The registry's descriptions
+of `scope` and `scope_kind`, on `core.processing_runs` and `core.preferred_runs`, still say that
+`scope` holds a primary-key value.
 
 R41 §2.5 described changing a preference as an amendment whose only new file is
 `core.preferred_runs`. That clause is recorded as rationale, and Part 05 §15.2 as incorporated
@@ -494,6 +496,11 @@ source, a recipe with two entries sharing `activity_type`, `scope_kind` and `sco
 an entry whose `processing_run_name` names no run the packet holds or the build records, naming the
 entry.
 
+An entry's `scope` names the scoped row as Part 02 §8.3 has a `string` paired value name it. The
+incorporated core registry MUST describe `scope`, on `core.processing_runs` and
+`core.preferred_runs`, as the scoped row's key where that key is carried and its `*_name` where it
+is assigned, and `scope_kind` on each as the resource holding that row.
+
 ### 3.9 Determinism covers the amended packet
 
 A writer's normalization MUST be deterministic in the recipe and, for an amending build, in the
@@ -567,12 +574,12 @@ These accepted clauses change:
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. Part 01 states no amendment rule. | None required. |
-| logical prose and registry | Part 02 §2.3 names the member, Part 02 gains *Amendment groups* with its anchor, and Part 02 §§1, 9.2 and 9.4 take §3.10's identifiers and §3.1's invariant. `registry/registry.schema.json` requires the member; the core registry source declares §3.2's lists and §3.7's rule; `registry/check.py` implements the invariant and follows the new identifiers. | `evidence/R<N>.json` names each anchor and registry pointer; `registry/check.py` passes. |
+| logical prose and registry | Part 02 §2.3 names the member, Part 02 gains *Amendment groups* with its anchor, and Part 02 §§1, 9.2 and 9.4 take §3.10's identifiers and §3.1's invariant. `registry/registry.schema.json` requires the member; the core registry source declares §3.2's lists, §3.7's rule and §3.8's descriptions; `registry/check.py` implements the invariant and follows the new identifiers. | `evidence/R<N>.json` names each anchor and registry pointer; `registry/check.py` passes. |
 | physical profiles | Part 03 §9's sentence covers every resource an amendment writes. Part 03 §5.2 is unchanged. | `evidence/R<N>.json` names the anchor. |
 | packet manifest and JSON Schemas | The registry meta-schema, as above, and `registry/recipe.schema.json`, which admits `amends` and `preferred_run`; `registry/build.py` copies the recipe schema into the writer. The manifest schema is unchanged. | `registry/build.py` regenerates byte-identically. |
 | validation and import | Part 05 §§1, 3.1, 3.3, 3.5, 3.6, 4.3, 7, 8, 11, 12, 15.1 and 15.2 take §§3.3–3.9, and Part 05 gains *Comparison with the superseded version*. Part 12 is unchanged. | `evidence/R<N>.json` names each anchor. |
 | extensions | Each of the four repository extension registries declares `amendment_groups` on its tables and advances its `registry_version`; the core specification does not choose either. | `registry/check.py` over every extension registry. |
-| reader, writer, validator, adapters | The writer runs a recipe with `amends` as an amending build: it seeds its numbering from the packet, drops delivered rows the packet holds, refuses a row growing a group, binds the packet's registries, records a new source file only for a new root, writes `core.preferred_runs` from the recipe, derives again or drops each stale derived resource, and runs §3.4's comparison. The validator reads the last superseded manifest and makes the same comparison. The reader reads the current manifest and is unchanged. Adapters are unchanged. | The writer and validator suites; both session packets rebuilt and validated with no error; an amending build of each adding intervals and a curation. |
+| reader, writer, validator, adapters | The writer runs a recipe with `amends` as an amending build: it seeds its numbering from the packet, drops delivered rows the packet holds, refuses a row growing a group, binds the packet's registries, records a new source file only for a new root, writes `core.preferred_runs` from the recipe, derives again or drops each stale derived resource, and runs §3.4's comparison. The validator reads the last superseded manifest and makes the same comparison. The reader reads the current manifest; its description of a preference's scope follows §3.8. Adapters are unchanged. | The writer and validator suites; both session packets rebuilt and validated with no error; an amending build of each adding intervals and a curation. |
 | conformance fixtures and tests | Amended fixture packets as §6 lists, each carrying its superseded manifest. Negative registry variants for `registry.amendment_groups.resolves` and a table object lacking the member. Writer tests for each refusal of §§3.5, 3.6 and 3.8. | `fixtures/corpus.py`; the registry-conformance vectors. |
 | revision process and tooling | The ordinary ledger and evidence records, R32 §3's supersession, and the notes above. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | `registry/tables.md` renders each table's group lists; Part 08 §§2 and 3 regenerate with the new registry versions; the registry guide documents the member; the writer's guide documents `amends` and `preferred_run`; the specification README's identifier table, `framework.py`'s expected version, the combined specification and the heading index follow. | `verify.py`. |
@@ -583,8 +590,8 @@ These accepted clauses change:
 `applied` at Part 05 §§15.1 and 15.2 and Part 03 §9, and §3.4 at Part 05 §1 and *Comparison with the
 superseded version*. §3.5 is `applied` at Part 05 §§3.1, 3.3, 3.5, 3.6, 8 and 15.1, and §3.6 at
 Part 05 §4.3. §3.7 is `applied` at Part 05 §§7 and 12 and `registry` for its rule. §3.8 is `applied`
-at Part 05 §§3.1, 3.5 and 12, §3.9 at Part 05 §§4.3 and 11, and §3.10 at Part 02 §§1, 9.2 and 9.4
-and Part 05 §3.1. Each is placed by canonical anchor.
+at Part 05 §§3.1, 3.5 and 12 and `registry` for its descriptions, §3.9 at Part 05 §§4.3 and 11, and
+§3.10 at Part 02 §§1, 9.2 and 9.4 and Part 05 §3.1. Each is placed by canonical anchor.
 
 These cases distinguish the new rules from the current ones:
 
