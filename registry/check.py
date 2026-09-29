@@ -104,15 +104,15 @@ check(
     [] if META_ID == "https://escapewheel.org/schemas/registry/0.9.0" else [META_ID],
 )
 check(
-    "core registry version is 0.10.0",
-    [] if REG.get("registry_version") == "0.10.0" else [REG.get("registry_version")],
+    "core registry version is 0.11.0",
+    [] if REG.get("registry_version") == "0.11.0" else [REG.get("registry_version")],
 )
 check(
     "every shipped registry selects the incorporated rule language",
     [
         name
         for name, document in {"core": REG, **EXT}.items()
-        if document.get("rule_language") != "escapewheel-rule-sql-v0.1"
+        if document.get("rule_language") != "escapewheel-rule-sql-v0.2"
     ],
 )
 
@@ -529,7 +529,7 @@ try:
     jsonschema.Draft202012Validator.check_schema(_contract_schema)
     _contract = json.loads(
         (
-            HERE / "registry_contracts/escapewheel-registry-contract-v0.6.json"
+            HERE / "registry_contracts/escapewheel-registry-contract-v0.7.json"
         ).read_text()
     )
     _contract_errors = list(
@@ -674,7 +674,7 @@ try:
     _language_schema = json.loads((HERE / "rule_language.schema.json").read_text())
     jsonschema.Draft202012Validator.check_schema(_language_schema)
     _language = json.loads(
-        (HERE / "rule_languages/escapewheel-rule-sql-v0.1.json").read_text()
+        (HERE / "rule_languages/escapewheel-rule-sql-v0.2.json").read_text()
     )
     check(
         "the incorporated rule-language profile validates against its schema",

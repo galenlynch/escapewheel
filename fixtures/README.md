@@ -117,6 +117,14 @@ clock at ticks below the first trial's and numbers it first, each draw
 draws `dynamic_foraging.trials.trial_id_resolves`, filed under `dynamic_foraging`, which fails
 while core passes.
 
+Six packets exercise how Part 02 §12.1 numbers units, whose two units, both in one curation, are
+labelled `"17"` and `"42"`. `unit_labels_by_length` relabels them `"7"` and `"007"`, and numbers them
+in that order, which is length order; `null_unit_labels` leaves both labels null, and
+`null_unit_labels_swapped` numbers the two the other way round; and `later_run_numbered_first` moves
+the second unit into a second sorting run's curation and numbers it first. All four are clean.
+`units_numbered_by_scalar` relabels them `"10"` and `"2"` in scalar-value order, and
+`units_numbered_from_one` numbers them 1 and 2; each draws `core.units.numbered_in_order`.
+
 Four packets each add one packet-owned opaque payload at `opaque/<resource_id>/<name>` (Part 03
 §11), and are clean with checksums: `owned_opaque_object` a single file, `owned_opaque_prefix` a
 directory digested as a prefix, `owned_opaque_singleton` a file bound to an opaque singleton of

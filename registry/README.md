@@ -7,7 +7,7 @@ Part 03 §3.3).
 
 <!-- BEGIN generated: counts -->
 ```
-48 resources, 45 tables, 360 columns, 116 references, 88 Tier 2 rules
+48 resources, 45 tables, 360 columns, 116 references, 89 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -21,9 +21,9 @@ history and rationale but are not current normative owners.
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
 | `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
-| `registry_contracts/escapewheel-registry-contract-v0.6.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
+| `registry_contracts/escapewheel-registry-contract-v0.7.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
-| `rule_languages/escapewheel-rule-sql-v0.1.json` | Exact incorporated portable Tier 2 language profile. |
+| `rule_languages/escapewheel-rule-sql-v0.2.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | Incorporated closed schema for `packet.json` (Part 04). |
 | `resources.schema.json` | Incorporated delivery schema (Part 12 §5). **Generated** by `build.py` from the manifest's resource entry. |
 | `resources.example.json` | A delivery document that `check.py` validates against it. |
@@ -44,7 +44,7 @@ registry_result.schema.json ──build.py──> escapewheel-validator/src/esca
 registry_contract.schema.json ─┐
 registry_contracts/*.json ────├─build.py─> escapewheel-validator/src/escapewheel_validator/schemas/
 rule_language.schema.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
-rule_languages/escapewheel-rule-sql-v0.1.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
+rule_languages/escapewheel-rule-sql-v0.2.json ──build.py──> escapewheel-validator/src/escapewheel_validator/schemas/
 manifest.schema.json  ──build.py──>  escapewheel-validator/src/escapewheel_validator/schemas/
 sources.schema.json   ──build.py──>  escapewheel-reader/src/escapewheel_reader/schemas/
 resources.schema.json ──build.py──>  escapewheel-writer/src/escapewheel_writer/schemas/
@@ -132,11 +132,11 @@ it names a resource the packet declares (R55 §2.4).
 
 Authored as `[[rules]]` entries in each table's source file and carried inline in its `rules`
 array. The whole registry
-selects `escapewheel-rule-sql-v0.1`; individual rules cannot override it. Inline rules keep a
+selects `escapewheel-rule-sql-v0.2`; individual rules cannot override it. Inline rules keep a
 table's whole logical contract readable in one declaration.
 
 <!-- BEGIN generated: rules -->
-88 rules over 29 tables: 79 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
+89 rules over 29 tables: 80 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
@@ -144,7 +144,7 @@ table's whole logical contract readable in one declaration.
 | `core.array_dimensions` | 8 |
 | `analysis.array_dimensions` | 7 |
 | `core.processing_runs` | 7 |
-| `core.units` | 5 |
+| `core.units` | 6 |
 | `core.clock_anchors` | 4 |
 | `core.sessions` | 4 |
 | `core.intervals` | 3 |

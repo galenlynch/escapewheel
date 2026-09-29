@@ -79,7 +79,7 @@ much, so the counts below are the current reference registry's and a packet carr
 gets its own.
 
 <!-- BEGIN facts: registry -->
-45 tables, 360 columns, 116 references, 88 Tier 2 rules (2 advisory)
+45 tables, 360 columns, 116 references, 89 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: tier1 -->
 175 not-null, 116 foreign-key, 4 closed-vocabulary, 26 finite-value and 16 discriminator checks, plus one uniqueness check per table whose sort does not begin with its primary key
@@ -93,7 +93,7 @@ gets its own.
 | closed vocabulary | `enum` |
 | finite value | `finite: true` |
 | discriminator | `role: discriminator`, two checks each (R55 §2.4) |
-| Tier 2 | statically checked `escapewheel-rule-sql-v0.1` queries the structure cannot imply, authored as `[[rules]]` in the registry's TOML source |
+| Tier 2 | statically checked `escapewheel-rule-sql-v0.2` queries the structure cannot imply, authored as `[[rules]]` in the registry's TOML source |
 
 A generated check reading an `optional` column is skipped where a table omits that column, which
 leaves it nothing to test (Part 02 §6).

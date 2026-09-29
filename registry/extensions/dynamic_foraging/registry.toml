@@ -1,6 +1,6 @@
 "$schema" = "https://escapewheel.org/schemas/registry/0.9.0"
 registry_id = "dynamic_foraging"
-registry_version = "0.11.0"
+registry_version = "0.12.0"
 logical_standard_version = "escapewheel-logical-v0.1"
-rule_language = "escapewheel-rule-sql-v0.1"
+rule_language = "escapewheel-rule-sql-v0.2"
 extension_id = "dynamic_foraging"

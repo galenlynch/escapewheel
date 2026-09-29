@@ -10,7 +10,7 @@ rules. It maps the logical resources and types of Part 02 into rule evaluation. 
 registry selection and rule declarations; Part 05 owns validation and reporting workflow. This
 part MUST NOT redefine either subject.
 
-The language identified by `escapewheel-rule-sql-v0.1` is based on the SQL framework and
+The language identified by `escapewheel-rule-sql-v0.2` is based on the SQL framework and
 SQL/Foundation editions, corrigenda, and IEEE floating-point edition identified in §9. Those
 authorities apply to the SQL and numerical requirements in §§2–7 only to the extent selected here.
 The narrower Escapewheel rules in this part govern where the external standards permit choices or
@@ -18,7 +18,7 @@ additional features.
 
 This part expressly incorporates `registry/rule_language.schema.json`, which defines the closed
 shape of a rule-language profile, and
-`registry/rule_languages/escapewheel-rule-sql-v0.1.json`, which assigns the exact external basis,
+`registry/rule_languages/escapewheel-rule-sql-v0.2.json`, which assigns the exact external basis,
 ISO feature dependencies, contract clauses, type bindings, and execution settings of this
 language. The JSON artifacts MUST conform to the incorporated profile schema. Their fields carry
 the meanings defined here; neither artifact makes a parser, abstract syntax tree, database engine,
@@ -72,16 +72,17 @@ including `!=`, are outside the profile.
 
 | class | admitted routines |
 |---|---|
-| scalar | `ABS` over one approximate numeric; `COALESCE` over two or more common-type arguments; `CAST` only to `DOUBLE PRECISION` or `DECIMAL(38,0)`; one-argument `isnan` and `isfinite` over an approximate numeric |
+| scalar | `ABS` over one approximate numeric; `COALESCE` over two or more common-type arguments; `CAST` only to `DOUBLE PRECISION` or `DECIMAL(38,0)`; one-argument `CHARACTER_LENGTH` over a `CHARACTER VARYING` value; one-argument `isnan` and `isfinite` over an approximate numeric |
 | aggregate | `COUNT(*)`, one-argument `COUNT`, `COUNT(DISTINCT expression)`, one-argument `MIN` and `MAX`, and the ordered-set `PERCENTILE_CONT` form above |
 | window | one-argument `LAG`, zero-argument `ROW_NUMBER`, and zero-argument `DENSE_RANK` |
 
 `ABS`, `MIN`, `MAX`, and `LAG` return their argument's domain. `COALESCE` returns its arguments'
-common domain, and `CAST` returns its target domain. `COUNT`, `ROW_NUMBER`, and `DENSE_RANK`
-return `BIGINT`; `PERCENTILE_CONT` returns `DOUBLE PRECISION`. Comparisons, predicates, Boolean
-operators, `isnan`, and `isfinite` return `BOOLEAN`. An aggregate MUST NOT be used as a window
-routine, and a window routine MUST carry `OVER`. SQL keywords and routine names are
-case-insensitive; identifiers follow §3.
+common domain, and `CAST` returns its target domain. `COUNT`, `ROW_NUMBER`, `DENSE_RANK`, and
+`CHARACTER_LENGTH` return `BIGINT`; `PERCENTILE_CONT` returns `DOUBLE PRECISION`. Comparisons,
+predicates, Boolean operators, `isnan`, and `isfinite` return `BOOLEAN`. An aggregate MUST NOT be
+used as a window routine, and a window routine MUST carry `OVER`. SQL keywords and routine names are
+case-insensitive; identifiers follow §3. `CHARACTER_LENGTH` is admitted in that spelling alone:
+`CHAR_LENGTH`, `LENGTH`, and a `USING` clause are outside the profile.
 
 A validator MUST parse and statically check a rule before executing it. It MUST reject a second
 statement, any surface outside this positive profile, and every DDL, DML, transaction, catalog,
@@ -199,7 +200,8 @@ MUST NOT wrap, clamp, saturate, or truncate.
 
 Character operations compare stored Unicode scalar sequences in ascending scalar-value order,
 without case folding or normalization. A scalar is in U+0000–U+D7FF or U+E000–U+10FFFF. In
-`LIKE`, `_` matches one scalar and `%` matches zero or more scalars.
+`LIKE`, `_` matches one scalar and `%` matches zero or more scalars. `CHARACTER_LENGTH` returns
+the number of scalars in its argument, and null for a null argument.
 
 <a id="ew-tier-2-bounded-recursion" data-spec-anchor="canonical"></a>
 ## 6. Bounded recursive common table expressions

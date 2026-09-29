@@ -385,7 +385,7 @@ def extension_document():
         "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
-        "rule_language": "escapewheel-rule-sql-v0.1",
+        "rule_language": "escapewheel-rule-sql-v0.2",
         "extension_id": "task",
         "resources": {
             "task.notes": {

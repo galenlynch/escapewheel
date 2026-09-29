@@ -154,7 +154,7 @@ that clause is recorded as rationale, and no current part states it.
 | surface | effect |
 |---|---|
 | semantic prose | Unchanged. Part 01 §3.10 already defines an interval's kind as the resource that specialises it. |
-| logical prose and registry | Part 02 §8.3 states the declaration and adds the check to *What is generated*. The registry meta-schema gains the field, so the registry-contract descriptor advances after R148 and the draft `unit-labels-order-by-length-then-by-unicode-scalar-value`. The core registry declares no specialising table, so its declarations are unchanged. |
+| logical prose and registry | Part 02 §8.3 states the declaration and adds the check to *What is generated*. The registry meta-schema gains the field, so the registry-contract descriptor advances after R148 and R149. The core registry declares no specialising table, so its declarations are unchanged. |
 | physical profiles | Unchanged. The check reads two tables and changes no storage. |
 | packet manifest and JSON Schemas | The registry meta-schema, as above. The packet manifest is unchanged. |
 | validation and import | One generated check per declared specialisation. Part 05 §15.4's input set is unchanged. |

@@ -7,7 +7,7 @@
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§1, 2.3, 9.2 and 9.4, and a new subsection of Part 02 §2; Part 03 §§5.3 and 9; Part 05 §§1, 3.1, 3.3, 3.5, 3.6, 4.3, 7, 8, 11, 12, 15.1 and 15.2, and a new subsection of Part 05 §15; Part 08 §§2 and 3; the registry meta-schema; the registry-contract descriptor; the recipe schema; the core registry; the four extension registries |
-| **Depends on** | R148 §3.2 and `unit-labels-order-by-length-then-by-unicode-scalar-value` §3.1 (the per-group numbering an amending build continues); `unit-labels-order-by-length-then-by-unicode-scalar-value` §§3.3 and 3.4 (the rule language and the registry identifiers this advances from) |
+| **Depends on** | R148 §3.2 and R149 §3.1 (the per-group numbering an amending build continues); R149 §§3.3 and 3.4 (the rule language and the registry identifiers this advances from) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6; §3.7; §3.8; §3.9; §3.10 |
 
@@ -44,8 +44,7 @@ This revision has each table declare the groups an amendment may add, restates P
 content class, and lets a recipe perform an amendment through the adapters any build uses. It
 exempts imports from Part 05 §12, has a validator compare an amendment with the version it
 supersedes, and gives a recipe a member declaring the preferred runs Part 05 §12 requires. R148 and
-the draft `unit-labels-order-by-length-then-by-unicode-scalar-value` check their numbering within
-each group, so an amending build continues it.
+R149 check their numbering within each group, so an amending build continues it.
 
 The change is structural because it replaces Part 05 §15.2's table and revises rules inside
 Part 05 §§4.3, 7, 8, 11 and 12 and Part 03 §9. Appended sections would leave Part 05 §15.2
@@ -128,9 +127,8 @@ identifier, and two rules were run over the result:
 
 - a rule checking one order across the packet, by session, kind, clock and bounds for intervals, and
   by run, curation and label for units;
-- the per-group rule of R148 §3.2 and
-  `unit-labels-order-by-length-then-by-unicode-scalar-value` §3.1, which checks that identifiers are
-  dense from 0, and that each group's are contiguous and in the group's order.
+- the per-group rule of R148 §3.2 and R149 §3.1, which checks that identifiers are dense from 0, and
+  that each group's are contiguous and in the group's order.
 
 Each cell gives the rows drawn in the first packet, then the second.
 
@@ -144,9 +142,9 @@ Each cell gives the rows drawn in the first packet, then the second.
 Whether a packet-wide order keeps identifiers therefore depends on how the added kind's resource ID
 or run's identifier sorts. Renumbering the first packet with its pulses in the one order satisfies
 the packet-wide rule and leaves none of the 450 trials with its identifier. For every misnumbering
-those drafts test, the per-group rule draws as many rows as the packet-wide rule, or one fewer. Both
-per-group rules pass the Part 11 static check, the unit rule with `CHARACTER_LENGTH` admitted as
-`unit-labels-order-by-length-then-by-unicode-scalar-value` admits it.
+those revisions test, the per-group rule draws as many rows as the packet-wide rule, or one fewer.
+Both per-group rules pass the Part 11 static check, the unit rule with `CHARACTER_LENGTH` admitted
+as R149 admits it.
 
 ### 2.3 An amendment cannot read a source
 
@@ -617,8 +615,8 @@ These incorporated identifiers MUST advance:
 | artifact | from | to |
 |---|---|---|
 | registry meta-schema `$id` | `https://escapewheel.org/schemas/registry/0.9.0` | `https://escapewheel.org/schemas/registry/0.10.0` |
-| registry-contract descriptor ID | `escapewheel-registry-contract-v0.7`, which `unit-labels-order-by-length-then-by-unicode-scalar-value` assigns | `escapewheel-registry-contract-v0.8` |
-| core registry `registry_version` | `0.11.0`, which `unit-labels-order-by-length-then-by-unicode-scalar-value` assigns | `0.12.0` |
+| registry-contract descriptor ID | `escapewheel-registry-contract-v0.7`, which R149 assigns | `escapewheel-registry-contract-v0.8` |
+| core registry `registry_version` | `0.11.0`, which R149 assigns | `0.12.0` |
 | recipe schema `$id` | `https://escapewheel.org/schemas/recipe/0.1.0` | `https://escapewheel.org/schemas/recipe/0.2.0` |
 
 The v0.8 descriptor selects meta-schema 0.10.0, lists `escapewheel-rule-sql-v0.2` alone in

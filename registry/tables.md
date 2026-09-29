@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See the repository
 [authority model](../README.md#authority) for the sources that bind.
 
 ```text
-48 resources, 45 tables, 360 columns, 116 references, 88 Tier 2 rules
-registry 0.10.0   logical standard escapewheel-logical-v0.1
+48 resources, 45 tables, 360 columns, 116 references, 89 Tier 2 rules
+registry 0.11.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -1108,10 +1108,11 @@ registry 0.10.0   logical standard escapewheel-logical-v0.1
 - `curation_id` → `core.curation_versions` (`curation_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
-**Tier 2 rules** — 5
+**Tier 2 rules** — 6
 
 - `core.units.spike_summary_consistent` — error: n_spikes, first_spike_tick or last_spike_tick disagrees with core.spike_events
 - `core.units.designated_label_is_recorded` — error: the designated quality label is not among the recorded ones
 - `core.units.designated_label_pair_complete` — error: quality_label and quality_label_source must be present together
 - `core.units.observation_declared` — info *(advisory)*: units carry no observation intervals and their clock declares none, so no rate over them has a denominator
 - `core.units.amplitude_unit_declared` — error: a unit's spikes carry an amplitude and the unit declares no amplitude_unit
+- `core.units.numbered_in_order` — error: unit_id is not dense from 0, or does not number a curation's units consecutively by label

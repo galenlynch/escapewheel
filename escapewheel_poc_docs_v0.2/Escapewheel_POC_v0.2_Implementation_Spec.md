@@ -74,11 +74,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.10.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.11.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.10.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.11.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -953,7 +953,7 @@ This part expressly incorporates the following artifacts:
 |---|---|
 | `registry/registry.schema.json` | exact local JSON structure and conditional shape constraints |
 | `registry/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
-| `registry/registry_contracts/escapewheel-registry-contract-v0.6.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `registry/registry_contracts/escapewheel-registry-contract-v0.7.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
 | `registry/logical_schemas.json` | exact current core and analysis resource declarations, including table columns, keys, references, vocabularies, and rules |
 
 The generated core registry is what a packet embeds. `registry/tables.md` is a generated,
@@ -1515,17 +1515,18 @@ profile stores a bound registry.
 The incorporated registry meta-schema has `$id`
 `https://escapewheel.org/schemas/registry/0.9.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.10.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.11.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
-`rule_language: escapewheel-rule-sql-v0.1`.
+`rule_language: escapewheel-rule-sql-v0.2`.
 
 An extension's `registry_version` identifies that extension registry and advances independently of
 the core registry's version. An extension conforming to the incorporated meta-schema MUST carry
 the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
 The core specification does not assign an extension's version. An extension registry migrated to
-meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0.
-No checker verifies this, since a checker reads only the document before it and not the version
-that document replaced.
+meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0,
+and one migrated to `escapewheel-rule-sql-v0.2` a `registry_version` different from the one it
+carried under `escapewheel-rule-sql-v0.1`. No checker verifies either, since a checker reads only
+the document before it and not the version that document replaced.
 
 A checker selects schemas and contracts only from local artifacts and MUST NOT dereference an
 identifier. An old registry document MUST NOT be silently interpreted under the new meta-schema
@@ -1592,11 +1593,11 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.6` and selects the 0.9.0
-meta-schema. That meta-schema MUST declare `finite` as a boolean member of a column, require it
-where `type` is `float32` or `float64`, and forbid it otherwise; the `shape` phase therefore decides
-§5.4's declaration rule, and the descriptor adds no invariant for it. A checker MUST evaluate its
-phases in this order:
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.7`, selects the 0.9.0
+meta-schema, and lists `escapewheel-rule-sql-v0.2` alone in `rule_languages`. That meta-schema MUST
+declare `finite` as a boolean member of a column, require it where `type` is `float32` or
+`float64`, and forbid it otherwise; the `shape` phase therefore decides §5.4's declaration rule, and
+the descriptor adds no invariant for it. A checker MUST evaluate its phases in this order:
 
 1. `json`;
 2. `schema_selection`;
@@ -1924,10 +1925,19 @@ row, resolving a value, or reading an absence takes more than the generic rules 
 <a id="ew-unit-identity" data-spec-anchor="canonical"></a>
 ### 12.1 Unit identity
 
-`unit_id` identifies a unit on its own. The packet assigns it, numbering units by
-ascending `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces the same
-numbers; `core.units` records the run and the curation as ordinary columns, and
-`local_unit_label` records what the sorter called it.
+`unit_id` identifies a unit on its own. The packet assigns it; `core.units` records the run and the
+curation as ordinary columns, and `local_unit_label` records what the sorter called it.
+
+A writer MUST number a packet's units densely from 0. It MUST number each curation's units, those
+sharing `sorting_run_id` and `curation_id`, consecutively in ascending order of `local_unit_label`,
+and MUST number the units one build adds curation by curation, in ascending order of
+`sorting_run_id`, then `curation_id`. It MUST compare two labels by their length in Unicode scalars,
+shorter first, and two labels of equal length by Unicode scalar value
+([Part 11 §5](11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics)). A null label follows
+every other label. Units of one curation that tie on their label, two null labels included, MAY be
+numbered in either order. `core.units.numbered_in_order` checks that identifiers are dense from 0
+and that each curation's units are numbered consecutively in label order; the order of curations
+binds the writer alone, and no rule checks it.
 
 A packet carrying `core.units` MUST carry `core.sorting_runs` and `core.curation_versions`.
 
@@ -4186,11 +4196,11 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.10.0.json.gz
-    aind_opto/        0.9.0.json.gz
-    aind_unit_qc/     0.10.0.json.gz
-    dynamic_foraging/ 0.11.0.json.gz
-    vr_foraging/      0.10.0.json.gz
+    core/             0.11.0.json.gz
+    aind_opto/        0.10.0.json.gz
+    aind_unit_qc/     0.11.0.json.gz
+    dynamic_foraging/ 0.12.0.json.gz
+    vr_foraging/      0.11.0.json.gz
   tables/
     core/             sessions, subjects, session_experimenters, devices, probes, electrodes,
                       sorting_run_channels, unit_electrodes, coordinate_frames,
@@ -4227,11 +4237,11 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.10.0", "path": "registries/core/0.10.0.json.gz", "sha256": "…"},
-    "aind_opto": {"role": "extension", "version": "0.9.0", "path": "registries/aind_opto/0.9.0.json.gz", "sha256": "…"},
-    "aind_unit_qc": {"role": "extension", "version": "0.10.0", "path": "registries/aind_unit_qc/0.10.0.json.gz", "sha256": "…"},
-    "dynamic_foraging": {"role": "extension", "version": "0.11.0", "path": "registries/dynamic_foraging/0.11.0.json.gz", "sha256": "…"},
-    "vr_foraging": {"role": "extension", "version": "0.10.0", "path": "registries/vr_foraging/0.10.0.json.gz", "sha256": "…"}
+    "core": {"role": "core", "version": "0.11.0", "path": "registries/core/0.11.0.json.gz", "sha256": "…"},
+    "aind_opto": {"role": "extension", "version": "0.10.0", "path": "registries/aind_opto/0.10.0.json.gz", "sha256": "…"},
+    "aind_unit_qc": {"role": "extension", "version": "0.11.0", "path": "registries/aind_unit_qc/0.11.0.json.gz", "sha256": "…"},
+    "dynamic_foraging": {"role": "extension", "version": "0.12.0", "path": "registries/dynamic_foraging/0.12.0.json.gz", "sha256": "…"},
+    "vr_foraging": {"role": "extension", "version": "0.11.0", "path": "registries/vr_foraging/0.11.0.json.gz", "sha256": "…"}
   },
   "created_at": "…",
   "sessions": ["s001"],
@@ -4731,7 +4741,7 @@ rules. It maps the logical resources and types of Part 02 into rule evaluation. 
 registry selection and rule declarations; Part 05 owns validation and reporting workflow. This
 part MUST NOT redefine either subject.
 
-The language identified by `escapewheel-rule-sql-v0.1` is based on the SQL framework and
+The language identified by `escapewheel-rule-sql-v0.2` is based on the SQL framework and
 SQL/Foundation editions, corrigenda, and IEEE floating-point edition identified in §9. Those
 authorities apply to the SQL and numerical requirements in §§2–7 only to the extent selected here.
 The narrower Escapewheel rules in this part govern where the external standards permit choices or
@@ -4739,7 +4749,7 @@ additional features.
 
 This part expressly incorporates `registry/rule_language.schema.json`, which defines the closed
 shape of a rule-language profile, and
-`registry/rule_languages/escapewheel-rule-sql-v0.1.json`, which assigns the exact external basis,
+`registry/rule_languages/escapewheel-rule-sql-v0.2.json`, which assigns the exact external basis,
 ISO feature dependencies, contract clauses, type bindings, and execution settings of this
 language. The JSON artifacts MUST conform to the incorporated profile schema. Their fields carry
 the meanings defined here; neither artifact makes a parser, abstract syntax tree, database engine,
@@ -4793,16 +4803,17 @@ including `!=`, are outside the profile.
 
 | class | admitted routines |
 |---|---|
-| scalar | `ABS` over one approximate numeric; `COALESCE` over two or more common-type arguments; `CAST` only to `DOUBLE PRECISION` or `DECIMAL(38,0)`; one-argument `isnan` and `isfinite` over an approximate numeric |
+| scalar | `ABS` over one approximate numeric; `COALESCE` over two or more common-type arguments; `CAST` only to `DOUBLE PRECISION` or `DECIMAL(38,0)`; one-argument `CHARACTER_LENGTH` over a `CHARACTER VARYING` value; one-argument `isnan` and `isfinite` over an approximate numeric |
 | aggregate | `COUNT(*)`, one-argument `COUNT`, `COUNT(DISTINCT expression)`, one-argument `MIN` and `MAX`, and the ordered-set `PERCENTILE_CONT` form above |
 | window | one-argument `LAG`, zero-argument `ROW_NUMBER`, and zero-argument `DENSE_RANK` |
 
 `ABS`, `MIN`, `MAX`, and `LAG` return their argument's domain. `COALESCE` returns its arguments'
-common domain, and `CAST` returns its target domain. `COUNT`, `ROW_NUMBER`, and `DENSE_RANK`
-return `BIGINT`; `PERCENTILE_CONT` returns `DOUBLE PRECISION`. Comparisons, predicates, Boolean
-operators, `isnan`, and `isfinite` return `BOOLEAN`. An aggregate MUST NOT be used as a window
-routine, and a window routine MUST carry `OVER`. SQL keywords and routine names are
-case-insensitive; identifiers follow §3.
+common domain, and `CAST` returns its target domain. `COUNT`, `ROW_NUMBER`, `DENSE_RANK`, and
+`CHARACTER_LENGTH` return `BIGINT`; `PERCENTILE_CONT` returns `DOUBLE PRECISION`. Comparisons,
+predicates, Boolean operators, `isnan`, and `isfinite` return `BOOLEAN`. An aggregate MUST NOT be
+used as a window routine, and a window routine MUST carry `OVER`. SQL keywords and routine names are
+case-insensitive; identifiers follow §3. `CHARACTER_LENGTH` is admitted in that spelling alone:
+`CHAR_LENGTH`, `LENGTH`, and a `USING` clause are outside the profile.
 
 A validator MUST parse and statically check a rule before executing it. It MUST reject a second
 statement, any surface outside this positive profile, and every DDL, DML, transaction, catalog,
@@ -4920,7 +4931,8 @@ MUST NOT wrap, clamp, saturate, or truncate.
 
 Character operations compare stored Unicode scalar sequences in ascending scalar-value order,
 without case folding or normalization. A scalar is in U+0000–U+D7FF or U+E000–U+10FFFF. In
-`LIKE`, `_` matches one scalar and `%` matches zero or more scalars.
+`LIKE`, `_` matches one scalar and `%` matches zero or more scalars. `CHARACTER_LENGTH` returns
+the number of scalars in its argument, and null for a null argument.
 
 <a id="ew-tier-2-bounded-recursion" data-spec-anchor="canonical"></a>
 ## 6. Bounded recursive common table expressions

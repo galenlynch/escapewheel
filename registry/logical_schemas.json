@@ -1,10 +1,10 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
   "registry_id": "core",
-  "registry_version": "0.10.0",
+  "registry_version": "0.11.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
-  "rule_language": "escapewheel-rule-sql-v0.1",
+  "rule_language": "escapewheel-rule-sql-v0.2",
   "resources": {
     "analysis.array_asset_instances": {
       "content_class": "analysis",
@@ -5570,6 +5570,12 @@
             "level": "error",
             "message": "a unit's spikes carry an amplitude and the unit declares no amplitude_unit",
             "sql": "SELECT DISTINCT u.unit_id\nFROM core.spike_events AS s\nJOIN core.units AS u USING (unit_id)\nWHERE s.amplitude IS NOT NULL\n  AND u.amplitude_unit IS NULL"
+          },
+          {
+            "id": "core.units.numbered_in_order",
+            "level": "error",
+            "message": "unit_id is not dense from 0, or does not number a curation's units consecutively by label",
+            "sql": "SELECT numbered.unit_id\nFROM (\n  SELECT unit_id, sorting_run_id, curation_id,\n    ROW_NUMBER() OVER (ORDER BY unit_id) - 1 AS dense,\n    ROW_NUMBER() OVER (\n      PARTITION BY sorting_run_id, curation_id\n      ORDER BY label_length, local_unit_label, unit_id) - 1 AS rank_in_curation\n  FROM (\n    SELECT unit_id, sorting_run_id, curation_id, local_unit_label,\n      CHARACTER_LENGTH(local_unit_label) AS label_length\n    FROM core.units\n  ) AS labelled\n) AS numbered\nJOIN (\n  SELECT sorting_run_id, curation_id, MIN(unit_id) AS first_id\n  FROM core.units\n  GROUP BY sorting_run_id, curation_id\n) AS curations\n  ON curations.sorting_run_id = numbered.sorting_run_id AND curations.curation_id = numbered.curation_id\nWHERE numbered.unit_id <> numbered.dense\n   OR numbered.unit_id <> CAST(curations.first_id AS DECIMAL(38,0)) + numbered.rank_in_curation"
           }
         ]
       }

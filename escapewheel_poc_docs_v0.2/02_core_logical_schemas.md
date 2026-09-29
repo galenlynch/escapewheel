@@ -18,7 +18,7 @@ This part expressly incorporates the following artifacts:
 |---|---|
 | `registry/registry.schema.json` | exact local JSON structure and conditional shape constraints |
 | `registry/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
-| `registry/registry_contracts/escapewheel-registry-contract-v0.6.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `registry/registry_contracts/escapewheel-registry-contract-v0.7.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
 | `registry/logical_schemas.json` | exact current core and analysis resource declarations, including table columns, keys, references, vocabularies, and rules |
 
 The generated core registry is what a packet embeds. `registry/tables.md` is a generated,
@@ -580,17 +580,18 @@ profile stores a bound registry.
 The incorporated registry meta-schema has `$id`
 `https://escapewheel.org/schemas/registry/0.9.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.10.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.11.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
-`rule_language: escapewheel-rule-sql-v0.1`.
+`rule_language: escapewheel-rule-sql-v0.2`.
 
 An extension's `registry_version` identifies that extension registry and advances independently of
 the core registry's version. An extension conforming to the incorporated meta-schema MUST carry
 the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
 The core specification does not assign an extension's version. An extension registry migrated to
-meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0.
-No checker verifies this, since a checker reads only the document before it and not the version
-that document replaced.
+meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0,
+and one migrated to `escapewheel-rule-sql-v0.2` a `registry_version` different from the one it
+carried under `escapewheel-rule-sql-v0.1`. No checker verifies either, since a checker reads only
+the document before it and not the version that document replaced.
 
 A checker selects schemas and contracts only from local artifacts and MUST NOT dereference an
 identifier. An old registry document MUST NOT be silently interpreted under the new meta-schema
@@ -657,11 +658,11 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.6` and selects the 0.9.0
-meta-schema. That meta-schema MUST declare `finite` as a boolean member of a column, require it
-where `type` is `float32` or `float64`, and forbid it otherwise; the `shape` phase therefore decides
-§5.4's declaration rule, and the descriptor adds no invariant for it. A checker MUST evaluate its
-phases in this order:
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.7`, selects the 0.9.0
+meta-schema, and lists `escapewheel-rule-sql-v0.2` alone in `rule_languages`. That meta-schema MUST
+declare `finite` as a boolean member of a column, require it where `type` is `float32` or
+`float64`, and forbid it otherwise; the `shape` phase therefore decides §5.4's declaration rule, and
+the descriptor adds no invariant for it. A checker MUST evaluate its phases in this order:
 
 1. `json`;
 2. `schema_selection`;
@@ -989,10 +990,19 @@ row, resolving a value, or reading an absence takes more than the generic rules 
 <a id="ew-unit-identity" data-spec-anchor="canonical"></a>
 ### 12.1 Unit identity
 
-`unit_id` identifies a unit on its own. The packet assigns it, numbering units by
-ascending `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces the same
-numbers; `core.units` records the run and the curation as ordinary columns, and
-`local_unit_label` records what the sorter called it.
+`unit_id` identifies a unit on its own. The packet assigns it; `core.units` records the run and the
+curation as ordinary columns, and `local_unit_label` records what the sorter called it.
+
+A writer MUST number a packet's units densely from 0. It MUST number each curation's units, those
+sharing `sorting_run_id` and `curation_id`, consecutively in ascending order of `local_unit_label`,
+and MUST number the units one build adds curation by curation, in ascending order of
+`sorting_run_id`, then `curation_id`. It MUST compare two labels by their length in Unicode scalars,
+shorter first, and two labels of equal length by Unicode scalar value
+([Part 11 §5](11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics)). A null label follows
+every other label. Units of one curation that tie on their label, two null labels included, MAY be
+numbered in either order. `core.units.numbered_in_order` checks that identifiers are dense from 0
+and that each curation's units are numbered consecutively in label order; the order of curations
+binds the writer alone, and no rule checks it.
 
 A packet carrying `core.units` MUST carry `core.sorting_runs` and `core.curation_versions`.
 

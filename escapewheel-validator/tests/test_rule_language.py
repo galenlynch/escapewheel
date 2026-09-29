@@ -25,14 +25,14 @@ def _rule(registry, sql, *, rule_id="core.trials.profile_test"):
 
 def test_maintained_profile_validates_and_vendored_copies_are_exact():
     schema_path = ROOT / "registry/rule_language.schema.json"
-    profile_path = ROOT / "registry/rule_languages/escapewheel-rule-sql-v0.1.json"
+    profile_path = ROOT / "registry/rule_languages/escapewheel-rule-sql-v0.2.json"
     schema = json.loads(schema_path.read_text())
     profile = json.loads(profile_path.read_text())
     jsonschema.Draft202012Validator(schema).validate(profile)
     assert profile["id"] == PROFILE_ID
     package = importlib_resources.files("escapewheel_validator").joinpath("schemas")
     assert package.joinpath("rule_language.schema.json").read_text() == schema_path.read_text()
-    assert package.joinpath("escapewheel-rule-sql-v0.1.json").read_text() == profile_path.read_text()
+    assert package.joinpath("escapewheel-rule-sql-v0.2.json").read_text() == profile_path.read_text()
 
 
 def test_every_shipped_rule_passes_static_profile_check():
@@ -49,7 +49,7 @@ def test_every_shipped_rule_passes_static_profile_check():
         for table in [declaration["table"]]
         for rule in table["rules"]
     ]
-    assert len(checked) == 136
+    assert len(checked) == 137
 
 
 def test_the_transform_slope_rule_flags_every_slope_that_is_not_positive():
@@ -140,3 +140,64 @@ def test_undeclared_column_is_rejected_during_static_binding():
     }
     with pytest.raises(RuleProfileError, match="does not bind"):
         check_rule("SELECT missing FROM core.rows", document)
+
+
+@pytest.mark.parametrize(
+    ("sql", "message"),
+    [
+        ("SELECT CHAR_LENGTH(local_unit_label) AS n FROM core.units", "outside the profile"),
+        ("SELECT LENGTH(local_unit_label) AS n FROM core.units", "outside the profile"),
+        ("SELECT LEN(local_unit_label) AS n FROM core.units", "outside the profile"),
+        ("SELECT CHARACTER_LENGTH(local_unit_label USING OCTETS) AS n FROM core.units", ""),
+        ("SELECT CHARACTER_LENGTH(unit_id) AS n FROM core.units", "CHARACTER VARYING"),
+    ],
+    ids=["char-length", "length", "len", "using-octets", "integer-argument"],
+)
+def test_character_length_is_admitted_in_one_spelling_over_a_string(sql, message):
+    core = json.loads((ROOT / "registry/logical_schemas.json").read_text())
+    check_rule("SELECT CHARACTER_LENGTH(local_unit_label) AS n FROM core.units", core)
+    with pytest.raises(RuleProfileError, match=message):
+        check_rule(sql, core)
+
+
+@pytest.mark.parametrize(
+    ("units", "conforming"),
+    [
+        ([(0, 0, 0, "2"), (1, 0, 0, "10")], True),
+        ([(0, 0, 0, "10"), (1, 0, 0, "2")], False),
+        ([(1, 0, 0, "1"), (2, 0, 0, "2")], False),
+        ([(0, 1, 0, "1"), (1, 1, 0, "2"), (2, 0, 0, "1")], True),
+        ([(0, 0, 0, "1"), (1, 0, 1, "1"), (2, 0, 0, "2")], False),
+        ([(0, 0, 0, "7"), (1, 0, 0, "007")], True),
+        ([(0, 0, 0, "007"), (1, 0, 0, "7")], False),
+        ([(0, 0, 0, "3"), (1, 0, 0, None), (2, 0, 0, None)], True),
+        ([(0, 0, 0, None), (1, 0, 0, "3")], False),
+    ],
+    ids=[
+        "2-before-10",
+        "10-before-2",
+        "from-one",
+        "later-run-first",
+        "curation-interleaved",
+        "7-before-007",
+        "007-before-7",
+        "nulls-last",
+        "null-first",
+    ],
+)
+def test_units_are_numbered_densely_and_by_label_within_a_curation(units, conforming):
+    """A label sorts by its length first, so "2" precedes "10" and "7" precedes "007"; null sorts last."""
+    import duckdb
+
+    core = json.loads((ROOT / "registry/logical_schemas.json").read_text())
+    rule = next(
+        r for r in core["resources"]["core.units"]["table"]["rules"] if r["id"] == "core.units.numbered_in_order"
+    )
+    connection = duckdb.connect()
+    connection.sql("CREATE SCHEMA core")
+    connection.sql(
+        "CREATE TABLE core.units "
+        "(unit_id INTEGER, sorting_run_id INTEGER, curation_id INTEGER, local_unit_label VARCHAR)"
+    )
+    connection.executemany("INSERT INTO core.units VALUES (?, ?, ?, ?)", units)
+    assert (not connection.sql(rule["sql"]).fetchall()) == conforming

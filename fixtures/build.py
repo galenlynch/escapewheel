@@ -763,20 +763,19 @@ def write_packet(
     unsorted: frozenset = frozenset(),
     algorithm: str = "sha256",
     extensions: tuple = (),
-    numbers: dict[str, int] | None = None,
+    numbers: dict[str, dict[str, int]] | None = None,
 ):
     """Write a packet in 03's portable layout. `raw` supplies pre-built Arrow tables for
     variants that must violate the registry's own schema; `unsorted` names resources
     written in insertion order, for variants that must violate Part 03 §5.3. Every resource
     records its `digest` under `algorithm`. `extensions` are registry documents bound beside
-    core and `dynamic_foraging`. `numbers` replaces Part 02 §12.9's interval numbering, for
-    variants that must number intervals otherwise."""
+    core and `dynamic_foraging`. `numbers` replaces the numbering of each identifier it names,
+    for variants that must number one otherwise."""
     if out.exists():
         shutil.rmtree(out)
     KEYS.clear()
     preassign(tables)
-    if numbers is not None:
-        KEYS["interval_id"] = dict(numbers)
+    KEYS.update({kind: dict(names) for kind, names in (numbers or {}).items()})
     (out / "tables" / "core").mkdir(parents=True)
 
     resources = []
@@ -1226,6 +1225,7 @@ def main():
     floor_variants(root)
     axis_variants(root)
     interval_variants(root)
+    unit_variants(root)
     opaque_variants(root)
 
 
@@ -1705,14 +1705,14 @@ def interval_variants(root: Path) -> None:
     cue = (CUE_EXTENSION,)
     for name, mutate, options in (
         ("two_kinds_one_label", with_tone, {"extensions": cue}),
-        ("kinds_out_of_unicode_order", with_tone, {"extensions": cue, "numbers": {first: 0, second: 1, tone: 2}}),
+        ("kinds_out_of_unicode_order", with_tone, {"extensions": cue, "numbers": {"interval_id": {first: 0, second: 1, tone: 2}}}),
         ("equal_bounds", equal_bounds, {}),
-        ("equal_bounds_swapped", equal_bounds, {"numbers": {second: 0, first: 1}}),
+        ("equal_bounds_swapped", equal_bounds, {"numbers": {"interval_id": {second: 0, first: 1}}}),
         ("trial_labelled_axis", trial_labelled_axis, {}),
-        ("trials_numbered_from_one", None, {"numbers": {first: 1, second: 2}}),
-        ("trials_misordered", None, {"numbers": {second: 0, first: 1}}),
-        ("trials_numbered_by_tick", second_trial_on_the_probe_clock, {"numbers": {second: 0, first: 1}}),
-        ("interval_numbering_gap", None, {"numbers": {first: 0, second: 2}}),
+        ("trials_numbered_from_one", None, {"numbers": {"interval_id": {first: 1, second: 2}}}),
+        ("trials_misordered", None, {"numbers": {"interval_id": {second: 0, first: 1}}}),
+        ("trials_numbered_by_tick", second_trial_on_the_probe_clock, {"numbers": {"interval_id": {second: 0, first: 1}}}),
+        ("interval_numbering_gap", None, {"numbers": {"interval_id": {first: 0, second: 2}}}),
         ("repeated_interval_label", repeated_label, {}),
         ("orphan_trial", orphan_trial, {}),
     ):
@@ -1724,6 +1724,58 @@ def interval_variants(root: Path) -> None:
         if name == "trial_labelled_axis":
             entry = array_entry(out, "waveform_mean", "default", LABELLED_SHAPE, LABELLED_AXES)
             edit_manifest(out, lambda m, entry=entry: m["resources"].append(entry))
+        print(f"{name:26s}written")
+
+
+def unit_variants(root: Path) -> None:
+    """Part 02 §12.1's numbering: packets numbering units in each admitted order, and one per defect.
+
+    The two units are named "1" and "2" and numbered in that order unless a variant says otherwise.
+    """
+
+    def labelled(first, second):
+        def mutate(c):
+            c["core.units"][0]["local_unit_label"] = first
+            c["core.units"][1]["local_unit_label"] = second
+
+        return mutate
+
+    def later_run(c):
+        # A second run of the same probe, whose one curation holds the second unit.
+        run, curation = c["core.sorting_runs"][0], c["core.curation_versions"][0]
+        c["core.sorting_runs"].append(
+            run
+            | {
+                "sorting_run_id": "sort_ks4_002",
+                "started_at": run["ended_at"],
+                "ended_at": run["ended_at"] + timedelta(hours=1),
+            }
+        )
+        c["core.sorting_run_channels"] += [
+            r | {"sorting_run_id": "sort_ks4_002"} for r in c["core.sorting_run_channels"]
+        ]
+        c["core.curation_versions"].append(
+            curation
+            | {
+                "curation_id": "curation_002",
+                "sorting_run_id": "sort_ks4_002",
+                "created_at": curation["created_at"] + timedelta(hours=2),
+            }
+        )
+        c["core.units"][1] |= {"sorting_run_id": "sort_ks4_002", "curation_id": "curation_002"}
+
+    for name, mutate, numbers in (
+        ("units_numbered_by_scalar", labelled("10", "2"), None),
+        ("units_numbered_from_one", None, {"1": 1, "2": 2}),
+        ("unit_labels_by_length", labelled("7", "007"), None),
+        ("null_unit_labels", labelled(None, None), None),
+        ("null_unit_labels_swapped", labelled(None, None), {"2": 0, "1": 1}),
+        ("later_run_numbered_first", later_run, {"2": 0, "1": 1}),
+    ):
+        c = content()
+        if mutate is not None:
+            mutate(c)
+        write_packet(root / name, c, numbers=None if numbers is None else {"unit_id": numbers})
         print(f"{name:26s}written")
 
 

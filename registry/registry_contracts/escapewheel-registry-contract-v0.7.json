@@ -1,10 +1,10 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry-contract/0.1.0",
-  "id": "escapewheel-registry-contract-v0.6",
+  "id": "escapewheel-registry-contract-v0.7",
   "registry_schema": "https://escapewheel.org/schemas/registry/0.9.0",
   "semantic_standard": "escapewheel-semantic-v0.1",
   "logical_standard": "escapewheel-logical-v0.1",
-  "rule_languages": ["escapewheel-rule-sql-v0.1"],
+  "rule_languages": ["escapewheel-rule-sql-v0.2"],
   "phases": ["json", "schema_selection", "shape", "contract_selection", "semantic", "rule_static", "external_domain"],
   "invariants": [
     {"id": "registry.namespace.owned", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-registry-document", "ew-extension-definition", "ew-extension-namespacing"]},

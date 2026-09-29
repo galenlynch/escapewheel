@@ -107,13 +107,16 @@ def test_a_unit_name_is_unique_across_runs(source):
 
 
 def test_a_unit_name_sorts_as_the_numbering_must(source):
-    """Part 02 §12.1 numbers by ascending `(sorting_run_id, curation_id, local_unit_label)`.
+    """Part 02 §12.1 numbers a curation's units by label, shorter first and equal lengths by scalar.
 
     `PacketWriter._preassign` assigns in sorted-name order, so the name has to sort that way --
     which is what the zero padding is for: unpadded, label 40 would precede label 5 as text.
     """
     units = rows_of(source, "core.units")
-    ordered = sorted(units, key=lambda u: (u["sorting_run_id"], u["curation_id"], int(u["local_unit_label"])))
+    ordered = sorted(
+        units,
+        key=lambda u: (u["sorting_run_id"], u["curation_id"], len(u["local_unit_label"]), u["local_unit_label"]),
+    )
     assert [u["unit_id"] for u in ordered] == sorted(u["unit_id"] for u in units)
 
 

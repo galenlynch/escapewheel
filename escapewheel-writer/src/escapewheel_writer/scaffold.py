@@ -168,7 +168,7 @@ def draft(
             "registry_id": extension_id,
             "registry_version": "0.1.0",
             "logical_standard_version": logical_standard_version,
-            "rule_language": "escapewheel-rule-sql-v0.1",
+            "rule_language": "escapewheel-rule-sql-v0.2",
             "extension_id": extension_id,
             "resources": {
                 resource_id: {

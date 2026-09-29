@@ -1,0 +1,313 @@
+{
+  "version": 1,
+  "revision": "R149",
+  "based_on": "4d4501063a42b2c9815f8a0dd97555c4dcc5f2e3",
+  "clauses": {
+    "R149 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-unit-identity"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.units/table/rules/5"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "units_numbered_by_scalar",
+            "finding": "core.units.numbered_in_order"
+          },
+          {
+            "kind": "fixture",
+            "packet": "units_numbered_from_one",
+            "finding": "core.units.numbered_in_order"
+          },
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "137 shipped rules statically check, bind, and execute empty"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_units_are_numbered_densely_and_by_label_within_a_curation[10-before-2]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_units_are_numbered_densely_and_by_label_within_a_curation[from-one]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_units_are_numbered_densely_and_by_label_within_a_curation[later-run-first]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_units_are_numbered_densely_and_by_label_within_a_curation[7-before-007]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_units_are_numbered_densely_and_by_label_within_a_curation[nulls-last]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sorter_source.py::test_a_unit_name_sorts_as_the_numbering_must"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.units.toml",
+          "fixtures/build.py",
+          "fixtures/corpus.py",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R149 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md",
+          "anchor": "ew-tier-2-query-profile"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md",
+          "anchor": "ew-tier-2-deterministic-semantics"
+        },
+        {
+          "path": "registry/rule_languages/escapewheel-rule-sql-v0.2.json",
+          "pointer": "/iso_feature_dependencies"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "machine-readable rule-language vectors"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_character_length_is_admitted_in_one_spelling_over_a_string[char-length]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_character_length_is_admitted_in_one_spelling_over_a_string[length]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_character_length_is_admitted_in_one_spelling_over_a_string[len]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_character_length_is_admitted_in_one_spelling_over_a_string[using-octets]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_character_length_is_admitted_in_one_spelling_over_a_string[integer-argument]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/rule_language.py",
+          "conformance/rule-language/vectors.json",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the validator's README names no admitted routine"
+      }
+    },
+    "R149 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md",
+          "anchor": "ew-tier-2-language-selection"
+        },
+        {
+          "path": "registry/rule_languages/escapewheel-rule-sql-v0.2.json",
+          "pointer": "/id"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/rule_language"
+        },
+        {
+          "path": "registry/extensions/aind_opto.json",
+          "pointer": "/rule_language"
+        },
+        {
+          "path": "registry/extensions/aind_unit_qc.json",
+          "pointer": "/rule_language"
+        },
+        {
+          "path": "registry/extensions/dynamic_foraging.json",
+          "pointer": "/rule_language"
+        },
+        {
+          "path": "registry/extensions/vr_foraging.json",
+          "pointer": "/rule_language"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "incorporated profile and anchors"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every shipped registry selects the incorporated rule language"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the incorporated rule-language profile validates against its schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_maintained_profile_validates_and_vendored_copies_are_exact"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/registry.toml",
+          "registry/extensions/aind_opto/registry.toml",
+          "registry/extensions/aind_unit_qc/registry.toml",
+          "registry/extensions/dynamic_foraging/registry.toml",
+          "registry/extensions/vr_foraging/registry.toml",
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-validator/src/escapewheel_validator/rule_language.py",
+          "escapewheel-writer/src/escapewheel_writer/scaffold.py",
+          "prototype/registry-codegen/registry.json",
+          "conformance/interval-kinds/probe.py",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "registry/README.md",
+          "STATUS.md"
+        ]
+      }
+    },
+    "R149 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-core-logical-schema-scope"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.7.json",
+          "pointer": "/id"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.7.json",
+          "pointer": "/rule_languages"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/README.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md",
+          "registry/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "core registry version is 0.11.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the incorporated registry contract validates against its schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_the_superseded_rule_language_selects_no_contract"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/registry.toml",
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "facts.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md",
+          "STATUS.md"
+        ]
+      }
+    }
+  }
+}

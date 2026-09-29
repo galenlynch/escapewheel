@@ -1413,7 +1413,8 @@ note = "also stated in 02_core_logical_schemas.md §12.1"
 
 [clause."R81 §2.2"]
 disposition = "applied"
-where = [{ part = "02", section = "12.1" }]
+where = [{ part = "02", anchor = "ew-unit-identity" }]
+note = "R149 §3.1 states its start and its label order, declares core.units.numbered_in_order, and lets units tying on their label be numbered in either order"
 
 [clause."R81 §2.3"]
 disposition = "registry"
@@ -2898,7 +2899,7 @@ where = [
   { part = "02", anchor = "ew-unit-identity" },
   { part = "05", anchor = "ew-reader-unit-selection" },
 ]
-note = "Unit meaning remains semantic, while packet-local identity and reader unit selection have separate current owners."
+note = "Unit meaning remains semantic, while packet-local identity and reader unit selection have separate current owners. Under R149 §3.1 two writers may number units tying on their label differently."
 
 [clause."R123 §3.2"]
 disposition = "applied"
@@ -2963,12 +2964,12 @@ where = [
   { part = "02", anchor = "ew-registry-document" },
   { part = "11", anchor = "ew-tier-2-language-selection" },
 ]
-note = "Part 11 owns the selected language, Part 02 owns its registry-level selection, and Part 00 records the boundary."
+note = "Part 11 owns the selected language, Part 02 owns its registry-level selection, and Part 00 records the boundary. R149 §3.3 renames the language escapewheel-rule-sql-v0.2, and the selection carries to the new identifier."
 
 [clause."R125 §3.2"]
 disposition = "applied"
 where = [{ part = "11", anchor = "ew-tier-2-query-profile" }]
-note = "closed hybrid descriptor and admitted SQL query surface"
+note = "closed hybrid descriptor and admitted SQL query surface; R149 §3.3 renames the descriptor escapewheel-rule-sql-v0.2 and adds E021-04, and its exact data carries to the new identifier"
 
 [clause."R125 §3.3"]
 disposition = "applied"
@@ -3020,7 +3021,7 @@ note = "each validation layer supplies its own dependency facts"
 [clause."R125 §3.11"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description" }]
-note = "registry identities and the document-wide language selection changed atomically with migrated rules"
+note = "registry identities and the document-wide language selection changed atomically with migrated rules; R149 §3.3 renames the language, and a validator's claim to support it carries to escapewheel-rule-sql-v0.2"
 
 [clause."R126 §3.1"]
 disposition = "applied"
@@ -3892,3 +3893,28 @@ where = [{ part = "02", anchor = "ew-discriminator-semantics", note = "the const
 [clause."R148 §3.4"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.10.0" }]
+
+[clause."R149 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-unit-identity", note = "the start, the curation order and the label order" }]
+note = "the registry's core.units declares core.units.numbered_in_order"
+
+[clause."R149 §3.2"]
+disposition = "applied"
+where = [
+  { part = "11", anchor = "ew-tier-2-query-profile", note = "the routine, its spelling and its result domain" },
+  { part = "11", anchor = "ew-tier-2-deterministic-semantics", note = "what it counts" },
+]
+
+[clause."R149 §3.3"]
+disposition = "applied"
+where = [{ part = "11", anchor = "ew-tier-2-language-selection", note = "the language ID and the incorporated descriptor" }]
+note = "core and every repository extension registry select escapewheel-rule-sql-v0.2"
+
+[clause."R149 §3.4"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-registry-self-description", note = "core 0.11.0 and the migrated extension's version" },
+  { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.7" },
+  { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
+]

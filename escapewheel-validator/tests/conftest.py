@@ -107,7 +107,7 @@ def _registry():
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
         "logical_standard_version": "escapewheel-logical-v0.1",
-        "rule_language": "escapewheel-rule-sql-v0.1",
+        "rule_language": "escapewheel-rule-sql-v0.2",
         "tables": {
             "core.sessions": {
                 "columns": [

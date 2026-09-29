@@ -11,15 +11,18 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import Any, cast
 
 from sqlglot import exp, parse
 from sqlglot.errors import ParseError
+from sqlglot.optimizer.annotate_types import annotate_types
 from sqlglot.optimizer.qualify import qualify
 from sqlglot.optimizer.qualify_columns import OptimizeError
 from sqlglot.optimizer.scope import build_scope
+from sqlglot.tokens import Tokenizer, TokenType
 
-PROFILE_ID = "escapewheel-rule-sql-v0.1"
+PROFILE_ID = "escapewheel-rule-sql-v0.2"
 IDENTIFIER = re.compile(r"^[a-z][a-z0-9_]*$")
 BRACKETED_COMMENT = re.compile(r"/\*")
 EXPLICIT_NULL_ORDER = re.compile(r"\bNULLS\s+(?:FIRST|LAST)\b", re.IGNORECASE)
@@ -85,6 +88,7 @@ _ALLOWED_FUNCTION_NODES = tuple(
         "DenseRank",
         "IsNan",
         "Lag",
+        "Length",
         "Max",
         "Min",
         "PercentileCont",
@@ -92,6 +96,20 @@ _ALLOWED_FUNCTION_NODES = tuple(
     )
     if (node := getattr(exp, name, None)) is not None
 )
+# SQLGlot parses CHARACTER_LENGTH, CHAR_LENGTH, LENGTH and LEN to one node, so only the tokens tell them apart.
+_LENGTH_SPELLING = "character_length"
+# The descriptor's type bindings, spelled so SQLGlot can infer a routine argument's domain.
+_ANNOTATION_TYPES = {
+    "bool": "BOOLEAN",
+    "date": "DATE",
+    "float32": "FLOAT",
+    "float64": "DOUBLE",
+    "int32": "INT",
+    "int64": "BIGINT",
+    "json_string": "VARCHAR",
+    "string": "VARCHAR",
+    "timestamp": "TIMESTAMPTZ",
+}
 _STRUCTURAL_FUNCTION_NODES = tuple(
     node for name in ("And", "Case", "Cast", "Exists", "If", "Or") if (node := getattr(exp, name, None)) is not None
 )
@@ -164,6 +182,23 @@ def _check_binding(expression: exp.Expression, tables: Mapping[str, Any]) -> Any
     return qualified
 
 
+def _check_character_length(qualified: exp.Expression, tables: Mapping[str, Any]) -> None:
+    """Reject CHARACTER_LENGTH over anything but a CHARACTER VARYING value."""
+    if not any(qualified.find_all(exp.Length)):
+        return
+    schema: dict[str, dict[str, dict[str, str]]] = {}
+    for resource, table in tables.items():
+        namespace, name = resource.split(".", 1)
+        schema.setdefault(namespace, {})[name] = {
+            column["name"]: _ANNOTATION_TYPES.get(column["type"], "UNKNOWN") for column in table["columns"]
+        }
+    annotated = annotate_types(qualified.copy(), schema=cast(dict[str, object], schema))
+    for length in annotated.find_all(exp.Length):
+        argument = length.this
+        if argument.type is None or not argument.type.is_type(*exp.DataType.TEXT_TYPES):
+            raise RuleProfileError("CHARACTER_LENGTH takes one CHARACTER VARYING argument")
+
+
 def _base_inputs(expression: Any) -> frozenset[tuple[str, str]]:
     """Return exact registry columns bound by the qualified expression."""
     root = build_scope(expression)
@@ -213,6 +248,14 @@ def _check_surface(expression: exp.Expression, sql: str) -> None:  # noqa: C901
             raise RuleProfileError(f"{(side or kind).lower()} join is outside the profile")
         if join.args.get("on") is None and join.args.get("using") is None:
             raise RuleProfileError("a join needs ON or USING")
+    spelled = sum(
+        token.token_type == TokenType.VAR
+        and token.text.lower() == _LENGTH_SPELLING
+        and following.token_type == TokenType.L_PAREN
+        for token, following in pairwise(Tokenizer().tokenize(sql))
+    )
+    if spelled != sum(1 for _ in expression.find_all(exp.Length)):
+        raise RuleProfileError("a length routine other than CHARACTER_LENGTH is outside the profile")
     for function in expression.find_all(exp.Func):
         if isinstance(function, exp.Anonymous):
             if function.name.lower() not in _ANONYMOUS_ROUTINES:
@@ -340,6 +383,7 @@ def check_rule(
     resources = _base_tables(expression, visible)
     tables = core_tables | own_tables
     qualified = _check_binding(expression, tables)
+    _check_character_length(qualified, tables)
     _check_window_keys(expression, resources, tables)
     _check_exact_overflow(expression)
     _check_recursion(expression, sql)

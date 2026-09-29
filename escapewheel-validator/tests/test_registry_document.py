@@ -48,7 +48,7 @@ def _document():
         "registry_id": "demo",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
-        "rule_language": "escapewheel-rule-sql-v0.1",
+        "rule_language": "escapewheel-rule-sql-v0.2",
         "extension_id": "demo",
         "resources": {
             "demo.rows": {
@@ -95,7 +95,7 @@ def _ids(result):
 def test_reference_registry_has_one_complete_valid_result():
     result = check_registry(CORE)
     assert result.state == "valid"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.6"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.7"
     assert tuple(phase.phase for phase in result.phases) == PHASES
     assert result.phases[0].state == "skipped"
     assert result.phases[0].reason == "registry.phase.mapping_input"
@@ -327,7 +327,7 @@ def test_null_primary_key_is_a_valid_duplicate_row_declaration():
 def test_two_local_contracts_for_one_tuple_are_ambiguous():
     first = json.loads(CONTRACT.read_text())
     second = copy.deepcopy(first)
-    second["id"] = "escapewheel-registry-contract-v0.6"
+    second["id"] = "escapewheel-registry-contract-v0.7"
     result = check_registry(CORE, descriptors=[first, second])
     assert result.state == "unsupported"
     assert "registry.contract.selector_ambiguous" in _ids(result)
@@ -336,7 +336,7 @@ def test_two_local_contracts_for_one_tuple_are_ambiguous():
 def test_extension_without_core_runs_local_checks_and_is_incomplete():
     result = check_registry(_document())
     assert result.state == "incomplete"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.6"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.7"
     assert "registry.contract.core_context_unusable" in _ids(result)
 
     broken = _document()
@@ -579,7 +579,7 @@ def test_invalid_rule_language_outcome_is_attached_to_the_rule():
     document = _document()
     _table(document)["rules"] = [{**_rule(), "sql": "DELETE FROM demo.rows"}]
     result = check_registry(document, CORE)
-    outcome = next(outcome for outcome in result.findings if outcome.id == "escapewheel-rule-sql-v0.1")
+    outcome = next(outcome for outcome in result.findings if outcome.id == "escapewheel-rule-sql-v0.2")
     assert outcome.owner == "demo.rows.negative_demo_id"
 
 
@@ -594,6 +594,14 @@ def test_unavailable_selected_rule_language_is_unsupported_and_attached():
     assert result.state == "unsupported"
     assert rule_phase.state == "unsupported"
     assert all(outcome.owner for outcome in rule_phase.outcomes)
+
+
+def test_the_superseded_rule_language_selects_no_contract():
+    core = copy.deepcopy(CORE)
+    core["rule_language"] = "escapewheel-rule-sql-v0.1"
+    result = check_registry(core)
+    assert result.state == "unsupported"
+    assert "registry.contract.selector_unsupported" in _ids(result)
 
 
 def test_external_domain_uses_exact_ucum_syntax():

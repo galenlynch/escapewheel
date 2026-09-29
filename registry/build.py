@@ -23,12 +23,12 @@ VENDORED = {
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
     "registry_contract.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json",
-    "registry_contracts/escapewheel-registry-contract-v0.6.json": HERE.parent
-    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.6.json",
+    "registry_contracts/escapewheel-registry-contract-v0.7.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.7.json",
     "rule_language.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/rule_language.schema.json",
-    "rule_languages/escapewheel-rule-sql-v0.1.json": HERE.parent
-    / "escapewheel-validator/src/escapewheel_validator/schemas/escapewheel-rule-sql-v0.1.json",
+    "rule_languages/escapewheel-rule-sql-v0.2.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/escapewheel-rule-sql-v0.2.json",
     # The validator and the writer's publication gate apply the manifest schema; a reader does not.
     "manifest.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/manifest.schema.json",

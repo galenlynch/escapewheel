@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "profile": "escapewheel-rule-sql-v0.1",
+  "profile": "escapewheel-rule-sql-v0.2",
   "vectors": [
     {
       "id": "parsed-base-resources-ignore-alias-literal-and-comment",
@@ -104,6 +104,18 @@
       "expected_resources": ["core.labels"],
       "expected_result_names": ["first_label"],
       "expected_rows": [["é"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "character-length-counts-unicode-scalars",
+      "mode": "execute",
+      "inputs": {
+        "core.labels": {"primary_key": ["label_id"], "columns": [{"name": "label_id", "type": "int32"}, {"name": "label", "type": "string"}], "rows": [[1, "e\u0301"], [2, null]]}
+      },
+      "query": "SELECT label_id, CHARACTER_LENGTH(label) AS label_length FROM core.labels",
+      "expected_resources": ["core.labels"],
+      "expected_result_names": ["label_id", "label_length"],
+      "expected_rows": [["1", "2"], ["2", null]],
       "row_order_ignored": true
     },
     {
@@ -247,6 +259,46 @@
         "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": []}
       },
       "query": "SELECT random() AS value FROM core.measurements",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "char-length-spelling-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.labels": {"primary_key": ["label_id"], "columns": [{"name": "label_id", "type": "int32"}, {"name": "label", "type": "string"}], "rows": []}
+      },
+      "query": "SELECT CHAR_LENGTH(label) AS label_length FROM core.labels",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "length-spelling-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.labels": {"primary_key": ["label_id"], "columns": [{"name": "label_id", "type": "int32"}, {"name": "label", "type": "string"}], "rows": []}
+      },
+      "query": "SELECT LENGTH(label) AS label_length FROM core.labels",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "character-length-using-octets-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.labels": {"primary_key": ["label_id"], "columns": [{"name": "label_id", "type": "int32"}, {"name": "label", "type": "string"}], "rows": []}
+      },
+      "query": "SELECT CHARACTER_LENGTH(label USING OCTETS) AS label_length FROM core.labels",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "character-length-of-a-number-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": []}
+      },
+      "query": "SELECT CHARACTER_LENGTH(value) AS value_length FROM core.measurements",
       "expected_failure": "invalid",
       "row_order_ignored": true
     },

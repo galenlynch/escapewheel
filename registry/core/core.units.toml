@@ -205,3 +205,30 @@ FROM core.spike_events AS s
 JOIN core.units AS u USING (unit_id)
 WHERE s.amplitude IS NOT NULL
   AND u.amplitude_unit IS NULL'''
+
+[[rules]]
+id = "core.units.numbered_in_order"
+level = "error"
+message = "unit_id is not dense from 0, or does not number a curation's units consecutively by label"
+sql = '''
+SELECT numbered.unit_id
+FROM (
+  SELECT unit_id, sorting_run_id, curation_id,
+    ROW_NUMBER() OVER (ORDER BY unit_id) - 1 AS dense,
+    ROW_NUMBER() OVER (
+      PARTITION BY sorting_run_id, curation_id
+      ORDER BY label_length, local_unit_label, unit_id) - 1 AS rank_in_curation
+  FROM (
+    SELECT unit_id, sorting_run_id, curation_id, local_unit_label,
+      CHARACTER_LENGTH(local_unit_label) AS label_length
+    FROM core.units
+  ) AS labelled
+) AS numbered
+JOIN (
+  SELECT sorting_run_id, curation_id, MIN(unit_id) AS first_id
+  FROM core.units
+  GROUP BY sorting_run_id, curation_id
+) AS curations
+  ON curations.sorting_run_id = numbered.sorting_run_id AND curations.curation_id = numbered.curation_id
+WHERE numbered.unit_id <> numbered.dense
+   OR numbered.unit_id <> CAST(curations.first_id AS DECIMAL(38,0)) + numbered.rank_in_curation'''

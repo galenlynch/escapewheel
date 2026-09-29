@@ -23,7 +23,7 @@ from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, ch
 SCHEMAS = Path(__file__).resolve().parent / "schemas"
 SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
-CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.6.json"
+CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.7.json"
 RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
 UCUM_URI = "https://ucum.org/ucum"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
