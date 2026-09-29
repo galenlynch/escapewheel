@@ -144,6 +144,36 @@ forbids it.
 §15.2's table names only core and analysis resources. It does not say what an amendment may do to
 an extension, compatibility-projection or documentation resource.
 
+### 2.6 An amendment cannot read a source
+
+Part 00 §2.4 defines a build as one execution of a writer against one recipe. Part 05 §2's pipeline
+binds a build, and Part 12's rules bind a build and the adapters it reaches, "and bind no other
+build". Part 05 §15 says nothing of recipes, sources, adapters, normalization or provenance, and
+Part 05 §8 places derivation into a committed packet in an amendment. Nothing in the specification
+lets an amendment read a source through an adapter.
+
+The recipe also describes a whole packet. Part 05 §3.1 has it declare the packet's clocks and their
+parents. Part 05 §3.5 refuses two things before any source opens:
+
+- a required foreign key to a table nothing supplies;
+- a clock referenced but absent, or parented to nothing.
+
+A recipe adding a sniff sensor's device, clock and array parents the new clock to one the packet
+already holds, which the recipe does not declare, and §3.5 refuses it. The added rows' required
+references to tables only the packet supplies, such as `core.sessions`, draw the other refusal
+unless the recipe supplies those tables again.
+
+Part 05 §7 has a writer record one import run declaring its scope. The reference writer takes an
+import as session-wide and scopes it to the session, as R44 §2.1 has a session-wide run do. A
+second import into the same packet then shares (`session_id`, `activity_type`, `scope_kind`,
+`scope`) with the first. Part 05 §12 has a packet
+holding two such runs carry a `core.preferred_runs` row naming one of them, and has a writer refuse
+to commit one that does not, although the two imports supplied different groups and neither is an
+alternative to the other.
+
+The reference writer's amendment takes only resources a caller stages through its API. Its
+recipe-driven command builds a new packet, and its identifier numbering starts empty.
+
 ## 3. Desired outcome and constraints
 
 A resolution lets an amendment add a group of rows to a canonical table without changing any row,
@@ -180,6 +210,32 @@ More than one list is needed where one table serves two additions. `core.unit_co
 rows both for a new curation's units in an existing frame and for existing units in a new
 registration.
 
+An array or a video is an instance of `core.array_asset_instances` or `core.media_asset_instances`,
+which `core.array_assets` and `core.media_assets` catalogue one row per instance. An instance is
+therefore added with the catalogue row an amendment adds, and no instance a superseded row
+catalogues changes.
+
+An amendment numbers a name the superseded version holds with that version's identifier, since
+Part 02 §8.2 makes a name unique within a packet, and numbers a name the packet lacks after the
+largest identifier. An added array thus names the clock or device the packet already holds rather
+than a copy of it. A recipe performing an amendment names only the sources whose rows it adds, and
+its `owns` and preferences (Part 05 §3.3) govern only those rows.
+
+An amendment performed from a recipe is a build as Part 00 §2.4 defines one, so Part 05 §2's
+pipeline and Part 12 bind it unchanged. Four steps read the superseded packet:
+
+- its recipe names the packet it amends, and its clock table declares only added clocks, each
+  parented to a clock the recipe or the packet declares;
+- Part 05 §3.5 counts what the packet holds, so a foreign key or clock parent the packet supplies
+  is satisfied;
+- Part 05 §4.3 numbers names against the packet, as above;
+- Part 05 §7 adds one import run with the amendment's recipe, and a `core.source_files` row for
+  each root the packet lacks.
+
+Part 05 §12 then needs to exempt one import from another. Two imports into one packet supply
+disjoint groups, which adding only new groups guarantees, so neither is an alternative to the
+other.
+
 Where a declared rule numbers a table's assigned identifier, the numbering follows these rules:
 
 - the rule's order holds within each group, and each group's identifiers are contiguous;
@@ -204,6 +260,10 @@ identifier is stable across the versions of one packet, which is where reference
 made. A build's determinism (Part 05 §11) is unchanged. An amendment's numbering is a function of
 the superseded packet and the amendment's own recipe and sources.
 
+Adding only new groups has a second cost. An added row may reference rows the packet holds, but no
+row the packet holds can come to reference an added one. A stream written without a device cannot
+be attached to a device an amendment adds, and a clock cannot be moved under an added parent.
+
 ## 5. Impact sketch
 
 | surface | effect |
@@ -212,9 +272,9 @@ the superseded packet and the amendment's own recipe and sources.
 | logical prose and registry | Part 02 states the group declaration and the per-group numbering. The interval draft's numbering rule and Part 02 §12.1's unit order, which the unit-label draft rewrites, become per-group. The registry meta-schema gains the field, so the registry-contract descriptor advances, as the proposal `a-specialising-row-names-a-row-of-its-own-kind` would also advance it. The core registry declares groups on the tables §6's second question settles. |
 | physical profiles | Part 03 §9 is unchanged in substance: a table gaining a group is a new file. Part 03 §5.2's partitioning stays deferred. |
 | packet manifest and JSON Schemas | The registry meta-schema, as above. The packet manifest is unchanged. |
-| validation and import | Part 05 §15.2 is restated by content class and gains groups. Part 05 §4.3 states how an amendment continues numbering. §15.4's re-run rule already covers a written table. |
+| validation and import | Part 05 §15.2 is restated by content class and gains groups. An amendment may be performed from a recipe: Part 05 §§3.1 and 3.5 admit a recipe naming the packet it amends, §4.3 states how an amendment continues numbering, §7 records the amendment's import run, and §12 exempts one import from another. §15.4's re-run rule already covers a written table. Part 12 is unchanged, since an amendment from a recipe is a build. |
 | extensions | Each extension may declare groups on its canonical tables in its own registry version, and none needs to. An extension resource a new kind names is added as a resource, which §15.2 already permits. |
-| reader, writer, validator, adapters | The writer's amendment takes new groups of canonical tables: it reads the superseded rows, numbers after the largest identifier, and refuses a row whose group exists. The validator's generated checks are unchanged apart from the two numbering rules. The reader reads the current manifest and is unchanged. Adapters are unchanged. |
+| reader, writer, validator, adapters | The writer's amendment takes new groups of canonical tables: it reads the superseded rows, numbers after the largest identifier, and refuses a row whose group exists. It also runs a recipe's sources into an amendment, seeding its numbering from the packet's names. The validator's generated checks are unchanged apart from the two numbering rules. The reader reads the current manifest and is unchanged. Adapters are unchanged: an adapter delivers the same way into an amendment as into a new packet. |
 | existing packets | Both session packets pass both per-group rules unchanged. The drafts rebuild them anyway. |
 | conformance fixtures and tests | An amended fixture packet gaining a kind that sorts before its trials, and a curation of its first run, both conforming. The drafts' negative variants carry over. A writer test refuses an amendment adding a trial. |
 | revision process and tooling | Unchanged. |
@@ -222,17 +282,18 @@ the superseded packet and the amendment's own recipe and sources.
 
 ## 6. Open questions
 
-1. **Does an amendment add only groups a packet lacks, or also rows to a group it holds?** The
-   preferred direction is only groups it lacks, since a grown group changes what a consumer read
-   whole (§3).
+1. **Does an amendment add only groups a packet lacks, or also rows to a group it holds?** Resolved
+   2026-09-29: only groups it lacks, since a grown group changes what a consumer read whole (§3).
 2. **Which core tables declare groups in v0.2?** A v0.2 packet can gain only what v0.2 declares
-   (§1), so this is settled now or never for v0.2 packets. The preferred direction covers the
-   additions of §2.1:
+   (§1), so this is settled now or never for v0.2 packets. Resolved 2026-09-29 in part: the
+   additions of §2.1, including media and arrays. Devices and clocks are included as well, since a
+   source the original build had no adapter for, such as a sniff sensor, brings its device, its
+   clock and its array together:
 
    | tables | group |
    |---|---|
    | `core.intervals` | session and kind |
-   | `core.sorting_runs`, `core.curation_versions`, `core.event_streams`, `core.coordinate_frames`, `core.preferred_runs` | each row |
+   | `core.sorting_runs`, `core.curation_versions`, `core.event_streams`, `core.coordinate_frames`, `core.preferred_runs`, `core.array_assets`, `core.media_assets`, `core.devices`, `core.clocks` | each row |
    | `core.units` | run and curation |
    | `core.spike_events`, `core.unit_electrodes`, `core.unit_observation_intervals` | session and unit |
    | `core.sorting_run_channels` | session and run |
@@ -242,12 +303,23 @@ the superseded packet and the amendment's own recipe and sources.
    | `core.electrode_coordinates`, `core.electrode_coordinate_values` | session, frame and basis |
    | `core.unit_coordinates`, `core.unit_coordinate_values` | session and unit, or session, frame and basis |
    | `core.unit_quality_labels` | session and unit, or session and source |
+   | `core.array_dimensions`, `core.array_labels`, `core.array_channels` | array asset |
+   | `core.media_frames` | media asset |
+   | `core.clock_anchors` | clock |
+   | `core.clock_observation_intervals`, `core.clock_phase_steps` | session and clock |
    | the provenance tables | each row, as today |
 
-   The media and array tables, with `core.devices` and `core.clocks` and their child tables, are
-   the open part of this question. The identity of the session, subject, probes and electrodes
-   declares no group.
-3. **Is changing a preference part of this decision?** R41 §2.5 described it as an amendment. It
+   Still open: probes, electrodes and calibrations. The sniff sensor's reasoning applies equally to
+   a probe whose recording the original build had no adapter for, and to a calibration of an added
+   device. The preferred direction declares them too: `core.probes` and `core.calibrations` each
+   row, `core.electrodes` by probe, and `core.calibration_points` and `core.calibration_devices` by
+   calibration. Only `core.sessions`, `core.subjects` and `core.session_experimenters`, which
+   identify the packet, would then declare no group.
+3. **Is an amendment from a recipe part of this decision, or its own proposal?** Without it no
+   amendment reads a source (§2.6), so the sniff sensor's device, clock and array can be added only
+   by hand through a writer's API. The preferred direction keeps it here, since the groups this
+   proposal adds mostly come from sources.
+4. **Is changing a preference part of this decision?** R41 §2.5 described it as an amendment. It
    revises a row, so the preferred direction leaves it forbidden here and treats it as a separate
    proposal.
 
