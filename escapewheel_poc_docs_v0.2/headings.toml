@@ -1002,6 +1002,12 @@ section = "10"
 title = "Manifest conformance"
 aliases = []
 
+[anchor.ew-packet-owned-bytes]
+part = "03"
+section = "8.1"
+title = "Packet-owned bytes"
+aliases = []
+
 [anchor.ew-packet-registry-bindings]
 part = "04"
 section = "8"
@@ -1090,6 +1096,12 @@ aliases = []
 part = "04"
 section = "5.4"
 title = "Prefix resources"
+aliases = []
+
+[anchor.ew-prior-packet-comparison]
+part = "05"
+section = "9.3"
+title = "Comparison against a prior packet"
 aliases = []
 
 [anchor.ew-protocol-groups]

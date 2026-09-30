@@ -2551,6 +2551,7 @@ A value used for filtering, grouping, joining, or validation MUST be a first-cla
 
 ## 8. Immutability
 
+<a id="ew-packet-owned-bytes" data-spec-anchor="canonical"></a>
 ### 8.1 Packet-owned bytes
 
 A writer MUST NOT modify a resource the packet owns once it is committed. A correction is a new packet version, not an edit.
@@ -3682,6 +3683,7 @@ published in no partial form; its writer corrects the extension or builds the pa
 
 A validator MUST NOT downgrade an error to make a packet pass. An advisory rule MUST NOT be an error (Part 02 §10.2), so enabling advisory checks cannot change whether a packet previously passed.
 
+<a id="ew-prior-packet-comparison" data-spec-anchor="canonical"></a>
 ### 9.3 Comparison against a prior packet
 
 Where an import replaces an existing packet, it SHOULD report every resource the prior manifest declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
