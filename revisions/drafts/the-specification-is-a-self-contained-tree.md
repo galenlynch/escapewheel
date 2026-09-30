@@ -6,10 +6,10 @@
 | **Based on** | `a110521e9b61e9f62e12d66506528ad6fa1539fd` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 00 §§2.1, 2.3 and 2.4; Part 02 §§1, 4, 9.3 and 9.5; Part 03 §§1 and 6.5; Part 04 §§1 and 5.5; Part 05 §§1 and 3.1; Part 08 §§2 and 3; Part 10 §§1 and 5; Part 11 §1; Part 12 §§1 and 7; the description of `resources.schema.json`; the specification README |
-| **Depends on** | R122 §3.1 (the candidate's composition, which this locates); R122 §3.3 (internal consistency, whose checks this places); R111 §3.3 (every requirement binds a defined actor, which fifteen uses of a checker do not) |
+| **Amends** | Part 00 §§2.1 and 2.4; Part 02 §§1, 4, 9.3 and 9.5; Part 03 §§1 and 6.5; Part 04 §§1 and 5.5; Part 05 §§1 and 3.1; Part 08 §§2 and 3; Part 10 §§1 and 5; Part 11 §1; Part 12 §§1 and 7; the description of `resources.schema.json`; the specification README |
+| **Depends on** | R122 §3.1 (the candidate's composition, which this locates); R111 §3.3 (every requirement binds a defined actor, which fifteen uses of a checker do not) |
 | **Profile** | all |
-| **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5 |
+| **Decision clauses** | §3.1; §3.2; §3.3; §3.4 |
 
 Section 3 is normative. Sections 1, 2, 4, 5 and 6 are informative.
 
@@ -32,12 +32,13 @@ The specification also binds an actor it does not define. Parts 02, 03 and 04 or
 checker, and Part 00 §2.4 names four actors, none of them a checker, while requiring every
 requirement to bind one of them or state a property of an artifact.
 
-This revision makes the specification one directory, the specification's tree. The tree holds
-every member and names files only within itself, and its own tools produce its generated content
-and decide its consistency. Part 00 §2.4 gains the checker, of which a validator is one kind. No
-packet, artifact identifier or registry byte changes.
+This revision makes the specification one directory, the specification's tree. The tree holds every
+member, names files only within itself, and reproduces its generated content alone. Part 00 §2.4
+gains the checker, of which a validator is one kind. Where the tree's consistency checks run, and
+what its tools may import, are rules of the repository rather than of the specification, and the
+root contributing guide states them. No packet, artifact identifier or registry byte changes.
 
-The change is structural because it revises Part 00 §§2.1, 2.3 and 2.4 in place, rewrites the path
+The change is structural because it revises Part 00 §§2.1 and 2.4 in place, rewrites the path
 in every incorporation statement, and turns Part 08's generated regions into committed text.
 Appended sections would leave each part naming `registry/` paths that a separated tree cannot
 resolve, and Part 00 §2.4 counting four actors beside a section defining a fifth.
@@ -51,15 +52,14 @@ merges or retires. The rows are the sections whose text changes.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
-| Part 00 §2.1, the candidate's members and the combined rendering | extend in place | same section | the members lie in the specification's tree, incorporated artifacts in its `artifacts/`; a part names files only within the tree; a release's members lie within it; the combined rendering is named by its path in the tree | §3.1; §3.2 |
-| Part 00 §2.3, internal consistency | extend in place | same section | generated content is derived within the tree by its tools; the tree decides each checked projection and explicit consistency condition | §3.3; §3.4 |
-| Part 00 §2.4, the actors | extend in place | same section | a fifth actor, the checker, of which a validator is one kind; the roster's counts follow | §3.5 |
+| Part 00 §2.1, the candidate's members and the combined rendering | extend in place | same section | the members lie in the specification's tree, incorporated artifacts in its `artifacts/`; a part names files only within the tree; a release's members lie within it; generated content is reproducible from the tree alone; the combined rendering is named by its path in the tree | §3.1; §3.2; §3.3 |
+| Part 00 §2.4, the actors | extend in place | same section | a fifth actor, the checker, of which a validator is one kind; the roster's counts follow | §3.4 |
 | Part 02 §1, the incorporated artifacts and the rendered listing | revise in place | same section | paths from the tree's root | none (form required by §3.2) |
-| Part 02 §4, the registry checker | revise in place | same section | the actor is a checker | §3.5 |
+| Part 02 §4, the registry checker | revise in place | same section | the actor is a checker | §3.4 |
 | Part 02 §9.3, the rendered listing | revise in place | same section | path from the tree's root | none (form required by §3.2) |
 | Part 02 §9.5, the result schema | revise in place | same section | path from the tree's root | none (form required by §3.2) |
 | Part 03 §1, the schema and descriptor | revise in place | same section | paths from the tree's root | none (form required by §3.2) |
-| Part 03 §6.5, the physical checker | revise in place | same section | the actor is a validator | §3.5 |
+| Part 03 §6.5, the physical checker | revise in place | same section | the actor is a validator | §3.4 |
 | Part 04 §§1 and 5.5, the manifest and sources schemas | revise in place | same sections | paths from the tree's root | none (form required by §3.2) |
 | Part 05 §1, the actors it binds | revise in place | same section | names the four of five actors it binds | none |
 | Part 05 §3.1, the recipe schema | revise in place | same section | path from the tree's root | none (form required by §3.2) |
@@ -216,6 +216,11 @@ The validator's two checks could stay outside the tree, run from `conformance/` 
 reference validator, as NWB checks its schema with HDMF. A separated tree could then not check its
 own release, because its consistency check would import a package that copies from the tree.
 
+The rules for the tree's tools, what they may import and which checks the tree holds, could be
+requirements of Part 00. No writer, reader, checker, validator or consumer could comply with them or
+fail them. NWB and GeoParquet keep their checking tools in the specification's repository and state
+no rule for them in the specification.
+
 Part 00 §2.4 could keep four actors, but the fifteen uses would still bind an actor nobody is
 defined as. A checker could be defined as a validator acting on one document, but a validator
 decides a packet, and the tree's tools, which check the candidate's own registry and descriptor,
@@ -223,8 +228,8 @@ would then act as validators.
 
 ## 3. Decision
 
-The subsections state what the specification's tree holds, how a part names a file, how the tree
-produces its generated content and decides its consistency, and the checker.
+The subsections state what the specification's tree holds, how a part names a file, what the tree
+reproduces alone, and the checker.
 
 ### 3.1 The specification's tree holds every member
 
@@ -243,26 +248,13 @@ packet, and not in a link from one part to another, the path MUST be relative to
 MUST name a file within the tree. A numbered part MAY name evidence outside the tree, such as a
 conformance probe, by what it is, and MUST NOT give its path.
 
-### 3.3 The tree produces its generated content alone
+### 3.3 The tree reproduces its generated content alone
 
-Each generated file within the tree, and each generated region of a file within it, MUST be derived
-only from files within the tree by a tool within the tree. A tool within the tree MUST import only
-its language's standard library, files within the tree, and the libraries the tree declares, at the
-versions the tree locks.
+Each generated file within the tree, and each generated region of a file within it, MUST be
+reproducible from the files within the tree, using no file outside it other than released software
+that implements no part of the specification.
 
-### 3.4 The tree decides its own consistency
-
-The specification's tree MUST contain a tool deciding each of the following, which Part 00 §2.3
-makes a condition of the candidate's internal consistency:
-
-- each mechanically checked projection within the tree;
-- each explicit consistency condition between the candidate's owners, among them Part 03 §5.4's
-  conditions between the descriptor and the core registry; and
-- each incorporated artifact's conformance to the schema or contract its incorporating part names,
-  among them the core registry's under Part 02 §9.4, the physical-profile descriptor's under
-  Part 03 §1, and the static conformance of the core registry's rules under Part 11.
-
-### 3.5 A checker decides whether a document conforms
+### 3.4 A checker decides whether a document conforms
 
 A **checker** decides whether a document conforms to the contract governing it, and reports its
 findings. The documents are a registry document under Part 02 §9.4, a physical-profile descriptor
@@ -276,10 +268,11 @@ packet's axes table from its dense-array declaration, and is a validator.
 
 ## 4. What this does not change
 
-The tree's tools are not members. A tool deciding a condition of §3.4 owns nothing: the prose and
-the incorporated artifacts own the condition (Part 00 §2.2), and a tool disagreeing with them is a
-defect in the tool. An extension registry is not incorporated (Part 09), so where one sits carries
-no normative force.
+The tree's tools are not members and own nothing. A tool deciding a condition of Part 00 §2.3 checks
+what the prose and the incorporated artifacts own (Part 00 §2.2), and a tool disagreeing with them
+is a defect in the tool. Part 00 §2.3 still decides what makes the candidate inconsistent, and says
+nothing of where a check runs. An extension registry is not incorporated (Part 09), so where one
+sits carries no normative force.
 
 ## 5. Consequence
 
@@ -311,9 +304,14 @@ in. The rest of the repository depends on `spec/`, and `spec/` depends on none o
   writer reproduces them;
 - executing the Tier 2 rules in DuckDB, and each check reading Git history, a prototype or the
   frozen v0.1 documents, move to `conformance/`, whose runner opens the tree's corpus with the
-  reader and validates it with the validator; and
+  reader and validates it with the validator;
+- the root contributing guide states the rules for the tree's tools, and `verify.py` checks them: a
+  tool within the tree imports nothing of the repository outside the tree and only libraries the
+  tree declares and locks, and the tree holds a tool deciding each mechanically checked projection,
+  each explicit consistency condition and each incorporated artifact's conformance to the schema or
+  contract its part names;
 - the style guide's link to the root README's authority summary points at Part 00 §2 instead, so
-  no file in the tree links out of it;
+  no file in the tree links out of it; and
 - `revisions/` stays the change process outside the tree; the heading tool reports changed
   headings and the revision tooling finds their citers.
 
@@ -336,16 +334,16 @@ lists the roster, gains the checker. The packages, the frozen v0.1 documents, `i
 | reader, writer, validator, adapters | Each package's build copies the artifacts and checkers it uses from the tree and checks its copies. The reader copies the descriptor checker and Part 03 §5.4's condition, and the validator the registry-document and rule checkers. The writer's `init` template and README name the new core registry path. No runtime behavior changes, and adapters are unchanged. | The copy-agreement checks; the package suites. |
 | conformance fixtures and tests | The corpus builder and the expected findings, as data, move into the tree; the builder already reads only the specification's artifacts, and the runner stays in `conformance/`. The complete-result and Tier 2 static checks run from the tree's tools, and Tier 2 execution moves to `conformance/`. Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. | §6's cases; `fixtures/corpus.py` at its new path. |
 | revision process and tooling | The paths in `check_citations.py`, `ledger.py`, `impact.py`, `repoint.py`, `evidence.py`, `registry-targets.toml` and the verifier move, and R111 §3.3's note gains the checker. The heading tool stops importing the revision tooling. Accepted records and their evidence are unedited. | `ledger.py`, `evidence.py`, `check_citations.py` and `verify.py`. |
-| generated publications and developer documentation | The combined rendering and the heading index are regenerated within the tree. The specification README states what the tree holds and counts five actors. The root README, CONTRIBUTING, the agent instructions and the package guides describe the new layout. | `verify.py`. |
+| generated publications and developer documentation | The combined rendering and the heading index are regenerated within the tree. The specification README states what the tree holds and counts five actors. The root README, the agent instructions and the package guides describe the new layout, and the root contributing guide states the rules for the tree's tools. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
-§§3.1 and 3.2 are `applied` at Part 00 §2.1, §§3.3 and 3.4 at Part 00 §2.3, and §3.5 at
-Part 00 §2.4, Part 02 §4 and Part 03 §6.5. Each is placed by canonical anchor.
+§§3.1, 3.2 and 3.3 are `applied` at Part 00 §2.1, and §3.4 at Part 00 §2.4, Part 02 §4 and
+Part 03 §6.5. Each is placed by canonical anchor.
 
 The positive case is the tree alone: a copy of `spec/` in an empty directory, given only the
-environment the tree locks, regenerates every generated file and region byte for byte and passes
-every check of §3.4.
+released libraries the tree locks, none of which implements the specification, regenerates every
+generated file and region byte for byte.
 
 These cases distinguish the new rules from the current ones:
 
@@ -355,15 +353,15 @@ These cases distinguish the new rules from the current ones:
   within a packet, such as `schemas/semantic_version.txt`, begins with neither and is not flagged;
 - a file in `artifacts/` that no part incorporates fails, as does an incorporated artifact outside
   `artifacts/`;
-- a tool within the tree importing a package of the repository, such as the validator, fails the
-  tree's import check, and one importing a library the tree does not declare fails it too;
-- each check of §3.4 refuses a seeded violation: a core registry breaking an invariant of
-  Part 02 §9.4, a descriptor failing Part 03 §1's checker, a rule outside Part 11's profile, and an
-  override failing Part 03 §5.4, carried by the tests that move with the checkers;
-- a package's copy of a tree checker that differs from its source fails that package's agreement
-  check; and
+- a generator reading a file outside the tree, as Part 08's example generator runs the reference
+  writer, leaves the copy unable to regenerate what it writes; and
 - an edit to Part 08's committed regions that the reference writer does not reproduce fails
   `integration/`.
 
-No mechanical case covers §3.5. The incorporation review reads all 26 uses of "checker" against the
+The contributing guide's rules have evidence of their own, which is not conformance evidence for
+this revision: `verify.py` fails a tool within the tree that imports the validator or an undeclared
+library, each consistency tool refuses the seeded violations its tests carry, and a package's copy
+of a tree checker that differs from its source fails that package's agreement check.
+
+No mechanical case covers §3.4. The incorporation review reads all 26 uses of "checker" against the
 roster, and `evidence/R<N>.json` names the three anchors that carry it.
