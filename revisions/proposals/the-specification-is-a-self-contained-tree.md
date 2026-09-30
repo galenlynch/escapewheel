@@ -6,7 +6,7 @@
 | **Opened** | 2026-09-30 |
 | **Based on** | `2b04880d9e7ea0c6cda9a564f0d277fabc49c0d2` |
 | **Decision domain** | specification |
-| **Affects** | Part 00 §2.1's composition of the specification candidate and of a release; the incorporation statements of Part 02 §§1 and 9.5, Part 03 §1, Part 04 §§1 and 5.5, Part 05 §3.1, Part 11 §1 and Part 12 §§1 and 7; Part 02 §§1 and 9.3's citations of the rendered registry listing; Part 08 §§2–3's generated regions; Part 10 §§1 and 5's citations of conformance probes; the specification README and style guide |
+| **Affects** | Part 00 §2.1's composition of the specification candidate and of a release; the incorporation statements of Part 02 §§1 and 9.5, Part 03 §1, Part 04 §§1 and 5.5, Part 05 §3.1, Part 11 §1 and Part 12 §§1 and 7; Part 02 §§1 and 9.3's citations of the rendered registry listing; Part 08 §§2–3's generated regions; Part 10 §§1 and 5's citations of conformance probes; the specification README and style guide; Part 00 §2.4's roster of actors, the actor counts in Part 05 §1 and the specification README, Part 02 §4's registry checker and Part 03 §6.5's physical checker |
 
 ## 1. Problem
 
@@ -26,6 +26,11 @@ regions are written by building a packet with the reference writer, and the regi
 the reference validator and reader. The candidate therefore cannot be regenerated, checked or handed
 to another implementer apart from the packages it is meant to govern, and a release frozen from
 this tree has no directory it could be frozen from.
+
+The specification also binds an actor it does not define. Parts 02, 03 and 04 order the phases of a
+checker of registry documents, physical-profile descriptors and manifests, and Part 00 §2.4, which
+names four actors and none of them a checker, requires every requirement to bind one of the four or
+state a property of an artifact.
 
 ## 2. Evidence
 
@@ -116,12 +121,12 @@ registry-document checker is 1,859 lines needing `jsonschema`, `sqlglot` and `uc
 rule checker, which it calls, is 394 lines needing `sqlglot`.
 
 The two validator modules check registries, not packets. Part 02 §9.4 defines registry-document
-conformance as its own contract, whose result §9.5 serialises, and a validator applies it to the
-registries a packet binds. `registry_document.py` imports only `rule_language.py` and those three
-libraries; the validator's manifest, generation and validation modules import it, and nothing
-imports in the other direction. The Tier 2 check also executes each rule in DuckDB against empty
-tables built from the registry. Part 11 defines an engine-neutral language, so that execution
-shows that one engine accepts the rules and decides no condition of Part 00 §2.3.
+conformance as its own contract, whose result Part 02 §9.5 serialises, and a validator applies it to
+the registries a packet binds. `registry_document.py` imports only `rule_language.py` and those
+three libraries. The validator's manifest, generation and validation modules import it, and it
+imports none of them. The Tier 2 check also executes each rule in DuckDB against empty tables built
+from the registry. Part 11 defines an engine-neutral language, so that execution shows that one
+engine accepts the rules and decides no condition of Part 00 §2.3.
 
 ### 2.4 The conformance corpus builds from specification artifacts alone
 
@@ -169,7 +174,9 @@ The following were read from each project's repository or documentation on 2026-
 
 - **NWB.** NWB keeps its schema, its format documentation and a schema for extension documents in
   `NeurodataWithoutBorders/nwb-schema`. PyNWB pins it as a Git submodule at a release commit.
-  HDMF's common schema follows the same pattern, and two consumers pin it independently.
+  HDMF's common schema follows the same pattern, and two consumers pin it independently. The
+  schema repository's continuous integration checks the schema with an implementation: its
+  `validate_schema.yml` installs HDMF from its Git repository and runs `validate_hdmf_spec`.
 - **Parquet.** Parquet keeps its prose and `parquet.thrift` in `apache/parquet-format`, tagged
   separately from parquet-java. parquet-java took the Thrift file from the released format artifact
   until September 2026. It then vendored a copy with a sidecar recording the source commit, because
@@ -181,7 +188,8 @@ The following were read from each project's repository or documentation on 2026-
   submodule or subtree.
 - **GeoParquet.** GeoParquet keeps its specification, JSON Schema, examples and test data in one
   repository, `opengeospatial/geoparquet`, and attaches the specification and schema to each
-  release tag.
+  release tag. Its `scripts/` directory declares and locks its own Python environment, in which it
+  tests the JSON Schema and generates and tests the example file.
 - **Iceberg.** Iceberg keeps its specification at `format/spec.md` inside the Java implementation's
   repository. It has no specification tags, and its specification page is unversioned. A 2024
   Apache thread on the Variant encoding wanted that specification moved out of Spark, so that
@@ -191,14 +199,34 @@ Where an implementation vendors a copy that nothing generates or checks, the cop
 happened to Arrow C++'s Thrift file and to `openapi-spec-validator`'s schemas, which trail several
 published iterations.
 
+### 2.7 Six parts bind a checker that Part 00 §2.4 does not define
+
+"Checker" appears 26 times in six parts, in two senses.
+
+- Eleven times, in Parts 01, 02, 03, 05 and 06, it labels an unchecked requirement: "No checker
+  verifies this" follows a writer obligation that no validator decides either, so the label reads a
+  checker as including a validator.
+- Fifteen times, in Parts 02, 03 and 04, it binds or describes an actor. Part 02 §9.4 orders a
+  checker's phases over a registry document, and Part 02 §9.2 forbids it to dereference an
+  identifier. Part 03 §1 requires the generic cross-member checker to refuse a misplaced
+  `overriding_orders`. Part 04 §10 orders a checker's phases over a manifest, and Part 03 §4 and
+  Part 04 §4.3 name findings it reports in them. Part 02 §4 calls it a registry checker, and
+  Part 03 §6.5 calls a physical checker what checks a packet's arrays, which a validator does.
+
+Part 00 §2.4 defines a validator as deciding whether a packet conforms, and a registry document or
+descriptor checked alone is no packet. The manifest phases run inside packet validation, and the
+registry-document phases run there, over each registry a packet binds, and over a registry
+document alone.
+
 ## 3. Desired outcome and constraints
 
 The specification's members and everything needed to produce and check them should form one tree
 that can be read, rebuilt and checked with nothing else present. The tree's own tools should decide
 every consistency condition of Part 00 §2.3, so that a second implementer handed the tree receives
-the whole contract, can establish that it is consistent, and receives nothing that is only an
-implementation. The tree should also be separable into its own repository later without rewriting
-what it says.
+the whole contract and can establish that it is consistent. Of an implementation, the tree should
+hold only the checkers it runs over its own artifacts, which are tools and not members (Part 00
+§2.1). Every requirement should bind an actor Part 00 §2.4 defines. The tree should also be
+separable into its own repository later without rewriting what it says.
 
 The resolution should preserve:
 
@@ -244,7 +272,7 @@ For where the consistency checks run:
 | option | effect |
 |---|---|
 | the implementations' checks, as now | the packages the candidate governs decide its consistency, and a second implementer needs the reference reader and validator to establish it |
-| the tree owns the reader's two checkers, and the validator's two run from `conformance/` | the tree cannot establish its own consistency, and a registry check stays in the validator although it checks no packet |
+| the tree owns the reader's two checkers, and the validator's two run from `conformance/` | the tree's consistency check imports a package that copies from the tree, so a separated tree cannot check its own release, and the check lives with an implementation, as at NWB (§2.6) |
 | the tree owns all four, and the packages copy them (preferred direction) | the tree decides its own consistency; its tools gain `sqlglot`, `ucumvert` and about 2,250 lines of checker code, and the prose still owns every algorithm (Part 02 §9.4) |
 
 Under the preferred direction the specification is one directory, `spec/`, holding every member of
@@ -258,7 +286,8 @@ spec/
   source/core/                 the TOML the core registry is assembled from
   informative/                 the registry listing, the combined rendering, example documents
   conformance/                 the informative conformance corpus and its expected findings
-  tools/                       assembly, rendering, heading and combining tools, and the checkers
+  tools/                       assembly, rendering, heading and combining tools, the checkers,
+                               and the locked environment they run in
 ```
 
 The rest of the repository depends on `spec/`, and `spec/` depends on none of it:
@@ -268,7 +297,9 @@ The rest of the repository depends on `spec/`, and `spec/` depends on none of it
   from `spec/tools/`, and each package checks that its copies agree. The reader copies the
   descriptor's cross-member checker and Part 03 §5.4's consistency condition. The validator copies
   the registry-document checker and the rule checker, and applies them to the registries a packet
-  binds.
+  binds. The tree declares and locks its tools' environment, so its consistency result does not
+  move with a library's release, and a package copying a checker admits the tree's locked version
+  of each library the checker needs.
 - **Extensions.** The four extension registries leave the specification's tree. `aind_opto` and
   `aind_unit_qc` join `escapewheel-aind`, and `dynamic_foraging` and `vr_foraging` go under
   `extensions/`. An extension is not incorporated (Part 09), so where each one sits is repository
@@ -299,6 +330,22 @@ nothing outside the specification's artifacts (§2.4). The corpus's expected fin
 within the tree, while the runner, which opens packets with the reader and validates them with the
 validator, stays in `conformance/`.
 
+For who a checker is:
+
+| option | effect |
+|---|---|
+| keep four actors | the fifteen uses keep binding an actor nobody is defined as, against Part 00 §2.4's own rule |
+| a checker is a validator acting on one document | the roster keeps four actors, but a validator decides a packet, and the tree's tools, which check the candidate's registry and descriptor and no packet, would act as validators |
+| a fifth actor, of which a validator is one kind (preferred direction) | every use resolves, the unchecked label keeps covering validators, and the tree's tools act as checkers and as no other actor |
+
+Under the preferred direction Part 00 §2.4 gains a **checker**, which decides whether a document
+conforms to the contract governing it (a registry document under Part 02 §9.4, a physical-profile
+descriptor under Part 03 §1, or a manifest under Part 04 §10) and reports its findings. A validator
+is the checker of a packet: it checks each such document the packet carries, as a checker, and
+decides the rest of the packet besides, so a requirement on a checker binds a validator checking
+one. Part 02 §4's registry checker becomes a checker and Part 03 §6.5's physical checker a
+validator, and Part 00 §2.4, Part 05 §1 and the specification README stop counting four actors.
+
 A release is not defined here. Part 00 §2.1 would gain only that a release's members are drawn from
 the specification's tree. Which of the tree's informative files a release includes, and the
 publication record's format, are left to the release decision.
@@ -307,6 +354,13 @@ The cost is one large mechanical move before the field test:
 
 - the validator's registry-document and rule checkers, 2,253 lines, move into `spec/tools/`, which
   gains `sqlglot` and `ucumvert`, and the validator's copies are generated and checked;
+- the checkers' 1,152 lines of tests move with them, and the `registry-contract` and
+  `rule-language` probes import them from the tree;
+- the registry-document checker stops importing its rule checker by the validator's package name
+  and stops locating the artifacts beside its own file, as Part 03 §1's checker already avoids by
+  taking them as arguments, so that a copy can match its source byte for byte;
+- Part 00 §2.4 gains the checker, Part 02 §4's registry checker and Part 03 §6.5's physical checker
+  are renamed, and the five places counting four actors are corrected;
 - the 65 current files that name the old paths, and the scripts that compute them, are repointed;
 - `registry-targets.toml`'s 292 paths are repointed, and `ledger.py`'s containment check follows
   them;
@@ -319,17 +373,17 @@ The cost is one large mechanical move before the field test:
 
 | surface | effect |
 |---|---|
-| semantic prose | Unchanged. Part 01 names no file. |
-| logical prose and registry | Part 02 §§1 and 9.5 cite their artifacts under `artifacts/`, and §§1 and 9.3 cite the rendered listing under `informative/`. No declaration, identity or byte of the core registry changes. |
-| physical profiles | Part 03 §1 cites its schema and descriptor under `artifacts/`. Neither artifact changes. Part 03 §2's generated region is written by a tool within the tree. |
+| semantic prose | Unchanged. Part 01 names no file, and its three unchecked labels keep their meaning. |
+| logical prose and registry | Part 02 §§1 and 9.5 cite their artifacts under `artifacts/`, and §§1 and 9.3 cite the rendered listing under `informative/`. No declaration, identity or byte of the core registry changes. Part 02 §4's registry checker becomes a checker. |
+| physical profiles | Part 03 §1 cites its schema and descriptor under `artifacts/`. Neither artifact changes. Part 03 §2's generated region is written by a tool within the tree. Part 03 §6.5's physical checker becomes a validator. |
 | packet manifest and JSON Schemas | Part 04 §§1 and 5.5, Part 05 §3.1 and Part 12 §§1 and 7 cite their schemas under `artifacts/`. No schema's `$id` or member changes. `resources.schema.json`'s description stops naming a repository script, which changes its bytes but not its `$id` or shape. |
-| validation and import | Unchanged. No packet obligation changes, and the validator applies the same registry checks from its copies of the tree's checkers. |
+| validation and import | Part 00 §2.4 gains the checker, of which a validator is one kind, and Part 05 §1 names the four actors it binds. No packet obligation changes: each requirement on a checker already binds the validator performing it, and the validator applies the same registry checks from its copies of the tree's checkers. |
 | extensions | Unchanged in meaning. The four extension documents leave the specification's tree unchanged in content. Part 09 names no file. |
 | reader, writer, validator, adapters | Each package's build copies the artifacts and checkers it uses from the tree, and each package checks its copies. The reader copies the descriptor checker and Part 03 §5.4's consistency condition, and the validator the registry-document and rule checkers. The writer's `init` template and README name the new core registry path. No runtime behavior changes. |
 | existing packets | Unchanged. No packet records a repository path. The field-test recipes change their registry and extension paths. |
 | conformance fixtures and tests | The corpus becomes an informative member of the tree; its builder already reads only the specification's artifacts. The expected findings move out of the runner into data. The complete-result and Tier 2 static checks run from the tree's tools, Tier 2 execution in DuckDB moves to `conformance/`, and Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. |
 | revision process and tooling | The paths in `check_citations.py`, `ledger.py`, `impact.py`, `repoint.py`, `evidence.py`, `registry-targets.toml` and the verifier move. The heading tool stops importing the revision tooling. Accepted records and their evidence are unedited. The revision guide's own links are repointed as ordinary maintenance. |
-| generated publications and developer documentation | The combined rendering and the heading index are regenerated from the new tree. The root README, CONTRIBUTING and the package guides describe the new layout. The specification README states what the tree holds. |
+| generated publications and developer documentation | The combined rendering and the heading index are regenerated from the new tree. The root README, CONTRIBUTING and the package guides describe the new layout. The specification README states what the tree holds and counts five actors. |
 
 ## 7. Promotion criteria
 
