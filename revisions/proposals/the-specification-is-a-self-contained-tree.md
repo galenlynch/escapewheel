@@ -263,10 +263,12 @@ Four rules state the boundary at the level of the specification:
 - an informative part may point at evidence outside the tree, such as Part 10's probes, only by
   naming it and not by a path the tree's copy would have to resolve.
 
-The conformance corpus becomes an informative member of the tree. Its builder needs the one
-override of Part 03 §5.4 (§2.4). Its expected findings become data the builder's tree holds, while
-the runner, which opens packets with the reader and validates them with the validator, stays in
-`conformance/`.
+The conformance corpus becomes an informative member of the tree. Its builder reads Part 03
+§5.4's overriding order from the physical-profile descriptor, which the proposal
+`the-profile-descriptor-declares-the-overriding-orders` would make that order's machine-readable
+owner (§2.4); this proposal follows that one. The corpus's expected findings become data within the
+tree, while the runner, which opens packets with the reader and validates them with the validator,
+stays in `conformance/`.
 
 A release is not defined here. Part 00 §2.1 would gain only that a release's members are drawn from
 the specification's tree. Which of the tree's informative files a release includes, and the
@@ -294,18 +296,9 @@ The cost is one large mechanical move before the field test:
 | extensions | Unchanged in meaning. The four extension documents leave the specification's tree unchanged in content. Part 09 names no file. |
 | reader, writer, validator, adapters | Each package's build copies the artifacts it uses from the tree, and each package checks its copies. The writer's `init` template and README name the new core registry path. No runtime behavior changes. |
 | existing packets | Unchanged. No packet records a repository path. The field-test recipes change their registry and extension paths. |
-| conformance fixtures and tests | The corpus becomes an informative member of the tree, and its builder stops importing the reader. The expected findings move out of the runner into data. The package-dependent registry checks move to `conformance/`, and Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. |
+| conformance fixtures and tests | The corpus becomes an informative member of the tree, and its builder reads the overriding order from the descriptor rather than importing the reader. The expected findings move out of the runner into data. The package-dependent registry checks move to `conformance/`, and Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. |
 | revision process and tooling | The paths in `check_citations.py`, `ledger.py`, `impact.py`, `repoint.py`, `evidence.py`, `registry-targets.toml` and the verifier move. The heading tool stops importing the revision tooling. Accepted records and their evidence are unedited. The revision guide's own links are repointed as ordinary maintenance. |
 | generated publications and developer documentation | The combined rendering and the heading index are regenerated from the new tree. The root README, CONTRIBUTING and the package guides describe the new layout. The specification README states what the tree holds. |
-
-## 6. Open questions
-
-1. **Where does the corpus builder get Part 03 §5.4's stored order?** The preferred direction has the
-   builder restate the one override from Part 03 §5.4, with a conformance check that the builder's
-   copy and the reader's agree. That leaves the contract unchanged. The alternative is for the
-   physical-profile descriptor to carry each overriding order, so that the builder, the writer and
-   the validator all read it from an incorporated artifact. That changes an incorporated artifact
-   and needs its own proposal.
 
 ## 7. Promotion criteria
 
@@ -315,7 +308,7 @@ The cost is one large mechanical move before the field test:
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
