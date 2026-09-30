@@ -161,7 +161,7 @@ def prune(
     days = keep_days if keep_days is not None else declared.get("keep_days", KEEP_DAYS)
 
     superseded = sorted(
-        ((path, _read(path)) for path in (root / MANIFESTS).glob("nwb.packet.*.json")),
+        ((path, _read(path)) for path in (root / MANIFESTS).glob("*.json")),
         key=lambda pair: semver(pair[1].get("packet_version", "")),
     )
     # The current version's own retained copy is not superseded, whatever the policy says.

@@ -23,7 +23,7 @@ from escapewheel_reader import Manifest, Packet
 from escapewheel_validator import Report, validate
 from escapewheel_validator.stores import StoreUnreachable, digest, digest_resource, listing
 
-from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version
+from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version, retained
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
 #: records a prefix's Part 04 §5.4 per-member listing with the entity tag the store handed over,
@@ -151,7 +151,7 @@ def verify(
     versions = root / MANIFESTS
     versions.mkdir(exist_ok=True)
     for manifest in (superseded, candidate):
-        (versions / f"nwb.packet.{manifest['packet_version']}.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        (versions / retained(manifest)).write_text(json.dumps(manifest, indent=2) + "\n")
     written = root / f"{MANIFEST}.candidate"
     written.write_text(json.dumps(candidate, indent=2) + "\n")
     os.replace(written, root / MANIFEST)

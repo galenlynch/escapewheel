@@ -496,7 +496,7 @@ def test_an_amendment_keeps_packet_level_fields(tmp_path, registry, minimal):
     after = json.loads((root / "packet.json").read_text())
     assert after["sessions"] == ["s001"]
     assert after["description"] == "a packet"
-    assert after["created_at"] == json.loads((root / "manifests" / "nwb.packet.0.1.0.json").read_text())["created_at"]
+    assert after["created_at"] == json.loads((root / "manifests" / "0.1.0.json").read_text())["created_at"]
 
 
 def test_every_manifest_is_retained(tmp_path, registry, minimal):
@@ -504,7 +504,7 @@ def test_every_manifest_is_retained(tmp_path, registry, minimal):
     _write(root, registry, minimal)
     _amend(root, registry, {"core.processing_runs": _runs()})
     kept = sorted(p.name for p in (root / "manifests").iterdir())
-    assert kept == ["nwb.packet.0.1.0.json", "nwb.packet.0.1.1.json"]
+    assert kept == ["0.1.0.json", "0.1.1.json"]
 
 
 def test_amending_an_uncommitted_root_is_refused(tmp_path, registry, minimal):
@@ -618,7 +618,7 @@ def test_an_amendment_installs_a_newer_registry_and_retains_the_old(tmp_path, re
     assert writer.amend(root).passed
     bound = json.loads((root / "packet.json").read_text())["registries"]["core"]
     assert (bound["version"], bound["path"]) == ("9.9.9", "registries/core/9.9.9.json.gz")
-    retained = json.loads((root / "manifests" / "nwb.packet.0.1.0.json").read_text())["registries"]["core"]
+    retained = json.loads((root / "manifests" / "0.1.0.json").read_text())["registries"]["core"]
     assert (root / retained["path"]).is_file()
     assert retained["version"] == registry["registry_version"]
 

@@ -104,8 +104,8 @@ def test_verify_is_a_new_packet_version_that_retains_the_old(tmp_path, registry,
     _, manifest = verify(root)
     assert manifest["packet_version"] == "0.1.1"
     assert sorted(p.name for p in (root / "manifests").iterdir()) == [
-        "nwb.packet.0.1.0.json",
-        "nwb.packet.0.1.1.json",
+        "0.1.0.json",
+        "0.1.1.json",
     ]
 
 

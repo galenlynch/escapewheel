@@ -345,6 +345,11 @@ PROVENANCE = ("core.processing_runs", "core.source_files", "core.processing_run_
 MANIFESTS = "manifests"
 
 
+def retained(manifest: Mapping[str, Any]) -> str:
+    """Name a manifest's retained copy under `MANIFESTS` by its version (Part 03 §3.1)."""
+    return f"{manifest['packet_version']}.json"
+
+
 def semver(text: str) -> tuple[int, ...]:
     """Order a packet_version. A part that is not a number sorts before one that is."""
     return tuple(int(part) if part.isdigit() else -1 for part in str(text).split("."))
@@ -2028,12 +2033,12 @@ class PacketWriter:
             raise CommitRefused(report, staging)
 
         moved = [e["uri"] for e in entries if not e.get("external")]
-        retained = [
-            f"{MANIFESTS}/nwb.packet.{manifest['packet_version']}.json"
+        copies = [
+            f"{MANIFESTS}/{retained(manifest)}"
             for manifest in (superseded, amended)
-            if not (root / MANIFESTS / f"nwb.packet.{manifest['packet_version']}.json").exists()
+            if not (root / MANIFESTS / retained(manifest)).exists()
         ]
-        creates = {_created(root, relative) for relative in (*moved, *added_registries, *retained)}
+        creates = {_created(root, relative) for relative in (*moved, *added_registries, *copies)}
         creates |= {f"{MANIFEST}.candidate"}
         _claim(root, creates)
         _record_promotion(staging, version, creates)
@@ -2107,7 +2112,7 @@ class PacketWriter:
         versions = root / MANIFESTS
         versions.mkdir(exist_ok=True)
         for manifest in (superseded, amended):
-            path = versions / f"nwb.packet.{manifest['packet_version']}.json"
+            path = versions / retained(manifest)
             # An existing copy is the one an earlier amendment retained, and retained bytes are
             # not rewritten.
             if not path.exists():

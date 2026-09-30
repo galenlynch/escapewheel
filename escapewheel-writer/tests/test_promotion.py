@@ -133,7 +133,7 @@ def test_an_interrupted_amendment_is_undone_and_published_on_retry(tmp_path, reg
     version, paths = read_promotion(root)
     assert version == "0.1.1"
     assert "registries/core/9.9.9.json.gz" in paths
-    retained = next(p for p in paths if "manifests/nwb.packet.0.1.0.json".startswith(p))
+    retained = next(p for p in paths if "manifests/0.1.0.json".startswith(p))
     assert (root / retained).exists()
 
     monkeypatch.undo()

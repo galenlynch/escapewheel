@@ -48,7 +48,7 @@ def packet(tmp_path):
         ("0.2.0", [kept], "0.2.0"),
         ("0.3.0", [kept], "0.2.0"),
     ):
-        (root / MANIFESTS / f"nwb.packet.{version}.json").write_text(
+        (root / MANIFESTS / f"{version}.json").write_text(
             json.dumps(_manifest(version, resources, registry=registry))
         )
     return root
@@ -81,13 +81,13 @@ def test_orphans_go_before_the_manifests_that_identify_them(packet):
 def test_the_default_keeps_one_superseded_manifest(packet):
     plan = prune(packet)
     assert KEEP_VERSIONS == 1
-    assert [p.name for p in plan.retained] == ["nwb.packet.0.2.0.json"]
-    assert [p.name for p in plan.expired] == ["nwb.packet.0.1.0.json"]
+    assert [p.name for p in plan.retained] == ["0.2.0.json"]
+    assert [p.name for p in plan.expired] == ["0.1.0.json"]
 
 
 def test_the_current_versions_own_copy_is_never_expired(packet):
     plan = prune(packet, keep_versions=0)
-    assert "nwb.packet.0.3.0.json" not in [p.name for p in plan.expired]
+    assert "0.3.0.json" not in [p.name for p in plan.expired]
 
 
 def test_a_packet_declares_its_retention(packet):
@@ -102,8 +102,8 @@ def test_an_argument_overrides_what_the_packet_declares(packet):
     manifest["retention"] = {"keep_versions": 2}
     (packet / MANIFEST).write_text(json.dumps(manifest))
     assert [p.name for p in prune(packet, keep_versions=0).expired] == [
-        "nwb.packet.0.1.0.json",
-        "nwb.packet.0.2.0.json",
+        "0.1.0.json",
+        "0.2.0.json",
     ]
 
 
@@ -115,7 +115,7 @@ def test_both_floors_must_permit_an_expiry(packet):
 
 
 def test_a_manifest_with_no_timestamp_is_kept_and_said_so(packet):
-    path = packet / MANIFESTS / "nwb.packet.0.1.0.json"
+    path = packet / MANIFESTS / "0.1.0.json"
     manifest = json.loads(path.read_text())
     del manifest["created_at"], manifest["validation"]
     path.write_text(json.dumps(manifest))
@@ -135,7 +135,7 @@ def test_a_retained_registry_lives_as_long_as_the_manifest_naming_it_survives(pa
 def test_a_manifest_deleted_out_of_band_strands_its_registry(packet):
     """Which is why Part 05 §15.5 puts orphans first: nothing names the file any more, so it is a
     stray, and a stray is never removed."""
-    (packet / MANIFESTS / "nwb.packet.0.1.0.json").unlink()
+    (packet / MANIFESTS / "0.1.0.json").unlink()
     plan = prune(packet)
     assert "0.1.0.json.gz" in [p.name for p in plan.strays]
     assert "0.1.0.json.gz" not in [p.name for p in plan.orphans]
