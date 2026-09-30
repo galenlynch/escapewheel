@@ -235,6 +235,7 @@ note = "restored 2026-09-04; the reader floor table was absent entirely"
 [clause."R30 §3.2"]
 disposition = "applied"
 where = [{ part = "03", section = "5.4" }]
+note = "the descriptor's table interface declares the order 03 §5.4 projects (R154 §3.1)"
 
 [clause."R30 §3.1"]
 disposition = "applied"
@@ -1430,7 +1431,7 @@ where = [
     { part = "03", section = "5.4" },
     { part = "02", section = "9" },
 ]
-note = "an amended packet is run-major within each build, so under R150 §3.6 it clusters each curation's spikes"
+note = "an amended packet is run-major within each build, so under R150 §3.6 it clusters each curation's spikes; the descriptor declares the order 03 §5.4 projects (R154 §3.1)"
 
 [clause."R81 §2.5"]
 disposition = "applied"
@@ -1774,7 +1775,7 @@ note = "what a profile is, what a second one must satisfy, and that no Part 01 o
 
 [clause."R93 §3.3"]
 disposition = "registry"
-note = "03 §5.4 is an override's only statement; escapewheel_reader.ordering holds the machine copy the writer and validator both read"
+note = "the physical-profile descriptor holds the machine-readable order (R154 §3.1), and its check without a packet is 03 §5.4's consistency condition (R154 §3.3)"
 
 [clause."R93 §3.4"]
 disposition = "applied"
@@ -3518,7 +3519,7 @@ note = "a codec matches a pattern by name and stated configuration members; a sh
 [clause."R137 §3.3"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-array-codecs" }]
-note = "physical-profile/0.2.0 defines codec_pattern, codec_sequence, sharding_floor and zarr_v3_floor, and the portable descriptor names it"
+note = "the schema defines codec_pattern, codec_sequence, sharding_floor and zarr_v3_floor; R154 §3.5 supersedes the 0.2.0 identifier, now stated at 03 §1"
 
 [clause."R137 §3.4"]
 disposition = "applied"
@@ -4087,3 +4088,29 @@ where = [
   { part = "04", anchor = "ew-packet-catalog-scope", note = "manifest 0.6.0" },
   { part = "05", anchor = "ew-recipe-purpose", note = "recipe 0.3.0" },
 ]
+
+[clause."R154 §3.1"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-portable-profile-scope", note = "the descriptor owns the overriding orders; the member is refused off the table interface" },
+  { part = "03", anchor = "ew-overriding-orders", note = "the member's meaning and its generated projection" },
+]
+
+[clause."R154 §3.2"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-table-ordering", note = "a primary key's order" },
+  { part = "03", anchor = "ew-overriding-orders", note = "the writer's obligation; only a descriptor overrides" },
+]
+
+[clause."R154 §3.3"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-overriding-orders" }]
+
+[clause."R154 §3.4"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-overriding-orders" }]
+
+[clause."R154 §3.5"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-portable-profile-scope", note = "physical-profile/0.3.0" }]

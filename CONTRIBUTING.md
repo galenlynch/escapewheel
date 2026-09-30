@@ -193,7 +193,7 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 822 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 827 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 7. What each check is for
@@ -205,7 +205,7 @@ that complete result. `check.py` separately adds checks true only of this reposi
 `facts.py` counts the descriptor inventory and those repository checks:
 
 <!-- BEGIN facts: checks -->
-29 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 40 further checks over the whole set
+29 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 41 further checks over the whole set
 <!-- END facts: checks -->
 
 | check | catches |

@@ -43,7 +43,8 @@ terms as core.
 
 An extension needs no code. Its registry document supplies the logical contract; physical-profile
 support determines how a particular payload is read or written. Neither imports anything of the
-reference implementation.
+reference implementation. An extension's table is stored in its primary key's order, which the
+extension chooses by the order in which it declares its key's columns (Part 03 §5.3).
 
 <a id="ew-extension-namespacing" data-spec-anchor="canonical"></a>
 ### 5.2 Namespacing

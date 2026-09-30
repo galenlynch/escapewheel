@@ -16,10 +16,14 @@ from urllib.parse import quote
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-from escapewheel_reader.ordering import stored_order
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = json.loads((HERE.parent / "registry" / "logical_schemas.json").read_text())
+_PROFILE = json.loads(
+    (HERE.parent / "registry" / "physical_profiles" / "escapewheel-portable-v0.1.json").read_text()
+)
+#: Part 03 §5.4's overriding orders, read from the descriptor that owns them.
+OVERRIDING_ORDERS = _PROFILE["interfaces"][_PROFILE["kind_interfaces"]["table"]].get("overriding_orders", {})
 
 #: The one extension this corpus carries. Part 01 §3.10a makes an `interval_kind` naming a resource
 #: the packet does not declare an error, and no core table specialises an interval -- so a packet
@@ -721,7 +725,8 @@ def sort_table(resource: str, t: pa.Table) -> pa.Table:
 
     Sorted by number rather than by name, since Part 02 §12.9 numbers intervals by their bounds.
     """
-    keys = [k for k in stored_order(resource, SPECS[resource]) if k in t.column_names]
+    order = OVERRIDING_ORDERS.get(resource) or SPECS[resource].get("primary_key") or ()
+    keys = [k for k in order if k in t.column_names]
     if not keys:
         return t
     return t.take(pc.sort_indices(t, sort_keys=[(k, "ascending") for k in keys], null_placement="at_end"))

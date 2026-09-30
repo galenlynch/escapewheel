@@ -105,14 +105,12 @@ The other 34 checks need only the standard library or `jsonschema`. `headings.py
 records each part's stable headings, imports the revision tooling's `impact.py` to list the
 citers of a changed heading.
 
-### 2.4 The conformance corpus needs the reader to build
+### 2.4 The conformance corpus builds from specification artifacts alone
 
-The corpus builder, `fixtures/build.py`, writes 120 packets with PyArrow and imports one function
-from the reference reader, `stored_order`. That function returns each table's primary key, except
-for the one override of Part 03 §5.4, the stored order of `analysis.spike_events`. Part 03 §5.4's
-table is the only statement of that override in the specification: the physical-profile
-descriptor does not carry it, and the reader's `ordering.py` restates it for the writer and
-validator. The corpus's expected findings sit in `fixtures/corpus.py`, beside the runner that
+The corpus builder, `fixtures/build.py`, writes 120 packets with PyArrow and imports nothing of the
+reference implementation. It stores each table in its primary key's order, except where the
+physical-profile descriptor declares an overriding order (R154 §3.1), which it reads from the
+descriptor. The corpus's expected findings sit in `fixtures/corpus.py`, beside the runner that
 opens each packet with the reader and validates it with the validator.
 
 ### 2.5 The paths are cited widely, but frozen records need not follow them
@@ -263,10 +261,8 @@ Four rules state the boundary at the level of the specification:
 - an informative part may point at evidence outside the tree, such as Part 10's probes, only by
   naming it and not by a path the tree's copy would have to resolve.
 
-The conformance corpus becomes an informative member of the tree. Its builder reads Part 03
-§5.4's overriding order from the physical-profile descriptor, which the proposal
-`the-profile-descriptor-declares-the-overriding-orders` would make that order's machine-readable
-owner (§2.4); this proposal follows that one. The corpus's expected findings become data within the
+The conformance corpus becomes an informative member of the tree. Its builder already reads
+nothing outside the specification's artifacts (§2.4). The corpus's expected findings become data within the
 tree, while the runner, which opens packets with the reader and validates them with the validator,
 stays in `conformance/`.
 

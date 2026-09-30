@@ -1952,10 +1952,21 @@ def _scan_one_ordering(  # noqa: C901
     resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report
 ) -> bool:
     """One table's ordering scan. True where uniqueness must fall back to the aggregate."""
-    # Part 03 §5.3 puts every table in its key's order unless Part 03 §5.4 overrides it, and R93 §3.3
-    # moved that list out of the registry, so both come from `escapewheel_reader.ordering`.
+    # Part 03 §5.3 puts every table in its key's order unless the descriptor overrides it (Part 03
+    # §5.4), so both come from `escapewheel_reader.ordering`.
     keys = stored_order(resource_id, spec)
     unique = spec["primary_key"] if adjacency_settles_uniqueness(resource_id, spec) else None
+    declared = {c["name"] for c in spec.get("columns", ())}
+    if missing := [k for k in keys if k not in declared]:
+        # Part 03 §5.4: the bound registry cannot hold the required order, so the table departs.
+        report.add(
+            "error",
+            f"{resource_id}.physical_order",
+            f"the bound registry declares no {', '.join(missing)}, so the table cannot be in its "
+            f"required order ({', '.join(keys)})",
+            registry=report.resource_owner(resource_id),
+        )
+        return bool(unique)
     # Part 03 §5.3: the declarations this table's adjacency argument leans on.
     determined = (
         [

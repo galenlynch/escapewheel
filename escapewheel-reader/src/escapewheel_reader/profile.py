@@ -45,6 +45,7 @@ def check_physical_profile(
             errors.append(f"interface {name!r} is not referenced by any logical kind")
         if logical_kinds is not None and set(mappings) != set(logical_kinds):
             errors.append("kind_interfaces keys do not equal the logical kind vocabulary")
+        errors.extend(_misplaced_orders(mappings, interfaces))
     if logical_standard is not None and descriptor.get("logical_standard") != logical_standard:
         errors.append("logical_standard does not identify the checked logical standard")
     if part_text is not None and isinstance(interfaces, Mapping):
@@ -67,6 +68,15 @@ def check_physical_profile(
                     if count != 1:
                         errors.append(f"{label} anchor {anchor!r} resolves {count} times in Part 03")
     return tuple(errors)
+
+
+def _misplaced_orders(mappings: Mapping[str, Any], interfaces: Mapping[str, Any]) -> list[str]:
+    """Only the interface storing tables has a row order to override (Part 03 §1)."""
+    return [
+        f"interface {name!r} declares overriding_orders but does not store tables"
+        for name, entry in interfaces.items()
+        if isinstance(entry, Mapping) and "overriding_orders" in entry and mappings.get("table") != name
+    ]
 
 
 def _bundled_json(relative: str) -> dict[str, Any]:

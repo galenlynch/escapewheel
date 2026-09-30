@@ -115,8 +115,7 @@ def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> boo
     the only correct check.
     """
     key = table.get("primary_key")
-    # Part 03 §5.3: a table with no override is in its primary key's order. R93 §3.3 removed the
-    # registry field that used to say so, and Part 03 §5.4's list says it instead.
+    # Part 03 §5.3: a table the descriptor does not override is in its primary key's order.
     sort = stored_order(resource, table)
     if not key or not sort:
         return False

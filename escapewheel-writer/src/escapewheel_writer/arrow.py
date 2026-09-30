@@ -210,8 +210,8 @@ def schema(spec: Mapping[str, Any], present: set[str]) -> pa.Schema:
 def sort_key(resource: str, spec: Mapping[str, Any]) -> list[str] | None:
     """Return the columns this table is physically ordered by, or None.
 
-    Part 03 §5.3 sorts every table by its primary key except where §5.4 gives another order,
-    which it does for `analysis.spike_events` alone.
+    Part 03 §5.3 sorts every table by its primary key except where the descriptor overrides it
+    (Part 03 §5.4).
 
     Parameters
     ----------

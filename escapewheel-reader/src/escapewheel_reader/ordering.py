@@ -1,27 +1,24 @@
-"""The order a table is stored in, which the registry no longer declares.
+"""The order a table is stored in, which the physical-profile descriptor declares.
 
-R93 §3.3 removed the per-table `sort` field: it stated a physical property in the logical
-standard's machine form, and a reader could not tell a table with no override from one a later
-build block forgot. Part 03 §5.4's table is the only statement an override has now, and two actors
-read it -- a writer emits the order (Part 03 §5.4) and a validator establishes it (Part 03 §5.3) -- so
-the machine copy lives here, in the package both of them depend on and neither of which depends
-on the other.
-
-Everything not named below is stored in its primary key's order (Part 03 §5.3).
+A table is stored in its primary key's order unless the descriptor's table interface names it in
+`overriding_orders` (Part 03 §5.4). A writer emits the order and a validator establishes it (Part 03
+§5.3), and both read it here, from the descriptor this package vendors.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from functools import cache
 from typing import Any
 
-#: Part 03 §5.4. `analysis.spike_events` buckets by time and sorts by unit within each bucket, so a
-#: time filter and a unit filter each prune (Part 03 §5.4, narrowed to five columns by R81 §2.4). It
-#: satisfies Part 03 §5.3 because `clock_id` and `time_bucket_tick` are each declared `determined_by`
-#: a subset of the key, so neither can separate two rows that share one.
-OVERRIDES: Mapping[str, tuple[str, ...]] = {
-    "analysis.spike_events": ("session_id", "clock_id", "time_bucket_tick", "unit_id", "t_tick"),
-}
+from .profile import physical_profile
+
+
+@cache
+def _overrides() -> Mapping[str, tuple[str, ...]]:
+    profile = physical_profile()
+    interface = profile["interfaces"][profile["kind_interfaces"]["table"]]
+    return {resource: tuple(order) for resource, order in interface.get("overriding_orders", {}).items()}
 
 
 def stored_order(resource: str, table: Mapping[str, Any]) -> list[str]:
@@ -30,15 +27,39 @@ def stored_order(resource: str, table: Mapping[str, Any]) -> list[str]:
     Empty where the table declares no primary key and no override, which is the one case with no
     order to establish (Part 02 §2 admits a `null` key with a stated reason).
     """
-    if override := OVERRIDES.get(resource):
+    if override := _overrides().get(resource):
         return list(override)
     return list(table.get("primary_key") or ())
 
 
 def overridden(resource: str) -> Sequence[str] | None:
     """Part 03 §5.4's order for `resource`, or None where its key is its order."""
-    override = OVERRIDES.get(resource)
+    override = _overrides().get(resource)
     return list(override) if override else None
 
 
-__all__ = ["OVERRIDES", "overridden", "stored_order"]
+def override_errors(order: Sequence[str], table: Mapping[str, Any] | None) -> list[str]:
+    """Where an overriding order is inconsistent with the table a core registry declares.
+
+    The conditions of Part 03 §5.4 that let an override settle its key by adjacency without a
+    packet (Part 03 §5.3). `table` is None where the registry declares no such table.
+    """
+    if table is None:
+        return ["the core registry declares no such table"]
+    columns = {column["name"]: column for column in table.get("columns", ())}
+    key = list(table.get("primary_key") or ())
+    errors = [f"{name!r} is not a column of the table" for name in order if name not in columns]
+    errors += [f"key column {name!r} is absent" for name in key if name not in order]
+    if errors:
+        return errors
+    last = max(order.index(name) for name in key)
+    for name in order[:last]:
+        determined = columns[name].get("determined_by")
+        if name not in key and not (determined and set(determined) <= set(key)):
+            errors.append(f"{name!r} precedes a key column and is not determined by the key")
+    if list(order) == key:
+        errors.append("the order is the table's primary key's order")
+    return errors
+
+
+__all__ = ["overridden", "override_errors", "stored_order"]

@@ -81,11 +81,6 @@ REASONING: tuple[tuple[str, str, str], ...] = (
         "the revision's own terminal-anchor test, which is the measurement rather than the rule",
     ),
     (
-        "escapewheel-reader/src/escapewheel_reader/ordering.py",
-        "R81 §2.4",
-        "what narrowed the override, beside the citation of the override itself",
-    ),
-    (
         "escapewheel-aind/src/escapewheel_aind/nwb.py",
         "R59 §2",
         "which of the four atlas fields that revision promoted to columns, and which it left",

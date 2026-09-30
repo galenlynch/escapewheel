@@ -920,8 +920,8 @@ def test_a_column_determined_by_the_key_cannot_separate_duplicates():
     """
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
-    # R93 §3.3 took the order out of the registry, so the resource names it: Part 03 §5.4's entry
-    # for this one is what puts two non-key columns ahead of the key.
+    # The resource names the order: the descriptor's override for this one (Part 03 §5.4) is what
+    # puts two non-key columns ahead of the key.
     table = {
         "primary_key": ["session_id", "unit_id", "t_tick"],
         "columns": [
@@ -936,27 +936,23 @@ def test_a_column_determined_by_a_non_key_still_refuses():
     """The dependency must be on the key: anything else can order duplicates apart."""
     from unittest.mock import patch
 
-    from escapewheel_reader.ordering import OVERRIDES
-
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
     table = {
         "primary_key": ["a", "b"],
         "columns": [{"name": "x", "type": "string", "presence": "required", "determined_by": ["c"]}],
     }
-    with patch.dict(OVERRIDES, {"x.y": ("a", "x", "b")}):
+    with patch("escapewheel_reader.ordering._overrides", return_value={"x.y": ("a", "x", "b")}):
         assert not adjacency_settles_uniqueness("x.y", table)
 
 
 def test_an_undeclared_column_ahead_of_the_key_refuses():
     from unittest.mock import patch
 
-    from escapewheel_reader.ordering import OVERRIDES
-
     from escapewheel_validator.generate import adjacency_settles_uniqueness
 
     table = {"primary_key": ["a", "b"], "columns": [{"name": "x"}]}
-    with patch.dict(OVERRIDES, {"x.y": ("a", "x", "b")}):
+    with patch("escapewheel_reader.ordering._overrides", return_value={"x.y": ("a", "x", "b")}):
         assert not adjacency_settles_uniqueness("x.y", table)
 
 
@@ -2306,3 +2302,24 @@ def test_each_unassessed_external_is_its_own_registrys_finding():
         ("info", "external.physical_unassessed", "core", (("core.lfp",),)),
         ("info", "external.physical_unassessed", "task", (("task.lfp",),)),
     ]
+
+
+def test_a_bound_registry_lacking_an_overrides_column_departs_from_its_order():
+    """Part 03 §5.4: without `time_bucket_tick` the table cannot take the descriptor's order."""
+    from escapewheel_validator import Report
+    from escapewheel_validator.validator import _scan_one_ordering
+
+    report = Report()
+    spec = {
+        "columns": [
+            {"name": "session_id"},
+            {"name": "unit_id"},
+            {"name": "t_tick"},
+            {"name": "clock_id", "determined_by": ["session_id"]},
+        ],
+        "primary_key": ["session_id", "unit_id", "t_tick"],
+    }
+    _scan_one_ordering("analysis.spike_events", None, spec, report)
+    (finding,) = report.findings
+    assert (finding.check, finding.level) == ("analysis.spike_events.physical_order", "error")
+    assert "declares no time_bucket_tick" in finding.message

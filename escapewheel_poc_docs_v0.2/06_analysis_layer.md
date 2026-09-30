@@ -44,7 +44,7 @@ Normative.
 
 Core keeps each spike on the clock of the probe that measured it, sorted unit-major. That layout answers "this unit's spikes" well and "every unit's spikes in this window" not at all, because a window across many clocks means nothing.
 
-`analysis.spike_events` is core's spikes mapped onto the session's reference clock and bucketed by time, so that a time filter and a unit filter both prune. Its `clock_id` is the session's reference clock, so the table holds no rows for a session declaring no reference clock. Part 03 §5.4 owns the order it is stored in, by unit within each time bucket, and its row groups.
+`analysis.spike_events` is core's spikes mapped onto the session's reference clock and bucketed by time, so that a time filter and a unit filter both prune. Its `clock_id` is the session's reference clock, so the table holds no rows for a session declaring no reference clock. Part 03 §5.4 owns the order it is stored in and its row groups.
 
 <!-- columns: analysis.spike_events -->
 | column | type | presence | |

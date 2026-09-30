@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-09-30 |
 | **Based on** | `b548bd01a38ca46478b93be5891db87b484fb8d3` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -226,8 +226,8 @@ gain notes that the descriptor declares the order Part 03 §5.4 projects. R137 �
 
 ## 6. Conformance and implementation evidence
 
-§3.1 is `applied` at Part 03 §1 and §3.5 at Part 03 §1. §§3.2, 3.3 and 3.4 are `applied` at
-Part 03 §5.4, and §3.2 also at Part 03 §5.3. Each is placed by canonical anchor. The descriptor and
+§3.1 is `applied` at Part 03 §§1 and 5.4 and §3.5 at Part 03 §1. §§3.2, 3.3 and 3.4 are `applied`
+at Part 03 §5.4, and §3.2 also at Part 03 §5.3. Each is placed by canonical anchor. The descriptor and
 schema are evidence owners of §§3.1 and 3.5.
 
 These cases distinguish the new rules from the current ones:

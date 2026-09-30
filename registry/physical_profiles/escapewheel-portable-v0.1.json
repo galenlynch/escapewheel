@@ -1,5 +1,5 @@
 {
-  "$schema": "https://escapewheel.org/schemas/physical-profile/0.2.0",
+  "$schema": "https://escapewheel.org/schemas/physical-profile/0.3.0",
   "id": "escapewheel-portable-v0.1",
   "logical_standard": "escapewheel-logical-v0.1",
   "kind_interfaces": {"table": "parquet", "dense_array": "zarr", "opaque": null},
@@ -12,7 +12,10 @@
         "encodings": ["PLAIN", "RLE", "RLE_DICTIONARY", "DELTA_BINARY_PACKED"],
         "data_page_types": ["DATA_PAGE", "DATA_PAGE_V2"], "encryption": "none"
       },
-      "anchors": ["ew-table-encoding", "ew-parquet-reader-floor"]
+      "overriding_orders": {
+        "analysis.spike_events": ["session_id", "clock_id", "time_bucket_tick", "unit_id", "t_tick"]
+      },
+      "anchors": ["ew-table-encoding", "ew-overriding-orders", "ew-parquet-reader-floor"]
     },
     "zarr": {
       "realization": "materialized", "access": "logical_values", "resource_form": "prefix",

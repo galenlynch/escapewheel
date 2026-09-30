@@ -2163,10 +2163,16 @@ This part defines how the logical resources of Part 02 are stored in the portabl
 This part incorporates `registry/physical_profile.schema.json` and
 `registry/physical_profiles/escapewheel-portable-v0.1.json`. The schema owns the reusable closed
 shape. The descriptor owns the profile's exact identifiers, kind-to-interface mapping, interface
-forms, ownership compatibility, variants, reader floors, floor roles, and anchors. This prose owns
-their meaning and actor obligations. A conforming distributed copy MUST pass the schema and the
-generic cross-member checker at a packaging or equivalent conformance boundary; an implementation
-MAY cache that result and MUST NOT revalidate an unchanged bundled descriptor for each packet.
+forms, ownership compatibility, variants, reader floors, floor roles, overriding orders, and
+anchors. This prose owns their meaning and actor obligations. A conforming distributed copy MUST
+pass the schema and the generic cross-member checker at a packaging or equivalent conformance
+boundary; an implementation MAY cache that result and MUST NOT revalidate an unchanged bundled
+descriptor for each packet.
+
+The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
+`https://escapewheel.org/schemas/physical-profile/0.3.0`, and the portable descriptor's `$schema`
+names it. `overriding_orders` is a member only of the interface the descriptor's `kind_interfaces`
+maps `table` to, and the generic cross-member checker MUST refuse it on any other interface.
 
 The portable physical profile defined by this part is identified by
 `escapewheel-portable-v0.1`.
@@ -2324,7 +2330,7 @@ selection and cross-file ordering; the present `parquet` interface is one object
 <a id="ew-table-ordering" data-spec-anchor="canonical"></a>
 ### 5.3 Ordering
 
-A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where §5.4 gives no order for a table, the order required is its primary key's. A validator MUST report a departure as an **error**.
+A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). A table's **primary key's order** lists its primary key's columns in the order its registry declares them, and it is the order required of every table §5.4 does not name. A validator MUST report a departure as an **error**.
 
 Two rows sharing a key are then neighbours, because nothing in the sort can order between them: a column that is a function of the key takes the same value in both. So the scan that establishes order settles uniqueness in the same pass, which is the means Part 02 §10.1 leaves to a profile to supply. A validator establishes order by scan rather than by query, because physical order is not visible to SQL (Part 02 §10.3).
 
@@ -2334,16 +2340,45 @@ Where the scan finds a departure, uniqueness MUST be settled by aggregate rather
 
 A reader MUST NOT depend on stored order for correctness. Establishing the order is the validator's work, and a reader that assumed it would be trusting a property of the profile rather than of the logical standard.
 
-One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST`; Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because a build numbers units curation by curation ([Part 02 §12.1](02_core_logical_schemas.md#ew-unit-identity)) and an amendment numbers the units it adds after every unit the packet holds ([Part 05 §4.3](05_validation_and_import.md#ew-import-normalization)), the default order clusters each curation's spikes.
+§5.4 names the tables stored in another order, and its consistency conditions make each satisfy this section. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because a build numbers units curation by curation ([Part 02 §12.1](02_core_logical_schemas.md#ew-unit-identity)) and an amendment numbers the units it adds after every unit the packet holds ([Part 05 §4.3](05_validation_and_import.md#ew-import-normalization)), the default order clusters each curation's spikes.
 
 <a id="ew-overriding-orders" data-spec-anchor="canonical"></a>
 ### 5.4 The overriding orders
 
+The descriptor's table interface declares `overriding_orders`. Each member names a table and lists,
+in order, the columns that table is stored by. This table projects them:
+
+<!-- BEGIN GENERATED OVERRIDING ORDERS -->
 | resource | order |
 |---|---|
 | `analysis.spike_events` | `session_id, clock_id, time_bucket_tick, unit_id, t_tick` |
+<!-- END GENERATED OVERRIDING ORDERS -->
 
-A writer **MUST** emit `analysis.spike_events` in that order. It is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.
+A writer **MUST** store each table that `overriding_orders` names in the order named, and every
+other table in its primary key's order (§5.3). Only a physical-profile descriptor declares an
+overriding order, and a registry document declares none. A table of an extension is therefore
+stored in its primary key's order, and an extension chooses that order by the order in which it
+declares its key's columns.
+
+Each overriding order and the core registry the specification candidate incorporates MUST satisfy
+all of the following:
+
+- the order's key names a table that the core registry declares;
+- every column the order names is a column of that table;
+- the order names every column of the table's primary key;
+- every column before the last primary-key column in the order is a primary-key column or is
+  declared `determined_by` a subset of the primary key (Part 02 §8.5); and
+- the order differs from the table's primary key's order.
+
+These make each override satisfy §5.3's adjacency rule without a packet. A descriptor and core
+registry that fail them make the candidate internally inconsistent
+([Part 00 §2.3](00_architecture.md#ew-candidate-consistency)).
+
+Where a packet's bound core registry declares a table that `overriding_orders` names, but not every
+column its order names, the table cannot be stored in its required order. A validator **MUST**
+report that table's order as a departure under §5.3.
+
+`analysis.spike_events` is the one resource whose layout is part of its reason for existing: bucketing by time and sorting by unit within each bucket leaves both columns with informative row-group statistics, so a unit filter and a time filter each prune.
 
 A writer **SHOULD** start a new row group at each bucket boundary. A group cut at a fixed row count straddles boundaries and spans two buckets' worth of time. Row-group size and encoding are otherwise not normative: the right values follow from session length and unit count rather than from the schema.
 
@@ -2542,9 +2577,7 @@ declares the Zarr interface `materialized`, `logical_values`, and `prefix`, with
 `reader_only`; v3 permits packet and external ownership, while v2 permits external ownership only.
 It does not enumerate optional codecs.
 
-The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
-`https://escapewheel.org/schemas/physical-profile/0.2.0`, and the portable descriptor's `$schema`
-names it. The schema declares the v3 floor with these definitions:
+The physical-profile schema declares the v3 floor with these definitions:
 
 | definition | shape |
 |---|---|
@@ -4289,7 +4322,7 @@ Normative.
 
 Core keeps each spike on the clock of the probe that measured it, sorted unit-major. That layout answers "this unit's spikes" well and "every unit's spikes in this window" not at all, because a window across many clocks means nothing.
 
-`analysis.spike_events` is core's spikes mapped onto the session's reference clock and bucketed by time, so that a time filter and a unit filter both prune. Its `clock_id` is the session's reference clock, so the table holds no rows for a session declaring no reference clock. Part 03 §5.4 owns the order it is stored in, by unit within each time bucket, and its row groups.
+`analysis.spike_events` is core's spikes mapped onto the session's reference clock and bucketed by time, so that a time filter and a unit filter both prune. Its `clock_id` is the session's reference clock, so the table holds no rows for a session declaring no reference clock. Part 03 §5.4 owns the order it is stored in and its row groups.
 
 <!-- columns: analysis.spike_events -->
 | column | type | presence | |
@@ -4649,7 +4682,8 @@ terms as core.
 
 An extension needs no code. Its registry document supplies the logical contract; physical-profile
 support determines how a particular payload is read or written. Neither imports anything of the
-reference implementation.
+reference implementation. An extension's table is stored in its primary key's order, which the
+extension chooses by the order in which it declares its key's columns (Part 03 §5.3).
 
 <a id="ew-extension-namespacing" data-spec-anchor="canonical"></a>
 ### 5.2 Namespacing

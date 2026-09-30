@@ -49,24 +49,45 @@ VENDORED = {
 }
 
 
+def _replace_region(text: str, name: str, rows: list[str]) -> str:
+    begin, end = f"<!-- BEGIN GENERATED {name} -->", f"<!-- END GENERATED {name} -->"
+    before, remainder = text.split(begin, 1)
+    _, after = remainder.split(end, 1)
+    return before + "\n".join([begin, *rows, end]) + after
+
+
 def render_physical_profile() -> Path:
-    """Refresh Part 03's informative kind-to-interface projection."""
+    """Refresh Part 03's kind-to-interface and overriding-order projections."""
     descriptor = json.loads(
         (HERE / "physical_profiles/escapewheel-portable-v0.1.json").read_text()
     )
     path = HERE.parent / "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md"
-    text = path.read_text()
-    begin = "<!-- BEGIN GENERATED PHYSICAL PROFILE -->"
-    end = "<!-- END GENERATED PHYSICAL PROFILE -->"
-    rows = [begin, "| logical kind | generic interface |", "|---|---|"]
-    rows.extend(
-        f"| `{kind}` | {f'`{interface}`' if interface is not None else 'none'} |"
-        for kind, interface in descriptor["kind_interfaces"].items()
+    text = _replace_region(
+        path.read_text(),
+        "PHYSICAL PROFILE",
+        [
+            "| logical kind | generic interface |",
+            "|---|---|",
+            *(
+                f"| `{kind}` | {f'`{interface}`' if interface is not None else 'none'} |"
+                for kind, interface in descriptor["kind_interfaces"].items()
+            ),
+        ],
     )
-    projection = "\n".join([*rows, end])
-    before, remainder = text.split(begin, 1)
-    _, after = remainder.split(end, 1)
-    path.write_text(before + projection + after)
+    tables = descriptor["interfaces"][descriptor["kind_interfaces"]["table"]]
+    text = _replace_region(
+        text,
+        "OVERRIDING ORDERS",
+        [
+            "| resource | order |",
+            "|---|---|",
+            *(
+                f"| `{resource}` | `{', '.join(order)}` |"
+                for resource, order in tables.get("overriding_orders", {}).items()
+            ),
+        ],
+    )
+    path.write_text(text)
     return path
 
 

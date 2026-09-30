@@ -142,6 +142,20 @@ check(
     ),
 )
 
+# Part 03 §5.4: each override settles its key by adjacency against the core registry, with no
+# packet in hand. An extension table takes its key's order and is not checked here.
+from escapewheel_reader.ordering import override_errors
+
+_table_interface = _profile["interfaces"][_profile["kind_interfaces"]["table"]]
+check(
+    "every overriding order is consistent with the core registry",
+    [
+        f"{resource}: {error}"
+        for resource, order in _table_interface.get("overriding_orders", {}).items()
+        for error in override_errors(order, T.get(resource))
+    ],
+)
+
 check(
     "withdrawn tables absent",
     [

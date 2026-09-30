@@ -51,7 +51,6 @@ def test_the_schema_accepts_the_v3_floor_of_patterns_and_sharding():
     assert floor["codec_sequences"][-1] == [{"name": "bytes"}, {"name": "blosc", "configuration": {"cname": "zstd"}}]
     assert floor["sharding"]["index_location"] == "end"
     assert physical_profile()["$schema"] == physical_profile_schema()["$id"]
-    assert physical_profile_schema()["$id"].endswith("/physical-profile/0.2.0")
     assert _check(copy.deepcopy(physical_profile())) == ()
 
 
@@ -72,3 +71,26 @@ def test_the_checker_rejects_a_descriptor_naming_the_old_schema():
     descriptor["$schema"] = "https://escapewheel.org/schemas/physical-profile/0.1.0"
     errors = _check(descriptor)
     assert "$schema does not name the supplied physical-profile schema" in errors
+
+
+def test_the_schema_identifier_is_0_3_0_and_a_0_2_0_descriptor_fails():
+    """Part 03 §1 states the identifier the descriptor's `$schema` must name."""
+    assert physical_profile_schema()["$id"] == "https://escapewheel.org/schemas/physical-profile/0.3.0"
+    descriptor = copy.deepcopy(physical_profile())
+    descriptor["$schema"] = "https://escapewheel.org/schemas/physical-profile/0.2.0"
+    assert "$schema does not name the supplied physical-profile schema" in _check(descriptor)
+
+
+def test_the_table_interface_declares_the_overriding_orders():
+    """Part 03 §5.4: the portable descriptor's one override, which the schema admits."""
+    parquet = physical_profile()["interfaces"]["parquet"]
+    assert parquet["overriding_orders"] == {
+        "analysis.spike_events": ["session_id", "clock_id", "time_bucket_tick", "unit_id", "t_tick"]
+    }
+    assert "ew-overriding-orders" in parquet["anchors"]
+
+
+def test_overriding_orders_on_an_interface_not_storing_tables_is_refused():
+    descriptor = copy.deepcopy(physical_profile())
+    descriptor["interfaces"]["zarr"]["overriding_orders"] = {"core.array_assets": ["session_id"]}
+    assert _check(descriptor) == ("interface 'zarr' declares overriding_orders but does not store tables",)
