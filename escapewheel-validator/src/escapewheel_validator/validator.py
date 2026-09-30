@@ -532,7 +532,7 @@ def _version() -> str:
 
 
 def registry_meta_schema() -> dict[str, Any]:
-    """Part 02 §9.2's published meta-schema, as this distribution vendors it.
+    """Part 02 §9.2's published meta-schema, as this distribution copies it.
 
     Public because Part 02 §9.2 makes its `$id` something a writer has to state: a document declares
     which meta-schema governs it, and the writer that emits the declaration must not keep its own

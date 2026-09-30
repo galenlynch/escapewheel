@@ -30,7 +30,7 @@ from escapewheel_writer import arrow
 from escapewheel_writer.sources.nwb import NWBSource
 
 REGISTRY_DOCUMENT = json.loads(
-    (HERE.parent.parent / "registry" / "logical_schemas.json").read_text()
+    (HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text()
 )
 REGISTRY = {
     name: declaration["table"]

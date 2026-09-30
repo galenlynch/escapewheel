@@ -32,7 +32,7 @@ verdict is the worst of them, so a failing extension fails the packet and leaves
 The JSON report's `status` is the packet verdict, `verdicts` maps each registry ID to its own, and
 each finding's `registry` names its subject, `null` for the packet.
 
-Rules are **data, not code**. `registry/logical_schemas.json` carries every table's structure
+Rules are **data, not code**. `spec/artifacts/logical_schemas.json` carries every table's structure
 and its Tier 2 rules, and the checks are generated from it rather than written per table. The
 execution contract is the whole protocol: **a check's query returns offending rows — empty is
 a pass, non-empty is a failure and the rows are the finding.**

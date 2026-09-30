@@ -41,7 +41,8 @@ EXTENSIONS = {
     document["extension_id"]: document
     for document in (
         json.loads(path.read_text())
-        for path in sorted((Path(__file__).resolve().parents[2] / "registry" / "extensions").glob("*.json"))
+        for directory in ("extensions", "escapewheel-aind/extensions")
+        for path in sorted((Path(__file__).resolve().parents[2] / directory).glob("*.json"))
     )
 }
 

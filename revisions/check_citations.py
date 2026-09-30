@@ -10,7 +10,7 @@ six references to a draft's §5 left pointing at Consequence after it was restru
 Three forms are resolved:
 
     R92 §2.2        against revisions/accepted/R92-*.md
-    Part 03 §5.4       against escapewheel_poc_docs_v0.2/03_*.md
+    Part 03 §5.4       against spec/parts/03_*.md
     §3.1            against the citing document itself
 
 What fails the build is a revision-to-revision citation that does not resolve, anywhere, and a
@@ -69,7 +69,8 @@ except ModuleNotFoundError:  # Direct execution from revisions/.
 
 HERE = Path(__file__).resolve().parent
 ACCEPTED = HERE / "accepted"
-PARTS = HERE.parent / "escapewheel_poc_docs_v0.2"
+SPEC = HERE.parent / "spec"
+PARTS = SPEC / "parts"
 
 #: `## 3.` and `### 3.1 ` alike; the trailing dot is optional and the numbering may nest.
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
@@ -295,15 +296,16 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
 SKIPPED = ("nwb_lake_poc_docs/",)
 
 CURRENT_CONTRACT = (
-    PARTS / "README.md",
+    SPEC / "README.md",
     *sorted(PARTS.glob("[0-9][0-9]_*.md")),
-    HERE.parent / "registry/logical_schemas.json",
-    HERE.parent / "registry/registry.schema.json",
-    HERE.parent / "registry/manifest.schema.json",
-    HERE.parent / "registry/sources.schema.json",
-    *sorted((HERE.parent / "registry/extensions").glob("*.json")),
-    PARTS / "Escapewheel_POC_v0.2_Implementation_Spec.md",
-    HERE.parent / "registry/tables.md",
+    SPEC / "artifacts/logical_schemas.json",
+    SPEC / "artifacts/registry.schema.json",
+    SPEC / "artifacts/manifest.schema.json",
+    SPEC / "artifacts/sources.schema.json",
+    *sorted((HERE.parent / "extensions").glob("*.json")),
+    *sorted((HERE.parent / "escapewheel-aind/extensions").glob("*.json")),
+    SPEC / "informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+    SPEC / "informative/tables.md",
 )
 
 
@@ -317,9 +319,9 @@ def current_contract_history_refs() -> list[str]:
         for line_number, line in enumerate(path.read_text().splitlines(), 1):
             if re.search(r"\bR\d+\b", line):
                 defects.append(f"{path.relative_to(HERE.parent)}:{line_number}")
-    stale_html = HERE.parent / "registry/tables.html"
+    stale_html = SPEC / "informative/tables.html"
     if stale_html.exists():
-        defects.append("registry/tables.html is present")
+        defects.append("spec/informative/tables.html is present")
     return defects
 
 

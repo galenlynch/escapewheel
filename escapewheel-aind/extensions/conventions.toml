@@ -1,0 +1,12 @@
+# Exceptions to the naming conventions of `spec/tools/conventions.py` for the registries in this
+# directory, each with its reason. An exception is declared, never inferred.
+
+# A metric's name is the vocabulary people search by, so renaming one makes the column match
+# nothing anyone's code expects.
+[naming_exceptions]
+"aind_unit_qc.metrics.rp_violations" = "the sorter's own metric name; a count of violations"
+"aind_unit_qc.waveform_metrics.num_negative_peaks" = "the sorter's own metric name; a count of peaks"
+"aind_unit_qc.waveform_metrics.num_positive_peaks" = "as num_negative_peaks"
+
+# Part 02 §8.2: name columns naming a kind of thing rather than one assigned identifier's value.
+[names_a_kind]

@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "revision": "R155",
+  "based_on": "a110521e9b61e9f62e12d66506528ad6fa1539fd",
+  "clauses": {
+    "R155 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/00_architecture.md",
+          "anchor": "ew-specification-candidate"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_tree_paths.py::test_the_tree_gives_only_paths_within_it"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_tree_paths.py::test_an_artifact_no_part_incorporates_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "is incorporated by no numbered part"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: the tree regenerates and checks itself alone",
+            "id": "a copy of the tree alone regenerates and checks itself"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/tools/framework.py",
+          "ci/tree.py",
+          "copies.py",
+          "verify.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "CONTRIBUTING.md",
+          "README.md",
+          "spec/README.md",
+          "spec/source/README.md",
+          "extensions/README.md"
+        ]
+      }
+    },
+    "R155 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/00_architecture.md",
+          "anchor": "ew-specification-candidate"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_tree_paths.py::test_a_path_leaving_the_tree_fails"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_tree_paths.py::test_a_path_under_an_enclosing_repository_entry_fails"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_tree_paths.py::test_a_path_under_a_tree_entry_must_name_a_file"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_tree_paths.py::test_a_path_within_a_packet_is_not_judged"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_tree_paths.py::test_a_link_to_anything_but_a_part_fails"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_tree_paths.py::test_an_artifact_giving_a_path_outside_the_tree_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: the tree regenerates and checks itself alone",
+            "id": "no part gives a path under the repository outside the tree"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/tools/framework.py",
+          "ci/tree.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "CONTRIBUTING.md",
+          "spec/README.md"
+        ]
+      }
+    },
+    "R155 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/00_architecture.md",
+          "anchor": "ew-specification-actors"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-logical-column-naming"
+        },
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-array-metadata-placement"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "the clause names the actor existing requirements already bind, and changes no obligation a packet or an implementation can be tested against"
+      },
+      "implementations": {
+        "unchanged": "the validator already performs every check a requirement on a checker describes, and the tree's checkers are the same code moved"
+      },
+      "documentation": {
+        "paths": [
+          "spec/README.md"
+        ]
+      }
+    }
+  }
+}

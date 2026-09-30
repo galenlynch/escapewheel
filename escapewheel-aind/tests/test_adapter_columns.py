@@ -32,11 +32,15 @@ from tests.test_unit_qc import UNITS as QC_UNITS
 from tests.test_unit_qc import stream as analyzer
 from tests.test_video_source import HARP_ROW, TIMING
 
-REGISTRY_DIR = Path(__file__).resolve().parents[2] / "registry"
-CORE = json.loads((REGISTRY_DIR / "logical_schemas.json").read_text())
+ROOT = Path(__file__).resolve().parents[2]
+CORE = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
 EXTENSIONS = {
     document["extension_id"]: document
-    for document in (json.loads(path.read_text()) for path in sorted((REGISTRY_DIR / "extensions").glob("*.json")))
+    for document in (
+        json.loads(path.read_text())
+        for directory in ("extensions", "escapewheel-aind/extensions")
+        for path in sorted((ROOT / directory).glob("*.json"))
+    )
 }
 
 

@@ -17,7 +17,7 @@ from escapewheel_writer import CommitRefused
 
 import example
 
-MANIFEST_SCHEMA = json.loads((example.ROOT / "registry" / "manifest.schema.json").read_text())
+MANIFEST_SCHEMA = json.loads((example.ROOT / "spec" / "artifacts" / "manifest.schema.json").read_text())
 
 
 def _entry(root, resource_id):
@@ -151,7 +151,8 @@ def test_a_derived_array_reads_its_labels_from_the_analysis_table(packet_root):
 
 def test_part_08_shows_this_packet(packet_root):
     manifest = json.loads((packet_root / "packet.json").read_text())
-    assert example.render(manifest) == example.PART.read_text(), "run integration/example.py"
+    text = example.PART.read_text()
+    assert all(body in text for body in example.shown(manifest).values()), "run integration/example.py"
 
 
 def _queries():

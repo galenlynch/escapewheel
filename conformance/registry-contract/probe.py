@@ -23,12 +23,21 @@ from ucumvert import get_ucum_parser, parse_ucum
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = "8b22b501cec6d2b76a1f286d84d2c082055f62f6"
 ACCEPTED = "revisions/accepted/R126-a-registry-document-has-one-complete-conformance-contract.md"
+# Paths at the frozen commits, which the current layout does not share.
 CORE = "registry/logical_schemas.json"
 EXTENSIONS = (
     "registry/extensions/aind_opto.json",
     "registry/extensions/aind_unit_qc.json",
     "registry/extensions/dynamic_foraging.json",
     "registry/extensions/vr_foraging.json",
+)
+#: The same documents where they lie now, in the same order.
+CURRENT = (
+    "spec/artifacts/logical_schemas.json",
+    "escapewheel-aind/extensions/aind_opto.json",
+    "escapewheel-aind/extensions/aind_unit_qc.json",
+    "extensions/dynamic_foraging.json",
+    "extensions/vr_foraging.json",
 )
 
 
@@ -236,7 +245,7 @@ def main() -> int:
     before = [_document(path, BASELINE) for path in (CORE, *EXTENSIONS)]
     after = [_document(path, incorporated) for path in (CORE, *EXTENSIONS)]
     _assert_migration(before, after)
-    current = [_document(path, None) for path in (CORE, *EXTENSIONS)]
+    current = [json.loads((ROOT / path).read_text()) for path in CURRENT]
     core = current[0]
     assert check_registry(core).state == "valid"
     assert all(

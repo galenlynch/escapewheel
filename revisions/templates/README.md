@@ -22,5 +22,5 @@ acceptance. The JSON evidence manifest turns that record into checked paths and 
 making implementations or tests authoritative.
 
 All three stages follow the shared specification style in
-`../../escapewheel_poc_docs_v0.2/CONTRIBUTING.md`; revision-specific guidance is in
+`../../spec/CONTRIBUTING.md`; revision-specific guidance is in
 `../CONTRIBUTING.md`.

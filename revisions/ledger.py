@@ -29,10 +29,12 @@ except ModuleNotFoundError:  # Direct execution from revisions/.
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-PARTS = ROOT / "escapewheel_poc_docs_v0.2"
+PARTS = ROOT / "spec" / "parts"
 REVISIONS = HERE / "accepted"
 LEDGER = HERE / "applied.toml"
 REGISTRY_TARGETS = HERE / "registry-targets.toml"
+#: Where a registry target may lie: the tree's artifacts and the extension registries outside it.
+REGISTRY_ROOTS = ("spec/artifacts", "extensions", "escapewheel-aind/extensions")
 
 DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 
@@ -148,10 +150,8 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
                 continue
             seen.add(pair)
             artifact = (ROOT / path).resolve()
-            try:
-                artifact.relative_to((ROOT / "registry").resolve())
-            except ValueError:
-                defects.append(f"{key}: {path!r} is outside registry/")
+            if not any(artifact.is_relative_to((ROOT / root).resolve()) for root in REGISTRY_ROOTS):
+                defects.append(f"{key}: {path!r} is outside {', '.join(REGISTRY_ROOTS)}")
                 continue
             if artifact.suffix != ".json" or not artifact.is_file():
                 defects.append(f"{key}: {path!r} is not an existing JSON artifact")

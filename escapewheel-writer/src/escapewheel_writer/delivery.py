@@ -666,7 +666,7 @@ def _refuses(document: Mapping[str, Any]) -> str | None:
     if not found:
         return None
     where = "/".join(str(p) for p in found[0].path) or "document"
-    return f"does not satisfy registry/resources.schema.json at {where}: {found[0].message}"
+    return f"does not satisfy resources.schema.json at {where}: {found[0].message}"
 
 
 def _tail(notes: Sequence[str]) -> str:

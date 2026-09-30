@@ -23,9 +23,7 @@ from tests.nwbfixture import array, group, text
 
 LABELS = [0, 1, 5]
 
-REGISTRY = json.loads(
-    (Path(__file__).resolve().parents[2] / "registry" / "extensions" / "aind_unit_qc.json").read_text()
-)
+REGISTRY = json.loads((Path(__file__).resolve().parents[1] / "extensions" / "aind_unit_qc.json").read_text())
 
 #: The packet's units: the sorter's names for them, which is what the adapter carries on.
 UNITS = [

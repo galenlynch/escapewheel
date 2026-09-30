@@ -25,7 +25,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-REGISTRY = ROOT / "registry/logical_schemas.json"
+REGISTRY = ROOT / "spec/artifacts/logical_schemas.json"
+EXTENSIONS = (ROOT / "extensions", ROOT / "escapewheel-aind/extensions")
 
 REGION = re.compile(
     r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL
@@ -55,19 +56,20 @@ def documents() -> list[Path]:
 
 
 #: The incorporated descriptor is the enumerable invariant inventory. Part 02 and Part 09 own
-#: their algorithms; the shared checker implements them and `registry/check.py` consumes one
+#: their algorithms; the tree's checker implements them and `spec/tools/check.py` consumes one
 #: complete result.
 REGISTRY_CONTRACT = (
-    "registry/registry_contracts/escapewheel-registry-contract-v0.9.json"
+    "spec/artifacts/registry_contracts/escapewheel-registry-contract-v0.9.json"
 )
 
 
 def _check_counts() -> tuple[int, int]:
-    """How many invariants hold of a registry document, and how many of this repository's build.
+    """How many invariants hold of a registry document, and how many further checks the tree makes.
 
-    The first run once per document, so each binds core and every extension; the second run once
-    over the whole set and are facts about the build rather than about any document. Counted by
-    parsing rather than by running, since `check.py` needs DuckDB to finish and this must not.
+    The first run once per document, so each binds core and every extension; the second are the
+    tree's checks of its own artifacts. Counted by parsing rather than by running, since
+    `check.py` needs the tree's environment and this must not; the convention checks are counted
+    from the module that defines them, since `check.py` reaches them through one loop.
     """
 
     def calls(scope, name, exclude=frozenset()):
@@ -80,9 +82,11 @@ def _check_counts() -> tuple[int, int]:
         )
 
     per_document = len(json.loads((ROOT / REGISTRY_CONTRACT).read_text())["invariants"])
-    return per_document, calls(
-        ast.parse((ROOT / "registry/check.py").read_text()), "check"
-    )
+    sys.path.insert(0, str(ROOT / "spec/tools"))
+    import conventions
+
+    loop = len(conventions.convention_failures({}, {}, {})) - 1
+    return per_document, calls(ast.parse((ROOT / "spec/tools/check.py").read_text()), "check") + loop
 
 
 def _clause_count() -> int:
@@ -174,7 +178,7 @@ def facts() -> dict[str, str]:
         p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"
     ]
 
-    extensions = sorted(p.stem for p in (ROOT / "registry/extensions").glob("*.json"))
+    extensions = sorted(p.stem for directory in EXTENSIONS for p in directory.glob("*.json"))
     per_document, whole = _check_counts()
     decision_clauses = _clause_count()
     corpus = _corpus_count()
@@ -209,8 +213,8 @@ def facts() -> dict[str, str]:
         "corpus": f"{corpus} conformance packets",
         "checks": (
             f"{per_document} registry-contract invariants, applied by class to core and each of the "
-            f"{len(extensions)} extension registries, and {whole} further checks over the "
-            f"whole set"
+            f"{len(extensions)} extension registries, and {whole} further checks of the "
+            f"specification's tree"
         ),
         "clauses": (
             f"`ledger.py` enumerates {decision_clauses} Decision clauses across the "

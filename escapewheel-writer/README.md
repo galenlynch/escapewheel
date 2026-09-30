@@ -28,7 +28,7 @@ escapewheel import session.toml                        # stage, validate, commit
 ```toml
 [packet]
 id = "ecephys_776259_2025-04-09"
-registry = "../registry/logical_schemas.json"
+registry = "../spec/artifacts/logical_schemas.json"
 
 [session]
 session_id = "ecephys_776259_2025-04-09"
@@ -51,9 +51,9 @@ source = "nwb"
 reason = "the NWB states a probe's type and manufacturer; the sorter knows only the stream"
 ```
 
-A recipe is TOML 1.0 whose decoded form satisfies `schemas/recipe.schema.json`, vendored from
-`registry/recipe.schema.json` (Part 05 §3.1). Its top-level blocks are closed, so a misspelled
-block is refused on load rather than dropped; `registry/recipe.example.toml` uses every one. A
+A recipe is TOML 1.0 whose decoded form satisfies `schemas/recipe.schema.json`, copied from
+`spec/artifacts/recipe.schema.json` (Part 05 §3.1). Its top-level blocks are closed, so a misspelled
+block is refused on load rather than dropped; `spec/informative/recipe.example.toml` uses every one. A
 source kind appears once, and every report names a source by its kind. An extension appears once
 too: `[packet].extensions` entries whose documents carry one `extension_id`, whether a repeated
 entry, a path and an installed id, or two versions, are refused, since a packet binds one registry

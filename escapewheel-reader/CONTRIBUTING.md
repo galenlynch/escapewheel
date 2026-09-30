@@ -15,10 +15,10 @@ Two rules carry most of the weight. Read them before adding anything:
 ## Where the rules come from
 
 Use the monorepo's [authority model](../README.md#authority). Reader behavior comes from the
-current v0.2 parts, while `../registry/logical_schemas.json` supplies the exact generated table,
+current v0.2 parts, while `../spec/artifacts/logical_schemas.json` supplies the exact generated table,
 column, and validation declarations incorporated by Part 02. The portable profile's exact facts
-come from the vendored physical-profile descriptor, which `registry/build.py` writes into
-`schemas/physical_profiles/`: `profile.py` checks it once, and `ordering.py` takes Part 03 §5.4's
+come from the physical-profile descriptor copied from the specification's tree into
+`schemas/physical_profiles/`: `profile.py` checks it once, with the copied `descriptor.py`, and `ordering.py` takes Part 03 §5.4's
 overriding orders from its table interface for the writer and validator.
 
 **A defect found while implementing starts as a proposal or revision draft, never as a silent

@@ -27,7 +27,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(
             evidence.owner_defects(
                 {
-                    "path": "registry/logical_schemas.json",
+                    "path": "spec/artifacts/logical_schemas.json",
                     "pointer": "/resources/core.units/table",
                 }
             ),
@@ -47,8 +47,8 @@ class EvidenceTests(unittest.TestCase):
                         },
                         {
                             "kind": "check",
-                            "stage": "registry: structural checks",
-                            "id": "every Tier 2 rule conforms and executes against empty tables",
+                            "stage": "spec: structural checks",
+                            "id": "every core Tier 2 rule is in the portable profile",
                         },
                     ]
                 },
@@ -81,7 +81,7 @@ class EvidenceTests(unittest.TestCase):
                     ],
                     "projections": {
                         "paths": [
-                            "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+                            "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
                         ]
                     },
                     "conformance": {
@@ -90,7 +90,7 @@ class EvidenceTests(unittest.TestCase):
                     "implementations": {
                         "unchanged": "the clause assigns publication ownership, not behavior"
                     },
-                    "documentation": {"paths": ["escapewheel_poc_docs_v0.2/README.md"]},
+                    "documentation": {"paths": ["spec/README.md"]},
                 }
             },
         }

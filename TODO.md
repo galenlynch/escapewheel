@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R154 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. No proposal or draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -23,7 +23,7 @@ R1–R41, R43–R72 and R74–R154 accepted. R42 and R73 withdrawn. 0 proposals 
 <!-- END facts: extensions -->
 
 Each drawn from columns measured in a real
-session rather than invented — see `registry/extensions/README.md`. The conformance corpus carries
+session rather than invented — see `extensions/README.md`. The conformance corpus carries
 one, because R54 §2.4a leaves a packet holding intervals no way not to.
 
 **Phases 0–6 complete.** `escapewheel verify` closes R36 §2.4 and `escapewheel prune` closes R61 §3.
@@ -48,13 +48,13 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ## 1. Closed: the registry is authored as TOML
 
-Every registry document is assembled from one TOML file per resource under `registry/core/` or
-`registry/extensions/<id>/`; see `registry/README.md`.
+Every registry document is assembled from one TOML file per resource under `spec/source/core/` or
+an extension's `<id>/` directory; see `spec/source/README.md`.
 
 ## 2. No template scaffolds an extension project
 
 **Not started.** Writing an extension is now well enough defined to scaffold, and nothing scaffolds
-it: the four here were written by hand, and `registry/extensions/README.md` covers *what to model* —
+it: the four here were written by hand, and `extensions/README.md` covers *what to model* —
 what varies belongs on the row, a source's columns are evidence rather than a schema, deriving a
 document from a pydantic model — while saying nothing about how to build and deliver one.
 
@@ -64,8 +64,8 @@ the shape: `_templates_suffix: .jinja`, `_subdirectory: template`, copier ≥ 9.
 `~/Documents/Code/aind-capsule-copier-template` is the other one to read before choosing which to
 fork. What it should generate:
 
-- `registry/<namespace>.json`, a skeleton declaring one table with every attribute a column owes,
-  and a test running it against `registry/registry.schema.json`;
+- `<namespace>.json`, a skeleton declaring one table with every attribute a column owes,
+  and a test running it against the specification's `registry.schema.json`;
 - an `extract.py` delivering by `files-v0.1`: it reads the build's JSON object of terms from
   standard input and writes `<resource_id>.parquet` into the `delivery_root` it names, beside an
   adapter declaration document (Part 12 §7) for the recipe's `delivery` table;

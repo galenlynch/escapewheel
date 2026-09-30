@@ -5,6 +5,6 @@ The root `AGENTS.md` also applies. Before changing this package, read `CONTRIBUT
 
 - Resolve behavioral questions using the root authority model and the registry embedded by the
   packet under validation.
-- Follow `../CONTRIBUTING.md` for generated inputs. Do not hand-edit the vendored registry schema.
+- Follow `../CONTRIBUTING.md` for generated inputs. Do not hand-edit a file copied from the specification's tree.
 - Preserve the SQL-versus-storage-shim boundary documented in `CONTRIBUTING.md`; report a format
   defect instead of inventing a package-local rule.

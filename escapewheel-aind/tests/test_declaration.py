@@ -102,7 +102,7 @@ reason = "subject.json is the record the NWB's subject group projects"
 
 
 def _checked(tmp_path, text):
-    registry = json.loads((Path(__file__).parents[2] / "registry/logical_schemas.json").read_text())
+    registry = json.loads((Path(__file__).parents[2] / "spec/artifacts/logical_schemas.json").read_text())
     path = tmp_path / "recipe.toml"
     path.write_text(text)
     recipe = Recipe.load(path)

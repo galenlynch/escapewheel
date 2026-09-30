@@ -66,7 +66,7 @@ class Bound:
 
 
 def manifest_schema() -> dict[str, Any]:
-    """Load Part 04's incorporated manifest schema, as this distribution vendors it.
+    """Load Part 04's incorporated manifest schema, as this distribution copies it.
 
     Returns
     -------

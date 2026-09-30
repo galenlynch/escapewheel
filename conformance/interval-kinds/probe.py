@@ -18,7 +18,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = json.loads(
-    (HERE.parent.parent / "registry" / "logical_schemas.json").read_text()
+    (HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text()
 )
 SESSION, N_TRIALS, N_PULSES = "ecephys_776259", 400, 120
 

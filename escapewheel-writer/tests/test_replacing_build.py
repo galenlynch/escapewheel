@@ -17,7 +17,7 @@ from tests.conftest import REGISTRY
 from tests.test_amending_build import _amending, packet  # noqa: F401
 from tests.test_build_end_to_end import _recipe
 
-CORE = Path(__file__).resolve().parents[2] / "registry" / "logical_schemas.json"
+CORE = Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json"
 
 
 def _replacing(root: Path, *entries: str, out: str = "replacement") -> Path:

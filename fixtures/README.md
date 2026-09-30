@@ -200,10 +200,10 @@ keys as Part 04 §4.3's raw UTF-8, and `corpus.py` requires that it draw no `own
 `no_extracellular` is `valid` without its fourteen core tables specific to extracellular
 electrophysiology, and `sessions_only` keeps only `core.sessions` and `core.subjects`, its session
 naming no reference clock. Both are clean, since the packet mechanism confines no packet to a
-recording modality ([Part 00 §1](../escapewheel_poc_docs_v0.2/00_architecture.md#ew-architecture-scope)).
+recording modality ([Part 00 §1](../spec/parts/00_architecture.md#ew-architecture-scope)).
 `one_clock` is `no_extracellular` reduced to its behavior clock, with no reference clock named, and
 is clean because a session must name its reference only where it declares more than one clock
-([Part 01 §3.3](../escapewheel_poc_docs_v0.2/01_semantic_standard.md#ew-session-concept)).
+([Part 01 §3.3](../spec/parts/01_semantic_standard.md#ew-session-concept)).
 
 `bad_vocabulary` uses `good` deliberately: it is Phy's label for a single unit, and the
 one an importer most plausibly forgets to map to `sua` (R11 §3).

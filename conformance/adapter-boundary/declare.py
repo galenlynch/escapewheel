@@ -29,7 +29,7 @@ import serve_nwb
 from escapewheel_writer.sources import ADAPTERS
 
 REGISTRY_DOCUMENT = json.loads(
-    (HERE.parent.parent / "registry" / "logical_schemas.json").read_text()
+    (HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text()
 )
 REGISTRY = {
     name: declaration["table"]

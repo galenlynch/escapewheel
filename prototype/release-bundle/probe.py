@@ -21,14 +21,15 @@ ROOT = Path(__file__).resolve().parents[2]
 #: What a consumer needs, and why each is in the bundle rather than assumed.
 PARTS: dict[str, tuple[str, ...]] = {
     "specification": (
-        "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+        "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
     ),
-    "registry": ("registry/logical_schemas.json", "registry/tables.md"),
-    "schemas": ("registry/registry.schema.json", "registry/manifest.schema.json"),
+    "registry": ("spec/artifacts/logical_schemas.json", "spec/informative/tables.md"),
+    "schemas": ("spec/artifacts/registry.schema.json", "spec/artifacts/manifest.schema.json"),
     "extensions": tuple(
         sorted(
             str(p.relative_to(ROOT))
-            for p in (ROOT / "registry/extensions").glob("*.json")
+            for directory in ("extensions", "escapewheel-aind/extensions")
+            for p in (ROOT / directory).glob("*.json")
         )
     ),
     "conformance": ("fixtures/build.py", "fixtures/corpus.py"),
@@ -63,7 +64,7 @@ def described() -> dict[str, object]:
             "logical": "escapewheel-logical-v0.1",
             "profile": "escapewheel-portable-v0.1",
             "registry_version": json.loads(
-                (ROOT / "registry/logical_schemas.json").read_text()
+                (ROOT / "spec/artifacts/logical_schemas.json").read_text()
             )["registry_version"],
         },
         "commit": revision,

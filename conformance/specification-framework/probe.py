@@ -7,15 +7,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEC = ROOT / "escapewheel_poc_docs_v0.2"
-sys.path.insert(0, str(SPEC))
+sys.path.insert(0, str(ROOT / "spec" / "tools"))
 
 import framework
 
 
 def _text(name: str) -> str:
     """Read one framework input."""
-    return (SPEC / name).read_text()
+    return framework._documents()[name]
 
 
 def _replace(name: str, old: str, new: str) -> dict[str, str]:

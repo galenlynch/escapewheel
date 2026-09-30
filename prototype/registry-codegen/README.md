@@ -61,8 +61,8 @@ validation surface consists of.
 
 ## Prototype limits
 
-`registry.json` is its own document rather than a slice of `registry/logical_schemas.json`,
-and it is kept conforming: `registry/check.py` validates it against the meta-schema, because a
+`registry.json` is its own document rather than a slice of `spec/artifacts/logical_schemas.json`,
+and it is kept conforming: `conformance/registries/check.py` validates it against the meta-schema, because a
 demonstration that the format drives the tooling is worth nothing on input the format rejects.
 It went 16 errors out of conformance once, unnoticed, which is why the check exists.
 

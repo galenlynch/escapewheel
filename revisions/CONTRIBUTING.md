@@ -3,7 +3,7 @@
 This guide defines the file-based process for proposing, appraising, accepting, incorporating, and
 verifying a change to the Escapewheel specification. The repository-wide
 [authority model](../README.md#authority) applies throughout. The shared
-[specification style guide](../escapewheel_poc_docs_v0.2/CONTRIBUTING.md) governs prose; this guide
+[specification style guide](../spec/CONTRIBUTING.md) governs prose; this guide
 governs the change lifecycle.
 
 ## 1. Scope
@@ -229,7 +229,7 @@ incorporation.
 - Introduce terms before relying on them and use one term for one concept.
 - Name every amended part and section.
 - Apply the specification style guide's
-  [structure guidance](../escapewheel_poc_docs_v0.2/CONTRIBUTING.md#6-make-structure-support-lookup):
+  [structure guidance](../spec/CONTRIBUTING.md#6-make-structure-support-lookup):
   use bullets for three or more independently checkable peers under one shared obligation, numbers
   only when order matters, and a table when entries repeat the same attributes; keep interdependent
   logic in prose.
@@ -503,7 +503,7 @@ tool accepts an anchor and reports its current heading and live citers.
 Follow the generation order in the root [contribution guide](../CONTRIBUTING.md#4-bootstrapping-in-order).
 In particular:
 
-1. Generate the registry, rendered tables, vendored schemas, marked fact regions, column tables,
+1. Generate the registry, rendered tables, packages' copies, marked fact regions, column tables,
    and combined specification from their sources.
 2. Add positive and negative conformance fixtures for every newly decidable rule.
 3. Add expected findings to the corpus rather than relying on an unasserted validator run.
@@ -556,7 +556,7 @@ uv run --project escapewheel-writer python revisions/evidence.py
 uv run --project escapewheel-writer python revisions/repoint.py --quiet
 uv run --project escapewheel-writer python revisions/repoint.py --exempt
 uv run --project escapewheel-writer python revisions/ledger.py
-uv run --project escapewheel-writer python escapewheel_poc_docs_v0.2/headings.py --check
+uv run --project spec/tools python spec/tools/headings.py --check
 uv run --project escapewheel-writer python verify.py
 ```
 

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://escapewheel.org/schemas/resources/0.5.0",
   "title": "Escapewheel resource document",
-  "description": "Shape of the document an adapter delivers alongside its rows to describe the resources it references rather than writes (Part 12 \u00a75). Generated from the manifest schema by registry/build.py: each entry is a manifest resource entry without the members a build supplies.",
+  "description": "Shape of the document an adapter delivers alongside its rows to describe the resources it references rather than writes (Part 12 \u00a75). Generated from the manifest schema: each entry is a manifest resource entry without the members a build supplies.",
   "type": "object",
   "required": [
     "resources"

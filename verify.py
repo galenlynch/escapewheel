@@ -1,7 +1,7 @@
 """Run every generator and every check in the monorepo.
 
-The chain is reproducible — `registry/build.py` writes
-`logical_schemas.json`, `tables.md` and the registry README; `fixtures/build.py` writes the
+The chain is reproducible — `spec/tools/build.py` writes the core registry, the rendered
+listing and the source guide's counts; `fixtures/build.py` writes the
 conformance corpus; the prototype writes its own packets — but reproducibility nobody runs is a
 claim rather than a property, and three artifacts drifted for many revisions without anything
 noticing: the corpus stopped building at R54, the prototype's registry left R2's format at R48,
@@ -39,10 +39,19 @@ ROOT = Path(__file__).resolve().parent
 #: Packages whose venv `uv run --project` resolves. The writer's is used for anything needing
 #: pyarrow and duckdb outside a package, because it depends on all three.
 TOOLS = ROOT / "escapewheel-writer"
+#: The specification's tree, whose tools run in the environment it declares and locks.
+TREE = ROOT / "spec" / "tools"
+TREE_RUN = ["uv", "run", "--project", str(TREE), "python"]
+EXTENSIONS = ["extensions", "escapewheel-aind/extensions"]
 
 #: Each stage: what it is, where it runs, and what to run. A stage fails on a non-zero exit.
 STAGES: list[tuple[str, Path, list[str]]] = [
-    ("registry: generate", ROOT / "registry", [sys.executable, "build.py"]),
+    ("spec: generate", TREE, [*TREE_RUN, "build.py"]),
+    (
+        "extensions: generate",
+        ROOT,
+        [*TREE_RUN, "extensions/registries.py", "build", *EXTENSIONS],
+    ),
     ("root: the documents' counts are current", ROOT, [sys.executable, "facts.py"]),
     (
         "revisions: open stages are structurally complete",
@@ -69,10 +78,38 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ROOT,
         [sys.executable, "revisions/evidence.py"],
     ),
+    ("spec: structural checks", TREE, [*TREE_RUN, "check.py"]),
     (
-        "registry: structural checks",
-        ROOT / "registry",
-        ["uv", "run", "--project", str(TOOLS), "python", "check.py"],
+        "spec: checker tests",
+        TREE,
+        ["uv", "run", "--project", str(TREE), "pytest", "-q", "-p", "no:cacheprovider"],
+    ),
+    # CONTRIBUTING.md's rules for the tree: it regenerates and checks itself alone, and its tools
+    # import only what it declares and locks.
+    (
+        "spec: the tree regenerates and checks itself alone",
+        ROOT,
+        [sys.executable, "ci/tree.py"],
+    ),
+    (
+        "packages: copies from the tree agree",
+        ROOT,
+        ["uv", "run", "--project", str(TOOLS), "python", "copies.py", "--check"],
+    ),
+    (
+        "extensions: each registry checked where it sits",
+        ROOT,
+        [*TREE_RUN, "extensions/registries.py", "check", *EXTENSIONS],
+    ),
+    (
+        "registries: ledger, prototype and rule execution",
+        ROOT,
+        ["uv", "run", "--project", str(TOOLS), "python", "conformance/registries/check.py"],
+    ),
+    (
+        "registries: history cleanup preserves declarations",
+        ROOT / "conformance/history-cleanup",
+        [sys.executable, "probe.py"],
     ),
     (
         "registry: R126 migration and external-domain evidence",
@@ -124,13 +161,13 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     # leave its citers resolving perfectly to prose that no longer says what they cited.
     (
         "spec: every changed heading has been read",
-        ROOT / "escapewheel_poc_docs_v0.2",
-        [sys.executable, "headings.py", "--check"],
+        TREE,
+        [*TREE_RUN, "headings.py", "--check"],
     ),
     (
         "spec: framework declarations agree",
-        ROOT / "escapewheel_poc_docs_v0.2",
-        [sys.executable, "framework.py"],
+        TREE,
+        [*TREE_RUN, "framework.py"],
     ),
     (
         "spec: framework rejects conflicting projections",
@@ -141,8 +178,8 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     # would otherwise be concatenated into the single file and look authoritative.
     (
         "spec: the column tables come from the registry",
-        ROOT / "escapewheel_poc_docs_v0.2",
-        [sys.executable, "columns.py", "--check"],
+        TREE,
+        [*TREE_RUN, "columns.py", "--check"],
     ),
     # Part 08 shows a packet the writer builds, so its layout and manifest follow the registries.
     (
@@ -152,8 +189,8 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     ),
     (
         "spec: the single-file rendering is current",
-        ROOT / "escapewheel_poc_docs_v0.2",
-        [sys.executable, "combine.py", "--check"],
+        TREE,
+        [*TREE_RUN, "combine.py", "--check"],
     ),
     (
         "prototype: write packets",
@@ -218,10 +255,11 @@ RUNTIME_CAPABILITY_STAGE = (
 #: Directories whose tracked content must be unchanged once the generators have run. Only the
 #: ones holding generated output; an unrelated edit elsewhere is not this tool's business.
 GENERATED = (
-    "registry",
+    "spec",
+    "extensions",
+    "escapewheel-aind/extensions",
     "prototype",
     "fixtures",
-    "escapewheel_poc_docs_v0.2",
     "STATUS.md",
     "TODO.md",
     "CONTRIBUTING.md",

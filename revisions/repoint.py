@@ -17,7 +17,7 @@ citations.
 What is not mechanical is whether a citation of an `applied` clause is of the **requirement** or of
 the **reasoning** behind it, which the current citation-context rule permits. So a citation that
 stays carries a reason in `EXEMPT`, keyed by the
-shape or the site rather than left to be rediscovered -- `registry/check.py`'s discipline for
+shape or the site rather than left to be rediscovered -- `spec/tools/conventions.py`'s discipline for
 `NAMING_EXCEPTIONS`, whose entries are checked to still be needed so the list cannot go stale.
 
     python repoint.py              # every citation that should name a part and does not
@@ -37,7 +37,7 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 LEDGER = ROOT / "revisions" / "applied.toml"
-HEADINGS = ROOT / "escapewheel_poc_docs_v0.2" / "headings.toml"
+HEADINGS = ROOT / "spec" / "tools" / "headings.toml"
 
 #: `R92 §2.2`. The same spelling `check_citations.py` resolves.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")

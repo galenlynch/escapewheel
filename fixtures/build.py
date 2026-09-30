@@ -18,9 +18,9 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 HERE = Path(__file__).resolve().parent
-REGISTRY = json.loads((HERE.parent / "registry" / "logical_schemas.json").read_text())
+REGISTRY = json.loads((HERE.parent / "spec" / "artifacts" / "logical_schemas.json").read_text())
 _PROFILE = json.loads(
-    (HERE.parent / "registry" / "physical_profiles" / "escapewheel-portable-v0.1.json").read_text()
+    (HERE.parent / "spec" / "artifacts" / "physical_profiles" / "escapewheel-portable-v0.1.json").read_text()
 )
 #: Part 03 §5.4's overriding orders, read from the descriptor that owns them.
 OVERRIDING_ORDERS = _PROFILE["interfaces"][_PROFILE["kind_interfaces"]["table"]].get("overriding_orders", {})
@@ -30,7 +30,7 @@ OVERRIDING_ORDERS = _PROFILE["interfaces"][_PROFILE["kind_interfaces"]["table"]]
 #: with intervals carries an extension by construction, and the corpus has to as well.
 EXTENSION_ID = "dynamic_foraging"
 EXTENSION = json.loads(
-    (HERE.parent / "registry" / "extensions" / f"{EXTENSION_ID}.json").read_text()
+    (HERE.parent / "extensions" / f"{EXTENSION_ID}.json").read_text()
 )
 
 #: Every table a fixture may write, core's and the extension's alike.

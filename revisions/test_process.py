@@ -11,7 +11,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "escapewheel_poc_docs_v0.2"))
+sys.path.insert(0, str(ROOT / "spec" / "tools"))
 
 import combine
 
@@ -169,7 +169,7 @@ class ProcessSemanticsTests(unittest.TestCase):
             site
             for site in sites
             if not site.startswith("revisions/accepted/")
-            and not site.startswith("escapewheel_poc_docs_v0.2/07_")
+            and not site.startswith("spec/parts/07_")
         ]
         self.assertEqual(live_process, [])
         self.assertTrue(sites)

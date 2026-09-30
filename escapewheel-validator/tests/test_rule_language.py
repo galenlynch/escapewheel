@@ -1,14 +1,11 @@
 import copy
 import json
-from importlib import resources as importlib_resources
 from pathlib import Path
 
-import jsonschema
 import pytest
 from escapewheel_reader import open_packet
 
 from escapewheel_validator import validate
-from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, check_rule
 
 from .conftest import install_registry, read_registry
 
@@ -23,40 +20,11 @@ def _rule(registry, sql, *, rule_id="core.trials.profile_test"):
     return changed
 
 
-def test_maintained_profile_validates_and_vendored_copies_are_exact():
-    schema_path = ROOT / "registry/rule_language.schema.json"
-    profile_path = ROOT / "registry/rule_languages/escapewheel-rule-sql-v0.2.json"
-    schema = json.loads(schema_path.read_text())
-    profile = json.loads(profile_path.read_text())
-    jsonschema.Draft202012Validator(schema).validate(profile)
-    assert profile["id"] == PROFILE_ID
-    package = importlib_resources.files("escapewheel_validator").joinpath("schemas")
-    assert package.joinpath("rule_language.schema.json").read_text() == schema_path.read_text()
-    assert package.joinpath("escapewheel-rule-sql-v0.2.json").read_text() == profile_path.read_text()
-
-
-def test_every_shipped_rule_passes_static_profile_check():
-    core = json.loads((ROOT / "registry/logical_schemas.json").read_text())
-    documents = [
-        core,
-        *[json.loads(path.read_text()) for path in sorted((ROOT / "registry/extensions").glob("*.json"))],
-    ]
-    checked = [
-        check_rule(rule["sql"], document, core_resources=core)
-        for document in documents
-        for declaration in document["resources"].values()
-        if declaration["kind"] == "table"
-        for table in [declaration["table"]]
-        for rule in table["rules"]
-    ]
-    assert len(checked) == 139
-
-
 def test_the_transform_slope_rule_flags_every_slope_that_is_not_positive():
     """Part 11 §5 orders NaN above infinity, so NaN and +inf pass here and draw the finiteness check."""
     import duckdb
 
-    core = json.loads((ROOT / "registry/logical_schemas.json").read_text())
+    core = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
     rule = next(
         r
         for r in core["resources"]["core.clocks"]["table"]["rules"]
@@ -99,67 +67,6 @@ def test_engine_failure_is_incomplete_not_a_packet_finding(packet_root):
     assert not any(f.check == "core.trials.profile_test" for f in report.findings)
 
 
-def test_cross_extension_relation_is_rejected_before_execution():
-    document = {
-        "extension_id": "task_a",
-        "rule_language": PROFILE_ID,
-        "resources": {
-            "task_a.rows": {
-                "kind": "table",
-                "table": {
-                    "primary_key": ["row_id"],
-                    "columns": [{"name": "row_id", "type": "int64"}],
-                    "references": [],
-                    "rules": [],
-                },
-            }
-        },
-    }
-    try:
-        check_rule("SELECT row_id FROM task_b.rows", document, core_resources={"core.sessions"})
-    except RuleProfileError as exc:
-        assert "not visible" in str(exc)
-    else:
-        raise AssertionError("cross-extension relation was accepted")
-
-
-def test_undeclared_column_is_rejected_during_static_binding():
-    document = {
-        "rule_language": PROFILE_ID,
-        "resources": {
-            "core.rows": {
-                "kind": "table",
-                "table": {
-                    "primary_key": ["row_id"],
-                    "columns": [{"name": "row_id", "type": "int64"}],
-                    "references": [],
-                    "rules": [],
-                },
-            }
-        },
-    }
-    with pytest.raises(RuleProfileError, match="does not bind"):
-        check_rule("SELECT missing FROM core.rows", document)
-
-
-@pytest.mark.parametrize(
-    ("sql", "message"),
-    [
-        ("SELECT CHAR_LENGTH(local_unit_label) AS n FROM core.units", "outside the profile"),
-        ("SELECT LENGTH(local_unit_label) AS n FROM core.units", "outside the profile"),
-        ("SELECT LEN(local_unit_label) AS n FROM core.units", "outside the profile"),
-        ("SELECT CHARACTER_LENGTH(local_unit_label USING OCTETS) AS n FROM core.units", ""),
-        ("SELECT CHARACTER_LENGTH(unit_id) AS n FROM core.units", "CHARACTER VARYING"),
-    ],
-    ids=["char-length", "length", "len", "using-octets", "integer-argument"],
-)
-def test_character_length_is_admitted_in_one_spelling_over_a_string(sql, message):
-    core = json.loads((ROOT / "registry/logical_schemas.json").read_text())
-    check_rule("SELECT CHARACTER_LENGTH(local_unit_label) AS n FROM core.units", core)
-    with pytest.raises(RuleProfileError, match=message):
-        check_rule(sql, core)
-
-
 @pytest.mark.parametrize(
     ("units", "conforming"),
     [
@@ -189,7 +96,7 @@ def test_units_are_numbered_densely_and_by_label_within_a_curation(units, confor
     """A label sorts by its length first, so "2" precedes "10" and "7" precedes "007"; null sorts last."""
     import duckdb
 
-    core = json.loads((ROOT / "registry/logical_schemas.json").read_text())
+    core = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
     rule = next(
         r for r in core["resources"]["core.units"]["table"]["rules"] if r["id"] == "core.units.numbered_in_order"
     )

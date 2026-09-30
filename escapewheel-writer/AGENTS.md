@@ -5,6 +5,6 @@ The root `AGENTS.md` also applies. Before changing this package, read `CONTRIBUT
 
 - Resolve behavioral questions using the root authority model and current registries.
 - Follow `../CONTRIBUTING.md` for generated inputs. Do not hand-edit generated adapter declarations or
-  vendored schemas.
+  schemas copied from the specification's tree.
 - Preserve the adapter and extension boundaries documented in `CONTRIBUTING.md`; report a format
   defect instead of inventing a writer-only interpretation.

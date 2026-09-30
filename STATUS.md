@@ -5,7 +5,7 @@ which phase is in progress. The repository [authority model](README.md#authority
 file is not normative.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R154 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. No proposal or draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -24,7 +24,7 @@ Phases are Part 07's plan of record.
 
 | Phase | State | Notes |
 |---|---|---|
-| — Specification | **in reconciliation** | The generated v0.2 material is the authoritative specification candidate under [Part 00](escapewheel_poc_docs_v0.2/00_architecture.md#ew-specification-authority). R122 establishes its authority framework; the reconciliation roadmap must close before immutable publication. |
+| — Specification | **in reconciliation** | The generated v0.2 material is the authoritative specification candidate under [Part 00](spec/parts/00_architecture.md#ew-specification-authority). R122 establishes its authority framework; the reconciliation roadmap must close before immutable publication. |
 | — Registry content | **complete** | The counts are in the block above. The registry meta-schema is `0.9.0` and the core registry `0.11.0`; every shipped registry selects `escapewheel-rule-sql-v0.2`, and extension versions remain independent. R126 defines one complete registry-document result, generalized over logical resource declarations by R128. |
 | 0 Spec fixtures | **complete** | Single-session packet plus the variant corpus carrying one extension; `fixtures/`. |
 | 1 Manifest and table reader | **complete** | `escapewheel-reader`; 223 tests in the repository verifier. Ticks come back on the packet's reference clock by default, and `seconds=True` derives R39 §2.3's seconds from the declared origin or refuses. `TableResource` and `ArrayResource`, each with its heavy dependency behind an extra. |
@@ -41,7 +41,7 @@ One repository since 2026-09-04; the `Repo` column is gone with the split that n
 
 | Path | Contents |
 |---|---|
-| `escapewheel_poc_docs_v0.2/` | Authoritative numbered parts and expressly incorporated artifacts, an informational README, and their generated convenience rendering. |
+| `spec/` | The specification's self-contained tree: numbered parts, incorporated artifacts, the core registry's source, informative material, and the tools that generate and check them. |
 | `nwb_lake_poc_docs/` | Frozen starting point. Not edited. |
 | `revisions/` | Specification-change lifecycle and records; start at `revisions/README.md`. |
 | `conformance/` | Probe suites producing the evidence revisions cite. |
@@ -50,7 +50,8 @@ One repository since 2026-09-04; the `Repo` column is gone with the split that n
 | `escapewheel-reader/` | Phase 1: the reader. Owns the `escapewheel` console script. |
 | `escapewheel-validator/` | Phase 2: the validator. Adds `escapewheel validate`. |
 | `escapewheel-writer/` | Phase 3: writer, clock, NWB and JSON adapters. Adds `escapewheel import`. |
-| `registry/` | Registry, meta-schema, manifest schema, and the derivation. |
+| `extensions/` | The repository's example extension registries, outside the specification. |
+| `escapewheel-aind/` | AIND adapters and the AIND extension registries. |
 
 The root is the monorepo and Git repository. `AGENTS.md` contains agent-only routing;
 `CONTRIBUTING.md` contains the human development workflow.
@@ -116,15 +117,17 @@ packet belongs to.
 
 Two other things pass:
 
-- `registry/check.py` — the complete R126 result over the core registry and all four repository
-  extension examples, repository authoring conventions, and all 121 Tier 2 rules statically
-  checked and executed against empty typed tables. Empty tables prove a rule binds, not that it
-  can report; typed semantic vectors and the corpus cover result behavior.
+- `spec/tools/check.py` — the complete R126 result over the core registry, its authoring
+  conventions, and every core Tier 2 rule statically checked; `extensions/registries.py check`
+  holds the four repository extension examples to the same result under the core context, and
+  `conformance/registries/check.py` executes every shipped rule against empty typed tables.
+  Empty tables prove a rule binds, not that it can report; typed semantic vectors and the corpus
+  cover result behavior.
 - `prototype/registry-codegen/` — `packets/valid` exits 0; `packets/broken` reports three
   defects and exits 1.
 
-The core registry carries 76 Tier 2 rules, of which 2 are advisory; the four extension examples
-bring the candidate total to 121. `facts.py` prints the current core counts.
+The core registry carries 91 Tier 2 rules; the four extension examples bring the candidate total
+to 139. `facts.py` prints the current core counts.
 
 ## Verifiable claims
 
@@ -840,7 +843,7 @@ should delay Phases 3-6.
 
 - **A PostgreSQL export of the registry.** R2 §7 already makes structure and rules *data*:
   35 tables with columns, types, presence, keys, and foreign keys, plus 61 Tier 2 rules as
-  SQL. `registry/render.py` generates `tables.md` from exactly that, and DDL is the same
+  SQL. `spec/tools/render.py` generates `tables.md` from exactly that, and DDL is the same
   traversal with a different emitter — types map through R2 §4's Arrow vocabulary, primary
   keys and references become constraints, and closed vocabularies become `CHECK` or an enum.
   What it would buy is a second execution engine for the rules, which is the sharpest

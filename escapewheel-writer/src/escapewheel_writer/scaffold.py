@@ -168,7 +168,7 @@ def draft(
         )
     return Draft(
         {
-            # Part 02 §9.2. Taken from the meta-schema the validator vendors rather than written
+            # Part 02 §9.2. Taken from the meta-schema the validator copies rather than written
             # here, because a second copy of a URI is a second thing to go stale.
             "$schema": registry_meta_schema()["$id"],
             "registry_id": extension_id,

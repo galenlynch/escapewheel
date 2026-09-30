@@ -10,7 +10,7 @@ from escapewheel_validator.rule_language import check_rule
 from escapewheel_validator.validator import _DDL
 
 ROOT = Path(__file__).resolve().parents[2]
-CORE = json.loads((ROOT / "registry/logical_schemas.json").read_text())
+CORE = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
 
 
 def _flagged(rule_id, rows):

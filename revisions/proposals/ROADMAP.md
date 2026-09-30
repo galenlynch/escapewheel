@@ -214,7 +214,7 @@ The narrowing left the following work in later entries in this roadmap:
    stale output of the current prototype: it records commit
    `2a3a05ea10604e037016ae426054cab3955fa2db`, its membership is selected by `release.py`, and the
    monorepo verifier does not establish it as the current release authority.
-2. Incorporating `registry/registry.schema.json` now would overstate what it proves. It validates
+2. Incorporating `spec/artifacts/registry.schema.json` now would overstate what it proves. It validates
    document shape, while the review's D1, D2, I2, I7, and I11 findings require shared semantic
    registry conformance for core, extensions, embedded copies, and public construction boundaries.
 3. Part 02 §10.2 calls Tier 2 predicates SQL but does not define a dialect or execution contract.

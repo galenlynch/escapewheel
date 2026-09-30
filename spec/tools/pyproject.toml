@@ -1,0 +1,22 @@
+[project]
+name = "escapewheel-spec-tools"
+version = "0.2.0"
+description = "The tools that generate and check the Escapewheel specification's tree"
+requires-python = ">=3.12"
+# The libraries a tool in the tree may import beyond the standard library. A package copying a
+# checker admits the version of each that `uv.lock` holds.
+dependencies = [
+    "jsonschema>=4.26.0",
+    "sqlglot>=27.0",
+    "ucumvert>=0.3.2,<0.4",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

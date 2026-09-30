@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from escapewheel_validator import check_registry_context
 
-REGISTRY = json.loads((Path(__file__).resolve().parents[2] / "registry" / "logical_schemas.json").read_text())
+REGISTRY = json.loads((Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json").read_text())
 REGISTRY_CONTEXT = check_registry_context(REGISTRY)
 
 

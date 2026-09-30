@@ -52,8 +52,8 @@ BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
 def schema() -> dict[str, Any]:
     """Load the bundled JSON Schema for a declaration document (Part 12 §7).
 
-    Vendored from `registry/` the way the manifest's schema is, because a wheel cannot read a file
-    from another repository.
+    Copied from the specification's tree the way the manifest's schema is, because a wheel cannot
+    read a file outside its package.
     """
     from importlib import resources
 
@@ -124,7 +124,7 @@ def load(path: str | Path) -> dict[str, Any]:
     Raises
     ------
     ValueError
-        If the file is absent, is not JSON, or does not satisfy `registry/adapter.schema.json`,
+        If the file is absent, is not JSON, or does not satisfy `adapter.schema.json`,
         naming every place it fails. Shape only: what the declaration *says* is checked against
         the registry and the recipe by :func:`refusals`, which needs both.
     """

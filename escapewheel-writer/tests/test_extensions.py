@@ -312,7 +312,7 @@ def test_a_draft_does_not_validate_until_finished(tmp_path):
 
     from escapewheel_writer.scaffold import draft
 
-    meta = json.loads((Path(__file__).resolve().parents[2] / "registry/registry.schema.json").read_text())
+    meta = json.loads((Path(__file__).resolve().parents[2] / "spec/artifacts/registry.schema.json").read_text())
     drafted = draft("vrf", {"sites": _sites(tmp_path)})
     errors = list(jsonschema.Draft202012Validator(meta).iter_errors(drafted.document))
     assert errors, "a draft that validated would be a draft nobody finishes"
@@ -574,7 +574,7 @@ def test_the_check_command_refuses_one_extension_listed_twice(tmp_path, capsys):
     """`import --check` reaches the same refusal, from the recipe and the registries alone."""
     from escapewheel_reader.scripts.cli import main
 
-    registry = Path(__file__).resolve().parents[2] / "registry" / "logical_schemas.json"
+    registry = Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json"
     path = _extensions_recipe(
         tmp_path,
         ["task-0.1.0.json", "task-0.2.0.json"],
@@ -712,8 +712,8 @@ def test_a_file_delivered_source_needs_no_python_of_ours(tmp_path, registry, min
 
 #: Where the reference registry and the extensions this repository ships live, for the checks that
 #: go through the command rather than the function.
-_REGISTRY = Path(__file__).resolve().parents[2] / "registry" / "logical_schemas.json"
-_EXTENSIONS = Path(__file__).resolve().parents[2] / "registry" / "extensions"
+_REGISTRY = Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json"
+_EXTENSIONS = Path(__file__).resolve().parents[2] / "extensions"
 
 
 def test_the_check_command_passes_a_shipped_extension(capsys):
@@ -752,6 +752,6 @@ def test_the_check_command_reads_the_registry_a_packet_binds(tmp_path, capsys, r
     root = tmp_path / "packet"
     assert writer.commit(root).passed
 
-    document = _EXTENSIONS / "aind_opto.json"
+    document = _EXTENSIONS.parent / "escapewheel-aind/extensions/aind_opto.json"
     assert main(["extension", "check", str(document), "--packet", str(root)]) == 0
     assert "sound" in capsys.readouterr().out

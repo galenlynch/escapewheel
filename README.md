@@ -10,14 +10,14 @@ This is a proof of principle.
 ## Authority
 
 For v0.2, authority is assigned by concern in
-[Part 00](escapewheel_poc_docs_v0.2/00_architecture.md#ew-specification-authority):
+[Part 00](spec/parts/00_architecture.md#ew-specification-authority):
 
 - The numbered parts own meanings, processing semantics, obligations, conformance, artifact roles,
   and the subject boundaries assigned there.
 - A machine-readable artifact owns exact structures or assignments only where a numbered part
   expressly incorporates it. Part 02 incorporates the registry and registry-contract schemas,
-  the initial contract descriptor, and `registry/logical_schemas.json` for their stated extents.
-- `escapewheel_poc_docs_v0.2/README.md` is an informational entry point, and
+  the initial contract descriptor, and `spec/artifacts/logical_schemas.json` for their stated extents.
+- `spec/README.md` is an informational entry point, and
   `Escapewheel_POC_v0.2_Implementation_Spec.md` is a generated convenience rendering. Neither is a
   separately edited normative owner.
 - `nwb_lake_poc_docs/` and `revisions/` preserve the starting point, decisions, and rationale.
@@ -44,16 +44,17 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 
 | Directory | What it is |
 |---|---|
-| `escapewheel_poc_docs_v0.2/` | The current specification and its generated single-file rendering; see [Authority](#authority). |
+| `spec/` | The specification's tree: the README and style guide, the numbered parts in `parts/`, the incorporated artifacts in `artifacts/`, the core registry's source in `source/`, the rendered listing, single-file rendering and examples in `informative/`, and the tools producing and checking them in `tools/`. See [Authority](#authority). |
 | `nwb_lake_poc_docs/` | The frozen v0.1 specification it was compiled from. Never edited. |
 | [`revisions/`](revisions/) | The specification-change lifecycle, including proposals, drafts, and accepted decision records. |
-| `registry/` | Registry declarations, local-shape schemas, and small machine-readable contract descriptors. `logical_schemas.json` and the extension documents are generated from TOML sources by `build.py`; incorporated hand-written schemas and descriptors are edited at their sources here. |
+| `extensions/` | The dynamic-foraging and VR-foraging extension registries, generated from TOML sources and checked where they sit by the tree's checker. |
 | `escapewheel-reader/` | The reference reader. Opens a packet, resolves resources, gives tabular and array access. |
 | `escapewheel-validator/` | The reference validator. SQL rules generated from the registry, plus the shim for what SQL cannot see. |
 | `escapewheel-writer/` | The writer, the source adapters, and the session recipe that drives them. |
+| `escapewheel-aind/` | AIND's source adapters and its two extension registries, `aind_opto` and `aind_unit_qc`, in `extensions/`. |
 | `fixtures/` | The conformance corpus: one valid packet and its variants, each with its expected finding recorded as data. |
 | `integration/` | The writer, reader, and validator run against one another, and the generator of Part 08's example packet. |
-| `conformance/` | Mechanical probes producing the measured evidence revisions cite. |
+| `conformance/` | Mechanical probes producing the measured evidence revisions cite, and the registry checks needing more than the tree holds. |
 | `inventory/` | Source inventories from discovery (Part 05 §4.1), and the upstream defects found while writing adapters. |
 
 ## A packet
@@ -119,7 +120,7 @@ uv sync --all-extras
 Python 3.12 or newer. Always `uv`, never bare `pip` or `python`.
 
 For the registry and generation pipeline, see `CONTRIBUTING.md`. The specification style guide is
-`escapewheel_poc_docs_v0.2/CONTRIBUTING.md`. For specification changes, start at
+`spec/CONTRIBUTING.md`. For specification changes, start at
 `revisions/README.md`; uncertain changes begin as proposals rather than normative drafts.
 
 Run the monorepo verification from the repository root:

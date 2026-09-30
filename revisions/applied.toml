@@ -1381,7 +1381,7 @@ note = "R143 §3.4 makes a source-relative `uri` a relative reference, resolved 
 [clause."R80 §2.2"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-source-resolution" }]
-note = "the document's shape is registry/sources.schema.json, which Part 04 §5.5 incorporates, and a reader MUST NOT resolve through a document of a version it does not know (R134 §3.3)"
+note = "the document's shape is spec/artifacts/sources.schema.json, which Part 04 §5.5 incorporates, and a reader MUST NOT resolve through a document of a version it does not know (R134 §3.3)"
 
 [clause."R80 §2.3"]
 disposition = "applied"
@@ -1405,7 +1405,7 @@ note = "what does not change"
 
 [clause."R80 §4"]
 disposition = "registry"
-note = "registry/sources.schema.json, its example, and build.py's VENDORED entry"
+note = "spec/artifacts/sources.schema.json, its example, and the reader's copy of it"
 
 [clause."R80 §5"]
 disposition = "rationale"
@@ -1502,7 +1502,7 @@ where = [
     { part = "04", section = "3", note = "the two standard version fields" },
     { part = "04", anchor = "ew-source-resolution", note = "the source resolution document's schema URI" },
 ]
-note = "an extension's `extends` value and the published $ids are the registry's, read from registry/*.schema.json"
+note = "an extension's `extends` value and the published $ids are the registry's, read from spec/artifacts/*.schema.json"
 
 [clause."R84 §2.3"]
 disposition = "applied"
@@ -1538,7 +1538,7 @@ where = [{ part = "01", section = "3.5" }]
 [clause."R86 §2.1"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-packet" }]
-note = "registry/check.py computes the scope and reports the 33 and the 2"
+note = "spec/tools/check.py computes the scope and reports the 33 and the 2"
 
 [clause."R86 §2.2"]
 disposition = "applied"
@@ -1652,7 +1652,7 @@ where = [{ part = "02", anchor = "ew-discriminator-semantics" }]
 [clause."R90 §3.2"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-discriminator-semantics" }]
-note = "`discriminates_via` in registry.schema.json, checked by registry/check.py"
+note = "`discriminates_via` in registry.schema.json, checked by spec/tools/check.py"
 
 [clause."R90 §3.3"]
 disposition = "applied"
@@ -1799,7 +1799,7 @@ note = "where the boundary is crossed; informative, and its SHOULDs are the ones
 [clause."R94 §3"]
 disposition = "applied"
 where = [{ part = "02", section = "10.2" }]
-note = "also enforced in registry/check.py, which matches identifiers with literals and comments stripped"
+note = "also enforced in spec/tools/check.py, which matches identifiers with literals and comments stripped"
 
 [clause."R94 §2"]
 disposition = "rationale"
@@ -2239,7 +2239,7 @@ note = "50 restatements over 45 distinct columns -- 35 of `vocabulary`, 10 of `a
 [clause."R107 §2.4"]
 disposition = "rationale"
 where = "R107 §2.4"
-note = "registry/tables.md rendered Column, Type, Presence, Since and Description and no declaration at all, which is what the prose was buying: core.processing_runs.status's three values reached a reader of that document only because someone typed them beside the enum holding them"
+note = "spec/informative/tables.md rendered Column, Type, Presence, Since and Description and no declaration at all, which is what the prose was buying: core.processing_runs.status's three values reached a reader of that document only because someone typed them beside the enum holding them"
 
 [clause."R107 §2.5"]
 disposition = "rationale"
@@ -2438,7 +2438,7 @@ note = "45 clauses named neither an actor nor the part they constrain: 8 whose s
 [clause."R111 §3.3"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-specification-actors" }]
-note = "the roster itself -- writer, reader, validator, consumer, and build/adapter/implementation resolving to them -- lands here as definitions carrying no modal, which is why only the rules that bind it are disposed. Every requirement binds an actor or states a property of an artifact, and an artifact predicate MUST name the part it constrains and put the constraint in an active verb -- a wall-clock column MUST NOT use INT96, over INT96 MUST NOT be used. Binds whoever writes this specification; a clause failing it is corrected rather than reported"
+note = "the roster itself -- writer, reader, checker, validator, consumer, and build/adapter/implementation resolving to them -- lands here as definitions carrying no modal, which is why only the rules that bind it are disposed. Every requirement binds an actor or states a property of an artifact, and an artifact predicate MUST name the part it constrains and put the constraint in an active verb -- a wall-clock column MUST NOT use INT96, over INT96 MUST NOT be used. Binds whoever writes this specification; a clause failing it is corrected rather than reported"
 
 [clause."R111 §3.5"]
 disposition = "applied"
@@ -3387,7 +3387,7 @@ note = "an entry without owns contributes what its adapter supplies in part and 
 [clause."R133 §3.4"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-recipe-purpose" }, { part = "05", anchor = "ew-recipe-check" }, { part = "05", anchor = "ew-validation-normative-references" }]
-note = "a recipe is TOML 1.0 whose decoded form satisfies registry/recipe.schema.json, refused before any source opens where it fails"
+note = "a recipe is TOML 1.0 whose decoded form satisfies spec/artifacts/recipe.schema.json, refused before any source opens where it fails"
 
 [clause."R133 §3.5"]
 disposition = "applied"
@@ -3397,7 +3397,7 @@ note = "a recipe lists a kind once, and a build names a source by its kind"
 [clause."R134 §3.1"]
 disposition = "applied"
 where = [{ part = "12", anchor = "ew-adapter-declaration-document" }, { part = "07", anchor = "ew-reference-object-model" }]
-note = "Part 03 §11.5 incorporates registry/adapter.schema.json; a declaration document carries all eight members, protocols replacing protocol"
+note = "Part 03 §11.5 incorporates spec/artifacts/adapter.schema.json; a declaration document carries all eight members, protocols replacing protocol"
 
 [clause."R134 §3.2"]
 disposition = "applied"
@@ -3407,7 +3407,7 @@ note = "a build refuses a declaration failing the schema and checks a class as i
 [clause."R134 §3.3"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-source-resolution" }]
-note = "Part 04 §5.5 incorporates registry/sources.schema.json; a writer writes a conforming document, a reader may validate, and a source name is any string"
+note = "Part 04 §5.5 incorporates spec/artifacts/sources.schema.json; a writer writes a conforming document, a reader may validate, and a source name is any string"
 
 [clause."R134 §3.4"]
 disposition = "applied"
@@ -4114,3 +4114,19 @@ where = [{ part = "03", anchor = "ew-overriding-orders" }]
 [clause."R154 §3.5"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-portable-profile-scope", note = "physical-profile/0.3.0" }]
+
+[clause."R155 §3.1"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-specification-candidate", note = "the tree and its artifacts directory" }]
+
+[clause."R155 §3.2"]
+disposition = "applied"
+where = [{ part = "00", anchor = "ew-specification-candidate", note = "paths relative to the tree's root" }]
+
+[clause."R155 §3.3"]
+disposition = "applied"
+where = [
+  { part = "00", anchor = "ew-specification-actors", note = "the checker; five actors" },
+  { part = "02", anchor = "ew-logical-column-naming", note = "the registry checker is a checker" },
+  { part = "03", anchor = "ew-array-metadata-placement", note = "the physical checker is a validator" },
+]

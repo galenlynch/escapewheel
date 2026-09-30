@@ -5,9 +5,9 @@ These instructions apply throughout the monorepo. A nested `AGENTS.md` may add n
 ## Required context
 
 - For architecture, behavior, or schema work, first read the authority model in `README.md`, then
-  read `escapewheel_poc_docs_v0.2/README.md` and the relevant numbered parts.
-- Before editing a specification part, read `escapewheel_poc_docs_v0.2/CONTRIBUTING.md`.
-- For registry or generation work, read `CONTRIBUTING.md`.
+  read `spec/README.md` and the relevant numbered parts in `spec/parts/`.
+- Before editing a specification part, read `spec/CONTRIBUTING.md`.
+- For registry, generation, or tree-tool work, read `CONTRIBUTING.md`.
 - For package work, read that package's `README.md` and `CONTRIBUTING.md`.
 - For specification change work, read `revisions/CONTRIBUTING.md` in full.
 

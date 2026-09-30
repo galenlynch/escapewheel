@@ -9,7 +9,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-REGISTRY = ROOT / "registry"
+REGISTRY = ROOT / "spec" / "artifacts"
 
 
 def tables(document: dict) -> dict:
@@ -42,7 +42,8 @@ def defects(documents: list[dict]) -> list[str]:
 core = json.loads((REGISTRY / "logical_schemas.json").read_text())
 extensions = [
     json.loads(path.read_text())
-    for path in sorted((REGISTRY / "extensions").glob("*.json"))
+    for directory in (ROOT / "extensions", ROOT / "escapewheel-aind" / "extensions")
+    for path in sorted(directory.glob("*.json"))
 ]
 documents = [core, *extensions]
 

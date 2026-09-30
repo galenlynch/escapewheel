@@ -6,13 +6,13 @@ covers changing it.
 ## Where the rules come from
 
 Use the monorepo's [authority model](../README.md#authority). The registry embedded in a packet
-governs that packet's declared tables and rules; the current reference registry in `../registry/`
-is generated source data for new packets.
+governs that packet's declared tables and rules; the current core registry in
+`../spec/artifacts/` is generated source data for new packets.
 
-`src/escapewheel_validator/schemas/registry.schema.json` is vendored by `../registry/build.py`.
-The registry-contract schema and descriptor are vendored beside it. Change their hand-written
-sources in `../registry/`, run the generator, and commit both source and projections; never edit a
-vendored copy directly.
+The schemas under `src/escapewheel_validator/schemas/`, and `registry_document.py` and
+`rule_language.py`, are copies of files in the specification's tree, listed in `pyproject.toml`'s
+`[tool.escapewheel.copies]`. Change the tree's file, run `../copies.py` from the monorepo root, and
+commit both; never edit a copy directly. `tests/test_copies.py` fails where a copy disagrees.
 
 `registry_document.py` returns the complete ordered Part 02 §9.4 result. Do not add a second
 registry checker at a caller boundary: invoke that result. The descriptor enumerates invariant
@@ -37,7 +37,7 @@ package belongs in the registry, and the design is what makes that true.
   closed vocabularies, finite values, none of them hand-written. If your check is one of
   those five shapes, it already exists the moment the registry declares the column.
 - **Tier 2 is hand-written portable-profile SQL**, and it lives in the registry, **not here**:
-  each is a `[[rules]]` entry in its table's file under `../registry/core/`. Adding one is editing
+  each is a `[[rules]]` entry in its table's file under `../spec/source/core/`. Adding one is editing
   that file and running `build.py`. Nothing in this package needs to change.
 
 So before writing Python, ask which of these your check is. Code lands here only for something a
@@ -141,7 +141,7 @@ cd ../fixtures && uv run --no-cache --with ../escapewheel-validator --with duckd
 ```
 
 Run it after changing the registry, the generator, or any rule. A new rule should arrive with a
-variant that trips it — a rule nothing exercises is a rule nobody knows works. `registry/check.py`
+variant that trips it — a rule nothing exercises is a rule nobody knows works. `conformance/registries/check.py`
 statically checks every Tier 2 rule and executes it against typed empty tables, which proves a rule *binds* but not that it can
 *report*: one bound cleanly for weeks and failed only once it had a finding to return.
 

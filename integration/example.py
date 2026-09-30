@@ -1,12 +1,12 @@
-"""Build the example packet, and refresh Part 08's layout and manifest excerpt from it.
+"""Build the example packet, and check that Part 08 shows its layout and manifest excerpt.
 
 The packet is the conformance corpus's valid session written by the writer rather than by hand,
-with every shipped extension bound and one resource of each kind the corpus lacks: a
+with every repository extension bound and one resource of each kind the corpus lacks: a
 packet-owned array, an external array, a materialized analysis table, and a derived analysis
-array. Part 08 shows this packet, so its layout and manifest cannot drift from what the writer
-produces against the current registries.
+array. Part 08 carries its layout and excerpt as text, and this fails where they differ from what
+the writer produces against the current registries, printing the text Part 08 should carry.
 
-    python example.py           # rewrite Part 08's generated regions
+    python example.py
 """
 
 from __future__ import annotations
@@ -23,10 +23,14 @@ from escapewheel_writer import PacketWriter, materialize
 from escapewheel_writer.writer import ExternalArray, StagedArray
 
 ROOT = Path(__file__).resolve().parents[1]
-PART = ROOT / "escapewheel_poc_docs_v0.2" / "08_example_packet.md"
-REGISTRY = json.loads((ROOT / "registry" / "logical_schemas.json").read_text())
+PART = ROOT / "spec" / "parts" / "08_example_packet.md"
+REGISTRY = json.loads((ROOT / "spec" / "artifacts" / "logical_schemas.json").read_text())
 EXTENSIONS = {
-    path.stem: json.loads(path.read_text()) for path in sorted((ROOT / "registry" / "extensions").glob("*.json"))
+    path.stem: json.loads(path.read_text())
+    for path in sorted(
+        [*(ROOT / "extensions").glob("*.json"), *(ROOT / "escapewheel-aind" / "extensions").glob("*.json")],
+        key=lambda path: path.name,
+    )
 }
 
 #: The session, as the corpus's valid packet carries it. Loaded by path because `fixtures/` is
@@ -288,34 +292,33 @@ def layout(manifest: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _fill(text: str, region: str, body: str) -> str:
-    begin = f"<!-- BEGIN GENERATED EXAMPLE PACKET: {region} -->"
-    end = f"<!-- END GENERATED EXAMPLE PACKET: {region} -->"
-    before, remainder = text.split(begin, 1)
-    _, after = remainder.split(end, 1)
-    return f"{before}{begin}\n{body}\n{end}{after}"
-
-
-def render(manifest: Mapping[str, Any]) -> str:
-    """Part 08 with its generated regions filled from this manifest."""
+def shown(manifest: Mapping[str, Any]) -> dict[str, str]:
+    """The text Part 08 §§2–3 carry for this manifest, by section."""
     owned = sum(1 for entry in manifest["resources"] if not entry.get("external"))
     count = (
         f"The packet carries {len(manifest['resources'])} resources, {owned} of them packet-owned; "
         f"the excerpt shows one entry of each kind."
     )
-    text = _fill(PART.read_text(), "layout", f"```text\n{layout(manifest)}\n```")
-    return _fill(text, "manifest", f"{count}\n\n```json\n{excerpt(manifest)}\n```")
+    return {
+        "§2's layout": f"```text\n{layout(manifest)}\n```",
+        "§3's manifest excerpt": f"{count}\n\n```json\n{excerpt(manifest)}\n```",
+    }
 
 
-def main() -> None:
+def main() -> int:
     with tempfile.TemporaryDirectory() as scratch:
         root = Path(scratch) / SESSION
         # A packet that fails validation is refused at commit, so one that exists has passed.
         build(root)
         manifest = json.loads((root / "packet.json").read_text())
-    PART.write_text(render(manifest))
-    print(f"wrote {PART.relative_to(ROOT)}")
+    text = PART.read_text()
+    stale = {section: body for section, body in shown(manifest).items() if body not in text}
+    for section, body in stale.items():
+        print(f"Part 08 {section} differs from the packet the writer builds, which shows:\n{body}\n")
+    if not stale:
+        print("Part 08 shows the packet the writer builds")
+    return 1 if stale else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -139,9 +139,9 @@ def vector_defects() -> list[str]:
 
 def profile_defects() -> list[str]:
     """Validate the incorporated descriptor and its contract-anchor references."""
-    schema = json.loads((ROOT / "registry/rule_language.schema.json").read_text())
+    schema = json.loads((ROOT / "spec/artifacts/rule_language.schema.json").read_text())
     profile = json.loads(
-        (ROOT / "registry/rule_languages/escapewheel-rule-sql-v0.2.json").read_text()
+        (ROOT / "spec/artifacts/rule_languages/escapewheel-rule-sql-v0.2.json").read_text()
     )
     defects = [
         error.message
@@ -149,7 +149,7 @@ def profile_defects() -> list[str]:
     ]
     if profile.get("id") != PROFILE_ID:
         defects.append("profile id disagrees")
-    part = (ROOT / "escapewheel_poc_docs_v0.2/11_tier_2_rule_language.md").read_text()
+    part = (ROOT / "spec/parts/11_tier_2_rule_language.md").read_text()
     for anchor in profile.get("contract_clauses", []):
         if f'id="{anchor}"' not in part:
             defects.append(f"contract anchor #{anchor} does not resolve")
@@ -158,12 +158,13 @@ def profile_defects() -> list[str]:
 
 def shipped_rule_defects() -> list[str]:
     """Check and execute every shipped rule against typed empty relations."""
-    core = json.loads((ROOT / "registry/logical_schemas.json").read_text())
+    core = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
     documents = [
         core,
         *[
             json.loads(path.read_text())
-            for path in sorted((ROOT / "registry/extensions").glob("*.json"))
+            for directory in ("extensions", "escapewheel-aind/extensions")
+            for path in sorted((ROOT / directory).glob("*.json"))
         ],
     ]
     connection = duckdb.connect()

@@ -12,7 +12,7 @@ of what follows exists because one of those disagreements was silent once.
 ## Where the rules come from
 
 Use the monorepo's [authority model](../README.md#authority). Packet construction uses the current
-v0.2 parts and the generated declarations in `../registry/logical_schemas.json`.
+v0.2 parts and the generated declarations in `../spec/artifacts/logical_schemas.json`.
 `../inventory/` records measured defects in real sources; every compensation cites one.
 
 **A defect found while implementing starts as a proposal or revision draft, never as a silent
@@ -167,7 +167,7 @@ same failure `ndx-` extensions demonstrate on the read path, avoided one step ea
 
 Under `files-v0.1` the command reads the build's terms as one JSON object on standard input (Part
 12 §4) and writes `<resource_id>.parquet` for each resource into the `delivery_root` that
-object names. The declaration document satisfies `registry/adapter.schema.json`, and a build reads
+object names. The declaration document satisfies `spec/artifacts/adapter.schema.json`, and a build reads
 it before it launches anything, so a term the script needs is one it declares.
 
 `command` is an argument list — **not a shell**, and with no opinion about how the environment is

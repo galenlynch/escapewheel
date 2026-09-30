@@ -68,6 +68,20 @@ docs = [
   "furo",
 ]
 
+[tool.escapewheel.copies]
+# What this package copies from the specification's tree, a wheel being unable to read a file
+# outside it: a path in this package = a path under `spec/`. `copies.py` at the
+# monorepo root writes them, and `tests/test_copies.py` checks that they agree.
+"src/escapewheel_validator/registry_document.py" = "tools/checkers/registry_document.py"
+"src/escapewheel_validator/rule_language.py" = "tools/checkers/rule_language.py"
+"src/escapewheel_validator/schemas/registry.schema.json" = "artifacts/registry.schema.json"
+"src/escapewheel_validator/schemas/registry_result.schema.json" = "artifacts/registry_result.schema.json"
+"src/escapewheel_validator/schemas/registry_contract.schema.json" = "artifacts/registry_contract.schema.json"
+"src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.9.json" = "artifacts/registry_contracts/escapewheel-registry-contract-v0.9.json"
+"src/escapewheel_validator/schemas/rule_language.schema.json" = "artifacts/rule_language.schema.json"
+"src/escapewheel_validator/schemas/escapewheel-rule-sql-v0.2.json" = "artifacts/rule_languages/escapewheel-rule-sql-v0.2.json"
+"src/escapewheel_validator/schemas/manifest.schema.json" = "artifacts/manifest.schema.json"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/escapewheel_validator"]
 

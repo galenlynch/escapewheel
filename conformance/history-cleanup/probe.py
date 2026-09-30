@@ -18,11 +18,14 @@ ROOT = Path(__file__).resolve().parents[2]
 BASELINE = "41aad8a15b7c8c3415f6c52b3c12e64114658718"
 INCORPORATED = "194bdb9f5240af345f3dd77d4441b991c3434099"
 
+# Paths at the two frozen commits, which the current layout does not share.
 CORE = "registry/logical_schemas.json"
 RULES = "registry/rules.json"
-EXTENSIONS = tuple(
-    str(path.relative_to(ROOT))
-    for path in sorted((ROOT / "registry/extensions").glob("*.json"))
+EXTENSIONS = (
+    "registry/extensions/aind_opto.json",
+    "registry/extensions/aind_unit_qc.json",
+    "registry/extensions/dynamic_foraging.json",
+    "registry/extensions/vr_foraging.json",
 )
 
 _PARENTHETICAL_REVISION = re.compile(

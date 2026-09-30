@@ -1,0 +1,10 @@
+# Exceptions to the naming conventions of `spec/tools/conventions.py` for the registries in this
+# directory, each with its reason. An exception is declared, never inferred.
+
+[naming_exceptions]
+
+# Part 02 §8.2: name columns naming a kind of thing rather than one assigned identifier's value.
+[names_a_kind]
+"dynamic_foraging.sessions.auto_train_curriculum_name" = "which curriculum, not which session"
+"vr_foraging.sessions.curriculum_name" = "as auto_train_curriculum_name"
+"vr_foraging.sessions.curriculum_stage_name" = "which stage of it"

@@ -552,7 +552,7 @@ class MaterializeSpec:
 
 
 def schema() -> dict[str, Any]:
-    """Load the bundled JSON Schema for a recipe (Part 05 §3.1), vendored from `registry/`."""
+    """Load the bundled JSON Schema for a recipe (Part 05 §3.1), copied from the specification's tree."""
     from importlib import resources
 
     parsed: dict[str, Any] = json.loads(resources.files(__package__).joinpath("schemas/recipe.schema.json").read_text())
@@ -560,7 +560,7 @@ def schema() -> dict[str, Any]:
 
 
 def shape_problems(document: Mapping[str, Any]) -> list[str]:
-    """Where a decoded recipe fails `registry/recipe.schema.json`, each as `path: message`.
+    """Where a decoded recipe fails `recipe.schema.json`, each as `path: message`.
 
     Every failure rather than the first, since an author fixing a recipe wants the whole list; an
     unknown top-level block is one of them, where it would otherwise be dropped unread.

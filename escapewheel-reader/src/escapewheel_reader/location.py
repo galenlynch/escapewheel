@@ -48,7 +48,7 @@ SOURCES_VERSION = "escapewheel-sources-v0.1"
 def sources_schema() -> dict[str, Any]:
     """Load the bundled JSON Schema for a source resolution document (Part 04 §5.5).
 
-    Vendored from `registry/`, because a wheel cannot read a file from another repository.
+    Copied from the specification's tree, because a wheel cannot read a file outside its package.
 
     Returns
     -------

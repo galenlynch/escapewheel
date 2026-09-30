@@ -64,7 +64,7 @@ def test_a_prefix_reaches_every_asset_id_its_name_and_its_resource(root):
 
 def test_a_prefixed_video_binds_to_its_own_asset_row(root):
     """A build binds a referenced resource to the catalog row by asset ID, so both must carry the prefix."""
-    registry = json.loads((Path(__file__).parents[2] / "registry/logical_schemas.json").read_text())
+    registry = json.loads((Path(__file__).parents[2] / "spec/artifacts/logical_schemas.json").read_text())
     source = _source(root, prefix="A_")
     rows = source.media_assets()
     writer = PacketWriter(registry, packet_id="p", session="s001")

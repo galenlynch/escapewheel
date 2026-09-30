@@ -3,80 +3,16 @@
 from __future__ import annotations
 
 import json
-import re
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from functools import cache
 from importlib import resources as importlib_resources
 from typing import Any
 
-import jsonschema
+from .descriptor import check_physical_profile
 
 
 class PhysicalProfileError(ValueError):
     """The physical-profile descriptor is malformed or internally inconsistent."""
-
-
-def check_physical_profile(
-    descriptor: Mapping[str, Any],
-    schema: Mapping[str, Any],
-    *,
-    logical_kinds: Collection[str] | None = None,
-    logical_standard: str | None = None,
-    part_text: str | None = None,
-) -> tuple[str, ...]:
-    """Return generic shape, cross-member, cross-artifact, and anchor errors."""
-    errors = [
-        f"{'/'.join(map(str, error.path)) or '<root>'}: {error.message}"
-        for error in sorted(
-            jsonschema.Draft202012Validator(schema).iter_errors(descriptor),
-            key=lambda error: list(error.path),
-        )
-    ]
-    if descriptor.get("$schema") != schema.get("$id"):
-        errors.append("$schema does not name the supplied physical-profile schema")
-    mappings = descriptor.get("kind_interfaces", {})
-    interfaces = descriptor.get("interfaces", {})
-    if isinstance(mappings, Mapping) and isinstance(interfaces, Mapping):
-        mapped = {value for value in mappings.values() if isinstance(value, str)}
-        declared = set(interfaces)
-        for name in sorted(mapped - declared):
-            errors.append(f"kind_interfaces refers to undeclared interface {name!r}")
-        for name in sorted(declared - mapped):
-            errors.append(f"interface {name!r} is not referenced by any logical kind")
-        if logical_kinds is not None and set(mappings) != set(logical_kinds):
-            errors.append("kind_interfaces keys do not equal the logical kind vocabulary")
-        errors.extend(_misplaced_orders(mappings, interfaces))
-    if logical_standard is not None and descriptor.get("logical_standard") != logical_standard:
-        errors.append("logical_standard does not identify the checked logical standard")
-    if part_text is not None and isinstance(interfaces, Mapping):
-        for interface, entry in interfaces.items():
-            candidates = [(str(interface), entry)]
-            if isinstance(entry, Mapping):
-                candidates.extend(
-                    (f"{interface}.{variant}", value) for variant, value in entry.get("variants", {}).items()
-                )
-            for label, value in candidates:
-                if not isinstance(value, Mapping):
-                    continue
-                for anchor in value.get("anchors", []):
-                    count = len(
-                        re.findall(
-                            rf'<a id="{re.escape(str(anchor))}"(?: [^>]*)?></a>',
-                            part_text,
-                        )
-                    )
-                    if count != 1:
-                        errors.append(f"{label} anchor {anchor!r} resolves {count} times in Part 03")
-    return tuple(errors)
-
-
-def _misplaced_orders(mappings: Mapping[str, Any], interfaces: Mapping[str, Any]) -> list[str]:
-    """Only the interface storing tables has a row order to override (Part 03 §1)."""
-    return [
-        f"interface {name!r} declares overriding_orders but does not store tables"
-        for name, entry in interfaces.items()
-        if isinstance(entry, Mapping) and "overriding_orders" in entry and mappings.get("table") != name
-    ]
 
 
 def _bundled_json(relative: str) -> dict[str, Any]:

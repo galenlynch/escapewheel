@@ -24,7 +24,7 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PARTS = ROOT / "escapewheel_poc_docs_v0.2"
+PARTS = ROOT / "spec" / "parts"
 
 #: A heading that opens a numbered section, at any depth.
 HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
@@ -59,7 +59,7 @@ def touched(ref: str | None) -> dict[str, set[str]]:
     args = (
         ["git", "diff", "--unified=0"]
         + ([ref] if ref else [])
-        + ["--", "escapewheel_poc_docs_v0.2"]
+        + ["--", "spec/parts"]
     )
     diff = subprocess.run(
         args, cwd=ROOT, capture_output=True, text=True, check=False

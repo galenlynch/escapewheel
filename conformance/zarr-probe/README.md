@@ -2,7 +2,7 @@
 
 Produces the evidence cited in
 [R3 §7.3](../../revisions/accepted/R3-cross-language-physical-floor.md) and the reader matrix of
-[Part 10 §5](../../escapewheel_poc_docs_v0.2/10_performance_notes.md#ew-zarr-codec-floor-evidence),
+[Part 10 §5](../../spec/parts/10_performance_notes.md#ew-zarr-codec-floor-evidence),
 which [R137](../../revisions/accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md)
 raised the v3 reader floor on.
 

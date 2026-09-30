@@ -11,20 +11,19 @@ from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from functools import cache
 from importlib.resources import files
-from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 from xml.etree import ElementTree
 
 import jsonschema
 
-from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, check_rule
+from .artifacts import ARTIFACTS
+from .rule_language import PROFILE_ID, RuleProfileError, check_rule
 
-SCHEMAS = Path(__file__).resolve().parent / "schemas"
-SCHEMA = SCHEMAS / "registry.schema.json"
-CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
-CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.9.json"
-RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
+SCHEMA = ARTIFACTS / "registry.schema.json"
+CONTRACT_SCHEMA = ARTIFACTS / "registry_contract.schema.json"
+CONTRACT = ARTIFACTS / "registry_contracts" / "escapewheel-registry-contract-v0.9.json"
+RESULT_SCHEMA = ARTIFACTS / "registry_result.schema.json"
 UCUM_URI = "https://ucum.org/ucum"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
 METADATA_DESCRIPTION = (

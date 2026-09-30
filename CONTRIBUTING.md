@@ -7,62 +7,94 @@ The repository-wide [authority model](README.md#authority) applies. This file de
 authoring and generation pipeline; it is not normative.
 
 The process feels byzantine for one reason: **most of what looks like source is output.**
-`logical_schemas.json` and the extension documents beside it are committed, readable, and edited
-by nobody. `tables.md` is a document generated from the core registry. Two schemas are copied into two other packages by a build step. Once you know
-which files a person writes, the rest is a straight line.
+`logical_schemas.json` and the extension documents are committed, readable, and edited by nobody.
+`tables.md` is a document generated from the core registry, and the packages carry copies of the
+schemas and checkers they use. Once you know which files a person writes, the rest is a straight
+line.
 
 ## 1. What a person writes
 
+The specification is the directory `spec/`, its **tree**. Everything a second implementer needs
+lies within it, and it depends on nothing else in the repository; the packages, extensions,
+fixtures and conformance probes depend on it.
+
 | file | what it is |
 |---|---|
-| `escapewheel_poc_docs_v0.2/00_architecture.md` | the authority framework, part subjects and statuses, normative-reference policy, and shared references |
-| `escapewheel_poc_docs_v0.2/README.md` | the informational specification entry point; its tables are checked projections |
-| `escapewheel_poc_docs_v0.2/01_*.md` through `10_*.md` | subject-owning numbered parts, including their local normative references; normative prose changes through an accepted revision's incorporation |
-| `escapewheel_poc_docs_v0.2/CONTRIBUTING.md` | the non-normative specification style guide |
-| `escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md` | generated convenience rendering; never edited directly |
+| `spec/parts/00_architecture.md` | the authority framework, part subjects and statuses, normative-reference policy, and shared references |
+| `spec/README.md` | the informational specification entry point; its tables are checked projections |
+| `spec/parts/01_*.md` through `12_*.md` | subject-owning numbered parts, including their local normative references; normative prose changes through an accepted revision's incorporation |
+| `spec/CONTRIBUTING.md` | the non-normative specification style guide |
+| `spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md` | generated convenience rendering; never edited directly |
 | `revisions/proposals/*.md` | active problem statements and alternatives; non-authoritative |
 | `revisions/drafts/*.md` | candidate normative changes; non-authoritative and unnumbered |
 | `revisions/accepted/R<N>-*.md` | accepted decision records explaining changes incorporated into the specification or revision process |
-| `registry/core/*.toml` | the core registry's source: one file per resource, named by its resource ID, and `registry.toml` for the document's own fields |
-| `registry/registry.schema.json` | the local-shape schema a registry document validates against |
-| `registry/registry_contract.schema.json` | the closed shape of a registry-contract descriptor |
-| `registry/registry_contracts/*.json` | phase and semantic-invariant identities, applicability, and owning anchors |
-| `registry/manifest.schema.json` | the JSON Schema for `packet.json` |
-| `registry/extensions/<id>/*.toml` | each extension registry's source, in the same form |
+| `spec/source/core/*.toml` | the core registry's source: one file per resource, named by its resource ID, and `registry.toml` for the document's own fields |
+| `spec/artifacts/registry.schema.json` | the local-shape schema a registry document validates against |
+| `spec/artifacts/registry_contract.schema.json` | the closed shape of a registry-contract descriptor |
+| `spec/artifacts/registry_contracts/*.json` | phase and semantic-invariant identities, applicability, and owning anchors |
+| `spec/artifacts/manifest.schema.json` | the JSON Schema for `packet.json` |
+| `spec/tools/checkers/*.py` | the registry-document, rule-language and descriptor checkers the packages copy |
+| `extensions/<id>/*.toml`, `escapewheel-aind/extensions/<id>/*.toml` | each extension registry's source, in the same form |
 | `escapewheel-validator/.../generate.py` | how Tier 1 checks are derived from structure |
 
-Everything else in `registry/` is output.
+Everything else in `spec/artifacts/` and `spec/informative/` is output, apart from the example
+documents beside the listing.
 
 ## 2. What a machine writes
 
 ```
-registry/core/*.toml ────────────assemble.py──> registry/logical_schemas.json
-registry/extensions/<id>/*.toml ─assemble.py──> registry/extensions/<id>.json
-                                                 │
-                                                 ├──render.py──> registry/tables.md
-                                                 └──render.py──> registry/README.md (marked regions)
+spec/source/core/*.toml ──assemble.py──> spec/artifacts/logical_schemas.json
+                                          │
+                                          ├──render.py──> spec/informative/tables.md
+                                          └──render.py──> spec/source/README.md (marked regions)
 
-registry/registry.schema.json ──build.py──> escapewheel-validator/src/…/schemas/
-registry/registry_contract*  ──build.py──> escapewheel-validator/src/…/schemas/
-registry/manifest.schema.json ──build.py──> escapewheel-validator/src/…/schemas/
-                              ├─build.py─> registry/resources.schema.json ──build.py──> escapewheel-writer/src/…/schemas/
-                              └─build.py─> Part 04 §§3, 4.1, 8 and 9 field tables
+extensions/<id>/*.toml ───registries.py build──> extensions/<id>.json
+
+spec/artifacts/manifest.schema.json ─build.py─> spec/artifacts/resources.schema.json
+                                    └─build.py─> Part 04 §§3, 4.1, 8 and 9 field tables
+
+spec/artifacts/*, spec/tools/checkers/* ──copies.py──> each package's copies
 ```
 
-The registry documents, `tables.md`, the README's generated regions, the delivery schema, Part 04's
-field tables, and the vendored schema copies are **build artifacts that happen to be committed**.
-They are committed because a packet binds the registry and a reviewer should see it change; they
-are not files to edit. The delivery schema is the manifest's resource entry without
+The registry documents, `tables.md`, the source guide's generated regions, the delivery schema,
+Part 04's field tables, and the packages' copies are **build artifacts that happen to be
+committed**. They are committed because a packet binds the registry and a reviewer should see it
+change; they are not files to edit. The delivery schema is the manifest's resource entry without
 `validation_state` and `derived_from`, so change the manifest schema and rebuild.
 
 The registry regenerates from its source: delete `logical_schemas.json` and `tables.md`, run
-`uv run --project ../escapewheel-writer python build.py` from `registry/`, and both come back
-byte-identical. `verify.py` asserts exactly
-that on every run — snapshot the intentional candidate, regenerate, then demand that generation
-preserved the snapshot. This catches an artifact drifting from its source while allowing the
-pre-commit change that intentionally updates both to pass.
+`uv run --project spec/tools python spec/tools/build.py`, and both come back byte-identical.
+`verify.py` asserts exactly that on every run — snapshot the intentional candidate, regenerate,
+then demand that generation preserved the snapshot. This catches an artifact drifting from its
+source while allowing the pre-commit change that intentionally updates both to pass.
 
-## 3. The one command
+## 3. The tree's tools
+
+`spec/tools/` holds the software that produces and checks the tree, and nothing else in the tree
+is software. Four rules keep the tree whole, and `verify.py` checks each through `ci/tree.py`:
+
+- **The tree regenerates from itself alone.** A copy of `spec/` in an empty directory, running its
+  own tools in the environment its own lock declares, reproduces every generated file and region
+  byte for byte and passes its own checks.
+- **A tool in the tree imports nothing of the repository outside it.** It imports the standard
+  library, the tree's own modules, and the libraries `spec/tools/pyproject.toml` declares and
+  `spec/tools/uv.lock` locks; a test may also import the development group's.
+- **The tree holds a tool deciding each checked projection, consistency condition and artifact
+  conformance.** A column table, a generated region or the combined rendering has the tool that
+  regenerates it, each explicit consistency condition has the check that decides it, and each
+  incorporated artifact is checked against the schema or contract its part names.
+- **A package copies what it uses and checks its copies.** A wheel cannot read a file outside it,
+  so a package lists under `[tool.escapewheel.copies]` the artifacts and checkers it copies from
+  the tree. `copies.py` writes them, and the package's `tests/test_copies.py` fails where one
+  differs. A package copying a checker admits the tree's locked version of each library the
+  checker imports, which `copies.py --check` confirms.
+
+A checker locates its artifacts through the `artifacts` module beside it, which each place
+supplies for itself, so a copy matches its source byte for byte. Checks needing what the tree does
+not hold — the Tier 2 rules' execution in DuckDB, Git history, the frozen v0.1 documents, the
+prototype — lie in `conformance/`.
+
+## 4. The one command
 
 ```bash
 uv run --project escapewheel-writer python verify.py
@@ -80,7 +112,7 @@ limit. A runner lacking those facilities is unsuitable for the full suite and fa
 generation or a package test can hang or be mistaken for an implementation defect. CI runs the
 same command and therefore exercises the same preflight.
 
-## 3.1 Working with large packets
+## 4.1 Working with large packets
 
 Cap memory for commands that read a real packet so a runaway decode fails visibly instead of
 exhausting the machine. On a systemd Linux host, for example:
@@ -95,18 +127,19 @@ large spills, and read large Parquet resources in batches (`ParquetFile.iter_bat
 filtered query rather than materializing a whole spike table. DuckDB also needs an on-disk spill
 directory for its memory limit to be effective.
 
-## 4. Bootstrapping in order
+## 5. Bootstrapping in order
 
 Nothing here needs doing by hand in normal work — `verify.py` does it — but this is the order, and
 the order matters.
 
-1. **`assemble.py`** reads each registry's source directory and writes its document. A file uses
-   the published format's keys and differs from the document only in spelling: a table's fields
-   sit at the top of its file, a single-column reference is written on its column, and a rule may
-   invoke the `interval` template, which is expanded into plain SQL so that the registry a packet
-   embeds carries no vocabulary a validator would have to learn. `canonical.py` fixes what JSON
-   leaves free — keys in the order `registry.schema.json` declares them, single-column references
-   in column order before multi-column ones — so how a file orders them changes nothing.
+1. **`spec/tools/assemble.py`** reads each registry's source directory and writes its document. A
+   file uses the published format's keys and differs from the document only in spelling: a
+   table's fields sit at the top of its file, a single-column reference is written on its column,
+   and a rule may invoke the `interval` template, which is expanded into plain SQL so that the
+   registry a packet embeds carries no vocabulary a validator would have to learn. `canonical.py`
+   fixes what JSON leaves free — keys in the order `registry.schema.json` declares them,
+   single-column references in column order before multi-column ones — so how a file orders them
+   changes nothing.
 
    **Column order is a convention of this registry and not a conformance requirement** — a
    validator resolves a column by name, and no clause of Part 02 or Part 03 states an order — so no
@@ -119,42 +152,45 @@ the order matters.
      coordinates a clock interprets is the author's judgement.
    - `metadata` is last.
 
-   `check.py` holds the first and the last in core and every extension.
+   `spec/tools/conventions.py` holds the first and the last, and the naming conventions, for core
+   and every extension.
 
    Each varies only where the rule says it may — a `clock_id` in the key leads because it is key,
    and a table with no coordinate has nothing to sit beside — so a placement that looks odd is
    one the rule accounts for rather than one nobody decided.
-2. **`build.py`** runs `assemble.py`, then `render.py` for `tables.md` and the README's regions,
-   then refreshes Part 03's and Part 04's projections and copies the hand-written schemas into
-   their consuming packages.
-3. **`check.py`** verifies the result: one complete registry-contract result for core and every
-   extension, then repository authoring conventions, source-to-output agreement, vendored copies,
-   and — with DuckDB present — execution binding against empty qualified tables built from the
-   registry. The shared result is implemented in `escapewheel_validator.registry_document`, so an
-   extension author and this repository receive the same answer. Section 7 counts the descriptor's
-   invariant inventory.
+2. **`spec/tools/build.py`** runs `assemble.py`, then `render.py` for `tables.md` and the source
+   guide's regions, then refreshes Part 03's and Part 04's projections and the delivery schema.
+   **`extensions/registries.py build`** assembles each extension where it sits.
+3. **`spec/tools/check.py`** verifies the tree: one complete registry-contract result for core,
+   then authoring conventions, source-to-output agreement, each artifact's schema, and the static
+   Tier 2 profile. The result is implemented in `spec/tools/checkers/registry_document.py`, which
+   the validator copies, so an extension author and this repository receive the same answer.
+   **`extensions/registries.py check`** requires the same result of each extension, under the core
+   registry's context, with the same conventions. Section 8 counts the descriptor's invariant
+   inventory.
 4. **Tier 1 checks are never stored.** `escapewheel_validator.generate` derives them from the
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
    Changing what Tier 1 means is a code change in `generate.py`, not a data change.
-5. **`fixtures/build.py`** writes the 30-packet conformance corpus against the registry;
+5. **`fixtures/build.py`** writes the conformance corpus against the registry;
    `fixtures/corpus.py` runs each through the real validator and checks it produced the finding
    it was built to produce.
 6. **`integration/example.py`** commits a small packet with the writer, one resource of each
-   kind against every shipped extension, and fills Part 08's layout and manifest excerpt from it.
-   It runs before `combine.py --check`, since the single-file rendering carries Part 08.
+   kind against every repository extension, and fails where Part 08's layout and manifest excerpt
+   differ from it, printing the text Part 08 should carry.
 
-## 5. Changing something
+## 6. Changing something
 
 | you want to | edit | then |
 |---|---|---|
-| add or change a column, key, type, reference | begin with a proposal or draft, then get the revision accepted and edit the table's file in `registry/core/` | `verify.py`; `revisions/CONTRIBUTING.md` has the whole sequence |
+| add or change a column, key, type, reference | begin with a proposal or draft, then get the revision accepted and edit the table's file in `spec/source/core/` | `verify.py`; `revisions/CONTRIBUTING.md` has the whole sequence |
 | add a Tier 2 rule | a `[[rules]]` entry in the table's file | `verify.py` |
 | change how Tier 1 is derived | `escapewheel-validator/.../generate.py` | `verify.py` |
-| add an extension | a directory `registry/extensions/<id>/` holding `registry.toml` and one file per resource | `verify.py` |
-| change the manifest or the meta-schema | the hand-written copy in `registry/` | `build.py` re-vendors; `verify.py` |
+| add an extension | a directory `extensions/<id>/` holding `registry.toml` and one file per resource | `extensions/registries.py build extensions`; `verify.py` |
+| change the manifest or the meta-schema | the hand-written copy in `spec/artifacts/` | `spec/tools/build.py`, then `copies.py`; `verify.py` |
+| change a checker | `spec/tools/checkers/`, with its tests in `spec/tools/tests/` | `copies.py`; `verify.py` |
 | add a fixture variant | `fixtures/build.py` and `fixtures/corpus.py` | `verify.py` |
-| change the packet Part 08 shows | `integration/example.py` | `verify.py` |
+| change the packet Part 08 shows | `integration/example.py`, then Part 08's text to match | `verify.py` |
 
 **A schema change starts with a revision.** Not as ceremony: `revisions/registry-targets.toml`
 locates each accepted clause in the generated registry, so a declaration traces to the argument
@@ -165,24 +201,25 @@ incorporation into the applicable current owner are one reviewable change; until
 the existing v0.2 text and revision-process guide remain authoritative for their respective
 subjects.
 
-## 6. Four traps, each of which has actually happened
+## 7. Four traps, each of which has actually happened
 
-**Editing `logical_schemas.json` or an extension's `.json`.** The next `build.py` overwrites it
-from its TOML source. `verify.py`'s candidate-state comparison catches that overwrite, which is why
-the comparison exists.
+**Editing `logical_schemas.json` or an extension's `.json`.** The next build overwrites it from its
+TOML source. `verify.py`'s candidate-state comparison catches that overwrite, which is why the
+comparison exists.
 
-**A stale vendored schema.** `registry.schema.json` and `manifest.schema.json` are copied into two
-other packages because a wheel cannot read a file from another distribution. A stale copy has broken
-every packet three times — R48, R53 and R56 — and each time it surfaced as a hundred findings
-about the *data* rather than one about the copy. `build.py` writes them and `check.py` compares
-them, so the class is closed; do not edit a vendored copy.
+**A stale package copy.** The schemas and checkers are copied into the packages because a wheel
+cannot read a file from another distribution. A stale copy has broken every packet three times —
+R48, R53 and R56 — and each time it surfaced as a hundred findings about the *data* rather than one
+about the copy. `copies.py` writes them and each package's `test_copies.py` compares them, so the
+class is closed; do not edit a copy.
 
 **A maintained inventory going stale.** Three records cannot be fully derived from the generated
-registry: the table ledger in `conformance/spec-sweep/tables.py`, the `NAMING_EXCEPTIONS` in
-`check.py`, and `applied.toml`'s clause dispositions. Each fails a check rather than drifting. Every
-naming exception must still identify a present declaration that breaks a convention, and the
-clause ledger must still name real accepted clauses and existing current owners. What stays a human
-judgement is *which* disposition a clause gets.
+registry: the table ledger in `conformance/spec-sweep/tables.py`, the naming exceptions in
+`spec/tools/conventions.py` and each extension directory's `conventions.toml`, and
+`applied.toml`'s clause dispositions. Each fails a check rather than drifting. Every naming
+exception must still identify a present declaration that breaks a convention, and the clause ledger
+must still name real accepted clauses and existing current owners. What stays a human judgement is
+*which* disposition a clause gets.
 
 **A revision clause that never reaches the spec.** Two independent audits found normative clauses
 dropped during compilation of the v0.2 prose — `R53 §2.4`'s `int64` escape, `R21`'s codec floor,
@@ -193,19 +230,20 @@ the revision is cited for its *other* clauses. `revisions/ledger.py` is what see
 fall and must not rise. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 827 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 830 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
-## 7. What each check is for
+## 8. What each check is for
 
 The incorporated registry-contract descriptor enumerates the invariants that apply to core and
 extension documents by class. Their algorithms are owned by Parts 02 and 09 and implemented once
-in `escapewheel_validator.registry_document`; `escapewheel extension check` and `check.py` consume
-that complete result. `check.py` separately adds checks true only of this repository's build.
-`facts.py` counts the descriptor inventory and those repository checks:
+in `spec/tools/checkers/registry_document.py`; `escapewheel extension check`,
+`spec/tools/check.py` and `extensions/registries.py` consume that complete result. `check.py`
+separately adds checks of the tree's other artifacts. `facts.py` counts the descriptor inventory
+and those checks:
 
 <!-- BEGIN facts: checks -->
-29 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 41 further checks over the whole set
+29 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 36 further checks of the specification's tree
 <!-- END facts: checks -->
 
 | check | catches |
@@ -215,25 +253,30 @@ that complete result. `check.py` separately adds checks true only of this reposi
 | `revisions/evidence.py` | an accepted current-format clause with no owner, projection, conformance evidence, implementation disposition, or documentation disposition |
 | `revisions/check_citations.py` and `revisions/repoint.py` | a citation that does not resolve, or implementation source that names a historical decision where the current part owns the rule |
 | `revisions/impact.py` | working-tree files citing a changed or explicitly queried specification section or stable anchor |
-| `registry/check.py` | a registry that contradicts itself, a rule naming a removed column, a stale vendored copy, a naming convention broken without a declared reason |
+| `spec/tools/check.py` | a registry that contradicts itself, an artifact failing its schema, a naming convention broken without a declared reason |
+| `spec/tools/tests/` | a checker deciding a case differently from the contract it implements |
+| `ci/tree.py` | a tree that cannot regenerate itself alone, or a tree tool importing what the tree does not declare |
+| `copies.py --check` | a package copy differing from the tree, or a package not admitting the tree's locked library |
+| `extensions/registries.py check` | an extension registry failing the contract or the conventions where it sits |
+| `conformance/registries/check.py` | a core table set departing from the Part 02 ledger, a prototype document the format rejects, or a Tier 2 rule that does not execute |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
 | `revisions/ledger.py` | an accepted clause with no disposition or an unresolved current-owner or registry target |
-| `escapewheel_poc_docs_v0.2/columns.py --check` | a column table in a part that no longer reproduces the registry |
-| `combine.py --check` | a single-file spec rendering that no longer matches its parts |
+| `spec/tools/columns.py --check` | a column table in a part that no longer reproduces the registry |
+| `spec/tools/combine.py --check` | a single-file spec rendering that no longer matches its parts |
 | `facts.py` | a count in a root document that no longer matches what it counts |
 | `verify.py`'s candidate-state comparison | a stale or hand-edited artifact changed by regeneration |
 | the four package test suites | asserted reference-implementation behavior outside the checks above |
-| `integration/` | a writer, reader, and validator that disagree with one another, or a Part 08 query that no longer runs |
+| `integration/` | a writer, reader, and validator that disagree with one another, a Part 08 excerpt the writer no longer reproduces, or a Part 08 query that no longer runs |
 
-## 8. Reading the result
+## 9. Reading the result
 
-No derived count in this repository should be typed by hand. `registry/README.md`'s are filled by
-`render.py`, the root documents' by `facts.py`, and the clause ledger's undisposed high-water mark
-lowers itself. Provenance exceptions are exact identities, not a count. If you find yourself
-editing a number, check whether something can compute it instead:
-every number that was hand-maintained here went stale, several of them twice in one day.
+No derived count in this repository should be typed by hand. `spec/source/README.md`'s are filled
+by `render.py`, the root documents' by `facts.py`, and the clause ledger's undisposed high-water
+mark lowers itself. Provenance exceptions are exact identities, not a count. If you find yourself
+editing a number, check whether something can compute it instead: every number that was
+hand-maintained here went stale, several of them twice in one day.
 
-`registry/tables.md` is the readable registry: every table, every column, its type, presence,
-what it declares about its values, and its description. Read Part 02 and the registry to see what holds
-**now**; read the accepted revisions to understand why. `registry/README.md` carries the counts,
-generated.
+`spec/informative/tables.md` is the readable registry: every table, every column, its type,
+presence, what it declares about its values, and its description. Read Part 02 and the registry to
+see what holds **now**; read the accepted revisions to understand why. `spec/source/README.md`
+carries the counts, generated.

@@ -2,7 +2,7 @@
 
 Each adapter's `PRODUCES` and `CONTRIBUTES` and the writer's `RECIPE_SUPPLIES` are consulted in one
 order by `recipe._resolve_ownership`, in another by `session`, and in a third by the scaffolder, so
-an entry could stop meaning anything and say nothing. These are the shape `registry/check.py`
+an entry could stop meaning anything and say nothing. These are the shape `spec/tools/conventions.py`
 applies to `NAMING_EXCEPTIONS` -- a declaration is checked to still be needed -- turned on the
 adapters' own.
 """
@@ -124,7 +124,7 @@ def test_a_recipe_supplied_resource_is_declared(resource):
     """The recipe supplies it, so it must be a resource the registry defines."""
     import json
 
-    registry = json.loads((Path(__file__).resolve().parents[2] / "registry/logical_schemas.json").read_text())
+    registry = json.loads((Path(__file__).resolve().parents[2] / "spec/artifacts/logical_schemas.json").read_text())
     assert resource in registry["resources"]
 
 
@@ -141,7 +141,7 @@ def test_a_name_records_what_its_identifier_stands_for():
     """
     import json
 
-    registry = json.loads((Path(__file__).resolve().parents[2] / "registry/logical_schemas.json").read_text())
+    registry = json.loads((Path(__file__).resolve().parents[2] / "spec/artifacts/logical_schemas.json").read_text())
     pairs = {
         column["name"]: column["name"].removesuffix("_name") + "_id"
         for declaration in registry["resources"].values()

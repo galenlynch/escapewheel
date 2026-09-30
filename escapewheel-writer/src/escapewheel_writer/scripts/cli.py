@@ -124,7 +124,7 @@ def _init(args: argparse.Namespace) -> int:
         "[packet]",
         f'id = "{args.session_id}"',
         f'out = "{args.session_id}"{GUESSED}',
-        'registry = "registry/logical_schemas.json"',
+        'registry = "spec/artifacts/logical_schemas.json"',
         "",
         "[session]",
         f'session_id = "{args.session_id}"',
