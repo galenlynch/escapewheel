@@ -3853,8 +3853,8 @@ A conforming writer at least:
 
 Byte-identical output is **not** required and cannot be: a manifest carries `created_at` and
 `validated_at`, and encoders may encode identical logical content differently between library
-versions. A writer MAY offer a deterministic-build mode that pins those, and a packet
-a validator MUST NOT judge a packet non-conforming for lacking one.
+versions. A writer MAY offer a deterministic-build mode that pins those, and a validator MUST NOT
+judge a packet non-conforming for lacking one.
 
 A recorded digest therefore says what a packet's bytes **are**, not what a second build would
 produce. Two conforming builds of one dataset may record different digests for the same rows.
