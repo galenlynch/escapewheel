@@ -627,6 +627,8 @@ class Recipe:
     #: The `packet_version` this recipe amends, which makes its build an amending build (Part 05
     #: §15.1), or None for a new packet.
     amends: str | None = None
+    #: Where the build reads each packet it replaces, as the recipe wrote it (Part 05 §9.3).
+    replaces: tuple[str, ...] = ()
     #: Part 05 §12: each run the recipe prefers among runs sharing an activity and scope.
     preferred_runs: tuple[Mapping[str, Any], ...] = ()
 
@@ -751,6 +753,7 @@ class Recipe:
             limits=document.get("commit", {}),
             preferences=document.get("preference", {}),
             amends=packet.get("amends"),
+            replaces=tuple(str(entry) for entry in packet.get("replaces", ())),
             preferred_runs=tuple(document.get("preferred_run", ())),
         )
 
@@ -1140,7 +1143,10 @@ class Recipe:
         """Report each member an amending recipe declares where the packet's rows prevail (Part 05 §3.5)."""
         if self.amends is None:
             return []
-        problems = [
+        problems = []
+        if self.replaces:
+            problems.append("[packet] gives both replaces and amends, and a build replaces packets or amends one")
+        problems += [
             f"[session] {name} is declared, and an amending recipe declares only session_id"
             for name in sorted(self.session)
             if name != "session_id"

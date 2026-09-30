@@ -142,16 +142,18 @@ the second unit into a second sorting run's curation and numbers it first. All f
 `units_numbered_by_scalar` relabels them `"10"` and `"2"` in scalar-value order, and
 `units_numbered_from_one` numbers them 1 and 2; each draws `core.units.numbered_in_order`.
 
-Seven packets are amendments (Part 05 §15). `build.py` writes each as version 0.1.0 and then as
-0.1.1 over it. Every table whose bytes change is written at a new `uri`, the superseded manifest is
-kept at `manifests/0.1.0.json`, and a held name keeps its number while a new one is numbered after
-every number the packet holds. Each amendment records a second import of the session, with both
-imports scoped to it. Three amendments are clean:
+Ten packets are amendments (Part 05 §15). `build.py` writes each as version 0.1.0, or 1.0.0 for a
+replacement, and then at the next patch version over it. Every table whose bytes change is written
+at a new `uri`, the superseded manifest's bytes are kept under `manifests/`, and a held name keeps
+its number while a new one is numbered after every number the packet holds. Each amendment records
+a second import of the session, with both imports scoped to it. Four amendments are clean:
 
 - `amended_intervals` adds 120 `cue.tones` intervals, whose kind sorts before the trials.
 - `amended_curation` adds a second curation of the sorting run, with its units, spikes, contacts,
   observation windows and quality labels, and prefers its curation run.
 - `amended_preference` replaces the preference for the later curation with one for the earlier.
+- `amended_replacement` amends a packet at 1.0.0 that replaces version 0.1.0 of its own
+  `packet_id`, keeping the major version and `replaces`.
 
 The rest each break one rule of adding:
 
@@ -160,6 +162,15 @@ The rest each break one rule of adding:
   `amendment.group_grown`.
 - `amended_trial_bounds` moves the first trial's end and draws `amendment.row_changed`.
 - `amended_packet_id` changes `packet_id` and draws `amendment.identity_changed`.
+- `amended_replacement_unlinked` drops `amended_replacement`'s `replaces`, and
+  `amended_replacement_major` moves it to 2.0.0; each draws `amendment.identity_changed`.
+
+Five packets are `valid` with a `replaces` (Part 04 §3), whose item names a version by a digest of
+no real manifest, since a validator given no named packet does not check it. `replaces_own_packet`
+is at 1.0.0 naming version 0.1.0 of its own `packet_id`, and `replaces_another_packet` is at 0.1.0
+naming version 3.0.0 of another; both are clean. `replaces_same_major` is at 0.1.0 naming version
+0.1.0 of itself and draws `packet.replaces.major_version`. `replaces_item_with_location` gives its
+item a `uri`, and `replaces_item_without_digest` omits `sha256`; each draws `packet.manifest.schema`.
 
 `two_imports` is `valid` with two imports of the one session, which are not alternatives, and is
 clean. `preference_of_another_scope` prefers, for the sorting run, a curation run whose scope is the

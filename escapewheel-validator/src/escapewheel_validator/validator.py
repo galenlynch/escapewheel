@@ -37,7 +37,15 @@ from escapewheel_reader.uri import decode
 
 from . import amendment
 from .generate import Check, Specialisation, adjacency_settles_uniqueness, concerns, generate
-from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest, named_registries
+from .manifest import (
+    MANIFEST_FILENAME,
+    Bound,
+    Issue,
+    bind_registries,
+    check_manifest,
+    confirm_replaced,
+    named_registries,
+)
 from .opaque import describe, findings
 from .registry_document import (
     UCUM_URI,
@@ -2605,6 +2613,7 @@ def validate(
     store_digests: bool = False,
     store_checksums: bool = True,
     superseded: Mapping[str, Any] | None = None,
+    replaced: Sequence[str | Path] = (),
 ) -> Report:
     """Validate a packet against the registries it binds.
 
@@ -2662,6 +2671,10 @@ def validate(
         The manifest this one supersedes, for a writer validating an amendment before it retains
         that manifest. Absent, the retained manifest immediately preceding this version is compared
         (Part 05 §15.6), and a packet retaining none has nothing to compare.
+    replaced : sequence of str or Path, optional
+        Packet roots, or manifest files, to read as packets the manifest's `replaces` names. Each
+        difference from the item it is read as is a `packet.replaces.mismatch` warning (Part 04 §3);
+        a packet no one supplies is not looked for.
 
     Returns
     -------
@@ -2674,6 +2687,8 @@ def validate(
     report, bound = check_packet_manifest(packet.location, advisory=advisory, manifest=manifest)
     if bound is None:
         return report
+    for message, rows in confirm_replaced(packet.manifest.entry, replaced):
+        report.add("warning", "packet.replaces.mismatch", message, rows)
     core_context = bound.core
     extensions = {name: context.document for name, context in bound.extensions.items()}
     directing = ([] if core_context is None else [(bound.core_id, core_context.document)]) + list(extensions.items())

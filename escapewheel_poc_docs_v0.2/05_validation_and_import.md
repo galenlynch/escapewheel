@@ -89,16 +89,17 @@ A recipe declares, for one packet:
 - the clocks the packet declares, and their parents;
 - what to materialize;
 - which run is preferred among runs sharing an activity and scope (§12);
-- session facts no source carries; and
+- session facts no source carries;
+- each packet the build replaces (§9.3); and
 - where it amends a packet, the version it amends (§15.1).
 
 A recipe MAY declare a fact a source it reads also states; §3.6 says which of the two the packet gets. `core.subjects` is not a resource the recipe supplies unconditionally: a source that states a subject MAY own it, arbitrated as any other resource two sources can produce, and the recipe's `[subject]` block supplies the table only where no source owns it.
 
-A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `registry/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.2.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` and a preferred run's `chosen_at` untyped. §3.6 types a fact when it normalizes it, and a build normalizes `chosen_at` to the type of `core.preferred_runs.chosen_at`. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
+A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `registry/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.3.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` and a preferred run's `chosen_at` untyped. §3.6 types a fact when it normalizes it, and a build normalizes `chosen_at` to the type of `core.preferred_runs.chosen_at`. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
 
 | member | form | constraint |
 |---|---|---|
-| `packet` | table | requires `id`; admits `amends`, a version matching `^\d+\.\d+\.\d+$`, and `out`, `registry`, `extensions`, `description`, and `in_process` |
+| `packet` | table | requires `id`; admits `amends`, a version matching `^\d+\.\d+\.\d+$`, `replaces`, a non-empty array of distinct non-empty strings, and `out`, `registry`, `extensions`, `description`, and `in_process` |
 | `session`, `subject` | table | keys are field names; values are untyped |
 | `overrides` | table | keys are `block.field` names; each value a non-empty string (§3.6) |
 | `encoding` | table | keys are `resource.column` names; each entry carries exactly `encoding`, one of `delta`, `plain`, or `dictionary`, and a non-empty `reason` (§3.8) |
@@ -125,6 +126,10 @@ versions of the registry.
 
 `[packet].amends` gives the `packet_version` of the packet at the root the build writes, and makes
 the build an amending build of that packet (§15.1).
+
+`[packet].replaces` lists the packets a build replaces, each entry saying where the build reads one
+(§9.3). This specification does not fix how a build resolves an entry to a packet, as it does not
+for an `extensions` entry.
 
 Each `preferred_run` entry names the run a build prefers among runs sharing the entry's
 `activity_type`, `scope_kind` and `scope`, by that run's `processing_run_name`. An entry's `scope`
@@ -208,6 +213,13 @@ A build MUST also refuse, on the same terms and before any source is opened:
 - a preference for a resource another entry declares under `owns` or `contributes`, naming the resource and that entry's kind, since the recipe then says both that one source knows more and that the other supplies the resource.
 
 A build MUST refuse a recipe that is not TOML 1.0 or whose decoded form fails the schema §3.1 incorporates, naming where it fails, before it opens any source.
+
+A build MUST refuse, before it opens any source:
+
+- a `[packet].replaces` entry at which it can read no published manifest, or one whose `packet_id`
+  or `packet_version` is absent or does not satisfy the manifest schema, naming the entry;
+- a recipe giving both `replaces` and `amends`; and
+- two `replaces` entries at which it reads manifests of equal SHA-256, naming both.
 
 A build MUST refuse, before it opens any source, a recipe with two `preferred_run` entries sharing
 `activity_type`, `scope_kind` and `scope`, and one whose `chosen_at` it cannot normalize. It MUST
@@ -603,7 +615,15 @@ A validator MUST NOT downgrade an error to make a packet pass. An advisory rule 
 <a id="ew-prior-packet-comparison" data-spec-anchor="canonical"></a>
 ### 9.3 Comparison against a prior packet
 
-Where an import replaces an existing packet, it SHOULD report every resource the prior manifest declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
+A build whose recipe gives `[packet].replaces` (§3.1) MUST record in its manifest's `replaces`
+([Part 04 §3](04_packet_catalog.md#ew-packet-identifiers)) one item for each entry, carrying the `packet_id` and
+`packet_version` of the manifest it read there and the SHA-256 of the exact bytes it read, and no
+other item. No checker verifies this. It MUST set a `packet_version` whose major version exceeds
+that of every named packet whose `packet_id` equals `[packet].id`.
+
+Such a build SHOULD report, as a warning, every resource a named packet's manifest declares that its
+own manifest does not. This is a warning: narrowing is legitimate, and no other check sees a
+resource that is simply absent.
 
 <a id="ew-incomplete-validation" data-spec-anchor="canonical"></a>
 ### 9.4 Incomplete validation
@@ -918,7 +938,9 @@ the portable profile.
 
 An **amendment** produces a new version of an existing packet. A writer performing one MUST NOT
 modify the bytes of any resource a superseded manifest names, and MUST set a `packet_version` that
-sorts strictly after the superseded one, compared as a semantic version.
+sorts strictly after the superseded one, compared as a semantic version, and has the superseded
+one's major version ([Part 04 §3](04_packet_catalog.md#ew-packet-identifiers)). The amended manifest MUST carry
+`replaces` exactly as the superseded manifest does, or omit it where that manifest omits it.
 
 `packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's
 rows.
@@ -949,7 +971,7 @@ A writer performing an amendment MAY make, and MUST NOT make, these changes:
 | Remove or replace an analysis, compatibility-projection or documentation resource | MAY — Part 06 makes analysis resources disposable |
 | Change or remove any other row of a canonical table | MUST NOT |
 | Change a canonical resource that is not a table, or remove a canonical resource | MUST NOT |
-| Change `packet_id`, `profile_id`, or the standard versions | MUST NOT |
+| Change `packet_id`, `profile_id`, the standard versions, the major version of `packet_version`, or `replaces` | MUST NOT |
 
 A table's group lists are those its declaration carries in the registry the amended manifest binds.
 Every added row forms a new group under at least one of them, so a group a table declares under its
@@ -960,7 +982,9 @@ even where the packet holds none. Under a table's other lists an added row may j
 a new registration's coordinates join each held unit's under `core.unit_coordinates`' first list.
 
 The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A
-packet whose canonical data was wrong is therefore a new packet, not a new version of an old one.
+packet whose canonical data was wrong is therefore corrected by a replacement naming it
+([Part 04 §3](04_packet_catalog.md#ew-packet-identifiers)), which MAY keep its `packet_id` at a greater major version. A
+correction is a replacement, not an edit and not an amendment.
 
 A preference is the one row an amendment may replace. Replacing one changes no row a run produced,
 and the superseded version keeps the replaced row. An amendment removes no preference, so an
@@ -975,7 +999,10 @@ tables are exempt because their rows record what ran, not what was measured.
 <a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
 ### 15.3 Superseded manifests
 
-Every superseded manifest is retained, so a later cleanup can distinguish a file an old version
+A packet retains every manifest its amendments superseded, and no manifest of a packet its
+manifest's `replaces` names. A writer retaining a superseded manifest MUST retain its exact bytes,
+so that an item naming that version is confirmed from the retained copy; no checker verifies this.
+Retaining them lets a later cleanup distinguish a file an old version
 named from a file nothing ever named. A retained manifest keeps its own `created_at` and its own
 validation record, which a writer performing an amendment MUST NOT rewrite.
 
@@ -1043,7 +1070,7 @@ of these at `error`:
 
 | check | finding |
 |---|---|
-| `amendment.identity_changed` | the two manifests differ in `packet_id`, `profile_id`, `semantic_standard_version` or `logical_standard_version` |
+| `amendment.identity_changed` | the two manifests differ in `packet_id`, `profile_id`, `semantic_standard_version`, `logical_standard_version`, the major version of `packet_version`, or `replaces`, where an absent member differs from any present one and two arrays differ unless they hold equal items in the same order |
 | `amendment.resource_changed` | a canonical resource the superseded manifest names that the current manifest does not name, or names at another `uri` where the resource is not a table |
 | `amendment.row_changed` | a row of a canonical table both manifests name and the amendment wrote, which the superseded version holds and the current version does not hold unchanged |
 | `amendment.group_grown` | a row of a canonical table the amendment wrote, which the current version holds and the superseded version does not, where the table declares no group list, or where under every group list the superseded version holds the row's group ([Part 02 §2.8](02_core_logical_schemas.md#ew-amendment-groups)) |

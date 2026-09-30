@@ -258,14 +258,21 @@ def compare(
         rather than reporting a finding.
     """
     found: list[Finding] = []
-    changed = [f for f in IDENTITY if current.get(f) != superseded.get(f)]
+    changed = [(f, superseded.get(f), current.get(f)) for f in IDENTITY if current.get(f) != superseded.get(f)]
+    before_version, version = (str(m.get("packet_version", "")) for m in (superseded, current))
+    if before_version.split(".", 1)[0] != version.split(".", 1)[0]:
+        changed.append(("the major version of packet_version", before_version, version))
+    # An absent member differs from any present one, and two arrays by their items in order.
+    if current.get("replaces") != superseded.get("replaces"):
+        changed.append(("replaces", json.dumps(superseded.get("replaces")), json.dumps(current.get("replaces"))))
     if changed:
         found.append(
             Finding(
                 "amendment.identity_changed",
                 None,
-                f"the amendment changes {', '.join(changed)}, which no amendment changes (Part 05 §15.2)",
-                [(f, superseded.get(f), current.get(f)) for f in changed],
+                f"the amendment changes {', '.join(f for f, _, _ in changed)}, which no amendment changes "
+                "(Part 05 §15.2)",
+                changed,
             )
         )
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/recipe/0.2.0",
+  "$id": "https://escapewheel.org/schemas/recipe/0.3.0",
   "title": "Escapewheel session recipe",
   "description": "Shape of a session recipe, per Part 05 §3.1: a TOML 1.0 document, validated in its decoded form. Top-level members are closed, so a misspelled block is refused rather than dropped; a source entry and a materialization are open, because every key they do not name is an option or a parameter their adapter or materializer checks. Fact values under `session` and `subject`, and a preferred run's `chosen_at`, are untyped here: TOML dates and times decode to values JSON Schema has no type for, and a build types each when it normalizes it (Part 05 §§3.1 and 3.6).",
   "type": "object",
@@ -23,6 +23,16 @@
           "type": "string",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "description": "The `packet_version` of the packet this recipe amends (Part 05 §15.1)."
+        },
+        "replaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Where the build reads each packet it replaces (Part 05 §3.1)."
         },
         "out": {
           "type": "string",

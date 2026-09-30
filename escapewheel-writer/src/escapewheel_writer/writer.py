@@ -350,6 +350,12 @@ def retained(manifest: Mapping[str, Any]) -> str:
     return f"{manifest['packet_version']}.json"
 
 
+def _first_version(packet_id: str, replaces: Sequence[Mapping[str, str]]) -> str:
+    """Return a new packet's version: a major version above every packet it replaces of its id (Part 05 §9.3)."""
+    majors = [int(item["packet_version"].split(".", 1)[0]) for item in replaces if item["packet_id"] == packet_id]
+    return f"{max(majors) + 1}.0.0" if majors else "0.1.0"
+
+
 def semver(text: str) -> tuple[int, ...]:
     """Order a packet_version. A part that is not a number sorts before one that is."""
     return tuple(int(part) if part.isdigit() else -1 for part in str(text).split("."))
@@ -437,8 +443,8 @@ def _bump(version: str) -> str:
     """Return the next packet version.
 
     Patch level, so a packet under development stays inside one minor series while the
-    structure moves. Part 05 §15.1 requires only that the new version sort strictly after the
-    superseded one, and Part 03 §8 leaves what it *means* open, so nothing here rests on the choice.
+    structure moves. Part 05 §15.1 requires only that the new version keep the major version and sort
+    strictly after the superseded one, and Part 03 §8 leaves what it *means* open, so nothing here rests on the choice.
     """
     major, minor, patch, *_ = (*version.split("."), "0", "0", "0")
     return f"{int(major)}.{int(minor)}.{int(patch) + 1}"
@@ -615,6 +621,9 @@ class PacketWriter:
         The packet's identifier.
     description : str, optional
         Human-readable description for the manifest.
+    replaces : sequence of Mapping, optional
+        The `replaces` items the manifest records, one per packet this one replaces (Part 04 §3). A
+        packet naming one of its own `packet_id` is published at a major version above it.
 
     Examples
     --------
@@ -633,7 +642,9 @@ class PacketWriter:
         session: str | None = None,
         encoding_exceptions: Mapping[str, Mapping[str, tuple[str, ...]]] | None = None,
         workspace: str | Path | None = None,
+        replaces: Sequence[Mapping[str, str]] = (),
     ) -> None:
+        self._replaces = [dict(item) for item in replaces]
         #: Where delivered sources handed over their files, beside the packet rather than in it.
         #: Removed once a commit promotes, since every delivery has been read by then; kept on a
         #: refusal, with staging, as evidence of why.
@@ -1630,7 +1641,7 @@ class PacketWriter:
         }
         manifest: dict[str, Any] = {
             "packet_id": self._packet_id,
-            "packet_version": "0.1.0",
+            "packet_version": _first_version(self._packet_id, self._replaces),
             "profile_id": PROFILE,
             "semantic_standard_version": self._registry["semantic_standard_version"],
             "logical_standard_version": self._registry["logical_standard_version"],
@@ -1645,6 +1656,8 @@ class PacketWriter:
         }
         if self._description is not None:
             manifest["description"] = self._description
+        if self._replaces:
+            manifest["replaces"] = [dict(item) for item in self._replaces]
         return manifest
 
     def declare_source(self, name: str, uri: str) -> None:
@@ -1915,7 +1928,7 @@ class PacketWriter:
             If a delivered row would change or grow what the packet holds, which is a new packet
             rather than a new version of this one (Part 05 §15.2).
         ValueError
-            If `packet_version` does not sort after the packet's.
+            If `packet_version` does not sort after the packet's, or has another major version.
         CommitRefused
             If validation found errors. The packet stays at its previous version, and nothing
             was written outside the staging area.
@@ -1935,6 +1948,11 @@ class PacketWriter:
         if semver(version) <= semver(str(superseded["packet_version"])):
             raise ValueError(
                 f"packet_version {version} does not sort after {superseded['packet_version']} (Part 05 §15.1)"
+            )
+        if semver(version)[0] != semver(str(superseded["packet_version"]))[0]:
+            raise ValueError(
+                f"packet_version {version} leaves the major version of {superseded['packet_version']}; "
+                "a greater major version is a replacement, not an amendment (Part 05 §15.1)"
             )
         self._amending = (root, version)
         try:
@@ -2061,9 +2079,10 @@ class PacketWriter:
             "validator_version": _version(),
         }
 
-        self._retain(root, superseded, amended)
+        body = (json.dumps(amended, indent=2) + "\n").encode()
+        self._retain(root, superseded, amended, body)
         candidate_path = root / f"{MANIFEST}.candidate"
-        candidate_path.write_text(json.dumps(amended, indent=2) + "\n")
+        candidate_path.write_bytes(body)
         os.replace(candidate_path, root / MANIFEST)
         shutil.rmtree(staging)
         if self._workspace is not None and self._workspace.exists():
@@ -2102,21 +2121,24 @@ class PacketWriter:
         }
         return [e for e in resources if e["resource_id"] not in stale]
 
-    def _retain(self, root: Path, superseded: Mapping[str, Any], amended: Mapping[str, Any]) -> None:
-        """Keep every manifest a packet has had (Part 05 §15.3).
+    def _retain(
+        self, root: Path, superseded: Mapping[str, Any], amended: Mapping[str, Any], amended_body: bytes
+    ) -> None:
+        """Keep the exact bytes of every manifest a packet has had (Part 05 §15.3).
 
         A superseded file is only interpretable if the manifest that named it still exists;
         without these, an orphan and a stray are indistinguishable and a recorded `digest` points
-        at a state nothing can reconstruct.
+        at a state nothing can reconstruct. Exact, because a replacement names a version by the
+        SHA-256 of its manifest (Part 04 §3).
         """
         versions = root / MANIFESTS
         versions.mkdir(exist_ok=True)
-        for manifest in (superseded, amended):
+        for manifest, body in ((superseded, (root / MANIFEST).read_bytes()), (amended, amended_body)):
             path = versions / retained(manifest)
             # An existing copy is the one an earlier amendment retained, and retained bytes are
             # not rewritten.
             if not path.exists():
-                path.write_text(json.dumps(manifest, indent=2) + "\n")
+                path.write_bytes(body)
 
     def _store_registries(
         self, root: Path, *, staging: Path | None = None

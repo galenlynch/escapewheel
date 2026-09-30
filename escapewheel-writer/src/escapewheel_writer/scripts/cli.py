@@ -35,6 +35,7 @@ from .. import compare
 from ..amending import AmendmentRefused, Held
 from ..extensions import load_checked as load_extension_context
 from ..recipe import RECIPE_SUPPLIES, Recipe, contributes, produces
+from ..replacing import ReplacementRefused, read_replaced
 from ..session import build, materializers
 from ..writer import CommitRefused
 
@@ -254,6 +255,11 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
     if any(p.level == "error" for p in problems):
         print(f"{recipe.path}: refused, {sum(p.level == 'error' for p in problems)} error(s)", file=sys.stderr)
         return 2
+    try:
+        replaced = read_replaced(recipe.replaces, recipe.path.parent)
+    except ReplacementRefused as exc:
+        print(f"{recipe.path}: refused, [packet].replaces (Part 05 §3.5): {exc}", file=sys.stderr)
+        return 2
     if args.check:
         print(f"{recipe.path}: sound")
         return 0
@@ -281,6 +287,7 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
             say=say,
             strict=args.strict,
             source_cache=_source_cache(args, recipe.out),
+            replaced=replaced,
         )
     except RegistryRejected as exc:
         print(json.dumps(exc.result.to_dict(), indent=2), file=sys.stderr)
@@ -290,9 +297,13 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
     if budget and "memory_limit" not in limits:
         limits["memory_limit"] = budget
     out = recipe.out
-    # Read before the commit writes over it: a rebuild's reference is the packet it replaces,
-    # and after `commit` there is nothing left to compare against.
-    reference = compare.resources(args.compare or out)
+    # Read before the commit writes over it: after `commit` there is nothing left to compare
+    # against. A packet the recipe names is each its own reference (Part 05 §9.3).
+    if args.compare or not replaced:
+        where = str(args.compare) if args.compare else "the packet it overwrites"
+        references = [(where, compare.resources(args.compare or out))]
+    else:
+        references = [(named.entry, named.resources) for named in replaced]
     try:
         if recipe.amends is not None:
             report = writer.amend(out, limits=limits or None, say=say, materialize=derive)
@@ -301,11 +312,12 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
     except CommitRefused as exc:
         _say_refusal(exc)
         return 1
-    if dropped := compare.lost(reference, compare.resources(out)):
-        where = "the packet it replaces" if not args.compare else str(args.compare)
-        print(f"warning: {len(dropped)} resource(s) in {where} are not in this build:", file=sys.stderr)
-        for resource_id in dropped:
-            print(f"  lost  {resource_id}", file=sys.stderr)
+    built = compare.resources(out)
+    for where, reference in references:
+        if dropped := compare.lost(reference, built):
+            print(f"warning: {len(dropped)} resource(s) in {where} are not in this build:", file=sys.stderr)
+            for resource_id in dropped:
+                print(f"  lost  {resource_id}", file=sys.stderr)
     print(f"committed {out} — {report.warnings} warning(s)")
     return 0
 
@@ -623,7 +635,10 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         "--compare",
         type=Path,
         default=None,
-        help="a packet to compare the result against; defaults to the one being replaced",
+        help=(
+            "a packet to compare the result against; defaults to each one [packet].replaces names, "
+            "else the one at the packet root"
+        ),
     )
     importer.add_argument("--registry", type=Path, help="registry, overriding [packet].registry")
     importer.add_argument("--registry-result", type=Path, help="write the complete core-registry result as JSON")

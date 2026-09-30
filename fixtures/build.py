@@ -1229,6 +1229,7 @@ def main():
     unit_variants(root)
     opaque_variants(root)
     amendment_variants(root)
+    replacement_variants(root)
     materialized_spike_variants(root)
 
 
@@ -2050,15 +2051,27 @@ def opaque_variants(root: Path) -> None:
 
 
 
-def amend(out: Path, make, change, *, extensions: tuple = (), identity: dict | None = None) -> None:
-    """Write `make()` as version 0.1.0, then `change`'s edit of it over it as 0.1.1 (Part 05 §15.1).
+def amend(
+    out: Path,
+    make,
+    change,
+    *,
+    extensions: tuple = (),
+    identity: dict | None = None,
+    superseded_identity: dict | None = None,
+    dropped: tuple = (),
+) -> None:
+    """Write `make()`, then `change`'s edit of it over it at the next patch version (Part 05 §15.1).
 
     A table whose bytes the edit changes is written at a new uri beside the held file; every other
-    entry is kept, and the superseded manifest is retained under `manifests/` (Part 03 §9). A name
-    the packet holds keeps its number and a new one is numbered after them, as Part 05 §4.3 has an
-    amending build number. `identity` overrides packet-level fields of the amended manifest.
+    entry is kept, and the superseded manifest's exact bytes are retained under `manifests/`
+    (Part 03 §9). A name the packet holds keeps its number and a new one is numbered after them, as
+    Part 05 §4.3 has an amending build number. `superseded_identity` sets packet-level fields of
+    the first version; `identity` overrides, and `dropped` removes, those of the amended one.
     """
     write_packet(out, make(), extensions=extensions)
+    if superseded_identity:
+        edit_manifest(out, lambda manifest: manifest.update(superseded_identity))
     held = {kind: dict(names) for kind, names in KEYS.items()}
     edited = make()
     change(edited)
@@ -2074,6 +2087,8 @@ def amend(out: Path, make, change, *, extensions: tuple = (), identity: dict | N
     write_packet(scratch, edited, extensions=extensions, numbers=numbers)
 
     superseded = json.loads((out / "packet.json").read_text())
+    major, minor, patch = superseded["packet_version"].split(".")
+    following = f"{major}.{minor}.{int(patch) + 1}"
     manifest = json.loads((scratch / "packet.json").read_text())
     assert manifest["registries"] == superseded["registries"], out.name
     before = {e["resource_id"]: e for e in superseded["resources"]}
@@ -2083,15 +2098,38 @@ def amend(out: Path, make, change, *, extensions: tuple = (), identity: dict | N
         if kept is not None and (out / kept["uri"]).read_bytes() == (scratch / entry["uri"]).read_bytes():
             resources.append(kept)
             continue
-        uri = entry["uri"] if kept is None else entry["uri"].replace(".parquet", ".0.1.1.parquet")
+        uri = entry["uri"] if kept is None else entry["uri"].replace(".parquet", f".{following}.parquet")
         (out / uri).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(scratch / entry["uri"], out / uri)
         resources.append({**entry, "uri": uri})
     shutil.rmtree(scratch)
     (out / "manifests").mkdir()
-    (out / "manifests" / "0.1.0.json").write_text(json.dumps(superseded, indent=2) + "\n")
-    amended = {**superseded, "packet_version": "0.1.1", "resources": resources, **(identity or {})}
+    retained = out / "manifests" / f"{superseded['packet_version']}.json"
+    retained.write_bytes((out / "packet.json").read_bytes())
+    amended = {**superseded, "packet_version": following, "resources": resources, **(identity or {})}
+    for member in dropped:
+        del amended[member]
     (out / "packet.json").write_text(json.dumps(amended, indent=2) + "\n")
+
+
+def replaced(packet_id: str, packet_version: str = "0.1.0", **extra) -> dict:
+    """A `replaces` item naming a version whose manifest bytes are the id and version (Part 04 §3)."""
+    body = f"{packet_id} {packet_version}".encode()
+    return {"packet_id": packet_id, "packet_version": packet_version, "sha256": hashlib.sha256(body).hexdigest(), **extra}
+
+
+def replacement_variants(root: Path) -> None:
+    """Part 04 §3's `replaces`: a packet naming the packets it replaces, and each way an item is wrong."""
+    for name, version, items in (
+        ("replaces_own_packet", "1.0.0", [replaced("replaces_own_packet")]),
+        ("replaces_another_packet", "0.1.0", [replaced("session_000", "3.0.0")]),
+        ("replaces_same_major", "0.1.0", [replaced("replaces_same_major")]),
+        ("replaces_item_with_location", "1.0.0", [replaced("replaces_item_with_location", uri="../old")]),
+        ("replaces_item_without_digest", "1.0.0", [{"packet_id": "replaces_item_without_digest", "packet_version": "0.1.0"}]),
+    ):
+        write_packet(root / name, content())
+        edit_manifest(root / name, lambda manifest, version=version, items=items: manifest.update(packet_version=version, replaces=items))
+        print(f"{name:26s}written")
 
 
 def materialized_spike_variants(root: Path) -> None:
@@ -2259,6 +2297,10 @@ def amendment_variants(root: Path) -> None:
         )
         reimported(c)
 
+    def replacing(packet_id):
+        # The first version replaces version 0.1.0 of its own packet_id, so it is at 1.0.0.
+        return {"packet_version": "1.0.0", "replaces": [replaced(packet_id)]}
+
     def repreferred(c):
         c["core.preferred_runs"] = [preference("run_curation_001")]
         reimported(c)
@@ -2271,6 +2313,19 @@ def amendment_variants(root: Path) -> None:
         ("amended_trial_bounds", scoped, moved_trial, {}),
         ("amended_unit_window", scoped, held_unit_observed_again, {}),
         ("amended_packet_id", scoped, reimported, {"identity": {"packet_id": "another_packet"}}),
+        ("amended_replacement", scoped, reimported, {"superseded_identity": replacing("amended_replacement")}),
+        (
+            "amended_replacement_unlinked",
+            scoped,
+            reimported,
+            {"superseded_identity": replacing("amended_replacement_unlinked"), "dropped": ("replaces",)},
+        ),
+        (
+            "amended_replacement_major",
+            scoped,
+            reimported,
+            {"superseded_identity": replacing("amended_replacement_major"), "identity": {"packet_version": "2.0.0"}},
+        ),
     ):
         amend(root / name, make, change, **options)
         print(f"{name:26s}written")

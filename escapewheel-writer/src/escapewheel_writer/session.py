@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 from functools import partial
@@ -52,6 +52,7 @@ from .recipe import (
     reached_by,
     redacted,
 )
+from .replacing import Replaced, ReplacementRefused, read_replaced
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
@@ -820,6 +821,7 @@ def build(  # noqa: C901
     say: Callable[[str], None] = lambda _: None,
     strict: bool = False,
     source_cache: str | Path | None = None,
+    replaced: Sequence[Replaced] | None = None,
 ) -> PacketWriter:
     """Run every source and return a writer holding the packet, uncommitted.
 
@@ -841,6 +843,9 @@ def build(  # noqa: C901
         The source-cache location, supplied as `source_cache` to each adapter accepting it
         (Part 12 §10). Created where absent and never emptied. One inside the packet root or the
         delivery workspace is supplied to no adapter, and the build notes that and proceeds.
+    replaced : sequence of Replaced, optional
+        The packets `[packet].replaces` names, already read by a caller that compares against them.
+        Read here where absent, before any source opens (Part 05 §3.5).
 
     Returns
     -------
@@ -863,6 +868,11 @@ def build(  # noqa: C901
             raise RegistryRejected(subject, extension_context)
     extension_documents = [extension.document for extension in extension_contexts]
     held = _held(recipe, checked_registry, extension_documents) if recipe.amends is not None else None
+    if replaced is None:
+        try:
+            replaced = read_replaced(recipe.replaces, recipe.path.parent)
+        except ReplacementRefused as exc:
+            raise RecipeError(f"{recipe.path}: refused, [packet].replaces (Part 05 §3.5): {exc}") from None
     problems = recipe.check(
         checked_registry,
         extension_documents,
@@ -897,6 +907,7 @@ def build(  # noqa: C901
         # own columns arrives as recipe data rather than as a Python object it hands over.
         encoding_exceptions=_encoding_exceptions(recipe),
         workspace=context.workspace,
+        replaces=[r.item() for r in replaced],
     )
     if held is not None:
         try:

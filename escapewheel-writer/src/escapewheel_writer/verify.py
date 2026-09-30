@@ -23,7 +23,7 @@ from escapewheel_reader import Manifest, Packet
 from escapewheel_validator import Report, validate
 from escapewheel_validator.stores import StoreUnreachable, digest, digest_resource, listing
 
-from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version, retained
+from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version, retained, semver
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
 #: records a prefix's Part 04 §5.4 per-member listing with the entity tag the store handed over,
@@ -100,14 +100,23 @@ def verify(
     NotCommitted
         If `root` holds no committed manifest.
     ValueError
-        If `level` is not one of :data:`LEVELS`.
+        If `level` is not one of :data:`LEVELS`, or `packet_version` does not sort after the
+        packet's or has another major version (Part 05 §15.1).
     """
     if level not in LEVELS:
         raise ValueError(f"level must be one of {', '.join(LEVELS)}, not {level!r}")
     root = Path(root)
     if not (root / MANIFEST).is_file():
         raise NotCommitted(f"{root} holds no committed {MANIFEST}; there is nothing to verify")
-    superseded = json.loads((root / MANIFEST).read_text())
+    superseded_body = (root / MANIFEST).read_bytes()
+    superseded = json.loads(superseded_body)
+    version = packet_version or _bump(superseded["packet_version"])
+    before = semver(superseded["packet_version"])
+    if semver(version) <= before or semver(version)[0] != before[0]:
+        raise ValueError(
+            f"packet_version {version} does not sort after {superseded['packet_version']} within its major "
+            "version (Part 05 §15.1)"
+        )
 
     notes: list[str] = []
     candidate = json.loads(json.dumps(superseded))
@@ -123,7 +132,7 @@ def verify(
             except StoreUnreachable as exc:
                 notes.append(f"{entry['resource_id']}: no digest recorded, {exc}")
 
-    candidate["packet_version"] = packet_version or _bump(superseded["packet_version"])
+    candidate["packet_version"] = version
 
     # Level 3 against what was just recorded, and nothing else. This writes no file and adds no
     # resource, so every packet-owned verdict is determined by immutability exactly as Part 05 §15.4
@@ -150,10 +159,13 @@ def verify(
     }
     versions = root / MANIFESTS
     versions.mkdir(exist_ok=True)
-    for manifest in (superseded, candidate):
-        (versions / retained(manifest)).write_text(json.dumps(manifest, indent=2) + "\n")
+    body = (json.dumps(candidate, indent=2) + "\n").encode()
+    for manifest, exact in ((superseded, superseded_body), (candidate, body)):
+        # Retained bytes are exact and never rewritten (Part 05 §15.3).
+        if not (path := versions / retained(manifest)).exists():
+            path.write_bytes(exact)
     written = root / f"{MANIFEST}.candidate"
-    written.write_text(json.dumps(candidate, indent=2) + "\n")
+    written.write_bytes(body)
     os.replace(written, root / MANIFEST)
     report.add("info", "verify.recorded", f"{reached} external resource(s) verified at {level}")
     return report, candidate

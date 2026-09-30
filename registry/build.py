@@ -85,6 +85,7 @@ _DEF_LABELS = {
     "validation": "validation block (§9)",
     "member": "member (§5.4)",
     "digest": "digest (§4.3)",
+    "replaced_packet": "replaced packet (§3)",
 }
 
 

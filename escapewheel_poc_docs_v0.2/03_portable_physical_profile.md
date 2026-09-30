@@ -431,7 +431,7 @@ A value used for filtering, grouping, joining, or validation MUST be a first-cla
 <a id="ew-packet-owned-bytes" data-spec-anchor="canonical"></a>
 ### 8.1 Packet-owned bytes
 
-A writer MUST NOT modify a resource the packet owns once it is committed. A correction is a new packet version, not an edit.
+A writer MUST NOT modify a resource the packet owns once it is committed. A correction is a replacement ([Part 04 §3](04_packet_catalog.md#ew-packet-identifiers)), not an edit and not an amendment.
 
 This promise is what allows an amendment to skip revalidating untouched files, so it is verified rather than assumed: a writer records a checksum for every packet-owned resource (§10).
 

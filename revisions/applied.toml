@@ -246,7 +246,7 @@ where = [
   { part = "05", anchor = "ew-amendment-definition" },
   { part = "03", anchor = "ew-portable-amendment", note = "a table that gains rows is a new file" },
 ]
-note = "R150 §3.3 extends Part 03 §9's statement to every resource an amendment writes"
+note = "R150 §3.3 extends Part 03 §9's statement to every resource an amendment writes; R153 §3.5 has an amendment keep its major version and replaces"
 
 [clause."R32 §3"]
 disposition = "superseded"
@@ -3953,6 +3953,7 @@ where = [
   { part = "05", anchor = "ew-validation-import-scope", note = "§15.6 binds a validator" },
   { part = "05", anchor = "ew-amendment-comparison", note = "the five checks and an incomplete comparison" },
 ]
+note = "R153 §3.5 extends amendment.identity_changed to the major version and replaces"
 
 [clause."R150 §3.5"]
 disposition = "applied"
@@ -3964,6 +3965,7 @@ where = [
   { part = "05", anchor = "ew-import-materialization", note = "a stale derived resource" },
   { part = "05", anchor = "ew-amendment-definition", note = "an amending build" },
 ]
+note = "R153 §3.4 refuses a recipe giving replaces beside amends"
 
 [clause."R150 §3.6"]
 disposition = "applied"
@@ -4038,4 +4040,50 @@ where = [
   { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
   { part = "02", anchor = "ew-registry-self-description", note = "meta-schema 0.11.0 and core 0.14.0" },
   { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.9" },
+]
+
+[clause."R153 §3.1"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-identifiers", note = "replaces and the replaced packet item" }]
+
+[clause."R153 §3.2"]
+disposition = "applied"
+where = [
+  { part = "04", anchor = "ew-packet-identifiers", note = "the major-version rule" },
+  { part = "04", anchor = "ew-packet-manifest-conformance", note = "packet.replaces.major_version" },
+]
+
+[clause."R153 §3.3"]
+disposition = "applied"
+where = [{ part = "04", anchor = "ew-packet-identifiers", note = "packet.replaces.mismatch" }]
+
+[clause."R153 §3.4"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-recipe-purpose", note = "[packet].replaces" },
+  { part = "05", anchor = "ew-recipe-check", note = "three refusals" },
+  { part = "05", anchor = "ew-prior-packet-comparison", note = "the record, the version, and lost resources" },
+]
+
+[clause."R153 §3.5"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-amendment-definition", note = "the major version and replaces kept" },
+  { part = "05", anchor = "ew-amendment-scope", note = "the identity row" },
+  { part = "05", anchor = "ew-superseded-manifest-retention", note = "exact bytes, and no replaced packet's manifest" },
+  { part = "05", anchor = "ew-amendment-comparison", note = "amendment.identity_changed" },
+]
+
+[clause."R153 §3.6"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-packet-owned-bytes" },
+  { part = "05", anchor = "ew-amendment-scope" },
+]
+
+[clause."R153 §3.7"]
+disposition = "applied"
+where = [
+  { part = "04", anchor = "ew-packet-catalog-scope", note = "manifest 0.6.0" },
+  { part = "05", anchor = "ew-recipe-purpose", note = "recipe 0.3.0" },
 ]

@@ -27,6 +27,10 @@ def _validate(args: argparse.Namespace) -> int:
     else:
         packet_id = packet.manifest.packet_id
         # A digest is pointless without resolving, so asking for one asks for the level under it.
+        replaced = [path for path in args.replaced if not (path.is_file() or (path / "packet.json").is_file())]
+        if replaced:
+            print(f"error: no published manifest at {replaced[0]}")
+            return 2
         report = validate(
             packet,
             advisory=args.advisory,
@@ -34,6 +38,7 @@ def _validate(args: argparse.Namespace) -> int:
             checksums=args.checksums,
             store_digests=args.store_digests,
             store_checksums=args.store_checksums,
+            replaced=args.replaced,
         )
     for finding in report.findings:
         where = f"[{finding.registry}] " if finding.registry else ""
@@ -100,5 +105,14 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         dest="store_checksums",
         action="store_false",
         help="with --checksums, read every byte rather than take a store's full-object checksums",
+    )
+    parser.add_argument(
+        "--replaced",
+        type=Path,
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="a packet root or manifest to read as a packet this one's replaces names, reporting each "
+        "difference from its item (Part 04 §3); repeatable",
     )
     parser.set_defaults(func=_validate)

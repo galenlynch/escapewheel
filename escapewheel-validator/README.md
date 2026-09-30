@@ -40,7 +40,14 @@ a pass, non-empty is a failure and the rows are the finding.**
 ```bash
 escapewheel validate packet/              # exits non-zero unless the packet verdict is passed
 escapewheel validate packet/ --advisory   # include rules that are off by default (R26)
+escapewheel validate packet/ --replaced old/  # compare a replaces item with the packet it names
 ```
+
+`--replaced` may be given once per packet the manifest's `replaces` names, as a packet root or a
+manifest file. The validator pairs each with an item, confirms the item's `sha256` against every
+manifest the packet publishes or retains, and reports a difference as `packet.replaces.mismatch` at
+`warning`, since it cannot tell which side is wrong (Part 04 §3). Given no packet, it reports
+nothing about the link.
 
 ```python
 from escapewheel_reader import open_packet

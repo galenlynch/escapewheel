@@ -226,3 +226,24 @@ def test_an_unknown_level_is_refused(tmp_path, registry, minimal):
     _commit(root, registry, minimal)
     with pytest.raises(ValueError, match="level must be"):
         verify(root, level="md5")
+
+
+def test_verify_retains_the_exact_bytes_it_supersedes(tmp_path, registry, minimal):
+    """`_external` writes the manifest compactly, so a copy re-serialised at retention would differ."""
+    root = tmp_path / "s001"
+    _commit(root, registry, minimal)
+    _external(root, _zarr(tmp_path).resolve().as_uri())
+    published = (root / "packet.json").read_bytes()
+
+    verify(root)
+    assert (root / "manifests" / "0.1.0.json").read_bytes() == published
+    assert (root / "manifests" / "0.1.1.json").read_bytes() == (root / "packet.json").read_bytes()
+
+
+@pytest.mark.parametrize("version", ["0.1.0", "1.0.0"])
+def test_verify_refuses_a_version_an_amendment_could_not_take(tmp_path, registry, minimal, version):
+    """Part 05 §15.1: the new version sorts after the old one and keeps its major version."""
+    root = tmp_path / "s001"
+    _commit(root, registry, minimal)
+    with pytest.raises(ValueError, match="within its major version"):
+        verify(root, packet_version=version)

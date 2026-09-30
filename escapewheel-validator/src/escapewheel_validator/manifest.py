@@ -8,11 +8,13 @@ later phase never indexes into a document an earlier one rejected.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections import Counter
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
+from pathlib import Path
 from typing import Any
 
 import jsonschema
@@ -234,7 +236,107 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
                 tuple((name,) for name, descriptor in sorted(registries.items()) if descriptor["path"] == path),
             )
         )
+    own = major(document["packet_version"])
+    for position, item in enumerate(document.get("replaces", ()), start=1):
+        if item["packet_id"] == document["packet_id"] and major(item["packet_version"]) >= own:
+            issues.append(
+                Issue(
+                    "packet.replaces.major_version",
+                    f"replaces item {position} names this packet_id at {item['packet_version']}, whose major "
+                    f"version is not below this packet's {document['packet_version']} (Part 04 §3)",
+                    ((position, item["packet_id"], item["packet_version"]),),
+                )
+            )
     return len(issues) == before
+
+
+def major(version: str) -> int:
+    """Return a `packet_version`'s major version, the first of its three numbers (Part 04 §3)."""
+    return int(version.split(".", 1)[0])
+
+
+def _published(path: Path) -> list[tuple[str, Mapping[str, Any]]]:
+    """Return each manifest at `path` as (SHA-256 of its bytes, decoded), the published one first.
+
+    A packet root yields its `packet.json` and every manifest it retains, since an item naming a
+    version later amended names a retained one (Part 05 §15.3); a file yields itself.
+    """
+    paths = [path] if path.is_file() else [path / "packet.json", *sorted((path / "manifests").glob("*.json"))]
+    found = []
+    for manifest in paths:
+        if manifest.is_file():
+            body = manifest.read_bytes()
+            try:
+                decoded = json.loads(body)
+            except ValueError:
+                continue
+            if isinstance(decoded, dict):
+                found.append((hashlib.sha256(body).hexdigest(), decoded))
+    if not found or not (path.is_file() or (path / "packet.json").is_file()):
+        raise FileNotFoundError(f"no published manifest can be read at {path}")
+    return found
+
+
+def confirm_replaced(
+    document: Mapping[str, Any], supplied: Sequence[str | Path]
+) -> list[tuple[str, tuple[tuple[Any, ...], ...]]]:
+    """Compare each supplied packet with the `replaces` item it is read as (Part 04 §3).
+
+    A packet is read as the item one of its manifests' SHA-256 confirms, else the item naming one
+    of their `packet_id` and `packet_version`, else the item naming its `packet_id`, else the only
+    item. Each returned (message, rows) is a difference the caller reports at `warning`, preferring
+    neither side, since the item or the packet supplied may be the one that is wrong.
+
+    Raises
+    ------
+    FileNotFoundError
+        If no published manifest can be read where a supplied path points.
+    """
+    items = list(document.get("replaces", ()))
+    differences: list[tuple[str, tuple[tuple[Any, ...], ...]]] = []
+    if not items:
+        return differences
+    for path in (Path(p) for p in supplied):
+        manifests = _published(path)
+        if any(item["sha256"] == sha for item in items for sha, _ in manifests):
+            continue
+        named = {(m.get("packet_id"), m.get("packet_version")): (sha, m) for sha, m in manifests}
+        paired = next(
+            (
+                (i, *named[key])
+                for i, item in enumerate(items)
+                if (key := (item["packet_id"], item["packet_version"])) in named
+            ),
+            None,
+        )
+        if paired is None:
+            sha, published = manifests[0]
+            candidates = [i for i, item in enumerate(items) if item["packet_id"] == published.get("packet_id")]
+            if not candidates and len(items) == 1:
+                candidates = [0]
+            if not candidates:
+                differences.append(
+                    (
+                        f"the packet at {path} is {published.get('packet_id')}, which no replaces item names",
+                        ((None, "packet_id", None, published.get("packet_id")),),
+                    )
+                )
+                continue
+            paired = (candidates[0], sha, published)
+        index, sha, manifest = paired
+        item = items[index]
+        rows = tuple(
+            (index + 1, member, item[member], found)
+            for member, found in (
+                ("packet_id", manifest.get("packet_id")),
+                ("packet_version", manifest.get("packet_version")),
+                ("sha256", sha),
+            )
+            if item[member] != found
+        )
+        members = ", ".join(row[1] for row in rows)
+        differences.append((f"replaces item {index + 1} differs in {members} from the packet at {path}", rows))
+    return differences
 
 
 def named_registries(raw: bytes) -> tuple[str, ...]:

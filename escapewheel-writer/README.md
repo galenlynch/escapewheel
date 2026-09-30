@@ -145,8 +145,9 @@ promoted directory with no record, or a record it cannot read, is refused and no
 A recipe whose `[packet].amends` names the committed packet's `packet_version` adds to that
 packet instead of building one (Part 05 §15.1). `escapewheel import` refuses it unless the packet
 at `out` has the recipe's `id`, that version, the recipe's session, and the logical and semantic
-standard versions of the registries the recipe binds. It then commits the next patch version and keeps the version it supersedes in
-`manifests/`. The packet's `core.sessions` and `core.subjects` rows prevail, so an amending
+standard versions of the registries the recipe binds. It then commits the next patch version and keeps the exact bytes of the
+manifest it supersedes in `manifests/`. An amendment keeps the packet's major version and its
+`replaces`, and `amend` and `verify` refuse a `packet_version` of another major version. The packet's `core.sessions` and `core.subjects` rows prevail, so an amending
 recipe may state `[session] session_id` and nothing else about the session or subject. It refuses
 a `[[clock]]` whose name the packet already holds, since that clock is referenced by name
 (Part 05 §3.5).
@@ -180,6 +181,29 @@ An added run of the same activity and scope as a held run, other than an import,
 the held run automatically, with the reason naming Part 05 §12. A `[[preferred_run]]` entry records
 a different choice, naming the run by `processing_run_name` among the packet's runs and this
 build's.
+
+## A replacing recipe names the packets it replaces
+
+A recipe's `[packet].replaces` lists the packets the build replaces, each a packet root or a
+manifest file such as one under `manifests/`, relative to the recipe (Part 05 §3.1). A build reads
+each manifest before any source opens, and refuses an entry it cannot read, one whose `packet_id`
+or `packet_version` fails the manifest schema, and two entries reading the same bytes; a recipe may
+not give both `replaces` and `amends` (Part 05 §3.5). The packet records each as a `replaces` item
+of its `packet_id`, `packet_version` and the SHA-256 of the manifest bytes read. Its version is
+0.1.0, or `N.0.0` where it names a packet of its own `packet_id`, `N` being one more than the
+greatest major version named (Part 05 §9.3):
+
+```toml
+[packet]
+id = "ecephys_776259_2025-04-09"
+out = "/data/packet-2"
+replaces = ["/data/packet"]
+```
+
+`escapewheel import` warns of each resource a named packet declares and the build does not, and
+`--compare` names one packet to compare against instead. An amending recipe is compared against the
+packet it amends. `escapewheel validate --replaced PATH`
+checks an item against the packet it names.
 
 ## Digests, and `escapewheel verify`
 

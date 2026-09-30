@@ -10,7 +10,7 @@ logical declaration in a bound registry and to its location. In the portable pro
 `packet.json` at the packet root.
 
 This part incorporates `registry/manifest.schema.json`, whose `$id` is
-`https://escapewheel.org/schemas/manifest/0.5.0`. The schema owns the manifest's exact local JSON
+`https://escapewheel.org/schemas/manifest/0.6.0`. The schema owns the manifest's exact local JSON
 structure: member names, JSON types, required members, object closure, patterns, enumerations,
 formats, and conditional shape within one entry. This prose owns every field's meaning,
 declaration-selected presence, and the checks of §10. A disagreement between this part and the
@@ -61,7 +61,31 @@ member the schema does not declare. [Part 05 §15.5](05_validation_and_import.md
 | `validation` | validation block (§9) | yes | — |
 | `description` | string | no | — |
 | `retention` | object | no | — |
+| `replaces` | array of replaced packet (§3) | no | nonempty; unique items |
 <!-- END GENERATED MANIFEST FIELDS: manifest -->
+
+A manifest's `replaces` names each packet it **replaces**, and the packet is then a **replacement**
+of each packet named. An item names one published packet version by its `packet_id`, its
+`packet_version`, and `sha256`, the SHA-256 of the exact bytes of the manifest that version
+published. The item names no location, and a manifest names no replaced packet by location. A
+manifest MAY name several packets, as a multi-session packet may replace the single-session packets
+it merges, and MAY name packets whose `packet_id` differs from its own. An item names the version it
+records and not a later one: after that packet is amended, the named manifest is the one
+[Part 05 §15.3](05_validation_and_import.md#ew-superseded-manifest-retention) has the packet retain.
+
+A version's **major version** is the first of its three numbers, read as a non-negative integer. A
+manifest MUST NOT carry a `replaces` item whose `packet_id` equals the manifest's own and whose
+major version is equal to or greater than the manifest's own. `packet_version` therefore orders, as
+a semantic version, every packet sharing a `packet_id` and linked by replacement, and its major
+version changes wherever one replaces another.
+
+A reader or validator that reads a manifest as that of a packet a `replaces` item names MUST report,
+against the item, each of the manifest's SHA-256, `packet_id` and `packet_version` that differs from
+the item's, and MUST NOT prefer the item or the manifest. A validator reports it at `warning` under
+`packet.replaces.mismatch`, since it cannot tell whether the item or the packet it was given is
+wrong. A reader or validator MUST NOT require a packet an item names, and a validator MUST NOT
+report a finding because it holds none: which packets it can reach is a property of the reader or
+validator.
 
 ## 4. Resource entries
 
@@ -359,6 +383,7 @@ owning resource ID or registry ID where one applies.
 | `packet.resource.uri_form` | entries | an entry's `uri` is neither absolute nor a relative reference in the one form of [Part 03 §4](03_portable_physical_profile.md#ew-portable-uri-rules) |
 | `packet.registry.core_count` | entries | the number of core descriptors differs from one |
 | `packet.registry.path_unique` | entries | two descriptors share a `path` |
+| `packet.replaces.major_version` | entries | a `replaces` item names the manifest's own `packet_id` at a major version equal to or greater than the manifest's own (§3), naming the item |
 | `packet.registry.missing` | registry_binding | nothing exists at a descriptor's path |
 | `packet.registry.unreadable` | registry_binding | the stored copy does not decode as the packet's physical profile requires |
 | `packet.registry.digest` | registry_binding | the decoded bytes' SHA-256 differs from `sha256` |

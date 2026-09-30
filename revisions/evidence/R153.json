@@ -1,0 +1,436 @@
+{
+  "version": 1,
+  "revision": "R153",
+  "based_on": "47106fbf0a6d80238dcca563885a354538d6aa87",
+  "clauses": {
+    "R153 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-identifiers"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/properties/replaces"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$defs/replaced_packet"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/manifest.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_a_replacement_at_a_greater_major_version_conforms"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_a_packet_of_another_packet_id_may_be_named_at_any_version"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_an_item_carrying_a_location_or_lacking_its_digest_fails_the_schema[location]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_an_item_carrying_a_location_or_lacking_its_digest_fails_the_schema[no-digest]"
+          },
+          {
+            "kind": "fixture",
+            "packet": "replaces_item_with_location",
+            "finding": "packet.manifest.schema"
+          },
+          {
+            "kind": "fixture",
+            "packet": "replaces_item_without_digest",
+            "finding": "packet.manifest.schema"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every vendored schema matches its source"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R153 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-identifiers"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-manifest-conformance"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_naming_its_own_packet_id_below_a_greater_major_version_is_required[0.1.0-0.1.0]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_naming_its_own_packet_id_below_a_greater_major_version_is_required[1.0.0-1.2.0]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_naming_its_own_packet_id_below_a_greater_major_version_is_required[1.0.0-2.0.0]"
+          },
+          {
+            "kind": "fixture",
+            "packet": "replaces_same_major",
+            "finding": "packet.replaces.major_version"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R153 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-identifiers"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_a_supplied_packet_matching_its_item_is_confirmed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_a_supplied_packet_differing_from_its_item_is_a_warning"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_no_supplied_packet_reports_nothing_about_the_link"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_an_item_naming_a_version_later_amended_is_confirmed_from_the_retained_manifest"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_a_supplied_path_holding_no_manifest_is_refused"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/manifest.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-validator/src/escapewheel_validator/scripts/cli.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R153 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-prior-packet-comparison"
+        },
+        {
+          "path": "registry/recipe.schema.json",
+          "pointer": "/properties/packet/properties/replaces"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_replacing_build.py::test_a_replacement_of_its_own_packet_records_it_at_the_next_major_version"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_replacing_build.py::test_a_build_refuses_what_it_cannot_replace_before_any_source_opens[unreadable]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_replacing_build.py::test_a_build_refuses_what_it_cannot_replace_before_any_source_opens[one-manifest-twice]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_replacing_build.py::test_an_entry_whose_identity_fails_the_manifest_schema_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_replacing_build.py::test_a_recipe_both_replacing_and_amending_is_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_replacing_build.py::test_import_warns_of_each_resource_a_named_packet_had_and_the_replacement_lacks"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the example recipe validates against it"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/replacing.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/scripts/cli.py",
+          "registry/recipe.example.toml"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R153 §3.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-amendment-definition"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-amendment-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-superseded-manifest-retention"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-amendment-comparison"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_an_amendment_keeping_the_major_version_and_the_link_passes"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_an_amendment_changing_the_major_version_or_the_link_is_identity_changed[dropped]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_an_amendment_changing_the_major_version_or_the_link_is_identity_changed[altered]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_replaces.py::test_an_amendment_changing_the_major_version_or_the_link_is_identity_changed[major]"
+          },
+          {
+            "kind": "fixture",
+            "packet": "amended_replacement_unlinked",
+            "finding": "amendment.identity_changed"
+          },
+          {
+            "kind": "fixture",
+            "packet": "amended_replacement_major",
+            "finding": "amendment.identity_changed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_replacing_build.py::test_an_amendment_keeps_the_major_version"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_replacing_build.py::test_an_amendment_retains_the_exact_bytes_it_supersedes"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_verify.py::test_verify_retains_the_exact_bytes_it_supersedes"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_verify.py::test_verify_refuses_a_version_an_amendment_could_not_take[0.1.0]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_verify.py::test_verify_refuses_a_version_an_amendment_could_not_take[1.0.0]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/amendment.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/verify.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R153 §3.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-packet-owned-bytes"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-amendment-scope"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "the clause defines a correction as a replacement, so its behaviour is R153 §3.1–§3.4's and has their evidence"
+      },
+      "implementations": {
+        "unchanged": "a correction is built as any replacement is"
+      },
+      "documentation": {
+        "unchanged": "the writer's README describes a replacing recipe, which is how a correction is built"
+      }
+    },
+    "R153 §3.7": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/04_packet_catalog.md",
+          "anchor": "ew-packet-catalog-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        },
+        {
+          "path": "registry/manifest.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/recipe.schema.json",
+          "pointer": "/$id"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/manifest.schema.json",
+          "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every vendored schema matches its source"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/build.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "registry/README.md lists the schemas without their identifiers"
+      }
+    }
+  }
+}
