@@ -277,18 +277,18 @@ and can establish that it is consistent, and the only software it holds is the t
 and check it.
 
 Incorporation carries out one large mechanical move before the field test. The tree is `spec/`,
-holding the README and style guide, `parts/`, `artifacts/`, `source/core/` for the core registry's
-TOML, `informative/` for the rendered listing, the combined rendering and the example documents,
-`conformance/` for the corpus and its expected findings, and `tools/` with the environment they run
-in. The rest of the repository depends on `spec/`, and `spec/` depends on none of it:
+holding the README and style guide, `parts/`, `artifacts/`, `source/` for the core registry's TOML
+and the guide to it, `informative/` for the rendered listing, the combined rendering and the example
+documents, and `tools/` with the environment they run in. The rest of the repository depends on
+`spec/`, and `spec/` depends on none of it:
 
 - each package's build copies the artifacts and checkers it uses from `spec/`, and each package
   checks that its copies agree, so the tree no longer writes into the packages' source trees;
-- the validator's registry-document and rule checkers, with their tests, move into `spec/tools/`,
-  stop importing by the validator's package name and stop locating their artifacts beside their own
-  file, so that a copy can match its source byte for byte; the reader's descriptor checker and
-  Part 03 §5.4's condition move likewise;
-- `spec/tools/` declares and locks `jsonschema`, `sqlglot`, `ucumvert` and PyArrow, and each package
+- the validator's registry-document and rule checkers, with the tests exercising them alone, move
+  into `spec/tools/`, stop importing by the validator's package name and stop locating their
+  artifacts beside their own file, so that a copy can match its source byte for byte; the reader's
+  descriptor checker and Part 03 §5.4's condition move likewise;
+- `spec/tools/` declares and locks `jsonschema`, `sqlglot` and `ucumvert`, and each package
   copying a checker admits the locked version of each library it imports;
 - `aind_opto` and `aind_unit_qc` join `escapewheel-aind`, `dynamic_foraging` and `vr_foraging` go
   under `extensions/`, and each extension's registry is checked where it sits by the tree's
@@ -296,16 +296,15 @@ in. The rest of the repository depends on `spec/`, and `spec/` depends on none o
 - Part 08's example regions become committed text, and `integration/` checks that the reference
   writer reproduces them;
 - executing the Tier 2 rules in DuckDB, and each check reading Git history, a prototype or the
-  frozen v0.1 documents, move to `conformance/`, whose runner opens the tree's corpus with the
-  reader and validates it with the validator;
+  frozen v0.1 documents, move to `conformance/`;
 - the root contributing guide states the rules for the tree's tools, and `verify.py` checks them:
   the tree's tools regenerate each generated file and region from the tree alone, a tool within the
   tree imports nothing of the repository outside the tree and only libraries the tree declares and
   locks, and the tree holds a tool deciding each mechanically checked projection,
   each explicit consistency condition and each incorporated artifact's conformance to the schema or
   contract its part names;
-- the style guide's link to the root README's authority summary points at Part 00 §2 instead, so
-  no file in the tree links out of it; and
+- the style guide's and the rendered listing's links to the root README's authority summary point
+  at Part 00 §2 instead, so no file in the tree links out of it; and
 - `revisions/` stays the change process outside the tree; the heading tool reports changed
   headings and the revision tooling finds their citers.
 
@@ -326,7 +325,7 @@ lists the roster, gains the checker. The packages, the frozen v0.1 documents, `i
 | validation and import | Part 00 §2.4 gains the checker, of which a validator is one kind, and Part 05 §1 names the four actors it binds. No packet obligation changes: each requirement on a checker already binds the validator performing it. | `evidence/R<N>.json` names the anchors. |
 | extensions | Unchanged in meaning and content. The four extension registries leave the tree, and Part 09 names no file. | Each extension's registry checked where it sits. |
 | reader, writer, validator, adapters | Each package's build copies the artifacts and checkers it uses from the tree and checks its copies. The reader copies the descriptor checker and Part 03 §5.4's condition, and the validator the registry-document and rule checkers. The writer's `init` template and README name the new core registry path. No runtime behavior changes, and adapters are unchanged. | The copy-agreement checks; the package suites. |
-| conformance fixtures and tests | The corpus builder and the expected findings, as data, move into the tree; the builder already reads only the specification's artifacts, and the runner stays in `conformance/`. The complete-result and Tier 2 static checks run from the tree's tools, and Tier 2 execution moves to `conformance/`. Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. | §6's cases; `fixtures/corpus.py` at its new path. |
+| conformance fixtures and tests | The corpus stays in `fixtures/`, since its builder also reads the `dynamic_foraging` extension, which is not a member; it reads the core registry and the descriptor from `artifacts/`. The complete-result and Tier 2 static checks run from the tree's tools, and Tier 2 execution moves to `conformance/`. Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. | §6's cases; `fixtures/corpus.py`. |
 | revision process and tooling | The paths in `check_citations.py`, `ledger.py`, `impact.py`, `repoint.py`, `evidence.py`, `registry-targets.toml` and the verifier move, and R111 §3.3's note gains the checker. The heading tool stops importing the revision tooling. Accepted records and their evidence are unedited. | `ledger.py`, `evidence.py`, `check_citations.py` and `verify.py`. |
 | generated publications and developer documentation | The combined rendering and the heading index are regenerated within the tree. The specification README states what the tree holds and counts five actors. The root README, the agent instructions and the package guides describe the new layout, and the root contributing guide states the rules for the tree's tools. | `verify.py`. |
 
