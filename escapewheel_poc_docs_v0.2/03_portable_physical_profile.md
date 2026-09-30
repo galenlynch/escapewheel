@@ -428,6 +428,7 @@ A value used for filtering, grouping, joining, or validation MUST be a first-cla
 
 ## 8. Immutability
 
+<a id="ew-packet-owned-bytes" data-spec-anchor="canonical"></a>
 ### 8.1 Packet-owned bytes
 
 A writer MUST NOT modify a resource the packet owns once it is committed. A correction is a new packet version, not an edit.

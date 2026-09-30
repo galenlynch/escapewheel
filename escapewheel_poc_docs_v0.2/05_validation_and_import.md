@@ -600,6 +600,7 @@ published in no partial form; its writer corrects the extension or builds the pa
 
 A validator MUST NOT downgrade an error to make a packet pass. An advisory rule MUST NOT be an error (Part 02 §10.2), so enabling advisory checks cannot change whether a packet previously passed.
 
+<a id="ew-prior-packet-comparison" data-spec-anchor="canonical"></a>
 ### 9.3 Comparison against a prior packet
 
 Where an import replaces an existing packet, it SHOULD report every resource the prior manifest declared that the new one does not. This is a warning: narrowing is legitimate, and no other check sees a resource that is simply absent.
