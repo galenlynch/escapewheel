@@ -115,6 +115,14 @@ profile checker and R154's condition are about 90 lines needing only `jsonschema
 registry-document checker is 1,859 lines needing `jsonschema`, `sqlglot` and `ucumvert`, and its
 rule checker, which it calls, is 394 lines needing `sqlglot`.
 
+The two validator modules check registries, not packets. Part 02 §9.4 defines registry-document
+conformance as its own contract, whose result §9.5 serialises, and a validator applies it to the
+registries a packet binds. `registry_document.py` imports only `rule_language.py` and those three
+libraries; the validator's manifest, generation and validation modules import it, and nothing
+imports in the other direction. The Tier 2 check also executes each rule in DuckDB against empty
+tables built from the registry. Part 11 defines an engine-neutral language, so that execution
+shows that one engine accepts the rules and decides no condition of Part 00 §2.3.
+
 ### 2.4 The conformance corpus builds from specification artifacts alone
 
 The corpus builder, `fixtures/build.py`, writes 120 packets with PyArrow and imports nothing of the
@@ -185,12 +193,12 @@ published iterations.
 
 ## 3. Desired outcome and constraints
 
-The specification's members and everything needed to produce them should form one tree that can
-be read and rebuilt with nothing else present. The tree should decide every consistency condition
-whose check needs no implementation, and name each one it leaves to an implementation's check. A
-second implementer
-handed the tree should receive the whole contract and nothing that is only an implementation. The
-tree should also be separable into its own repository later without rewriting what it says.
+The specification's members and everything needed to produce and check them should form one tree
+that can be read, rebuilt and checked with nothing else present. The tree's own tools should decide
+every consistency condition of Part 00 §2.3, so that a second implementer handed the tree receives
+the whole contract, can establish that it is consistent, and receives nothing that is only an
+implementation. The tree should also be separable into its own repository later without rewriting
+what it says.
 
 The resolution should preserve:
 
@@ -231,6 +239,14 @@ For how the packages obtain the artifacts:
 | a Git submodule | not needed while the specification and the packages share a repository |
 | vendored copies written by each package's build and checked against the tree (preferred direction) | today's mechanism, with the direction reversed so that the specification no longer knows its consumers' paths |
 
+For where the consistency checks run:
+
+| option | effect |
+|---|---|
+| the implementations' checks, as now | the packages the candidate governs decide its consistency, and a second implementer needs the reference reader and validator to establish it |
+| the tree owns the reader's two checkers, and the validator's two run from `conformance/` | the tree cannot establish its own consistency, and a registry check stays in the validator although it checks no packet |
+| the tree owns all four, and the packages copy them (preferred direction) | the tree decides its own consistency; its tools gain `sqlglot`, `ucumvert` and about 2,250 lines of checker code, and the prose still owns every algorithm (Part 02 §9.4) |
+
 Under the preferred direction the specification is one directory, `spec/`, holding every member of
 the candidate and everything that produces or checks them, and nothing that imports a package:
 
@@ -242,23 +258,24 @@ spec/
   source/core/                 the TOML the core registry is assembled from
   informative/                 the registry listing, the combined rendering, example documents
   conformance/                 the informative conformance corpus and its expected findings
-  tools/                       assembly, rendering, heading, combining and static-check tools
+  tools/                       assembly, rendering, heading and combining tools, and the checkers
 ```
 
 The rest of the repository depends on `spec/`, and `spec/` depends on none of it:
 
 - **Packages.** The reader, validator, writer and `escapewheel-aind` go under `packages/`. Each
-  package's build copies the artifacts it uses from `spec/artifacts/`, and each package checks
-  that its copies agree. The reader also copies the descriptor's cross-member checker and
-  Part 03 §5.4's consistency condition from `spec/tools/`, which owns them.
+  package's build copies the artifacts it uses from `spec/artifacts/` and the checkers it uses
+  from `spec/tools/`, and each package checks that its copies agree. The reader copies the
+  descriptor's cross-member checker and Part 03 §5.4's consistency condition. The validator copies
+  the registry-document checker and the rule checker, and applies them to the registries a packet
+  binds.
 - **Extensions.** The four extension registries leave the specification's tree. `aind_opto` and
   `aind_unit_qc` join `escapewheel-aind`, and `dynamic_foraging` and `vr_foraging` go under
   `extensions/`. An extension is not incorporated (Part 09), so where each one sits is repository
   organisation rather than part of this decision.
-- **Evidence.** The two checks that need the validator leave `spec/tools/` for `conformance/`:
-  Part 02 §9.4's complete result, and Part 11's static contract with Tier 2 execution, each run
-  against the reference validator. So does each check that reads Git history or a prototype. The
-  specification README names the two consistency conditions the tree leaves to them.
+- **Evidence.** Executing the Tier 2 rules in DuckDB leaves `spec/tools/` for `conformance/`, as
+  does each check that reads Git history or a prototype. Each extension's registry is checked where
+  the extension sits, by the tree's registry-document checker.
 - **Part 08.** Part 08's example regions become committed text, and `integration/` checks that the
   reference writer reproduces them.
 - **History.** The frozen v0.1 documents, the root audit documents, `inventory/` and `prototype/`
@@ -273,8 +290,7 @@ Five rules state the boundary at the level of the specification:
   file within it;
 - every generated region and generated artifact is derived from files within the tree, by tools
   within the tree that import no implementation;
-- each consistency condition of Part 00 §2.3 that the tree's tools do not decide is named within
-  the tree, with the check outside it that does; and
+- the tree's tools decide every consistency condition of Part 00 §2.3; and
 - an informative part may point at evidence outside the tree, such as Part 10's probes, only by
   naming it and not by a path the tree's copy would have to resolve.
 
@@ -289,6 +305,8 @@ publication record's format, are left to the release decision.
 
 The cost is one large mechanical move before the field test:
 
+- the validator's registry-document and rule checkers, 2,253 lines, move into `spec/tools/`, which
+  gains `sqlglot` and `ucumvert`, and the validator's copies are generated and checked;
 - the 65 current files that name the old paths, and the scripts that compute them, are repointed;
 - `registry-targets.toml`'s 292 paths are repointed, and `ledger.py`'s containment check follows
   them;
@@ -305,13 +323,13 @@ The cost is one large mechanical move before the field test:
 | logical prose and registry | Part 02 §§1 and 9.5 cite their artifacts under `artifacts/`, and §§1 and 9.3 cite the rendered listing under `informative/`. No declaration, identity or byte of the core registry changes. |
 | physical profiles | Part 03 §1 cites its schema and descriptor under `artifacts/`. Neither artifact changes. Part 03 §2's generated region is written by a tool within the tree. |
 | packet manifest and JSON Schemas | Part 04 §§1 and 5.5, Part 05 §3.1 and Part 12 §§1 and 7 cite their schemas under `artifacts/`. No schema's `$id` or member changes. `resources.schema.json`'s description stops naming a repository script, which changes its bytes but not its `$id` or shape. |
-| validation and import | Unchanged. No packet obligation changes. |
+| validation and import | Unchanged. No packet obligation changes, and the validator applies the same registry checks from its copies of the tree's checkers. |
 | extensions | Unchanged in meaning. The four extension documents leave the specification's tree unchanged in content. Part 09 names no file. |
-| reader, writer, validator, adapters | Each package's build copies the artifacts it uses from the tree, and each package checks its copies. The reader copies the descriptor checker and Part 03 §5.4's consistency condition from the tree's tools. The writer's `init` template and README name the new core registry path. No runtime behavior changes. |
+| reader, writer, validator, adapters | Each package's build copies the artifacts and checkers it uses from the tree, and each package checks its copies. The reader copies the descriptor checker and Part 03 §5.4's consistency condition, and the validator the registry-document and rule checkers. The writer's `init` template and README name the new core registry path. No runtime behavior changes. |
 | existing packets | Unchanged. No packet records a repository path. The field-test recipes change their registry and extension paths. |
-| conformance fixtures and tests | The corpus becomes an informative member of the tree; its builder already reads only the specification's artifacts. The expected findings move out of the runner into data. The complete-result and Tier 2 checks move to `conformance/`, and Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. |
+| conformance fixtures and tests | The corpus becomes an informative member of the tree; its builder already reads only the specification's artifacts. The expected findings move out of the runner into data. The complete-result and Tier 2 static checks run from the tree's tools, Tier 2 execution in DuckDB moves to `conformance/`, and Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. |
 | revision process and tooling | The paths in `check_citations.py`, `ledger.py`, `impact.py`, `repoint.py`, `evidence.py`, `registry-targets.toml` and the verifier move. The heading tool stops importing the revision tooling. Accepted records and their evidence are unedited. The revision guide's own links are repointed as ordinary maintenance. |
-| generated publications and developer documentation | The combined rendering and the heading index are regenerated from the new tree. The root README, CONTRIBUTING and the package guides describe the new layout. The specification README states what the tree holds and which consistency conditions it leaves to `conformance/`. |
+| generated publications and developer documentation | The combined rendering and the heading index are regenerated from the new tree. The root README, CONTRIBUTING and the package guides describe the new layout. The specification README states what the tree holds. |
 
 ## 7. Promotion criteria
 
