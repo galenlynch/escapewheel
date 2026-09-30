@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | 2026-09-30 |
-| **Based on** | `2d2fbe8dba9406b6fcd331e4c5487bda05ecd6b7` |
+| **Based on** | `2b04880d9e7ea0c6cda9a564f0d277fabc49c0d2` |
 | **Decision domain** | specification |
 | **Affects** | Part 00 §2.1's composition of the specification candidate and of a release; the incorporation statements of Part 02 §§1 and 9.5, Part 03 §1, Part 04 §§1 and 5.5, Part 05 §3.1, Part 11 §1 and Part 12 §§1 and 7; Part 02 §§1 and 9.3's citations of the rendered registry listing; Part 08 §§2–3's generated regions; Part 10 §§1 and 5's citations of conformance probes; the specification README and style guide |
 
@@ -70,8 +70,8 @@ to the repository README is the only one leaving it.
 | `README.md`, `tables.md`, `.gitignore` | 3 | no |
 
 No package ships the core registry or an extension document. `escapewheel-aind` registers a source
-producing `aind_unit_qc` rows and no registry; its tests read `registry/extensions/aind_unit_qc.json`
-from the monorepo. Apart from the checks, probes and tests that read every extension document, and
+producing `aind_unit_qc` rows and no registry; its tests read
+`registry/extensions/aind_unit_qc.json` from the monorepo. Apart from the checks, probes and tests that read every extension document, and
 Part 08's example, which binds all four, `aind_opto`'s document is read by one writer test and
 `vr_foraging`'s by two.
 
@@ -82,7 +82,7 @@ The specification's generated content is produced by five writers:
 | generated content | writer | depends on |
 |---|---|---|
 | `logical_schemas.json`, `tables.md` | `registry/assemble.py`, `registry/render.py` | the standard library |
-| `resources.schema.json`; Part 03 §2's profile region; Part 04 §§3, 4.1, 8 and 9's field tables | `registry/build.py` | the standard library |
+| `resources.schema.json`; Part 03 §§2 and 5.4's profile regions; Part 04 §§3, 4.1, 8 and 9's field tables | `registry/build.py` | the standard library |
 | Part 06 §4's column table | `columns.py` | the standard library |
 | the combined rendering | `combine.py` | the standard library |
 | Part 08 §§2–3's layout and manifest excerpt | `integration/example.py` | the reference writer, which validates on commit |
@@ -90,18 +90,28 @@ The specification's generated content is produced by five writers:
 `registry/build.py` also writes thirteen vendored copies into the source trees of the reader,
 validator and writer, so the specification's build knows each consumer by path.
 
-`registry/check.py` makes 40 named checks. Six of them reach outside the specification:
+`registry/check.py` makes 41 named checks. Seven of them reach outside the specification:
 
 - The complete-result check of Part 02 §9.4 imports the reference validator. It runs over the core
   registry and each of the four extensions.
 - The physical profile's check imports the reference reader.
+- The check of Part 03 §5.4's consistency condition, added by R154, imports the reference reader.
 - The Tier 2 static and execution check imports the validator's rule checker and DuckDB.
 - The table-set check runs a script under `conformance/spec-sweep/` that parses the frozen v0.1
   Part 02.
 - The history-cleanup check runs a script under `conformance/history-cleanup/` against Git history.
 - One check validates a document under `prototype/registry-codegen/`.
 
-The other 34 checks need only the standard library or `jsonschema`. `headings.py`, the tool that
+The other 34 checks need only the standard library or `jsonschema`.
+
+Four of the seven decide whether the candidate is internally consistent under Part 00 §2.3, which
+makes an incorporated artifact violating its governing prose an inconsistency that a release must
+not contain: the complete result of Part 02 §9.4 over the core registry, Part 03 §1's generic
+cross-member checker, Part 03 §5.4's consistency condition, and Part 11's static contract over the
+core registry's rules. The code deciding them is the reference implementation's. The reader's
+profile checker and R154's condition are about 90 lines needing only `jsonschema`. The validator's
+registry-document checker is 1,859 lines needing `jsonschema`, `sqlglot` and `ucumvert`, and its
+rule checker, which it calls, is 394 lines needing `sqlglot`. `headings.py`, the tool that
 records each part's stable headings, imports the revision tooling's `impact.py` to list the
 citers of a changed heading.
 
@@ -115,13 +125,14 @@ opens each packet with the reader and validates it with the validator.
 
 ### 2.5 The paths are cited widely, but frozen records need not follow them
 
-173 tracked files name `registry/` or `escapewheel_poc_docs_v0.2` literally, excluding the frozen
-v0.1 documents and lock files:
+172 tracked files name `registry/` or `escapewheel_poc_docs_v0.2` at the start of a path, excluding
+the frozen v0.1 documents and lock files:
 
 - 107 are accepted revisions or their evidence manifests.
-- 66 are current files: revision tooling and its data (13), the writer (9), the registry directory
-  (8), the specification directory (8), `conformance/` (6), the validator (5), and the root
-  documents and scripts.
+- 65 are current files: revision tooling and its data (13, this proposal among them), the writer
+  (9), the registry directory (8), the specification directory (8), the validator (5),
+  `conformance/` (5), the reader, `escapewheel-aind` and `prototype/` (2 each), `integration/` (1),
+  and the root documents and scripts (10).
 
 More scripts compute the paths than name them. These include `verify.py`, `facts.py`,
 `check_citations.py`, `ledger.py`, `impact.py`, `repoint.py`, and the package test suites through
@@ -141,8 +152,8 @@ Two conformance probes, `registry-contract/probe.py` and `history-cleanup/probe.
 the old paths. Each reads one path both at a past commit through `git show` and in the working tree.
 
 The field test's recipes name the core registry and all four extensions by absolute path into
-`registry/`. No packet records a repository path: a packet embeds the registries it binds (Part 04
-§8), and every `$id` is a URL rather than a path.
+`registry/`. No packet records a repository path: a packet embeds the registries it binds
+(Part 04 §8), and every `$id` is a URL rather than a path.
 
 ### 2.6 Other formats keep the specification apart from its implementations
 
@@ -262,9 +273,9 @@ Four rules state the boundary at the level of the specification:
   naming it and not by a path the tree's copy would have to resolve.
 
 The conformance corpus becomes an informative member of the tree. Its builder already reads
-nothing outside the specification's artifacts (§2.4). The corpus's expected findings become data within the
-tree, while the runner, which opens packets with the reader and validates them with the validator,
-stays in `conformance/`.
+nothing outside the specification's artifacts (§2.4). The corpus's expected findings become data
+within the tree, while the runner, which opens packets with the reader and validates them with the
+validator, stays in `conformance/`.
 
 A release is not defined here. Part 00 §2.1 would gain only that a release's members are drawn from
 the specification's tree. Which of the tree's informative files a release includes, and the
@@ -272,7 +283,7 @@ publication record's format, are left to the release decision.
 
 The cost is one large mechanical move before the field test:
 
-- the 66 current files that name the old paths, and the scripts that compute them, are repointed;
+- the 65 current files that name the old paths, and the scripts that compute them, are repointed;
 - `registry-targets.toml`'s 292 paths are repointed, and `ledger.py`'s containment check follows
   them;
 - the two conformance probes of §2.5 take a separate path for the past commit;
@@ -292,9 +303,23 @@ The cost is one large mechanical move before the field test:
 | extensions | Unchanged in meaning. The four extension documents leave the specification's tree unchanged in content. Part 09 names no file. |
 | reader, writer, validator, adapters | Each package's build copies the artifacts it uses from the tree, and each package checks its copies. The writer's `init` template and README name the new core registry path. No runtime behavior changes. |
 | existing packets | Unchanged. No packet records a repository path. The field-test recipes change their registry and extension paths. |
-| conformance fixtures and tests | The corpus becomes an informative member of the tree, and its builder reads the overriding order from the descriptor rather than importing the reader. The expected findings move out of the runner into data. The package-dependent registry checks move to `conformance/`, and Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. |
+| conformance fixtures and tests | The corpus becomes an informative member of the tree; its builder already reads only the specification's artifacts. The expected findings move out of the runner into data. The package-dependent registry checks move to `conformance/`, and Part 08's example becomes a check in `integration/`. The package suites locate the registry at its new path. |
 | revision process and tooling | The paths in `check_citations.py`, `ledger.py`, `impact.py`, `repoint.py`, `evidence.py`, `registry-targets.toml` and the verifier move. The heading tool stops importing the revision tooling. Accepted records and their evidence are unedited. The revision guide's own links are repointed as ordinary maintenance. |
 | generated publications and developer documentation | The combined rendering and the heading index are regenerated from the new tree. The root README, CONTRIBUTING and the package guides describe the new layout. The specification README states what the tree holds. |
+
+## 6. Open questions
+
+- **Where the implementation-dependent consistency checks run.** The preferred direction moves every
+  check needing an implementation to `conformance/`, which leaves the tree unable to decide the four
+  consistency conditions of §2.3 on its own, against §3's aim of a tree verified with nothing else
+  present. The credible answers are:
+  - move the two small checkers into the tree's tools and have the reader copy them as it copies
+    the artifacts, and run the other two from `conformance/` against the reference validator,
+    stating in the specification README which conditions the tree does not decide alone;
+  - move all four checkers into the tree's tools, making the validator's registry-document and rule
+    checkers code the specification's tree owns and the validator copies; or
+  - run all four from `conformance/`, and restate §3's aim as a tree read and rebuilt alone and
+    verified with the reference implementation.
 
 ## 7. Promotion criteria
 
@@ -304,7 +329,7 @@ The cost is one large mechanical move before the field test:
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
