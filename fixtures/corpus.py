@@ -138,6 +138,9 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "amended_packet_id": ("error", "amendment.identity_changed"),
     "two_imports": None,
     "preference_of_another_scope": ("error", "core.preferred_runs.scope_matches_run"),
+    "spikes_on_reference_clock": None,
+    "spikes_off_reference_clock": ("error", "analysis.spike_events.on_reference_clock"),
+    "spikes_without_reference_clock": ("error", "analysis.spike_events.on_reference_clock"),
 }
 
 #: Packets whose expected finding is one per resource (Part 05 §5.3), and how many it must fire.

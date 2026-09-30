@@ -49,7 +49,7 @@ def test_every_shipped_rule_passes_static_profile_check():
         for table in [declaration["table"]]
         for rule in table["rules"]
     ]
-    assert len(checked) == 138
+    assert len(checked) == 139
 
 
 def test_the_transform_slope_rule_flags_every_slope_that_is_not_positive():

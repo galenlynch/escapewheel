@@ -7,7 +7,7 @@
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§1, 7, 8.3, 9.2 and 9.4; Part 08 §§2 and 3; the registry meta-schema; the registry-contract descriptor; the core registry |
-| **Depends on** | R150 §3.10 (the meta-schema and descriptor this advances from); `materialized-spikes-are-checked-against-the-reference-clock` §3.2 (the core registry version this advances from) |
+| **Depends on** | R150 §3.10 (the meta-schema and descriptor this advances from); R151 §3.2 (the core registry version this advances from) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4 |
 
@@ -234,7 +234,7 @@ These incorporated identifiers MUST advance:
 |---|---|---|
 | registry meta-schema `$id` | `https://escapewheel.org/schemas/registry/0.10.0`, which R150 assigns | `https://escapewheel.org/schemas/registry/0.11.0` |
 | registry-contract descriptor ID | `escapewheel-registry-contract-v0.8`, which R150 assigns | `escapewheel-registry-contract-v0.9` |
-| core registry `registry_version` | `0.13.0`, which `materialized-spikes-are-checked-against-the-reference-clock` assigns | `0.14.0` |
+| core registry `registry_version` | `0.13.0`, which R151 §3.2 assigns | `0.14.0` |
 
 The v0.9 descriptor selects meta-schema 0.11.0, lists `escapewheel-rule-sql-v0.2` alone in
 `rule_languages`, and otherwise differs from v0.8 only by §3.3's invariant. Part 02 §1 incorporates

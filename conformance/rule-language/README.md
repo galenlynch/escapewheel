@@ -6,6 +6,7 @@ expected parsed dependencies/result names, typed unordered result bag, or reject
 
 Run `probe.py` through the repository verifier. In addition to the explicit vectors, the probe
 validates the maintained language descriptor, resolves every incorporated contract anchor, and
-statically checks and binds all 121 shipped Tier 2 rules against typed empty relations.
+statically checks and binds every shipped Tier 2 rule against typed empty relations, failing
+when their count differs from the one `probe.py` states.
 
 These vectors test the incorporated contract; they do not define another language.

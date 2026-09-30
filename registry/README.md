@@ -7,7 +7,7 @@ Part 03 §3.3).
 
 <!-- BEGIN generated: counts -->
 ```
-48 resources, 45 tables, 360 columns, 116 references, 90 Tier 2 rules
+48 resources, 45 tables, 360 columns, 116 references, 91 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -136,7 +136,7 @@ selects `escapewheel-rule-sql-v0.2`; individual rules cannot override it. Inline
 table's whole logical contract readable in one declaration.
 
 <!-- BEGIN generated: rules -->
-90 rules over 29 tables: 81 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
+91 rules over 29 tables: 82 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
@@ -148,10 +148,10 @@ table's whole logical contract readable in one declaration.
 | `core.clock_anchors` | 4 |
 | `core.preferred_runs` | 4 |
 | `core.sessions` | 4 |
+| `analysis.spike_events` | 3 |
 | `core.intervals` | 3 |
 | `core.media_assets` | 3 |
 | `analysis.array_labels` | 2 |
-| `analysis.spike_events` | 2 |
 | `core.array_assets` | 2 |
 | `core.array_labels` | 2 |
 | `core.calibrations` | 2 |

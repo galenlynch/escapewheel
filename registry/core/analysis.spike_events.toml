@@ -78,3 +78,13 @@ JOIN (
   AND a.clock_id = b.clock_id
   AND b.time_bucket_tick > a.time_bucket_tick
 WHERE b.lo <= a.hi'''
+
+[[rules]]
+id = "analysis.spike_events.on_reference_clock"
+level = "error"
+message = "spikes are on a clock other than their session's reference clock, or their session declares none"
+sql = '''
+SELECT DISTINCT e.session_id, e.clock_id, s.reference_clock_id
+FROM analysis.spike_events AS e
+JOIN core.sessions AS s ON s.session_id = e.session_id
+WHERE e.clock_id IS DISTINCT FROM s.reference_clock_id'''

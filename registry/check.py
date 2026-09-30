@@ -104,8 +104,8 @@ check(
     [] if META_ID == "https://escapewheel.org/schemas/registry/0.10.0" else [META_ID],
 )
 check(
-    "core registry version is 0.12.0",
-    [] if REG.get("registry_version") == "0.12.0" else [REG.get("registry_version")],
+    "core registry version is 0.13.0",
+    [] if REG.get("registry_version") == "0.13.0" else [REG.get("registry_version")],
 )
 check(
     "every shipped registry selects the incorporated rule language",

@@ -148,6 +148,12 @@ The rest each break one rule of adding:
 clean. `preference_of_another_scope` prefers, for the sorting run, a curation run whose scope is the
 probe, and draws `core.preferred_runs.scope_matches_run` (Part 05 §12).
 
+Three packets add `valid`'s 42 spikes as `analysis.spike_events` (Part 06 §4).
+`spikes_on_reference_clock` puts them on the session's reference clock, `imec_ap_s001`, and is
+clean. `spikes_off_reference_clock` puts them on `behavior_s001`, and
+`spikes_without_reference_clock` puts them on the only clock of a session declaring no reference
+clock; each draws `analysis.spike_events.on_reference_clock` and nothing else.
+
 Four packets each add one packet-owned opaque payload at `opaque/<resource_id>/<name>` (Part 03
 §11), and are clean with checksums: `owned_opaque_object` a single file, `owned_opaque_prefix` a
 directory digested as a prefix, `owned_opaque_singleton` a file bound to an opaque singleton of

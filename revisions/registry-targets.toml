@@ -597,3 +597,6 @@ locations = [
   { path = "registry/logical_schemas.json", pointer = "/resources/core.unit_quality_labels/table/amendment_groups" },
   { path = "registry/logical_schemas.json", pointer = "/resources/core.units/table/amendment_groups" },
 ]
+
+[target."R151 §3.1"]
+locations = [{ path = "registry/logical_schemas.json", pointer = "/resources/analysis.spike_events/table/rules/2/id", equals = "analysis.spike_events.on_reference_clock" }]

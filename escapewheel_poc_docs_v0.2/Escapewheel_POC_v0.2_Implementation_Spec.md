@@ -74,11 +74,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.12.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.13.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.12.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.13.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -1544,7 +1544,7 @@ profile stores a bound registry.
 The incorporated registry meta-schema has `$id`
 `https://escapewheel.org/schemas/registry/0.10.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.12.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.13.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -4387,7 +4387,7 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.12.0.json.gz
+    core/             0.13.0.json.gz
     aind_opto/        0.11.0.json.gz
     aind_unit_qc/     0.12.0.json.gz
     dynamic_foraging/ 0.13.0.json.gz
@@ -4428,7 +4428,7 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.12.0", "path": "registries/core/0.12.0.json.gz", "sha256": "…"},
+    "core": {"role": "core", "version": "0.13.0", "path": "registries/core/0.13.0.json.gz", "sha256": "…"},
     "aind_opto": {"role": "extension", "version": "0.11.0", "path": "registries/aind_opto/0.11.0.json.gz", "sha256": "…"},
     "aind_unit_qc": {"role": "extension", "version": "0.12.0", "path": "registries/aind_unit_qc/0.12.0.json.gz", "sha256": "…"},
     "dynamic_foraging": {"role": "extension", "version": "0.13.0", "path": "registries/dynamic_foraging/0.13.0.json.gz", "sha256": "…"},

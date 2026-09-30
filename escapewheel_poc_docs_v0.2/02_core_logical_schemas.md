@@ -609,7 +609,7 @@ profile stores a bound registry.
 The incorporated registry meta-schema has `$id`
 `https://escapewheel.org/schemas/registry/0.10.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.12.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.13.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 

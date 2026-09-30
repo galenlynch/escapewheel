@@ -3780,6 +3780,7 @@ where = [
   { part = "00", anchor = "ew-numbered-part-ownership", note = "the Part 06 row" },
   { part = "06", anchor = "ew-analysis-spike-events" },
 ]
+note = "R151 §3.1 declares analysis.spike_events.on_reference_clock, the check R145 §7 deferred"
 
 [clause."R145 §3.8"]
 disposition = "applied"
@@ -4001,4 +4002,14 @@ where = [
   { part = "02", anchor = "ew-registry-self-description", note = "meta-schema 0.10.0 and core 0.12.0" },
   { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.8" },
   { part = "05", anchor = "ew-recipe-purpose", note = "recipe schema 0.2.0" },
+]
+
+[clause."R151 §3.1"]
+disposition = "registry"
+note = "analysis.spike_events.on_reference_clock"
+
+[clause."R151 §3.2"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-registry-self-description", note = "core 0.13.0" },
 ]

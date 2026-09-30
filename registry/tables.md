@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See the repository
 [authority model](../README.md#authority) for the sources that bind.
 
 ```text
-48 resources, 45 tables, 360 columns, 116 references, 90 Tier 2 rules
-registry 0.12.0   logical standard escapewheel-logical-v0.1
+48 resources, 45 tables, 360 columns, 116 references, 91 Tier 2 rules
+registry 0.13.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -135,10 +135,11 @@ registry 0.12.0   logical standard escapewheel-logical-v0.1
 
 **Amendment groups** — none  
 
-**Tier 2 rules** — 2
+**Tier 2 rules** — 3
 
 - `analysis.spike_events.bucket_contains_spike` — error: a spike precedes the start of the bucket it is labelled with
 - `analysis.spike_events.buckets_partition_time` — error: buckets overlap in tick range, so the layout they declare is not a partition
+- `analysis.spike_events.on_reference_clock` — error: spikes are on a clock other than their session's reference clock, or their session declares none
 
 ## `core`
 

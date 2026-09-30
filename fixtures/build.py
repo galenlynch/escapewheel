@@ -1228,6 +1228,7 @@ def main():
     unit_variants(root)
     opaque_variants(root)
     amendment_variants(root)
+    materialized_spike_variants(root)
 
 
 #: A prefix's objects as a store would list them, for the manifest-only prefix variants.
@@ -1985,6 +1986,58 @@ def amend(out: Path, make, change, *, extensions: tuple = (), identity: dict | N
     (out / "manifests" / "0.1.0.json").write_text(json.dumps(superseded, indent=2) + "\n")
     amended = {**superseded, "packet_version": "0.1.1", "resources": resources, **(identity or {})}
     (out / "packet.json").write_text(json.dumps(amended, indent=2) + "\n")
+
+
+def materialized_spike_variants(root: Path) -> None:
+    """Part 06 §4's materialized spikes: on the reference clock, off it, and in a session naming none."""
+
+    def materialize(c, clock):
+        c["analysis.spike_events"] = [
+            {
+                "session_id": s["session_id"],
+                "unit_id": s["unit_id"],
+                "t_tick": s["t_tick"],
+                "clock_id": clock,
+                "time_bucket_tick": s["t_tick"] // SPIKE_BUCKET_TICKS * SPIKE_BUCKET_TICKS,
+            }
+            for s in c["core.spike_events"]
+        ]
+
+    def one_clock(c):
+        # The AP clock alone, so the units keep theirs and only the missing reference is wrong.
+        c["core.clocks"] = [clock for clock in c["core.clocks"] if clock["clock_id"] == "imec_ap_s001"]
+        c["core.clock_observation_intervals"] = [
+            r for r in c["core.clock_observation_intervals"] if r["clock_id"] == "imec_ap_s001"
+        ]
+        c.pop("core.clock_anchors", None)
+        for rows in c.values():
+            for row in rows:
+                if row.get("clock_id") == "behavior_s001":
+                    row["clock_id"] = "imec_ap_s001"
+        c["core.sessions"][0]["reference_clock_id"] = None
+
+    for name, clock, mutate in (
+        ("spikes_on_reference_clock", "imec_ap_s001", None),
+        ("spikes_off_reference_clock", "behavior_s001", None),
+        ("spikes_without_reference_clock", "imec_ap_s001", one_clock),
+    ):
+        c = content()
+        if mutate is not None:
+            mutate(c)
+        materialize(c, clock)
+        write_packet(root / name, c)
+        edit_manifest(root / name, derive_spikes)
+        print(f"{name:26s}written")
+
+
+def derive_spikes(manifest: dict) -> None:
+    for entry in manifest["resources"]:
+        if entry["resource_id"] == "analysis.spike_events":
+            entry["derived_from"] = ["core.spike_events"]
+
+
+#: The width of a materialized spike's time bucket, in ticks of its clock.
+SPIKE_BUCKET_TICKS = 100_000
 
 
 def amendment_variants(root: Path) -> None:

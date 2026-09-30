@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "revision": "R151",
+  "based_on": "884ab72b6500805cc456f2ab755806ca993bb72f",
+  "clauses": {
+    "R151 §3.1": {
+      "owners": [
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.spike_events/table/rules/2"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "spikes_off_reference_clock",
+            "finding": "analysis.spike_events.on_reference_clock"
+          },
+          {
+            "kind": "fixture",
+            "packet": "spikes_without_reference_clock",
+            "finding": "analysis.spike_events.on_reference_clock"
+          },
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "139 shipped rules statically check, bind, and execute empty"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/analysis.spike_events.toml",
+          "conformance/rule-language/probe.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md",
+          "fixtures/README.md",
+          "conformance/rule-language/README.md"
+        ]
+      }
+    },
+    "R151 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "core registry version is 0.13.0"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/registry.toml",
+          "registry/check.py",
+          "escapewheel_poc_docs_v0.2/framework.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md"
+        ]
+      }
+    }
+  }
+}
