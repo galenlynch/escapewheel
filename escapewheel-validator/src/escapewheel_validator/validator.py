@@ -30,10 +30,12 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, UnresolvedSource, sql_name
 from escapewheel_reader.location import SOURCES_FILENAME
+from escapewheel_reader.manifest import Manifest
 from escapewheel_reader.ordering import stored_order
 from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_floor_admits
 from escapewheel_reader.uri import decode
 
+from . import amendment
 from .generate import Check, adjacency_settles_uniqueness, concerns, generate
 from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest, named_registries
 from .opaque import describe, findings
@@ -2578,6 +2580,7 @@ def validate(
     checksums: bool = False,
     store_digests: bool = False,
     store_checksums: bool = True,
+    superseded: Mapping[str, Any] | None = None,
 ) -> Report:
     """Validate a packet against the registries it binds.
 
@@ -2607,7 +2610,7 @@ def validate(
         Resources this call has just written, restricting the rules to those Part 05 §15.4 obliges to
         run: the ones attached to such a resource, and the ones whose query names one. `None`,
         the default, runs every rule, which is what a first commit and a packet of unknown
-        provenance both need. An amendment passes what it writes, because Part 05 §15.2 forbids it
+        provenance both need. An amendment passes what it writes, because Part 05 §15.1 forbids it
         modifying anything else and Part 03 §8.1 declares those bytes immutable, so a rule reading
         only them is already answered.
     external : bool, default False
@@ -2631,6 +2634,10 @@ def validate(
         With `checksums`, take a store's full-object checksums in the digest's algorithm in place
         of reading those objects (Part 04 §5.3). A composite value is never taken, an object the
         store reports nothing for is read, and a local packet has no store checksums to take.
+    superseded : Mapping, optional
+        The manifest this one supersedes, for a writer validating an amendment before it retains
+        that manifest. Absent, the retained manifest immediately preceding this version is compared
+        (Part 05 §15.6), and a packet retaining none has nothing to compare.
 
     Returns
     -------
@@ -2686,7 +2693,69 @@ def validate(
         unsound,
         recheck,
     )
+    _check_amendment(packet, [effective, *extensions.values()], tables, report, limits, superseded)
     return report
+
+
+def _check_amendment(
+    packet: Packet,
+    documents: Sequence[Mapping[str, Any]],
+    tables: Mapping[str, Mapping[str, Any]],
+    report: Report,
+    limits: Mapping[str, Any] | None,
+    superseded: Mapping[str, Any] | None,
+) -> None:
+    """Compare an amended packet with the version it supersedes (Part 05 §15.6).
+
+    Where the superseded version cannot be read, the comparison is an evaluation that did not
+    complete and not a finding (Part 05 §§9.4 and 9.5).
+    """
+    import duckdb
+
+    current = packet.manifest.entry
+    try:
+        if superseded is None:
+            if not packet.location.is_local:
+                return
+            superseded = amendment.predecessor(packet.location.path, current)
+        if superseded is None:
+            return
+        earlier = Packet(packet.location, Manifest.from_dict(superseded)).with_declarations(*documents)
+    except (OSError, ValueError, PacketError) as exc:
+        report.record_evaluation("core", "incomplete", rule="amendment", detail=str(exc).splitlines()[0][:160])
+        return
+    classes: dict[str, str | None] = {}
+    kinds: dict[str, str | None] = {}
+    for version in (earlier, packet):
+        for resource in version.resources():
+            classes[resource.resource_id] = resource.content_class
+            kinds[resource.resource_id] = resource.kind
+
+    def located(version: Packet) -> Any:
+        named = {resource.resource_id for resource in version.resources(kind="table")}
+        return lambda resource_id: version.path(resource_id) if resource_id in named else None
+
+    with _spill_beside(packet) as spill:
+        connection = _bounded(duckdb.connect(), LIMITS if limits is None else limits, spill)
+        try:
+            found = amendment.compare(
+                connection,
+                current,
+                superseded,
+                tables=tables,
+                classes=classes,
+                kinds=kinds,
+                current_path=located(packet),
+                superseded_path=located(earlier),
+            )
+        except (OSError, PacketError, pa.ArrowException, duckdb.Error) as exc:
+            report.record_evaluation("core", "incomplete", rule="amendment", detail=str(exc).splitlines()[0][:160])
+            return
+        finally:
+            connection.close()
+    for finding in found:
+        owner = None if finding.resource is None else report.resource_owner(finding.resource)
+        report.add("error", finding.check, finding.message, finding.rows, registry=owner)
 
 
 def check_packet_manifest(

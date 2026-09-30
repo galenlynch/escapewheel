@@ -140,6 +140,47 @@ every path it will create. A retry after an interruption removes those paths and
 promoted directory with no record, or a record it cannot read, is refused and nothing is removed
 (Part 05 §6). `escapewheel prune` reports `staging/` and those paths apart from strays.
 
+## An amending recipe adds to a packet
+
+A recipe whose `[packet].amends` names the committed packet's `packet_version` adds to that
+packet instead of building one (Part 05 §15.1). `escapewheel import` refuses it unless the packet
+at `out` has the recipe's `id`, that version, the recipe's session, and the logical and semantic
+standard versions of the registries the recipe binds. It then commits the next patch version and keeps the version it supersedes in
+`manifests/`. The packet's `core.sessions` and `core.subjects` rows prevail, so an amending
+recipe may state `[session] session_id` and nothing else about the session or subject. It refuses
+a `[[clock]]` whose name the packet already holds, since that clock is referenced by name
+(Part 05 §3.5).
+
+Delivered rows are settled against the packet (Part 05 §4.3):
+
+- A row equal to a held row, ignoring `metadata`, is dropped.
+- A row forming a group the packet lacks (Part 02 §2.8) is added, numbered after every identifier
+  the packet holds.
+- Any other row refuses the build.
+
+So re-running a source the packet already imported adds nothing but a second `import` run. The
+sorter adapter's `curation` names a second curation of the packet's sortings, which forms new
+groups of units and spikes:
+
+```toml
+[packet]
+id = "ecephys_776259_2025-04-09"
+amends = "0.1.0"
+
+[session]
+session_id = "ecephys_776259_2025-04-09"
+
+[[source]]
+kind = "sorter"
+root = "/data/session_recurated"
+curation = "recurated"
+```
+
+An added run of the same activity and scope as a held run, other than an import, is preferred over
+the held run automatically, with the reason naming Part 05 §12. A `[[preferred_run]]` entry records
+a different choice, naming the run by `processing_run_name` among the packet's runs and this
+build's.
+
 ## Digests, and `escapewheel verify`
 
 Every resource the packet owns records a SHA-256 `digest`, `{"algorithm": "sha256", "value": …}`,

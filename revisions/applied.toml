@@ -246,10 +246,12 @@ where = [
   { part = "05", anchor = "ew-amendment-definition" },
   { part = "03", anchor = "ew-portable-amendment", note = "a table that gains rows is a new file" },
 ]
+note = "R150 §3.3 extends Part 03 §9's statement to every resource an amendment writes"
 
 [clause."R32 §3"]
-disposition = "applied"
-where = [{ part = "05", anchor = "ew-amendment-scope" }]
+disposition = "superseded"
+by = "R150"
+note = "R150 §3.3 lets an amendment add a canonical table's rows in groups the packet lacks and change no canonical row; was a scope table forbidding any change to a core or extension resource"
 
 [clause."R32 §4"]
 disposition = "applied"
@@ -319,6 +321,7 @@ note = "restates that 05's staging discipline is unchanged"
 [clause."R75 §2.1"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-writer-acceptance-criteria" }]
+note = "R150 §3.9 states determinism for an amending build over the packet version it amends"
 
 [clause."R75 §2.2"]
 disposition = "applied"
@@ -732,7 +735,7 @@ note = "the identity field, carried or assigned, on every identifier column"
 
 [clause."R53 §2.5"]
 disposition = "rationale"
-note = "states no requirement and carries no RFC 2119 keyword: that an identifier is stable for the life of a packet is a consequence of R32 §3's ban on an amendment modifying what it did not write (Part 03 §9.1), and that an assigned one is not stable across packets is the cost, whose remedy is §2.3.1's `*_name` (Part 02 §8.2). It was disposed `applied` at Part 05 §8, which governs materialization"
+note = "states no requirement and carries no RFC 2119 keyword: that an identifier is stable for the life of a packet is a consequence of R32 §3's ban on an amendment modifying what it did not write (Part 03 §9.1), and that an assigned one is not stable across packets is the cost, whose remedy is §2.3.1's `*_name` (Part 02 §8.2). It was disposed `applied` at Part 05 §8, which governs materialization. R150 §3.3 carries that ban: an amendment changes no canonical row"
 
 [clause."R53 §2.6"]
 disposition = "registry"
@@ -1023,7 +1026,7 @@ where = [{ part = "02", section = "6" }]
 
 [clause."R54 §2.6"]
 disposition = "applied"
-where = [{ part = "05", section = "4.3" }]
+where = [{ part = "05", anchor = "ew-import-normalization" }]
 
 [clause."R54 §4"]
 disposition = "rationale"
@@ -1427,6 +1430,7 @@ where = [
     { part = "03", section = "5.4" },
     { part = "02", section = "9" },
 ]
+note = "an amended packet is run-major within each build, so under R150 §3.6 it clusters each curation's spikes"
 
 [clause."R81 §2.5"]
 disposition = "applied"
@@ -1442,7 +1446,7 @@ note = "core.units.default_electrode_id struck with its rule core.units.default_
 
 [clause."R82 §2.1"]
 disposition = "registry"
-note = "also stated in 05_validation_and_import.md §11"
+note = "also stated in 05_validation_and_import.md §11; R150 §3.7 exempts import runs from core.processing_runs.undeclared_currency"
 
 [clause."R82 §2.2"]
 disposition = "registry"
@@ -1450,11 +1454,13 @@ note = "also stated in 05_validation_and_import.md §11"
 
 [clause."R82 §2.3"]
 disposition = "applied"
-where = [{ part = "05", section = "12" }]
+where = [{ part = "05", anchor = "ew-alternatives-resolved" }]
+note = "R150 §3.7 exempts import runs, which are never alternatives"
 
 [clause."R82 §2.4"]
 disposition = "applied"
-where = [{ part = "05", section = "12" }]
+where = [{ part = "05", anchor = "ew-alternatives-resolved" }]
+note = "R150 §3.7 exempts import runs, which are never alternatives"
 
 [clause."R83 §2.1"]
 disposition = "registry"
@@ -3917,4 +3923,82 @@ where = [
   { part = "02", anchor = "ew-registry-self-description", note = "core 0.11.0 and the migrated extension's version" },
   { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.7" },
   { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
+]
+
+[clause."R150 §3.1"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-resource-kind", note = "the table object's member" },
+  { part = "02", anchor = "ew-amendment-groups", note = "group lists and the group test" },
+  { part = "02", anchor = "ew-registry-conformance", note = "registry.amendment_groups.resolves" },
+]
+
+[clause."R150 §3.2"]
+disposition = "registry"
+note = "every core table declares its group lists, [] on the tables identifying the packet and on the analysis tables"
+
+[clause."R150 §3.3"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-amendment-definition", note = "the new version sorts after, and settlement against the packet" },
+  { part = "05", anchor = "ew-amendment-scope", note = "the change table" },
+  { part = "03", anchor = "ew-portable-amendment", note = "every written resource is a new file" },
+]
+
+[clause."R150 §3.4"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-validation-import-scope", note = "§15.6 binds a validator" },
+  { part = "05", anchor = "ew-amendment-comparison", note = "the five checks and an incomplete comparison" },
+]
+
+[clause."R150 §3.5"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-recipe-purpose", note = "amends" },
+  { part = "05", anchor = "ew-recipe-ownership", note = "the packet's rows as delivered" },
+  { part = "05", anchor = "ew-recipe-check", note = "an amending recipe's refusals" },
+  { part = "05", anchor = "ew-declared-fact-authority", note = "the packet's facts prevail" },
+  { part = "05", anchor = "ew-import-materialization", note = "a stale derived resource" },
+  { part = "05", anchor = "ew-amendment-definition", note = "an amending build" },
+]
+
+[clause."R150 §3.6"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-import-normalization", note = "numbering after the packet's identifiers" },
+  { part = "03", anchor = "ew-table-ordering", note = "clustering within each build" },
+]
+
+[clause."R150 §3.7"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-import-provenance", note = "an amending build's import run and source files" },
+  { part = "05", anchor = "ew-alternatives-resolved", note = "an import run is no alternative, and an added run is preferred" },
+]
+note = "the registry's core.processing_runs.undeclared_currency exempts import runs"
+
+[clause."R150 §3.8"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-recipe-purpose", note = "preferred_run" },
+  { part = "05", anchor = "ew-recipe-check", note = "a preferred_run entry's refusals" },
+  { part = "05", anchor = "ew-alternatives-resolved", note = "a recipe's preferred runs" },
+]
+note = "the registry declares core.preferred_runs.scope_matches_run and the scope descriptions of core.processing_runs and core.preferred_runs"
+
+[clause."R150 §3.9"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-import-normalization", note = "determinism over the amended version" },
+  { part = "05", anchor = "ew-writer-acceptance-criteria", note = "the acceptance criterion" },
+]
+
+[clause."R150 §3.10"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
+  { part = "02", anchor = "ew-registry-self-description", note = "meta-schema 0.10.0 and core 0.12.0" },
+  { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.8" },
+  { part = "05", anchor = "ew-recipe-purpose", note = "recipe schema 0.2.0" },
 ]

@@ -261,7 +261,7 @@ def test_a_batch_where_nothing_maps_yields_nothing(tmp_path):
 
 
 class Recorder:
-    """The three calls `into` makes on a writer."""
+    """The calls `into` makes on a writer, for a packet holding no run of the name it gives."""
 
     def __init__(self):
         self.batches, self.tables, self.derived = {}, {}, {}
@@ -274,6 +274,9 @@ class Recorder:
 
     def derives(self, rid, sources):
         self.derived[rid] = list(sources)
+
+    def name_apart(self, kind, name):
+        return name
 
 
 def test_into_records_lineage_and_a_run_row(tmp_path):

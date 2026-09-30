@@ -79,7 +79,7 @@ much, so the counts below are the current reference registry's and a packet carr
 gets its own.
 
 <!-- BEGIN facts: registry -->
-45 tables, 360 columns, 116 references, 89 Tier 2 rules (2 advisory)
+45 tables, 360 columns, 116 references, 90 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: tier1 -->
 175 not-null, 116 foreign-key, 4 closed-vocabulary, 26 finite-value and 16 discriminator checks, plus one uniqueness check per table whose sort does not begin with its primary key

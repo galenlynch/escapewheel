@@ -1,0 +1,919 @@
+{
+  "version": 1,
+  "revision": "R150",
+  "based_on": "4d4501063a42b2c9815f8a0dd97555c4dcc5f2e3",
+  "clauses": {
+    "R150 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-resource-kind"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-amendment-groups"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$defs/table/properties/amendment_groups"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.8.json",
+          "pointer": "/invariants/27"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/headings.toml",
+          "registry/tables.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_group_list_names_present_columns_once[absent_column]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_group_list_names_present_columns_once[optional_column]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_group_list_names_present_columns_once[one_set_twice]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_an_analysis_table_declares_no_group_list"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_table_without_group_lists_fails_its_shape"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the incorporated registry contract validates against its schema"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "registry/assemble.py",
+          "registry/render.py",
+          "escapewheel-writer/src/escapewheel_writer/scaffold.py",
+          "fixtures/build.py",
+          "prototype/registry-codegen/registry.json",
+          "conformance/interval-kinds/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md"
+        ]
+      }
+    },
+    "R150 §3.2": {
+      "owners": [
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_assets/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_dimensions/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.array_labels/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/analysis.spike_events/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_assets/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_channels/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_dimensions/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.array_labels/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.calibration_devices/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.calibration_points/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.calibrations/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.clock_anchors/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.clock_observation_intervals/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.clock_phase_steps/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.clocks/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.coordinate_frame_axes/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.coordinate_frames/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.curation_versions/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.devices/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.electrode_coordinate_values/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.electrode_coordinates/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.electrodes/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.event_stream_observation_intervals/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.event_streams/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.events/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.intervals/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.media_assets/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.media_frames/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.preferred_runs/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.probes/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.processing_run_inputs/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.processing_runs/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.session_experimenters/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.sessions/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.sorting_run_channels/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.sorting_runs/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.source_files/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.spike_events/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.subjects/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.unit_coordinate_values/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.unit_coordinates/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.unit_electrodes/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.unit_observation_intervals/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.unit_quality_labels/table/amendment_groups"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.units/table/amendment_groups"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every registry document is what its source assembles to"
+          },
+          {
+            "kind": "fixture",
+            "packet": "amended_trial",
+            "finding": "amendment.group_grown"
+          },
+          {
+            "kind": "fixture",
+            "packet": "amended_unit_window",
+            "finding": "amendment.group_grown"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_a_row_joining_a_held_group_is_group_grown"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/analysis.array_assets.toml",
+          "registry/core/analysis.array_dimensions.toml",
+          "registry/core/analysis.array_labels.toml",
+          "registry/core/analysis.spike_events.toml",
+          "registry/core/core.array_assets.toml",
+          "registry/core/core.array_channels.toml",
+          "registry/core/core.array_dimensions.toml",
+          "registry/core/core.array_labels.toml",
+          "registry/core/core.calibration_devices.toml",
+          "registry/core/core.calibration_points.toml",
+          "registry/core/core.calibrations.toml",
+          "registry/core/core.clock_anchors.toml",
+          "registry/core/core.clock_observation_intervals.toml",
+          "registry/core/core.clock_phase_steps.toml",
+          "registry/core/core.clocks.toml",
+          "registry/core/core.coordinate_frame_axes.toml",
+          "registry/core/core.coordinate_frames.toml",
+          "registry/core/core.curation_versions.toml",
+          "registry/core/core.devices.toml",
+          "registry/core/core.electrode_coordinate_values.toml",
+          "registry/core/core.electrode_coordinates.toml",
+          "registry/core/core.electrodes.toml",
+          "registry/core/core.event_stream_observation_intervals.toml",
+          "registry/core/core.event_streams.toml",
+          "registry/core/core.events.toml",
+          "registry/core/core.intervals.toml",
+          "registry/core/core.media_assets.toml",
+          "registry/core/core.media_frames.toml",
+          "registry/core/core.preferred_runs.toml",
+          "registry/core/core.probes.toml",
+          "registry/core/core.processing_run_inputs.toml",
+          "registry/core/core.processing_runs.toml",
+          "registry/core/core.session_experimenters.toml",
+          "registry/core/core.sessions.toml",
+          "registry/core/core.sorting_run_channels.toml",
+          "registry/core/core.sorting_runs.toml",
+          "registry/core/core.source_files.toml",
+          "registry/core/core.spike_events.toml",
+          "registry/core/core.subjects.toml",
+          "registry/core/core.unit_coordinate_values.toml",
+          "registry/core/core.unit_coordinates.toml",
+          "registry/core/core.unit_electrodes.toml",
+          "registry/core/core.unit_observation_intervals.toml",
+          "registry/core/core.unit_quality_labels.toml",
+          "registry/core/core.units.toml"
+        ]
+      },
+      "documentation": {
+        "unchanged": "tables.md renders each table's lists, and no guide restates them"
+      }
+    },
+    "R150 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-amendment-definition"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-amendment-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-portable-amendment"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_an_amendment_may_not_change_a_held_row"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_an_amendment_drops_a_row_the_packet_holds"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_a_preference_replaces_the_held_row_of_its_key"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_rerunning_the_held_curation_adds_none_of_its_rows"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_an_amendment_adding_a_new_group_passes"
+          },
+          {
+            "kind": "fixture",
+            "packet": "amended_trial_bounds",
+            "finding": "amendment.row_changed"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/amending.py",
+          "escapewheel-validator/src/escapewheel_validator/amendment.py",
+          "escapewheel-validator/src/escapewheel_validator/generate.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R150 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-validation-import-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-amendment-comparison"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/headings.toml"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_changing_a_held_row_is_row_changed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_removing_a_held_row_is_row_changed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_a_table_declaring_no_group_list_takes_no_added_row"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_changing_the_packet_id_is_identity_changed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_removing_a_canonical_resource_is_resource_changed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_a_derived_resource_kept_over_a_written_source_is_stale"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_removing_the_stale_derived_resource_passes"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_an_unreadable_retained_manifest_leaves_the_comparison_incomplete"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_a_superseded_version_whose_files_were_removed_leaves_the_comparison_incomplete"
+          },
+          {
+            "kind": "fixture",
+            "packet": "amended_packet_id",
+            "finding": "amendment.identity_changed"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/amendment.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the validator's README lists no check by name"
+      }
+    },
+    "R150 §3.5": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-ownership"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-declared-fact-authority"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-import-materialization"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-amendment-definition"
+        },
+        {
+          "path": "registry/recipe.schema.json",
+          "pointer": "/properties/packet/properties/amends"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_an_amending_build_refuses_a_version_it_does_not_amend"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_an_amending_recipe_declares_no_session_fact"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_an_amending_build_refuses_a_held_clock_declared_again"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_a_source_s_differing_session_fact_is_reported_and_the_packet_s_kept"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_a_source_naming_another_subject_refuses_the_amendment"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_amending_recipe_declares_only_its_session"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_amended_packet_supplies_what_it_holds"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the example recipe validates against it"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/scripts/cli.py",
+          "escapewheel-writer/src/escapewheel_writer/amending.py",
+          "escapewheel-writer/src/escapewheel_writer/materialize.py",
+          "registry/recipe.example.toml",
+          "registry/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R150 §3.6": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-import-normalization"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/03_portable_physical_profile.md",
+          "anchor": "ew-table-ordering"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_an_amendment_numbers_after_every_held_identifier"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_an_amending_build_adds_a_curation_and_prefers_it"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/keys.py",
+          "escapewheel-writer/src/escapewheel_writer/amending.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "fixtures/build.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R150 §3.7": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-import-provenance"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-alternatives-resolved"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.processing_runs/table/rules/4"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_an_added_run_of_a_held_scope_is_preferred"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_runs.py::test_two_imports_of_one_session_are_not_alternatives"
+          },
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "138 shipped rules statically check, bind, and execute empty"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.processing_runs.toml",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/sorter.py",
+          "escapewheel-writer/src/escapewheel_writer/materialize.py",
+          "escapewheel-reader/src/escapewheel_reader/runs.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R150 §3.8": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-alternatives-resolved"
+        },
+        {
+          "path": "registry/recipe.schema.json",
+          "pointer": "/properties/preferred_run"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.preferred_runs/table/rules/1"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.processing_runs/table/columns/4/description"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.processing_runs/table/columns/5/description"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.preferred_runs/table/columns/2/description"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/resources/core.preferred_runs/table/columns/3/description"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md",
+          "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "preference_of_another_scope",
+            "finding": "core.preferred_runs.scope_matches_run"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_two_preferred_runs_of_one_key_are_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_a_chosen_at_naming_no_instant_is_refused[yesterday]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_offset_chosen_at_is_normalized_to_utc"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_a_preferred_run_names_a_run_the_packet_holds"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending_build.py::test_a_preferred_run_naming_no_run_is_refused"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/core.preferred_runs.toml",
+          "registry/core/core.processing_runs.toml",
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "registry/recipe.example.toml",
+          "escapewheel-reader/src/escapewheel_reader/runs.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R150 §3.9": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-import-normalization"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/05_validation_and_import.md",
+          "anchor": "ew-writer-acceptance-criteria"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_an_amendment_numbers_after_every_held_identifier"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/keys.py",
+          "escapewheel-writer/src/escapewheel_writer/amending.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the writer's README states determinism only through the specification"
+      }
+    },
+    "R150 §3.10": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-core-logical-schema-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/registry_version"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.8.json",
+          "pointer": "/id"
+        },
+        {
+          "path": "registry/recipe.schema.json",
+          "pointer": "/$id"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.8.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "registry meta-schema identity is 0.10.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "core registry version is 0.12.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the incorporated registry contract validates against its schema"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/registry.toml",
+          "registry/extensions/aind_opto/registry.toml",
+          "registry/extensions/aind_unit_qc/registry.toml",
+          "registry/extensions/dynamic_foraging/registry.toml",
+          "registry/extensions/vr_foraging/registry.toml",
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "facts.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md",
+          "revisions/STATUS.md"
+        ]
+      }
+    }
+  }
+}

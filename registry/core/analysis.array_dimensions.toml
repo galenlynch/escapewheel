@@ -4,6 +4,7 @@ instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "required"
 primary_key = ["array_asset_id", "axis_index"]
+amendment_groups = []
 
 [[columns]]
 name = "session_id"

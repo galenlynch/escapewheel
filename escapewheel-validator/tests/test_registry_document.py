@@ -59,6 +59,7 @@ def _document():
                 "lineage": "optional",
                 "table": {
                     "primary_key": ["session_id", "demo_id"],
+                    "amendment_groups": [["session_id", "demo_id"]],
                     "columns": [
                         _column("session_id"),
                         _column("demo_id", identity="carried"),
@@ -95,7 +96,7 @@ def _ids(result):
 def test_reference_registry_has_one_complete_valid_result():
     result = check_registry(CORE)
     assert result.state == "valid"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.7"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.8"
     assert tuple(phase.phase for phase in result.phases) == PHASES
     assert result.phases[0].state == "skipped"
     assert result.phases[0].reason == "registry.phase.mapping_input"
@@ -165,7 +166,7 @@ def test_every_repository_extension_satisfies_the_same_contract(path):
 
 def test_byte_entry_rejects_a_nested_duplicate_at_its_containing_object():
     result = check_registry_bytes(
-        b'{"$schema":"https://escapewheel.org/schemas/registry/0.9.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
+        b'{"$schema":"https://escapewheel.org/schemas/registry/0.10.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
     )
     outcome = result.findings[0]
     assert result.state == "invalid"
@@ -212,7 +213,7 @@ def test_shape_failure_uses_schema_identity_and_location():
     result = check_registry(document, CORE)
     outcome = result.findings[0]
     assert result.state == "invalid"
-    assert outcome.id == "https://escapewheel.org/schemas/registry/0.9.0"
+    assert outcome.id == "https://escapewheel.org/schemas/registry/0.10.0"
     assert outcome.instance == "/resources/demo.rows/table/columns/1/type"
     assert outcome.schema_location
 
@@ -302,7 +303,7 @@ def test_meta_schema_owns_each_local_conditional(case):  # noqa: C901
     result = check_registry(document, CORE)
     shape = next(phase for phase in result.phases if phase.phase == "shape")
     assert shape.state == "invalid"
-    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.9.0"}
+    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.10.0"}
 
 
 def test_unknown_contract_tuple_is_unsupported():
@@ -318,6 +319,7 @@ def test_null_primary_key_is_a_valid_duplicate_row_declaration():
     document["resources"]["demo.rows"]["table"] = {
         "columns": [_column("value", type="float64", presence="nullable", role="data")],
         "primary_key": None,
+        "amendment_groups": [],
         "references": [],
         "rules": [],
     }
@@ -327,7 +329,7 @@ def test_null_primary_key_is_a_valid_duplicate_row_declaration():
 def test_two_local_contracts_for_one_tuple_are_ambiguous():
     first = json.loads(CONTRACT.read_text())
     second = copy.deepcopy(first)
-    second["id"] = "escapewheel-registry-contract-v0.7"
+    second["id"] = "escapewheel-registry-contract-v0.8"
     result = check_registry(CORE, descriptors=[first, second])
     assert result.state == "unsupported"
     assert "registry.contract.selector_ambiguous" in _ids(result)
@@ -336,7 +338,7 @@ def test_two_local_contracts_for_one_tuple_are_ambiguous():
 def test_extension_without_core_runs_local_checks_and_is_incomplete():
     result = check_registry(_document())
     assert result.state == "incomplete"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.7"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.8"
     assert "registry.contract.core_context_unusable" in _ids(result)
 
     broken = _document()
@@ -445,6 +447,7 @@ def _with_extension_analysis(document):
     derived = copy.deepcopy(document["resources"]["demo.rows"])
     derived.update(content_class="analysis", lineage="required")
     derived["table"]["columns"].pop()
+    derived["table"]["amendment_groups"] = []
     document["resources"]["demo.derived"] = derived
     return document
 
@@ -818,8 +821,47 @@ def test_core_device_detail_shape_is_reserved_for_extensions():
                 ),
             ],
             "primary_key": ["device_id"],
+            "amendment_groups": [["device_id"]],
             "references": [],
             "rules": [],
         },
     }
     assert "registry.core.device_detail" in _ids(check_registry(core))
+
+
+def _group_pointers(result):
+    return {outcome.instance for outcome in result.findings if outcome.id == "registry.amendment_groups.resolves"}
+
+
+@pytest.mark.parametrize(
+    ("groups", "site"),
+    [
+        ([["session_id", "absent_id"]], "/resources/demo.rows/table/amendment_groups/0/1"),
+        ([["metadata"]], "/resources/demo.rows/table/amendment_groups/0/0"),
+        ([["session_id", "demo_id"], ["demo_id", "session_id"]], "/resources/demo.rows/table/amendment_groups/1"),
+    ],
+    ids=["absent_column", "optional_column", "one_set_twice"],
+)
+def test_a_group_list_names_present_columns_once(groups, site):
+    """Part 02 §2.8: a member names one required column, and no two lists of a table name one set."""
+    document = _document()
+    _table(document)["amendment_groups"] = groups
+    result = check_registry(document, CORE)
+    assert result.state == "invalid"
+    assert _group_pointers(result) == {site}
+
+
+def test_an_analysis_table_declares_no_group_list():
+    document = _with_extension_analysis(_document())
+    _table(document, "demo.derived")["amendment_groups"] = [["session_id"]]
+    result = check_registry(document, CORE)
+    assert result.state == "invalid"
+    assert _group_pointers(result) == {"/resources/demo.derived/table/amendment_groups"}
+
+
+def test_a_table_without_group_lists_fails_its_shape():
+    document = _document()
+    del _table(document)["amendment_groups"]
+    result = check_registry(document, CORE)
+    shape = next(phase for phase in result.phases if phase.phase == "shape")
+    assert shape.state == "invalid"

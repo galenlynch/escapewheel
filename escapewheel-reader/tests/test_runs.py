@@ -92,6 +92,14 @@ def test_two_runs_one_scope_is_ambiguous(tmp_path, packet_root):
         check(packet)
 
 
+def test_two_imports_of_one_session_are_not_alternatives(tmp_path, packet_root):
+    """An amendment records a second import of the session, which adds rows and replaces none (Part 05 §12)."""
+    runs = [(1, "import", "s1"), (2, "import", "s1")]
+    packet = _with_runs(tmp_path, packet_root, "amended", runs)
+    assert ambiguities(packet) == ()
+    assert check(packet) is None
+
+
 def test_a_preference_resolves_it(tmp_path, packet_root):
     """A declared preference settles the choice and removes the finding (Part 01 §2.4)."""
     runs = [(1, "spike_sorting", "probe_1"), (2, "spike_sorting", "probe_1")]

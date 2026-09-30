@@ -129,6 +129,15 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "uri_lowercase_hex": ("error", "packet.resource.uri_form"),
     "uri_encoded_unreserved": ("error", "packet.resource.uri_form"),
     "uri_dot_segment": ("error", "packet.resource.uri_form"),
+    "amended_intervals": None,
+    "amended_curation": None,
+    "amended_preference": None,
+    "amended_trial": ("error", "amendment.group_grown"),
+    "amended_trial_bounds": ("error", "amendment.row_changed"),
+    "amended_unit_window": ("error", "amendment.group_grown"),
+    "amended_packet_id": ("error", "amendment.identity_changed"),
+    "two_imports": None,
+    "preference_of_another_scope": ("error", "core.preferred_runs.scope_matches_run"),
 }
 
 #: Packets whose expected finding is one per resource (Part 05 §5.3), and how many it must fire.

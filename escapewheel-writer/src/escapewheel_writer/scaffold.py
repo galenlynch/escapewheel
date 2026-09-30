@@ -157,9 +157,15 @@ def draft(
             # discriminator names this table. Nothing here can know which.
             "references": [],
             "rules": [],
+            # Part 02 §2.8: no group list, so an amendment adds no row to the table until one is
+            # declared; which columns group its rows is the author's to say.
+            "amendment_groups": [],
         }
         decisions.append(f"{resource}: primary_key is null; declare it or say why not (R7)")
         decisions.append(f"{resource}: no references; an extension may reference core (Part 09 §2)")
+        decisions.append(
+            f"{resource}: amendment_groups is empty; declare the groups an amendment may add (Part 02 §2.8)"
+        )
     return Draft(
         {
             # Part 02 §9.2. Taken from the meta-schema the validator vendors rather than written

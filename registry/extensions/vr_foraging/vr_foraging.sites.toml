@@ -4,6 +4,7 @@ instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
 primary_key = ["site_id"]
+amendment_groups = [["site_id"]]
 
 [[columns]]
 name = "session_id"

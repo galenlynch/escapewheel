@@ -32,7 +32,6 @@ def minimal():
             {
                 "clock_id": "harp_s001",
                 "session_id": "s001",
-                "clock_name": "harp",
                 "tick_rate_num": 31250,
                 "tick_rate_den": 1,
                 "origin": "harp_epoch",

@@ -85,6 +85,7 @@
 "2.5" = "Presence and dependencies"
 "2.6" = "Catalog binding"
 "2.7" = "Lineage policy"
+"2.8" = "Amendment groups"
 "3" = "Column declaration"
 "4" = "Naming"
 "5" = "Type system"
@@ -241,6 +242,7 @@
 "15.3" = "Superseded manifests"
 "15.4" = "Scope of revalidation"
 "15.5" = "Cleanup"
+"15.6" = "Comparison with the superseded version"
 "16" = "Normative references"
 
 ["06"]
@@ -370,11 +372,23 @@ section = "12"
 title = "Alternatives are resolved before a commit"
 aliases = []
 
+[anchor.ew-amendment-comparison]
+part = "05"
+section = "15.6"
+title = "Comparison with the superseded version"
+aliases = []
+
 [anchor.ew-amendment-definition]
 part = "05"
 section = "15.1"
 title = "What an amendment is"
 aliases = ["ew-packet-version-scope"]
+
+[anchor.ew-amendment-groups]
+part = "02"
+section = "2.8"
+title = "Amendment groups"
+aliases = []
 
 [anchor.ew-amendment-scope]
 part = "05"
@@ -1388,6 +1402,12 @@ aliases = []
 part = "03"
 section = "5.1"
 title = "Encoding"
+aliases = []
+
+[anchor.ew-table-ordering]
+part = "03"
+section = "5.3"
+title = "Ordering"
 aliases = []
 
 [anchor.ew-table-partitioning]

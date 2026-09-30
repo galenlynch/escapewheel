@@ -15,6 +15,9 @@ Numbers are assigned in first-seen order and start at 0. Part 05 §4.3 requires 
 move once committed, and a deterministic order makes two builds of the same sources produce the
 same packet, which is what lets a rebuild be compared to what it replaced. Where Part 02 orders a
 kind's numbers -- units in §12.1, intervals in §12.9 -- the caller asks in that order.
+
+An amending build first `hold`s every number the packet it amends assigned, so a held name keeps its
+number and every new one is numbered from one past the largest held (Part 05 §4.3).
 """
 
 from __future__ import annotations
@@ -38,6 +41,8 @@ class Keys:
 
     def __init__(self) -> None:
         self._assigned: dict[str, dict[str, int]] = {}
+        self._named: dict[str, dict[int, str]] = {}
+        self._next: dict[str, int] = {}
 
     def of(self, kind: str, name: str) -> int:
         """Return the number for one named thing, assigning it if this is the first sight.
@@ -52,16 +57,32 @@ class Keys:
         """
         within = self._assigned.setdefault(kind, {})
         if name not in within:
-            within[name] = len(within)
+            self.hold(kind, name, self._next.get(kind, 0))
         return within[name]
+
+    def hold(self, kind: str, name: str, number: int) -> None:
+        """Record a number already assigned to a name, so later names are numbered after it.
+
+        Raises
+        ------
+        ValueError
+            If the name already holds another number, or the number already names another thing.
+        """
+        within = self._assigned.setdefault(kind, {})
+        named = self._named.setdefault(kind, {})
+        if within.get(name, number) != number or named.get(number, name) != name:
+            raise ValueError(f"{kind} {name!r} and {number} each already name something else")
+        within[name] = number
+        named[number] = name
+        self._next[kind] = max(self._next.get(kind, 0), number + 1)
 
     def names(self, kind: str) -> dict[int, str]:
         """Return every number assigned for one kind, and what it stands for."""
-        return {number: name for name, number in self._assigned.get(kind, {}).items()}
+        return dict(self._named.get(kind, {}))
 
     def name_of(self, kind: str, number: int) -> str | None:
         """Return what one number stands for, or None if this kind never assigned it."""
-        return self.names(kind).get(number)
+        return self._named.get(kind, {}).get(number)
 
     def __len__(self) -> int:
         """How many things have been numbered, across every kind."""

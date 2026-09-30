@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See the repository
 [authority model](../README.md#authority) for the sources that bind.
 
 ```text
-48 resources, 45 tables, 360 columns, 116 references, 89 Tier 2 rules
-registry 0.11.0   logical standard escapewheel-logical-v0.1
+48 resources, 45 tables, 360 columns, 116 references, 90 Tier 2 rules
+registry 0.12.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -47,6 +47,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `device_id` → `core.devices` (`device_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
+**Amendment groups** — none  
+
 ### `analysis.array_dimensions`
 
 | Column | Type | Presence | Declares | Description |
@@ -76,6 +78,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `clock_id` → `core.clocks` (`clock_id`)
 - `array_asset_id`, `depends_on_axis_index` → `analysis.array_dimensions` (`array_asset_id`, `axis_index`)
 
+**Amendment groups** — none  
+
 **Tier 2 rules** — 7
 
 - `analysis.array_dimensions.axis_index_contiguous` — error: axis_index is not contiguous from 0
@@ -104,6 +108,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `array_asset_id`, `axis_index` → `analysis.array_dimensions` (`array_asset_id`, `axis_index`)
 
+**Amendment groups** — none  
+
 **Tier 2 rules** — 2
 
 - `analysis.array_labels.independent_depends_on_position_zero` — error: a label on an axis that depends on no other has a nonzero depends_on_position_index
@@ -126,6 +132,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `unit_id` → `core.units` (`unit_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+
+**Amendment groups** — none  
 
 **Tier 2 rules** — 2
 
@@ -162,6 +170,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `device_id` → `core.devices` (`device_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
+**Amendment groups** — (`array_asset_id`)  
+
 **Tier 2 rules** — 2
 
 - `core.array_assets.one_scaling_level` — error: scaling is declared both on the array and per channel
@@ -187,6 +197,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `array_asset_id`, `axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
+
+**Amendment groups** — (`array_asset_id`, `axis_index`)  
 
 **Tier 2 rules** — 1
 
@@ -221,6 +233,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `clock_id` → `core.clocks` (`clock_id`)
 - `array_asset_id`, `depends_on_axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
 
+**Amendment groups** — (`array_asset_id`)  
+
 **Tier 2 rules** — 8
 
 - `core.array_dimensions.axis_index_contiguous` — error: axis_index is not contiguous from 0
@@ -250,6 +264,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `array_asset_id`, `axis_index` → `core.array_dimensions` (`array_asset_id`, `axis_index`)
 
+**Amendment groups** — (`array_asset_id`, `axis_index`)  
+
 **Tier 2 rules** — 2
 
 - `core.array_labels.independent_depends_on_position_zero` — error: a label on an axis that depends on no other has a nonzero depends_on_position_index
@@ -271,6 +287,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `calibration_id` → `core.calibrations` (`calibration_id`)
 - `device_id` → `core.devices` (`device_id`)
 
+**Amendment groups** — (`calibration_id`)  
+
 ### `core.calibration_points`
 
 | Column | Type | Presence | Declares | Description |
@@ -287,6 +305,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `calibration_id` → `core.calibrations` (`calibration_id`)
+
+**Amendment groups** — (`calibration_id`)  
 
 ### `core.calibrations`
 
@@ -311,6 +331,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `array_asset_id` → `core.array_assets` (`array_asset_id`)
 
+**Amendment groups** — (`calibration_id`)  
+
 **Tier 2 rules** — 2
 
 - `core.calibrations.unit_pair_complete` — error: a calibration declares one unit of measure and not the other; the pair is what makes a point readable
@@ -332,6 +354,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+
+**Amendment groups** — (`clock_id`)  
 
 **Tier 2 rules** — 4
 
@@ -356,6 +380,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
+**Amendment groups** — (`session_id`, `clock_id`)  
+
 **Tier 2 rules** — 2
 
 - `core.clock_observation_intervals.interval_valid` — error: stop_tick precedes start_tick
@@ -378,6 +404,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+
+**Amendment groups** — (`session_id`, `clock_id`)  
 
 **Tier 2 rules** — 1
 
@@ -409,6 +437,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `parent_clock_id` → `core.clocks` (`clock_id`)
+
+**Amendment groups** — (`clock_id`)  
 
 **Tier 2 rules** — 12
 
@@ -443,6 +473,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 
+**Amendment groups** — (`session_id`, `coordinate_frame`)  
+
 **Tier 2 rules** — 1
 
 - `core.coordinate_frame_axes.axis_names_distinct` — error: two axes of one frame name the same field, so which axis a coordinate value sits on cannot be told
@@ -462,6 +494,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 **References**
 
 - `session_id` → `core.sessions` (`session_id`)
+
+**Amendment groups** — (`session_id`, `coordinate_frame`)  
 
 ### `core.curation_versions`
 
@@ -489,6 +523,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `parent_curation_id` → `core.curation_versions` (`curation_id`)
 
+**Amendment groups** — (`curation_id`)  
+
 ### `core.devices`
 
 | Column | Type | Presence | Declares | Description |
@@ -512,6 +548,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `parent_device_id` → `core.devices` (`device_id`)
+
+**Amendment groups** — (`device_id`)  
 
 **Tier 2 rules** — 2
 
@@ -537,6 +575,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `electrode_id`, `coordinate_frame`, `coordinate_basis` → `core.electrode_coordinates` (`electrode_id`, `coordinate_frame`, `coordinate_basis`)
 - `session_id`, `coordinate_frame`, `axis_index` → `core.coordinate_frame_axes` (`session_id`, `coordinate_frame`, `axis_index`)
 
+**Amendment groups** — (`electrode_id`, `coordinate_frame`, `coordinate_basis`)  
+
 ### `core.electrode_coordinates`
 
 | Column | Type | Presence | Declares | Description |
@@ -558,6 +598,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 
+**Amendment groups** — (`session_id`, `coordinate_frame`, `coordinate_basis`) · (`electrode_id`)  
+
 ### `core.electrodes`
 
 | Column | Type | Presence | Declares | Description |
@@ -578,6 +620,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `probe_id` → `core.probes` (`probe_id`)
 
+**Amendment groups** — (`probe_id`)  
+
 ### `core.event_stream_observation_intervals`
 
 | Column | Type | Presence | Declares | Description |
@@ -593,6 +637,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `event_stream_id` → `core.event_streams` (`event_stream_id`)
+
+**Amendment groups** — (`event_stream_id`)  
 
 **Tier 2 rules** — 2
 
@@ -622,6 +668,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `clock_id` → `core.clocks` (`clock_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
+**Amendment groups** — (`event_stream_id`)  
+
 **Tier 2 rules** — 1
 
 - `core.event_streams.observation_declared` — info *(advisory)*: streams carry no observation intervals and their clock declares none, so no rate over them has a denominator
@@ -642,6 +690,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `stream_id` → `core.event_streams` (`event_stream_id`)
+
+**Amendment groups** — (`session_id`, `stream_id`)  
 
 **Tier 2 rules** — 1
 
@@ -667,6 +717,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+
+**Amendment groups** — (`session_id`, `interval_kind`)  
 
 **Tier 2 rules** — 3
 
@@ -697,6 +749,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `device_id` → `core.devices` (`device_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
+**Amendment groups** — (`media_asset_id`)  
+
 **Tier 2 rules** — 3
 
 - `core.media_assets.pts_rate_pair_complete` — error: an asset declares one half of its presentation-timestamp rate; half a rational is unusable
@@ -723,6 +777,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `media_asset_id` → `core.media_assets` (`media_asset_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
 
+**Amendment groups** — (`media_asset_id`)  
+
 **Tier 2 rules** — 2
 
 - `core.media_frames.frame_index_contiguous` — error: frame_index is not contiguous from 0 within an asset
@@ -734,8 +790,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 |---|---|:---:|---|---|
 | `session_id` | int32 | **required** | — | Session ID. |
 | `activity_type` | string | **required** | open | Which kind of output this preference is about, in the vocabulary `core.processing_runs.activity_type` uses (Part 02 §9.3). |
-| `scope_kind` | string | **required** | resolves optional | The resource whose primary key `scope` holds, as a dotted resource ID. |
-| `scope` | string | **required** | free | What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide. |
+| `scope_kind` | string | **required** | resolves optional | The resource holding the row `scope` names, as a dotted resource ID. |
+| `scope` | string | **required** | free | What it applies to: the scoped row's key where that key is carried, and its `*_name` where it is assigned, as `core.processing_runs.scope` names it. |
 | `processing_run_id` | int32 | **required** | — | The preferred run. |
 | `chosen_at` | timestamp | nullable | — | When the choice was made. |
 | `reason` | string | nullable | free | Why, in one line. |
@@ -747,9 +803,12 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 
-**Tier 2 rules** — 3
+**Amendment groups** — (`session_id`, `activity_type`, `scope_kind`, `scope`)  
+
+**Tier 2 rules** — 4
 
 - `core.preferred_runs.activity_matches_run` — error: a preference names a run whose activity_type differs from the preference's
+- `core.preferred_runs.scope_matches_run` — error: a preference names a run whose scope_kind or scope differs from the preference's
 - `core.preferred_runs.run_in_session` — error: a preference names a run belonging to another session
 - `core.preferred_runs.not_superseded` — warning: the preferred run is superseded by another run
 
@@ -775,6 +834,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `device_id` → `core.devices` (`device_id`)
 
+**Amendment groups** — (`probe_id`)  
+
 ### `core.processing_run_inputs`
 
 | Column | Type | Presence | Declares | Description |
@@ -791,6 +852,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `source_file_id` → `core.source_files` (`source_file_id`)
 
+**Amendment groups** — (`processing_run_id`)  
+
 ### `core.processing_runs`
 
 | Column | Type | Presence | Declares | Description |
@@ -799,8 +862,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 | `processing_run_id` | int32 | **required** | — | Stable processing run ID. |
 | `processing_run_name` | string | nullable | free | What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (Part 05 §4.3). |
 | `activity_type` | string | **required** | open | What kind of work the run did: `import`, `validation`, `sorting`, `curation`, `materialization`. A pipeline names its own. |
-| `scope` | string | nullable | free | What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Read only with the `scope_kind` beside it, which names the table the value keys into. |
-| `scope_kind` | string | nullable | resolves optional | The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
+| `scope` | string | nullable | free | What this run is about: the scoped row's key where that key is carried, and its `*_name` where it is assigned, such as a probe's `probe_name`. Read only with the `scope_kind` beside it. |
+| `scope_kind` | string | nullable | resolves optional | The resource holding the row `scope` names, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all. |
 | `supersedes_run_id` | int32 | nullable | — | The run this one replaces, if any. |
 | `software_name` | string | nullable | free | Software name. |
 | `software_version` | string | nullable | free | Software version. |
@@ -817,6 +880,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `supersedes_run_id` → `core.processing_runs` (`processing_run_id`)
+
+**Amendment groups** — (`processing_run_id`)  
 
 **Tier 2 rules** — 7
 
@@ -840,6 +905,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 **References**
 
 - `session_id` → `core.sessions` (`session_id`)
+
+**Amendment groups** — none  
 
 ### `core.sessions`
 
@@ -866,6 +933,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `subject_id` → `core.subjects` (`subject_id`)
 - `reference_clock_id` → `core.clocks` (`clock_id`)
 
+**Amendment groups** — none  
+
 **Tier 2 rules** — 4
 
 - `core.sessions.session_interval_valid` — error: session_end_time precedes session_start_time
@@ -889,6 +958,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
+
+**Amendment groups** — (`session_id`, `sorting_run_id`)  
 
 **Tier 2 rules** — 2
 
@@ -921,6 +992,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `input_array_asset_id` → `core.array_assets` (`array_asset_id`)
 
+**Amendment groups** — (`sorting_run_id`)  
+
 ### `core.source_files`
 
 | Column | Type | Presence | Declares | Description |
@@ -935,6 +1008,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
 
 **Primary key** — `source_file_id`  
+
+**Amendment groups** — (`source_file_id`)  
 
 ### `core.spike_events`
 
@@ -951,6 +1026,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `unit_id` → `core.units` (`unit_id`)
+
+**Amendment groups** — (`session_id`, `unit_id`)  
 
 **Tier 2 rules** — 2
 
@@ -972,6 +1049,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 **Primary key** — `subject_id`  
 
+**Amendment groups** — none  
+
 ### `core.unit_coordinate_values`
 
 | Column | Type | Presence | Declares | Description |
@@ -990,6 +1069,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis` → `core.unit_coordinates` (`session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`)
 - `session_id`, `coordinate_frame`, `axis_index` → `core.coordinate_frame_axes` (`session_id`, `coordinate_frame`, `axis_index`)
+
+**Amendment groups** — (`session_id`, `unit_id`, `coordinate_frame`, `coordinate_basis`)  
 
 ### `core.unit_coordinates`
 
@@ -1012,6 +1093,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `processing_run_id` → `core.processing_runs` (`processing_run_id`)
 - `session_id`, `coordinate_frame` → `core.coordinate_frames` (`session_id`, `coordinate_frame`)
 
+**Amendment groups** — (`session_id`, `unit_id`) · (`session_id`, `coordinate_frame`, `coordinate_basis`)  
+
 ### `core.unit_electrodes`
 
 | Column | Type | Presence | Declares | Description |
@@ -1028,6 +1111,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `session_id` → `core.sessions` (`session_id`)
 - `unit_id` → `core.units` (`unit_id`)
 - `electrode_id` → `core.electrodes` (`electrode_id`)
+
+**Amendment groups** — (`session_id`, `unit_id`)  
 
 **Tier 2 rules** — 2
 
@@ -1049,6 +1134,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `unit_id` → `core.units` (`unit_id`)
+
+**Amendment groups** — (`session_id`, `unit_id`)  
 
 **Tier 2 rules** — 2
 
@@ -1072,6 +1159,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 
 - `session_id` → `core.sessions` (`session_id`)
 - `unit_id` → `core.units` (`unit_id`)
+
+**Amendment groups** — (`session_id`, `unit_id`) · (`session_id`, `source`)  
 
 **Tier 2 rules** — 1
 
@@ -1107,6 +1196,8 @@ registry 0.11.0   logical standard escapewheel-logical-v0.1
 - `sorting_run_id` → `core.sorting_runs` (`sorting_run_id`)
 - `curation_id` → `core.curation_versions` (`curation_id`)
 - `clock_id` → `core.clocks` (`clock_id`)
+
+**Amendment groups** — (`sorting_run_id`, `curation_id`)  
 
 **Tier 2 rules** — 6
 

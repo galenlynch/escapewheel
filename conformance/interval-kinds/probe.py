@@ -92,7 +92,7 @@ def detail(extension_id, table, extra, *, based):
             }
         )
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
         "registry_id": extension_id,
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -108,6 +108,7 @@ def detail(extension_id, table, extra, *, based):
                 "table": {
                     "columns": columns + extra,
                     "primary_key": key,
+                    "amendment_groups": [key],
                     "references": references,
                     "rules": [],
                 },

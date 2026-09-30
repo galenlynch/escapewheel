@@ -9,6 +9,7 @@ from escapewheel_reader import check_sources, open_packet
 from escapewheel_validator import RegistryRejected, validate
 
 from escapewheel_writer import CommitRefused, PacketWriter
+from escapewheel_writer.amending import AmendmentRefused, Held
 from escapewheel_writer.encoding import (
     DELTA_COLUMNS,
     DICTIONARY_COLUMNS,
@@ -43,7 +44,7 @@ def test_stamp_sets_columns_on_rows_already_added(registry, minimal):
     assert changed == 1
     (clock,) = writer._tables["core.clocks"]
     assert clock["withheld_first_anchor"] is True and clock["withheld_last_anchor"] is False
-    assert clock["clock_name"] == "harp"  # the row it was, not a row standing in for it
+    assert clock["origin"] == "harp_epoch"  # the row it was, not a row standing in for it
 
 
 def test_stamp_reports_a_miss_rather_than_raising(registry, minimal):
@@ -168,8 +169,8 @@ def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
     assert "registry_version" not in manifest
     descriptor = manifest["registries"]["core"]
     assert descriptor["role"] == "core"
-    assert descriptor["version"] == registry["registry_version"] == "0.11.0"
-    assert descriptor["path"] == "registries/core/0.11.0.json.gz"
+    assert descriptor["version"] == registry["registry_version"] == "0.12.0"
+    assert descriptor["path"] == "registries/core/0.12.0.json.gz"
     body = gzip.decompress((root / descriptor["path"]).read_bytes())
     assert hashlib.sha256(body).hexdigest() == descriptor["sha256"]
     assert json.loads(body) == dict(registry)
@@ -513,12 +514,80 @@ def test_amending_an_uncommitted_root_is_refused(tmp_path, registry, minimal):
         _amend(tmp_path / "nothing", registry, {"core.processing_runs": _runs()})
 
 
-def test_an_amendment_may_not_replace_a_core_resource(tmp_path, registry, minimal):
+def test_an_amendment_may_not_change_a_held_row(tmp_path, registry, minimal):
     """Part 05 §15.2: a packet whose core data changes is a new packet, not a new version."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
-    with pytest.raises(ValueError, match="new packet"):
-        _amend(root, registry, {"core.sessions": minimal["core.sessions"]})
+    changed = [dict(minimal["core.sessions"][0], session_start_time="2026-08-28T00:00:00Z")]
+    with pytest.raises(AmendmentRefused, match="new packet"):
+        _amend(root, registry, {"core.sessions": changed})
+    retimed = [dict(minimal["core.clocks"][0], tick_rate_num=1000)]
+    with pytest.raises(AmendmentRefused, match="core.clocks"):
+        _amend(root, registry, {"core.clocks": retimed})
+
+
+def test_an_amendment_drops_a_row_the_packet_holds(tmp_path, registry, minimal):
+    """Part 05 §4.3: a row equal to a held row is dropped, and a table gaining none is not written."""
+    root = tmp_path / "s001"
+    _write(root, registry, minimal)
+    before = {e["resource_id"]: e["uri"] for e in json.loads((root / "packet.json").read_text())["resources"]}
+    assert _amend(root, registry, {**minimal, "core.processing_runs": _runs()}).passed
+    after = {e["resource_id"]: e["uri"] for e in json.loads((root / "packet.json").read_text())["resources"]}
+    assert {r: u for r, u in after.items() if r in before} == before
+    assert set(after) - set(before) == {"core.processing_runs"}
+
+
+def test_an_amendment_numbers_after_every_held_identifier(tmp_path, registry, minimal):
+    """Part 05 §4.3: a held name keeps its number and an added one follows the largest held."""
+    root = tmp_path / "s001"
+    scoped = {"scope_kind": "core.sessions", "scope": "s001"}
+    _write(root, registry, {**minimal, "core.processing_runs": _runs(**scoped)})
+    added = [*_runs(processing_run_id="run0", **scoped), *_runs(**scoped)]
+    assert _amend(root, registry, {"core.processing_runs": added}).passed
+    runs = open_packet(root).table("core.processing_runs").to_pylist()
+    assert [(r["processing_run_id"], r["processing_run_name"]) for r in runs] == [(0, "run1"), (1, "run0")]
+    entry = next(
+        e
+        for e in json.loads((root / "packet.json").read_text())["resources"]
+        if e["resource_id"] == "core.processing_runs"
+    )
+    assert entry["uri"] == "tables/core/processing_runs.0.1.1.parquet"
+    assert (root / "tables/core/processing_runs.parquet").is_file()
+
+
+def test_an_added_run_of_a_held_scope_is_preferred(tmp_path, registry, minimal):
+    """Part 05 §12: the added run is an alternative to the held one, and the amendment says which is current."""
+    root = tmp_path / "s001"
+    scoped = {"scope_kind": "core.sessions", "scope": "s001"}
+    _write(root, registry, {**minimal, "core.processing_runs": _runs(**scoped)})
+    writer = PacketWriter(registry, packet_id=root.name)
+    writer.amending(Held.open(root))
+    name = writer.name_apart("processing_run_id", "run1")
+    assert name == "run1.2"
+    writer.add("core.processing_runs", _runs(processing_run_id=name, **scoped))
+    assert writer.amend(root).passed
+    packet = open_packet(root)
+    runs = {r["processing_run_id"]: r["processing_run_name"] for r in packet.table("core.processing_runs").to_pylist()}
+    [preference] = packet.table("core.preferred_runs").to_pylist()
+    assert runs[preference["processing_run_id"]] == "run1.2"
+
+
+def test_a_preference_replaces_the_held_row_of_its_key(tmp_path, registry, minimal):
+    """Part 05 §15.2: the one row an amendment may replace, and the superseded version keeps it."""
+    root = tmp_path / "s001"
+    scoped = {"scope_kind": "core.sessions", "scope": "s001"}
+    runs = [*_runs(**scoped), *_runs(processing_run_id="run2", **scoped)]
+    preference = {"session_id": "s001", "activity_type": "materialization", **scoped, "reason": "first"}
+    _write(
+        root,
+        registry,
+        {**minimal, "core.processing_runs": runs, "core.preferred_runs": [dict(preference, processing_run_id="run1")]},
+    )
+    assert _amend(
+        root, registry, {"core.preferred_runs": [dict(preference, processing_run_id="run2", reason="second")]}
+    ).passed
+    [row] = open_packet(root).table("core.preferred_runs").to_pylist()
+    assert (row["processing_run_id"], row["reason"]) == (1, "second")
 
 
 def test_an_amendment_may_extend_a_provenance_table(tmp_path, registry, minimal):
@@ -563,7 +632,9 @@ def test_a_failed_amendment_restores_the_registry(tmp_path, registry, minimal):
     writer.add("core.processing_runs", _runs(status="bogus"))
     with pytest.raises(CommitRefused):
         writer.amend(root)
-    assert json.loads((root / "packet.json").read_text())["registries"]["core"]["version"] == "0.11.0"
+    assert (
+        json.loads((root / "packet.json").read_text())["registries"]["core"]["version"] == registry["registry_version"]
+    )
     assert not (root / "registries" / "core" / "9.9.9.json.gz").exists()
 
 

@@ -25,6 +25,7 @@ import json
 import re
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -623,6 +624,11 @@ class Recipe:
     #: Part 05 §3.3: resource to `{source, reason}`, the source kind that owns a resource several
     #: listed sources produce. The only preferences a build applies.
     preferences: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
+    #: The `packet_version` this recipe amends, which makes its build an amending build (Part 05
+    #: §15.1), or None for a new packet.
+    amends: str | None = None
+    #: Part 05 §12: each run the recipe prefers among runs sharing an activity and scope.
+    preferred_runs: tuple[Mapping[str, Any], ...] = ()
 
     @classmethod
     def load(cls, path: str | Path, *, out: str | Path | None = None) -> Recipe:
@@ -744,6 +750,8 @@ class Recipe:
             ),
             limits=document.get("commit", {}),
             preferences=document.get("preference", {}),
+            amends=packet.get("amends"),
+            preferred_runs=tuple(document.get("preferred_run", ())),
         )
 
     def with_sample(self, sample: int) -> Recipe:
@@ -825,7 +833,14 @@ class Recipe:
                 claimed.setdefault(resource, []).append(source.kind)
         return claimed
 
-    def check(self, registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()) -> list[Problem]:
+    def check(
+        self,
+        registry: Mapping[str, Any],
+        extensions: Sequence[Mapping[str, Any]] = (),
+        *,
+        held_tables: Collection[str] = (),
+        held_clocks: Collection[str] = (),
+    ) -> list[Problem]:
         """Everything wrong with the recipe that is knowable without reading a source.
 
         Parameters
@@ -837,6 +852,9 @@ class Recipe:
             resolve against core; core's never resolve against an extension, which Part 09 §2
             requires by forbidding core to reference one at all. Given in the order of the
             `[packet].extensions` entries they resolve from, so a refusal can name the entries.
+        held_tables, held_clocks : collection of str
+            For an amending build, the tables the packet names and the names of the clocks it
+            holds, which count as supplied and declared (Part 05 §3.5).
 
         Returns
         -------
@@ -861,6 +879,7 @@ class Recipe:
         # (Part 12 §5); catalog instances are bound by the rows of the table it owns instead.
         singletons = payloads(registry, extensions)
         owners, claimants = self.owners, self.claimants
+        supplied = {**claimants, **{r: claimants.get(r, ["packet"]) for r in held_tables}}
         errors: list[str] = []
         warnings: list[str] = []
 
@@ -880,8 +899,10 @@ class Recipe:
         errors.extend(self._arbitration_problems())
         errors.extend(self._extension_problems(extensions or ()))
         warnings.extend(self._unclaimed())
-        errors.extend(self._dangling_references(tables, claimants, warnings))
-        errors.extend(self._clock_problems())
+        errors.extend(self._dangling_references(tables, claimants, warnings, supplied))
+        errors.extend(self._clock_problems(held_clocks))
+        errors.extend(self._preferred_run_problems())
+        errors.extend(self._amending_problems())
         errors.extend(self._option_problems())
         errors.extend(self._materialize_problems())
         errors.extend(self._prefix_problems())
@@ -1049,7 +1070,11 @@ class Recipe:
         return errors, warnings, notes
 
     def _dangling_references(
-        self, tables: Mapping[str, Any], supplied: Mapping[str, list[str]], warnings: list[str]
+        self,
+        tables: Mapping[str, Any],
+        claimed: Mapping[str, list[str]],
+        warnings: list[str],
+        supplied: Mapping[str, list[str]] | None = None,
     ) -> list[str]:
         """Foreign keys from an owned table into a table no source produces.
 
@@ -1057,10 +1082,11 @@ class Recipe:
         every row dangles, so the packet cannot validate. A **nullable** one may be legitimately
         empty, so it is a warning -- and worth saying, because `generate(only=...)` silently
         skips a foreign-key check whose target is absent, which is the quiet version of the
-        same problem.
+        same problem. `supplied` adds, as targets only, the tables an amended packet holds.
         """
+        supplied = claimed if supplied is None else supplied
         problems = []
-        for resource in sorted(supplied):
+        for resource in sorted(claimed):
             spec = tables.get(resource)
             if spec is None:
                 continue
@@ -1090,6 +1116,42 @@ class Recipe:
             for spec in self.sources
             for resource in sorted(declared(spec)["produces"] - claimed)
         ]
+
+    def _preferred_run_problems(self) -> list[str]:
+        """Two `preferred_run` entries of one key, or a `chosen_at` naming no instant (Part 05 §3.5)."""
+        problems = []
+        keys = [(str(e["activity_type"]), str(e["scope_kind"]), str(e["scope"])) for e in self.preferred_runs]
+        problems += [
+            f"[[preferred_run]] {activity} of {kind} {scope} is declared {keys.count(key)} times; a recipe "
+            "prefers one run per activity and scope (Part 05 §12)"
+            for key in sorted(set(keys))
+            if keys.count(key) > 1
+            for activity, kind, scope in [key]
+        ]
+        problems += [
+            f"[[preferred_run]] {entry['processing_run_name']} gives chosen_at {entry['chosen_at']!r}, which names "
+            "no instant; give an offset date-time"
+            for entry in self.preferred_runs
+            if "chosen_at" in entry and normalized_chosen_at(entry["chosen_at"]) is None
+        ]
+        return problems
+
+    def _amending_problems(self) -> list[str]:
+        """Report each member an amending recipe declares where the packet's rows prevail (Part 05 §3.5)."""
+        if self.amends is None:
+            return []
+        problems = [
+            f"[session] {name} is declared, and an amending recipe declares only session_id"
+            for name in sorted(self.session)
+            if name != "session_id"
+        ]
+        problems += [
+            f"[subject] {name} is declared, and an amending recipe declares none" for name in sorted(self.subject)
+        ]
+        problems += [
+            f"[overrides] {name} is declared, and an amending recipe declares none" for name in sorted(self.overrides)
+        ]
+        return problems
 
     def _storage_problems(self) -> list[str]:
         """Storage options that carry a credential, which a recipe must not (Part 05 §3.1).
@@ -1293,12 +1355,20 @@ class Recipe:
             ),
         ]
 
-    def _clock_problems(self) -> list[str]:
-        """Clock IDs that are declared twice, referenced but absent, or parented to nothing."""
+    def _clock_problems(self, held: Collection[str] = ()) -> list[str]:
+        """Clock IDs that are declared twice, referenced but absent, or parented to nothing.
+
+        A clock an amended packet holds counts as declared, and declaring it again is refused, since
+        its held row would then meet a second (Part 05 §3.5).
+        """
         declared = [c.clock_id for c in self.clocks]
-        known = set(declared)
+        known = set(declared) | set(held)
         problems = [
             f"clock {c} is declared more than once" for c in sorted({c for c in declared if declared.count(c) > 1})
+        ]
+        problems += [
+            f"clock {c} is declared, and the packet this recipe amends holds a clock of that name"
+            for c in sorted(set(declared) & set(held))
         ]
         reference = self.session.get("reference_clock_id")
         if reference and reference not in known:
@@ -1307,6 +1377,21 @@ class Recipe:
             if clock.parent_clock_id and clock.parent_clock_id not in known:
                 problems.append(f"clock {clock.clock_id} names parent {clock.parent_clock_id!r}, which is not declared")
         return problems
+
+
+def normalized_chosen_at(value: Any) -> datetime | None:
+    """Return a `preferred_run` entry's `chosen_at` as a UTC timestamp, or None where it cannot be one.
+
+    A local date-time or a bare date names no instant, so it is not normalized (Part 05 §3.5).
+    """
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if not isinstance(value, datetime) or value.tzinfo is None:
+        return None
+    return value.astimezone(timezone.utc)
 
 
 __all__ = [
@@ -1319,5 +1404,6 @@ __all__ = [
     "Problem",
     "Recipe",
     "SourceSpec",
+    "normalized_chosen_at",
     "redacted",
 ]

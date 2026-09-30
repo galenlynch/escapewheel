@@ -4,7 +4,7 @@ A registry's source is a directory: `registry.toml` holds the document's own fie
 `<resource_id>.toml` declares one resource. A file uses the published format's keys (Part 02
 §9) and differs from the document it produces in spelling only:
 
-- a table's `primary_key`, `columns`, `references` and `rules` sit at the top of its file, where
+- a table's `primary_key`, `columns`, `references`, `rules` and `amendment_groups` sit at the top of its file, where
   the document nests them under `table`;
 - a single-column reference is written on its column, as `references = "<resource>"` where the
   target column has the same name and `references = { resource = "...", column = "..." }`
@@ -23,7 +23,7 @@ from canonical import canonical, dumps
 
 HERE = Path(__file__).resolve().parent
 HEADER = "registry.toml"
-TABLE = ("primary_key", "columns", "references", "rules")
+TABLE = ("primary_key", "columns", "references", "rules", "amendment_groups")
 
 
 def sources() -> dict[Path, Path]:
@@ -157,6 +157,7 @@ def _table(resource: str, source: dict[str, Any]) -> dict[str, Any]:
         "primary_key": source["primary_key"],
         "references": references,
         "rules": rules,
+        "amendment_groups": source["amendment_groups"],
     }
 
 

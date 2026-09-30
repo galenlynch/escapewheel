@@ -13,7 +13,7 @@ from escapewheel_writer import PacketWriter
 from escapewheel_writer.writer import CommitRefused
 
 EXTENSION = {
-    "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
+    "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
     "registry_id": "task",
     "registry_version": "0.1.0",
     "logical_standard_version": "escapewheel-logical-v0.1",
@@ -55,6 +55,7 @@ EXTENSION = {
                     },
                 ],
                 "primary_key": ["trial_id"],
+                "amendment_groups": [["trial_id"]],
                 "references": [
                     {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
                     {"columns": ["trial_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
@@ -607,7 +608,7 @@ def test_two_registries_for_one_extension_are_refused_given_directly(registry):
 
 def _vrf_registry():
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
         "registry_id": "vrf",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -656,6 +657,7 @@ def _vrf_registry():
                         },
                     ],
                     "primary_key": ["session_id", "site_id"],
+                    "amendment_groups": [["session_id", "site_id"]],
                     "references": [
                         {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
                     ],

@@ -81,6 +81,11 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
             out.append(f"- {_code(ref['columns'])} → `{ref['resource']}` ({target})")
         out.append("")
 
+    groups = spec.get("amendment_groups")
+    listed = " · ".join(f"({_code(group)})" for group in groups) if groups else "none"
+    out.append(f"**Amendment groups** — {listed}  ")
+    out.append("")
+
     if rules := spec.get("rules"):
         out.append(f"**Tier 2 rules** — {len(rules)}")
         out.append("")

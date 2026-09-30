@@ -50,10 +50,9 @@ builds' manifests:
 
 `core.units` and `core.intervals` keep one digest across these four builds of each session, so
 these rebuilds kept every unit and interval identifier, and nothing in either packet says so. A
-rebuild can also renumber. Under R148, a rebuild adding
-a kind of interval that sorts before the trials moves every trial's identifier, as §2.2 of the
-proposal `an-amendment-adds-groups-of-rows-a-packet-lacks` measured, and the rebuild still carries
-the same `packet_id` and `packet_version`.
+rebuild can also renumber. Under R148, a rebuild adding a kind of interval that sorts before the
+trials moves every trial's identifier, as R150 §2.2 measured, and the rebuild still carries the
+same `packet_id` and `packet_version`.
 
 ### 2.2 Nothing records the packet a build replaces
 
@@ -141,7 +140,7 @@ same version, just as nothing keeps two amendments from doing so (R32 §7).
 | logical prose and registry | Unchanged. The link is a manifest fact, read before any table (Part 04 §2), and no table records it. |
 | physical profiles | Part 03 §8.1's sentence on corrections cites the replacement rule. Part 03 §9 is unchanged. |
 | packet manifest and JSON Schemas | Part 04 §3 gains an optional member naming the replaced packets and states its meaning, and the manifest schema declares it. The recipe schema Part 05 §3.1 incorporates gains a member naming the packets a build replaces. |
-| validation and import | Part 05 states what a replacement is and its major-version rule. §9.3 compares against the packets a recipe names, §15.1 has an amendment keep its major version and the link, and §15.2's correction becomes a replacement. The proposal `an-amendment-adds-groups-of-rows-a-packet-lacks` states that identifiers are stable across a packet's amendments, which are then the versions sharing a major version. |
+| validation and import | Part 05 states what a replacement is and its major-version rule. §9.3 compares against the packets a recipe names, §15.1 has an amendment keep its major version and the link, and §15.2's correction becomes a replacement. R150 §5 states that identifiers are stable across a packet's amendments, which are then the versions sharing a major version. |
 | extensions | Unchanged. |
 | reader, writer, validator, adapters | The writer reads each named manifest, records the link, sets the version, and compares against the named packets; today it compares against a packet its caller names, records nothing, and sets 0.1.0 for every build. The validator checks the major-version rule and, holding a named packet, its digest. A reader may expose the link. Adapters are unchanged. |
 | existing packets | They conform unchanged, since the member is optional. The field test's builds would name the builds they replace. |

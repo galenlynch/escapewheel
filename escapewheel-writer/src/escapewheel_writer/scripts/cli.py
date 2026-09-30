@@ -28,9 +28,11 @@ import time
 from pathlib import Path
 from typing import Any
 
+from escapewheel_reader.registries import gunzip_member
 from escapewheel_validator import RegistryRejected, check_registry_context_bytes
 
 from .. import compare
+from ..amending import AmendmentRefused, Held
 from ..extensions import load_checked as load_extension_context
 from ..recipe import RECIPE_SUPPLIES, Recipe, contributes, produces
 from ..session import build, materializers
@@ -204,10 +206,15 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
     # delivery lands from where the packet is going.
     recipe = Recipe.load(args.recipe, out=args.out)
     registry_path = args.registry or recipe.registry
-    if registry_path is None:
+    # Part 05 §15.1: an amending build binds, under an ID its recipe names nothing for, the
+    # registry the packet binds.
+    bound = _bound_registries(recipe.out) if recipe.amends is not None else {}
+    if registry_path is None and "core" not in bound:
         print("error: no registry; declare [packet].registry or pass --registry", file=sys.stderr)
         return 2
-    core_context = check_registry_context_bytes(Path(registry_path).read_bytes())
+    core_context = check_registry_context_bytes(
+        Path(registry_path).read_bytes() if registry_path is not None else bound["core"]
+    )
     if args.registry_result is not None:
         args.registry_result.write_text(json.dumps(core_context.result.to_dict(), indent=2) + "\n")
     if core_context.result.state != "valid":
@@ -217,6 +224,14 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
     extension_contexts = [
         load_extension_context(named, core_context, base=recipe.path.parent) for named in recipe.extensions
     ]
+    named_ids = {
+        str(context.document.get("registry_id")) for context in extension_contexts if isinstance(context.document, dict)
+    }
+    extension_contexts += [
+        check_registry_context_bytes(body, core=core_context)
+        for registry_id, body in sorted(bound.items())
+        if registry_id != "core" and registry_id not in named_ids
+    ]
     rejected = [context for context in extension_contexts if context.result.state != "valid"]
     if rejected:
         print(f"error: extension registry is {rejected[0].result.state}", file=sys.stderr)
@@ -225,7 +240,15 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
     if args.sample:
         recipe = recipe.with_sample(args.sample)
 
-    problems = recipe.check(registry, extensions)
+    held = {}
+    if recipe.amends is not None:
+        try:
+            amended = Held.open(recipe.out)
+        except AmendmentRefused as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        held = {"held_tables": amended.tables_named(), "held_clocks": amended.clock_names()}
+    problems = recipe.check(registry, extensions, **held)
     for problem in problems:
         print(f"  {problem}", file=sys.stderr)
     if any(p.level == "error" for p in problems):
@@ -271,7 +294,10 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
     # and after `commit` there is nothing left to compare against.
     reference = compare.resources(args.compare or out)
     try:
-        report = writer.commit(out, limits=limits or None, say=say, materialize=derive)
+        if recipe.amends is not None:
+            report = writer.amend(out, limits=limits or None, say=say, materialize=derive)
+        else:
+            report = writer.commit(out, limits=limits or None, say=say, materialize=derive)
     except CommitRefused as exc:
         _say_refusal(exc)
         return 1
@@ -282,6 +308,15 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
             print(f"  lost  {resource_id}", file=sys.stderr)
     print(f"committed {out} — {report.warnings} warning(s)")
     return 0
+
+
+def _bound_registries(root: Path) -> dict[str, bytes]:
+    """Return the exact bytes of each registry the packet at `root` binds, by registry ID."""
+    manifest = root / "packet.json"
+    if not manifest.is_file():
+        return {}
+    registries = json.loads(manifest.read_text()).get("registries", {})
+    return {name: gunzip_member((root / bound["path"]).read_bytes()) for name, bound in registries.items()}
 
 
 def _source_cache(args: argparse.Namespace, out: Path) -> Path | None:

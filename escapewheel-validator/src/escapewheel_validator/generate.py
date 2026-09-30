@@ -60,7 +60,7 @@ def concerns(check: Check, written: Collection[str]) -> bool:
 
     Generated Tier 1 checks carry dependencies derived from registry structure, while Tier 2
     checks carry base relations returned by the Part 11 parser. Anything else reads only files an
-    amendment may not modify (Part 05 §15.2) and Part 04 §5.1 declares immutable, so it can only
+    amendment may not modify (Part 05 §15.1) and Part 04 §5.1 declares immutable, so it can only
     reach the verdict it reached before.
     """
     return bool(check.dependencies & set(written))

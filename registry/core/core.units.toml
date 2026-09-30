@@ -4,6 +4,7 @@ instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
 primary_key = ["unit_id"]
+amendment_groups = [["sorting_run_id", "curation_id"]]
 
 [[columns]]
 name = "session_id"

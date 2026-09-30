@@ -49,10 +49,12 @@ from escapewheel_validator import (
     validate,
     verify_order,
 )
+from escapewheel_validator.amendment import DERIVED, chain_reaches
 from escapewheel_validator.generate import adjacency_settles_uniqueness
 from escapewheel_validator.validator import OrderViolation
 
 from . import opaque
+from .amending import Held
 from .arrow import build, number_batch, schema, sort_key
 from .encoding import encodings, inefficient
 from .keys import Keys
@@ -335,8 +337,8 @@ def _write_stream(
     return written
 
 
-#: Core tables an amendment may extend (Part 05 §15.2). Append-only by nature: a row records that
-#: something ran, and a later run does not change what an earlier one did.
+#: Core tables whose added rows leave every derived resource current (Part 05 §15.2), since a row
+#: records what ran, not what was measured.
 PROVENANCE = ("core.processing_runs", "core.source_files", "core.processing_run_inputs")
 
 #: Where superseded manifests are retained (Part 03 §9).
@@ -714,6 +716,46 @@ class PacketWriter:
         #: Packet-owned opaque resources as each source delivered them, bound at commit, once every
         #: source's catalog rows are in (Part 12 §5).
         self._payloads: list[opaque.StagedPayload] = []
+        #: The packet version this writer amends, whose numbers seed `keys` and against whose rows
+        #: every table settles (Part 05 §4.3), or None for a new packet.
+        self._held: Held | None = None
+        #: For an amendment, the packet root and the new version, which name a file that would
+        #: otherwise overwrite one the packet holds (Part 03 §9).
+        self._amending: tuple[Path, str] | None = None
+
+    def amending(self, held: Held, *, prevail: bool = False) -> None:
+        """Amend `held` rather than build a new packet (Part 05 §15).
+
+        Its numbers are held before any is assigned, so a held name keeps its identifier and an
+        added one is numbered after every held one, and each table is settled against its held rows
+        when staged (Part 05 §4.3).
+
+        Parameters
+        ----------
+        held : Held
+            The packet version amended.
+        prevail : bool, default False
+            Keep the packet's session and subject rows whatever a source delivers, as an amending
+            build does (Part 05 §3.5), rather than settling them like any other row.
+
+        Raises
+        ------
+        AmendmentRefused
+            If a held row owns an assigned identifier and gives it no name.
+        """
+        documents = (self._registry, *self._extensions.values())
+        declarations = {rid: decl for document in documents for rid, decl in document["resources"].items()}
+        held.bind(
+            {rid: decl["table"] for rid, decl in declarations.items() if decl.get("kind") == "table"},
+            {rid: str(decl.get("content_class")) for rid, decl in declarations.items()},
+        )
+        held.prevail = prevail
+        held.seed(self.keys)
+        self._held = held
+
+    def name_apart(self, kind: str, name: str) -> str:
+        """Return a name the packet this writer amends does not hold, `name` itself where it holds none."""
+        return name if self._held is None else self._held.apart(kind, name)
 
     def declaration(self, declaration_id: str) -> Mapping[str, Any] | None:
         """Return one logical declaration from core or the owning extension."""
@@ -1242,9 +1284,8 @@ class PacketWriter:
 
         entries = []
         for resource_id, spec in self._staged_arrays.items():
-            namespace, name = resource_id.split(".", 1)
             declaration_id = spec.declaration_id
-            relative = f"arrays/{namespace}/{name}.zarr"
+            relative = self._relative("arrays", resource_id, "zarr")
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             if spec.written is not None:
@@ -1358,15 +1399,19 @@ class PacketWriter:
                 continue
             spec = self.spec(resource_id)
             assert spec is not None
-            namespace, name = resource_id.split(".", 1)
-            relative = f"tables/{namespace}/{name}.parquet"
+            relative = self._relative("tables", resource_id, "parquet")
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             if resource_id in self._batches:
+                batches = self._batches[resource_id]
+                # A restage writes afresh, and an amendment adding nothing must leave no file.
+                path.unlink(missing_ok=True)
+                if self._held is not None:
+                    batches = self._held.settle_stream(resource_id, batches, derived=self._derived)
                 try:
                     self.rows_written[resource_id] = _write_stream(
                         spec,
-                        self._batches[resource_id],
+                        batches,
                         path,
                         resource_id,
                         self._encoding_exceptions,
@@ -1379,8 +1424,14 @@ class PacketWriter:
                     raise OrderViolation(f"{resource_id}: {exc}") from None
                 if sort_key(resource_id, spec):
                     self._ordered.add(resource_id)
+                if not path.exists():
+                    # Nothing the amendment adds, so the held entry stands (Part 05 §4.3).
+                    continue
             else:
-                table = build(resource_id, spec, self._tables[resource_id], self.keys, self._paired_kinds(resource_id))
+                built = build(resource_id, spec, self._tables[resource_id], self.keys, self._paired_kinds(resource_id))
+                table = built if self._held is None else self._held.settle(resource_id, built, derived=self._derived)
+                if table is None:
+                    continue
                 self.rows_written[resource_id] = table.num_rows
                 # No `row_group_size`: pyarrow's default is min(rows, 2**20), which puts each
                 # of these tables in one row group, and that is the right answer — they are
@@ -1414,6 +1465,55 @@ class PacketWriter:
             entry["digest"] = _digest(path)
             entries.append(entry)
         return entries
+
+    def _relative(self, folder: str, resource_id: str, suffix: str) -> str:
+        """Return where a resource is written, apart from any file the amended packet holds (Part 03 §9)."""
+        namespace, name = resource_id.split(".", 1)
+        relative = f"{folder}/{namespace}/{name}.{suffix}"
+        if self._amending is not None and (self._amending[0] / relative).exists():
+            relative = f"{folder}/{namespace}/{name}.{self._amending[1]}.{suffix}"
+        return relative
+
+    def _prefer_added_runs(self) -> None:
+        """Prefer each run an amendment adds to the scope of a run the packet holds (Part 05 §12).
+
+        A run of an activity other than `import` sharing its session, activity, `scope_kind` and
+        `scope` with a held run is an alternative to it, and the one added is preferred unless a
+        preference of that key is already delivered, as a recipe declares one (Part 05 §3.1).
+        """
+        if self._held is None:
+            return
+        held = self._held
+        scopes = {
+            (run["session_id"], run["activity_type"], run["scope_kind"], run["scope"])
+            for run in held.named_rows("core.processing_runs", self.keys)
+            if run.get("scope") is not None and run["activity_type"] != "import"
+        }
+        held_runs = held.held_names.get("processing_run_id", set())
+        preferred = {
+            (row.get("session_id", self._session), row["activity_type"], row["scope_kind"], row["scope"])
+            for row in self._tables.get("core.preferred_runs", [])
+        }
+        adding = []
+        for run in self._tables.get("core.processing_runs", []):
+            name = str(run["processing_run_id"])
+            if name in held_runs or run.get("activity_type") == "import":
+                continue
+            key = (run.get("session_id", self._session), run["activity_type"], run.get("scope_kind"), run.get("scope"))
+            if key in scopes and key not in preferred:
+                preferred.add(key)
+                adding.append(
+                    {
+                        "session_id": key[0],
+                        "activity_type": key[1],
+                        "scope_kind": key[2],
+                        "scope": key[3],
+                        "processing_run_id": name,
+                        "reason": "the amendment adds this run to the scope of a run the packet holds (Part 05 §12)",
+                    }
+                )
+        if adding:
+            self.add("core.preferred_runs", adding)
 
     def _preassign(self) -> None:
         """Assign a number to every name this packet uses, before any table is built (Part 05 §4.3).
@@ -1590,21 +1690,22 @@ class PacketWriter:
         return document
 
     def stage_at(self, root: str | Path) -> Path:
-        """Prepare, empty, the staging area `commit` will use at `root`, and return it.
+        """Prepare, empty, the staging area `commit` or `amend` will use at `root`, and return it.
 
-        For a build pointing deliveries there before any source runs, so commit moves what they
+        For a build pointing deliveries there before any source runs, so the commit moves what they
         wrote by rename (Part 12 §5) and keeps it rather than clearing it.
 
         Raises
         ------
         FileExistsError
-            If `root` already holds a committed manifest.
+            If `root` already holds a committed manifest and this writer amends none.
         PromotionRecordUnreadable
             If the staging area holds a promotion record this writer cannot read.
         """
         root = Path(root)
         _act_on_promotion(root)
-        _refuse_occupied(root)
+        if self._held is None:
+            _refuse_occupied(root)
         self._prepared = None
         staging = self._staging(root)
         self._prepared = staging.resolve()
@@ -1770,41 +1871,46 @@ class PacketWriter:
         *,
         packet_version: str | None = None,
         limits: Mapping[str, Any] | None = None,
+        say: Callable[[str], None] = lambda _: None,
+        materialize: Sequence[Callable[[Any, PacketWriter], None]] = (),
     ) -> Report:
-        """Add resources to a committed packet, as a new packet version (R32).
+        """Publish what this writer holds as a new version of a committed packet (Part 05 §15).
 
-        An amendment modifies no file the superseded manifest names. A table that gains rows is
-        written as a **new file** and the amended manifest names that one, so Part 03 §8.1's
-        immutability holds literally rather than by exception.
-
-        The sequence is `commit`'s, with the swap at the end doing more work: the added
-        resources are staged and validated before anything reaches a final path, the superseded
-        manifest and registries are retained, and `packet.json` is replaced by an atomic
-        rename last. A reader sees the old packet or the new one, never a blend.
+        Each table settles against the packet's rows as it is staged (Part 05 §4.3), so what is
+        written adds groups of rows the packet lacks and changes no row it holds, and a resource
+        the packet names is written to a new file (Part 03 §9). Everything is staged and validated,
+        against the superseded version too (Part 05 §15.6), before anything reaches a final path,
+        and `packet.json` is replaced by an atomic rename last, so a reader sees the old version or
+        the new one.
 
         Parameters
         ----------
         root : str or Path
             A packet root holding a committed manifest.
         packet_version : str, optional
-            The new version. Defaults to bumping the minor component.
+            The new version. Defaults to bumping the patch component.
         limits : Mapping, optional
-            DuckDB settings bounding validation. Part 05 §15.4 narrows an amendment to the rules
-            attached to a written resource or naming one, but every table is still registered
-            alongside it, so a surviving rule may read anything the packet holds.
+            DuckDB settings bounding validation, as for `commit`.
+        say : callable, optional
+            Progress reporter, as for `commit`.
+        materialize : sequence of callable, optional
+            As for `commit`, each given the staged amended packet, so a derived resource is derived
+            from what the new version holds and replaces the one the packet names (Part 05 §8).
 
         Returns
         -------
         Report
-            The validation report for the **whole** packet, not only what was added (Part 05 §15.4).
+            The validation report for the whole packet, not only what was added (Part 05 §15.4).
 
         Raises
         ------
         NotCommitted
             If `root` holds no committed manifest. Use `commit` to create a packet.
+        AmendmentRefused
+            If a delivered row would change or grow what the packet holds, which is a new packet
+            rather than a new version of this one (Part 05 §15.2).
         ValueError
-            If the amendment would replace a core resource other than a provenance table, which
-            is a new packet rather than a new version of this one (Part 05 §15.2).
+            If `packet_version` does not sort after the packet's.
         CommitRefused
             If validation found errors. The packet stays at its previous version, and nothing
             was written outside the staging area.
@@ -1812,80 +1918,139 @@ class PacketWriter:
             If the staging area holds a promotion record this writer cannot read.
         """
         root = Path(root)
+        _act_on_promotion(root)
         if not (root / MANIFEST).is_file():
             raise NotCommitted(f"{root} holds no committed {MANIFEST}; use commit() to create a packet")
-        _act_on_promotion(root)
-        superseded = json.loads((root / MANIFEST).read_text())
-
-        added = set(self.resources)
-        standing = {e["resource_id"] for e in superseded["resources"]}
-        if clash := sorted(r for r in added & standing if not r.startswith("analysis.") and r not in PROVENANCE):
+        if self._held is None:
+            self.amending(Held.open(root))
+        held = self._held
+        assert held is not None
+        superseded = dict(held.manifest)
+        version = packet_version or _bump(str(superseded["packet_version"]))
+        if semver(version) <= semver(str(superseded["packet_version"])):
             raise ValueError(
-                f"amending would replace {clash}; a packet whose core data changes is a new packet (Part 05 §15.2)"
+                f"packet_version {version} does not sort after {superseded['packet_version']} (Part 05 §15.1)"
             )
+        self._amending = (root, version)
+        try:
+            return self._amend(root, held, superseded, version, limits, say, materialize)
+        finally:
+            held.close()
+            self._amending = None
 
-        self._absorb_provenance(root, superseded)
+    def _amend(
+        self,
+        root: Path,
+        held: Held,
+        superseded: Mapping[str, Any],
+        version: str,
+        limits: Mapping[str, Any] | None,
+        say: Callable[[str], None],
+        materialize: Sequence[Callable[[Any, PacketWriter], None]],
+    ) -> Report:
+        """Stage, derive, validate and promote an amendment; `amend` without its preparation."""
+        payloads = [
+            (payload, declaration)
+            for payload, declaration in self._bind_payloads()
+            if not self._held_instance(payload.resource_id, declaration)
+        ]
+        for instances in (self._staged_arrays, self._referenced_arrays, self._referenced_media):
+            for resource_id in [r for r, i in instances.items() if self._held_instance(r, i.declaration_id)]:
+                del instances[resource_id]
+        staging = self._staging(root)
 
-        staging = root / STAGING
-        if staging.exists():
-            shutil.rmtree(staging)
-        staging.mkdir(parents=True)
-        entries = self._with_lineage(self._stage(staging))
+        clock = time.perf_counter()
+        self._prefer_added_runs()
+        entries = self._with_lineage(
+            [
+                *self._stage(staging),
+                *self._stage_arrays(staging),
+                *self._stage_payloads(staging, payloads),
+                *self._reference_arrays(),
+                *self._reference_media(),
+            ]
+        )
+        say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
+        for note in sorted(set(self._encoding_notes)):
+            say(f"  encoding: {note}")
+        for report in self._after_stage:
+            report(say)
+        clock = time.perf_counter()
+        # Before validation, since the validator acquires each registry through the candidate's
+        # descriptor (Part 04 §10); one the packet does not yet store is bound under staging/.
+        registries, added_registries = self._store_registries(root, staging=staging)
 
-        # Validate with the added resources still under staging/, so nothing occupies a final
-        # path until it has passed. The candidate is derived from the superseded manifest, not
-        # rebuilt: every packet-level field this amendment does not change carries over, which
-        # is what keeps the session inventory and description from silently vanishing (Part 05 §15.3).
-        kept = [e for e in superseded["resources"] if e["resource_id"] not in added]
-        candidate = dict(superseded)
-        candidate["resources"] = kept + [dict(e, uri=f"staging/{e['uri']}") for e in entries]
-        candidate["packet_version"] = packet_version or _bump(superseded["packet_version"])
+        def candidate(staged: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+            """Return the amended manifest with every written resource still under staging/."""
+            written = {e["resource_id"] for e in staged}
+            amended = dict(superseded)
+            amended["packet_version"] = version
+            amended["registries"] = registries
+            amended["resources"] = [
+                *(e for e in superseded["resources"] if e["resource_id"] not in written),
+                *(e if e.get("external") else dict(e, uri=f"{STAGING}/{e['uri']}") for e in staged),
+            ]
+            if self._description is not None:
+                amended["description"] = self._description
+            return amended
 
-        # The registries go in before validation, not after: the validator acquires each through
-        # the candidate's descriptor (Part 04 §10). A version the packet already stores stays where
-        # it is, so a superseded manifest still binds the bytes it named (Part 05 §15.3); a new one
-        # is bound under staging/ until it has passed, like the resources.
-        candidate["registries"], added_registries = self._store_registries(root, staging=staging)
-        # Both halves of the amendment are bounded by what it writes (R35). Physical order is
-        # re-read only for those files, and only the rules attached to one or naming one re-run. A
-        # file the amendment does not name is byte-identical to one already verified -- Part 03
-        # §9.2 forbids modifying it and Part 03 §8.1 declares it immutable -- so its order cannot
-        # have changed and a rule reading only it is already answered.
+        if materialize:
+
+            def counts() -> dict[str, int]:
+                return {r: len(self._tables.get(r, ())) for r in self.resources}
+
+            before = counts()
+            for derive in materialize:
+                derive(Packet(root, Manifest.from_dict(candidate(entries))), self)
+                self._prefer_added_runs()
+                say(f"derived {', '.join(sorted(set(self.resources) - set(before)))}")
+                before = {**before, **{r: n for r, n in counts().items() if r not in before}}
+            touched = {r for r, n in counts().items() if n != before.get(r, -1) or r not in before}
+            touched |= set(self.resources) - {e["resource_id"] for e in entries}
+            restaged = self._stage(staging, only=touched)
+            entries = self._with_lineage([*(e for e in entries if e["resource_id"] not in touched), *restaged])
+            say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
+            clock = time.perf_counter()
+
+        amended = candidate(entries)
+        amended["resources"] = self._without_stale(amended["resources"], entries)
         written = {e["resource_id"] for e in entries}
         report = validate(
-            Packet(root, Manifest.from_dict(candidate)),
+            Packet(root, Manifest.from_dict(amended)),
             limits=limits,
             scan=written - self._ordered,
             recheck=written,
+            superseded=superseded,
         )
+        say(f"validated in {time.perf_counter() - clock:.1f} s")
+        clock = time.perf_counter()
         if not report.passed:
             raise CommitRefused(report, staging)
 
+        moved = [e["uri"] for e in entries if not e.get("external")]
         retained = [
             f"{MANIFESTS}/nwb.packet.{manifest['packet_version']}.json"
-            for manifest in (superseded, candidate)
+            for manifest in (superseded, amended)
             if not (root / MANIFESTS / f"nwb.packet.{manifest['packet_version']}.json").exists()
         ]
-        creates = {
-            _created(root, relative) for relative in (*(e["uri"] for e in entries), *added_registries, *retained)
-        } | {f"{MANIFEST}.candidate"}
+        creates = {_created(root, relative) for relative in (*moved, *added_registries, *retained)}
+        creates |= {f"{MANIFEST}.candidate"}
         _claim(root, creates)
-        _record_promotion(staging, str(candidate["packet_version"]), creates)
-        for relative in (*(e["uri"] for e in entries), *added_registries):
+        _record_promotion(staging, version, creates)
+        for relative in (*moved, *added_registries):
             destination = root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(staging / relative), str(destination))
-        for entry in entries:
-            entry["validation_state"] = "passed"
-        candidate["registries"] = {
-            name: dict(bound, path=str(bound["path"]).removeprefix(f"{STAGING}/"))
-            for name, bound in candidate["registries"].items()
+        by_id = {e["resource_id"]: e for e in entries}
+        amended["resources"] = [
+            dict(by_id[e["resource_id"]], validation_state="passed") if e["resource_id"] in by_id else e
+            for e in amended["resources"]
+        ]
+        amended["registries"] = {
+            name: dict(bound, path=str(bound["path"]).removeprefix(f"{STAGING}/")) for name, bound in registries.items()
         }
-
-        amended = dict(candidate)
-        amended["resources"] = kept + [dict(e) for e in entries]
         amended["validation"] = {
-            "status": "passed" if report.passed else "failed",
+            "status": "passed",
             "validated_at": datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
             "validator_name": "escapewheel_validator",
             "validator_version": _version(),
@@ -1896,30 +2061,41 @@ class PacketWriter:
         candidate_path.write_text(json.dumps(amended, indent=2) + "\n")
         os.replace(candidate_path, root / MANIFEST)
         shutil.rmtree(staging)
+        if self._workspace is not None and self._workspace.exists():
+            shutil.rmtree(self._workspace)
+        say(f"promoted in {time.perf_counter() - clock:.1f} s")
         return report
 
-    def _absorb_provenance(self, root: Path, superseded: Mapping[str, Any]) -> None:
-        """Carry a provenance table's existing rows into the amendment (Part 05 §15.2).
+    def _held_instance(self, resource_id: str, declaration_id: str) -> bool:
+        """Whether a canonical catalog instance is one the amended packet already names.
 
-        R32 permits *adding rows* to these tables, and a resource is staged from whatever this
-        writer holds -- so amending with one new run and nothing else would rewrite the table
-        as that single row and drop every earlier one. Reading them back in is what makes
-        "add" mean add.
+        Its catalog row then equals the held one or is refused as it settles, so the held instance
+        stands and the delivered copy is dropped with its row (Part 05 §4.3).
         """
-        standing = {e["resource_id"]: e for e in superseded["resources"]}
-        for resource_id in [r for r in self._tables if r in PROVENANCE and r in standing]:
-            existing = pq.read_table(root / standing[resource_id]["uri"]).to_pylist()
-            key = (self.spec(resource_id) or {}).get("primary_key") or []
-            taken = {tuple(row.get(k) for k in key) for row in self._tables[resource_id]}
-            collide = sorted(
-                str(tuple(r.get(k) for k in key)) for r in existing if tuple(r.get(k) for k in key) in taken
-            )
-            if collide:
-                raise ValueError(
-                    f"amending {resource_id} would rewrite existing row(s) {collide[:3]}; an amendment adds "
-                    "rows to a provenance table, it does not revise them (Part 05 §15.2)"
-                )
-            self._tables[resource_id] = [*existing, *self._tables[resource_id]]
+        held = self._held
+        return held is not None and resource_id in held.entries and held.canonical(declaration_id)
+
+    def _without_stale(
+        self, resources: Sequence[Mapping[str, Any]], written: Sequence[Mapping[str, Any]]
+    ) -> list[Mapping[str, Any]]:
+        """Drop each derived resource the amendment neither wrote nor left current (Part 05 §15.2).
+
+        One whose `derived_from` chain reaches a canonical table the amendment wrote, other than a
+        provenance table, was derived from rows that are no longer all the packet holds.
+        """
+        held = self._held
+        assert held is not None
+        rewritten = {e["resource_id"] for e in written}
+        sources = {r for r in rewritten if held.canonical(r) and r not in PROVENANCE}
+        chains = {e["resource_id"]: e for e in resources}
+        stale = {
+            e["resource_id"]
+            for e in resources
+            if e["resource_id"] not in rewritten
+            and held.classes.get(str(e.get("declaration_id", e["resource_id"]))) in DERIVED
+            and chain_reaches(chains, e["resource_id"], sources)
+        }
+        return [e for e in resources if e["resource_id"] not in stale]
 
     def _retain(self, root: Path, superseded: Mapping[str, Any], amended: Mapping[str, Any]) -> None:
         """Keep every manifest a packet has had (Part 05 §15.3).

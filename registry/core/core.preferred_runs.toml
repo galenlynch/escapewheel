@@ -4,6 +4,7 @@ instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
 primary_key = ["session_id", "activity_type", "scope_kind", "scope"]
+amendment_groups = [["session_id", "activity_type", "scope_kind", "scope"]]
 
 [[columns]]
 name = "session_id"
@@ -29,7 +30,7 @@ presence = "required"
 role = "discriminator"
 resolves = "optional"
 discriminates = "scope"
-description = "The resource whose primary key `scope` holds, as a dotted resource ID."
+description = "The resource holding the row `scope` names, as a dotted resource ID."
 
 [[columns]]
 name = "scope"
@@ -37,7 +38,7 @@ type = "string"
 presence = "required"
 role = "data"
 vocabulary = "free"
-description = "What it applies to -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the preference is session-wide."
+description = "What it applies to: the scoped row's key where that key is carried, and its `*_name` where it is assigned, as `core.processing_runs.scope` names it."
 
 [[columns]]
 name = "processing_run_id"
@@ -73,6 +74,18 @@ SELECT p.session_id, p.activity_type AS preferred_activity_type, p.scope,
 FROM core.preferred_runs AS p
 JOIN core.processing_runs AS r USING (processing_run_id)
 WHERE r.activity_type IS DISTINCT FROM p.activity_type'''
+
+[[rules]]
+id = "core.preferred_runs.scope_matches_run"
+level = "error"
+message = "a preference names a run whose scope_kind or scope differs from the preference's"
+sql = '''
+SELECT p.session_id, p.activity_type, p.scope_kind AS preferred_scope_kind,
+  p.scope AS preferred_scope, r.scope_kind AS run_scope_kind, r.scope AS run_scope
+FROM core.preferred_runs AS p
+JOIN core.processing_runs AS r USING (processing_run_id)
+WHERE r.scope_kind IS DISTINCT FROM p.scope_kind
+   OR r.scope IS DISTINCT FROM p.scope'''
 
 [[rules]]
 id = "core.preferred_runs.run_in_session"

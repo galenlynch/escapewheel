@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://escapewheel.org/schemas/recipe/0.1.0",
+  "$id": "https://escapewheel.org/schemas/recipe/0.2.0",
   "title": "Escapewheel session recipe",
-  "description": "Shape of a session recipe, per Part 05 §3.1: a TOML 1.0 document, validated in its decoded form. Top-level members are closed, so a misspelled block is refused rather than dropped; a source entry and a materialization are open, because every key they do not name is an option or a parameter their adapter or materializer checks. Fact values under `session` and `subject` are untyped here: TOML dates and times decode to values JSON Schema has no type for, and a build types a fact when it normalizes it (Part 05 §3.6).",
+  "description": "Shape of a session recipe, per Part 05 §3.1: a TOML 1.0 document, validated in its decoded form. Top-level members are closed, so a misspelled block is refused rather than dropped; a source entry and a materialization are open, because every key they do not name is an option or a parameter their adapter or materializer checks. Fact values under `session` and `subject`, and a preferred run's `chosen_at`, are untyped here: TOML dates and times decode to values JSON Schema has no type for, and a build types each when it normalizes it (Part 05 §§3.1 and 3.6).",
   "type": "object",
   "required": [
     "packet"
@@ -18,6 +18,11 @@
           "type": "string",
           "minLength": 1,
           "description": "The packet this recipe builds."
+        },
+        "amends": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "The `packet_version` of the packet this recipe amends (Part 05 §15.1)."
         },
         "out": {
           "type": "string",
@@ -213,6 +218,50 @@
         "additionalProperties": false
       },
       "description": "Which source owns a resource more than one listed source produces, keyed by resource (Part 05 §3.3)."
+    },
+    "preferred_run": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "activity_type",
+          "scope_kind",
+          "scope",
+          "processing_run_name",
+          "reason"
+        ],
+        "properties": {
+          "activity_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The activity chosen among."
+          },
+          "scope_kind": {
+            "$ref": "#/$defs/resource",
+            "description": "The resource holding the scoped row."
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The scoped row's key where carried, its name where assigned."
+          },
+          "processing_run_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The preferred run."
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Why that run is preferred."
+          },
+          "chosen_at": {
+            "description": "When the choice was made."
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Which run is preferred among runs sharing an activity and scope (Part 05 §12)."
     },
     "materialize": {
       "type": "array",

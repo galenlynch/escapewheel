@@ -74,11 +74,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.11.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.12.0` | [Part 02 §9.2](02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.11.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.12.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -953,7 +953,7 @@ This part expressly incorporates the following artifacts:
 |---|---|
 | `registry/registry.schema.json` | exact local JSON structure and conditional shape constraints |
 | `registry/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
-| `registry/registry_contracts/escapewheel-registry-contract-v0.7.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `registry/registry_contracts/escapewheel-registry-contract-v0.8.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
 | `registry/logical_schemas.json` | exact current core and analysis resource declarations, including table columns, keys, references, vocabularies, and rules |
 
 The generated core registry is what a packet embeds. `registry/tables.md` is a generated,
@@ -1036,7 +1036,7 @@ The logical kind states which generic payload structure, if any, Escapewheel int
 
 A table declaration MUST contain `table`, MUST NOT contain `array`, and MUST use singleton
 instances. Its `table` object contains an ordered column list (§3), a primary key or `null`,
-references (§7), and Tier 2 rules (§10.2).
+references (§7), Tier 2 rules (§10.2), and amendment groups (§2.8).
 
 A dense-array declaration MUST contain `array`, MUST NOT contain `table`, and MUST use catalog
 instances. Its `axes_resource` names a visible singleton table declaration. The axes table MUST
@@ -1132,6 +1132,35 @@ The lineage graph contains no self-edge or cycle. Because every analysis resourc
 lineage, every finite analysis chain terminates in canonical core or extension resources. A writer
 and validator apply this policy without regard to kind. A reader may expose the resolved facts
 without validating the registry or possessing a validation receipt for ordinary access.
+
+<a id="ew-amendment-groups" data-spec-anchor="canonical"></a>
+### 2.8 Amendment groups
+
+Every `table` object carries `amendment_groups`, an array of **group lists**, beside its columns,
+primary key, references and rules. A group list is a nonempty array of distinct column names of the
+table. Under one group list, the rows whose listed columns hold equal values, a null equal to a
+null, form one **group**. A group list **carries** each declared reference whose source columns are
+all members of the list, where the referenced table has a column named by each other member: the
+referenced row is then the one the group describes. A version **holds** a group where it holds a row
+of the group, or where the list carries at least one declared reference to a table that does not
+declare `[]` and each such reference resolves, on the group's values, to a row that version holds. A
+canonical table a version's manifest does not name holds no rows in that version. A table an
+amendment may not add rows to declares `[]`.
+[Part 05 §15.2](05_validation_and_import.md#ew-amendment-scope) lets an amendment add rows to a
+table only in groups its superseded version does not hold.
+
+A packet holding a stream therefore holds the stream's group of `core.events` before the stream has
+an event, since that table's list carries `stream_id`'s reference to `core.event_streams`. A packet
+holding a frame holds a basis's group of `core.electrode_coordinates` only where it holds
+coordinates in that basis, since the table's first list carries no reference to
+`core.coordinate_frames`, which has no `coordinate_basis` column. The lists of `core.intervals`, the
+second of `core.unit_quality_labels`, the first of `core.electrode_coordinates` and the second of
+`core.unit_coordinates` carry no reference, since an interval kind, a label source and a coordinate
+basis name no row, so a group under those is held only by its rows.
+
+A group list MUST name only columns whose presence is `required` or `nullable`. Two group lists of
+one table MUST NOT name the same set of columns. A table whose content class is not canonical MUST
+declare `[]`, since an amendment may replace such a resource whole.
 
 <a id="ew-column-declaration" data-spec-anchor="canonical"></a>
 ## 3. Column declaration
@@ -1513,9 +1542,9 @@ A packet binds each registry that declares its resources under
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.9.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.10.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.11.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.12.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -1524,8 +1553,9 @@ the core registry's version. An extension conforming to the incorporated meta-sc
 the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
 The core specification does not assign an extension's version. An extension registry migrated to
 meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0,
-and one migrated to `escapewheel-rule-sql-v0.2` a `registry_version` different from the one it
-carried under `escapewheel-rule-sql-v0.1`. No checker verifies either, since a checker reads only
+one migrated to `escapewheel-rule-sql-v0.2` a `registry_version` different from the one it carried
+under `escapewheel-rule-sql-v0.1`, and one migrated to meta-schema 0.10.0 a `registry_version`
+different from the one it carried under 0.9.0. No checker verifies any of these, since a checker reads only
 the document before it and not the version that document replaced.
 
 A checker selects schemas and contracts only from local artifacts and MUST NOT dereference an
@@ -1593,11 +1623,13 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.7`, selects the 0.9.0
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.8`, selects the 0.10.0
 meta-schema, and lists `escapewheel-rule-sql-v0.2` alone in `rule_languages`. That meta-schema MUST
 declare `finite` as a boolean member of a column, require it where `type` is `float32` or
 `float64`, and forbid it otherwise; the `shape` phase therefore decides §5.4's declaration rule, and
-the descriptor adds no invariant for it. A checker MUST evaluate its phases in this order:
+the descriptor adds no invariant for it. It MUST also require `amendment_groups` in the `table`
+object, after `rules`, as a duplicate-free array of nonempty, duplicate-free arrays of names. A
+checker MUST evaluate its phases in this order:
 
 1. `json`;
 2. `schema_selection`;
@@ -1706,6 +1738,7 @@ The descriptor assigns these invariants in this exact order:
 | `registry.resource.array_axes` | semantic | core, extension |
 | `registry.resource.dependency` | semantic | core, extension |
 | `registry.resource.canonical_targets` | semantic | core, extension |
+| `registry.amendment_groups.resolves` | semantic | core, extension |
 
 Every descriptor anchor MUST identify every numbered-part clause defining the invariant. Invariant
 IDs are unique. The descriptor schema closes its objects; requires nonempty, duplicate-free arrays;
@@ -1734,7 +1767,11 @@ The resource invariants enforce §§2.1–2.7: document-class/content-class elig
 instance eligibility; unambiguous visible catalog bindings; the dense-array axes binding; visible
 singleton dependencies; and canonical resources' canonical targets, whose outcome points at the
 offending reference, `requires` entry or catalog binding and is core-dependent where the target
-lies in the core context. The existing table, column, reference, rule, and external-domain
+lies in the core context. `registry.amendment_groups.resolves` enforces §2.8: it reports a
+group-list member naming no column of its table or a column whose presence is `optional`, two group
+lists of one table naming the same set, and a nonempty `amendment_groups` on a non-canonical table.
+Its outcome points at the offending member, at the later of two group lists naming one set, and at
+`amendment_groups` itself on a non-canonical table. The existing table, column, reference, rule, and external-domain
 invariants operate on the `table` payload of table-kind declarations. Their stable IDs do not
 change merely because their instance pointers gain enclosing `resources` and `table` components.
 
@@ -2254,6 +2291,7 @@ An identifier column is `int32`, or `int64` where its range requires it (Part 02
 Partitioned tables are not part of this profile. A future interface may define immutable member
 selection and cross-file ordering; the present `parquet` interface is one object.
 
+<a id="ew-table-ordering" data-spec-anchor="canonical"></a>
 ### 5.3 Ordering
 
 A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where §5.4 gives no order for a table, the order required is its primary key's. A validator MUST report a departure as an **error**.
@@ -2266,7 +2304,7 @@ Where the scan finds a departure, uniqueness MUST be settled by aggregate rather
 
 A reader MUST NOT depend on stored order for correctness. Establishing the order is the validator's work, and a reader that assumed it would be trusting a property of the profile rather than of the logical standard.
 
-One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST`; Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes.
+One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST`; Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because a build numbers units curation by curation ([Part 02 §12.1](02_core_logical_schemas.md#ew-unit-identity)) and an amendment numbers the units it adds after every unit the packet holds ([Part 05 §4.3](05_validation_and_import.md#ew-import-normalization)), the default order clusters each curation's spikes.
 
 ### 5.4 The overriding orders
 
@@ -2530,9 +2568,13 @@ This specification promises nothing about bytes the packet does not own. What a 
 change, what it retains, what it revalidates, and how cleanup proceeds. This section is how this
 profile realizes an amendment, as Part 00 §7.3 requires of a profile.
 
-A resource that gains rows, a provenance table included, is written as a **new file** that the
-amended manifest names; no byte of the old one changes. Immutability is thereby a property of
-files, and a resource's *content* may be superseded by naming different bytes.
+Every resource an amendment writes
+([Part 05 §15.1](05_validation_and_import.md#ew-amendment-definition)), a table gaining a group or a
+provenance table gaining rows included, is written as a **new file** that the amended manifest
+names; no byte of the old one changes. Immutability is thereby a property of files, and a
+resource's *content* may be superseded by naming different bytes. Since §5.1 makes a table one
+Parquet file and §5.2 defers member files, a table gaining a group is rewritten whole, in the order
+§5.3 requires.
 
 Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file
 an old version named from a file nothing ever named. A packet never amended retains nothing and
@@ -3051,7 +3093,7 @@ sections bind each as follows:
 | actor | sections |
 |---|---|
 | a writer, for each build it performs and each adapter it ships | §§2–4, 6–8, 9.2, 9.3, 11, 12, 14.4 and 15 |
-| a validator | §§5, 9, 10, 14.5 and 15.4 |
+| a validator | §§5, 9, 10, 14.5, 15.4 and 15.6 |
 | a reader | §§13 and 14.3 |
 | a consumer | §12 |
 
@@ -3128,21 +3170,24 @@ A recipe declares, for one packet:
 - which source owns a resource more than one listed source can supply (§3.3);
 - the clocks the packet declares, and their parents;
 - what to materialize;
-- session facts no source carries.
+- which run is preferred among runs sharing an activity and scope (§12);
+- session facts no source carries; and
+- where it amends a packet, the version it amends (§15.1).
 
 A recipe MAY declare a fact a source it reads also states; §3.6 says which of the two the packet gets. `core.subjects` is not a resource the recipe supplies unconditionally: a source that states a subject MAY own it, arbitrated as any other resource two sources can produce, and the recipe's `[subject]` block supplies the table only where no source owns it.
 
-A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `registry/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.1.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` untyped, and §3.6 types each when it normalizes it. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
+A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `registry/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.2.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` and a preferred run's `chosen_at` untyped. §3.6 types a fact when it normalizes it, and a build normalizes `chosen_at` to the type of `core.preferred_runs.chosen_at`. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
 
 | member | form | constraint |
 |---|---|---|
-| `packet` | table | requires `id`; admits `out`, `registry`, `extensions`, `description`, and `in_process` |
+| `packet` | table | requires `id`; admits `amends`, a version matching `^\d+\.\d+\.\d+$`, and `out`, `registry`, `extensions`, `description`, and `in_process` |
 | `session`, `subject` | table | keys are field names; values are untyped |
 | `overrides` | table | keys are `block.field` names; each value a non-empty string (§3.6) |
 | `encoding` | table | keys are `resource.column` names; each entry carries exactly `encoding`, one of `delta`, `plain`, or `dictionary`, and a non-empty `reason` (§3.8) |
 | `clock` | array of tables | each requires `clock_id`, `name`, `tick_rate_num`, and `origin`, and admits `tick_rate_den` and `parent_clock_id` |
 | `source` | array of tables | each requires `kind`; `owns` and `contributes` are arrays of dotted resource identifiers, `storage_options` a table, `in_process` a boolean (§3.9), and `delivery` a table admitting `command`, an array of strings (§3.7), and `protocol`, `declaration`, and `report_path`; every other key is an option |
 | `preference` | table | keys are dotted resource identifiers; each entry is §3.3's |
+| `preferred_run` | array of tables | each requires `activity_type`, `scope_kind`, a dotted resource identifier, `scope`, `processing_run_name`, and a non-empty `reason`, and admits `chosen_at` (§12) |
 | `materialize` | array of tables | each requires `resource`; every other key is a parameter |
 | `commit` | table | members are a build's own limits |
 
@@ -3159,6 +3204,17 @@ one that does, naming the `extension_id` and each entry that resolves to it, bef
 source. Two entries list one extension when the registry documents they resolve to carry the same
 `extension_id`, whether the entries repeat one string, pair a path with an identifier, or name two
 versions of the registry.
+
+`[packet].amends` gives the `packet_version` of the packet at the root the build writes, and makes
+the build an amending build of that packet (§15.1).
+
+Each `preferred_run` entry names the run a build prefers among runs sharing the entry's
+`activity_type`, `scope_kind` and `scope`, by that run's `processing_run_name`. An entry's `scope`
+names the scoped row as
+[Part 02 §8.3](02_core_logical_schemas.md#ew-discriminator-semantics) has a `string` paired value
+name it: the row's key where that key is carried, and its `*_name` where it is assigned. A recipe
+can therefore name a scope before any identifier is assigned. §12 states what a build writes for
+each entry.
 
 ### 3.2 The recipe is the provenance record
 
@@ -3183,6 +3239,8 @@ A recipe declares each preference as an entry of its top-level `preference` tabl
 A preference declares ownership. A build MUST read the preferred source as owning the resource whatever its entry declares, and MUST discard every other source's rows for it, subject to §3.4's refusal of a discarded stated value. A build MUST apply each declared preference, and MUST NOT hold a preference of its own or accept one from any artifact other than the recipe: a built-in winner is one no recipe can see, and a recipe that has not heard of a new contest is better refused than silently arbitrated.
 
 A preference MUST NOT name a resource only one source produces. Such an entry arbitrates nothing and exempts a report that will never be due, so it is a claim no build tests, and it goes stale the moment the second producer stops producing.
+
+In an amending build (§15.1) the packet being amended is not a source. Ownership and preferences arbitrate among the recipe's sources only, and §4.3 settles each delivered row against the packet.
 
 <a id="ew-source-declarations" data-spec-anchor="canonical"></a>
 ### 3.4 What a source can produce
@@ -3233,6 +3291,28 @@ A build MUST also refuse, on the same terms and before any source is opened:
 
 A build MUST refuse a recipe that is not TOML 1.0 or whose decoded form fails the schema §3.1 incorporates, naming where it fails, before it opens any source.
 
+A build MUST refuse, before it opens any source, a recipe with two `preferred_run` entries sharing
+`activity_type`, `scope_kind` and `scope`, and one whose `chosen_at` it cannot normalize. It MUST
+refuse, naming the entry, a `preferred_run` entry whose `processing_run_name` names no run the
+packet holds or the build records, or names a run whose `activity_type`, `scope_kind` or `scope`
+differs from the entry's.
+
+An amending build (§15.1) MUST also refuse, before it opens any source:
+
+- a packet root holding no published manifest, or one whose `packet_id` differs from `[packet].id`
+  or whose `packet_version` differs from `[packet].amends`;
+- a `[session]` member other than `session_id`, or a `session_id` the manifest's `sessions` does not
+  list;
+- a `[subject]` member, or an `[overrides]` member;
+- a `clock` entry whose `clock_id` equals the `clock_name` of a `core.clocks` row the packet holds;
+- a registry it binds whose `logical_standard_version`, or for the core registry whose
+  `semantic_standard_version`, differs from the manifest's, or that declares a table without
+  `amendment_groups`; and
+- a packet holding a null `*_name` for an assigned identifier a row owns.
+
+For every other refusal of this section, the tables and clocks the packet holds count as supplied
+and declared, so a required reference or a clock parent the packet satisfies draws no refusal.
+
 A build MUST report as a **warning**:
 
 - an owned table whose **nullable** foreign key targets a table nothing supplies;
@@ -3253,6 +3333,11 @@ A recipe MAY declare that its own value supersedes the source's, by naming the f
 The comparison needs the source read, so it happens as each source is built, and a build MUST refuse before any resource is staged. A source's statement of a fact is whatever its adapter exposes for that fact; which of several values inside a file it stands behind is the adapter's judgement and not the recipe's.
 
 A fact the source **derives** is the source's. `core.sessions.session_start_time` and `session_end_time` come from the session source's declared stream windows, and a writer MUST use the source's value where a session source is present and MUST report a declaration it did not use rather than discarding it silently.
+
+In an amending build (§15.1), the packet's `core.sessions` and `core.subjects` rows prevail over
+every source for each fact they hold, derived facts included. A build reports a fact a source
+states that differs from the packet's, as this section reports one differing from a declaration,
+refuses where this section refuses, and otherwise keeps the packet's row.
 
 <a id="ew-source-command" data-spec-anchor="canonical"></a>
 ### 3.7 When a source runs a command
@@ -3310,7 +3395,32 @@ whose row count is large rather than materializing it as host objects.
 
 Map source objects onto the logical schemas: assign identifiers packet-wide before any table is written, apply the declared sort, and coerce types to the registry's.
 
-Normalization MUST be deterministic in the recipe. Two runs of the same recipe over the same sources produce the same packet.
+A writer's normalization MUST be deterministic in the recipe and, for an amending build (§15.1), in
+the content of the packet version it amends: two runs of one recipe over the same sources and the
+same packet version produce the same packet. A packet's identifiers are therefore a function of the
+sequence of recipes that built and amended it, each of which its import runs record (§3.2). A
+single build over the same sources, where one recipe can name them all, reproduces them only where
+it would number everything the amendments added after everything the packet held.
+
+An amending build takes the packet's rows as delivered and normalized before any source runs, so
+the terms of [Part 12 §4](12_adapter_interface.md#ew-build-supplied-values) include them. It
+numbers a name the packet holds with the packet's identifier for it, and every other name from one
+past the largest value the packet holds for that identifier, or from 0 where it holds none. It
+orders the names it adds as a build orders a new packet's, so the units of a curation it adds are
+numbered after every unit the packet holds.
+
+It then settles against the packet each delivered row that ownership keeps (§3.3):
+
+- a row of a non-canonical table the packet's manifest does not name is added;
+- a row of `core.sessions` or `core.subjects` is dropped, the packet's row prevailing (§3.6);
+- a row equal to one the packet holds, compared as §15.6 compares rows but for `metadata`, is
+  dropped, together with any catalog instance the row catalogues;
+- any other row is added where it forms, under at least one group list of its table (§15.2), a
+  group the packet does not hold
+  ([Part 02 §2.8](02_core_logical_schemas.md#ew-amendment-groups)).
+
+An amending build MUST refuse every other delivered row, naming the table and the row. A table to
+which it adds no row keeps its resource entry, so the amendment does not write it.
 
 An interval is closed (01 §2.3). A writer MUST convert a source whose intervals are half-open — `[start, stop)` — which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
 
@@ -3525,7 +3635,8 @@ the record's account, and MUST refuse to build or amend at that packet root, nam
 
 A writer MUST record, in the staging area at step 4 of §2:
 
-- one `core.processing_runs` row for the import, declaring its `scope` and `scope_kind`;
+- one `core.processing_runs` row for the import, whose `activity_type` is `import`, declaring its
+  `scope` and `scope_kind`;
 - one `core.source_files` row for each distinct `root` among the recipe's sources (§3.1), whose
   `uri` is that root as the recipe states it; and
 - one `core.processing_run_inputs` row linking each of those `core.source_files` rows to the import
@@ -3534,6 +3645,10 @@ A writer MUST record, in the staging area at step 4 of §2:
 A writer need not read a source to fill `sha256`, `size_bytes`, `format`, or `modified_at`, each of
 which may be null.
 
+An amending build (§15.1) records a `core.source_files` row only for a root among its recipe's
+sources whose `uri` no `core.source_files` row of the packet carries, and links its import run to the
+`core.source_files` row of every root among the recipe's sources, held or added.
+
 <a id="ew-import-materialization" data-spec-anchor="canonical"></a>
 ## 8. Materialize
 
@@ -3541,7 +3656,9 @@ Materialization is step 5 of §2: a build opens the staged packet, computes each
 from it, and writes the result to the staging area, so step 6 validates it with core before
 anything is promoted.
 
-Deriving into an already-committed packet is an amendment (§15.1), not part of an import.
+Deriving into an already-committed packet is an amendment (§15.1), not part of an import. In an
+amending build, materialization derives from the staged amended packet, and a derived resource
+replaces the resource of the same ID the packet names.
 
 ## 9. Reporting
 
@@ -3649,11 +3766,12 @@ A conforming writer at least:
 2. produces a packet that passes Tier 1, Tier 2, and the shim;
 3. records provenance for what it read and what it ran;
 4. leaves no manifest at the packet root when it refuses;
-5. is **logically deterministic**: for the same recipe, the same source bytes and the same
-   declared normalization, it produces the same canonical rows, the same values, the same assigned
-   identifiers, the same resource identities and the same declared physical ordering.
-   Identifier assignment MUST be a function of the recipe and the sources, never of wall-clock
-   time, iteration order over an unordered collection, or the order a filesystem listed a
+5. is **logically deterministic**: for the same recipe, the same source bytes, the same declared
+   normalization and, for an amending build (§15.1), the same packet version amended, it produces
+   the same canonical rows, the same values, the same assigned identifiers, the same resource
+   identities and the same declared physical ordering. Identifier assignment MUST be a function of
+   the recipe, the sources and, for an amending build, the content of the packet version it amends,
+   never of wall-clock time, iteration order over an unordered collection, or the order a filesystem listed a
    directory.
 
 Byte-identical output is **not** required and cannot be: a manifest carries `created_at` and
@@ -3667,9 +3785,23 @@ produce. Two conforming builds of one dataset may record different digests for t
 <a id="ew-alternatives-resolved" data-spec-anchor="canonical"></a>
 ## 12. Alternatives are resolved before a commit
 
-Where two or more `core.processing_runs` rows share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not. Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
+Where two or more `core.processing_runs` rows whose `activity_type` is not `import` share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not. Runs whose `activity_type` is `import` are not alternatives to one another: two imports into one packet supply disjoint groups (§15.2). Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
 
 Both are checked at `error` level. A consumer MUST NOT silently choose; on a conforming packet that case is unreachable. A consumer that meets an unresolved alternative is holding a packet that failed validation and reports that. Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting; what it requires is that the packet says which is current.
+
+A build MUST write one `core.preferred_runs` row per `preferred_run` entry of its recipe (§3.1), in
+the recipe's session, carrying the entry's `activity_type`, `scope_kind`, `scope`, `reason` and
+`chosen_at`, and naming as `processing_run_id` the run whose `processing_run_name` the entry gives.
+In an amending build, the row replaces the packet's row with the same primary key.
+`core.preferred_runs.scope_matches_run` reports a preference whose `scope_kind` or `scope` differs
+from its run's.
+
+An amending build (§15.1) MUST give every run it records a `processing_run_name` the packet does not
+hold, since §4.3 numbers a name the packet holds with the packet's identifier for it. Where a run it
+records, of an activity other than `import`, shares its session, `activity_type`, `scope_kind` and
+`scope` with a run the packet holds, the build MUST write a `core.preferred_runs` row naming it,
+unless its recipe declares a preference of that key. A materialization run deriving a resource
+again (§15.2) is such a run, as is the run of a curation added to a held sorting run.
 
 <a id="ew-reader-operations" data-spec-anchor="canonical"></a>
 ## 13. Reader operations
@@ -3872,27 +4004,54 @@ sorts strictly after the superseded one, compared as a semantic version.
 `packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's
 rows.
 
+An amendment **writes** a resource that the amended manifest names and the superseded manifest does
+not name at the same `uri`. A resource an amendment writes is realized by its profile;
+[Part 03 §9](03_portable_physical_profile.md#ew-portable-amendment) has the portable profile write
+it as a new file.
+
+A build whose recipe gives `[packet].amends` (§3.1) is an **amending build**. It performs an
+amendment of the packet at the root the build writes, and it is bound as an amendment wherever this
+part binds a build and an amendment differently. `amends` is the `packet_version` of the packet's
+current manifest. An amending build binds each registry its recipe names, and each registry the
+packet's current manifest binds under an ID for which the recipe names none. The amended manifest
+keeps the packet's `description` unless `[packet].description` gives one. §§3.3, 3.5, 3.6, 4.3, 7,
+8 and 12 state where an amending build differs from a build of a new packet.
+
 <a id="ew-amendment-scope" data-spec-anchor="canonical"></a>
 ### 15.2 What an amendment may change
 
 A writer performing an amendment MAY make, and MUST NOT make, these changes:
 
-| | |
+| change | |
 |---|---|
-| Add an analysis resource | MAY |
-| Add rows to a provenance table (`core.processing_runs`, `core.source_files`, `core.processing_run_inputs`) | MAY |
-| Remove an analysis resource | MAY — Part 06 makes them disposable |
-| Add a core resource | MAY |
-| Change the content of a core resource other than the provenance tables | MUST NOT |
-| Remove a core resource | MUST NOT |
+| Add a resource the superseded manifest does not name, other than a canonical table | MAY |
+| Add to a canonical table, whether or not the superseded manifest names it, rows each forming, under at least one of the table's group lists, a group the superseded version does not hold ([Part 02 §2.8](02_core_logical_schemas.md#ew-amendment-groups)) | MAY |
+| Replace a `core.preferred_runs` row with a row of the same primary key | MAY |
+| Remove or replace an analysis, compatibility-projection or documentation resource | MAY — Part 06 makes analysis resources disposable |
+| Change or remove any other row of a canonical table | MUST NOT |
+| Change a canonical resource that is not a table, or remove a canonical resource | MUST NOT |
 | Change `packet_id`, `profile_id`, or the standard versions | MUST NOT |
 
-The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A
-packet whose core data was wrong is a new packet, not a new version of an old one, because anything
-already derived from the old core is silently invalidated and nothing in the format can detect that.
+A table's group lists are those its declaration carries in the registry the amended manifest binds.
+Every added row forms a new group under at least one of them, so a group a table declares under its
+only list, such as a session's trials or a curation's units, never grows: nothing in a packet
+records which derived results read which rows. A group a held row describes is held before it has
+rows, so a stream the packet holds gains no events and a unit it holds no observation intervals,
+even where the packet holds none. Under a table's other lists an added row may join a held group, as
+a new registration's coordinates join each held unit's under `core.unit_coordinates`' first list.
 
-Provenance tables are the exception because they are append-only by nature — a row records that
-something ran, and a later run does not change what an earlier one did.
+The asymmetry is the design: an amendment **extends** what a packet says and does not revise it. A
+packet whose canonical data was wrong is therefore a new packet, not a new version of an old one.
+
+A preference is the one row an amendment may replace. Replacing one changes no row a run produced,
+and the superseded version keeps the replaced row. An amendment removes no preference, so an
+alternative §12 resolved stays resolved.
+
+A writer performing an amendment that writes a canonical table other than `core.processing_runs`,
+`core.source_files` and `core.processing_run_inputs` MUST derive again from the amended packet, or
+remove, every analysis and compatibility-projection resource whose `derived_from` chain
+([Part 04 §7](04_packet_catalog.md#ew-resource-lineage)) reaches that table. The three provenance
+tables are exempt because their rows record what ran, not what was measured.
 
 <a id="ew-superseded-manifest-retention" data-spec-anchor="canonical"></a>
 ### 15.3 Superseded manifests
@@ -3954,6 +4113,36 @@ A packet MAY declare its own retention, and a writer SHOULD emit one: how many s
 to keep, and an optional age beyond which one may be dropped. Both are **floors** — a manifest is
 expired only when both permit it — and both default to one kept version and no age limit, because a
 packet is archival where a table is operational.
+
+<a id="ew-amendment-comparison" data-spec-anchor="canonical"></a>
+### 15.6 Comparison with the superseded version
+
+A validator given a packet that retains a superseded manifest, and a writer validating an amendment
+under §15.4, MUST compare the current version with the superseded version whose `packet_version`,
+compared as a semantic version (§15.1), immediately precedes the current one, and MUST report each
+of these at `error`:
+
+| check | finding |
+|---|---|
+| `amendment.identity_changed` | the two manifests differ in `packet_id`, `profile_id`, `semantic_standard_version` or `logical_standard_version` |
+| `amendment.resource_changed` | a canonical resource the superseded manifest names that the current manifest does not name, or names at another `uri` where the resource is not a table |
+| `amendment.row_changed` | a row of a canonical table both manifests name and the amendment wrote, which the superseded version holds and the current version does not hold unchanged |
+| `amendment.group_grown` | a row of a canonical table the amendment wrote, which the current version holds and the superseded version does not, where the table declares no group list, or where under every group list the superseded version holds the row's group ([Part 02 §2.8](02_core_logical_schemas.md#ew-amendment-groups)) |
+| `amendment.derived_resource_stale` | an analysis or compatibility-projection resource both manifests name at the same `uri`, whose `derived_from` chain in either manifest reaches a canonical table the amendment wrote other than the three provenance tables |
+
+A table's rows are compared as a multiset over the columns the amended manifest's registry declares,
+matched by name: an `optional` column a file omits reads as null, and values compare as
+[Part 11 §5](11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics) compares them, a null
+equal to a null. Neither `amendment.row_changed` nor `amendment.group_grown` reports a replaced
+preference: a `core.preferred_runs` row of the superseded version and the current version's row
+with the same primary key. Group lists are those of §15.2. A validator attributes each finding
+under §9.5.
+
+Where the superseded version cannot be read, the comparison is an evaluation the packet requires
+that did not complete (§§9.4 and 9.5), and not a finding. A packet that retains no superseded
+manifest has nothing to compare. Each earlier version was compared with its own predecessor by the
+writer that amended it, and retention may since have removed its files, so a validator compares
+only this pair.
 
 <a id="ew-validation-normative-references" data-spec-anchor="canonical"></a>
 ## 16. Normative references
@@ -4196,11 +4385,11 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.11.0.json.gz
-    aind_opto/        0.10.0.json.gz
-    aind_unit_qc/     0.11.0.json.gz
-    dynamic_foraging/ 0.12.0.json.gz
-    vr_foraging/      0.11.0.json.gz
+    core/             0.12.0.json.gz
+    aind_opto/        0.11.0.json.gz
+    aind_unit_qc/     0.12.0.json.gz
+    dynamic_foraging/ 0.13.0.json.gz
+    vr_foraging/      0.12.0.json.gz
   tables/
     core/             sessions, subjects, session_experimenters, devices, probes, electrodes,
                       sorting_run_channels, unit_electrodes, coordinate_frames,
@@ -4237,11 +4426,11 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.11.0", "path": "registries/core/0.11.0.json.gz", "sha256": "…"},
-    "aind_opto": {"role": "extension", "version": "0.10.0", "path": "registries/aind_opto/0.10.0.json.gz", "sha256": "…"},
-    "aind_unit_qc": {"role": "extension", "version": "0.11.0", "path": "registries/aind_unit_qc/0.11.0.json.gz", "sha256": "…"},
-    "dynamic_foraging": {"role": "extension", "version": "0.12.0", "path": "registries/dynamic_foraging/0.12.0.json.gz", "sha256": "…"},
-    "vr_foraging": {"role": "extension", "version": "0.11.0", "path": "registries/vr_foraging/0.11.0.json.gz", "sha256": "…"}
+    "core": {"role": "core", "version": "0.12.0", "path": "registries/core/0.12.0.json.gz", "sha256": "…"},
+    "aind_opto": {"role": "extension", "version": "0.11.0", "path": "registries/aind_opto/0.11.0.json.gz", "sha256": "…"},
+    "aind_unit_qc": {"role": "extension", "version": "0.12.0", "path": "registries/aind_unit_qc/0.12.0.json.gz", "sha256": "…"},
+    "dynamic_foraging": {"role": "extension", "version": "0.13.0", "path": "registries/dynamic_foraging/0.13.0.json.gz", "sha256": "…"},
+    "vr_foraging": {"role": "extension", "version": "0.12.0", "path": "registries/vr_foraging/0.12.0.json.gz", "sha256": "…"}
   },
   "created_at": "…",
   "sessions": ["s001"],

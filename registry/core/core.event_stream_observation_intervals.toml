@@ -4,6 +4,7 @@ instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
 primary_key = ["event_stream_id", "start_tick"]
+amendment_groups = [["event_stream_id"]]
 
 [[columns]]
 name = "session_id"

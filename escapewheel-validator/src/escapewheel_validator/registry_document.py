@@ -23,7 +23,7 @@ from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, ch
 SCHEMAS = Path(__file__).resolve().parent / "schemas"
 SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
-CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.7.json"
+CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.8.json"
 RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
 UCUM_URI = "https://ucum.org/ucum"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
@@ -600,6 +600,7 @@ def _semantic_checks() -> dict[str, Any]:
         "registry.resource.array_axes": _resource_array_axes,
         "registry.resource.dependency": _resource_dependency,
         "registry.resource.canonical_targets": _resource_canonical_targets,
+        "registry.amendment_groups.resolves": _amendment_groups,
     }
 
 
@@ -868,6 +869,60 @@ def _resource_canonical_targets(
                     f"canonical declaration depends on {target['content_class']} declaration {target_name!r}",
                 )
             )
+    return outcomes
+
+
+def _amendment_groups(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+) -> list[Outcome]:
+    """Part 02 §2.8: a group list names present columns once, and only a canonical table has one."""
+    del universe, class_name, core_usable
+    invariant = "registry.amendment_groups.resolves"
+    outcomes: list[Outcome] = []
+    for resource, declaration in document["resources"].items():
+        table = _tables(document).get(resource)
+        if table is None:
+            continue
+        groups = table["amendment_groups"]
+        if groups and declaration["content_class"] not in CANONICAL_CLASSES:
+            outcomes.append(
+                _invalid(
+                    invariant,
+                    _pointer(("tables", resource, "amendment_groups")),
+                    resource,
+                    f"a {declaration['content_class']} table declares amendment groups",
+                )
+            )
+            continue
+        columns = _columns(table)
+        seen: set[frozenset[str]] = set()
+        for index, group in enumerate(groups):
+            for position, name in enumerate(group):
+                found = columns.get(str(name), [])
+                if len(found) != 1 or found[0][1]["presence"] == "optional":
+                    outcomes.append(
+                        _invalid(
+                            invariant,
+                            _pointer(("tables", resource, "amendment_groups", index, position)),
+                            resource,
+                            f"group-list member {name!r} names "
+                            + ("an optional column" if found else "no column of the table"),
+                        )
+                    )
+            members = frozenset(map(str, group))
+            if members in seen:
+                outcomes.append(
+                    _invalid(
+                        invariant,
+                        _pointer(("tables", resource, "amendment_groups", index)),
+                        resource,
+                        "another group list names the same columns",
+                    )
+                )
+            seen.add(members)
     return outcomes
 
 

@@ -235,6 +235,7 @@ class SorterSource:
         "parent_clock_id",
         "sample",
         "source_cache",
+        "curation",
     )
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
@@ -251,6 +252,7 @@ class SorterSource:
         parent_clock_id: str | None = None,
         sample: int | None = None,
         source_cache: str | None = None,
+        curation: str | None = None,
     ) -> None:
         path = source_root(root, cache=source_cache)
         self.root = path if path.name == "curated" else path / "curated"
@@ -262,6 +264,9 @@ class SorterSource:
         self.emit_probes = emit_probes
         self.parent_clock_id = parent_clock_id
         self.sample = sample
+        #: What names this curation apart from one a packet already holds, as an amendment adding a
+        #: curation of a held sorting needs (Part 05 §12); None keeps the default names.
+        self.curation = curation
         self.notes: list[str] = []
         self._cache: dict[str, Any] = {}
         self._noted_naive = False
@@ -356,7 +361,7 @@ class SorterSource:
         return f"{self.prefix}{stream.key}"
 
     def _curation_id(self, stream: SortedStream) -> str:
-        return f"{self.prefix}{stream.key}.curated"
+        return f"{self.prefix}{stream.key}.{self.curation or 'curated'}"
 
     def _probe_id(self, stream: SortedStream) -> str:
         return f"{self.prefix}{stream.device}"
@@ -471,6 +476,8 @@ class SorterSource:
 
     def _run_id(self, stream: SortedStream, activity: str) -> str:
         """Return the `core.processing_runs` ID for one activity on one stream (R41 §2.1)."""
+        if activity == "curation" and self.curation is not None:
+            return f"{self._curation_id(stream)}.curation"
         return f"{self.prefix}{stream.key}.{activity}"
 
     def processing_runs(self) -> list[dict[str, Any]]:

@@ -39,6 +39,14 @@ zone = "UTC"
 source = "nwb"
 reason = "the NWB states a probe's type and manufacturer where the sorter knows only the stream"
 
+[[preferred_run]]
+activity_type = "curation"
+scope_kind = "core.sorting_runs"
+scope = "experiment1.Neuropix-PXI-100.ProbeA"
+processing_run_name = "experiment1.Neuropix-PXI-100.ProbeA.curation"
+reason = "the curated labels supersede the sorter's own"
+chosen_at = 2026-01-02T00:00:00Z
+
 [[materialize]]
 resource = "analysis.spike_events"
 

@@ -102,7 +102,7 @@ def _col(name, type_, presence, **extra):
 def _registry():
     """A registry describing exactly the tables the fixture writes."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
         "registry_id": "core",
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",
@@ -118,6 +118,7 @@ def _registry():
                     _metadata(),
                 ],
                 "primary_key": ["session_id"],
+                "amendment_groups": [["session_id"]],
                 "references": [],
                 "rules": [],
             },
@@ -132,6 +133,7 @@ def _registry():
                     _metadata(),
                 ],
                 "primary_key": ["session_id", "trial_id"],
+                "amendment_groups": [["session_id", "trial_id"]],
                 "references": [
                     {
                         "columns": ["session_id"],
@@ -161,6 +163,7 @@ def _registry():
                     _metadata(),
                 ],
                 "primary_key": ["unit_id"],
+                "amendment_groups": [["unit_id"]],
                 "references": [
                     {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
                     {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]},
@@ -178,6 +181,7 @@ def _registry():
                     _metadata(),
                 ],
                 "primary_key": ["session_id", "event_id"],
+                "amendment_groups": [["session_id", "event_id"]],
                 "references": [
                     {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
                     {"columns": ["clock_id"], "resource": "core.clocks", "resource_columns": ["clock_id"]},
@@ -191,6 +195,7 @@ def _registry():
                     _col("t_tick", "int64", "required", clock_from="core.units.clock_id"),
                 ],
                 "primary_key": ["session_id", "unit_id", "t_tick"],
+                "amendment_groups": [["session_id", "unit_id", "t_tick"]],
                 "references": [
                     {
                         "columns": ["session_id"],
@@ -212,6 +217,7 @@ def _registry():
                     _metadata(),
                 ],
                 "primary_key": ["clock_id"],
+                "amendment_groups": [["clock_id"]],
                 "references": [],
                 "rules": [],
             },

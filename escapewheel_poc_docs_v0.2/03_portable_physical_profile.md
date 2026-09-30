@@ -168,6 +168,7 @@ An identifier column is `int32`, or `int64` where its range requires it (Part 02
 Partitioned tables are not part of this profile. A future interface may define immutable member
 selection and cross-file ordering; the present `parquet` interface is one object.
 
+<a id="ew-table-ordering" data-spec-anchor="canonical"></a>
 ### 5.3 Ordering
 
 A table MUST be stored in an order that settles its primary key by adjacency: every key column appears in the sort, and every sort column up to and including the last key column is either a key column itself or one the registry declares `determined_by` a subset of the key (Part 02 §8.5). Where §5.4 gives no order for a table, the order required is its primary key's. A validator MUST report a departure as an **error**.
@@ -180,7 +181,7 @@ Where the scan finds a departure, uniqueness MUST be settled by aggregate rather
 
 A reader MUST NOT depend on stored order for correctness. Establishing the order is the validator's work, and a reader that assumed it would be trusting a property of the profile rather than of the logical standard.
 
-One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST`; Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because units are numbered run-major the default order clusters a probe's spikes.
+One table is stored in an order other than its primary key's, `analysis.spike_events`, under a `MUST`; Part 03 §5.4 gives it, and it satisfies this section because `clock_id` and `time_bucket_tick` are each declared `determined_by` a subset of the key. `core.events` needs no override: its key is `(session_id, stream_id, t_tick)`, the order it is stored in. `core.spike_events` needs none either: its key is `(session_id, unit_id, t_tick)`, and because a build numbers units curation by curation ([Part 02 §12.1](02_core_logical_schemas.md#ew-unit-identity)) and an amendment numbers the units it adds after every unit the packet holds ([Part 05 §4.3](05_validation_and_import.md#ew-import-normalization)), the default order clusters each curation's spikes.
 
 ### 5.4 The overriding orders
 
@@ -444,9 +445,13 @@ This specification promises nothing about bytes the packet does not own. What a 
 change, what it retains, what it revalidates, and how cleanup proceeds. This section is how this
 profile realizes an amendment, as Part 00 §7.3 requires of a profile.
 
-A resource that gains rows, a provenance table included, is written as a **new file** that the
-amended manifest names; no byte of the old one changes. Immutability is thereby a property of
-files, and a resource's *content* may be superseded by naming different bytes.
+Every resource an amendment writes
+([Part 05 §15.1](05_validation_and_import.md#ew-amendment-definition)), a table gaining a group or a
+provenance table gaining rows included, is written as a **new file** that the amended manifest
+names; no byte of the old one changes. Immutability is thereby a property of files, and a
+resource's *content* may be superseded by naming different bytes. Since §5.1 makes a table one
+Parquet file and §5.2 defers member files, a table gaining a group is rewritten whole, in the order
+§5.3 requires.
 
 Every superseded manifest is retained under `manifests/`, so a later cleanup can distinguish a file
 an old version named from a file nothing ever named. A packet never amended retains nothing and

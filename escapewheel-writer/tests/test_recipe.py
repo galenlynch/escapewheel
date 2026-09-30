@@ -1134,3 +1134,61 @@ def test_a_build_refuses_disagreeing_prefixes_before_opening_a_source(tmp_path, 
     with pytest.raises(RecipeError, match="disagree on prefix"):
         build(recipe, registry)
     assert not (recipe.out / "staging").exists(), "refused before anything was prepared"
+
+
+PREFERRED = """
+[[preferred_run]]
+activity_type = "curation"
+scope_kind = "core.sorting_runs"
+scope = "probeA"
+processing_run_name = "probeA.curation"
+reason = "the manual curation"
+"""
+
+
+def test_two_preferred_runs_of_one_key_are_refused(tmp_path, registry):
+    """Part 05 §3.5: a recipe prefers one run per activity and scope."""
+    recipe = Recipe.load(write(tmp_path, PREFERRED + PREFERRED.replace("probeA.curation", "probeA.other")))
+    assert recipe.preferred_runs[1]["processing_run_name"] == "probeA.other"
+    assert any("declared 2 times" in m for m in levels(recipe.check(registry)).get("error", []))
+
+
+@pytest.mark.parametrize("chosen", ["2026-09-01T00:00:00", "2026-09-01", "yesterday"])
+def test_a_chosen_at_naming_no_instant_is_refused(tmp_path, registry, chosen):
+    recipe = Recipe.load(
+        write(tmp_path, PREFERRED + f"chosen_at = {chosen if chosen[0].isdigit() else repr(chosen)}\n")
+    )
+    assert any("names no instant" in m for m in levels(recipe.check(registry)).get("error", []))
+
+
+def test_an_offset_chosen_at_is_normalized_to_utc(tmp_path, registry):
+    from datetime import UTC, datetime
+
+    from escapewheel_writer.recipe import normalized_chosen_at
+
+    recipe = Recipe.load(write(tmp_path, PREFERRED + "chosen_at = 2026-09-01T02:00:00+02:00\n"))
+    assert not [m for m in levels(recipe.check(registry)).get("error", []) if "chosen_at" in m]
+    assert normalized_chosen_at(recipe.preferred_runs[0]["chosen_at"]) == datetime(2026, 9, 1, tzinfo=UTC)
+
+
+def test_an_amending_recipe_declares_only_its_session(tmp_path, registry):
+    """Part 05 §3.5: the packet's session and subject rows prevail, so the recipe states neither."""
+    body = BASE.replace('registry = "reg.json"', 'registry = "reg.json"\namends = "0.1.0"')
+    path = tmp_path / "amend.toml"
+    path.write_text(body + '\n[overrides]\n"subject.subject_id" = "because"\n')
+    errors = levels(Recipe.load(path).check(registry)).get("error", [])
+    assert any("[session] reference_clock_id" in m for m in errors)
+    assert any("[subject] subject_id" in m for m in errors)
+    assert any("[overrides] subject.subject_id" in m for m in errors)
+
+
+def test_an_amended_packet_supplies_what_it_holds(tmp_path, registry):
+    """Part 05 §3.5: a held table satisfies a required reference, and a held clock a parent."""
+    body = '\n[[source]]\nkind = "sorter"\nroot = "sorted"\nparent_clock_id = "harp"\nowns = ["core.units"]\n'
+    recipe = Recipe.load(write(tmp_path, body))
+    required = [m for m in levels(recipe.check(registry)).get("error", []) if "which no source owns" in m]
+    assert required
+    held = recipe.check(
+        registry, held_tables=["core.sorting_runs", "core.curation_versions", "core.probes", "core.clocks"]
+    )
+    assert not [m for m in levels(held).get("error", []) if "which no source owns" in m]

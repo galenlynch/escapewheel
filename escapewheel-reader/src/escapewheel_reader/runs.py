@@ -17,6 +17,9 @@ The purpose is `(session_id, activity_type, scope)`. Scope is what a run is *abo
 an array asset, a camera — and it is what separates twelve probes sorted once each from one
 probe sorted twice. A packet that does not record it gets a fourth answer, `undeterminable`,
 which Part 01 §2.4 requires be reported apart from the third: see :func:`ambiguities`.
+
+Imports are never alternatives: two imports into one packet supply disjoint groups of rows (Part 05
+§12), so an `import` run is in no purpose.
 """
 
 from __future__ import annotations
@@ -30,6 +33,9 @@ from .errors import AmbiguousRun
 
 #: Where the run log lives, and where a preference over it lives (R9 §2, Part 01 §2.4).
 RUNS = "core.processing_runs"
+
+#: The activity whose runs are never alternatives to one another (Part 05 §12).
+IMPORT = "import"
 PREFERENCES = "core.preferred_runs"
 
 
@@ -116,7 +122,8 @@ def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
     grouping that ignores scope reports twelve alternatives where there are none.
 
     A run whose `scope` is null is grouped alone and reported as undeterminable if its activity
-    has other runs, rather than assumed unique (Part 01 §2.4).
+    has other runs, rather than assumed unique (Part 01 §2.4). An `import` run is skipped, since
+    imports are not alternatives to one another (Part 05 §12).
 
     Parameters
     ----------
@@ -145,7 +152,7 @@ def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
     grouped: dict[tuple[int | None, str, str | None, str | None], list[int]] = {}
     unscoped: dict[tuple[int | None, str], list[int]] = {}
     for row in rows:
-        if row["activity_type"] is None or row["processing_run_id"] is None:
+        if row["activity_type"] in (None, IMPORT) or row["processing_run_id"] is None:
             continue
         key = (row["session_id"], row["activity_type"], row["scope_kind"], row["scope"])
         grouped.setdefault(key, []).append(row["processing_run_id"])
@@ -190,7 +197,8 @@ def preferred_run(
         The resource whose primary key `scope` holds, as a dotted resource ID (R49 §2.2) --
         ``core.probes``, ``core.sorting_runs``, ``core.sessions``.
     scope : str
-        The primary-key value of the thing the run is about.
+        The thing the run is about: the scoped row's key where that key is carried, and its
+        `*_name` where it is assigned, as `core.processing_runs.scope` names it.
     session_id : int, optional
         Which session. Required only for a multi-session packet.
 

@@ -7,7 +7,7 @@ Part 03 §3.3).
 
 <!-- BEGIN generated: counts -->
 ```
-48 resources, 45 tables, 360 columns, 116 references, 89 Tier 2 rules
+48 resources, 45 tables, 360 columns, 116 references, 90 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -21,7 +21,7 @@ history and rationale but are not current normative owners.
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
 | `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
-| `registry_contracts/escapewheel-registry-contract-v0.7.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
+| `registry_contracts/escapewheel-registry-contract-v0.8.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.2.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | Incorporated closed schema for `packet.json` (Part 04). |
@@ -136,7 +136,7 @@ selects `escapewheel-rule-sql-v0.2`; individual rules cannot override it. Inline
 table's whole logical contract readable in one declaration.
 
 <!-- BEGIN generated: rules -->
-89 rules over 29 tables: 80 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
+90 rules over 29 tables: 81 error, 7 warning, 2 info — the 2 at `info` being the advisory ones (Part 02 §10.2), off unless asked for.
 
 | Table | Rules |
 |---|---:|
@@ -146,10 +146,10 @@ table's whole logical contract readable in one declaration.
 | `core.processing_runs` | 7 |
 | `core.units` | 6 |
 | `core.clock_anchors` | 4 |
+| `core.preferred_runs` | 4 |
 | `core.sessions` | 4 |
 | `core.intervals` | 3 |
 | `core.media_assets` | 3 |
-| `core.preferred_runs` | 3 |
 | `analysis.array_labels` | 2 |
 | `analysis.spike_events` | 2 |
 | `core.array_assets` | 2 |
@@ -173,6 +173,15 @@ table's whole logical contract readable in one declaration.
 
 `tables.md` lists them by ID with the message each reports. The manifest-to-`core.sessions`
 comparison is a Part 05 shim check because the manifest is not a SQL relation.
+
+## Amendment groups
+
+Every table's source file declares `amendment_groups`, the group lists of Part 02 §2.8. An amendment
+may add a row to a table only where the version it supersedes lacks the row's group under at least
+one list, so `[]` admits no added row and `[["unit_id"]]` admits a row of any new unit. A list names
+required columns of its own table, and no two lists of a table name the same set. Only a core or
+extension table declares a list other than `[]`. `check.py` and the validator report a list breaking
+either rule as `registry.amendment_groups.resolves`, and `tables.md` shows each table's lists.
 
 ## Identifier quoting
 

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
   "registry_id": "core",
   "registry_version": "0.9.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
@@ -85,7 +85,12 @@
             ]
           }
         ],
-        "rules": []
+        "rules": [],
+        "amendment_groups": [
+          [
+            "clock_id"
+          ]
+        ]
       }
     },
     "core.intervals": {
@@ -184,6 +189,12 @@
             "message": "stop_tick precedes start_tick",
             "sql": "SELECT session_id, interval_id, start_tick, stop_tick FROM core.intervals WHERE stop_tick < start_tick"
           }
+        ],
+        "amendment_groups": [
+          [
+            "session_id",
+            "interval_kind"
+          ]
         ]
       }
     },
@@ -240,7 +251,8 @@
             ]
           }
         ],
-        "rules": []
+        "rules": [],
+        "amendment_groups": []
       }
     }
   }

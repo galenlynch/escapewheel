@@ -4,6 +4,7 @@ instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
 primary_key = ["processing_run_id"]
+amendment_groups = [["processing_run_id"]]
 
 [[columns]]
 name = "session_id"
@@ -44,7 +45,7 @@ type = "string"
 presence = "nullable"
 role = "data"
 vocabulary = "free"
-description = "What this run is about -- a probe_id, an array_asset_id, a camera -- or the session_id itself where the run is session-wide. Read only with the `scope_kind` beside it, which names the table the value keys into."
+description = "What this run is about: the scoped row's key where that key is carried, and its `*_name` where it is assigned, such as a probe's `probe_name`. Read only with the `scope_kind` beside it."
 
 [[columns]]
 name = "scope_kind"
@@ -53,7 +54,7 @@ presence = "nullable"
 role = "discriminator"
 resolves = "optional"
 discriminates = "scope"
-description = "The resource whose primary key `scope` holds, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all."
+description = "The resource holding the row `scope` names, as a dotted resource ID -- `core.probes`, `core.array_assets`. A value naming no declared resource means the scope is not a packet resource. Set with `scope` or not at all."
 
 [[columns]]
 name = "supersedes_run_id"
@@ -183,6 +184,7 @@ WITH grouped AS (
   SELECT session_id, activity_type, scope, COUNT(*) AS n
   FROM core.processing_runs
   WHERE scope IS NOT NULL
+    AND activity_type <> 'import'
   GROUP BY session_id, activity_type, scope
   HAVING COUNT(*) > 1
 )

@@ -1227,6 +1227,7 @@ def main():
     interval_variants(root)
     unit_variants(root)
     opaque_variants(root)
+    amendment_variants(root)
 
 
 #: A prefix's objects as a store would list them, for the manifest-only prefix variants.
@@ -1654,6 +1655,7 @@ CUE_EXTENSION = {
                     {"columns": ["tone_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
                 ],
                 "rules": [],
+                "amendment_groups": [["tone_id"]],
             },
         }
     },
@@ -1938,6 +1940,193 @@ def opaque_variants(root: Path) -> None:
         edit_manifest(
             root / name, lambda m, uri=uri: m["resources"][-1].update(uri=uri)
         )
+
+
+
+def amend(out: Path, make, change, *, extensions: tuple = (), identity: dict | None = None) -> None:
+    """Write `make()` as version 0.1.0, then `change`'s edit of it over it as 0.1.1 (Part 05 §15.1).
+
+    A table whose bytes the edit changes is written at a new uri beside the held file; every other
+    entry is kept, and the superseded manifest is retained under `manifests/` (Part 03 §9). A name
+    the packet holds keeps its number and a new one is numbered after them, as Part 05 §4.3 has an
+    amending build number. `identity` overrides packet-level fields of the amended manifest.
+    """
+    write_packet(out, make(), extensions=extensions)
+    held = {kind: dict(names) for kind, names in KEYS.items()}
+    edited = make()
+    change(edited)
+    KEYS.clear()
+    preassign(edited)
+    numbers = {}
+    for kind, names in KEYS.items():
+        kept = held.get(kind, {})
+        added = sorted((name for name in names if name not in kept), key=names.get)
+        start = max(kept.values(), default=-1) + 1
+        numbers[kind] = {**kept, **{name: start + i for i, name in enumerate(added)}}
+    scratch = out.with_name(out.name + ".next")
+    write_packet(scratch, edited, extensions=extensions, numbers=numbers)
+
+    superseded = json.loads((out / "packet.json").read_text())
+    manifest = json.loads((scratch / "packet.json").read_text())
+    assert manifest["registries"] == superseded["registries"], out.name
+    before = {e["resource_id"]: e for e in superseded["resources"]}
+    resources = []
+    for entry in manifest["resources"]:
+        kept = before.get(entry["resource_id"])
+        if kept is not None and (out / kept["uri"]).read_bytes() == (scratch / entry["uri"]).read_bytes():
+            resources.append(kept)
+            continue
+        uri = entry["uri"] if kept is None else entry["uri"].replace(".parquet", ".0.1.1.parquet")
+        (out / uri).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(scratch / entry["uri"], out / uri)
+        resources.append({**entry, "uri": uri})
+    shutil.rmtree(scratch)
+    (out / "manifests").mkdir()
+    (out / "manifests" / "0.1.0.json").write_text(json.dumps(superseded, indent=2) + "\n")
+    amended = {**superseded, "packet_version": "0.1.1", "resources": resources, **(identity or {})}
+    (out / "packet.json").write_text(json.dumps(amended, indent=2) + "\n")
+
+
+def amendment_variants(root: Path) -> None:
+    """Part 05 §15.2's amendments: each adds groups a packet lacks, or breaks one rule of adding."""
+
+    def run(run_id, activity, scope_kind, scope, hours):
+        return {
+            "processing_run_id": run_id,
+            "session_id": "s001",
+            "activity_type": activity,
+            "scope_kind": scope_kind,
+            "scope": scope,
+            "software_name": "escapewheel",
+            "software_version": "0.1.0",
+            "status": "succeeded",
+            "started_at": START + timedelta(hours=hours),
+            "ended_at": START + timedelta(hours=hours, minutes=10),
+        }
+
+    def scoped():
+        # An import's scope is its session, so two imports of one session share a scope.
+        c = content()
+        c["core.processing_runs"][0] |= {"scope_kind": "core.sessions", "scope": "s001"}
+        return c
+
+    def reimported(c):
+        c["core.processing_runs"].append(run("run_import_002", "import", "core.sessions", "s001", 30))
+
+    def curated(preferred=None):
+        def make():
+            c = scoped()
+            c["core.processing_runs"].append(
+                run("run_curation_001", "curation", "core.sorting_runs", "sort_ks4_001", 4)
+            )
+            if preferred is not None:
+                add_curation(c)
+                c["core.preferred_runs"] = [preference(preferred)]
+            return c
+
+        return make
+
+    def preference(run_id):
+        return {
+            "session_id": "s001",
+            "activity_type": "curation",
+            "scope_kind": "core.sorting_runs",
+            "scope": "sort_ks4_001",
+            "processing_run_id": run_id,
+            "reason": "the later curation",
+            "chosen_at": START + timedelta(hours=31),
+        }
+
+    def add_curation(c):
+        """A second curation of the sorting run: new units, their spikes, contacts, windows and labels."""
+        c["core.curation_versions"].append(
+            {**c["core.curation_versions"][0], "curation_id": "curation_002", "created_at": START + timedelta(hours=29)}
+        )
+        held = [u for u in c["core.units"] if u["curation_id"] == "curation_001"]
+        by_unit = {}
+        for unit in held:
+            name = f"recurated.{unit['unit_id']}"  # sorts after the held units, as the build numbers them
+            by_unit[unit["unit_id"]] = name
+            c["core.units"].append({**unit, "unit_id": name, "curation_id": "curation_002"})
+        for table in (
+            "core.spike_events",
+            "core.unit_electrodes",
+            "core.unit_observation_intervals",
+            "core.unit_quality_labels",
+        ):
+            c[table] += [{**r, "unit_id": by_unit[r["unit_id"]]} for r in c[table] if r["unit_id"] in by_unit]
+        c["core.processing_runs"].append(
+            run("run_curation_002", "curation", "core.sorting_runs", "sort_ks4_001", 29)
+        )
+
+    def with_curation(c):
+        add_curation(c)
+        c["core.preferred_runs"] = [preference("run_curation_002")]
+        reimported(c)
+
+    def tones(c):
+        # 120 tones of a kind sorting before the trials, numbered after every interval the packet holds.
+        for i in range(120):
+            name = f"s001/cue.tones/{i + 1}"
+            c["core.intervals"].append(
+                {
+                    "session_id": "s001",
+                    "interval_kind": "cue.tones",
+                    "interval_id": name,
+                    "local_interval_label": str(i + 1),
+                    "start_tick": 100 + 90 * i,
+                    "stop_tick": 140 + 90 * i,
+                    "clock_id": "behavior_s001",
+                }
+            )
+            c.setdefault("cue.tones", []).append({"session_id": "s001", "tone_id": name})
+        reimported(c)
+
+    def another_trial(c):
+        c["core.intervals"].append(
+            {**c["core.intervals"][1], "interval_id": trial(3), "local_interval_label": "3", "start_tick": 10500, "stop_tick": 11500}
+        )
+        c[KIND].append({**c[KIND][1], "trial_id": trial(3)})
+        reimported(c)
+
+    def moved_trial(c):
+        c["core.intervals"][0]["stop_tick"] = 5500
+        reimported(c)
+
+    def held_unit_observed_again(c):
+        # Unit 2's dropout, observed after all: its windows are one group the packet holds.
+        c["core.unit_observation_intervals"].append(
+            {"session_id": "s001", "unit_id": 2, "start_tick": 125_000, "stop_tick": 145_000}
+        )
+        reimported(c)
+
+    def repreferred(c):
+        c["core.preferred_runs"] = [preference("run_curation_001")]
+        reimported(c)
+
+    for name, make, change, options in (
+        ("amended_intervals", scoped, tones, {"extensions": (CUE_EXTENSION,)}),
+        ("amended_curation", curated(), with_curation, {}),
+        ("amended_preference", curated("run_curation_002"), repreferred, {}),
+        ("amended_trial", scoped, another_trial, {}),
+        ("amended_trial_bounds", scoped, moved_trial, {}),
+        ("amended_unit_window", scoped, held_unit_observed_again, {}),
+        ("amended_packet_id", scoped, reimported, {"identity": {"packet_id": "another_packet"}}),
+    ):
+        amend(root / name, make, change, **options)
+        print(f"{name:26s}written")
+
+    c = scoped()
+    reimported(c)
+    write_packet(root / "two_imports", c)
+    print(f"{'two_imports':26s}written")
+
+    # A preference whose run curated the probe, not the sorting run the preference names.
+    c = curated()()
+    c["core.processing_runs"].append(run("run_curation_002", "curation", "core.probes", "probe0", 29))
+    c["core.preferred_runs"] = [preference("run_curation_002")]
+    write_packet(root / "preference_of_another_scope", c)
+    print(f"{'preference_of_another_scope':26s}written")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
 primary_key = ["media_asset_id"]
+amendment_groups = [["media_asset_id"]]
 
 [[columns]]
 name = "session_id"

@@ -125,6 +125,29 @@ the second unit into a second sorting run's curation and numbers it first. All f
 `units_numbered_by_scalar` relabels them `"10"` and `"2"` in scalar-value order, and
 `units_numbered_from_one` numbers them 1 and 2; each draws `core.units.numbered_in_order`.
 
+Seven packets are amendments (Part 05 §15). `build.py` writes each as version 0.1.0 and then as
+0.1.1 over it. Every table whose bytes change is written at a new `uri`, the superseded manifest is
+kept at `manifests/0.1.0.json`, and a held name keeps its number while a new one is numbered after
+every number the packet holds. Each amendment records a second import of the session, with both
+imports scoped to it. Three amendments are clean:
+
+- `amended_intervals` adds 120 `cue.tones` intervals, whose kind sorts before the trials.
+- `amended_curation` adds a second curation of the sorting run, with its units, spikes, contacts,
+  observation windows and quality labels, and prefers its curation run.
+- `amended_preference` replaces the preference for the later curation with one for the earlier.
+
+The rest each break one rule of adding:
+
+- `amended_trial` adds a third trial to the session's trials and draws `amendment.group_grown`.
+- `amended_unit_window` adds an observation window for a held unit and draws
+  `amendment.group_grown`.
+- `amended_trial_bounds` moves the first trial's end and draws `amendment.row_changed`.
+- `amended_packet_id` changes `packet_id` and draws `amendment.identity_changed`.
+
+`two_imports` is `valid` with two imports of the one session, which are not alternatives, and is
+clean. `preference_of_another_scope` prefers, for the sorting run, a curation run whose scope is the
+probe, and draws `core.preferred_runs.scope_matches_run` (Part 05 §12).
+
 Four packets each add one packet-owned opaque payload at `opaque/<resource_id>/<name>` (Part 03
 §11), and are clean with checksums: `owned_opaque_object` a single file, `owned_opaque_prefix` a
 directory digested as a prefix, `owned_opaque_singleton` a file bound to an opaque singleton of

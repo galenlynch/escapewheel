@@ -4,6 +4,7 @@ instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
 primary_key = ["clock_id", "anchor_index"]
+amendment_groups = [["clock_id"]]
 
 [[columns]]
 name = "session_id"

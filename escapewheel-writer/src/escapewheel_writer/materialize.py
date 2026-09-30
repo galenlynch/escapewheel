@@ -386,8 +386,8 @@ def spike_events(
 
 
 #: `processing_run_id` of the run row this materialization records. Stable rather than random, so
-#: re-running it produces the same identifier and an amendment that replaces the table replaces its
-#: run rather than accumulating one per attempt.
+#: two builds of one recipe record the same run; an amendment deriving the table again names its run
+#: apart from the packet's (Part 05 §12).
 RUN_ID = "materialize.analysis.spike_events"
 
 
@@ -427,7 +427,7 @@ def into(
     started = datetime.now(tz=timezone.utc)
     dropped: dict[int, int] = {}
     run: dict[str, Any] = {
-        "processing_run_id": run_id,
+        "processing_run_id": writer.name_apart("processing_run_id", run_id),
         "session_id": session,
         "activity_type": "materialization",
         # R44 §2.1: session-wide, so the session is the scope. Both stay null on a

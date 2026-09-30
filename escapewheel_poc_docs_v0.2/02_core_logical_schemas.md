@@ -18,7 +18,7 @@ This part expressly incorporates the following artifacts:
 |---|---|
 | `registry/registry.schema.json` | exact local JSON structure and conditional shape constraints |
 | `registry/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
-| `registry/registry_contracts/escapewheel-registry-contract-v0.7.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `registry/registry_contracts/escapewheel-registry-contract-v0.8.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
 | `registry/logical_schemas.json` | exact current core and analysis resource declarations, including table columns, keys, references, vocabularies, and rules |
 
 The generated core registry is what a packet embeds. `registry/tables.md` is a generated,
@@ -101,7 +101,7 @@ The logical kind states which generic payload structure, if any, Escapewheel int
 
 A table declaration MUST contain `table`, MUST NOT contain `array`, and MUST use singleton
 instances. Its `table` object contains an ordered column list (§3), a primary key or `null`,
-references (§7), and Tier 2 rules (§10.2).
+references (§7), Tier 2 rules (§10.2), and amendment groups (§2.8).
 
 A dense-array declaration MUST contain `array`, MUST NOT contain `table`, and MUST use catalog
 instances. Its `axes_resource` names a visible singleton table declaration. The axes table MUST
@@ -197,6 +197,35 @@ The lineage graph contains no self-edge or cycle. Because every analysis resourc
 lineage, every finite analysis chain terminates in canonical core or extension resources. A writer
 and validator apply this policy without regard to kind. A reader may expose the resolved facts
 without validating the registry or possessing a validation receipt for ordinary access.
+
+<a id="ew-amendment-groups" data-spec-anchor="canonical"></a>
+### 2.8 Amendment groups
+
+Every `table` object carries `amendment_groups`, an array of **group lists**, beside its columns,
+primary key, references and rules. A group list is a nonempty array of distinct column names of the
+table. Under one group list, the rows whose listed columns hold equal values, a null equal to a
+null, form one **group**. A group list **carries** each declared reference whose source columns are
+all members of the list, where the referenced table has a column named by each other member: the
+referenced row is then the one the group describes. A version **holds** a group where it holds a row
+of the group, or where the list carries at least one declared reference to a table that does not
+declare `[]` and each such reference resolves, on the group's values, to a row that version holds. A
+canonical table a version's manifest does not name holds no rows in that version. A table an
+amendment may not add rows to declares `[]`.
+[Part 05 §15.2](05_validation_and_import.md#ew-amendment-scope) lets an amendment add rows to a
+table only in groups its superseded version does not hold.
+
+A packet holding a stream therefore holds the stream's group of `core.events` before the stream has
+an event, since that table's list carries `stream_id`'s reference to `core.event_streams`. A packet
+holding a frame holds a basis's group of `core.electrode_coordinates` only where it holds
+coordinates in that basis, since the table's first list carries no reference to
+`core.coordinate_frames`, which has no `coordinate_basis` column. The lists of `core.intervals`, the
+second of `core.unit_quality_labels`, the first of `core.electrode_coordinates` and the second of
+`core.unit_coordinates` carry no reference, since an interval kind, a label source and a coordinate
+basis name no row, so a group under those is held only by its rows.
+
+A group list MUST name only columns whose presence is `required` or `nullable`. Two group lists of
+one table MUST NOT name the same set of columns. A table whose content class is not canonical MUST
+declare `[]`, since an amendment may replace such a resource whole.
 
 <a id="ew-column-declaration" data-spec-anchor="canonical"></a>
 ## 3. Column declaration
@@ -578,9 +607,9 @@ A packet binds each registry that declares its resources under
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.9.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.10.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.11.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.12.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -589,8 +618,9 @@ the core registry's version. An extension conforming to the incorporated meta-sc
 the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT carry `extends`.
 The core specification does not assign an extension's version. An extension registry migrated to
 meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0,
-and one migrated to `escapewheel-rule-sql-v0.2` a `registry_version` different from the one it
-carried under `escapewheel-rule-sql-v0.1`. No checker verifies either, since a checker reads only
+one migrated to `escapewheel-rule-sql-v0.2` a `registry_version` different from the one it carried
+under `escapewheel-rule-sql-v0.1`, and one migrated to meta-schema 0.10.0 a `registry_version`
+different from the one it carried under 0.9.0. No checker verifies any of these, since a checker reads only
 the document before it and not the version that document replaced.
 
 A checker selects schemas and contracts only from local artifacts and MUST NOT dereference an
@@ -658,11 +688,13 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.7`, selects the 0.9.0
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.8`, selects the 0.10.0
 meta-schema, and lists `escapewheel-rule-sql-v0.2` alone in `rule_languages`. That meta-schema MUST
 declare `finite` as a boolean member of a column, require it where `type` is `float32` or
 `float64`, and forbid it otherwise; the `shape` phase therefore decides §5.4's declaration rule, and
-the descriptor adds no invariant for it. A checker MUST evaluate its phases in this order:
+the descriptor adds no invariant for it. It MUST also require `amendment_groups` in the `table`
+object, after `rules`, as a duplicate-free array of nonempty, duplicate-free arrays of names. A
+checker MUST evaluate its phases in this order:
 
 1. `json`;
 2. `schema_selection`;
@@ -771,6 +803,7 @@ The descriptor assigns these invariants in this exact order:
 | `registry.resource.array_axes` | semantic | core, extension |
 | `registry.resource.dependency` | semantic | core, extension |
 | `registry.resource.canonical_targets` | semantic | core, extension |
+| `registry.amendment_groups.resolves` | semantic | core, extension |
 
 Every descriptor anchor MUST identify every numbered-part clause defining the invariant. Invariant
 IDs are unique. The descriptor schema closes its objects; requires nonempty, duplicate-free arrays;
@@ -799,7 +832,11 @@ The resource invariants enforce §§2.1–2.7: document-class/content-class elig
 instance eligibility; unambiguous visible catalog bindings; the dense-array axes binding; visible
 singleton dependencies; and canonical resources' canonical targets, whose outcome points at the
 offending reference, `requires` entry or catalog binding and is core-dependent where the target
-lies in the core context. The existing table, column, reference, rule, and external-domain
+lies in the core context. `registry.amendment_groups.resolves` enforces §2.8: it reports a
+group-list member naming no column of its table or a column whose presence is `optional`, two group
+lists of one table naming the same set, and a nonempty `amendment_groups` on a non-canonical table.
+Its outcome points at the offending member, at the later of two group lists naming one set, and at
+`amendment_groups` itself on a non-canonical table. The existing table, column, reference, rule, and external-domain
 invariants operate on the `table` payload of table-kind declarations. Their stable IDs do not
 change merely because their instance pointers gain enclosing `resources` and `table` components.
 

@@ -38,9 +38,20 @@ from escapewheel_validator import CheckedRegistryContext, RegistryRejected, chec
 from numpy.typing import NDArray
 
 from . import opaque
+from .amending import AmendmentRefused, Held
 from .declaration import SOURCE_CACHE
 from .extensions import load_checked as load_extension_context
-from .recipe import RECIPE_SUPPLIES, TERMS, Recipe, SourceSpec, declared, payloads, reached_by, redacted
+from .recipe import (
+    RECIPE_SUPPLIES,
+    TERMS,
+    Recipe,
+    SourceSpec,
+    declared,
+    normalized_chosen_at,
+    payloads,
+    reached_by,
+    redacted,
+)
 from .sources import ADAPTERS, SourceDefect
 from .sources.compensations import describe
 from .writer import PacketWriter
@@ -165,6 +176,9 @@ class Context:
     #: Part 05 §3.6: `block.field` to the registry type the packet stores it as, so a declared
     #: value and a stated one are compared after both are normalized, not as they were written.
     fact_types: dict[str, str] = field(default_factory=dict)
+    #: For an amending build, `block.field` to the value the packet's `core.sessions` or
+    #: `core.subjects` row holds, which prevails over every source (Part 05 §3.6); None otherwise.
+    held_facts: dict[str, Any] | None = None
     #: Source kind to the `opaque_location` supplied it, which the build reads back once it has run.
     opaque_locations: dict[str, Path] = field(default_factory=dict)
     #: The loaded registries' opaque singletons, which a source owns and delivers as a payload
@@ -444,6 +458,9 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
     source declares, whether that source ran here or delivered them from elsewhere.
     """
     declared, notes = recipe.declared_facts, getattr(source, "notes", context.notes)
+    if context.held_facts is not None:
+        _compare_held_facts(spec, source, context.held_facts, notes, context.fact_types)
+        return
     for fact, attribute in sorted(getattr(source, "STATES", {}).items()):
         stated = getattr(source, attribute, None)
         block, _, field = fact.partition(".")
@@ -474,6 +491,26 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
             notes.append(f"{fact} is {want!r} and {spec.kind} derives {stated!r}; the source's value is used")
         else:
             notes.append(f"{fact} is {want!r} and {spec.kind} states {stated!r}; the recipe's value is used")
+
+
+def _compare_held_facts(
+    spec: SourceSpec, source: Any, held: Mapping[str, Any], notes: list[str], fact_types: Mapping[str, str]
+) -> None:
+    """Compare what a source states against the amended packet's row, which prevails (Part 05 §3.6)."""
+    for fact, attribute in sorted(getattr(source, "STATES", {}).items()):
+        stated = getattr(source, attribute, None)
+        if stated is None:
+            continue
+        kept = held.get(fact)
+        column = fact_types.get(fact)
+        if kept is not None and _normalized(stated, column) == _normalized(kept, column):
+            continue
+        if fact in REFUSES_ON_DIFFERENCE:
+            raise SourceDefect(
+                f"{fact} is {kept!r} in the packet and {getattr(source, 'path', spec.kind)} states {stated!r}; "
+                "an amendment keeps the packet's value (Part 05 §3.6)"
+            )
+        notes.append(f"{fact} is {kept!r} in the packet and {spec.kind} states {stated!r}; the packet's value is kept")
 
 
 #: What a build takes from a source for the sources after it, beyond what the recipe claims. Each
@@ -825,7 +862,14 @@ def build(  # noqa: C901
             subject = str(document.get("extension_id", "extension")) if isinstance(document, Mapping) else "extension"
             raise RegistryRejected(subject, extension_context)
     extension_documents = [extension.document for extension in extension_contexts]
-    if errors := [p.message for p in recipe.check(checked_registry, extension_documents) if p.level == "error"]:
+    held = _held(recipe, checked_registry, extension_documents) if recipe.amends is not None else None
+    problems = recipe.check(
+        checked_registry,
+        extension_documents,
+        held_tables=() if held is None else held.tables_named(),
+        held_clocks=() if held is None else held.clock_names(),
+    )
+    if errors := [p.message for p in problems if p.level == "error"]:
         raise RecipeError(f"{recipe.path}: refused, {len(errors)} error(s): " + "; ".join(errors))
     session_id = str(recipe.session["session_id"])
     context = Context(
@@ -854,6 +898,12 @@ def build(  # noqa: C901
         encoding_exceptions=_encoding_exceptions(recipe),
         workspace=context.workspace,
     )
+    if held is not None:
+        try:
+            writer.amending(held, prevail=True)
+        except AmendmentRefused as exc:
+            raise RecipeError(f"{recipe.path}: refused: {exc}") from None
+        _from_packet(context, held, writer, session_id)
     context.staging = writer.stage_at(recipe.out)
 
     # Part 05 §3.1: the recipe supplies `core.subjects` only where no source owns it, so a packet
@@ -916,30 +966,43 @@ def build(  # noqa: C901
 
     _refuse_a_discarded_fact(writer, context, recipe)
     _declare_withheld(context, writer, say)
-    _declare_origin(context, say)
+    if held is None:
+        # An amendment keeps the packet's session row, derived facts included (Part 05 §3.6).
+        _declare_origin(context, say)
     for note in context.notes:
         say(f"  note: {note}")
-    writer.add(
-        "core.sessions",
-        [
-            {
-                "session_id": session_id,
-                **{k: v for k, v in recipe.session.items() if k != "session_id"},
-                **context.session_extra,
-            }
-        ],
-    )
+    if held is None:
+        writer.add(
+            "core.sessions",
+            [
+                {
+                    "session_id": session_id,
+                    **{k: v for k, v in recipe.session.items() if k != "session_id"},
+                    **context.session_extra,
+                }
+            ],
+        )
     run = _import_run(recipe, applied, context)
+    run["processing_run_id"] = writer.name_apart("processing_run_id", run["processing_run_id"])
     writer.add("core.processing_runs", [run])
     if roots := _source_roots(recipe):
-        writer.add("core.source_files", [{"source_file_id": root, "uri": root} for root in roots])
+        # A root the packet already records keeps its row, and the import still names it (Part 05 §7).
+        recorded = {} if held is None else held.source_files(writer.keys)
+        if added := [root for root in roots if root not in recorded]:
+            writer.add("core.source_files", [{"source_file_id": root, "uri": root} for root in added])
         writer.add(
             "core.processing_run_inputs",
             [
-                {"session_id": session_id, "processing_run_id": run["processing_run_id"], "source_file_id": root}
+                {
+                    "session_id": session_id,
+                    "processing_run_id": run["processing_run_id"],
+                    "source_file_id": recorded.get(root, root),
+                }
                 for root in roots
             ],
         )
+    if recipe.preferred_runs:
+        writer.add("core.preferred_runs", _preferred_runs(recipe, writer, held, session_id))
     for entry in describe(applied):
         say(f"  compensated: {entry['id']}")
 
@@ -957,6 +1020,123 @@ def build(  # noqa: C901
 
     writer.after_staging(written)
     return writer
+
+
+def _held(recipe: Recipe, registry: Mapping[str, Any], extensions: Collection[Mapping[str, Any]]) -> Held:
+    """Open the packet an amending recipe amends, refusing what §3.5 refuses before any source opens."""
+    try:
+        held = Held.open(recipe.out)
+    except AmendmentRefused as exc:
+        raise RecipeError(f"{recipe.path}: refused: {exc} (Part 05 §3.5)") from None
+    manifest = held.manifest
+    problems = []
+    if manifest["packet_id"] != recipe.packet_id:
+        problems.append(f"the packet at {recipe.out} is {manifest['packet_id']}, and [packet].id is {recipe.packet_id}")
+    if manifest["packet_version"] != recipe.amends:
+        problems.append(
+            f"the packet at {recipe.out} is at version {manifest['packet_version']}, and [packet].amends is "
+            f"{recipe.amends}"
+        )
+    if str(recipe.session.get("session_id")) not in manifest.get("sessions", ()):
+        problems.append(f"the packet does not list session {recipe.session.get('session_id')}")
+    for document in (registry, *extensions):
+        name = str(document.get("extension_id", "core"))
+        standards = ("logical_standard_version",) + (("semantic_standard_version",) if name == "core" else ())
+        problems += [
+            f"registry {name} has {standard} {document.get(standard)}, and the packet {manifest.get(standard)}"
+            for standard in standards
+            if document.get(standard) != manifest.get(standard)
+        ]
+    if problems:
+        raise RecipeError(f"{recipe.path}: refused, an amending recipe (Part 05 §3.5): " + "; ".join(problems))
+    return held
+
+
+def _from_packet(context: Context, held: Held, writer: PacketWriter, session_id: str) -> None:
+    """Take the packet's rows as delivered before any source runs (Part 05 §4.3).
+
+    So a source that consumes clocks, units or the reference clock is handed the packet's, named as
+    a source names them, and the facts the packet's session and subject rows hold prevail.
+    """
+    from .clock import Clock
+
+    keys = writer.keys
+    for row in held.named_rows("core.clocks", keys):
+        context.clocks[str(row["clock_id"])] = {k: v for k, v in row.items() if v is not None}
+    context.units += [
+        {
+            "device_name": str(row["sorting_run_id"]).rsplit(".", 1)[-1],
+            "local_unit_label": row["local_unit_label"],
+            "unit_id": row["unit_id"],
+        }
+        for row in held.named_rows("core.units", keys)
+    ]
+    context.anchors += held.named_rows("core.clock_anchors", keys)
+    context.event_streams += [row["event_stream_id"] for row in held.named_rows("core.event_streams", keys)]
+    sessions = [r for r in held.named_rows("core.sessions", keys) if str(r["session_id"]) == session_id]
+    subjects = {str(r["subject_id"]): r for r in held.named_rows("core.subjects", keys)}
+    session = sessions[0] if sessions else {}
+    subject = subjects.get(str(session.get("subject_id")), {})
+    context.held_facts = {
+        **{f"session.{k}": v for k, v in session.items()},
+        **{f"subject.{k}": v for k, v in subject.items()},
+    }
+    reference = context.clocks.get(str(session.get("reference_clock_id")))
+    if reference is not None and reference.get("tick_rate_num") is not None:
+        context.reference = Clock(
+            str(reference["clock_id"]),
+            session_id=session_id,
+            name=str(reference.get("clock_name", reference["clock_id"])),
+            tick_rate_num=int(reference["tick_rate_num"]),
+            tick_rate_den=int(reference.get("tick_rate_den", 1)),
+            origin=str(reference["origin"]),
+            tick_zero_utc=_stored(reference.get("tick_zero_utc"), "timestamp"),
+            parent_clock_id=reference.get("parent_clock_id"),
+        )
+
+
+def _preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, session_id: str) -> list[dict[str, Any]]:
+    """Return a `core.preferred_runs` row per `preferred_run` entry (Part 05 §12).
+
+    Raises
+    ------
+    RecipeError
+        Naming each entry whose run neither the packet holds nor the build records, or whose run's
+        activity or scope differs from the entry's.
+    """
+    runs = {str(r["processing_run_id"]): r for r in writer._tables.get("core.processing_runs", [])}
+    if held is not None:
+        for row in held.named_rows("core.processing_runs", writer.keys):
+            runs.setdefault(str(row["processing_run_id"]), row)
+    rows, problems = [], []
+    for entry in recipe.preferred_runs:
+        name = str(entry["processing_run_name"])
+        run = runs.get(name)
+        if run is None:
+            problems.append(f"[[preferred_run]] {name} names no run the packet holds or this build records")
+            continue
+        differs = [
+            f"{column} {run.get(column)!r}, not {entry[column]!r}"
+            for column in ("activity_type", "scope_kind", "scope")
+            if str(run.get(column)) != str(entry[column])
+        ]
+        if differs:
+            problems.append(f"[[preferred_run]] {name} names a run whose {', '.join(differs)}")
+            continue
+        rows.append(
+            {
+                "session_id": session_id,
+                "activity_type": entry["activity_type"],
+                "scope_kind": entry["scope_kind"],
+                "scope": entry["scope"],
+                "processing_run_id": name,
+                "reason": entry["reason"],
+                "chosen_at": normalized_chosen_at(entry["chosen_at"]) if "chosen_at" in entry else None,
+            }
+        )
+    if problems:
+        raise RecipeError(f"{recipe.path}: refused (Part 05 §3.5): " + "; ".join(problems))
+    return rows
 
 
 def _source_cache(configured: str | Path | None, out: Path, context: Context) -> Path | None:

@@ -507,7 +507,7 @@ def _declare(root, **overrides):
         "instances": {"mode": "singleton", "presence": "optional"},
         "requires": [],
         "lineage": "required",
-        "table": {**registry["resources"]["core.trials"]["table"], "rules": []},
+        "table": {**registry["resources"]["core.trials"]["table"], "rules": [], "amendment_groups": []},
     }
     install_registry(root, registry)
     path = root / "packet.json"
@@ -661,6 +661,7 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
                 },
             ],
             "primary_key": ["array_asset_id"],
+            "amendment_groups": [["array_asset_id"]],
             "references": [],
             "rules": [],
         },
@@ -704,6 +705,7 @@ def _add_array(root, *, declared, document=None, axes=3, external=False):
                 },
             ],
             "primary_key": ["array_asset_id", "axis_index"],
+            "amendment_groups": [["array_asset_id", "axis_index"]],
             "references": [
                 {
                     "columns": ["array_asset_id"],
@@ -1355,6 +1357,7 @@ def _label_axis(root, labels, *, depends_on=None, kind="core.sessions"):
                 },
             ],
             "primary_key": ["array_asset_id", "axis_index", "depends_on_position_index", "position_index"],
+            "amendment_groups": [["array_asset_id", "axis_index", "depends_on_position_index", "position_index"]],
             "references": [
                 {
                     "columns": ["array_asset_id", "axis_index"],
@@ -1506,6 +1509,7 @@ def _channels(root, *, rows):
                 _index("channel_index"),
             ],
             "primary_key": ["array_asset_id", "channel_index"],
+            "amendment_groups": [["array_asset_id", "channel_index"]],
             "references": [
                 {
                     "columns": ["array_asset_id", "axis_index"],
@@ -1642,7 +1646,7 @@ def test_an_empty_packet_owned_prefix_is_missing(packet_root):
 def _extension(root, *, tables=None, mutate=None):
     """Give the packet an extension registry and a table conforming to it."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
         "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -1684,6 +1688,7 @@ def _extension(root, *, tables=None, mutate=None):
                         },
                     ],
                     "primary_key": ["session_id", "trial_id"],
+                    "amendment_groups": [["session_id", "trial_id"]],
                     "references": [
                         {
                             "columns": ["session_id", "trial_id"],
@@ -1933,13 +1938,14 @@ def _required_extension(root, extension_id):
             }
         ],
         "primary_key": ["session_id"],
+        "amendment_groups": [["session_id"]],
         "references": [{"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}],
         "rules": [],
     }
     install_registry(
         root,
         {
-            "$schema": "https://escapewheel.org/schemas/registry/0.9.0",
+            "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
             "registry_id": extension_id,
             "registry_version": "0.1.0",
             "logical_standard_version": "escapewheel-logical-v0.1",
