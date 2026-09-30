@@ -9,13 +9,13 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R151 accepted. R42 and R73 withdrawn. 0 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R152 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
-105 conformance packets
+112 conformance packets
 <!-- END facts: corpus -->
 
 <!-- BEGIN facts: extensions -->
@@ -191,13 +191,7 @@ natural.
 
 ## 9. Implementation follow-ups
 
-**A kind naming a table that cannot specialise its row passes.** Part 02 §8.3 generates a reverse
-check for every kind a packet's rows name, and `escapewheel-validator` generates one only for a
-resource declaring a whole-key reference back, so an interval whose kind is `core.sessions`
-validates clean. For such a kind the check returns every row naming it, since no row of that
-resource can share the key.
-
-Otherwise none open. `tables` sources deliver by `files-v0.1`, `aind_unit_qc` is an adapter in
+None open. `tables` sources deliver by `files-v0.1`, `aind_unit_qc` is an adapter in
 `escapewheel-aind`, every name-minting adapter accepts `prefix`, and every store-reading adapter
 accepts `source_cache` and keeps store objects as Part 12 §10 requires.
 

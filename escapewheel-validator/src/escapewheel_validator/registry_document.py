@@ -23,7 +23,7 @@ from escapewheel_validator.rule_language import PROFILE_ID, RuleProfileError, ch
 SCHEMAS = Path(__file__).resolve().parent / "schemas"
 SCHEMA = SCHEMAS / "registry.schema.json"
 CONTRACT_SCHEMA = SCHEMAS / "registry_contract.schema.json"
-CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.8.json"
+CONTRACT = SCHEMAS / "registry_contracts" / "escapewheel-registry-contract-v0.9.json"
 RESULT_SCHEMA = SCHEMAS / "registry_result.schema.json"
 UCUM_URI = "https://ucum.org/ucum"
 RESULT_SCHEMA_ID = "https://escapewheel.org/schemas/registry-result/0.1.0"
@@ -548,6 +548,7 @@ def _semantic_outcomes(
         "registry.resource.array_axes",
         "registry.resource.dependency",
         "registry.resource.canonical_targets",
+        "registry.discriminator.specialisation",
     }
     for entry in descriptor["invariants"]:
         invariant = str(entry["id"])
@@ -601,6 +602,7 @@ def _semantic_checks() -> dict[str, Any]:
         "registry.resource.dependency": _resource_dependency,
         "registry.resource.canonical_targets": _resource_canonical_targets,
         "registry.amendment_groups.resolves": _amendment_groups,
+        "registry.discriminator.specialisation": _specialisations,
     }
 
 
@@ -923,6 +925,52 @@ def _amendment_groups(
                     )
                 )
             seen.add(members)
+    return outcomes
+
+
+def _specialisations(
+    document: Mapping[str, Any],
+    universe: Mapping[str, Any],
+    class_name: str,
+    core_usable: bool,
+) -> list[Outcome]:
+    """Part 02 §8.3: a specialising reference names a shared-key discriminator of the table it targets."""
+    invariant = "registry.discriminator.specialisation"
+    outcomes: list[Outcome] = []
+    for resource, table in _tables(document).items():
+        declared = [(index, r) for index, r in enumerate(table["references"]) if "specialises" in r]
+        for position, (r_index, reference) in enumerate(declared):
+            pointer = _pointer(("tables", resource, "references", r_index, "specialises"))
+            if position > 0:
+                outcomes.append(_invalid(invariant, pointer, resource, "the table declares specialises on another reference"))
+                continue
+            holder_name, column_name = str(reference["specialises"]).rsplit(".", 1)
+            holder = universe.get(holder_name)
+            if holder is None and class_name == "extension" and not core_usable:
+                if holder_name.split(".", 1)[0] in {"core", "analysis"}:
+                    continue  # reported incomplete as core-dependent
+            column = None if holder is None else _one_column(holder, column_name)
+            if column is None or column["role"] != "discriminator" or "discriminates" in column:
+                problem = (
+                    "names no visible column"
+                    if column is None
+                    else "names a column that is not a discriminator"
+                    if column["role"] != "discriminator"
+                    else "names a paired-value discriminator"
+                )
+                outcomes.append(_invalid(invariant, pointer, resource, f"specialises {problem}"))
+                continue
+            via = column.get("discriminates_via")
+            specialised = holder_name if via is None else str(via).rsplit(".", 1)[0]
+            if reference["resource"] != specialised:
+                outcomes.append(
+                    _invalid(invariant, pointer, resource, f"the reference targets {reference['resource']}, not {specialised}")
+                )
+            columns = list(reference["columns"])
+            if list(table.get("primary_key") or [])[: len(columns)] != columns:
+                outcomes.append(
+                    _invalid(invariant, pointer, resource, "the primary key does not begin with the reference's columns")
+                )
     return outcomes
 
 

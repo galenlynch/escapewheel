@@ -78,7 +78,8 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
         out.append("")
         for ref in references:
             target = ", ".join(f"`{c}`" for c in ref["resource_columns"])
-            out.append(f"- {_code(ref['columns'])} → `{ref['resource']}` ({target})")
+            specialising = f", specialising `{ref['specialises']}`" if "specialises" in ref else ""
+            out.append(f"- {_code(ref['columns'])} → `{ref['resource']}` ({target}){specialising}")
         out.append("")
 
     groups = spec.get("amendment_groups")

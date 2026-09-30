@@ -8,7 +8,8 @@ A registry's source is a directory: `registry.toml` holds the document's own fie
   the document nests them under `table`;
 - a single-column reference is written on its column, as `references = "<resource>"` where the
   target column has the same name and `references = { resource = "...", column = "..." }`
-  where it does not, so a `[[references]]` entry is always a multi-column one;
+  where it does not, with any `specialises` in that table, so a `[[references]]` entry is always
+  a multi-column one;
 - a rule may invoke the `interval` template (Part 02 §10.2), which is expanded into plain SQL,
   so the document a packet binds carries no vocabulary a validator would have to learn.
 
@@ -119,16 +120,19 @@ def _column(resource: str, column: dict[str, Any]) -> tuple[dict, dict | None]:
             "resource": target,
             "resource_columns": [name],
         }
-    if set(target) != {"resource", "column"}:
+    if not {"resource", "column"} <= set(target) <= {"resource", "column", "specialises"}:
         raise SystemExit(
             f"{resource}.{name}: a column's references is a resource ID, or a table of "
-            f"`resource` and `column`, not {sorted(target)}"
+            f"`resource`, `column` and optionally `specialises`, not {sorted(target)}"
         )
-    return column, {
+    reference = {
         "columns": [name],
         "resource": target["resource"],
         "resource_columns": [target["column"]],
     }
+    if "specialises" in target:
+        reference["specialises"] = target["specialises"]
+    return column, reference
 
 
 def _table(resource: str, source: dict[str, Any]) -> dict[str, Any]:

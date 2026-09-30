@@ -21,7 +21,7 @@ history and rationale but are not current normative owners.
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
 | `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
-| `registry_contracts/escapewheel-registry-contract-v0.8.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
+| `registry_contracts/escapewheel-registry-contract-v0.9.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.2.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | Incorporated closed schema for `packet.json` (Part 04). |
@@ -182,6 +182,21 @@ one list, so `[]` admits no added row and `[["unit_id"]]` admits a row of any ne
 required columns of its own table, and no two lists of a table name the same set. Only a core or
 extension table declares a list other than `[]`. `check.py` and the validator report a list breaking
 either rule as `registry.amendment_groups.resolves`, and `tables.md` shows each table's lists.
+
+## Specialising references
+
+A reference may declare `specialises`, naming the shared-key discriminator whose rows its table
+specialises (Part 02 §8.3). `dynamic_foraging.trials` and `vr_foraging.sites` declare
+`core.intervals.interval_kind`, written in the column's reference table:
+
+```toml
+references = { resource = "core.intervals", column = "interval_id", specialises = "core.intervals.interval_kind" }
+```
+
+The validator generates a check on each detail table that its rows' intervals name that table, and
+finds a reverse check's counterpart through the declaration. `check.py` and the validator report a
+declaration breaking Part 02 §8.3 as `registry.discriminator.specialisation`. The core registry
+declares none, and `tables.md` shows each declaration on its reference.
 
 ## Identifier quoting
 

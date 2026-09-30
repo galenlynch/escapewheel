@@ -1,7 +1,7 @@
 {
-  "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
+  "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
   "registry_id": "dynamic_foraging",
-  "registry_version": "0.13.0",
+  "registry_version": "0.14.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.2",
   "extension_id": "dynamic_foraging",
@@ -652,7 +652,8 @@
             "resource": "core.intervals",
             "resource_columns": [
               "interval_id"
-            ]
+            ],
+            "specialises": "core.intervals.interval_kind"
           },
           {
             "columns": [

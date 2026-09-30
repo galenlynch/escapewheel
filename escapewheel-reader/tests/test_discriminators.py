@@ -59,7 +59,12 @@ def _with_detail(packet_root, *, kind="task.trials"):
             "primary_key": ["trial_id"],
             "references": [
                 {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
-                {"columns": ["trial_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
+                {
+                    "columns": ["trial_id"],
+                    "resource": "core.intervals",
+                    "resource_columns": ["interval_id"],
+                    "specialises": "core.intervals.interval_kind",
+                },
             ],
             "rules": [],
         },
@@ -87,7 +92,7 @@ def test_a_kind_the_packet_does_not_hold_is_a_defect_where_it_must_resolve(packe
 
 
 def test_the_join_crosses_into_the_named_resource(packet_root):
-    """The shared-key shape: join on the discriminated table's whole key (Part 02 §8.3)."""
+    """The shared-key shape: join through the named resource's specialising reference (Part 02 §8.3)."""
     table = resolved(_with_detail(packet_root), "core.intervals", "task.trials")
     assert table.num_rows == 2
     assert set(table.column("outcome").to_pylist()) == {"hit", "miss"}
@@ -116,6 +121,16 @@ def test_a_kind_that_resolves_is_not_reported_unresolved(packet_root):
     assert "task.trials" not in {u.kind for u in reported}
     # A row declaring no kind is undeterminable whatever the packet holds, and stays reported.
     assert all(u.kind is None and u.level == "undeterminable" for u in reported)
+
+
+def test_a_kind_declaring_no_specialising_reference_does_not_resolve(packet_root):
+    """Part 02 §8.3: a reference to the interval makes a table no specialisation of it."""
+    _with_detail(packet_root)
+    rows = read_registry(packet_root)
+    del rows["resources"]["task.trials"]["table"]["references"][1]["specialises"]
+    install_registry(packet_root, rows)
+    with pytest.raises(LookupError, match="declares no specialising reference"):
+        resolved(open_packet(packet_root), "core.intervals", "task.trials")
 
 
 def test_naming_a_kind_the_packet_lacks_says_so(packet_root):

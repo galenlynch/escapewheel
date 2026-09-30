@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry-contract/0.1.0",
-  "id": "escapewheel-registry-contract-v0.8",
-  "registry_schema": "https://escapewheel.org/schemas/registry/0.10.0",
+  "id": "escapewheel-registry-contract-v0.9",
+  "registry_schema": "https://escapewheel.org/schemas/registry/0.11.0",
   "semantic_standard": "escapewheel-semantic-v0.1",
   "logical_standard": "escapewheel-logical-v0.1",
   "rule_languages": ["escapewheel-rule-sql-v0.2"],
@@ -34,6 +34,7 @@
     {"id": "registry.resource.array_axes", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-resource-kind", "ew-registry-conformance"]},
     {"id": "registry.resource.dependency", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-resource-presence", "ew-registry-conformance"]},
     {"id": "registry.resource.canonical_targets", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-resource-content-class", "ew-registry-conformance"]},
-    {"id": "registry.amendment_groups.resolves", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-amendment-groups", "ew-registry-conformance"]}
+    {"id": "registry.amendment_groups.resolves", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-amendment-groups", "ew-registry-conformance"]},
+    {"id": "registry.discriminator.specialisation", "phase": "semantic", "classes": ["core", "extension"], "anchors": ["ew-discriminator-semantics", "ew-registry-conformance"]}
   ]
 }

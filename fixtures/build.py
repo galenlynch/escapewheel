@@ -1225,6 +1225,7 @@ def main():
     floor_variants(root)
     axis_variants(root)
     interval_variants(root)
+    device_detail_variants(root)
     unit_variants(root)
     opaque_variants(root)
     amendment_variants(root)
@@ -1653,7 +1654,12 @@ CUE_EXTENSION = {
                 "primary_key": ["tone_id"],
                 "references": [
                     {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
-                    {"columns": ["tone_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
+                    {
+                        "columns": ["tone_id"],
+                        "resource": "core.intervals",
+                        "resource_columns": ["interval_id"],
+                        "specialises": "core.intervals.interval_kind",
+                    },
                 ],
                 "rules": [],
                 "amendment_groups": [["tone_id"]],
@@ -1662,6 +1668,74 @@ CUE_EXTENSION = {
     },
 }
 SPECS["cue.tones"] = CUE_EXTENSION["resources"]["cue.tones"]["table"]
+
+
+#: A fixture-local extension declaring a detail table of `core.devices.device_kind`, which core
+#: may not declare (Part 02 §8.3).
+RIG_EXTENSION = {
+    "$schema": EXTENSION["$schema"],
+    "registry_id": "rig",
+    "registry_version": "0.1.0",
+    "logical_standard_version": EXTENSION["logical_standard_version"],
+    "rule_language": EXTENSION["rule_language"],
+    "extension_id": "rig",
+    "resources": {
+        "rig.neuropixels": {
+            "content_class": "extension",
+            "kind": "table",
+            "instances": {"mode": "singleton", "presence": "optional"},
+            "requires": [],
+            "lineage": "optional",
+            "table": {
+                "columns": [
+                    {
+                        "name": "session_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                        "description": "Session ID.",
+                    },
+                    {
+                        "name": "device_id",
+                        "type": "int32",
+                        "presence": "required",
+                        "role": "identifier",
+                        "identity": "assigned",
+                        "description": "The probe this row describes.",
+                    },
+                ],
+                "primary_key": ["device_id"],
+                "references": [
+                    {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+                    {
+                        "columns": ["device_id"],
+                        "resource": "core.devices",
+                        "resource_columns": ["device_id"],
+                        "specialises": "core.devices.device_kind",
+                    },
+                ],
+                "rules": [],
+                "amendment_groups": [["device_id"]],
+            },
+        }
+    },
+}
+SPECS["rig.neuropixels"] = RIG_EXTENSION["resources"]["rig.neuropixels"]["table"]
+
+
+def device_detail_variants(root: Path) -> None:
+    """Part 02 §8.3's kind check on a detail table whose discriminator resolves `optional`."""
+    for name, kind in (
+        ("device_detail", "rig.neuropixels"),
+        ("device_detail_unkinded", None),
+        ("device_detail_other_kind", "core.probes"),
+    ):
+        c = content()
+        c["core.devices"][0]["device_kind"] = kind
+        c["rig.neuropixels"] = [{"session_id": "s001", "device_id": "imec0"}]
+        write_packet(root / name, c, extensions=(RIG_EXTENSION,))
+        print(f"{name:26s}written")
 
 
 def interval_variants(root: Path) -> None:
@@ -1681,6 +1755,34 @@ def interval_variants(root: Path) -> None:
             }
         )
         c["cue.tones"] = [{"session_id": "s001", "tone_id": "s001/cue.tones/1"}]
+
+    def trial_names_a_tone(c):
+        # Part 02 §8.3: a detail row whose interval is of another kind; the reverse check passes,
+        # since every interval still has a row of its own kind.
+        with_tone(c)
+        c[KIND].append({**c[KIND][1], "trial_id": tone})
+
+    def tone_names_a_trial(c):
+        with_tone(c)
+        c["cue.tones"].append({"session_id": "s001", "tone_id": first})
+
+    def tone_in_place_of_its_own(c):
+        with_tone(c)
+        c["cue.tones"][0]["tone_id"] = first
+
+    def interval_of_a_session(c):
+        # `core.sessions` is declared, so the kind resolves, but it specialises no interval.
+        c["core.intervals"].append(
+            {
+                "session_id": "s001",
+                "interval_kind": "core.sessions",
+                "interval_id": "s001/core.sessions/1",
+                "local_interval_label": "1",
+                "start_tick": 500,
+                "stop_tick": 900,
+                "clock_id": "behavior_s001",
+            }
+        )
 
     def equal_bounds(c):
         c["core.intervals"][1] |= {"start_tick": 1000, "stop_tick": 5000}
@@ -1708,6 +1810,10 @@ def interval_variants(root: Path) -> None:
     cue = (CUE_EXTENSION,)
     for name, mutate, options in (
         ("two_kinds_one_label", with_tone, {"extensions": cue}),
+        ("trial_names_a_tone", trial_names_a_tone, {"extensions": cue}),
+        ("tone_names_a_trial", tone_names_a_trial, {"extensions": cue}),
+        ("tone_in_place_of_its_own", tone_in_place_of_its_own, {"extensions": cue}),
+        ("interval_of_a_session", interval_of_a_session, {}),
         ("kinds_out_of_unicode_order", with_tone, {"extensions": cue, "numbers": {"interval_id": {first: 0, second: 1, tone: 2}}}),
         ("equal_bounds", equal_bounds, {}),
         ("equal_bounds_swapped", equal_bounds, {"numbers": {"interval_id": {second: 0, first: 1}}}),

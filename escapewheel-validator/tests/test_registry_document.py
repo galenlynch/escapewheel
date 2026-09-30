@@ -96,7 +96,7 @@ def _ids(result):
 def test_reference_registry_has_one_complete_valid_result():
     result = check_registry(CORE)
     assert result.state == "valid"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.8"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.9"
     assert tuple(phase.phase for phase in result.phases) == PHASES
     assert result.phases[0].state == "skipped"
     assert result.phases[0].reason == "registry.phase.mapping_input"
@@ -166,7 +166,7 @@ def test_every_repository_extension_satisfies_the_same_contract(path):
 
 def test_byte_entry_rejects_a_nested_duplicate_at_its_containing_object():
     result = check_registry_bytes(
-        b'{"$schema":"https://escapewheel.org/schemas/registry/0.10.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
+        b'{"$schema":"https://escapewheel.org/schemas/registry/0.11.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
     )
     outcome = result.findings[0]
     assert result.state == "invalid"
@@ -213,7 +213,7 @@ def test_shape_failure_uses_schema_identity_and_location():
     result = check_registry(document, CORE)
     outcome = result.findings[0]
     assert result.state == "invalid"
-    assert outcome.id == "https://escapewheel.org/schemas/registry/0.10.0"
+    assert outcome.id == "https://escapewheel.org/schemas/registry/0.11.0"
     assert outcome.instance == "/resources/demo.rows/table/columns/1/type"
     assert outcome.schema_location
 
@@ -303,7 +303,7 @@ def test_meta_schema_owns_each_local_conditional(case):  # noqa: C901
     result = check_registry(document, CORE)
     shape = next(phase for phase in result.phases if phase.phase == "shape")
     assert shape.state == "invalid"
-    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.10.0"}
+    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.11.0"}
 
 
 def test_unknown_contract_tuple_is_unsupported():
@@ -329,7 +329,7 @@ def test_null_primary_key_is_a_valid_duplicate_row_declaration():
 def test_two_local_contracts_for_one_tuple_are_ambiguous():
     first = json.loads(CONTRACT.read_text())
     second = copy.deepcopy(first)
-    second["id"] = "escapewheel-registry-contract-v0.8"
+    second["id"] = "escapewheel-registry-contract-v0.9"
     result = check_registry(CORE, descriptors=[first, second])
     assert result.state == "unsupported"
     assert "registry.contract.selector_ambiguous" in _ids(result)
@@ -338,7 +338,7 @@ def test_two_local_contracts_for_one_tuple_are_ambiguous():
 def test_extension_without_core_runs_local_checks_and_is_incomplete():
     result = check_registry(_document())
     assert result.state == "incomplete"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.8"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.9"
     assert "registry.contract.core_context_unusable" in _ids(result)
 
     broken = _document()
@@ -863,5 +863,87 @@ def test_a_table_without_group_lists_fails_its_shape():
     document = _document()
     del _table(document)["amendment_groups"]
     result = check_registry(document, CORE)
+    shape = next(phase for phase in result.phases if phase.phase == "shape")
+    assert shape.state == "invalid"
+
+
+def _with_detail(document, reference=None, key=None):
+    """Declare `demo.tones`, a detail table of `core.intervals.interval_kind` unless told otherwise."""
+    detail = copy.deepcopy(document["resources"]["demo.rows"])
+    table = detail["table"]
+    table["columns"] = [_column("session_id"), _column("tone_id")]
+    table["primary_key"] = key or ["tone_id"]
+    table["amendment_groups"] = [["tone_id"]]
+    table["references"] = [
+        {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+        {
+            "columns": ["tone_id"],
+            "resource": "core.intervals",
+            "resource_columns": ["interval_id"],
+            "specialises": "core.intervals.interval_kind",
+            **(reference or {}),
+        },
+    ]
+    document["resources"]["demo.tones"] = detail
+    return document
+
+
+def _specialisation_pointers(result):
+    return {outcome.instance for outcome in result.findings if outcome.id == "registry.discriminator.specialisation"}
+
+
+def test_a_detail_table_of_an_interval_is_valid():
+    assert check_registry(_with_detail(_document()), CORE).state == "valid"
+
+
+@pytest.mark.parametrize(
+    ("reference", "key"),
+    [
+        ({"specialises": "core.intervals.no_such_column"}, None),
+        ({"specialises": "core.intervals.clock_id"}, None),
+        ({"specialises": "core.processing_runs.scope_kind"}, None),
+        ({"specialises": "core.devices.device_kind"}, None),
+        ({}, ["session_id", "tone_id"]),
+    ],
+    ids=["absent_column", "not_a_discriminator", "paired_value", "another_target", "key_elsewhere"],
+)
+def test_a_specialising_reference_names_a_shared_key_discriminator_of_its_target(reference, key):
+    """Part 02 §8.3: the discriminator is shared-key, specialises the target, and leads the detail key."""
+    result = check_registry(_with_detail(_document(), reference, key), CORE)
+    assert result.state == "invalid"
+    assert _specialisation_pointers(result) == {"/resources/demo.tones/table/references/1/specialises"}
+
+
+def test_a_specialisation_through_discriminates_via_targets_the_specialised_table():
+    """`core.event_streams.detail_kind` specialises events, so a reference to the stream is refused."""
+    document = _document()
+    table = _table(document)
+    table["columns"] = [_column("session_id"), _column("stream_id")]
+    table["primary_key"] = ["session_id", "stream_id"]
+    table["amendment_groups"] = [["session_id", "stream_id"]]
+    table["references"] = [
+        {
+            "columns": ["session_id", "stream_id"],
+            "resource": "core.event_streams",
+            "resource_columns": ["session_id", "stream_id"],
+            "specialises": "core.event_streams.detail_kind",
+        }
+    ]
+    result = check_registry(document, CORE)
+    assert _specialisation_pointers(result) == {"/resources/demo.rows/table/references/0/specialises"}
+
+
+def test_a_table_specialises_through_one_reference():
+    """The later of two declarations is reported, though each alone would be valid."""
+    document = _with_detail(_document())
+    table = _table(document, "demo.tones")
+    table["columns"].append(_column("cue_id"))
+    table["references"].append({**table["references"][1], "columns": ["cue_id"]})
+    result = check_registry(document, CORE)
+    assert _specialisation_pointers(result) == {"/resources/demo.tones/table/references/2/specialises"}
+
+
+def test_a_specialises_value_that_is_not_a_column_path_fails_its_shape():
+    result = check_registry(_with_detail(_document(), {"specialises": "core.intervals"}), CORE)
     shape = next(phase for phase in result.phases if phase.phase == "shape")
     assert shape.state == "invalid"

@@ -36,7 +36,7 @@ from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_flo
 from escapewheel_reader.uri import decode
 
 from . import amendment
-from .generate import Check, adjacency_settles_uniqueness, concerns, generate
+from .generate import Check, Specialisation, adjacency_settles_uniqueness, concerns, generate
 from .manifest import MANIFEST_FILENAME, Bound, Issue, bind_registries, check_manifest, named_registries
 from .opaque import describe, findings
 from .registry_document import (
@@ -2213,13 +2213,14 @@ def _run_rules(
 
             kinds = _declared_kinds(packet, registry, extension_documents)
             keys = _declared_keys(packet, registry, extension_documents)
+            specialises = _specialisations(packet, registry, extension_documents)
             tier1 = generate(
                 core_context,
                 only=set(present),
                 advisory=advisory,
                 aggregate=unsound or set(),
                 kinds=kinds,
-                specialises=_specialisations(packet, registry, extension_documents),
+                specialises=specialises,
                 declared=False,
                 keys=keys,
             )
@@ -2243,6 +2244,7 @@ def _run_rules(
                 recheck,
                 unsound,
                 keys,
+                specialises,
             )
         finally:
             with contextlib.suppress(Exception):
@@ -2460,29 +2462,49 @@ def _declared_keys(
 
 def _specialisations(
     packet: Packet, registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
-) -> dict[str, list[tuple[str, dict[str, str]]]]:
-    """Which resources could specialise which, keyed by the discriminated resource.
+) -> dict[str, list[Specialisation]]:
+    """Every declared specialising reference, keyed by the discriminator it names (Part 02 §8.3).
 
-    A specialisation declares a reference back over the discriminated table's **whole** key
-    (Part 02 §8.3). Anything else a discriminator could name is a resource that could not carry
-    the key, so generating Part 02 §8.3's reverse check for it would be checking the impossible.
+    Only a declaration makes a table a specialisation: a table keyed by its reference to an
+    interval may hold one row per interval without being a kind, and inference from references
+    takes every related table for a misdirection.
     """
     tables = dict(_tables(registry))
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
     for document in extensions:
         if isinstance(_tables(document), Mapping):
             tables.update({n: t for n, t in _tables(document).items() if n in carried})
-    found: dict[str, list[tuple[str, dict[str, str]]]] = {}
+    found: dict[str, list[Specialisation]] = {}
     for name, spec in tables.items():
         for reference in spec.get("references", []):
-            target = reference["resource"]
-            key = (tables.get(target) or {}).get("primary_key") or []
-            mapping = dict(zip(reference.get("resource_columns", []), reference["columns"], strict=False))
-            if key and set(mapping) >= set(key):
-                # The mapping, not just the name: Part 02 §8.3 requires the whole key and does not
-                # require the same column names for it. `dynamic_foraging.trials` carries the
-                # interval's id as `trial_id`, so a join on matching names finds nothing.
-                found.setdefault(target, []).append((name, mapping))
+            if "specialises" not in reference:
+                continue
+            holder, column_name = str(reference["specialises"]).rsplit(".", 1)
+            column = next((c for c in (tables.get(holder) or {}).get("columns", []) if c["name"] == column_name), {})
+            via = None
+            if target_column := column.get("discriminates_via"):
+                target = str(target_column).rsplit(".", 1)[0]
+                to_holder = next(
+                    (
+                        r
+                        for r in (tables.get(target) or {}).get("references", [])
+                        if r["resource"] == holder and str(target_column).rsplit(".", 1)[1] in r["columns"]
+                    ),
+                    None,
+                )
+                if to_holder is None:
+                    continue  # the registry check reports a path that does not resolve
+                via = tuple(zip(to_holder["columns"], to_holder["resource_columns"], strict=True))
+            found.setdefault(str(reference["specialises"]), []).append(
+                Specialisation(
+                    detail=name,
+                    target=str(reference["resource"]),
+                    on=tuple(zip(reference["columns"], reference["resource_columns"], strict=True)),
+                    holder=holder,
+                    column=column_name,
+                    via=via,
+                )
+            )
     return found
 
 
@@ -2498,6 +2520,7 @@ def _check_extensions(
     recheck: Collection[str] | None = None,
     unsound: set[str] | None = None,
     keys: Mapping[str, Any] | None = None,
+    specialises: Mapping[str, Collection[Specialisation]] | None = None,
 ) -> None:
     """Run each directing extension registry's generated and declared checks (Part 05 §5.4).
 
@@ -2534,6 +2557,7 @@ def _check_extensions(
             aggregate=unsound or set(),
             resolvable=set(_tables(registry)),
             kinds=kinds,
+            specialises=specialises,
             declared=False,
             keys=keys,
         )

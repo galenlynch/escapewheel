@@ -171,20 +171,28 @@ def unresolved(packet: Any) -> list[Unresolved]:
     return out
 
 
-def _reference_back(packet: Any, kind: str, target: str) -> tuple[list[str], list[str]]:
-    """Find the named resource's reference to the discriminated table, as (its columns, the key's).
+def _reference_back(packet: Any, source: str, target: str) -> tuple[list[str], list[str]]:
+    """Find the specialised table's one reference to the discriminator's, as (its columns, the key's).
 
-    Part 02 §8.3 requires a shared-key target to declare one covering the discriminated table's
-    whole key, because a reference on part of it resolves to several rows while the generated
-    anti-join passes.
+    Part 02 §8.3 requires the table `discriminates_via` names to declare exactly one.
     """
-    for reference in registries(packet).get(kind, {}).get("references", []):
+    for reference in registries(packet).get(source, {}).get("references", []):
         if reference.get("resource") == target:
             return list(reference["columns"]), list(reference["resource_columns"])
-    raise LookupError(
-        f"{kind} declares no reference back to {target}, which a shared-key "
-        f"discriminator requires of what it names (Part 02 §8.3)"
-    )
+    raise LookupError(f"{source} declares no reference to {target}, which discriminates_via requires (Part 02 §8.3)")
+
+
+def _specialising_reference(packet: Any, kind: str, found: Discriminator) -> tuple[list[str], list[str]]:
+    """Find the named resource's specialising reference naming the discriminator, as (its columns, the key's).
+
+    Part 02 §8.3 has shared-key resolution join through that reference; a named resource declaring
+    none is not a specialisation of the discriminator, whatever else it references.
+    """
+    named = f"{found.resource}.{found.column}"
+    for reference in registries(packet).get(kind, {}).get("references", []):
+        if reference.get("specialises") == named:
+            return list(reference["columns"]), list(reference["resource_columns"])
+    raise LookupError(f"{kind} declares no specialising reference naming {named} (Part 02 §8.3)")
 
 
 def _key(packet: Any, resource: str) -> list[str]:
@@ -262,7 +270,7 @@ def resolved(packet: Any, resource_id: str, kind: str, *, column: str | None = N
 
     # Against the **discriminated** table, which `discriminates_via` moves away from the one
     # carrying the column: a detail table shares a key with the rows it specialises.
-    theirs, ours = _reference_back(packet, kind, found.specialised)
+    theirs, ours = _specialising_reference(packet, kind, found)
     # The key need not hold the kind -- `core.intervals` keys on `interval_id` alone -- so the rows
     # are filtered to it, and a column both tables carry, such as `session_id`, is kept once.
     rows = rows.filter(pc.equal(rows.column(found.column), kind))

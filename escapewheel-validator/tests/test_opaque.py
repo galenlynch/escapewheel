@@ -169,7 +169,7 @@ def test_a_uri_segment_windows_cannot_hold_is_named_in_its_own_directory(packet_
 def test_a_warning_on_an_extensions_payload_is_that_extensions(packet_root):
     """Part 05 §9.5: attributed to the registry whose declaration the entry names."""
     extension = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
         "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",

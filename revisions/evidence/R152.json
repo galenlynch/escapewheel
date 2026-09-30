@@ -1,0 +1,281 @@
+{
+  "version": 1,
+  "revision": "R152",
+  "based_on": "884ab72b6500805cc456f2ab755806ca993bb72f",
+  "clauses": {
+    "R152 §3.1": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-logical-references"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-discriminator-semantics"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$defs/reference/properties/specialises"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "registry/tables.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
+          "registry/extensions/dynamic_foraging.json",
+          "registry/extensions/vr_foraging.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_detail_table_of_an_interval_is_valid"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_specialises_value_that_is_not_a_column_path_fails_its_shape"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_discriminators.py::test_a_kind_declaring_no_specialising_reference_does_not_resolve"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "every registry document is what its source assembles to"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/assemble.py",
+          "registry/render.py",
+          "registry/extensions/dynamic_foraging/dynamic_foraging.trials.toml",
+          "registry/extensions/vr_foraging/vr_foraging.sites.toml",
+          "escapewheel-reader/src/escapewheel_reader/discriminators.py",
+          "conformance/interval-kinds/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md"
+        ]
+      }
+    },
+    "R152 §3.2": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-discriminator-semantics"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "trial_names_a_tone",
+            "finding": "dynamic_foraging.trials.trial_id.names_a_row_of_its_kind"
+          },
+          {
+            "kind": "fixture",
+            "packet": "tone_names_a_trial",
+            "finding": "cue.tones.tone_id.names_a_row_of_its_kind"
+          },
+          {
+            "kind": "fixture",
+            "packet": "tone_in_place_of_its_own",
+            "finding": "cue.tones.tone_id.names_a_row_of_its_kind"
+          },
+          {
+            "kind": "fixture",
+            "packet": "interval_of_a_session",
+            "finding": "core.intervals.interval_kind.core_sessions_is_specialised"
+          },
+          {
+            "kind": "fixture",
+            "packet": "device_detail_unkinded",
+            "finding": "rig.neuropixels.device_id.names_a_row_of_its_kind"
+          },
+          {
+            "kind": "fixture",
+            "packet": "device_detail_other_kind",
+            "finding": "rig.neuropixels.device_id.names_a_row_of_its_kind"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/generate.py",
+          "escapewheel-validator/src/escapewheel_validator/validator.py",
+          "fixtures/build.py",
+          "fixtures/corpus.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "fixtures/README.md",
+          "registry/README.md"
+        ]
+      }
+    },
+    "R152 §3.3": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.9.json",
+          "pointer": "/invariants/28"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.9.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_specialising_reference_names_a_shared_key_discriminator_of_its_target[absent_column]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_specialising_reference_names_a_shared_key_discriminator_of_its_target[not_a_discriminator]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_specialising_reference_names_a_shared_key_discriminator_of_its_target[paired_value]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_specialising_reference_names_a_shared_key_discriminator_of_its_target[another_target]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_specialising_reference_names_a_shared_key_discriminator_of_its_target[key_elsewhere]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_specialisation_through_discriminates_via_targets_the_specialised_table"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_registry_document.py::test_a_table_specialises_through_one_reference"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "registry/README.md"
+        ]
+      }
+    },
+    "R152 §3.4": {
+      "owners": [
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-core-logical-schema-scope"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "escapewheel_poc_docs_v0.2/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "registry/registry.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "registry/logical_schemas.json",
+          "pointer": "/registry_version"
+        },
+        {
+          "path": "registry/registry_contracts/escapewheel-registry-contract-v0.9.json",
+          "pointer": "/id"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel_poc_docs_v0.2/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "registry meta-schema identity is 0.11.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "core registry version is 0.14.0"
+          },
+          {
+            "kind": "check",
+            "stage": "registry: structural checks",
+            "id": "the incorporated registry contract validates against its schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "registry/core/registry.toml",
+          "registry/extensions/aind_opto/registry.toml",
+          "registry/extensions/aind_unit_qc/registry.toml",
+          "registry/extensions/dynamic_foraging/registry.toml",
+          "registry/extensions/vr_foraging/registry.toml",
+          "registry/build.py",
+          "registry/check.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_document.py",
+          "escapewheel_poc_docs_v0.2/framework.py",
+          "facts.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel_poc_docs_v0.2/README.md",
+          "registry/README.md"
+        ]
+      }
+    }
+  }
+}

@@ -23,8 +23,8 @@ VENDORED = {
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry.schema.json",
     "registry_contract.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contract.schema.json",
-    "registry_contracts/escapewheel-registry-contract-v0.8.json": HERE.parent
-    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.8.json",
+    "registry_contracts/escapewheel-registry-contract-v0.9.json": HERE.parent
+    / "escapewheel-validator/src/escapewheel_validator/schemas/registry_contracts/escapewheel-registry-contract-v0.9.json",
     "rule_language.schema.json": HERE.parent
     / "escapewheel-validator/src/escapewheel_validator/schemas/rule_language.schema.json",
     "rule_languages/escapewheel-rule-sql-v0.2.json": HERE.parent

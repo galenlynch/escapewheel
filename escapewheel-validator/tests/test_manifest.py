@@ -381,7 +381,7 @@ def test_an_extension_binding_finding_is_attributed_to_it(packet_root, extension
 @pytest.fixture
 def extension_document():
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
         "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",

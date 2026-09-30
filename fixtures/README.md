@@ -117,6 +117,23 @@ clock at ticks below the first trial's and numbers it first, each draw
 draws `dynamic_foraging.trials.trial_id_resolves`, filed under `dynamic_foraging`, which fails
 while core passes.
 
+Four packets exercise Part 02 §8.3's specialising references, where `cue.tones` and
+`dynamic_foraging.trials` each declare one naming `core.intervals.interval_kind`. Built on
+`two_kinds_one_label`, `trial_names_a_tone` adds a trial row on the tone's interval and draws
+`dynamic_foraging.trials.trial_id.names_a_row_of_its_kind` under `dynamic_foraging`, and
+`tone_names_a_trial` adds a tone row on the first trial's interval and draws
+`cue.tones.tone_id.names_a_row_of_its_kind` under `cue`; the reverse check passes both, since every
+interval keeps a row of its own kind. `tone_in_place_of_its_own` moves the tone row onto the first
+trial's interval and draws that check and `core.intervals.interval_kind.cue_tones_is_specialised`.
+`interval_of_a_session` adds an interval whose kind is `core.sessions`, which declares no
+specialising reference, and draws `core.intervals.interval_kind.core_sessions_is_specialised`.
+
+Three packets bind the fixture-local extension `rig`, whose `rig.neuropixels` is a detail table of
+`core.devices.device_kind`, a discriminator resolving `optional`, and hold one row for the probe.
+`device_detail` names `rig.neuropixels` as the probe's `device_kind` and is clean;
+`device_detail_unkinded` leaves it null and `device_detail_other_kind` names `core.probes`, and
+each draws `rig.neuropixels.device_id.names_a_row_of_its_kind` under `rig`.
+
 Six packets exercise how Part 02 §12.1 numbers units, whose two units, both in one curation, are
 labelled `"17"` and `"42"`. `unit_labels_by_length` relabels them `"7"` and `"007"`, and numbers them
 in that order, which is length order; `null_unit_labels` leaves both labels null, and

@@ -102,7 +102,7 @@ def _col(name, type_, presence, **extra):
 def _registry():
     """A registry describing exactly the tables the fixture writes."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
         "registry_id": "core",
         "registry_version": "0.1.0",
         "semantic_standard_version": "escapewheel-semantic-v0.1",

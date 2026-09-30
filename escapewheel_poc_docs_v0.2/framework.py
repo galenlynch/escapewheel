@@ -38,7 +38,7 @@ IDENTIFIERS = {
         "ew-core-logical-schema-scope",
     ),
     "registry_id": ("core", "02", "ew-registry-self-description"),
-    "registry_version": ("0.13.0", "02", "ew-registry-self-description"),
+    "registry_version": ("0.14.0", "02", "ew-registry-self-description"),
 }
 
 REFERENCE_MARKERS = {

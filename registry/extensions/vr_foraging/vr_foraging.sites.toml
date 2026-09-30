@@ -21,7 +21,7 @@ type = "int32"
 presence = "required"
 role = "identifier"
 identity = "assigned"
-references = { resource = "core.intervals", column = "interval_id" }
+references = { resource = "core.intervals", column = "interval_id", specialises = "core.intervals.interval_kind" }
 description = "The site, and the interval it occupies in core. The source numbers sites from 0 within a session, and that number is the interval's `local_interval_label`, so no separate site_index is carried."
 
 [[columns]]

@@ -18,7 +18,7 @@ This part expressly incorporates the following artifacts:
 |---|---|
 | `registry/registry.schema.json` | exact local JSON structure and conditional shape constraints |
 | `registry/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
-| `registry/registry_contracts/escapewheel-registry-contract-v0.8.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `registry/registry_contracts/escapewheel-registry-contract-v0.9.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
 | `registry/logical_schemas.json` | exact current core and analysis resource declarations, including table columns, keys, references, vocabularies, and rules |
 
 The generated core registry is what a packet embeds. `registry/tables.md` is a generated,
@@ -339,7 +339,7 @@ Duplication is permitted only where it buys otherwise-unavailable access. Axis n
 <a id="ew-logical-references" data-spec-anchor="canonical"></a>
 ## 7. References
 
-A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing.
+A table declares each foreign key as a reference naming the target resource, this table's columns, and the target's columns. A reference MAY be composite, nullable, or self-referencing, and MAY declare `specialises`, naming the discriminator whose rows its table specialises (§8.3).
 
 Where a reference has a populated source value, the packet MUST contain the target singleton table
 resource. This presence consequence is in addition to row-level foreign-key resolution.
@@ -460,11 +460,19 @@ joins; Part 05 §13.4 has a reader offer it. Two shapes exist, and a discriminat
 `positions_in`:
 
 - **Shared key.** The discriminated row and the named resource share a key, so the join is on that
-  key. A resource a shared-key discriminator may name MUST declare a reference back to the
-  discriminated table, and that reference MUST cover the discriminated table's **whole key**. A
-  reference on part of it targets a set that is not unique — it identifies a row of some kind,
-  which is not a foreign key, and the generated anti-join passes while resolving to several rows.
-  A detail table carries the discriminator's value as a constant column only where the
+  key. A reference declaring `specialises`, a dotted `resource.column` naming a discriminator, is a
+  **specialising reference**; its table is a **detail table** of that discriminator, a row of it is
+  a **detail row**, and the row a detail row's reference resolves to is its **specialised row**.
+  `specialises` MUST resolve, under the visibility and direction rules of a reference target, to a
+  discriminator column that declares no `discriminates`. The reference's target MUST be the table
+  that discriminator specialises: the table `discriminates_via` names where the discriminator
+  declares it, and the discriminator's own table otherwise. The detail table's primary key MUST
+  begin with the reference's `columns`, in their order, and a table MUST NOT declare `specialises`
+  on more than one reference. A resource a shared-key discriminator may name MUST be a detail table
+  of that discriminator. Where the discriminator resolves `optional`, no checker verifies this;
+  where it resolves `required`, the reverse check below reports every row naming a resource that is
+  not one. Resolution joins the discriminated row to the named resource through that resource's
+  specialising reference naming the discriminator. A detail table carries the discriminator's value as a constant column only where the
   discriminator is a member of that key, restating in every row what its own identity implies; a
   column holding one value costs almost nothing once encoded, and what it buys is a reference that
   identifies a row. `core.intervals.interval_kind` is no member of its table's key, so a table
@@ -482,20 +490,32 @@ joins; Part 05 §13.4 has a reader offer it. Two shapes exist, and a discriminat
     A writer MUST fill it with the identifier it assigned the named row, as it fills any reference
     to that resource ([Part 05 §4.3](05_validation_and_import.md#ew-import-normalization)).
 
-**What is generated.** Where `resolves` is `required`, every discriminator gets a forward anti-join
-against the resources the manifest declares, and each shape adds its own checks. All are at
-**error**, and each per-kind check is generated over the kinds a packet's rows actually name:
+**What is generated.** A packet MUST NOT hold a detail row whose specialised row's discriminator
+value is null or names a resource other than the detail table. The value is read on the specialised
+row where the discriminator is on that row's table, and otherwise on the row of the discriminator's
+table that the specialised row's `discriminates_via` column references. Every specialising
+reference generates a check at **error** on its detail table, whatever the discriminator declares
+for `resolves`, returning every detail row whose reference resolves and whose specialised row's
+value is null or is not the detail table's resource ID. A detail row whose reference resolves to
+nothing is left to the reference's anti-join.
+
+Where `resolves` is `required`, every discriminator also gets a forward anti-join against the
+resources the manifest declares, and each shape adds its own checks. All are at **error**, and each
+per-kind check is generated over the kinds a packet's rows actually name:
 
 - a shared-key discriminator gets a reverse check per named kind, returning every row of the
-  discriminating table whose key has no counterpart in the resource its discriminator names;
+  discriminating table whose key has no counterpart in the resource its discriminator names. The
+  counterpart is the row of the named resource whose specialising reference naming this
+  discriminator resolves to it, so a named resource declaring no such reference holds none and the
+  check returns every row naming it;
 - a paired-value discriminator gets a check reporting a named resource whose primary key is not one
   column of the paired value's form, built from the registry's key declarations as literals; an
   anti-join per named kind, returning every row whose paired value is not null and matches no row
   of the named resource; and, where the paired value is on the specialised table, a check returning
   every specialised row whose discriminator is null.
 
-Where `resolves` is `optional`, none of these is generated and an unresolvable value is reported
-as `info`.
+Where `resolves` is `optional`, the forward anti-join, the reverse check and the paired-value
+checks are not generated, and an unresolvable value is reported as `info`.
 
 Every generated check MUST be built over **every resource the packet declares, extensions
 included**. Building them over core alone lets an extension kind match no branch and pass in
@@ -505,9 +525,8 @@ Core MAY name an extension's resource through a discriminator. It MUST NOT refer
 does not create a dependency, so core stays checkable alone, an absent target is a reportable fact,
 and no integrity constraint couples the versions.
 
-A row's kind-specific facts live in a table sharing that row's key: the detail table's primary key
-MUST begin with the discriminated
-table's own identifier. `core.devices` names such a table through `device_kind`, and
+A row's kind-specific facts live in a detail table sharing that row's key, whose primary key begins
+with its specialising reference's `columns`. `core.devices` names such a table through `device_kind`, and
 core MUST NOT declare one — Part 01 §3.17 makes this standard name no instruments, so a camera's
 target or a thermistor's range belongs to an extension. A fact no detail table
 models stays in `metadata`, and what justifies promoting one out of it is a rule or a
@@ -607,9 +626,9 @@ A packet binds each registry that declares its resources under
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.10.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.11.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.13.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.14.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -619,8 +638,9 @@ the full `escapewheel-logical-v0.1` logical-standard identifier and MUST NOT car
 The core specification does not assign an extension's version. An extension registry migrated to
 meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0,
 one migrated to `escapewheel-rule-sql-v0.2` a `registry_version` different from the one it carried
-under `escapewheel-rule-sql-v0.1`, and one migrated to meta-schema 0.10.0 a `registry_version`
-different from the one it carried under 0.9.0. No checker verifies any of these, since a checker reads only
+under `escapewheel-rule-sql-v0.1`, one migrated to meta-schema 0.10.0 a `registry_version`
+different from the one it carried under 0.9.0, and one migrated to meta-schema 0.11.0 a
+`registry_version` different from the one it carried under 0.10.0. No checker verifies any of these, since a checker reads only
 the document before it and not the version that document replaced.
 
 A checker selects schemas and contracts only from local artifacts and MUST NOT dereference an
@@ -688,13 +708,15 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.8`, selects the 0.10.0
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.9`, selects the 0.11.0
 meta-schema, and lists `escapewheel-rule-sql-v0.2` alone in `rule_languages`. That meta-schema MUST
 declare `finite` as a boolean member of a column, require it where `type` is `float32` or
 `float64`, and forbid it otherwise; the `shape` phase therefore decides §5.4's declaration rule, and
 the descriptor adds no invariant for it. It MUST also require `amendment_groups` in the `table`
-object, after `rules`, as a duplicate-free array of nonempty, duplicate-free arrays of names. A
-checker MUST evaluate its phases in this order:
+object, after `rules`, as a duplicate-free array of nonempty, duplicate-free arrays of names, and
+admit `specialises` in the `reference` object as an optional member after `resource_columns`, a
+string matching `^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`. A checker MUST evaluate its
+phases in this order:
 
 1. `json`;
 2. `schema_selection`;
@@ -804,6 +826,7 @@ The descriptor assigns these invariants in this exact order:
 | `registry.resource.dependency` | semantic | core, extension |
 | `registry.resource.canonical_targets` | semantic | core, extension |
 | `registry.amendment_groups.resolves` | semantic | core, extension |
+| `registry.discriminator.specialisation` | semantic | core, extension |
 
 Every descriptor anchor MUST identify every numbered-part clause defining the invariant. Invariant
 IDs are unique. The descriptor schema closes its objects; requires nonempty, duplicate-free arrays;
@@ -836,7 +859,14 @@ lies in the core context. `registry.amendment_groups.resolves` enforces §2.8: i
 group-list member naming no column of its table or a column whose presence is `optional`, two group
 lists of one table naming the same set, and a nonempty `amendment_groups` on a non-canonical table.
 Its outcome points at the offending member, at the later of two group lists naming one set, and at
-`amendment_groups` itself on a non-canonical table. The existing table, column, reference, rule, and external-domain
+`amendment_groups` itself on a non-canonical table. `registry.discriminator.specialisation`
+enforces §8.3's specialising references: it reports a `specialises` value naming no visible column,
+naming a column that is not a discriminator, or naming a discriminator that declares
+`discriminates`; a specialising reference whose target is not the table its discriminator
+specialises; a detail table whose primary key does not begin with its specialising reference's
+`columns` in their order; and a table declaring `specialises` on more than one reference. Its
+outcome points at the offending `specialises` member, at the later one of a table declaring two,
+and is core-dependent where the discriminator lies in the core context. The existing table, column, reference, rule, and external-domain
 invariants operate on the `table` payload of table-kind declarations. Their stable IDs do not
 change merely because their instance pointers gain enclosing `resources` and `table` components.
 

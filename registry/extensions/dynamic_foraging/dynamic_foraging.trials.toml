@@ -21,7 +21,7 @@ type = "int32"
 presence = "required"
 role = "identifier"
 identity = "assigned"
-references = { resource = "core.intervals", column = "interval_id" }
+references = { resource = "core.intervals", column = "interval_id", specialises = "core.intervals.interval_kind" }
 description = "The trial, and the interval it occupies in core."
 
 [[columns]]

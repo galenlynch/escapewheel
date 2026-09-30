@@ -60,13 +60,14 @@ def detail(extension_id, table, extra, *, based):
         }
     ]
     if based:
-        # Part 02 §8.3: the named resource declares the reference back, which is what makes the
-        # join mechanical rather than inferred from names matching.
+        # Part 02 §8.3: the named resource declares its specialising reference, which is what makes
+        # the join mechanical rather than inferred from names matching.
         references.append(
             {
                 "columns": ["interval_id"],
                 "resource": "core.intervals",
                 "resource_columns": ["interval_id"],
+                "specialises": "core.intervals.interval_kind",
             }
         )
     else:
@@ -92,7 +93,7 @@ def detail(extension_id, table, extra, *, based):
             }
         )
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
         "registry_id": extension_id,
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",

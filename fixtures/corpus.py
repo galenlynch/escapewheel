@@ -99,6 +99,13 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "label_outside_core": ("error", "core.array_dimensions.coordinate_resource_is_core"),
     "array_without_dimension_names": ("error", "array.dimension_names"),
     "two_kinds_one_label": None,
+    "trial_names_a_tone": ("error", "dynamic_foraging.trials.trial_id.names_a_row_of_its_kind"),
+    "tone_names_a_trial": ("error", "cue.tones.tone_id.names_a_row_of_its_kind"),
+    "tone_in_place_of_its_own": ("error", "cue.tones.tone_id.names_a_row_of_its_kind"),
+    "interval_of_a_session": ("error", "core.intervals.interval_kind.core_sessions_is_specialised"),
+    "device_detail": None,
+    "device_detail_unkinded": ("error", "rig.neuropixels.device_id.names_a_row_of_its_kind"),
+    "device_detail_other_kind": ("error", "rig.neuropixels.device_id.names_a_row_of_its_kind"),
     "kinds_out_of_unicode_order": None,
     "equal_bounds": None,
     "equal_bounds_swapped": None,
@@ -166,6 +173,10 @@ ABSENT: dict[str, set[str]] = {
 EXTENSION_FINDINGS: dict[str, str] = {
     "extension_bad_type": "dynamic_foraging",
     "orphan_trial": "dynamic_foraging",
+    "trial_names_a_tone": "dynamic_foraging",
+    "tone_names_a_trial": "cue",
+    "device_detail_unkinded": "rig",
+    "device_detail_other_kind": "rig",
 }
 
 #: Packets whose expected finding is advisory (Part 02 §10.2). Advisory rules are off by default --

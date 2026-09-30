@@ -55,6 +55,35 @@ class Check:
             object.__setattr__(self, "dependencies", frozenset({self.resource}))
 
 
+@dataclass(frozen=True)
+class Specialisation:
+    """One specialising reference (Part 02 §8.3), resolved against every table the packet declares.
+
+    Attributes
+    ----------
+    detail : str
+        The detail table declaring the reference.
+    target : str
+        The table the discriminator specialises, which the reference targets.
+    on : tuple of (str, str)
+        Each detail column with the target column it references.
+    holder : str
+        The table carrying the discriminator.
+    column : str
+        The discriminator column.
+    via : tuple of (str, str), optional
+        Where the discriminator is on another table, each column of the target's reference to it
+        with the holder column it references.
+    """
+
+    detail: str
+    target: str
+    on: tuple[tuple[str, str], ...]
+    holder: str
+    column: str
+    via: tuple[tuple[str, str], ...] | None = None
+
+
 def concerns(check: Check, written: Collection[str]) -> bool:
     """Whether Part 05 §15.4 obliges `check` to run when `written` are the resources just written.
 
@@ -111,7 +140,7 @@ def _discriminator(
     column: Mapping[str, Any],
     kinds: Mapping[str, str | None] | None,
     included: Collection[str],
-    specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
+    specialises: Mapping[str, Collection[Specialisation]] | None = None,
     specs: Mapping[str, Any] | None = None,
     keys: Mapping[str, Mapping[str, Any] | None] | None = None,
 ) -> list[Check]:
@@ -152,34 +181,66 @@ def _discriminator(
     # A paired value lives in the named table's key space (Part 02 §8.3), so it resolves value-to-key.
     paired = column.get("discriminates")
     if paired is None:
-        # A shared-key discriminator: the reference Part 02 §8.3 requires of the named table
-        # generates the anti-join from detail to discriminated row. Part 02 §8.3 adds the direction a
-        # foreign key cannot point -- a row naming a kind with no counterpart in it, which is
-        # Part 01 §3.10a's "a kind that resolves to nothing is a name again" and which every other
-        # check passes. Only where `resolves` is required: an optional kind naming nothing is a
-        # fact (R49), not a defect.
+        # A shared-key discriminator: Part 02 §8.3 adds the direction a foreign key cannot point --
+        # a row naming a kind with no counterpart in it, which is Part 01 §3.10a's "a kind that
+        # resolves to nothing is a name again" and which every other check passes. Only where
+        # `resolves` is required: an optional kind naming nothing is a fact (R49), not a defect.
         if column.get("resolves") != "required" or not table.get("primary_key"):
             return checks
-        # Only a resource that could *be* a specialisation: one declaring a reference back over
-        # the discriminated table's whole key, which is what Part 02 §8.3 requires of a named
-        # resource. Without the filter this generates one check per declared resource, and 34 of
-        # the 35 name a core table that could never carry the key (Part 02 §8.3).
-        for kind, mapping in sorted((specialises or {}).get(resource, ()), key=lambda pair: pair[0]):
-            on = " AND ".join(f"s.{quote(mapping[c])} = d.{quote(c)}" for c in table["primary_key"])
+        key = ", ".join(quote(c) for c in table["primary_key"])
+        details = {s.detail: s for s in (specialises or {}).get(f"{resource}.{column['name']}", ())}
+        for kind in sorted(kinds):
+            found = details.get(kind)
+            if found is None:
+                # A kind declaring no specialising reference naming this discriminator holds no
+                # counterpart, so every row naming it is reported.
+                message = f"a row names {kind}, which declares no specialising reference naming {resource}.{column['name']} (Part 02 §8.3)"
+                sql = f"SELECT {key} FROM {name} d WHERE d.{col} = '{kind}'"
+            else:
+                on = " AND ".join(f"s.{quote(a)} = d.{quote(b)}" for a, b in found.on)
+                message = f"a row names {kind} and has no counterpart there (Part 02 §8.3)"
+                sql = f"SELECT {key} FROM {name} d WHERE d.{col} = '{kind}' AND NOT EXISTS (SELECT 1 FROM {kind} s WHERE {on})"
             checks.append(
                 Check(
                     f"{resource}.{column['name']}.{sql_name(kind)}_is_specialised",
                     "error",
-                    f"a row names {kind} and has no counterpart there (Part 02 §8.3)",
-                    f"SELECT {', '.join(quote(c) for c in table['primary_key'])} FROM {name} d "
-                    f"WHERE d.{col} = '{kind}' "
-                    f"AND NOT EXISTS (SELECT 1 FROM {kind} s WHERE {on})",
+                    message,
+                    sql,
                     resource,
                     dependencies=frozenset({resource, kind}),
                 )
             )
         return checks
     return checks + _paired_value(resource, name, column, paired, kinds, included, specs or {}, keys)
+
+
+def _kind_matches(found: Specialisation, reachable: Collection[str]) -> list[Check]:
+    """Build the check that each detail row's specialised row names the detail table (Part 02 §8.3).
+
+    Generated whatever the discriminator declares for `resolves`: the check compares two rows the
+    packet holds, where `resolves` governs a kind naming a resource the packet lacks. The inner
+    join leaves a detail row naming no row to its reference's anti-join.
+    """
+    if found.target not in reachable or found.holder not in reachable:
+        return []
+    detail = ", ".join(f"t.{quote(c)}" for c, _ in found.on)
+    on = " AND ".join(f"t.{quote(a)} = s.{quote(b)}" for a, b in found.on)
+    col = quote(found.column)
+    if found.via is None:
+        joins, value = f"JOIN {found.target} s ON {on}", f"s.{col}"
+    else:
+        via = " AND ".join(f"s.{quote(a)} = h.{quote(b)}" for a, b in found.via)
+        joins, value = f"JOIN {found.target} s ON {on} LEFT JOIN {found.holder} h ON {via}", f"h.{col}"
+    return [
+        Check(
+            f"{found.detail}.{'_'.join(c for c, _ in found.on)}.names_a_row_of_its_kind",
+            "error",
+            f"a row specialises a {found.target} row whose {found.column} does not name {found.detail} (Part 02 §8.3)",
+            f"SELECT {detail} FROM {found.detail} t {joins} WHERE {value} IS NULL OR {value} <> '{found.detail}'",
+            found.detail,
+            dependencies=frozenset({found.detail, found.target, found.holder}),
+        )
+    ]
 
 
 def _key_column(kind: str, specs: Mapping[str, Any], keys: Mapping[str, Mapping[str, Any] | None] | None) -> Any:
@@ -308,7 +369,7 @@ def _generate(
     aggregate: set[str] | None = None,
     resolvable: set[str] | None = None,
     kinds: Mapping[str, str | None] | None = None,
-    specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
+    specialises: Mapping[str, Collection[Specialisation]] | None = None,
     declared: bool = True,
     keys: Mapping[str, Mapping[str, Any] | None] | None = None,
 ) -> list[Check]:
@@ -422,6 +483,13 @@ def _generate(
         for ref in table.get("references", []):
             if ref["resource"] not in reachable:
                 continue
+            if declared_discriminator := ref.get("specialises"):
+                checks.extend(
+                    check
+                    for found in (specialises or {}).get(declared_discriminator, ())
+                    if found.detail == resource
+                    for check in _kind_matches(found, reachable)
+                )
             parent = ref["resource"]
             on = " AND ".join(f"c.{quote(a)} = p.{quote(b)}" for a, b in zip(ref["columns"], ref["resource_columns"]))
             # A foreign key that may be null constrains only its non-null values; without this
@@ -457,7 +525,7 @@ def generate(
     aggregate: set[str] | None = None,
     resolvable: set[str] | None = None,
     kinds: Mapping[str, str | None] | None = None,
-    specialises: Mapping[str, Collection[tuple[str, Mapping[str, str]]]] | None = None,
+    specialises: Mapping[str, Collection[Specialisation]] | None = None,
     declared: bool = True,
     keys: Mapping[str, Mapping[str, Any] | None] | None = None,
 ) -> list[Check]:

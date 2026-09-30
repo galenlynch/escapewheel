@@ -1646,7 +1646,7 @@ def test_an_empty_packet_owned_prefix_is_missing(packet_root):
 def _extension(root, *, tables=None, mutate=None):
     """Give the packet an extension registry and a table conforming to it."""
     document = {
-        "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
         "registry_id": "task",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",
@@ -1945,7 +1945,7 @@ def _required_extension(root, extension_id):
     install_registry(
         root,
         {
-            "$schema": "https://escapewheel.org/schemas/registry/0.10.0",
+            "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
             "registry_id": extension_id,
             "registry_version": "0.1.0",
             "logical_standard_version": "escapewheel-logical-v0.1",
