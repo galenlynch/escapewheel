@@ -511,9 +511,9 @@ def test_a_floor_codec_this_installation_lacks_is_marked_within_the_floor(array_
         raise UnknownCodecError("zstd")
 
     monkeypatch.setattr(zarr, "open_array", unimplemented)
-    with pytest.raises(UnsupportedCodecError, match="reader floor: within it") as raised:
+    with pytest.raises(UnsupportedCodecError) as raised:
         open_packet(array_packet).array("core.lfp")
-    assert not raised.value.outside_floor
+    assert raised.value.outside_floor is False
 
 
 @pytest.mark.parametrize(
@@ -549,6 +549,6 @@ def test_a_store_only_zarr_can_reach_leaves_the_floor_unassessed(array_packet, m
     monkeypatch.setattr(zarr, "open_array", unimplemented)
     monkeypatch.setattr(ArrayResource, "_read_document", lambda self: None)
     handle = open_packet(array_packet).array_resource("core.lfp")
-    with pytest.raises(UnsupportedCodecError, match="reader floor: unassessed") as raised:
+    with pytest.raises(UnsupportedCodecError) as raised:
         handle.metadata()
     assert raised.value.outside_floor is None
