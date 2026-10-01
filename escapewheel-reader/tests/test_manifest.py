@@ -1,11 +1,10 @@
 import json
 
 import pytest
+from packet_fixture import SESSION_NAME, install_registry, read_registry
 
 from escapewheel_reader import Manifest, ManifestError, RegistryFault, RegistryUnavailable, open_packet
 from escapewheel_reader.manifest import MANIFESTS_DIRNAME
-
-from .conftest import SESSION_NAME, install_registry, read_registry
 
 
 def test_load_parses_declared_fields(packet_root):

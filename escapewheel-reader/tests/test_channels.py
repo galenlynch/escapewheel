@@ -6,6 +6,7 @@ import shutil
 import numpy as np
 import pyarrow as pa
 import pytest
+from packet_fixture import SESSION, SORTING_RUN, resource_entry, write_table
 
 from escapewheel_reader import open_packet
 from escapewheel_reader.channels import (
@@ -15,8 +16,6 @@ from escapewheel_reader.channels import (
     runs_without_channels,
 )
 from escapewheel_reader.errors import PacketError, UnresolvableChannelIndex
-
-from .conftest import SESSION, SORTING_RUN, _resource, _write
 
 #: The probe's four contacts, and the three a run kept: contact 1 is dropped, so every index from
 #: 1 on names a different electrode than the contact list would -- which is the whole hazard.
@@ -37,9 +36,9 @@ def _with_channels(tmp_path, packet_root, name, *, runs, channels):
     i32, i64 = pa.int32(), pa.int64()
 
     manifest["resources"].append(
-        _resource(
+        resource_entry(
             "core.sorting_runs",
-            _write(
+            write_table(
                 root,
                 "sorting_runs",
                 pa.table(
@@ -55,9 +54,9 @@ def _with_channels(tmp_path, packet_root, name, *, runs, channels):
     if channels:
         rows = [(run, index, electrode) for run, kept in channels.items() for index, electrode in enumerate(kept)]
         manifest["resources"].append(
-            _resource(
+            resource_entry(
                 "core.sorting_run_channels",
-                _write(
+                write_table(
                     root,
                     "sorting_run_channels",
                     pa.table(
@@ -166,7 +165,7 @@ def test_a_gap_in_the_indices_is_refused(tmp_path, packet_root):
     root = packet.root
     manifest = json.loads((root / "packet.json").read_text())
     i32, i64 = pa.int32(), pa.int64()
-    _write(
+    write_table(
         root,
         "sorting_run_channels",
         pa.table(
@@ -210,7 +209,7 @@ def test_a_table_missing_a_required_column_is_refused(tmp_path, packet_root):
     packet = _with_channels(tmp_path, packet_root, "narrow", runs=[SORTING_RUN], channels={SORTING_RUN: KEPT})
     root = packet.root
     i32 = pa.int32()
-    _write(
+    write_table(
         root,
         "sorting_run_channels",
         pa.table(

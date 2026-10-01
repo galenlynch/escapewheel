@@ -8,12 +8,11 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from packet_fixture import CLOCK_PROBE, SESSION, column, install_registry, read_registry, resource_entry
 
 from escapewheel_reader import open_packet
 from escapewheel_reader.axes import LabelledAxis, NumericAxis, Scaling, TickAxis, describe
 from escapewheel_reader.errors import AxisFault, UnresolvableAxis
-
-from .conftest import CLOCK_PROBE, SESSION, _col, _resource, install_registry, read_registry
 
 #: Two core arrays and an analysis one. The analysis array shares the LFP's number, since each
 #: catalog numbers its own, so a read not scoped to its own tables finds the other's rows.
@@ -24,16 +23,16 @@ TYPES = {"int32": pa.int32(), "int64": pa.int64(), "string": pa.string(), "float
 
 
 def _index(name, presence="required"):
-    return _col(name, "int64", presence, role="structural_index")
+    return column(name, "int64", presence, role="structural_index")
 
 
 def _axes_columns(namespace):
     return [
-        _col("session_id", "int32", "required"),
-        _col("array_asset_id", "int32", "required"),
+        column("session_id", "int32", "required"),
+        column("array_asset_id", "int32", "required"),
         _index("axis_index"),
-        _col("dimension_name", "string", "required"),
-        _col(
+        column("dimension_name", "string", "required"),
+        column(
             "coordinate_resource",
             "string",
             "nullable",
@@ -43,36 +42,36 @@ def _axes_columns(namespace):
             discriminates="label_id",
         ),
         _index("depends_on_axis_index", "nullable"),
-        _col("coordinate_array_asset_id", "int32", "nullable"),
-        _col("coordinate_unit", "string", "nullable"),
-        _col("step_value", "float64", "nullable"),
-        _col("origin_value", "float64", "nullable"),
-        _col("step_tick_num", "int64", "nullable"),
-        _col("step_tick_den", "int64", "nullable"),
-        _col("origin_tick", "int64", "nullable"),
-        _col("clock_id", "int32", "nullable"),
+        column("coordinate_array_asset_id", "int32", "nullable"),
+        column("coordinate_unit", "string", "nullable"),
+        column("step_value", "float64", "nullable"),
+        column("origin_value", "float64", "nullable"),
+        column("step_tick_num", "int64", "nullable"),
+        column("step_tick_den", "int64", "nullable"),
+        column("origin_tick", "int64", "nullable"),
+        column("clock_id", "int32", "nullable"),
     ]
 
 
 def _label_columns():
     return [
-        _col("session_id", "int32", "required"),
-        _col("array_asset_id", "int32", "required"),
+        column("session_id", "int32", "required"),
+        column("array_asset_id", "int32", "required"),
         _index("axis_index"),
         _index("depends_on_position_index"),
         _index("position_index"),
-        _col("label_id", "int32", "nullable"),
+        column("label_id", "int32", "nullable"),
     ]
 
 
 def _asset_columns():
     return [
-        _col("session_id", "int32", "required"),
-        _col("array_asset_id", "int32", "required"),
-        _col("resource_id", "string", "required"),
-        _col("unit", "string", "nullable"),
-        _col("conversion", "float64", "nullable"),
-        _col("offset", "float64", "nullable"),
+        column("session_id", "int32", "required"),
+        column("array_asset_id", "int32", "required"),
+        column("resource_id", "string", "required"),
+        column("unit", "string", "nullable"),
+        column("conversion", "float64", "nullable"),
+        column("offset", "float64", "nullable"),
     ]
 
 
@@ -91,9 +90,9 @@ def _to_axes(namespace):
 DECLARED = {
     "core.electrodes": (
         [
-            _col("session_id", "int32", "required"),
-            _col("electrode_id", "int32", "required"),
-            _col("electrode_name", "string", "required"),
+            column("session_id", "int32", "required"),
+            column("electrode_id", "int32", "required"),
+            column("electrode_name", "string", "required"),
         ],
         ["electrode_id"],
         [],
@@ -107,13 +106,13 @@ DECLARED = {
     ),
     "core.array_channels": (
         [
-            _col("session_id", "int32", "required"),
-            _col("array_asset_id", "int32", "required"),
+            column("session_id", "int32", "required"),
+            column("array_asset_id", "int32", "required"),
             _index("axis_index"),
             _index("channel_index"),
-            _col("unit", "string", "nullable"),
-            _col("offset", "float64", "nullable"),
-            _col("conversion", "float64", "nullable"),
+            column("unit", "string", "nullable"),
+            column("offset", "float64", "nullable"),
+            column("conversion", "float64", "nullable"),
         ],
         ["array_asset_id", "channel_index"],
         _to_axes("core"),
@@ -242,7 +241,7 @@ def _packet(tmp_path, packet_root, edit=None):
         )
         (root / "tables" / namespace).mkdir(parents=True, exist_ok=True)
         pq.write_table(table, root / "tables" / namespace / f"{name}.parquet")
-        manifest["resources"].append(_resource(resource_id, f"tables/{namespace}/{name}.parquet"))
+        manifest["resources"].append(resource_entry(resource_id, f"tables/{namespace}/{name}.parquet"))
         registry["resources"][resource_id] = {
             "content_class": namespace,
             "kind": "table",
@@ -267,7 +266,9 @@ def _packet(tmp_path, packet_root, edit=None):
     for resource_id, (namespace, shape) in ARRAYS.items():
         uri = f"arrays/{resource_id}.zarr"
         _zarr_json(root, uri, shape)
-        manifest["resources"].append(_resource(resource_id, uri, declaration_id=f"{namespace}.array_asset_instances"))
+        manifest["resources"].append(
+            resource_entry(resource_id, uri, declaration_id=f"{namespace}.array_asset_instances")
+        )
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     install_registry(root, registry)
     return open_packet(root)

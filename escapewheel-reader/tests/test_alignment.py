@@ -13,6 +13,7 @@ import shutil
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from packet_fixture import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, UNITS, resource_entry
 
 from escapewheel_reader import ClockMismatch, NotDeclared, open_packet
 from escapewheel_reader.alignment import (
@@ -20,8 +21,6 @@ from escapewheel_reader.alignment import (
     assigned_spikes,
     windows_disjoint,
 )
-
-from .conftest import CLOCK_BEHAVIOUR, CLOCK_PROBE, SESSION, UNITS, _resource
 
 CUES = [100, 200]
 SPIKES = [90, 100, 145, 190, 210]
@@ -62,7 +61,7 @@ def aligned_packet(tmp_path, packet_root):
         {
             "event_stream_id": pa.array([CUE_STREAM]),
             "session_id": pa.array([SESSION]),
-            "name": pa.array(["cue"]),
+            "event_stream_name": pa.array(["cue"]),
             "event_type": pa.array(["cue"]),
             "clock_id": pa.array([CLOCK_BEHAVIOUR]),
         }
@@ -70,9 +69,9 @@ def aligned_packet(tmp_path, packet_root):
     manifest["resources"] = [
         r for r in manifest["resources"] if r["resource_id"] not in {"core.events", "core.event_streams"}
     ]
-    manifest["resources"].append(_resource("core.events", write("core", "events", events)))
-    manifest["resources"].append(_resource("core.event_streams", write("core", "event_streams", streams)))
-    entry = _resource("analysis.spike_events", write("analysis", "spike_events", spikes))
+    manifest["resources"].append(resource_entry("core.events", write("core", "events", events)))
+    manifest["resources"].append(resource_entry("core.event_streams", write("core", "event_streams", streams)))
+    entry = resource_entry("analysis.spike_events", write("analysis", "spike_events", spikes))
     manifest["resources"].append(entry)
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     return open_packet(root)
@@ -216,7 +215,7 @@ def test_alignment_never_correlates_different_sessions(aligned_packet):
             {
                 "event_stream_id": pa.array([CUE_STREAM, CUE_STREAM + 1]),
                 "session_id": pa.array([SESSION, other]),
-                "name": pa.array(["cue-a", "cue-b"]),
+                "event_stream_name": pa.array(["cue-a", "cue-b"]),
                 "event_type": pa.array(["cue", "cue"]),
                 "clock_id": pa.array([CLOCK_BEHAVIOUR, CLOCK_BEHAVIOUR]),
             }

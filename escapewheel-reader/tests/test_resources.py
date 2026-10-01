@@ -1,8 +1,7 @@
 import pytest
+from packet_fixture import TRIALS, install_registry, read_registry
 
 from escapewheel_reader import ResourceNotFoundError, ResourceUnreadableError, open_packet
-
-from .conftest import TRIALS, install_registry, read_registry
 
 
 def test_handle_reads_and_describes(packet_root):

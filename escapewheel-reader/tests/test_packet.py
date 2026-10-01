@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from packet_fixture import SESSION_NAME, SUBJECT
 
 from escapewheel_reader import (
     ManifestError,
@@ -9,8 +10,6 @@ from escapewheel_reader import (
     ResourceUnreadableError,
     open_packet,
 )
-
-from .conftest import SESSION_NAME, SUBJECT
 
 
 def test_success_criterion(packet_root):

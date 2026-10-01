@@ -11,6 +11,17 @@ import shutil
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from packet_fixture import (
+    CLOCK_BEHAVIOUR,
+    CURATION,
+    SESSION,
+    SORTING_RUN,
+    UNITS,
+    install_registry,
+    read_registry,
+    resource_entry,
+    write_table,
+)
 
 from escapewheel_reader import NotDeclared, StaleSupport, access, open_packet
 from escapewheel_reader.duck import register_views
@@ -28,18 +39,6 @@ from escapewheel_reader.observation import (
     unit_windows,
 )
 
-from .conftest import (
-    CLOCK_BEHAVIOUR,
-    CURATION,
-    SESSION,
-    SORTING_RUN,
-    UNITS,
-    _resource,
-    _write,
-    install_registry,
-    read_registry,
-)
-
 CLOCK = CLOCK_BEHAVIOUR
 LICKS, CUES = 30, 31
 
@@ -51,7 +50,7 @@ def _extend(root, manifest, **tables):
         resource_id = f"core.{name}"
         # A table the fixture already has is replaced: two entries may not share an ID.
         manifest["resources"] = [r for r in manifest["resources"] if r["resource_id"] != resource_id]
-        manifest["resources"].append(_resource(resource_id, _write(root, name, table)))
+        manifest["resources"].append(resource_entry(resource_id, write_table(root, name, table)))
         registry["resources"].setdefault(
             resource_id,
             {
@@ -289,7 +288,7 @@ def stream_packet(tmp_path, observed_packet):
             {
                 "event_stream_id": pa.array([LICKS, CUES], type=pa.int32()),
                 "session_id": pa.array([SESSION, SESSION]),
-                "name": pa.array(["licks", "cues"]),
+                "event_stream_name": pa.array(["licks", "cues"]),
                 "clock_id": pa.array([CLOCK, CLOCK]),
             }
         ),

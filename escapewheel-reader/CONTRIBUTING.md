@@ -140,9 +140,13 @@ view this package registers. A registry rule must be runnable by any implementat
 
 ## Testing
 
-Tests build their own minimal packet in `tmp_path` (`tests/conftest.py`) rather than depending on
-`../fixtures/`, whose output is gitignored and belongs to the monorepo-level conformance corpus.
-**Keep it that way — this package must be testable standalone.**
+Tests build a small packet in `tmp_path` rather than depending on the conformance corpus's built
+packets under `../fixtures/packets/`, which are gitignored. `../fixtures/shared/packet_fixture.py`
+writes that packet for this suite and the validator's, and pytest's `pythonpath` setting in
+`pyproject.toml` puts it on the import path. Its registry is the core registry cut down to the
+columns `tests/conftest.py` names, each declared as core declares it, so the suite runs from a
+checkout of the monorepo and not from the package alone. A test that needs a table core lacks, or
+a declaration that differs from core's, declares it itself.
 
 Size a fixture so the expected numbers can be read off by hand, and say in the docstring what
 makes them what they are. `test_alignment.py` uses two events and five spikes for exactly this

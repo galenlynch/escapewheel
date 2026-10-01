@@ -7,10 +7,9 @@ import json
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_reader import NotDeclared, declared, kinds, open_packet, resolved, specialised, unresolved
-
-from .conftest import install_registry, read_registry
 
 
 def _with_detail(packet_root, *, kind="task.trials"):

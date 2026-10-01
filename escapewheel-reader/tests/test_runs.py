@@ -5,12 +5,11 @@ import shutil
 
 import pyarrow as pa
 import pytest
+from packet_fixture import SESSION, UNITS, resource_entry, write_table
 
 from escapewheel_reader import access, open_packet
 from escapewheel_reader.errors import AmbiguousRun, NotDeclared
 from escapewheel_reader.runs import ambiguities, check, preferences, preferred_run
-
-from .conftest import SESSION, UNITS, _resource, _write
 
 
 def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
@@ -40,7 +39,7 @@ def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
             "status": pa.array(["succeeded"] * len(runs)),
         }
     )
-    manifest["resources"].append(_resource("core.processing_runs", _write(root, "processing_runs", table)))
+    manifest["resources"].append(resource_entry("core.processing_runs", write_table(root, "processing_runs", table)))
 
     if prefs:
         chosen = pa.table(
@@ -52,7 +51,7 @@ def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
                 "processing_run_id": pa.array([p[2] for p in prefs]),
             }
         )
-        manifest["resources"].append(_resource("core.preferred_runs", _write(root, "preferred_runs", chosen)))
+        manifest["resources"].append(resource_entry("core.preferred_runs", write_table(root, "preferred_runs", chosen)))
 
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     return open_packet(root)

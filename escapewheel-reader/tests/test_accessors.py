@@ -3,10 +3,7 @@ import shutil
 
 import pyarrow as pa
 import pytest
-
-from escapewheel_reader import STORED, NotAligned, NoTimeOrigin, access, clocks, open_packet
-from escapewheel_reader.observation import support_of
-from tests.conftest import (
+from packet_fixture import (
     CLOCK_BEHAVIOUR,
     CLOCK_PROBE,
     CURATION,
@@ -14,9 +11,12 @@ from tests.conftest import (
     SESSION_NAME,
     SORTING_RUN,
     UNITS,
-    _resource,
-    _write,
+    resource_entry,
+    write_table,
 )
+
+from escapewheel_reader import STORED, NotAligned, NoTimeOrigin, access, clocks, open_packet
+from escapewheel_reader.observation import support_of
 
 
 def test_trials_unfiltered(packet_root):
@@ -213,11 +213,13 @@ def test_session_scope_reaches_spikes_time_conversion_and_support(tmp_path, pack
         ("core.units", "units", units),
         ("core.spike_events", "spike_events", spikes),
     ):
-        by_id[resource_id]["uri"] = _write(root, name, table)
+        by_id[resource_id]["uri"] = write_table(root, name, table)
     manifest["resources"].extend(
         [
-            _resource("core.clocks", _write(root, "clocks", clock_rows)),
-            _resource("core.clock_observation_intervals", _write(root, "clock_observation_intervals", windows)),
+            resource_entry("core.clocks", write_table(root, "clocks", clock_rows)),
+            resource_entry(
+                "core.clock_observation_intervals", write_table(root, "clock_observation_intervals", windows)
+            ),
         ]
     )
     manifest["sessions"] = [SESSION_NAME, "s002"]

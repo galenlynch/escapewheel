@@ -1,386 +1,51 @@
-import gzip
-import hashlib
 import json
+import shutil
 
 import pyarrow as pa
-import pyarrow.parquet as pq
 import pytest
+from packet_fixture import (
+    CLOCK_BEHAVIOUR,
+    CLOCK_PROBE,
+    CURATION,
+    SESSION,
+    SESSION_NAME,
+    SORTING_RUN,
+    STREAMS,
+    SUBJECT,
+    TS,
+    UNITS,
+    resource_entry,
+    write_packet,
+    write_table,
+)
 
-TS = pa.timestamp("us", tz="UTC")
-
-#: An identifier is an integer (Part 02 §5.3). The values are distinct across kinds so a test
-#: that confuses two of them fails rather than passing by coincidence, and a carried one
-#: (Part 01 §2.1) is the number its source would really have supplied.
-SESSION = 1
-SUBJECT = 7
-CLOCK_BEHAVIOUR = 3
-CLOCK_PROBE = 4
-TRIALS = (0, 1)  # a packet numbers its intervals from 0 (Part 02 §12.9)
-UNITS = (11, 12, 13)  # carried: the sorter's own labels
-SORTING_RUN = 5
-CURATION = 6
-EVENTS = (20, 21, 22)
-
-#: The session's name, which is what the manifest lists and what a stable cross-packet
-#: reference uses (Part 01 §2.1).
-SESSION_NAME = "s001"
-
-
-def install_registry(root, document, *, role=None):
-    """Store a registry as the portable profile does and bind it in the packet's manifest.
-
-    The manifest's descriptor is rewritten to match, so a test that edits a registry exercises
-    the edit rather than a digest mismatch.
-    """
-    registry_id = document["registry_id"]
-    body = json.dumps(document, indent=2).encode()
-    relative = f"registries/{registry_id}/{document['registry_version']}.json.gz"
-    (root / relative).parent.mkdir(parents=True, exist_ok=True)
-    (root / relative).write_bytes(gzip.compress(body, mtime=0))
-    descriptor = {
-        "role": role or ("core" if registry_id == "core" else "extension"),
-        "version": document["registry_version"],
-        "path": relative,
-        "sha256": hashlib.sha256(body).hexdigest(),
-    }
-    manifest_path = root / "packet.json"
-    if manifest_path.exists():
-        manifest = json.loads(manifest_path.read_text())
-        manifest.setdefault("registries", {})[registry_id] = descriptor
-        manifest_path.write_text(json.dumps(manifest, indent=2))
-    return descriptor
-
-
-def read_registry(root, registry_id="core"):
-    """The registry a packet binds under `registry_id`, decoded."""
-    manifest = json.loads((root / "packet.json").read_text())
-    return json.loads(gzip.decompress((root / manifest["registries"][registry_id]["path"]).read_bytes()))
-
-
-def _write(root, name, table):
-    path = root / "tables" / "core"
-    path.mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, path / f"{name}.parquet", compression="zstd")
-    return f"tables/core/{name}.parquet"
-
-
-def _resource(resource_id, uri, **extra):
-    entry = {
-        "resource_id": resource_id,
-        "declaration_id": resource_id,
-        "uri": uri,
-        "validation_state": "passed",
-    }
-    entry.update(extra)
-    return entry
-
-
-#: Mirroring the registry's own map (Part 02 §8.2): an identifier is the source's own number or
-#: one the writer chose, and only the second obliges its owner to carry a `*_name`.
-_CARRIED = {"unit_id"}
-
-
-def _col(name, type_, presence, **extra):
-    # Every column declares a role (Part 02 §8.1). Inferred here from the same two conventions
-    # the registry's own map rests on, because a test fixture's columns are all ordinary shapes.
-    role = (
-        "coordinate" if name.endswith("_tick") else "identifier" if name.endswith("_id") else extra.pop("role", "data")
-    )
-    column = {"name": name, "type": type_, "presence": presence, "role": role, "description": name, **extra}
-    if role == "identifier":
-        column["identity"] = "carried" if name in _CARRIED else "assigned"
-    return column
-
-
-def _registry():
-    """A registry describing exactly the tables the fixture writes."""
-    document = {
-        "registry_id": "core",
-        "registry_version": "0.1.0",
-        "semantic_standard_version": "escapewheel-semantic-v0.1",
-        "logical_standard_version": "escapewheel-logical-v0.1",
-        "tables": {
-            "core.sessions": {
-                "columns": [
-                    _col("session_id", "int32", "required"),
-                    _col("session_name", "string", "nullable"),
-                    _col("subject_id", "int32", "required"),
-                    _col("session_start_time", "timestamp", "required"),
-                ],
-                "primary_key": ["session_id"],
-                "references": [],
-                "rules": [
-                    {
-                        "id": "core.sessions.manifest_sessions_match",
-                        "level": "error",
-                        "message": "the manifest sessions list disagrees with core.sessions",
-                        "sql": (
-                            "SELECT session_name FROM core_sessions WHERE session_name NOT IN "
-                            "(SELECT session_id FROM manifest_sessions)"
-                        ),
-                    }
-                ],
-            },
-            "core.clocks": {
-                "columns": [
-                    _col("clock_id", "int32", "required"),
-                    _col("session_id", "int32", "required"),
-                ],
-                "primary_key": ["clock_id"],
-                "references": [
-                    {
-                        "columns": ["session_id"],
-                        "resource": "core.sessions",
-                        "resource_columns": ["session_id"],
-                    }
-                ],
-                "rules": [],
-            },
-            "core.processing_runs": {
-                "columns": [
-                    _col("processing_run_id", "int32", "required"),
-                    _col("session_id", "int32", "required"),
-                ],
-                "primary_key": ["processing_run_id"],
-                "references": [
-                    {
-                        "columns": ["session_id"],
-                        "resource": "core.sessions",
-                        "resource_columns": ["session_id"],
-                    }
-                ],
-                "rules": [],
-            },
-            "core.intervals": {
-                "columns": [
-                    _col("session_id", "int32", "required"),
-                    _col("interval_id", "int32", "required"),
-                    _col("interval_name", "string", "required"),
-                    dict(_col("interval_kind", "string", "required"), role="discriminator", resolves="required"),
-                    _col("local_interval_label", "string", "nullable"),
-                    _col("start_tick", "int64", "required"),
-                    _col("stop_tick", "int64", "required"),
-                    _col("clock_id", "int32", "required"),
-                ],
-                "primary_key": ["interval_id"],
-                "references": [
-                    {
-                        "columns": ["session_id"],
-                        "resource": "core.sessions",
-                        "resource_columns": ["session_id"],
-                    }
-                ],
-                "rules": [
-                    {
-                        "id": "core.intervals.interval_valid",
-                        "level": "error",
-                        "message": "stop_tick precedes start_tick",
-                        "sql": "SELECT session_id, interval_id FROM core_intervals WHERE stop_tick < start_tick",
-                    }
-                ],
-            },
-            "core.units": {
-                "columns": [
-                    _col("session_id", "int32", "required"),
-                    _col("unit_id", "int32", "required"),
-                    _col("sorting_run_id", "int32", "required"),
-                    _col("curation_id", "int32", "required"),
-                    _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
-                    # The unit names the clock its ticks are counted on.
-                    _col("clock_id", "int32", "required"),
-                ],
-                "primary_key": ["unit_id"],
-                "references": [
-                    {
-                        "columns": ["session_id"],
-                        "resource": "core.sessions",
-                        "resource_columns": ["session_id"],
-                    }
-                ],
-                "rules": [],
-            },
-            # An event is a tick on a stream; the kind and the clock are the stream's (Part 01 §3.11).
-            "core.event_streams": {
-                "columns": [
-                    _col("event_stream_id", "int32", "required"),
-                    _col("session_id", "int32", "required"),
-                    _col("name", "string", "required"),
-                    _col("event_type", "string", "required", vocabulary="open"),
-                    _col("clock_id", "int32", "required"),
-                ],
-                "primary_key": ["event_stream_id"],
-                "references": [
-                    {
-                        "columns": ["session_id"],
-                        "resource": "core.sessions",
-                        "resource_columns": ["session_id"],
-                    }
-                ],
-                "rules": [],
-            },
-            "core.events": {
-                "columns": [
-                    _col("session_id", "int32", "required"),
-                    _col("stream_id", "int32", "required"),
-                    _col("t_tick", "int64", "required"),
-                ],
-                "primary_key": ["session_id", "stream_id", "t_tick"],
-                "references": [
-                    {
-                        "columns": ["session_id"],
-                        "resource": "core.sessions",
-                        "resource_columns": ["session_id"],
-                    },
-                    {
-                        "columns": ["stream_id"],
-                        "resource": "core.event_streams",
-                        "resource_columns": ["event_stream_id"],
-                    },
-                ],
-                "rules": [],
-            },
-            "core.spike_events": {
-                "columns": [
-                    _col("session_id", "int32", "required"),
-                    _col("unit_id", "int32", "required"),
-                    _col("t_tick", "int64", "required"),
-                ],
-                "primary_key": ["session_id", "unit_id", "t_tick"],
-                "references": [
-                    {
-                        "columns": ["session_id"],
-                        "resource": "core.sessions",
-                        "resource_columns": ["session_id"],
-                    },
-                    {
-                        "columns": ["unit_id"],
-                        "resource": "core.units",
-                        "resource_columns": ["unit_id"],
-                    },
-                ],
-                "rules": [],
-            },
-        },
-    }
-    tables = document.pop("tables")
-    document["resources"] = {
-        name: {
-            "content_class": "core",
-            "kind": "table",
-            "instances": {
-                "mode": "singleton",
-                "presence": "required" if name == "core.sessions" else "optional",
-            },
-            "requires": [],
-            "lineage": "optional",
-            "table": table,
-        }
-        for name, table in tables.items()
-    }
-    document["resources"]["analysis.spike_events"] = {
-        "content_class": "analysis",
-        "kind": "table",
-        "instances": {"mode": "singleton", "presence": "optional"},
-        "requires": [],
-        "lineage": "required",
-        "table": tables["core.spike_events"],
-    }
-    return document
+#: What the fixture packet declares of core: each table's key and the columns a test reads.
+COLUMNS = {
+    "core.sessions": ("session_id", "session_name", "subject_id", "session_start_time"),
+    "core.clocks": ("session_id", "clock_id"),
+    "core.processing_runs": ("session_id", "processing_run_id"),
+    "core.intervals": (
+        "session_id",
+        "interval_id",
+        "interval_name",
+        "interval_kind",
+        "local_interval_label",
+        "start_tick",
+        "stop_tick",
+        "clock_id",
+    ),
+    "core.units": ("session_id", "unit_id", "unit_name", "sorting_run_id", "curation_id", "quality_label", "clock_id"),
+    "core.event_streams": ("event_stream_id", "session_id", "event_stream_name", "event_type", "clock_id"),
+    "core.events": ("session_id", "stream_id", "t_tick"),
+    "core.spike_events": ("session_id", "unit_id", "t_tick"),
+    "analysis.spike_events": ("session_id", "unit_id", "t_tick"),
+}
 
 
 @pytest.fixture
 def packet_root(tmp_path):
-    """A minimal two-table packet: one session, two trials referencing it."""
-    root = tmp_path / "session_001"
-    root.mkdir()
-
-    i32 = pa.int32()
-    sessions = pa.table(
-        {
-            "session_id": pa.array([SESSION], type=i32),
-            "session_name": pa.array([SESSION_NAME]),
-            "subject_id": pa.array([SUBJECT], type=i32),
-            "session_start_time": pa.array([1_756_000_000_000_000], type=TS),
-        }
-    )
-    trials = pa.table(
-        {
-            "session_id": pa.array([SESSION] * 2, type=i32),
-            "interval_id": pa.array(list(TRIALS), type=i32),
-            "interval_name": pa.array([f"{SESSION_NAME}/task.trials/{t + 1}" for t in TRIALS]),
-            "interval_kind": pa.array(["task.trials"] * 2),
-            "local_interval_label": pa.array([str(t + 1) for t in TRIALS]),
-            "start_tick": pa.array([1000, 6000], type=pa.int64()),
-            "stop_tick": pa.array([5000, 10000], type=pa.int64()),
-            "clock_id": pa.array([CLOCK_BEHAVIOUR] * 2, type=i32),
-        }
-    )
-    units = pa.table(
-        {
-            "session_id": pa.array([SESSION] * 2, type=i32),
-            "unit_id": pa.array(list(UNITS[:2]), type=i32),
-            "sorting_run_id": pa.array([SORTING_RUN] * 2, type=i32),
-            "curation_id": pa.array([CURATION] * 2, type=i32),
-            "quality_label": pa.array(["sua", "mua"]),
-            "clock_id": pa.array([CLOCK_PROBE] * 2, type=i32),
-        }
-    )
-    event_streams = pa.table(
-        {
-            "event_stream_id": pa.array([0, 1], type=i32),
-            "session_id": pa.array([SESSION] * 2, type=i32),
-            "name": pa.array(["stimulus", "reward"]),
-            "event_type": pa.array(["stimulus_onset", "reward"]),
-            "clock_id": pa.array([CLOCK_BEHAVIOUR] * 2, type=i32),
-        }
-    )
-    events = pa.table(
-        {
-            "session_id": pa.array([SESSION] * 3, type=i32),
-            "stream_id": pa.array([0, 0, 1], type=i32),
-            "t_tick": pa.array([1200, 6200, 4200], type=pa.int64()),
-        }
-    )
-    spike_events = pa.table(
-        {
-            "session_id": pa.array([SESSION] * 5, type=i32),
-            "unit_id": pa.array([UNITS[0]] * 3 + [UNITS[1]] * 2, type=i32),
-            "t_tick": pa.array([30000, 39000, 48000, 45000, 66000], type=pa.int64()),
-        }
-    )
-    resources = [
-        _resource("core.sessions", _write(root, "sessions", sessions)),
-        _resource("core.intervals", _write(root, "intervals", trials)),
-        _resource("core.units", _write(root, "units", units)),
-        _resource("core.event_streams", _write(root, "event_streams", event_streams)),
-        _resource("core.events", _write(root, "events", events)),
-        _resource("core.spike_events", _write(root, "spike_events", spike_events)),
-    ]
-
-    core = install_registry(root, _registry())
-    (root / "packet.json").write_text(
-        json.dumps(
-            {
-                "packet_id": "session_001",
-                "packet_version": "0.1.0",
-                "profile_id": "escapewheel-portable-v0.1",
-                "semantic_standard_version": "escapewheel-semantic-v0.1",
-                "logical_standard_version": "escapewheel-logical-v0.1",
-                "registries": {"core": core},
-                "created_at": "2026-08-26T00:00:00Z",
-                "sessions": [SESSION_NAME],
-                "resources": resources,
-                "validation": {
-                    "status": "passed",
-                    "validated_at": "2026-08-26T00:00:00Z",
-                    "validator_name": "escapewheel_validator",
-                    "validator_version": "0.1.0",
-                },
-            },
-            indent=2,
-        )
-    )
-    return root
+    """The shared packet with `core.clocks` declared and absent, so a test supplies the clocks it needs."""
+    return write_packet(tmp_path / "session_001", COLUMNS, unwritten=("core.clocks",))
 
 
 @pytest.fixture
@@ -390,8 +55,6 @@ def two_clock_packet(tmp_path, packet_root):
     The realistic shape: anchors relate the two, and only a mapped tick is comparable with a
     behavioural event. Anchor pairs are exact multiples so the expected ticks are exact.
     """
-    import shutil
-
     root = tmp_path / "two_clock"
     shutil.copytree(packet_root, root)
     manifest = json.loads((root / "packet.json").read_text())
@@ -403,7 +66,7 @@ def two_clock_packet(tmp_path, packet_root):
             "session_id": pa.array([SESSION], type=i32),
             "session_name": pa.array([SESSION_NAME]),
             "subject_id": pa.array([SUBJECT], type=i32),
-            "session_start_time": pa.array([1_756_000_000_000_000], type=pa.timestamp("us", tz="UTC")),
+            "session_start_time": pa.array([1_756_000_000_000_000], type=TS),
             "reference_clock_id": pa.array([CLOCK_BEHAVIOUR], type=i32),
             # Probe tick 0, which is where the probe clock's observation window begins and so
             # what Part 01 §2.2 makes the origin. It lands on a whole harp second by construction,
@@ -424,6 +87,7 @@ def two_clock_packet(tmp_path, packet_root):
         {
             "session_id": pa.array([SESSION] * 3, type=i32),
             "unit_id": pa.array(list(UNITS), type=i32),
+            "unit_name": pa.array([str(unit) for unit in UNITS]),
             "sorting_run_id": pa.array([SORTING_RUN] * 3, type=i32),
             "curation_id": pa.array([CURATION] * 3, type=i32),
             "quality_label": pa.array(["sua", "mua", "noise"]),
@@ -450,16 +114,16 @@ def two_clock_packet(tmp_path, packet_root):
     events = pa.table(
         {
             "session_id": pa.array([SESSION], type=i32),
-            "stream_id": pa.array([0], type=i32),
+            "stream_id": pa.array([STREAMS[0]], type=i32),
             "t_tick": pa.array([1_200_000], type=pa.int64()),
         }
     )
     # The kind lives on the stream, so the fixture declares the one it emits.
     event_streams = pa.table(
         {
-            "event_stream_id": pa.array([0], type=i32),
+            "event_stream_id": pa.array([STREAMS[0]], type=i32),
             "session_id": pa.array([SESSION], type=i32),
-            "name": pa.array(["go_cue"]),
+            "event_stream_name": pa.array(["go_cue"]),
             "event_type": pa.array(["go_cue"]),
             "clock_id": pa.array([CLOCK_BEHAVIOUR], type=i32),
         }
@@ -471,8 +135,8 @@ def two_clock_packet(tmp_path, packet_root):
         ("core.event_streams", "event_streams", event_streams),
         ("core.events", "events", events),
     ):
-        by_id[resource_id]["uri"] = _write(root, name, table)
-    manifest["resources"].append(_resource("core.clock_anchors", _write(root, "clock_anchors", anchors)))
-    manifest["resources"].append(_resource("core.clocks", _write(root, "clocks", clocks)))
+        by_id[resource_id]["uri"] = write_table(root, name, table)
+    manifest["resources"].append(resource_entry("core.clock_anchors", write_table(root, "clock_anchors", anchors)))
+    manifest["resources"].append(resource_entry("core.clocks", write_table(root, "clocks", clocks)))
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
     return root
