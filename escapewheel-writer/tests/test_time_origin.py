@@ -8,6 +8,7 @@ a consumer derives from it.
 import numpy as np
 import pytest
 
+from escapewheel_writer.notes import NoteCode, coded
 from escapewheel_writer.session import (
     TOLERANCE,
     Context,
@@ -168,4 +169,5 @@ def test_a_clock_the_stamp_could_not_reach_is_noted():
     """A silent miss would leave the packet saying the test never ran on that clock."""
     context = _context({"probeA": {"anchors": [], "n_withheld": 0}, "probeB": {"anchors": ["last"], "n_withheld": 1}})
     _declare_withheld(context, _Staged(reach=1), lambda _: None)
-    assert any("2 clocks and 1 of them are staged" in note for note in context.notes)
+    (partial,) = coded(context.notes, NoteCode.ANCHOR_TEST_PARTIAL)
+    assert "2 clocks and 1 of them" in partial

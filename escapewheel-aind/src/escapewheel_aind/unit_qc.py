@@ -21,6 +21,7 @@ from typing import Any, ClassVar
 import numpy as np
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.errors import SourceDefect, UnsupportedEncoding
+from escapewheel_writer.notes import Note
 from escapewheel_writer.sources.nwb import _clean
 from escapewheel_writer.sources.sorter import STREAM as STREAM_NAME
 from escapewheel_writer.sources.sorter import SortedStream
@@ -29,6 +30,7 @@ from escapewheel_writer.sources.waveforms import ANALYZERS
 from numpy.typing import NDArray
 
 from .errors import AindFault
+from .notes import AindNote
 
 #: The analyzer extensions holding each table's metrics, as a data frame of one array per column.
 QUALITY = "extensions/quality_metrics/metrics"
@@ -191,7 +193,12 @@ class UnitQCSource:
         """
         where = stream.path / group
         if not where.is_dir():
-            self.notes.append(f"{stream.key}: the analyzer holds no {group}; its units contribute no rows to it")
+            self.notes.append(
+                Note(
+                    f"{stream.key}: the analyzer holds no {group}; its units contribute no rows to it",
+                    AindNote.NO_METRIC_GROUP,
+                )
+            )
             return None
         columns: dict[str, NDArray[Any]] = {}
         for name in self.store.members(where):
@@ -251,16 +258,27 @@ class UnitQCSource:
                 "no unit in the analyzer's quality metrics matches the packet's sorting", code=AindFault.NO_UNIT_MATCHES
             )
         if missed:
-            self.notes.append(f"units: {missed} analyzer unit(s) match no unit in the packet's sorting; skipped")
+            self.notes.append(
+                Note(
+                    f"units: {missed} analyzer unit(s) match no unit in the packet's sorting; skipped",
+                    AindNote.UNIT_UNMATCHED,
+                )
+            )
         if self.nwb is not None:
             counts = " and ".join(f"{count} {name}" for name, count in self._filled.items())
-            self.notes.append(f"nwb: filled {counts} value(s) the analyzer left NaN")
+            self.notes.append(Note(f"nwb: filled {counts} value(s) the analyzer left NaN", AindNote.NAN_FILLED))
             self.notes.append(
-                f"nwb: {self._disagreed} unit(s) disagree with the analyzer on a metric both state; not filled"
+                Note(
+                    f"nwb: {self._disagreed} unit(s) disagree with the analyzer on a metric both state; not filled",
+                    AindNote.NAN_DISAGREED,
+                )
             )
             if self._unstated:
                 self.notes.append(
-                    f"nwb: {self._unstated} unit(s) with a NaN to fill are absent from the NWB; left null"
+                    Note(
+                        f"nwb: {self._unstated} unit(s) with a NaN to fill are absent from the NWB; left null",
+                        AindNote.NAN_UNSTATED,
+                    )
                 )
         self._built = built
         return built

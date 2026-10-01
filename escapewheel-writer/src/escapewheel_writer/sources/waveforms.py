@@ -18,6 +18,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..errors import SourceDefect, SourceFault
+from ..notes import Note, NoteCode
 from .sorter import STREAM, SortedStream
 from .store import SourceStore, source_root
 from .zarr_compat import DenseV2, attrs, attrs_at
@@ -241,7 +242,12 @@ class WaveformSource:
         """Return what the values are in, which the analyzer declares and the export does not."""
         settings = attrs(stream.path).get("settings") or {}
         if "return_in_uV" not in settings:
-            self.notes.append(f"{stream.key}: the analyzer declares no return_in_uV; the unit is left unstated")
+            self.notes.append(
+                Note(
+                    f"{stream.key}: the analyzer declares no return_in_uV; the unit is left unstated",
+                    NoteCode.UNIT_UNSTATED,
+                )
+            )
             return None
         # `{adc}` is a UCUM annotation, a dimensionless count of converter steps (Part 02 §8.4).
         return "uV" if settings["return_in_uV"] else "{adc}"
@@ -276,15 +282,26 @@ class WaveformSource:
                 "no unit in the analyzer's templates matches the packet's sorting", code=SourceFault.NO_UNIT_MATCHES
             )
         if kept.missed:
-            self.notes.append(f"units: {kept.missed} analyzer unit(s) match no unit in the packet's sorting; skipped")
+            self.notes.append(
+                Note(
+                    f"units: {kept.missed} analyzer unit(s) match no unit in the packet's sorting; skipped",
+                    NoteCode.UNIT_UNMATCHED,
+                )
+            )
         if kept.blank:
             self.notes.append(
-                f"units: {kept.blank} analyzer unit(s) are sparse on no contact at all; stored with no channels"
+                Note(
+                    f"units: {kept.blank} analyzer unit(s) are sparse on no contact at all; stored with no channels",
+                    NoteCode.UNIT_NO_CONTACT,
+                )
             )
         order = sorted(set(self.units.values()), key=str)
         if absent := sum(unit not in kept.templates and unit not in kept.empty for unit in order):
             self.notes.append(
-                f"units: {absent} unit(s) of the packet's sorting have no template; stored with no channels"
+                Note(
+                    f"units: {absent} unit(s) of the packet's sorting have no template; stored with no channels",
+                    NoteCode.UNIT_NO_TEMPLATE,
+                )
             )
         if len(samples) != 1 or len(windows) != 1:
             raise SourceDefect(

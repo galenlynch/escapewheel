@@ -18,6 +18,7 @@ from upath.registry import register_implementation
 from escapewheel_writer import declaration
 from escapewheel_writer import recipe as recipe_module
 from escapewheel_writer.errors import RecipeFault
+from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS, Recipe
 from escapewheel_writer.sources.store import STORAGE_FORMAT, prune_kept, source_root
 from tests import sorterfixture
@@ -154,7 +155,7 @@ def test_a_location_inside_the_packet_or_a_delivery_is_supplied_to_no_adapter(tm
     recipe = Recipe.load(_recipe(tmp_path, sorted_root, raw))
     context = _context(recipe, tmp_path / inside)
     assert context.source_cache is None
-    assert any("so no adapter is supplied one" in note for note in context.notes)
+    assert NoteCode.NO_SOURCE_CACHE in codes(context.notes)
     sorter = next(spec for spec in recipe.sources if spec.kind == "sorter")
     assert "source_cache" not in _supplied(sorter, recipe, context)
 

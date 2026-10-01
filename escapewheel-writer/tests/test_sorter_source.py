@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from escapewheel_writer.errors import SourceDefect, SourceFault
+from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.sources import SorterSource
 from escapewheel_writer.sources.sorter import PROJECTION
 from tests import sorterfixture
@@ -223,7 +224,7 @@ def test_the_naive_sorter_datetime_does_not_become_a_column(source):
     run = rows_of(source, "core.sorting_runs")[0]
     assert "started_at" not in run
     assert run["metadata"]["sorted_at_naive"] == "2026-08-26T23:25:57.061395"
-    assert any("no UTC offset" in note for note in source.notes)
+    assert NoteCode.SORT_TIME_NAIVE in codes(source.notes)
 
 
 def test_the_sorter_is_identified(source):
@@ -321,7 +322,7 @@ def test_a_removal_with_no_label_is_reported(tmp_path):
     path.write_text(json.dumps(doc))
     source = SorterSource(tmp_path, session_id=SESSION)
     source.unit_quality_labels()
-    assert any("carry no manual label" in note for note in source.notes)
+    assert NoteCode.REMOVAL_UNRECORDED in codes(source.notes)
 
 
 def test_a_non_quality_category_gets_its_own_source(tmp_path):
@@ -351,7 +352,7 @@ def test_two_labels_in_one_category_are_kept_unprojected(tmp_path):
     source = SorterSource(tmp_path, session_id=SESSION)
     row = next(q for q in source.unit_quality_labels() if q["source"] == "manual")
     assert (row["label"], row["normalized_label"]) == ("noise|MUA", None)
-    assert any("2 labels in category" in note for note in source.notes)
+    assert NoteCode.SEVERAL_LABELS in codes(source.notes)
 
 
 # -- observation windows (Part 01 §2.3) ----------------------------------------------------
@@ -388,7 +389,7 @@ def test_a_multi_segment_recording_declares_no_window(tmp_path):
     root = sorterfixture.build(tmp_path / "sorted", n_samples=(100, 200))
     source = SorterSource(root, session_id=SESSION)
     assert source.observation_intervals() == []
-    assert any("2 recording segments" in note for note in source.notes)
+    assert NoteCode.SEVERAL_SEGMENTS in codes(source.notes)
 
 
 # -- provenance the currency mechanism needs (R41 §2.1) ---------------------------------
@@ -475,4 +476,4 @@ def test_a_stream_without_a_channel_list_contributes_nothing(tmp_path):
     sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=[(0, 1)], channel_ids=None)
     source = SorterSource(tmp_path, session_id=SESSION)
     assert source.sorting_run_channels() == []
-    assert any("states no channel list" in note for note in source.notes)
+    assert NoteCode.NO_CHANNEL_LIST in codes(source.notes)

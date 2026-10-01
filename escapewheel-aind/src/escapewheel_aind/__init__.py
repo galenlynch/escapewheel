@@ -19,6 +19,10 @@ compensations
 errors
     The codes a defect from these adapters carries.
 
+Notes
+-----
+    The codes a note from these adapters carries.
+
 The package depends on `escapewheel-writer` and nothing in the writer imports it. A build refuses a
 kind it neither ships nor is told how to reach, so a recipe naming one of these sets
 ``in_process = true`` or gives a ``[source.delivery]`` command (Part 05 §3.9).

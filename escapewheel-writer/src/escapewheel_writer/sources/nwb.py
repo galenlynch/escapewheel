@@ -28,6 +28,7 @@ from numpy.typing import NDArray
 
 from ..clock import TickGrid, zone_of
 from ..errors import SourceDefect, SourceFault, UnsupportedEncoding
+from ..notes import Note, NoteCode
 from .compensations import Compensates
 from .store import SourceStore, source_root
 from .values import sex as _sex
@@ -109,7 +110,7 @@ def contact_columns(store: Any, table: Path) -> dict[str, Any]:
     }
 
 
-def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str], str | None]:
+def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str], Note | None]:
     """Name every contact in electrode-table row order, and say if the fallback was needed.
 
     Three adapters name the same contacts, and a writer numbers a name (Part 05 §4.3), so a second
@@ -124,12 +125,15 @@ def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str]
         )
     group = columns["group_name"]
     if "channel_name" in columns:
-        pairs, note = columns["channel_name"], None
+        pairs = columns["channel_name"]
+        note: Note | None = None
     else:
         # Every `DynamicTable` has an `id`, so a contact is always nameable; what the fallback
         # loses is the source's own spelling, which `local_channel_label` then cannot carry.
         pairs = columns["id"] if "id" in columns else np.arange(len(group))
-        note = "electrodes: no channel_name, so a contact is named by its group and row id"
+        note = Note(
+            "electrodes: no channel_name, so a contact is named by its group and row id", NoteCode.NO_CHANNEL_NAMES
+        )
     return [electrode_name(one, other, prefix) for one, other in zip(group, pairs, strict=True)], note
 
 
@@ -412,7 +416,9 @@ class NWBSource(Compensates):
                 try:
                     out[name] = self.store.array(f"{path}/{name}")
                 except UnsupportedEncoding as refused:
-                    self.notes.append(f"{path}/{name}: not read; {str(refused).rsplit('/', 1)[-1]}")
+                    self.notes.append(
+                        Note(f"{path}/{name}: not read; {str(refused).rsplit('/', 1)[-1]}", NoteCode.COLUMN_NOT_READ)
+                    )
         self._cache[path] = out
         return out
 
@@ -432,13 +438,17 @@ class NWBSource(Compensates):
         value = datetime.fromisoformat(raw)
         expected = value.replace(tzinfo=self.zone).utcoffset()
         if value.tzinfo is None:
-            self.notes.append(f"{label}: no offset stored; read as {self.zone.key}")
+            self.notes.append(Note(f"{label}: no offset stored; read as {self.zone.key}", NoteCode.OFFSET_ASSUMED))
             return value.replace(tzinfo=self.zone)
         if value.utcoffset() != expected:
             self.compensate("nwb.stored_offset_kept")
             self.notes.append(
-                f"{label}: stored offset {_offset(value.utcoffset())} disagrees with "
-                f"{self.zone.key}'s {_offset(expected)} for {value.replace(tzinfo=None).isoformat()}; kept as stored"
+                Note(
+                    f"{label}: stored offset {_offset(value.utcoffset())} disagrees with "
+                    f"{self.zone.key}'s {_offset(expected)} for {value.replace(tzinfo=None).isoformat()}; "
+                    "kept as stored",
+                    NoteCode.OFFSET_KEPT,
+                )
             )
         return value
 
@@ -455,7 +465,12 @@ class NWBSource(Compensates):
             return cached
         finite = np.isfinite(seconds)
         if not finite.all():
-            self.notes.append(f"{label}: {int((~finite).sum())} of {finite.size} timestamps not finite; dropped")
+            self.notes.append(
+                Note(
+                    f"{label}: {int((~finite).sum())} of {finite.size} timestamps not finite; dropped",
+                    NoteCode.TIMESTAMPS_DROPPED,
+                )
+            )
         converted = (self.clock.ticks(seconds[finite]), finite)
         self._cache[key] = converted
         return converted
@@ -566,8 +581,11 @@ class NWBSource(Compensates):
                 shared = commonprefix(covers).rstrip("-_ .") or covers[0]
                 row |= {"device_id": self.prefix + shared, "device_name": self.prefix + shared}
                 self.notes.append(
-                    f"devices: {', '.join(covers)} share serial {row['serial_number']}; "
-                    f"recorded as one device named {shared} (Part 01 §3.5)"
+                    Note(
+                        f"devices: {', '.join(covers)} share serial {row['serial_number']}; "
+                        f"recorded as one device named {shared} (Part 01 §3.5)",
+                        NoteCode.DEVICES_MERGED,
+                    )
                 )
             rows.append(row)
         return rows
@@ -648,8 +666,11 @@ class NWBSource(Compensates):
         carried = self.CARRIED_ELECTRODE
         if "inter_sample_shift" in columns:
             self.notes.append(
-                "electrodes/inter_sample_shift: not emitted; R19 puts it on core.array_channels "
-                "and this adapter emits no array assets"
+                Note(
+                    "electrodes/inter_sample_shift: not emitted; R19 puts it on core.array_channels "
+                    "and this adapter emits no array assets",
+                    NoteCode.SAMPLE_SHIFT_NOT_EMITTED,
+                )
             )
         rows = []
         for index, electrode_id in enumerate(self._electrode_ids(columns)):

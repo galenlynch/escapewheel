@@ -27,6 +27,7 @@ from numpy.typing import NDArray
 
 from ..clock import HARP_TICK_RATE_HZ, Clock
 from ..errors import SourceDefect, SourceFault
+from ..notes import Note, NoteCode
 from .store import source_root
 
 #: rig-qc archives the pre-alignment array under this name when it rewrites `timestamps.npy`.
@@ -415,8 +416,11 @@ class SyncSource:
         keep = [s for s in every if s.aligned]
         for skipped in (s for s in every if not s.aligned):
             self.notes.append(
-                f"{skipped.node}/{skipped.stream}: no {ARCHIVE}, so its timestamps are "
-                "acquisition-local rather than HARP; skipped"
+                Note(
+                    f"{skipped.node}/{skipped.stream}: no {ARCHIVE}, so its timestamps are "
+                    "acquisition-local rather than HARP; skipped",
+                    NoteCode.STREAM_NOT_ALIGNED,
+                )
             )
         if not keep:
             raise SourceDefect(
@@ -481,9 +485,12 @@ class SyncSource:
                     else ""
                 )
                 self.notes.append(
-                    f"{name}: node {other.node} records the same {shared.size:,} events as node "
-                    f"{first.node}; kept {first.node}. The two alignments disagree by up to "
-                    f"{drift * 1e6:.1f} us{unseen}"
+                    Note(
+                        f"{name}: node {other.node} records the same {shared.size:,} events as node "
+                        f"{first.node}; kept {first.node}. The two alignments disagree by up to "
+                        f"{drift * 1e6:.1f} us{unseen}",
+                        NoteCode.NODE_DUPLICATE,
+                    )
                 )
             out.append(first)
         return out
@@ -494,7 +501,12 @@ class SyncSource:
             recording = stream.path.parent.parent.parent
             self._starts[stream.node] = read_sync_messages(recording / SYNC_MESSAGES, stream.node)
             if self._starts[stream.node] is None:
-                self.notes.append(f"{stream.node}: no {SYNC_MESSAGES}; the node's start instant is unknown")
+                self.notes.append(
+                    Note(
+                        f"{stream.node}: no {SYNC_MESSAGES}; the node's start instant is unknown",
+                        NoteCode.NO_START_INSTANT,
+                    )
+                )
         return self._starts[stream.node]
 
     def _first_sample(self, stream: SyncStream) -> int:
@@ -607,8 +619,11 @@ class SyncSource:
             earliest, latest = min(estimates), max(estimates)
             if len(estimates) > 1:
                 self.notes.append(
-                    f"tick_zero_utc: {len(estimates)} record nodes agree to "
-                    f"{(latest - earliest).total_seconds() * 1e3:.0f} ms"
+                    Note(
+                        f"tick_zero_utc: {len(estimates)} record nodes agree to "
+                        f"{(latest - earliest).total_seconds() * 1e3:.0f} ms",
+                        NoteCode.TICK_ZERO_SPREAD,
+                    )
                 )
             # The mean of the nodes' estimates; each is independently derived and neither is better.
             self._epoch = earliest + (latest - earliest) / 2
@@ -646,7 +661,9 @@ class SyncSource:
             if clock is None:
                 if stream.key not in self._unanchored:
                     self._unanchored.add(stream.key)
-                    self.notes.append(f"{stream.key}: no clock declared for it; anchored to nothing")
+                    self.notes.append(
+                        Note(f"{stream.key}: no clock declared for it; anchored to nothing", NoteCode.NO_CLOCK_DECLARED)
+                    )
                 continue
             ticks, parents = self.pulses(stream, clock)
             rows += [
@@ -697,20 +714,29 @@ class SyncSource:
             kept = slice(1 if drop_first else None, -1 if drop_last else None)
             ticks, parents = ticks[kept], parents[kept]
             self.notes.append(
-                f"{stream.key}: withheld the {' and '.join(withheld)} anchor; residual "
-                f"{residuals['first']:.0f}/{residuals['last']:.0f} parent ticks against a "
-                f"{residuals['threshold']:.0f}-tick interior threshold (R37 §3.2)"
+                Note(
+                    f"{stream.key}: withheld the {' and '.join(withheld)} anchor; residual "
+                    f"{residuals['first']:.0f}/{residuals['last']:.0f} parent ticks against a "
+                    f"{residuals['threshold']:.0f}-tick interior threshold (R37 §3.2)",
+                    NoteCode.ANCHOR_WITHHELD,
+                )
             )
         self.notes.append(
-            f"{stream.key}: {ticks.size} anchors, ticks {int(ticks[0])}..{int(ticks[-1])}, "
-            f"parent {int(parents[0])}..{int(parents[-1])}"
+            Note(
+                f"{stream.key}: {ticks.size} anchors, ticks {int(ticks[0])}..{int(ticks[-1])}, "
+                f"parent {int(parents[0])}..{int(parents[-1])}",
+                NoteCode.ANCHORS_WRITTEN,
+            )
         )
         if stepped := phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ):
             self.discontinuities[clock] = stepped
             self.notes.append(
-                f"{stream.key}: {len(stepped)} phase discontinuit"
-                f"{'y' if len(stepped) == 1 else 'ies'} in the reference alignment, "
-                + ", ".join(f"{e['seconds'] * 1e3:+.2f} ms at tick {e['t_tick']}" for e in stepped)
+                Note(
+                    f"{stream.key}: {len(stepped)} phase discontinuit"
+                    f"{'y' if len(stepped) == 1 else 'ies'} in the reference alignment, "
+                    + ", ".join(f"{e['seconds'] * 1e3:+.2f} ms at tick {e['t_tick']}" for e in stepped),
+                    NoteCode.PHASE_DISCONTINUITY,
+                )
             )
         self._pulses[clock] = (ticks, parents)
         return ticks, parents

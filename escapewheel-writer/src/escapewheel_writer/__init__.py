@@ -33,6 +33,10 @@ verify, prune
 errors
     Every exception the package raises on purpose.
 
+Notes
+-----
+    What an adapter or a build worked around, each with a code.
+
 A resource is imported only once it has passed validation (Part 05 §2), so a commit renames the
 manifest into place last.
 """

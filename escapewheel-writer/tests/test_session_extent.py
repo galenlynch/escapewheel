@@ -7,6 +7,7 @@ from typing import ClassVar
 import pytest
 
 from escapewheel_writer.errors import SourceDefect, SourceFault
+from escapewheel_writer.notes import NoteCode, coded, codes
 from escapewheel_writer.session import Context, _harvest
 
 BEGAN = datetime(2025, 4, 10, 0, 25, 12, tzinfo=UTC)
@@ -96,7 +97,7 @@ def test_a_recipe_that_disagrees_is_reported_and_overridden():
     context = _context()
     _harvest(Spec(), source, context, recipe_with(session_start_time="2025-04-10T00:30:00Z"), _no_rows)
     assert context.session_extra["session_start_time"] == BEGAN
-    assert len(source.notes) == 1 and "the source's value is used" in source.notes[0]
+    assert codes(source.notes) == [NoteCode.SOURCE_VALUE_USED]
 
 
 # -- the subject the recipe declares ------------------------------------------------------
@@ -122,7 +123,7 @@ def test_a_source_stating_no_subject_leaves_the_declaration_unchecked():
     so a build log tells a verified subject from an asserted one."""
     source = Stub(subject_id=None)
     _harvest(Spec(), source, _context(), recipe_for("776259"), _no_rows)
-    assert any("went unchecked" in n for n in source.notes)
+    assert NoteCode.FACT_UNCHECKED in codes(source.notes)
 
 
 def test_an_override_lets_the_recipe_win_and_says_why():
@@ -130,7 +131,8 @@ def test_an_override_lets_the_recipe_win_and_says_why():
     source = Stub(subject_id="776259")
     recipe = recipe_for("786867", **{"subject.subject_id": "the session names the wrong animal"})
     _harvest(Spec(), source, _context(), recipe, _no_rows)
-    assert any("the session names the wrong animal" in n for n in source.notes)
+    (overridden,) = coded(source.notes, NoteCode.FACT_OVERRIDDEN)
+    assert "the session names the wrong animal" in overridden
 
 
 def test_an_override_that_changes_nothing_is_reported():
@@ -138,7 +140,7 @@ def test_an_override_that_changes_nothing_is_reported():
     source = Stub(subject_id="776259")
     recipe = recipe_for("776259", **{"subject.subject_id": "no longer needed"})
     _harvest(Spec(), source, _context(), recipe, _no_rows)
-    assert any("states the same value" in n for n in source.notes)
+    assert NoteCode.OVERRIDE_UNNEEDED in codes(source.notes)
 
 
 def test_a_number_and_a_string_naming_one_subject_agree():

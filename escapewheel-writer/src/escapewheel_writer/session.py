@@ -47,6 +47,7 @@ from .errors import (
     UnknownSourceKind,
 )
 from .extensions import load_checked as load_extension_context
+from .notes import Note, NoteCode
 from .recipe import (
     RECIPE_SUPPLIES,
     TERMS,
@@ -476,15 +477,19 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
         if stated is None:
             # Part 05 §3.6: silence is a fact about the source, not a disagreement -- but it is
             # reported, so a build log tells a verified fact from an asserted one.
-            notes.append(f"{fact} {want!r} went unchecked; {spec.kind} states none")
+            notes.append(Note(f"{fact} {want!r} went unchecked; {spec.kind} states none", NoteCode.FACT_UNCHECKED))
             continue
         column = context.fact_types.get(fact)
         if _normalized(stated, column) == _normalized(want, column):
             if reason is not None:
-                notes.append(f"{fact} declares an override and {spec.kind} states the same value")
+                notes.append(
+                    Note(
+                        f"{fact} declares an override and {spec.kind} states the same value", NoteCode.OVERRIDE_UNNEEDED
+                    )
+                )
             continue
         if reason is not None:
-            notes.append(f"{fact} is {want!r} over {spec.kind}'s {stated!r}: {reason}")
+            notes.append(Note(f"{fact} is {want!r} over {spec.kind}'s {stated!r}: {reason}", NoteCode.FACT_OVERRIDDEN))
         elif fact in REFUSES_ON_DIFFERENCE:
             raise SourceDefect(
                 f"{fact} is {want!r} and {getattr(source, 'path', spec.kind)} states {stated!r}; "
@@ -493,9 +498,19 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
                 where=fact,
             )
         elif fact in SOURCE_WINS:
-            notes.append(f"{fact} is {want!r} and {spec.kind} derives {stated!r}; the source's value is used")
+            notes.append(
+                Note(
+                    f"{fact} is {want!r} and {spec.kind} derives {stated!r}; the source's value is used",
+                    NoteCode.SOURCE_VALUE_USED,
+                )
+            )
         else:
-            notes.append(f"{fact} is {want!r} and {spec.kind} states {stated!r}; the recipe's value is used")
+            notes.append(
+                Note(
+                    f"{fact} is {want!r} and {spec.kind} states {stated!r}; the recipe's value is used",
+                    NoteCode.RECIPE_VALUE_USED,
+                )
+            )
 
 
 def _compare_held_facts(
@@ -517,7 +532,12 @@ def _compare_held_facts(
                 code=SourceFault.HELD_FACT_DIFFERS,
                 where=fact,
             )
-        notes.append(f"{fact} is {kept!r} in the packet and {spec.kind} states {stated!r}; the packet's value is kept")
+        notes.append(
+            Note(
+                f"{fact} is {kept!r} in the packet and {spec.kind} states {stated!r}; the packet's value is kept",
+                NoteCode.PACKET_VALUE_KEPT,
+            )
+        )
 
 
 #: What a build takes from a source for the sources after it, beyond what the recipe claims. Each
@@ -1208,15 +1228,27 @@ def _source_cache(configured: str | Path | None, out: Path, context: Context) ->
     where = Path(configured).resolve()
     for inside in (out.resolve(), context.workspace.resolve()):
         if where == inside or inside in where.parents:
-            context.notes.append(f"source cache {where} lies inside {inside}, so no adapter is supplied one")
+            context.notes.append(
+                Note(
+                    f"source cache {where} lies inside {inside}, so no adapter is supplied one",
+                    NoteCode.NO_SOURCE_CACHE,
+                )
+            )
             return None
     try:
         where.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        context.notes.append(f"source cache {where} cannot be created ({exc}), so no adapter is supplied one")
+        context.notes.append(
+            Note(
+                f"source cache {where} cannot be created ({exc}), so no adapter is supplied one",
+                NoteCode.NO_SOURCE_CACHE,
+            )
+        )
         return None
     if not os.access(where, os.W_OK | os.X_OK):
-        context.notes.append(f"source cache {where} is not writable, so no adapter is supplied one")
+        context.notes.append(
+            Note(f"source cache {where} is not writable, so no adapter is supplied one", NoteCode.NO_SOURCE_CACHE)
+        )
         return None
     context.say(f"source cache {where}")
     return where
@@ -1431,7 +1463,12 @@ def _note_unclaimed(
     if not dropped or notes is None:
         return
     listed = ", ".join(f"{resource} ({rows:,} rows)" for resource, rows in sorted(dropped.items()))
-    notes.append(f"{spec.kind} produced {listed}, which no source in this recipe claims; discarded")
+    notes.append(
+        Note(
+            f"{spec.kind} produced {listed}, which no source in this recipe claims; discarded",
+            NoteCode.UNCLAIMED_DISCARDED,
+        )
+    )
 
 
 def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) -> None:
@@ -1449,8 +1486,11 @@ def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None])
             # and this is a fact about the sorter's clock rows. No resource carries it, so it does
             # not cross -- and a packet missing it says nothing, which is why this says it here.
             context.notes.append(
-                "the terminal-anchor test's result is not recorded: the source that runs it was "
-                "delivered, and no resource carries a fact about another source's rows (R99 §3.2)"
+                Note(
+                    "the terminal-anchor test's result is not recorded: the source that runs it was "
+                    "delivered, and no resource carries a fact about another source's rows (R99 §3.2)",
+                    NoteCode.ANCHOR_TEST_UNRECORDED,
+                )
             )
         return
     stamped = writer.stamp(
@@ -1471,8 +1511,11 @@ def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None])
     )
     if stamped != len(withheld):
         context.notes.append(
-            f"the terminal-anchor test examined {len(withheld)} clocks and {stamped} of them are "
-            "staged, so the rest carry no record of it"
+            Note(
+                f"the terminal-anchor test examined {len(withheld)} clocks and {stamped} of them are "
+                "staged, so the rest carry no record of it",
+                NoteCode.ANCHOR_TEST_PARTIAL,
+            )
         )
 
 

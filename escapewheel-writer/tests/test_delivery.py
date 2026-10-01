@@ -16,6 +16,7 @@ import pytest
 from escapewheel_writer import Clock, declaration, delivery
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.errors import DeliveryFailed, RecipeFault, SourceDefect, SourceFault
+from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS
 from escapewheel_writer.sources import ADAPTERS, NWBSource
 from tests import nwbfixture
@@ -302,7 +303,7 @@ def test_what_the_report_says_is_reported(supplied, tmp_path):
         workspace=tmp_path / "work",
     )
     assert got.notes, "the adapter's own notes travel in its report"
-    assert all(note.startswith("nwb reports ") for note in got.notes)
+    assert set(codes(got.notes)) == {NoteCode.REPORTED}
 
 
 def test_a_report_is_not_required(supplied, tmp_path):

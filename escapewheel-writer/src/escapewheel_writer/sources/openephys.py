@@ -17,6 +17,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, ClassVar
 
+from ..notes import Note, NoteCode
 from .store import source_root
 
 #: The file Open Ephys writes beside a recording, one per record node.
@@ -131,7 +132,7 @@ class OpenEphysSource:
             try:
                 root = ET.parse(path).getroot()
             except ET.ParseError as exc:
-                self.notes.append(f"{path}: not parseable as XML ({exc}); skipped")
+                self.notes.append(Note(f"{path}: not parseable as XML ({exc}); skipped", NoteCode.SETTINGS_UNPARSEABLE))
                 continue
             found.extend(element.attrib for element in root.findall(".//NP_PROBE"))
         return found

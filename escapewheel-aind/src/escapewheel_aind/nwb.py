@@ -15,7 +15,10 @@ from collections.abc import Mapping
 from typing import Any, ClassVar
 
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
+from escapewheel_writer.notes import Note
 from escapewheel_writer.sources.nwb import NWBSource, _clean
+
+from .notes import AindNote
 
 #: ``Model: <model> - Serial number: <serial>``, which is how `aind-data-schema` renders a probe
 #: into an NWB `Device` description. The model itself contains hyphens, so the serial is bounded
@@ -180,7 +183,9 @@ class AindNWBSource(NWBSource):
             return []
         columns = self._table("units")
         if not columns or "ks_unit_id" not in columns or "device_name" not in columns:
-            self.notes.append("units: no ks_unit_id/device_name, so no unit coordinate is emitted")
+            self.notes.append(
+                Note("units: no ks_unit_id/device_name, so no unit coordinate is emitted", AindNote.NO_UNIT_NAMES)
+            )
             return []
         paired: list[tuple[int, dict[str, Any]]] = []
         missed = 0
@@ -193,7 +198,12 @@ class AindNWBSource(NWBSource):
                 continue
             paired.append((index, {"unit_id": unit_id}))
         if missed:
-            self.notes.append(f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped")
+            self.notes.append(
+                Note(
+                    f"units: {missed} NWB row(s) match no unit in the packet's sorting; skipped",
+                    AindNote.UNIT_UNMATCHED,
+                )
+            )
         return paired
 
 

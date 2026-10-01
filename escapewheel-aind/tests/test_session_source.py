@@ -8,10 +8,12 @@ import pytest
 from escapewheel_writer import Clock
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.notes import coded, codes
 from escapewheel_writer.recipe import SourceSpec
 from escapewheel_writer.session import Context, _composed
 
 from escapewheel_aind.errors import AindFault
+from escapewheel_aind.notes import AindNote
 from escapewheel_aind.session import SessionSource
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
@@ -162,7 +164,7 @@ def test_an_ambiguous_split_is_a_defect(tmp_path):
 def test_the_seven_hour_error_is_corrected_and_reported(source):
     """`+00:00` on a Pacific reading; the naive part is right, so it is re-localized."""
     assert source.ephys().start == datetime.fromisoformat("2025-04-09T17:25:12-07:00")
-    assert any("+00:00 replaced with" in note and "-07:00" in note for note in source.notes)
+    assert any("+00:00" in note and "-07:00" in note for note in coded(source.notes, AindNote.OFFSET_REPLACED))
 
 
 def test_a_correct_offset_is_left_alone_and_unreported(source):
@@ -192,7 +194,8 @@ def test_the_epoch_crosses_the_dst_boundary_correctly(source):
 
 def test_the_epoch_says_it_was_derived(source):
     source.epoch(FIRST_SPIKE_TICK, tick_rate_num=HARP_TICK_RATE_HZ)
-    assert any("derived from data_streams[0]" in note and "uncertain" in note for note in source.notes)
+    (derived,) = coded(source.notes, AindNote.TICK_ZERO_DERIVED)
+    assert "data_streams[0]" in derived
 
 
 def test_the_clock_carries_the_epoch_and_the_session(harp):
@@ -270,15 +273,15 @@ def test_an_inverted_window_is_a_defect(tmp_path, harp):
 def test_a_window_cannot_be_placed_on_a_clock_whose_tick_zero_is_unknown(source):
     """A wall clock locates no tick without one, so the window is omitted and said to be."""
     assert "core.clock_observation_intervals" not in source.records()
-    assert any("no tick_zero_utc" in note for note in source.notes)
+    assert AindNote.NO_OBSERVATION_INTERVAL in codes(source.notes)
 
 
 def test_notes_do_not_grow_when_the_file_is_read_twice(source):
     """Deriving a clock and then asking for a window must not report the offset twice."""
     source.clock(clock_id="harp", at_tick=FIRST_SPIKE_TICK, tick_rate_num=HARP_TICK_RATE_HZ)
-    offsets = [n for n in source.notes if "replaced with" in n]
+    offsets = coded(source.notes, AindNote.OFFSET_REPLACED)
     source.behavior()
-    assert [n for n in source.notes if "replaced with" in n] == offsets
+    assert coded(source.notes, AindNote.OFFSET_REPLACED) == offsets
 
 
 # -- what the build asks for --------------------------------------------------------

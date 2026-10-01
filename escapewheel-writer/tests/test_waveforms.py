@@ -17,6 +17,7 @@ import pytest
 import zarr
 
 from escapewheel_writer.errors import SourceDefect, SourceFault
+from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.sources.waveforms import WaveformSource
 
 UNITS, CHANNELS, SAMPLES = 3, 5, 4
@@ -251,7 +252,7 @@ def test_an_analyzer_that_declares_no_unit_says_so(tmp_path: Path) -> None:
     _attrs(root / "postprocessed" / STREAM)
     source = _source(root)
     assert source.array_assets()[0]["unit"] is None
-    assert any("return_in_uV" in note for note in source.notes)
+    assert NoteCode.UNIT_UNSTATED in codes(source.notes)
 
 
 # -- units the build did not mint ------------------------------------------------------
@@ -269,10 +270,8 @@ def test_a_unit_matching_nothing_and_a_unit_masked_nowhere_are_counted_apart(tmp
         ],
     )
     source.array_assets()
-    assert source.notes == [
-        "units: 1 analyzer unit(s) match no unit in the packet's sorting; skipped",
-        "units: 1 analyzer unit(s) are sparse on no contact at all; stored with no channels",
-    ]
+    assert codes(source.notes) == [NoteCode.UNIT_UNMATCHED, NoteCode.UNIT_NO_CONTACT]
+    assert all(note.startswith("units: 1 analyzer unit(s)") for note in source.notes)
     assert source.values.shape[0] == 2
 
 
@@ -311,7 +310,8 @@ def test_a_unit_with_no_template_keeps_its_position(asset: Path) -> None:
     source = WaveformSource(asset, session_id="s1", units=units)
     assert _live(source.values) == [2, 0, 3, 1]
     assert not [r for r in source.unit_electrodes() if r["unit_id"] == 1]
-    assert source.notes == ["units: 1 unit(s) of the packet's sorting have no template; stored with no channels"]
+    assert codes(source.notes) == [NoteCode.UNIT_NO_TEMPLATE]
+    assert source.notes[0].startswith("units: 1 unit(s)")
 
 
 @pytest.mark.parametrize("prefix", ["", "A_"])

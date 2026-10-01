@@ -8,6 +8,7 @@ import pytest
 
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.errors import SourceDefect, SourceFault
+from escapewheel_writer.notes import NoteCode, coded, codes
 from escapewheel_writer.sources import SyncSource
 from escapewheel_writer.sources.sync import phase_discontinuities, suspect_terminals
 from tests import syncfixture
@@ -85,8 +86,9 @@ def test_only_the_owned_streams_are_aligned(source):
 def test_a_stub_is_skipped_and_reported(source):
     """Its seconds are acquisition-local; taken at face value they are 17.7 Ms out."""
     source.aligned()
-    assert any("Neuropix-PXI-100.probeC" in n and "acquisition-local" in n for n in source.notes)
-    assert sum("skipped" in n for n in source.notes) == 3
+    skipped = coded(source.notes, NoteCode.STREAM_NOT_ALIGNED)
+    assert any("Neuropix-PXI-100.probeC" in note for note in skipped)
+    assert len(skipped) == 3
 
 
 def test_a_tree_with_nothing_aligned_is_a_defect(tmp_path):
@@ -147,7 +149,7 @@ def test_a_stream_may_decline_a_clock(source):
     """The NI-DAQ records the pulse and carries no ticks, so it anchors to nothing."""
     rows = source.anchors()
     assert not [r for r in rows if "NI-DAQ" in r["clock_id"]]
-    assert any("anchored to nothing" in n for n in source.notes)
+    assert NoteCode.NO_CLOCK_DECLARED in codes(source.notes)
 
 
 def test_supplying_no_clocks_reaches_a_stream_that_carries_no_ticks(source):
@@ -227,7 +229,7 @@ def test_one_device_recorded_by_two_nodes_is_kept_once(source):
     identical events and HARP seconds that disagree by 70 us. One device is one clock."""
     daq = [s for s in source.aligned() if s.stream == "NI-DAQmx-107"]
     assert [s.node for s in daq] == ["109"]
-    assert any("records the same" in note and "disagree by up to" in note for note in source.notes)
+    assert NoteCode.NODE_DUPLICATE in codes(source.notes)
 
 
 def test_uid_stays_unique_where_key_does_not(source):
@@ -352,7 +354,7 @@ def test_without_the_file_the_older_routes_still_apply(tree):
     with pytest.raises(SourceDefect) as refused:
         source.anchors()
     assert refused.value.code is SourceFault.NO_FIRST_SAMPLE
-    assert any("no sync_messages.txt" in note for note in source.notes)
+    assert NoteCode.NO_START_INSTANT in codes(source.notes)
 
 
 def test_phase_steps_are_rows_of_their_own_table(source):

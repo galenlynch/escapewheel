@@ -8,6 +8,7 @@ import pytest
 from escapewheel_reader import open_packet
 
 from escapewheel_writer.errors import RecipeFault, RecipeUnsound, SourceDefect, SourceFault
+from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import Recipe, SourceSpec
 from escapewheel_writer.session import _compare_held_facts, build
 from tests.conftest import REGISTRY
@@ -152,9 +153,8 @@ def test_a_source_s_differing_session_fact_is_reported_and_the_packet_s_kept():
     source = _stating(**{"session.task_name": "reversal", "session.institution": "AIND"})
     held = {"session.task_name": "foraging", "session.institution": "AIND"}
     _compare_held_facts(SourceSpec(kind="nwb", root=Path("."), owns=()), source, held, notes, {})
-    assert notes == [
-        "session.task_name is 'foraging' in the packet and nwb states 'reversal'; the packet's value is kept"
-    ]
+    assert codes(notes) == [NoteCode.PACKET_VALUE_KEPT]
+    assert notes[0].startswith("session.task_name is 'foraging' in the packet and nwb states 'reversal'")
 
 
 def test_a_source_naming_another_subject_refuses_the_amendment():

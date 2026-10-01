@@ -44,6 +44,7 @@ from escapewheel_reader.uri import canonical, is_absolute
 from . import opaque
 from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_CACHE
 from .errors import DeliveryFailed, SourceDefect, SourceFault
+from .notes import Note, NoteCode
 
 #: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
 #: identifier is dotted, so no undotted token can collide with it.
@@ -750,13 +751,19 @@ def _from_report(
     try:
         document = json.loads(report_path.read_text())
     except json.JSONDecodeError as exc:
-        return [f"{kind}: the report at {report_path} is not JSON ({exc})"], {}
-    notes = []
+        return [Note(f"{kind}: the report at {report_path} is not JSON ({exc})", NoteCode.REPORT_NOT_JSON)], {}
+    notes: list[str] = []
     for problem in document.get("problems", ()):
         where = f" [{problem['resource']}]" if problem.get("resource") else ""
-        notes.append(f"{kind} reports {problem.get('level', 'info')}{where}: {problem.get('message', '')}")
+        notes.append(
+            Note(
+                f"{kind} reports {problem.get('level', 'info')}{where}: {problem.get('message', '')}", NoteCode.REPORTED
+            )
+        )
     if read := document.get("read"):
-        notes.append(f"{kind} read {len(read)} input(s): {', '.join(str(r) for r in read[:4])}")
+        notes.append(
+            Note(f"{kind} read {len(read)} input(s): {', '.join(str(r) for r in read[:4])}", NoteCode.INPUTS_READ)
+        )
     return notes, dict(document.get("stated", {}))
 
 

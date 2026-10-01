@@ -2,6 +2,7 @@
 
 import pytest
 
+from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.sources.openephys import OpenEphysSource
 
 #: Two probes on one basestation and a quad-base on another, which is the shape both packaged
@@ -123,7 +124,7 @@ def test_unparseable_settings_are_noted_rather_than_raised(tmp_path):
     (node / "settings.xml").write_text("<SETTINGS>")
     source = OpenEphysSource(tmp_path, session_id="s001")
     assert source.devices() == []
-    assert "not parseable as XML" in source.notes[0]
+    assert codes(source.notes) == [NoteCode.SETTINGS_UNPARSEABLE]
 
 
 def test_the_metadata_bag_does_not_restate_the_port(source):

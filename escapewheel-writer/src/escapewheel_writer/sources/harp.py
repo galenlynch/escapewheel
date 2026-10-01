@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar
 
+from ..notes import Note, NoteCode
 from .store import source_root
 
 
@@ -99,7 +100,7 @@ class HarpSource:
             declared = self._read(path)
             name = declared.get("device")
             if not name:
-                self.notes.append(f"{path}: declares no device name; skipped")
+                self.notes.append(Note(f"{path}: declares no device name; skipped", NoteCode.DEVICE_UNNAMED))
                 continue
             if name in rows:
                 continue

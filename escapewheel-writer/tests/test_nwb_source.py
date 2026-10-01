@@ -12,6 +12,7 @@ from escapewheel_reader import open_packet
 from escapewheel_writer import Clock, OffGrid, PacketWriter
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.errors import SourceDefect, SourceFault
+from escapewheel_writer.notes import NoteCode, coded, codes
 from escapewheel_writer.sources import NWBSource
 from escapewheel_writer.sources.nwb import _sex, ucum_code
 from tests import nwbfixture
@@ -193,14 +194,15 @@ def test_a_zone_is_accepted_as_the_name_a_recipe_wrote(nwb, harp):
 def test_a_stored_offset_that_disagrees_with_the_zone_is_reported(source):
     """The real file stamps -07:53 -- Pacific Local Mean Time -- on the date of birth."""
     source.records()
-    assert any("-07:53" in note and "-07:00" in note for note in source.notes)
+    (kept,) = coded(source.notes, NoteCode.OFFSET_KEPT)
+    assert "-07:53" in kept and "-07:00" in kept
 
 
 def test_a_naive_wall_clock_is_read_in_the_declared_zone(tmp_path, harp):
     nwb = nwbfixture.build(tmp_path, session_offset="")
     source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND)
     assert source.records()["core.sessions"][0]["session_start_time"].utcoffset().total_seconds() == -7 * 3600
-    assert any("no offset stored" in note for note in source.notes)
+    assert NoteCode.OFFSET_ASSUMED in codes(source.notes)
 
 
 def test_a_date_of_birth_is_the_local_calendar_date(source):
@@ -234,7 +236,8 @@ def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
 
 def test_the_pickled_column_is_skipped_and_reported(source):
     source.records()
-    assert any("group: not read" in note and "pickled" in note for note in source.notes)
+    (unread,) = coded(source.notes, NoteCode.COLUMN_NOT_READ)
+    assert unread.startswith("general/extracellular_ephys/electrodes/group:")
 
 
 def test_the_pickled_column_costs_nothing(source):
@@ -246,7 +249,7 @@ def test_a_placeholder_stream_keeps_its_stream_and_loses_its_nan(source):
     records = source.records()
     assert only(records["core.event_streams"], event_stream_id="FIP_rising_time")
     assert not [e for e in records["core.events"] if e["stream_id"] == "FIP_rising_time"]
-    assert any("FIP_rising_time" in note and "not finite" in note for note in source.notes)
+    assert any("FIP_rising_time" in note for note in coded(source.notes, NoteCode.TIMESTAMPS_DROPPED))
 
 
 def test_notes_are_not_repeated_when_a_table_is_read_by_two_builders(source):
@@ -278,7 +281,7 @@ def test_a_contact_falls_back_to_its_row_id_where_the_file_names_no_channel(tmp_
     electrodes = source.records()["core.electrodes"]
     assert sorted(e["electrode_id"] for e in electrodes) == ["probeA.0", "probeA.1"]
     assert [e["local_channel_label"] for e in electrodes] == [None, None]
-    assert any("no channel_name" in note for note in source.notes)
+    assert NoteCode.NO_CHANNEL_NAMES in codes(source.notes)
 
 
 def test_a_prefix_disambiguates_ids_for_a_multi_session_packet(nwb, harp):

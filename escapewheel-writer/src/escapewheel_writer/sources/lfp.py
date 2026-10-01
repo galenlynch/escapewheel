@@ -17,6 +17,7 @@ from typing import Any, ClassVar
 import numpy as np
 
 from ..errors import SourceDefect, SourceFault
+from ..notes import Note, NoteCode
 from .compensations import Compensates
 from .nwb import contact_columns, contact_ids, ucum_code
 from .store import SourceStore, source_root
@@ -154,7 +155,7 @@ class LFPSource(Compensates):
             sorted(p for p in (self.root / GROUP).iterdir() if p.is_dir()) if (self.root / GROUP).is_dir() else []
         )
         if not self._series:
-            self.notes.append(f"{GROUP}: no series found, so no LFP is referenced")
+            self.notes.append(Note(f"{GROUP}: no series found, so no LFP is referenced", NoteCode.NO_LFP_SERIES))
 
     # -- identity ---------------------------------------------------------------------
 
@@ -303,7 +304,7 @@ class LFPSource(Compensates):
             digested = digest_resource(array.uri) if self.verify == "sha256" else None
             found = listing(array.uri) if digested is None else digested.found
         except StoreUnreachable as exc:
-            self.notes.append(f"{array.array_asset_id}: nothing verified, {exc}")
+            self.notes.append(Note(f"{array.array_asset_id}: nothing verified, {exc}", NoteCode.NOT_VERIFIED))
             return array
         members = None
         if self.verify in {"members", "sha256"}:
@@ -311,8 +312,11 @@ class LFPSource(Compensates):
             members = tuple(_member_entry(member, value) for member, value in zip(found.members, values, strict=True))
             if not found.digested_by_store:
                 self.notes.append(
-                    f"{array.array_asset_id}: the store offered no entity tag for any of its "
-                    f"{len(found.members)} members, so none records a store digest"
+                    Note(
+                        f"{array.array_asset_id}: the store offered no entity tag for any of its "
+                        f"{len(found.members)} members, so none records a store digest",
+                        NoteCode.NO_STORE_DIGEST,
+                    )
                 )
         return ExternalArray(
             array_asset_id=array.array_asset_id,
@@ -442,7 +446,12 @@ class LFPSource(Compensates):
         channel = columns.get("channel_name")
         shift = self.store.array(table / "inter_sample_shift") if (table / "inter_sample_shift").is_dir() else None
         if shift is None:
-            self.notes.append("electrodes/inter_sample_shift: absent, so array channels carry no acquisition offset")
+            self.notes.append(
+                Note(
+                    "electrodes/inter_sample_shift: absent, so array channels carry no acquisition offset",
+                    NoteCode.NO_SAMPLE_SHIFT,
+                )
+            )
         rows = []
         for series in self._series:
             region = self.store.array(series / "electrodes")

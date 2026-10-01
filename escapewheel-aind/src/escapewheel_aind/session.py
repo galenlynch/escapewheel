@@ -23,12 +23,14 @@ from zoneinfo import ZoneInfo
 from escapewheel_writer.clock import Clock, epoch_from, zone_of
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.notes import Note
 from escapewheel_writer.sources.compensations import Compensates
 from escapewheel_writer.sources.store import source_root
 from escapewheel_writer.sources.values import sex as _sex
 from escapewheel_writer.sources.values import utc_offset as _offset
 
 from .errors import AindFault
+from .notes import AindNote
 
 #: `session.json`'s own name for the file, used to accept either it or its directory.
 SESSION_JSON = "session.json"
@@ -229,8 +231,11 @@ class SessionSource(Compensates):
         localized = value.replace(tzinfo=self.zone)
         if value.tzinfo is not None and value.utcoffset() != localized.utcoffset():
             self.notes.append(
-                f"{label}: stored offset {_offset(value.utcoffset())} replaced with "
-                f"{self.zone.key}'s {_offset(localized.utcoffset())} for {value.replace(tzinfo=None).isoformat()}"
+                Note(
+                    f"{label}: stored offset {_offset(value.utcoffset())} replaced with "
+                    f"{self.zone.key}'s {_offset(localized.utcoffset())} for {value.replace(tzinfo=None).isoformat()}",
+                    AindNote.OFFSET_REPLACED,
+                )
             )
         return localized
 
@@ -333,8 +338,11 @@ class SessionSource(Compensates):
         instant = epoch_from(anchor.start, at_tick, tick_rate_num, tick_rate_den)
         self.compensate("aind.tick_zero_from_stream_start")
         self.notes.append(
-            f"tick_zero_utc {instant.isoformat()} derived from data_streams[{anchor.index}] "
-            f"start and tick {at_tick}; not declared by any source, ~1 s uncertain"
+            Note(
+                f"tick_zero_utc {instant.isoformat()} derived from data_streams[{anchor.index}] "
+                f"start and tick {at_tick}; not declared by any source, ~1 s uncertain",
+                AindNote.TICK_ZERO_DERIVED,
+            )
         )
         return instant
 
@@ -400,8 +408,11 @@ class SessionSource(Compensates):
         )
         if clock.tick_zero_utc is None:
             self.notes.append(
-                f"{self.clock_row['clock_id']}: no tick_zero_utc, so the declared acquisition window "
-                "locates no ticks and no observation interval is emitted"
+                Note(
+                    f"{self.clock_row['clock_id']}: no tick_zero_utc, so the declared acquisition window "
+                    "locates no ticks and no observation interval is emitted",
+                    AindNote.NO_OBSERVATION_INTERVAL,
+                )
             )
             return []
         window = self.behavior()

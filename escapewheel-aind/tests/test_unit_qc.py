@@ -17,8 +17,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.notes import coded, codes
 
 from escapewheel_aind.errors import AindFault
+from escapewheel_aind.notes import AindNote
 from escapewheel_aind.unit_qc import METRICS, WAVEFORM_METRICS, UnitQCSource
 from tests.nwbfixture import array, group, text
 
@@ -112,7 +114,8 @@ def test_units_resolve_to_the_sorters_names_and_the_rest_are_skipped(asset: Path
     metrics = source.records()["aind_unit_qc.metrics"]
     assert sorted(_by_unit(metrics)) == ["exp1.A:0", "exp1.A:5"]
     assert {row["session_id"] for row in metrics} == {"s1"}
-    assert source.notes == ["units: 1 analyzer unit(s) match no unit in the packet's sorting; skipped"]
+    assert codes(source.notes) == [AindNote.UNIT_UNMATCHED]
+    assert source.notes[0].startswith("units: 1 analyzer unit(s)")
 
 
 def test_a_metric_keeps_its_name_except_num_spikes_and_a_nan_is_null(asset: Path) -> None:
@@ -195,7 +198,8 @@ def test_a_stream_without_template_metrics_leaves_that_table_empty_and_says_so(t
     built = source.records()
     assert built["aind_unit_qc.waveform_metrics"] == []
     assert set(built) == set(UnitQCSource.PRODUCES)
-    assert any("template_metrics" in note for note in source.notes)
+    (absent,) = coded(source.notes, AindNote.NO_METRIC_GROUP)
+    assert "template_metrics" in absent
     assert source.offers()["aind_unit_qc.metrics"] == 2
 
 

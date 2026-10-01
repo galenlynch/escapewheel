@@ -5,6 +5,7 @@ import json
 import pytest
 
 from escapewheel_writer.errors import SourceDefect, SourceFault
+from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.sources.lfp import LFPSource
 
 CLOCK = "experiment1.Neuropix-PXI-100.45883-1.samples"
@@ -185,7 +186,7 @@ def test_an_unreachable_store_leaves_the_claim_unmade(nwb):
     source = _source(nwb, uri_base="s3://bucket/s.nwb")
     array = source.external_arrays()["core.45883-1.lfp"]
     assert (array.size_bytes, array.digest, array.verified_at) == (None, None, None)
-    assert any("nothing verified" in n for n in source.notes)
+    assert NoteCode.NOT_VERIFIED in codes(source.notes)
 
 
 def test_a_reachable_store_is_sized_whole(nwb):
@@ -227,7 +228,7 @@ def test_a_series_with_no_matching_clock_is_refused(nwb):
 def test_an_nwb_with_no_lfp_group_yields_nothing(tmp_path):
     source = _source(tmp_path / "empty.nwb")
     assert source.records()["core.array_assets"] == []
-    assert any("no series found" in n for n in source.notes)
+    assert NoteCode.NO_LFP_SERIES in codes(source.notes)
 
 
 def test_offers_counts_the_channels_it_can_supply(nwb):
@@ -281,7 +282,7 @@ def test_a_local_store_offers_no_entity_tag(nwb):
     source = _source(nwb, verify="members")
     array = source.external_arrays()["core.45883-1.lfp"]
     assert all("store_digest" not in m and "digest" not in m for m in array.members)
-    assert any("offered no entity tag" in note for note in source.notes)
+    assert NoteCode.NO_STORE_DIGEST in codes(source.notes)
 
 
 def test_size_records_no_members(nwb):

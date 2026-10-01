@@ -30,6 +30,7 @@ from numpy.typing import NDArray
 
 from ..clock import Clock
 from ..errors import SourceDefect, SourceFault
+from ..notes import Note, NoteCode
 from .store import source_root
 from .zarr_compat import attrs, attrs_at, read_array
 
@@ -453,8 +454,11 @@ class SorterSource:
             if log.get("datetime") and not self._noted_naive:
                 self._noted_naive = True
                 self.notes.append(
-                    "sorting_runs.started_at: the sorter stamps no UTC offset and its machine's "
-                    "zone is not recorded; kept verbatim in metadata.sorted_at_naive"
+                    Note(
+                        "sorting_runs.started_at: the sorter stamps no UTC offset and its machine's "
+                        "zone is not recorded; kept verbatim in metadata.sorted_at_naive",
+                        NoteCode.SORT_TIME_NAIVE,
+                    )
                 )
             rows.append(
                 {
@@ -584,7 +588,12 @@ class SorterSource:
         if len(lengths) != 1:
             # Each segment restarts the counter, so a multi-segment recording is more than one
             # clock (Part 01 §3.9) and its length is not one interval on this one.
-            self.notes.append(f"{stream.key}: {len(lengths)} recording segments; no observation window written")
+            self.notes.append(
+                Note(
+                    f"{stream.key}: {len(lengths)} recording segments; no observation window written",
+                    NoteCode.SEVERAL_SEGMENTS,
+                )
+            )
             return None
         return int(lengths[0])
 
@@ -616,7 +625,9 @@ class SorterSource:
         for stream in self.streams():
             channels = self._channel_ids(stream)
             if channels is None:
-                self.notes.append(f"{stream.key}: the analyzer states no channel list; none written")
+                self.notes.append(
+                    Note(f"{stream.key}: the analyzer states no channel list; none written", NoteCode.NO_CHANNEL_LIST)
+                )
                 continue
             rows += [
                 {
@@ -664,7 +675,9 @@ class SorterSource:
             return None
         settings = attrs(analyzer).get("settings") or {}
         if "return_in_uV" not in settings:
-            self.notes.append(f"{stream.key}: analyzer declares no return_in_uV; amplitude unit unknown")
+            self.notes.append(
+                Note(f"{stream.key}: analyzer declares no return_in_uV; amplitude unit unknown", NoteCode.UNIT_UNSTATED)
+            )
             return None
         # `{adc}` is a UCUM annotation, a dimensionless count of converter steps (Part 02 §8.4).
         return "uV" if settings["return_in_uV"] else "{adc}"
@@ -676,7 +689,7 @@ class SorterSource:
             return None
         path = analyzer / "extensions" / "spike_amplitudes" / "amplitudes"
         if not (path / ".zarray").is_file():
-            self.notes.append(f"{stream.key}: analyzer carries no spike_amplitudes")
+            self.notes.append(Note(f"{stream.key}: analyzer carries no spike_amplitudes", NoteCode.NO_AMPLITUDES))
             return None
         values = read_array(path)
         # A sample truncates the spikes, so it must truncate their amplitudes by the same rule:
@@ -812,8 +825,11 @@ class SorterSource:
                 unknown = {str(v) for v in np.unique(labels)} - set(PROJECTION)
                 if unknown:
                     self.notes.append(
-                        f"{stream.key}/{name}: {sorted(unknown)} have no declared projection; "
-                        "kept verbatim with a null normalized_label"
+                        Note(
+                            f"{stream.key}/{name}: {sorted(unknown)} have no declared projection; "
+                            "kept verbatim with a null normalized_label",
+                            NoteCode.LABEL_UNPROJECTED,
+                        )
                     )
                 for offset, label in enumerate(ids):
                     raw = str(labels[offset])
@@ -851,11 +867,19 @@ class SorterSource:
         labelled = {entry["unit_id"] for entry in curation.get("manual_labels") or []}
         if removed != labelled:
             self.notes.append(
-                f"{stream.key}: {len(removed - labelled)} units are removed by the curation and carry "
-                f"no manual label, so the packet cannot say they were removed; 02 has no column for it"
+                Note(
+                    f"{stream.key}: {len(removed - labelled)} units are removed by the curation and carry "
+                    f"no manual label, so the packet cannot say they were removed; 02 has no column for it",
+                    NoteCode.REMOVAL_UNRECORDED,
+                )
             )
         if stray := labelled - known:
-            self.notes.append(f"{stream.key}: {len(stray)} manual labels name units the sorting does not have")
+            self.notes.append(
+                Note(
+                    f"{stream.key}: {len(stray)} manual labels name units the sorting does not have",
+                    NoteCode.LABEL_NAMES_NO_UNIT,
+                )
+            )
 
         rows = []
         for entry in curation.get("manual_labels") or []:
@@ -866,8 +890,11 @@ class SorterSource:
                 chosen = list(values) if isinstance(values, list) else [values]
                 if len(chosen) != 1:
                     self.notes.append(
-                        f"{stream.key}/unit {label}: {len(chosen)} labels in category {category!r}; "
-                        "kept verbatim and left unprojected, since the closed set holds one value"
+                        Note(
+                            f"{stream.key}/unit {label}: {len(chosen)} labels in category {category!r}; "
+                            "kept verbatim and left unprojected, since the closed set holds one value",
+                            NoteCode.SEVERAL_LABELS,
+                        )
                     )
                 raw = "|".join(str(v) for v in chosen)
                 rows.append(

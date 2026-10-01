@@ -14,6 +14,8 @@ from escapewheel_writer.errors import (
     SourceFault,
     SourcesNotOrdered,
 )
+from escapewheel_writer.notes import NoteCode, codes
+from escapewheel_writer.notes import coded as noted
 from escapewheel_writer.recipe import RECIPE_SUPPLIES, Recipe
 from escapewheel_writer.session import (
     Context,
@@ -315,9 +317,8 @@ def test_a_produced_resource_no_source_claims_is_noted(tmp_path):
     recipe = Recipe.load(write(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'))
     source = Noted()
     _note_unclaimed(recipe.sources[0], source, {"core.units": 4, "core.unit_quality_labels": 19_061})
-    assert len(source.notes) == 1
+    assert codes(source.notes) == [NoteCode.UNCLAIMED_DISCARDED]
     assert "core.unit_quality_labels (19,061 rows)" in source.notes[0]
-    assert "discarded" in source.notes[0]
 
 
 def test_a_resource_the_recipe_prefers_another_source_for_is_not_noted(tmp_path):
@@ -342,7 +343,7 @@ def test_a_resource_another_source_owns_is_noted_where_the_recipe_prefers_none(t
     recipe = Recipe.load(write(tmp_path, body))
     source = Noted()
     _note_unclaimed(recipe.sources[0], source, {"core.units": 4, "core.probes": 10}, frozenset(recipe.preferred))
-    assert any("core.probes (10 rows)" in n for n in source.notes)
+    assert any("core.probes (10 rows)" in n for n in noted(source.notes, NoteCode.UNCLAIMED_DISCARDED))
 
 
 def test_an_empty_unclaimed_resource_is_not_noted(tmp_path):
@@ -373,7 +374,8 @@ def test_rows_another_source_owns_are_noted_without_a_preference(tmp_path):
     )
     source = Noted()
     _note_unclaimed(recipe.sources[0], source, {"core.clock_observation_intervals": 12})
-    assert any("core.clock_observation_intervals" in n for n in source.notes)
+    (discarded,) = noted(source.notes, NoteCode.UNCLAIMED_DISCARDED)
+    assert "core.clock_observation_intervals" in discarded
 
 
 def test_a_preferred_resource_draws_a_refusal_rather_than_a_note(tmp_path):

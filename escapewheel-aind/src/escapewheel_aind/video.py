@@ -24,9 +24,12 @@ from urllib.parse import quote
 import numpy as np
 import pyarrow as pa
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
+from escapewheel_writer.notes import Note
 from escapewheel_writer.sources.compensations import Compensates
 from escapewheel_writer.sources.store import source_root
 from escapewheel_writer.writer import ExternalMedia
+
+from .notes import AindNote
 
 #: Rows per emitted batch. A camera writes ~2.5 M frames a session and three cameras 7.5 M, which
 #: is why the frame table streams rather than being held as records.
@@ -191,7 +194,9 @@ class VideoSource(Compensates):
         for video in self.videos():
             timing = self._timing(video)
             if timing is None:
-                self.notes.append(f"{video.name}: no timing CSV beside it; referenced without frames")
+                self.notes.append(
+                    Note(f"{video.name}: no timing CSV beside it; referenced without frames", AindNote.NO_TIMING)
+                )
             else:
                 self.compensate("video.zip_pairing_repaired")
             rows.append(
@@ -260,10 +265,17 @@ class VideoSource(Compensates):
             rows = (pts - pts[0]) // step
         inside = rows < counter.size
         if not inside.all():
-            self.notes.append(f"{video.name}: {int((~inside).sum())} frame(s) index past the timing file; dropped")
+            self.notes.append(
+                Note(
+                    f"{video.name}: {int((~inside).sum())} frame(s) index past the timing file; dropped",
+                    AindNote.FRAME_PAST_TIMING,
+                )
+            )
             pts, rows = pts[inside], rows[inside]
         if (missing := counter.size - rows.size) > 0:
-            self.notes.append(f"{video.name}: {missing} timed frame(s) absent from the video (transcode)")
+            self.notes.append(
+                Note(f"{video.name}: {missing} timed frame(s) absent from the video (transcode)", AindNote.FRAME_ABSENT)
+            )
 
         # Every value in the first column is a real trigger timestamp; only the frame each was
         # written beside is wrong. So the repair is a lookup rather than a fit: exposure k was
@@ -280,8 +292,11 @@ class VideoSource(Compensates):
             last = triggers.size - 1
             ticks[beyond] = triggers[last] + np.rint((exposures[beyond] - last) * period).astype(np.int64)
             self.notes.append(
-                f"{video.name}: {int(beyond.sum()):,} frame(s) past the last recorded trigger; "
-                f"extrapolated at {period:.5f} ticks"
+                Note(
+                    f"{video.name}: {int(beyond.sum()):,} frame(s) past the last recorded trigger; "
+                    f"extrapolated at {period:.5f} ticks",
+                    AindNote.FRAME_EXTRAPOLATED,
+                )
             )
         # True where anything is missing immediately before this frame, from either cause.
         gap = np.empty(ticks.size, dtype=bool)

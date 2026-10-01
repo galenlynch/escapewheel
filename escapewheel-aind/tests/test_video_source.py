@@ -6,9 +6,11 @@ from pathlib import Path
 
 import pyarrow as pa
 import pytest
+from escapewheel_writer.notes import codes
 from escapewheel_writer.writer import PacketWriter
 
 from escapewheel_aind import video
+from escapewheel_aind.notes import AindNote
 from escapewheel_aind.video import VideoSource
 
 HARP_ROW = {"clock_id": "harp", "session_id": "s001", "tick_rate_num": 31250, "origin": "HARP epoch"}
@@ -90,7 +92,7 @@ def test_a_short_video_places_each_frame_by_its_timestamp(root, monkeypatch):
     monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
     source = _source(root)
     assert [f["t_tick"] for f in _frames(source)] == [31250, 31312, 31375, 31500]
-    assert any("absent from the video" in note for note in source.notes)
+    assert AindNote.FRAME_ABSENT in codes(source.notes)
 
 
 #: Part 04 §4.1's resource-ID pattern.
