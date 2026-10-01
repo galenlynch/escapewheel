@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 4 proposals and 0 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 3 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -133,11 +133,12 @@ specification tooling are restructured apart from the registry checker's split. 
 the 2026-09-06 request is not answered by it: which problems a dependency already solves that this
 code solves again.
 
-## 3a. Four proposals await promotion
+## 3a. One draft awaits acceptance and three proposals await promotion
 
-All four are committed under `revisions/proposals/` and none is promoted.
+The draft is under `revisions/drafts/` and the proposals under `revisions/proposals/`.
 
-- **The reader floor bounds an array's byte order.** It supersedes R3 §7.1's little-endian and
+- **The reader floor bounds an array's byte order.** A draft, promoted 2026-10-01 and not
+  accepted. It supersedes R3 §7.1's little-endian and
   `fill_value` sentences, which the ledger records as applied and no part states, and narrows the
   Zarr v2 reader floor to little-endian and single-byte data types. Three code sites wait on it:
   the first paragraph of `arrays.py`'s module docstring, the validator's `array.no_fill_value`
@@ -268,7 +269,7 @@ natural.
 - **Four corpus packets expected to warn are not checked to pass**, and `tone_in_place_of_its_own`
   names no registry. REFACTOR.md §11.6 lists them.
 - **The ledger cannot see that an applied clause's text has gone.** Two accepted sentences were
-  lost this way and found by hand. The fourth proposal of §3a addresses it.
+  lost this way and found by hand. The ledger proposal of §3a addresses it.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
