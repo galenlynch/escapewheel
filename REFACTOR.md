@@ -196,7 +196,7 @@ module declares `__all__`, and `api.rst` lists exactly the two tiers.
 | writer | `build`, `Recipe`, `PacketWriter`, `verify`, `prune`, `materializers`, one function that runs a recipe through to a commit, the exception classes | `escapewheel_writer.adapter`: the protocols, `SourceDefect`, `Clock` and its helpers, the staged and referenced bindings, `Payload`, the protocol names, `SourceStore`, `serve`, and the `NWBSource` extension points |
 | aind | its adapters, by entry point | none |
 
-- [ ] Reader: decide the delegate policy for `Packet` methods that mirror free functions, then
+- [x] Reader: decide the delegate policy for `Packet` methods that mirror free functions, then
       make `__all__`, `api.rst` and the imports agree.
 - [ ] Validator: likewise; remove the names that are public by accident.
 - [ ] Writer: add `escapewheel_writer.adapter`; publish the `NWBSource` class tables and the five
@@ -252,7 +252,7 @@ Known obstacles:
 - [ ] Validator: one options object for the verification modes, so the API derives `external`
       from the other modes as the command line does.
 - [ ] Validator: `validate` becomes four phase calls over one context object.
-- [ ] Reader: functions that take a packet are typed against `PacketLike`, and the six memo
+- [x] Reader: functions that take a packet are typed against `PacketLike`, and the six memo
       caches they reach by `getattr` become one public memo.
 - [ ] Tests: split `test_validation.py` (2,336 lines), `test_writer.py` (1,530) and
       `test_recipe.py` (1,194) along the new modules.
@@ -473,3 +473,46 @@ Found and left as it was, since REFACTOR.md lists no such change:
 - The ordering scan raises `KeyError` where a table repeats a primary key and a sort column
   declared `determined_by` that key is constant in the file. The scan drops the constant column
   from its batches and the `determined_by` comparison still reads it.
+
+### 11.8 Reader tiers, split and memo
+
+The reader's row of §7's table is done: `packet.py` is `duck` and `packet`, and source resolution
+is in `location`.
+
+- `Packet` has no method that mirrors a free function. Nine of the 28 functions taking a packet
+  had a delegate and no rule said which; no package outside the reader's own tests called one;
+  and removing them removes `packet`'s import of `access` and `clocks`. A test fails where a
+  `Packet` method shares a name with an exported function.
+- A name is public only through an `__all__`. The user tier is `escapewheel_reader.__all__`, and
+  the support tier is every name in a submodule's `__all__` that `__init__` does not export. A
+  bare name left out of `__all__` is for the reader's own modules and an underscore name for its
+  own module, so no name gained an underscore. A module exports only names it defines.
+- `api.rst` lists the user tier by subject, the support tier as `module.name` entries with
+  `resource_ids` listed whole, and one page for each module with a public name.
+  `tests/test_surface.py` holds `api.rst` against the `__all__`s in both directions.
+- `duck`'s functions take the packet root and the declared table resources, so `duck` does not
+  import `packet`. `Packet.duckdb` and `Packet.sql` keep their signatures. One guard serves the
+  packet and the dataset, each passing the sentence its own refusal ends with.
+- `PacketLike` is a protocol in `escapewheel_reader.protocols` listing the members the free
+  functions use and no others. A test holds that every module-level function with a `packet`
+  parameter is annotated with it.
+- The six caches are one dataclass, `protocols.Memo`, with a field for each function, exposed as
+  `Packet.memo` and declared by `PacketLike`. What is kept and for how long is as before.
+  `with_declarations` gives the rebound packet a shallow copy of the memo.
+- The functions reach the memo through `Memo.of(packet)`, which gives an object with no `memo` an
+  empty one that is then discarded. Stand-ins with no memo exist in the reader's tests and in the
+  validator's time-origin test; once each carries a memo, `Memo.of` becomes `packet.memo`.
+- The citation rule of §3.3 was applied to `packet`, `duck`, the moved source resolution and the
+  functions rewritten for the memo. The reader's other modules wait for the closing pass.
+  `access.events` keeps its revision citation, which `revisions/repoint.py` exempts by file.
+
+Found and left as they were:
+
+- Part 04 §5.5 cites "Immutability (§5.1)", and immutability is stated in Part 03 §8.1. A
+  specification part is not edited here.
+- The ledger places three clauses at Part 01 §2.2 and §2.4 whose rules read today in Part 01
+  §2.3 and §2.6. The ledger is not edited here.
+- `declared_bound` treats a sessions table with no `alignment_bound` column as unreadable, so it
+  returns the default bound and reads again on every call.
+- `ordering.overridden` is used only by its own test, and the validator's tests patch the private
+  `ordering._overrides`.
