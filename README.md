@@ -77,8 +77,14 @@ uses file layout as identity.
 
 ## Building and reading a packet
 
+Build from a checkout: no package is published to an index. Run `uv sync` in `escapewheel-writer/`
+for the standard sources, or in `escapewheel-aind/` to add AIND's, and run the commands below there
+with `uv run`. A recipe's paths resolve against the recipe's own directory. It names the core
+registry at `spec/artifacts/logical_schemas.json` and each extension by the path of its document:
+`dynamic_foraging` and `vr_foraging` lie in `extensions/`, and `aind_opto` and `aind_unit_qc` in
+`escapewheel-aind/extensions/`.
+
 ```bash
-uv sync                                       # in any of the three package directories
 
 escapewheel inspect sorter /data/session_sorted  # what a source offers (Part 05 §4.1)
 escapewheel init --session-id s001 \
@@ -101,6 +107,13 @@ waveform = packet.array_resource("core.waveform_mean").read((slice(0, 1),))
 A **session recipe** is the unit of import: one TOML file naming every source, which resources
 each is responsible for, and the clocks they share. It is also the provenance record — the
 recipe lands in `core.processing_runs.parameters`, so a packet says what produced it.
+
+## Reporting a problem
+
+Report problems as issues on the [repository](https://github.com/galenlynch/escapewheel/issues),
+with the recipe, the command, and its output. A defect in a part, a registry or an incorporated
+schema is a specification change and follows `revisions/README.md`; a defect in a package is
+fixed in the package.
 
 ## Status
 

@@ -4,14 +4,11 @@ Tools to read escapewheel packets
 
 ## Installation
 
-```bash
-pip install escapewheel-reader
-```
+No release is published to an index; install from the monorepo:
 
-For development:
 ```bash
-git clone https://github.com/AllenNeuralDynamics/escapewheel-reader.git
-cd escapewheel-reader
+git clone https://github.com/galenlynch/escapewheel.git
+cd escapewheel/escapewheel-reader
 uv sync
 ```
 

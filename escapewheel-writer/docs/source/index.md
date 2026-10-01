@@ -4,14 +4,11 @@ Tools to write escapewheel packets
 
 ## Installation
 
-```bash
-pip install escapewheel-writer
-```
+No release is published to an index; install from the monorepo:
 
-For development:
 ```bash
-git clone https://github.com/AllenNeuralDynamics/escapewheel-writer.git
-cd escapewheel-writer
+git clone https://github.com/galenlynch/escapewheel.git
+cd escapewheel/escapewheel-writer
 uv sync
 ```
 

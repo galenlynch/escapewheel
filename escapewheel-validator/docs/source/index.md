@@ -4,14 +4,11 @@ Tools to validate escapewheel packets
 
 ## Installation
 
-```bash
-pip install escapewheel-validator
-```
+No release is published to an index; install from the monorepo:
 
-For development:
 ```bash
-git clone https://github.com/AllenNeuralDynamics/escapewheel-validator.git
-cd escapewheel-validator
+git clone https://github.com/galenlynch/escapewheel.git
+cd escapewheel/escapewheel-validator
 uv sync
 ```
 

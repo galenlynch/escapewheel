@@ -1,7 +1,5 @@
 # Escapewheel Validator
 
-![CI](https://github.com/AllenNeuralDynamics/escapewheel-validator/actions/workflows/ci-call.yml/badge.svg)
-[![PyPI - Version](https://img.shields.io/pypi/v/escapewheel-validator)](https://pypi.org/project/escapewheel-validator/)
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 [![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)

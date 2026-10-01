@@ -1,7 +1,5 @@
 # Escapewheel Reader
 
-![CI](https://github.com/AllenNeuralDynamics/escapewheel-reader/actions/workflows/ci-call.yml/badge.svg)
-[![PyPI - Version](https://img.shields.io/pypi/v/escapewheel-reader)](https://pypi.org/project/escapewheel-reader/)
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 [![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)

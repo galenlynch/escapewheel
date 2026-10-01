@@ -34,9 +34,9 @@ polars = ["polars>=1.0"]
 arrays = ["zarr>=3"]
 
 [project.urls]
-Repository = "https://github.com/AllenNeuralDynamics/escapewheel-reader/"
-Issues = "https://github.com/AllenNeuralDynamics/escapewheel-reader/issues"
-Changelog = "https://github.com/AllenNeuralDynamics/escapewheel-reader/blob/main/CHANGELOG.md"
+Repository = "https://github.com/galenlynch/escapewheel/"
+Issues = "https://github.com/galenlynch/escapewheel/issues"
+Changelog = "https://github.com/galenlynch/escapewheel/blob/main/escapewheel-reader/CHANGELOG.md"
 
 [project.scripts]
 # 07 names the CLI `escapewheel`; later packages extend it with their own subcommands

@@ -59,9 +59,9 @@ s3 = ["escapewheel-validator[s3]"]
 import = "escapewheel_writer.scripts.cli:register"
 
 [project.urls]
-Repository = "https://github.com/AllenNeuralDynamics/escapewheel-writer/"
-Issues = "https://github.com/AllenNeuralDynamics/escapewheel-writer/issues"
-Changelog = "https://github.com/AllenNeuralDynamics/escapewheel-writer/blob/main/CHANGELOG.md"
+Repository = "https://github.com/galenlynch/escapewheel/"
+Issues = "https://github.com/galenlynch/escapewheel/issues"
+Changelog = "https://github.com/galenlynch/escapewheel/blob/main/escapewheel-writer/CHANGELOG.md"
 
 [project.scripts]
 # Add your CLI scripts here, e.g.:

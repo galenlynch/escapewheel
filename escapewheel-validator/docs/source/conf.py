@@ -85,9 +85,9 @@ html_theme_options = {
     "sidebar_hide_name": True,
     "navigation_with_keys": True,
     "top_of_page_button": "edit",
-    "source_repository": "https://github.com/AllenNeuralDynamics/escapewheel-validator",
+    "source_repository": "https://github.com/galenlynch/escapewheel",
     "source_branch": "main",
-    "source_directory": "docs/source/",
+    "source_directory": "escapewheel-validator/docs/source/",
 }
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.

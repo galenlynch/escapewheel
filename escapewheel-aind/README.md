@@ -25,6 +25,12 @@ deliver` serves it over (Part 12 §3), so a delivery need not name one.
 Writing it this way is what makes moving it to its own repository a packaging change rather than a
 rewrite.
 
+## Its extension registries
+
+`extensions/` holds the `aind_opto` and `aind_unit_qc` registries these adapters fill, beside them
+rather than in the specification. They are not in the wheel, so a recipe binds one by the path of
+its document. `../extensions/README.md` describes how they are assembled and checked.
+
 ## Commands
 
 ```bash

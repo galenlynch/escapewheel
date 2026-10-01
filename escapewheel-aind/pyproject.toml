@@ -42,8 +42,8 @@ aind_unit_qc = "escapewheel_aind.unit_qc:UnitQCSource"
 aind = "escapewheel_aind.compensations:COMPENSATIONS"
 
 [project.urls]
-Repository = "https://github.com/AllenNeuralDynamics/escapewheel-aind/"
-Issues = "https://github.com/AllenNeuralDynamics/escapewheel-aind/issues"
+Repository = "https://github.com/galenlynch/escapewheel/"
+Issues = "https://github.com/galenlynch/escapewheel/issues"
 
 [dependency-groups]
 types = [
