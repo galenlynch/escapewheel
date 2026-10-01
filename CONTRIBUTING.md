@@ -181,8 +181,10 @@ the order matters.
    **`extensions/registries.py build`** assembles each extension where it sits.
 3. **`spec/tools/check.py`** verifies the tree: one complete registry-contract result for core,
    then authoring conventions, source-to-output agreement, each artifact's schema, and the static
-   Tier 2 profile. The result is implemented in `spec/tools/checkers/registry_document.py`, which
-   the validator copies, so an extension author and this repository receive the same answer.
+   Tier 2 profile. The result is implemented in `spec/tools/checkers/registry_document.py` and the
+   three `registry_*` modules it imports (the result model, the invariants and the rule and unit
+   phases), which the validator copies, so an extension author and this repository receive the
+   same answer.
    **`extensions/registries.py check`** requires the same result of each extension, under the core
    registry's context, with the same conventions. Section 8 counts the descriptor's invariant
    inventory.
@@ -255,7 +257,9 @@ fall and must not rise. Current owners need not cite their accepted revisions ba
 
 The incorporated registry-contract descriptor enumerates the invariants that apply to core and
 extension documents by class. Their algorithms are owned by Parts 02 and 09 and implemented once
-in `spec/tools/checkers/registry_document.py`; `escapewheel extension check`,
+in `spec/tools/checkers/registry_invariants.py`, whose one table registers each semantic invariant
+with its ID, the universe it resolves names in and whether it needs a usable core;
+`escapewheel extension check`,
 `spec/tools/check.py` and `extensions/registries.py` consume that complete result. `check.py`
 separately adds checks of the tree's other artifacts. `tools/facts.py` counts the descriptor inventory
 and those checks:
