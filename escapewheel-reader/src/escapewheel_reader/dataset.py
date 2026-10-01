@@ -1,4 +1,4 @@
-"""Many packets presented as one relation (R86).
+"""Many packets presented as one relation (Part 05 §13.1).
 
 - :func:`open_dataset` -- open several packets as a :class:`Dataset`.
 - :class:`Dataset` -- each session-scoped table as the union of every packet's rows, by
@@ -33,8 +33,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from duckdb import DuckDBPyConnection
 
 #: The columns a dataset projects onto every session-scoped table. `session_key` is the
-#: discriminator Part 05 §13.1 requires; `session_name` is the label it permits beside one, and
-#: promises nothing about what two packets' matching labels denote.
+#: session discriminator; `session_name` is the label permitted beside one, and promises nothing
+#: about what two packets' matching labels denote.
 PROJECTED = ("session_key", "session_name")
 
 #: What :func:`duck.connect` says of a dataset where DuckDB is absent.
@@ -51,7 +51,7 @@ def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
     Parameters
     ----------
     registry : Mapping
-        A parsed registry document in R2's format.
+        A parsed registry document.
 
     Returns
     -------
@@ -69,7 +69,7 @@ def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
         if name == CORE_SESSIONS:
             return True
         if name in seen:
-            # A self-reference is well-founded (Part 01 §3.5) and is not a route to anywhere.
+            # A table's reference to itself is not a route to anywhere.
             return False
         seen.add(name)
         return any(reaches(m, seen) for m in edges.get(name, ()))
@@ -85,8 +85,8 @@ class Session:
     ----------
     session_key : int
         The discriminator. Numbered by the dataset as it opened the packets, so it is stable
-        for one dataset and means nothing outside it -- exactly as Part 05 §4.3 says of every
-        assigned identifier.
+        for one dataset and means nothing outside it, as an assigned identifier means nothing
+        outside its packet.
     packet_id : str
         The packet this session was read from.
     session_id : int
@@ -104,15 +104,15 @@ class Session:
 class Dataset:
     """Several packets, presented as one relation per resource.
 
-    The discriminator is **the packet a row came from together with the row's `session_id`**
-    (Part 05 §13.1). Both are known for certain -- the reader opened the file, and the identifier is
-    unique within it -- so their pair is unique by construction and nothing has to be assumed
+    The discriminator is **the packet a row came from together with the row's `session_id`**.
+    Both are known for certain -- the reader opened the file, and the identifier is unique
+    within it -- so their pair is unique by construction and nothing has to be assumed
     about the world. A `*_name` is never used for it: measured across two packets sharing no
     session, no animal and no probe, 6 of 13 name columns hold a value appearing in both.
 
-    Identity is **carried, not joined on** (Part 05 §13.1). Within one packet an assigned identifier
-    is already unique, so a query over one session joins on it alone; a query spanning sessions
-    joins on `(session_key, unit_id)` (Part 05 §13.2).
+    Identity is **carried, not joined on**. Within one packet an assigned identifier is already
+    unique, so a query over one session joins on it alone; a query spanning sessions joins on
+    `(session_key, unit_id)`.
     """
 
     def __init__(self, packets: Sequence[Packet]) -> None:
@@ -163,8 +163,8 @@ class Dataset:
     def _scope(packets: Sequence[Packet]) -> frozenset[str]:
         """Return the union of what each packet's own registry says is session-scoped.
 
-        Each packet binds the registry it was written against (Part 04 §8), so two packets built
-        against different revisions can disagree. The union is what keeps a table scoped once
+        Each packet binds the registry it was written against, so two packets built against
+        different registry versions can disagree. The union is what keeps a table scoped once
         any packet says it is, which is the safe direction: an extra discriminator is harmless,
         while omitting one where it is needed can correlate unrelated rows.
         """
@@ -185,7 +185,7 @@ class Dataset:
 
     @property
     def scoped(self) -> frozenset[str]:
-        """Which resources carry a session discriminator (Part 05 §13.1)."""
+        """Which resources carry a session discriminator."""
         return self._scoped
 
     def __repr__(self) -> str:
@@ -204,8 +204,8 @@ class Dataset:
         """Register each resource as one view over every packet that holds it.
 
         A session-scoped view carries `session_key` and `session_name`, projected as scalar
-        expressions over `session_id` rather than joined from `core.sessions` (Part 05 §13.1). A
-        query planner can prune the projection when a query does not select it.
+        expressions over `session_id` rather than joined from `core.sessions`. A query planner
+        can prune the projection when a query does not select it.
 
         Nothing is registered unless asked for, for the reason `Packet.duckdb` says: binding a
         Parquet view reads its footer, which is a round trip per table in an object store.
@@ -270,8 +270,7 @@ class Dataset:
         base = str(handle.path) if handle.is_local else handle.location.uri
         source = f"SELECT * FROM '{base}'"
         if resource_id not in self._scoped:
-            # Part 05 §13.1: a reader does not carry a discriminator on a table that is not
-            # session-scoped.
+            # A table that is not session-scoped carries no discriminator.
             return source
         return f"SELECT *, {self._identity(packet, resource_id)} FROM '{base}'"
 
@@ -279,7 +278,7 @@ class Dataset:
         """Return the projected `session_key` and `session_name` for one packet's rows.
 
         A scalar expression over a column already being scanned, so a query not selecting it
-        can have the expression pruned and read nothing extra (Part 05 §13.1).
+        can have the expression pruned and read nothing extra.
         """
         held = self._by_packet[packet.manifest.packet_id]
         if "session_id" in _column_names(packet, resource_id):
@@ -294,8 +293,8 @@ class Dataset:
         if len(held) != 1:
             raise MultiSessionUnresolved(
                 f"{resource_id} is session-scoped, carries no session_id, and "
-                f"{packet.manifest.packet_id} holds {len(held)} sessions; Part 05 §13.1 requires "
-                "a discriminator and forbids deriving one from a session name"
+                f"{packet.manifest.packet_id} holds {len(held)} sessions; its rows need "
+                "a discriminator, and one may not be derived from a session name"
             )
         only = next(iter(held.values()))
         label = _literal(only.session_name)
@@ -388,7 +387,7 @@ def open_dataset(
     paths: Iterable[str | Path | Location | Packet],
     **options: Any,
 ) -> Dataset:
-    """Open several packets and present them as one relation (R86).
+    """Open several packets and present them as one relation.
 
     Parameters
     ----------

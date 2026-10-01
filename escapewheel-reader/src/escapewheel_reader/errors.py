@@ -55,7 +55,7 @@ class RegistryFault(StrEnum):
 
 
 class RegistryUnavailable(PacketError):
-    """A bound registry cannot be used to resolve a declaration (Part 04 §10).
+    """A bound registry cannot be used to resolve a declaration.
 
     Raised by the operation that needed the registry, never when the packet opens, so reading a
     resource no unavailable registry declares still works.
@@ -228,9 +228,9 @@ class UnresolvableAxis(Refused):
 class MultiSessionUnresolved(Refused):
     """A packet holds several sessions and a scoped table cannot say which row is whose.
 
-    Part 05 §13.1 requires a discriminator on every session-scoped table a reader presents. Part
-    02 §7.1 requires every such table to carry `session_id`, so a conforming packet cannot reach
-    this; a packet that lacks the column can, and its rows cannot be attributed.
+    Part 05 §13.1 requires a discriminator on every session-scoped table a reader presents, and
+    Part 02 §7.1 requires every such table to carry `session_id`, so a conforming packet cannot
+    reach this; a packet that lacks the column can, and its rows cannot be attributed.
     """
 
 
