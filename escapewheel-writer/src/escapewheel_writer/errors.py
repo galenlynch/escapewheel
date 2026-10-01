@@ -1,4 +1,4 @@
-"""Every exception this package raises on purpose.
+"""Every exception this package raises on purpose; each derives from :exc:`WriterError`.
 
 A recipe that cannot be built:
 
@@ -33,29 +33,33 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from escapewheel_reader.errors import NotAligned
+from escapewheel_reader.errors import EscapewheelError, NotAligned
 
 if TYPE_CHECKING:  # pragma: no cover
     from escapewheel_validator import Report
 
 
-class RecipeError(Exception):
+class WriterError(EscapewheelError):
+    """Base class for every error raised by this package."""
+
+
+class RecipeError(WriterError):
     """A recipe cannot be built: a source kind is unknown, or its dependencies do not order."""
 
 
-class ReplacementRefused(Exception):
+class ReplacementRefused(WriterError):
     """A recipe's `[packet].replaces` names what a build cannot replace (Part 05 §3.5)."""
 
 
-class AmendmentRefused(ValueError):
+class AmendmentRefused(WriterError, ValueError):
     """An amendment would change what Part 05 §15.2 forbids, or a build cannot amend this packet."""
 
 
-class ExtensionNotFound(Exception):
+class ExtensionNotFound(WriterError):
     """A recipe names an extension that is neither a file nor an installed distribution."""
 
 
-class SourceDefect(ValueError):
+class SourceDefect(WriterError, ValueError):
     """A source cannot supply what it was asked for, and the build cannot proceed past it.
 
     Carried as an exception rather than a note because it stops a build (Part 05 §4.4), where what
@@ -63,15 +67,15 @@ class SourceDefect(ValueError):
     """
 
 
-class UnsupportedEncoding(ValueError):
+class UnsupportedEncoding(WriterError, ValueError):
     """An array uses an encoding this package will not decode, such as ``pickle``."""
 
 
-class PayloadRefused(ValueError):
+class PayloadRefused(WriterError, ValueError):
     """A delivery holds something a packet cannot own, or a payload binds no single resource."""
 
 
-class OffGrid(ValueError):
+class OffGrid(WriterError, ValueError):
     """Source seconds do not lie on this clock's tick grid, so no exact tick exists.
 
     Recovering ticks from such values means fitting a rate and an offset, which is an
@@ -92,7 +96,7 @@ class OffGrid(ValueError):
         self.worst = worst
 
 
-class NonFinite(ValueError):
+class NonFinite(WriterError, ValueError):
     """A source timestamp was NaN or infinite.
 
     Placeholder streams do occur -- an NWB may carry a behaviour stream holding a single NaN --
@@ -101,7 +105,7 @@ class NonFinite(ValueError):
     """
 
 
-class NaiveTimestamp(ValueError):
+class NaiveTimestamp(WriterError, ValueError):
     """A wall-clock value carried no UTC offset.
 
     Part 03 requires wall-clock columns to be ``TIMESTAMP(MICROS, UTC)``, so a value without an
@@ -112,11 +116,11 @@ class NaiveTimestamp(ValueError):
     """
 
 
-class CarriedNotAnInteger(ValueError):
+class CarriedNotAnInteger(WriterError, ValueError):
     """A carried identifier arrived as something other than the source's own number."""
 
 
-class Collided(NotAligned):
+class Collided(WriterError, NotAligned):
     """Two spikes of one unit convert to the same reference tick, so the table cannot be built.
 
     Part 06 §4. This table is keyed on the converted tick, and a conversion preserves distinctness
@@ -127,7 +131,7 @@ class Collided(NotAligned):
     """
 
 
-class CommitRefused(Exception):
+class CommitRefused(WriterError):
     """The packet's verdict was not ``passed``, so nothing was committed (Part 05 §9.2).
 
     Attributes
@@ -142,9 +146,9 @@ class CommitRefused(Exception):
         self.staging = staging
 
 
-class NotCommitted(Exception):
+class NotCommitted(WriterError):
     """There is no committed packet at this root to amend."""
 
 
-class PromotionRecordUnreadable(Exception):
+class PromotionRecordUnreadable(WriterError):
     """A staging area holds a promotion record this writer cannot read (Part 05 §6)."""
