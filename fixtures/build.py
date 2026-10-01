@@ -816,7 +816,7 @@ def write_packet(
                 "validation": {
                     "status": "not_run",
                     "validated_at": "2026-08-26T00:00:00Z",
-                    "validator_name": "escapewheel_validate",
+                    "validator_name": "escapewheel_validator",
                     "validator_version": "0.1.0",
                 },
             },
