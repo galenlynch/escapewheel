@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | 2026-10-01 |
-| **Based on** | `07196d9fc19c0d6eed6a35ba3477b8be71ae5128` |
+| **Based on** | `6f8a97f1c972d34a6553e119ca0758b03ae818f7` |
 | **Decision domain** | specification |
 | **Affects** | Part 02 §2.2's meaning of the `documentation` class; Part 02 §2.6's list of catalog tables; Part 02 §11's resource index and the incorporated registry; Part 03 §3.1's layout and Part 03 §7's placement table; Part 09 §2's tier table and Part 09 §3's sentence on a field kept in a sidecar |
 
@@ -103,8 +103,9 @@ canonical data a replacement of the packet.
 Part 02 §2.2 forbids a `core` or `extension` declaration a table reference, a `requires` entry or a
 catalog binding that targets a documentation declaration. Part 02 §2.7 permits no class to take a
 documentation resource as a lineage source, and forbids a documentation resource lineage of its own.
-Both are checked on the registry document and the manifest. A result computed from a sidecar and
-recorded without lineage is the one dependence neither can see.
+Both are checked on the registry document and the manifest, so no resource of a packet can depend
+on a documentation resource through a declaration. Lineage relates one resource of the packet to
+another, and what a result was computed from outside the packet is recorded elsewhere (§2.12).
 
 ### 2.10 Core already states a nullable scope as a pair of columns
 
@@ -121,6 +122,18 @@ Part 04 §5.1 expects a large resource to be referenced, and Part 04 §5.2 makes
 no claim about the present. A packet-owned resource's digest is required and covers its bytes
 (Part 03 §10).
 
+### 2.12 The provenance tables record a file a result was computed from
+
+Part 01 §3.19 defines a source file as an input the packet was built from, and Part 04 §7 places
+provenance in `core.source_files`, `core.processing_runs` and `core.processing_run_inputs`. A
+`core.source_files` row carries a required `uri` and a nullable `sha256`, `size_bytes`, `format` and
+`modified_at`, and a `core.processing_run_inputs` row names a source file that a run consumed. The
+row locates a file and need not own it: nothing in the packet holds the bytes.
+
+Part 05 §7 requires a row for each distinct root among a recipe's sources. A search of Parts 01, 02,
+04, 05 and 12 finds no rule that limits the table to those rows, so a source may deliver a row for
+an input of a run it reports, such as the scan an electrode's coordinates were registered to.
+
 ## 3. Desired outcome and constraints
 
 A packet's author lists a file by naming it and describing it, with no registry and no adapter of
@@ -128,7 +141,9 @@ their own. A consumer finds a packet's sidecars with one query, learns from each
 is, and resolves its bytes through the manifest, which records a digest for it. A sidecar is
 packet-owned or external, as any opaque resource is, so a packet can point at a scan of its subject
 that another holder keeps, and need not own everything known about that subject. A consumer can ask
-which sidecars are about a given subject, session or resource. The resolution preserves:
+which sidecars are about a given subject, session or resource. A file that a result was computed
+from stays recorded as a source file, whether or not the packet also lists a copy of it as a sidecar.
+The resolution preserves:
 
 - Part 05 §10's rule that every resource a manifest lists resolves a logical declaration;
 - Part 02 §2.2's rule that a canonical resource depends on no non-canonical one;
@@ -169,29 +184,41 @@ nullable pair `scope_kind` and `scope` in the form `core.processing_runs` gives 
 pair is a sidecar about the packet. A consumer then finds a subject's sidecars with a query, where a
 description alone would leave it reading prose.
 
-**The class means that nothing depends on the file.** Part 02 §2.2's meaning of `documentation`
-loses "human-readable" and gains the test that separates a sidecar from data: no resource of the
-packet depends on a sidecar, and no result the packet holds is derived from one. A person or a
-program may read it. A viewer's saved state passes the test, since it is a view over data the packet
-already holds or names. Part 02 §2.2's sentence about a machine-interpreted control artifact stays,
-since it excludes a document that Escapewheel itself interprets, such as a recipe or a registry.
+**The class means that the packet asserts nothing through the file.** Part 02 §2.2's meaning of
+`documentation` loses "human-readable": a sidecar is a file the packet indexes and asserts no fact
+through, and a person or a program may read it. A viewer's saved state qualifies, since it is a view
+over data the packet already holds or names. The registry already keeps every resource of the packet
+from referencing, requiring, binding to or deriving from a documentation resource (§2.9), so the
+class needs no rule that a validator cannot check. Part 02 §2.2's sentence about a
+machine-interpreted control artifact stays, since it excludes a document that Escapewheel itself
+interprets, such as a recipe or a registry.
 
-**A writer owes the test where the registry cannot check it.** The registry already forbids a
-canonical reference, a `requires` entry, a catalog binding and a lineage edge that targets a
-documentation resource (§2.9). The remaining case binds a writer: it does not place in a sidecar a
-file from which a table, an array or an analysis resource of the packet was computed. No validator
-can decide that case, and the draft states it as unchecked.
+**A file whose meaning the packet states is not a sidecar.** An image that a coordinate frame is
+registered to, or a volume whose axes a table states, takes a dense-array declaration or an
+extension's own declaration, as it does now. A table can then reference it, which §2.9 forbids for a
+sidecar.
 
-**A file that results depend on is not a sidecar.** An image that a coordinate frame is registered
-to, or a volume whose axes a table states, takes a dense-array declaration or an extension's own
-declaration, as it does now. Such a file is also the one that has to stay fixed, which the canonical
-classes guarantee and the documentation class does not.
+**A file that a result was computed from is a source file.** A scan that electrode coordinates were
+registered to is an input of the run that registered them, and `core.source_files` and
+`core.processing_run_inputs` record it with its location and, where the writer read it, its checksum
+(§2.12). The scan stays where it is held, and the packet carries no volume on its account. Part 02
+§2.2 says that listing a file as a sidecar records no dependence on it, and names the provenance
+tables as the place where an input is recorded.
 
-**A sidecar's permanence is what its entry records.** An amendment may replace or remove a sidecar
-(§2.8), so a packet promises a sidecar's bytes for one version only, and each version's manifest
-records the digest of the bytes it names. A referenced sidecar is kept by whoever holds it, and its
-entry's digest lets a reader detect that it has changed (§2.11). A subject's scan held elsewhere is
-listed this way: the packet says that it exists, where it is, and what it was when checked.
+**One file may be both.** A copy of a rig's configuration or of a session's metadata file may ride
+in the packet as a sidecar while its `core.source_files` row records that a run consumed it. The row
+is the record and the sidecar is a convenience: an amendment that removes the sidecar leaves the
+provenance whole. The sidecar's scope pair can name the source-file row it is a copy of.
+
+**A file has to stay fixed only where something depends on it.** Each such file already has a place
+that fixes it. An amendment cannot change or remove a canonical array or payload (§2.8), and a
+source-file row carries the checksum of what the run read where the writer recorded one. A sidecar
+is in neither position, so an amendment may
+replace or remove one, and a packet promises a sidecar's bytes for one version only. Each version's
+manifest records the digest of a packet-owned sidecar. A referenced sidecar's entry records a digest
+only where the writer reached the file (§2.11), which this direction does not tighten: a subject's
+scan that no result depends on is listed with where it is and, where known, what it was when
+checked.
 
 **The two sentences that put values in a sidecar are restated.** Part 03 §7 and Part 09 §3 name an
 extension, or a `json_string` column, as the place for a lab-specific value, and no longer a sidecar
@@ -213,14 +240,14 @@ family payload no binding rule, which is a separate question.
 | surface | effect |
 |---|---|
 | semantic prose | Unchanged. A sidecar asserts no semantic fact, so Part 01 gains no concept. |
-| logical prose, registry meta-schema, declarations and rules | Part 02 §2.2 restates the meaning of `documentation` and binds a writer to the dependence test. The table declares the scope pair and the rule that the pair is set together. Part 02 §2.6 names a fourth catalog table whose `resource_id` is a string. Part 02 §11 gains the two resources. The registry gains the table and the opaque catalog declaration; the table declares `[]` as its amendment groups, as every non-canonical table does. The meta-schema and the registry contract are unchanged: a core registry may already declare the class. Whether a declared rule checks a media type's form is unknown, and either answer leaves the direction unchanged. |
+| logical prose, registry meta-schema, declarations and rules | Part 02 §2.2 restates the meaning of `documentation` and says that a sidecar records no dependence, naming the provenance tables for an input. The table declares the scope pair and the rule that the pair is set together. Part 02 §2.6 names a fourth catalog table whose `resource_id` is a string. Part 02 §11 gains the two resources. The registry gains the table and the opaque catalog declaration; the table declares `[]` as its amendment groups, as every non-canonical table does. The meta-schema and the registry contract are unchanged: a core registry may already declare the class. Whether a declared rule checks a media type's form is unknown, and either answer leaves the direction unchanged. |
 | physical profiles | Part 03 §3.1's layout drops `docs/`, and Part 03 §7 names the catalog and no longer places a value in a sidecar. Part 03 §11 and the descriptor are unchanged. |
 | packet manifest and other JSON Schemas | Unchanged. A sidecar's entry uses the existing members, and the recipe schema already admits an adapter's options. |
-| validation and import | Unchanged in rule. Part 04 §10's catalog-binding checks and Part 05 §15.2's amendment table already cover a documentation catalog. Part 09 §2's tier table names the catalog in place of `docs/`, and Part 09 §3 no longer names a sidecar as a place for a field. |
+| validation and import | Unchanged in rule. Part 05 §7 already admits a source-file row beyond a recipe's roots (§2.12). Part 04 §10's catalog-binding checks and Part 05 §15.2's amendment table already cover a documentation catalog. Part 09 §2's tier table names the catalog in place of `docs/`, and Part 09 §3 no longer names a sidecar as a place for a field. |
 | extension registries | Unchanged. An extension keeps the right to declare its own opaque or documentation resource. |
 | reader, writer, validator, adapters, code generation | Each package's registry copy regenerates. The reader lists the table and resolves an instance as it does any catalogued resource. The writer ships an adapter that delivers the files a recipe names, each packet-owned or referenced. The validator applies its existing checks. Other adapters are unchanged. |
 | existing packets | Unchanged in conformance. No existing packet carries either resource, and a stray in `docs/` stays a stray. A packet built afterwards binds the changed core registry. |
-| conformance fixtures and implementation tests | The corpus gains a packet with a packet-owned sidecar and a referenced one, a catalog row no entry binds, and an entry no row binds. Build tests cover the adapter. An amendment test replaces and removes a sidecar. |
+| conformance fixtures and implementation tests | The corpus gains a packet with a packet-owned sidecar and a referenced one, a catalog row no entry binds, and an entry no row binds. Build tests cover the adapter, including a sidecar that is a copy of a recorded source file. An amendment test replaces and removes a sidecar and leaves the source-file row. |
 | revision lifecycle, ledger, evidence and tooling | The ledger records that the accepted clause defining the class meanings is superseded in that one row. No process rule changes. |
 | generated publications and developer documentation | The generated table listing and the combined rendering regenerate. The writer's guide documents the adapter, and Part 08's example is unchanged unless the draft adds a sidecar to it. |
 
@@ -240,5 +267,5 @@ family payload no binding rule, which is a separate question.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
 - [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The exact proposal and its final appraisal state are tracked in the current commit.
+- [x] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.

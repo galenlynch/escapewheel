@@ -149,9 +149,10 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
   root wherever the build writes that root, which is wider than the request that prompted it. The
   writer waits on it for root recognition and for the docstring of `recipe._storage_problems`.
 - **Core declares a catalog of sidecars.** §3b describes it. Revised 2026-10-01: a sidecar is a
-  file nothing in the packet depends on, its row states what it is about in a nullable scope pair,
-  and a subject's scan held elsewhere is listed as a referenced sidecar. One question is open, the
-  form of the media type, and it does not block promotion.
+  file the packet asserts nothing through, its row states what it is about in a nullable scope
+  pair, a file a result was computed from is recorded as a source file, and one file may be both.
+  No rule in it is left for a writer to keep unchecked. One question is open, the form of the
+  media type, and it does not block promotion.
 - **The ledger reads no text of the section a clause lands in.** A process-domain proposal: each
   applied target quotes the passage that states its clause, and the check fails where the section
   no longer contains it. A replay over 180 commits showed that a digest of each section would have
@@ -182,9 +183,13 @@ Left open and outside the proposal:
 
 - Part 12 §5 binds a payload to a catalog row or a singleton and gives a family-mode payload no
   rule. No declaration uses family mode. Whether it gains a rule or is removed is undecided.
-- An MRI volume that tables describe, or that a result is computed from, is a dense array or an
-  extension's resource, not a sidecar. Nothing in core describes a volume's anatomy today. A scan
-  the packet only points at is a referenced sidecar.
+- An MRI volume that tables describe is a dense array or an extension's resource, not a sidecar,
+  and nothing in core describes a volume's anatomy today. A scan that a result was computed from
+  is a `core.source_files` row linked to the run, held wherever it is. A scan the packet only
+  points at is a referenced sidecar.
+- No shipped adapter delivers a `core.source_files` row for an input of an upstream run, such as
+  the scan a registration read. Part 05 §7 requires rows only for a recipe's roots and forbids no
+  other.
 
 ## 3c. `bench/` is untracked and holds no script yet
 
