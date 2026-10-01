@@ -993,23 +993,6 @@ class SorterSource:
         }
         return {resource: rows for resource, rows in built.items() if rows}
 
-    def into(self, writer: Any, *, batch_rows: int = STREAMED_BATCH_ROWS) -> dict[str, int]:
-        """Add every record and the spike stream to a :class:`~escapewheel_writer.writer.PacketWriter`.
-
-        Returns
-        -------
-        dict
-            Row counts per resource. `core.spike_events` counts the source's spikes, since
-            the batches themselves are not materialized here.
-        """
-        counted = {}
-        for resource, rows in self.records().items():
-            writer.add(resource, rows)
-            counted[resource] = len(rows)
-        writer.add_batches(CORE_SPIKE_EVENTS, self.spike_batches(batch_rows=batch_rows))
-        counted[CORE_SPIKE_EVENTS] = self.spike_count
-        return counted
-
     @property
     def spike_count(self) -> int:
         """How many spikes this source holds, from the arrays' headers rather than contents.

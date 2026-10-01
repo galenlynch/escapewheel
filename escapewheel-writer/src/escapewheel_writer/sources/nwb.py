@@ -204,7 +204,7 @@ class NWBSource(Compensates):
     Examples
     --------
     >>> source = NWBSource(path, reference_clock=harp, zone=ZoneInfo("America/Los_Angeles"))  # doctest: +SKIP
-    >>> source.into(writer)  # doctest: +SKIP
+    >>> tables = source.records()  # doctest: +SKIP
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -1275,25 +1275,6 @@ class NWBSource(Compensates):
             CORE_ARRAY_DIMENSIONS: self.array_dimensions(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
-
-    def into(self, writer: Any) -> dict[str, int]:
-        """Add every record to a :class:`~escapewheel_writer.writer.PacketWriter`.
-
-        Parameters
-        ----------
-        writer : PacketWriter
-            The writer to add to. Nothing is committed here.
-
-        Returns
-        -------
-        dict
-            Row counts per resource ID.
-        """
-        counted = {}
-        for resource, rows in self.records().items():
-            writer.add(resource, rows)
-            counted[resource] = len(rows)
-        return counted
 
     def offers(self) -> dict[str, int]:
         """Which resources this source supplies from its root, and how many rows (Part 05 §4.1)."""

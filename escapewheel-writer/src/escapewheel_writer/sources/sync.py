@@ -802,14 +802,6 @@ class SyncSource:
         """Which resources this source supplies from its root, and how many rows (Part 05 §4.1)."""
         return {resource: len(rows) for resource, rows in self.records().items()}
 
-    def into(self, writer: Any) -> dict[str, int]:
-        """Add the reference clock and every anchor to a `PacketWriter`."""
-        counted = {}
-        for resource, rows in self.records().items():
-            writer.add(resource, rows)
-            counted[resource] = len(rows)
-        return counted
-
 
 def _resolve(root: Path) -> Path:
     """Accept the clipped tree, an asset holding one, or a directory of record nodes."""

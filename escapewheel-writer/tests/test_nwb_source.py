@@ -500,7 +500,9 @@ def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
     # verbatim, with NumPy's scalars coerced to JSON's.
     source = carrying
     writer = PacketWriter(registry, packet_id=SESSION, extensions=[TASK_EXTENSION])
-    counted = source.into(writer)
+    counted = source.offers()
+    for resource, rows in source.records().items():
+        writer.add(resource, rows)
     writer.add(
         "task.trials",
         [{"session_id": SESSION, "trial_id": t["interval_id"]} for t in source.records()["core.intervals"]],
