@@ -2244,7 +2244,7 @@ def _run_rules(
                 declared=False,
                 keys=keys,
             )
-            tier2 = _tier2_checks(registry, registry, report, "core", advisory)
+            tier2 = _tier2_checks(core_context, core_context, report, "core", advisory)
             checks = [*tier1, *tier2]
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
@@ -2294,33 +2294,39 @@ def _install_rule_relations(packet: Packet, connection: Any, documents: Sequence
     return unreadable
 
 
-def _tier2_checks(
-    document: Mapping[str, Any],
-    core_registry: Mapping[str, Any],
-    report: Report,
-    registry_id: str,
-    advisory: bool,
-) -> list[Check]:
-    """Return checked Tier 2 rules, or record why this registry cannot be evaluated."""
+@dataclass(frozen=True)
+class _Tier2:
+    """A registry's Tier 2 rules as statically checked: the checks, or why none can run."""
+
+    language: Any
+    checks: tuple[Check, ...]
+    #: The ID and the refusal of each rule outside the profile.
+    invalid: tuple[tuple[Any, str], ...]
+
+
+#: Checked rules by the bytes of the registry and of core, and whether advisory rules are included.
+_TIER2: dict[tuple[bytes, bytes, bool], _Tier2] = {}
+_TIER2_KEPT = 32
+
+
+def _tier2(context: CheckedRegistryContext, core_context: CheckedRegistryContext, advisory: bool) -> _Tier2:
+    """Statically check a registry's Tier 2 rules, once for each distinct registry and core."""
+    from_bytes = context.input_kind == core_context.input_kind == "bytes"
+    key = (context.exact_input, core_context.exact_input, advisory)
+    if from_bytes and key in _TIER2:
+        return _TIER2[key]
+    document, core_registry = context.document, core_context.document
     language = document.get("rule_language")
-    if language != PROFILE_ID:
-        report.record_evaluation(
-            registry_id,
-            "unsupported",
-            detail=f"rule language {language!r} is not supported; expected {PROFILE_ID!r}",
-        )
-        return []
     checked: list[Check] = []
-    invalid = False
-    for resource, table in _tables(document).items():
+    invalid: list[tuple[Any, str]] = []
+    for resource, table in _tables(document).items() if language == PROFILE_ID else ():
         for rule in table.get("rules", []):
             if rule.get("advisory") and not advisory:
                 continue
             try:
                 parsed = check_rule(rule["sql"], document, core_resources=core_registry)
             except RuleProfileError as exc:
-                invalid = True
-                report.record_evaluation(registry_id, "invalid", rule=rule.get("id"), detail=str(exc))
+                invalid.append((rule.get("id"), str(exc)))
                 continue
             checked.append(
                 Check(
@@ -2333,7 +2339,33 @@ def _tier2_checks(
                     dependencies=parsed.resources,
                 )
             )
-    return [] if invalid else checked
+    found = _Tier2(language, tuple(checked), tuple(invalid))
+    if from_bytes:
+        if len(_TIER2) >= _TIER2_KEPT:
+            _TIER2.clear()
+        _TIER2[key] = found
+    return found
+
+
+def _tier2_checks(
+    context: CheckedRegistryContext,
+    core_context: CheckedRegistryContext,
+    report: Report,
+    registry_id: str,
+    advisory: bool,
+) -> list[Check]:
+    """Return checked Tier 2 rules, or record why this registry cannot be evaluated."""
+    found = _tier2(context, core_context, advisory)
+    if found.language != PROFILE_ID:
+        report.record_evaluation(
+            registry_id,
+            "unsupported",
+            detail=f"rule language {found.language!r} is not supported; expected {PROFILE_ID!r}",
+        )
+        return []
+    for rule_id, detail in found.invalid:
+        report.record_evaluation(registry_id, "invalid", rule=rule_id, detail=detail)
+    return [] if found.invalid else list(found.checks)
 
 
 def _run_checks(
@@ -2581,7 +2613,7 @@ def _check_extensions(
             declared=False,
             keys=keys,
         )
-        tier2 = _tier2_checks(document, registry, report, extension_id, advisory)
+        tier2 = _tier2_checks(extension_context, core_context, report, extension_id, advisory)
         checks = [*tier1, *tier2]
         if recheck is not None:
             checks = [check for check in checks if concerns(check, recheck)]

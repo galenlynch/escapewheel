@@ -26,6 +26,7 @@ import json
 from collections import Counter
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import lru_cache
 from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
@@ -385,6 +386,16 @@ def _shape_valid(context: CheckedRegistryContext) -> bool:
     return any(phase.phase == "shape" and phase.state == "passed" for phase in context.result.phases)
 
 
+@lru_cache(maxsize=32)
+def _checked(data: bytes, core: bytes | None) -> CheckedRegistryContext:
+    """Check a registry's bytes in the context of core's, once for each distinct pair.
+
+    The result is a function of the two byte strings, and the packets of one dataset bind the
+    same ones.
+    """
+    return check_registry_context_bytes(data, core=None if core is None else _checked(core, None))
+
+
 #: The check Part 04 §10 names for each way acquiring a bound registry fails.
 _ACQUISITION_CHECK = {
     RegistryFault.MISSING: "packet.registry.missing",
@@ -411,13 +422,13 @@ def bind_registries(root: Location, document: Mapping[str, Any], issues: list[Is
         except RegistryUnavailable as exc:
             issues.append(Issue(_ACQUISITION_CHECK[exc.reason], str(exc), ((name, binding.path),), name))
     bound.core_id = next((name for name, binding in bindings.items() if binding.role == "core"), None)
-    core_context = None
+    core_bytes = None
     if bound.core_id is not None and bound.core_id in acquired:
-        core_context = check_registry_context_bytes(acquired[bound.core_id])
-        bound.contexts[bound.core_id] = core_context
+        core_bytes = acquired[bound.core_id]
+        bound.contexts[bound.core_id] = _checked(core_bytes, None)
     for name in bindings:
         if name != bound.core_id and name in acquired:
-            bound.contexts[name] = check_registry_context_bytes(acquired[name], core=core_context)
+            bound.contexts[name] = _checked(acquired[name], core_bytes)
     for name, context in bound.contexts.items():
         binding = bindings[name]
         failed = False
