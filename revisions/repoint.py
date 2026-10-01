@@ -67,12 +67,12 @@ REASONING: tuple[tuple[str, str, str], ...] = (
         "the measurement that a scalar projection beats a join, not the rule it justified",
     ),
     (
-        "escapewheel-writer/src/escapewheel_writer/sources/sync.py",
+        "escapewheel-writer/src/escapewheel_writer/sources/sync_checks.py",
         "R37 §3.1",
         "the neighbour count a local rate was measured over",
     ),
     (
-        "escapewheel-writer/src/escapewheel_writer/sources/sync.py",
+        "escapewheel-writer/src/escapewheel_writer/sources/sync_checks.py",
         "R37 §3.2",
         "the revision's own terminal-anchor test, which is the measurement rather than the rule",
     ),

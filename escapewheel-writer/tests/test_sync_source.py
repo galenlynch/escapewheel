@@ -9,7 +9,8 @@ import pytest
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.notes import NoteCode, coded, codes
-from escapewheel_writer.sources.sync import SyncSource, phase_discontinuities, suspect_terminals
+from escapewheel_writer.sources.sync import SyncSource
+from escapewheel_writer.sources.sync_checks import phase_discontinuities, suspect_terminals
 from tests import syncfixture
 from tests.syncfixture import AP_HZ, FIRST_SAMPLE, HARP_START, N_PULSES
 
