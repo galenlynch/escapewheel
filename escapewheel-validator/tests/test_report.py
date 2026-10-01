@@ -1,7 +1,13 @@
-"""A report's evaluations and the verdicts they decide."""
+"""A report's findings, its evaluations and the verdicts they decide, and the JSON it renders."""
 
-from escapewheel_validator import EvaluationStatus, Report, check_table
+import json
+
+from escapewheel_reader import open_packet
+
+from escapewheel_validator import EvaluationStatus, Report, check_table, validate
 from escapewheel_validator.report import ROW_CAP
+
+from .builders import add_extension
 
 
 def test_completing_an_evaluation_records_it_complete():
@@ -68,3 +74,29 @@ def test_a_rendered_finding_gains_members_and_keeps_the_others():
         "column": None,
         "counts": {"checked": 1},
     }
+
+
+def test_report_renders_as_json(packet_root):
+    report = validate(open_packet(packet_root))
+    rendered = report.to_dict("session_001")
+    assert rendered["status"] == "passed"
+    assert rendered["summary"] == {"errors": 0, "warnings": 0}
+    assert rendered["registries"][0]["subject"] == "core"
+    assert rendered["registries"][0]["result"]["state"] == "valid"
+
+
+def test_report_records_whether_advisories_ran(packet_root):
+    """An empty advisory result is ambiguous unless the report says (R26 §5)."""
+    assert validate(open_packet(packet_root)).to_dict("p")["advisory"] is False
+    assert validate(open_packet(packet_root), advisory=True).to_dict("p")["advisory"] is True
+
+
+def test_the_json_report_states_every_verdict_and_subject(packet_root):
+    """Part 05 §9.5: a report states the packet's verdict, each registry's, and each finding's subject."""
+    root = add_extension(packet_root, mutate=lambda r: r["choice"].__setitem__(0, "sideways"))
+    document = validate(open_packet(root)).to_dict("p")
+    assert document["status"] == "failed"
+    assert document["verdicts"] == {"core": "passed", "task": "failed"}
+    errors = [f for f in document["findings"] if f["level"] == "error"]
+    assert [(f["check"], f["registry"]) for f in errors] == [("task.trials.choice.in_vocabulary", "task")]
+    assert json.loads(json.dumps(document)) == document

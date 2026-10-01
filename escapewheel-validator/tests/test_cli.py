@@ -14,8 +14,8 @@ from escapewheel_validator import Report
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.scripts import cli
 
+from .builders import add_extension
 from .test_replaces import _item, _replacing
-from .test_validation import _extension
 
 
 def test_validate_reports_a_conforming_packet(packet_root, capsys):
@@ -52,7 +52,7 @@ def test_validate_reports_a_manifest_the_reader_refuses(packet_root, capsys):
 
 def test_validate_exits_on_the_packet_verdict(packet_root, capsys):
     """Part 05 §9.5: a failing extension fails the packet even where core passes."""
-    root = _extension(packet_root, mutate=lambda rows: rows["choice"].__setitem__(0, "sideways"))
+    root = add_extension(packet_root, mutate=lambda rows: rows["choice"].__setitem__(0, "sideways"))
     assert main(["validate", str(root)]) == 1
     out = capsys.readouterr().out
     assert "[task] task.trials.choice.in_vocabulary" in out

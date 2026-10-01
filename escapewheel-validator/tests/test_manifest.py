@@ -5,10 +5,12 @@ import json
 
 import jsonschema
 import pytest
+from escapewheel_reader import open_packet
 
-from escapewheel_validator import FormatCheckUnavailable, check_packet_manifest
+from escapewheel_validator import FormatCheckUnavailable, check_packet_manifest, validate
 from escapewheel_validator.manifest import format_checker, prefix_digest
 
+from .builders import add_family_declaration, declare_analysis
 from .conftest import install_registry, read_registry
 
 
@@ -408,3 +410,40 @@ def test_an_installation_that_cannot_assert_date_time_is_refused(monkeypatch):
     monkeypatch.setattr(jsonschema.FormatChecker, "checkers", known)
     with pytest.raises(FormatCheckUnavailable):
         format_checker()
+
+
+def test_retired_codec_summary_is_rejected_by_the_manifest_schema(packet_root):
+    add_family_declaration(packet_root, "core.test_payloads")
+    path = packet_root / "packet.json"
+    entry = json.loads(path.read_text())
+    entry["resources"].append(
+        {
+            "resource_id": "core.probe0",
+            "declaration_id": "core.test_payloads",
+            "uri": "s3://example/p.zarr",
+            "external": True,
+            "validation_state": "not_run",
+        }
+    )
+    entry["required_codecs"] = ["wavpack"]
+    path.write_text(json.dumps(entry))
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert {f.check for f in report.findings} == {"packet.manifest.schema"}
+
+
+def test_a_manifest_entry_naming_a_run_is_refused_by_its_schema(packet_root):
+    declare_analysis(packet_root, processing_run_id="ghost")
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    finding = next(f for f in report.findings if f.check == "packet.manifest.schema")
+    assert finding.rows[0][1].endswith("/additionalProperties")
+
+
+def test_a_packet_owned_resource_without_a_digest_fails_the_manifest(packet_root):
+    """Part 04 §4.3: a writer records one for every resource the packet owns."""
+    manifest = json.loads((packet_root / "packet.json").read_text())
+    del manifest["resources"][1]["digest"]
+    (packet_root / "packet.json").write_text(json.dumps(manifest))
+    report = validate(open_packet(packet_root))
+    assert [(f.level, f.check) for f in report.findings] == [("error", "packet.resource.digest_missing")]

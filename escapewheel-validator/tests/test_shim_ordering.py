@@ -5,9 +5,12 @@ from types import SimpleNamespace
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from escapewheel_reader import open_packet
 
-from escapewheel_validator import OrderFault, OrderViolation, Report
+from escapewheel_validator import OrderFault, OrderViolation, Report, validate
 from escapewheel_validator.shim.ordering import _scan_one_ordering, verify_order
+
+from .builders import rewrite_table
 
 
 def _batch(first_tick, n=5, unit="u1"):
@@ -172,3 +175,52 @@ def test_a_table_of_one_repeated_row_keeps_every_key_and_reports_the_duplicate(t
     assert _scanned_spike_events(tmp_path, clock_id=[1, 1], unit_id=[1, 1], t_tick=[5, 5]) == [
         ("analysis.spike_events.primary_key_unique", (("row 2", "(1, 1, 5)"),)),
     ]
+
+
+def test_physical_order_is_an_error(packet_root):
+    """Part 03 §5.3. A waiver may not rest on a property nothing requires.
+
+    Part 02 §10.1 skips the uniqueness query for a table whose order settles its key, so the order
+    is what a correctness check is discharged by and a departure fails the packet.
+    """
+    events = pq.read_table(packet_root / "tables" / "core" / "events.parquet")
+    rewrite_table(packet_root, "events", events.take([2, 0, 1]))
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    (finding,) = [f for f in report.findings if f.check == "core.events.physical_order"]
+    assert finding.level == "error"
+    # The second row sorts before the first: a finding names a row by its position.
+    assert [row[0] for row in finding.rows] == ["row 2"]
+
+
+def test_a_duplicate_beside_its_twin_is_caught_by_the_scan(packet_root):
+    """core.intervals is sorted by its key, so duplicates are neighbours and no GROUP BY runs."""
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    rewrite_table(packet_root, "intervals", intervals.take([0, 0, 1]))
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    (finding,) = [f for f in report.findings if f.check == "core.intervals.primary_key_unique"]
+    assert [row[0] for row in finding.rows] == ["row 2"]  # the second row repeats the first
+
+
+def test_a_duplicate_out_of_order_still_fails(packet_root):
+    """Adjacency is unsound on an unordered file, so uniqueness falls back to the aggregate.
+
+    Ordering stays a warning -- a packet in the wrong order still conforms -- so the fallback
+    is what keeps the check from passing by omission.
+    """
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    rewrite_table(packet_root, "intervals", intervals.take([1, 0, 0]))
+    report = validate(open_packet(packet_root))
+    assert not report.passed
+    assert any(f.check == "core.intervals.primary_key_unique" for f in report.findings)
+
+
+def test_scanning_nothing_leaves_the_ordering_unchecked(packet_root):
+    """What `commit` relies on: a caller that established the order elsewhere skips the read."""
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    rewrite_table(packet_root, "intervals", intervals.sort_by([("interval_id", "descending")]))
+    assert any(f.check == "core.intervals.physical_order" for f in validate(open_packet(packet_root)).findings)
+    assert not any(
+        f.check == "core.intervals.physical_order" for f in validate(open_packet(packet_root), scan=set()).findings
+    )
