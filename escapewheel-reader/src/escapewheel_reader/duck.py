@@ -54,7 +54,7 @@ def prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:
     and no signal when it is off, which is the kind of wrong this package exists to prevent.
 
     Credentials are deliberately **not** set. Whether a store is reachable is a property of the
-    caller's situation rather than of the packet (Part 04 §5.1), so a caller supplies its own secret;
+    caller's situation rather than of the packet, so a caller supplies its own secret;
     what this removes is the setup a caller cannot be expected to know.
     """
     with contextlib.suppress(Exception):  # an older duckdb, or an extension it cannot fetch
@@ -122,7 +122,7 @@ def register(
     # a view skipped for want of an input gains it when that input is registered later.
     # What the packet declares is passed separately from what is registered, so a view whose
     # refinements table exists but is not yet registered is skipped rather than built without
-    # its guard (Part 01 §2.2) -- which would answer, wrongly, instead of not answering.
+    # its guard -- which would answer, wrongly, instead of not answering.
     register_views(connection, [sql_name(r.resource_id) for r in declared])
 
 
@@ -142,7 +142,8 @@ def named_in(query: str, declared: Sequence[Resource]) -> set[str]:
     return {r.resource_id for r in declared if sql_name(r.resource_id) in needed}
 
 
-#: How the SQL path resolves R38's inheritance, as ``{view: spec}``.
+#: How the SQL path resolves what inherits its clock's observation window (Part 01 §2.3), as
+#: ``{view: spec}``.
 #:
 #: A packet that needs no refinement does not carry the table to refine with -- units inherit
 #: their clock's window in the common case, so `core.unit_observation_intervals` is absent --
@@ -151,14 +152,15 @@ def named_in(query: str, declared: Sequence[Resource]) -> set[str]:
 #: inheriting branch's `NOT EXISTS` guard is dropped with it, being vacuously true.
 #:
 #: This restates the CTEs inside the registry's two `within_observation` rules rather than
-#: sharing code with them, and the duplication is deliberate: a rule must be runnable by any
-#: implementation from `logical_schemas.json` alone (R2 §7.4), so it cannot depend on a view
-#: this reader happens to register. `tests/test_observation.py` asserts the two agree on the
-#: same packet, which is drift protection without the coupling.
+#: sharing code with them, and the duplication is deliberate: a rule may name only registry
+#: resources (Part 11 §3), so it cannot depend on a view this reader happens to register.
+#: `tests/test_observation.py` asserts the two agree on the same packet, which is drift
+#: protection without the coupling.
 VIEWS: dict[str, dict[str, Any]] = {
     "unit_observation": {
         "refinements": "core_unit_observation_intervals",
-        # R96 §3.2 put the clock on the unit, so neither arm reaches through `core.sorting_runs`.
+        # A unit declares its own clock (Part 02 §12.1), so neither arm reaches through
+        # `core.sorting_runs`.
         "declared": (
             ("core_unit_observation_intervals", "core_units"),
             """SELECT o.session_id, o.unit_id, u.clock_id,

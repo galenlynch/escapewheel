@@ -202,15 +202,14 @@ def anchors(packet: PacketLike) -> dict[int, tuple[NDArray[np.int64], NDArray[np
 def declared_bound(packet: PacketLike) -> float:
     """Return the alignment bound the packet's writer established, or `BOUND`.
 
-    Part 01 §3.9 lets a writer map further than one median anchor interval once it has *measured*
-    the estimator at the distance it intends to use, and R99 §3.1 puts that bound in
-    `core.sessions.alignment_bound`. Reading it is what makes a consumer's mapping match the
-    writer's: a packet whose spikes were placed at a bound of two and whose reader maps at one
-    disagrees with itself about which of its own rows have a time.
+    `core.sessions.alignment_bound` holds how far past its anchors the writer mapped, and a null
+    is the default of one median anchor interval, `BOUND` (Part 02 §12.6). Reading it is what
+    makes a consumer's mapping match the writer's: a packet whose spikes were placed at a bound of
+    two and whose reader maps at one disagrees with itself about which of its own rows have a
+    time.
 
-    A null column is a packet that stayed within Part 01 §3.9's default, which is `BOUND`. Where a
-    packet holds several sessions the widest wins, since the reader presents them as one relation
-    (R86) and a tick placed under the wider bound has to stay placed.
+    Where a packet holds several sessions the widest wins, since the reader presents them as one
+    relation and a tick placed under the wider bound has to stay placed.
 
     Kept in the packet's memo, for the same reason :func:`anchors` is.
     """
@@ -229,7 +228,7 @@ def declared_bound(packet: PacketLike) -> float:
 
 
 def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int:
-    """Return the clock a packet reports its times on (R27 §2).
+    """Return the clock a packet reports its times on, `core.sessions.reference_clock_id`.
 
     Parameters
     ----------
@@ -255,7 +254,7 @@ def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int
         return memo.reference_clock
     table = packet.table(CORE_SESSIONS)
     if "reference_clock_id" not in table.column_names:
-        raise NotAligned(f"{CORE_SESSIONS} carries no reference_clock_id (R27 §2)")
+        raise NotAligned(f"{CORE_SESSIONS} carries no reference_clock_id")
     declared = {
         session: clock
         for session, clock in zip(
@@ -265,11 +264,11 @@ def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int
     }
     if session_id is not None:
         if session_id not in declared:
-            raise NotAligned(f"session {session_id!r} declares no reference_clock_id (R27 §2)")
+            raise NotAligned(f"session {session_id!r} declares no reference_clock_id")
         return int(declared[session_id])
     named = sorted({int(clock) for clock in declared.values()})
     if not named:
-        raise NotAligned("no session declares a reference_clock_id (R27 §2)")
+        raise NotAligned("no session declares a reference_clock_id")
     if len(named) > 1:
         raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
     memo.reference_clock = named[0]
@@ -380,11 +379,11 @@ def tick_rate(packet: PacketLike, clock_id: int) -> tuple[int, int]:
 
 
 def origin(packet: PacketLike, session_id: int | None = None) -> tuple[int, int, int]:
-    """Return the session's time origin and the reference clock's rational rate (Part 01 §§2.2 and 3.9).
+    """Return the session's time origin and the reference clock's rational rate (Part 01 §2.2).
 
-    Read from `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum
-    across clocks through R13's mapping, which is arithmetic a reader should not have to repeat
-    and would not repeat identically.
+    Read from `core.sessions.t_zero_tick` rather than recomputed: the writer took the earliest
+    observation start across clocks through the anchor mapping, which is arithmetic a reader
+    should not have to repeat and would not repeat identically.
 
     Parameters
     ----------
@@ -402,7 +401,7 @@ def origin(packet: PacketLike, session_id: int | None = None) -> tuple[int, int,
     ------
     NoTimeOrigin
         If the packet declares none, or if sessions declare different origins and none was
-        named. Part 01 §2.2 requires refusing rather than inventing one.
+        named: an origin is refused rather than invented.
     """
     origins = Memo.of(packet).origins
     if session_id in origins:

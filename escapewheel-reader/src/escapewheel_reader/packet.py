@@ -430,8 +430,8 @@ class Packet:
 
         Views are named by flattening the dotted resource ID, so ``core.intervals`` is queried
         as ``core_intervals``. `unit_observation` and `stream_observation` are registered
-        alongside where their inputs are present, resolving R38's inheritance so a rate has a
-        denominator without the caller writing the join.
+        alongside where their inputs are present, so a rate has a denominator without the caller
+        writing the join.
 
         Parameters
         ----------
@@ -482,9 +482,9 @@ class Packet:
         membership; ``None`` means the column is unconstrained. An unknown column raises when
         the expression is applied, rather than silently matching nothing.
 
-        Membership exists because R91 §3.1 made one kind of event several streams: resolving a
-        type gives a set of keys, and pushing them down is what lets row-group statistics prune
-        rather than reading and filtering.
+        Membership exists because several streams may carry one kind of event: resolving a type
+        gives a set of keys, and pushing them down is what lets row-group statistics prune rather
+        than reading and filtering.
         """
         expression: pads.Expression | None = None
         for column, value in where.items():
@@ -517,11 +517,11 @@ def open_packet(
         Part 00 §3.3 admits both, and an object store is where a shared dataset lives.
     rewrite : Mapping, optional
         Declared-URI prefix to replacement, applied to every resource before it is resolved.
-        Part 04 §5.1 makes reachability the reader's situation, and a committed packet records the
-        writer's -- so this is how the same bytes are reached from somewhere else without
-        editing bytes Part 04 §5.1 makes immutable. Longest prefix wins.
+        A committed packet records where its writer reached each resource, so this is how the
+        same bytes are reached from somewhere else without editing the packet. Longest prefix
+        wins.
     sources : iterable, optional
-        Source resolution documents (Part 04 §5.5), as mappings or as paths to read. Consulted
+        Source resolution documents, as mappings or as paths to read. Consulted
         before the packet root's own `sources.json`, in the order given; a path whose document
         fails the schema or declares an unknown version is refused.
 

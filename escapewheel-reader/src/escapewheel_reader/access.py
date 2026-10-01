@@ -350,7 +350,7 @@ def _unit_clocks(packet: PacketLike, keys: Sequence[str], **narrow: Any) -> dict
 
 
 def _unit_support(packet: PacketLike, unit_id: int, session_id: int | None) -> pa.Table:
-    """Return one unit's observation windows, from the packet's resolved set (R38).
+    """Return one unit's observation windows, from the packet's resolved set.
 
     The resolution is read once into the packet's memo and filtered here, because it reads
     three tables and this is called per unit.

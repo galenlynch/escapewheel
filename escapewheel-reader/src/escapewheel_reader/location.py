@@ -28,8 +28,8 @@ from .uri import decode, is_absolute
 
 #: A substitution a caller supplies at open time: declared URI prefix to replacement.
 #:
-#: Part 04 §5.1 makes an external resource's reachability a property of the reader's situation, and
-#: a packet already committed records one situation -- the writer's. Substituting a prefix is
+#: Part 04 §5.5 makes which mirrors a reader can reach a property of the reader, and a packet
+#: already committed records one situation -- the writer's. Substituting a prefix is
 #: how a reader reaches the same bytes from somewhere else without touching bytes Part 03 §8.1
 #: makes immutable. `git config url.<base>.insteadOf` is the same mechanism.
 Rewrite = Mapping[str, str]
@@ -382,7 +382,7 @@ def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | N
     The caller's documents come first, in the order given, then `sources.json` at the packet
     root if it is there. First match wins, so a caller redirects a source without editing
     anything. A missing default is not an error -- a packet naming no source needs none, and an
-    unresolved one is a fact rather than a defect (Part 04 §5.5).
+    unresolved one is a fact rather than a defect.
 
     A document the caller names is refused if :func:`read_sources` refuses it; the packet's own
     default then resolves nothing instead, so a broken optional file cannot stop a packet opening.
