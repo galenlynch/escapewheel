@@ -4,7 +4,6 @@
 - :func:`load_checked` -- the same registry checked against core, from a file's exact bytes.
 - :func:`installed` -- the registries that installed distributions register, keyed by the name each
   claims.
-- :exc:`ExtensionNotFound` -- an entry names neither a file nor an installed distribution.
 - :data:`EXTENSION_GROUP` -- the entry-point group a distribution registers a registry under.
 
 A distribution is needed only while a packet is built: the packet embeds the registry document
@@ -21,13 +20,11 @@ from typing import Any
 
 from escapewheel_validator import CheckedRegistryContext, check_registry_context, check_registry_context_bytes
 
+from .errors import ExtensionNotFound
+
 #: Entry-point group a distribution registers an extension registry under. The value loads to the
 #: parsed document, or to a path to it -- whichever is natural for how the package ships it.
 EXTENSION_GROUP = "escapewheel.extensions"
-
-
-class ExtensionNotFound(Exception):
-    """A recipe names an extension that is neither a file nor an installed distribution."""
 
 
 def _document(loaded: Any, source: str) -> dict[str, Any]:
@@ -92,4 +89,4 @@ def load_checked(named: str, core: CheckedRegistryContext, *, base: Path | None 
     )
 
 
-__all__ = ["EXTENSION_GROUP", "ExtensionNotFound", "installed", "load", "load_checked"]
+__all__ = ["EXTENSION_GROUP", "installed", "load", "load_checked"]

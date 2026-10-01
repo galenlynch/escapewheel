@@ -5,8 +5,9 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from escapewheel_writer.errors import NotCommitted
 from escapewheel_writer.prune import KEEP_VERSIONS, prune
-from escapewheel_writer.writer import MANIFEST, MANIFESTS, PROMOTION, STAGING, NotCommitted
+from escapewheel_writer.writer import MANIFEST, MANIFESTS, PROMOTION, STAGING
 
 
 def _manifest(version, resources, registry="0.1.0", when="2026-01-01T00:00:00Z"):

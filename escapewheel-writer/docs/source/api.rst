@@ -55,6 +55,7 @@ Each module's page lists what it holds beyond the names above.
    scaffold
    verify
    prune
+   errors
 
 Source adapters
 ---------------
@@ -73,4 +74,3 @@ Source adapters
    sources.zarr_compat
    sources.compensations
    sources.values
-   sources.defect

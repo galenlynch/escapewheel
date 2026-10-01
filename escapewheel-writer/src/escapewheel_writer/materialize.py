@@ -3,7 +3,6 @@
 - :func:`spike_events` -- `analysis.spike_events` as batches: core spikes on the reference clock,
   bucketed by time.
 - :func:`into` -- add that table to a writer, with its lineage and a run row.
-- :exc:`Collided` -- two spikes of one unit convert to the same reference tick.
 - :data:`RUN_ID` -- the `processing_run_id` of the run row a materialization records.
 
 The table keeps the reference tick and not the probe tick, and drops any spike that no anchor
@@ -27,20 +26,10 @@ from escapewheel_reader.errors import NotAligned
 from numpy.typing import NDArray
 
 from .arrow import schema as arrow_schema
+from .errors import Collided
 
 #: The resource these buckets become, so the spill can take the encoding its columns want.
 RESOURCE = "analysis.spike_events"
-
-
-class Collided(NotAligned):
-    """Two spikes of one unit convert to the same reference tick, so the table cannot be built.
-
-    Part 06 §4. This table is keyed on the converted tick, and a conversion preserves distinctness
-    only where it expands -- a reference clock slower than a probe's collapses spikes that were
-    distinct on the probe. Refusing costs nothing usable: a histogram over collapsed spikes
-    undercounts them, so a clock that coarse makes this table the wrong instrument rather than a
-    broken one, and Part 06 §2 makes not building it an ordinary outcome.
-    """
 
 
 def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) -> None:
@@ -453,4 +442,4 @@ def into(
     return resource
 
 
-__all__ = ["BATCH_ROWS", "BUCKET_SECONDS", "RUN_ID", "Collided", "into", "spike_events"]
+__all__ = ["BATCH_ROWS", "BUCKET_SECONDS", "RUN_ID", "into", "spike_events"]

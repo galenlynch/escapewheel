@@ -30,6 +30,8 @@ extensions, scaffold
     Finding an extension's registry document, and drafting one.
 verify, prune
     Recording what external resources hold, and removing files a packet no longer needs.
+errors
+    Every exception the package raises on purpose.
 
 A resource is imported only once it has passed validation (Part 05 §2), so a commit renames the
 manifest into place last.
@@ -37,10 +39,11 @@ manifest into place last.
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .clock import Clock, NonFinite, OffGrid
+from .clock import Clock
+from .errors import CommitRefused, NonFinite, OffGrid
 from .recipe import Recipe
 from .session import build
-from .writer import CommitRefused, PacketWriter
+from .writer import PacketWriter
 
 try:
     __version__ = version("escapewheel-writer")

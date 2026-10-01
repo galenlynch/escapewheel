@@ -6,8 +6,8 @@ from typing import ClassVar
 
 import pytest
 
+from escapewheel_writer.errors import SourceDefect
 from escapewheel_writer.session import Context, _harvest
-from escapewheel_writer.sources import SourceDefect
 
 BEGAN = datetime(2025, 4, 10, 0, 25, 12, tzinfo=UTC)
 ENDED = datetime(2025, 4, 10, 2, 38, 44, tzinfo=UTC)

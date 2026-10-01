@@ -7,9 +7,9 @@ from types import SimpleNamespace
 import pytest
 from escapewheel_reader import open_packet
 
+from escapewheel_writer.errors import RecipeError, SourceDefect
 from escapewheel_writer.recipe import Recipe, SourceSpec
-from escapewheel_writer.session import RecipeError, _compare_held_facts, build
-from escapewheel_writer.sources import SourceDefect
+from escapewheel_writer.session import _compare_held_facts, build
 from tests.conftest import REGISTRY
 from tests.test_build_end_to_end import CLOCK_NAME, _recipe, _sources
 

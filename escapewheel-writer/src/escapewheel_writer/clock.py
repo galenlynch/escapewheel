@@ -4,12 +4,11 @@
 - :class:`TickGrid` -- a clock's identifier and rational rate, and the seconds-to-ticks conversion.
 - :func:`epoch_from` -- the UTC instant of tick 0, from one tick whose instant is known.
 - :func:`zone_of` -- a recipe's declared time zone, as an IANA zone.
-- :exc:`OffGrid`, :exc:`NonFinite` -- seconds that land on no tick, and NaN or infinite seconds.
 - :data:`HARP_TICK_RATE_HZ` -- HARP's tick rate.
 
 Conversion only quantizes: seconds are checked against the clock's grid, those on it convert
-exactly, and those off it raise :exc:`OffGrid`. Recovering their ticks would mean fitting a rate
-and an offset, and this module offers no such estimate.
+exactly, and those off it raise :exc:`~escapewheel_writer.errors.OffGrid`. Recovering their ticks
+would mean fitting a rate and an offset, and this module offers no such estimate.
 """
 
 from __future__ import annotations
@@ -23,38 +22,10 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from numpy.typing import NDArray
 
+from .errors import NonFinite, OffGrid
+
 #: int64's range. A tick outside it is not representable in `core.*.t_tick`.
 TICK_MIN, TICK_MAX = -(2**63), 2**63 - 1
-
-
-class OffGrid(ValueError):
-    """Source seconds do not lie on this clock's tick grid, so no exact tick exists.
-
-    Recovering ticks from such values means fitting a rate and an offset, which is an
-    estimate this package will not silently produce. The message reports how many values
-    missed and by how much, in ticks.
-
-    Attributes
-    ----------
-    n_off : int
-        How many values missed the grid.
-    worst : float
-        The largest miss, as a fraction of one tick.
-    """
-
-    def __init__(self, message: str, *, n_off: int, worst: float) -> None:
-        super().__init__(message)
-        self.n_off = n_off
-        self.worst = worst
-
-
-class NonFinite(ValueError):
-    """A source timestamp was NaN or infinite.
-
-    Placeholder streams do occur -- an NWB may carry a behaviour stream holding a single NaN --
-    so a caller that expects them filters first and says so, rather than letting a NaN become
-    an arbitrary integer.
-    """
 
 
 @dataclass(frozen=True)
@@ -348,4 +319,4 @@ def epoch_from(instant: datetime, t_tick: int, tick_rate_num: int, tick_rate_den
 HARP_TICK_RATE_HZ = 31250
 
 
-__all__ = ["HARP_TICK_RATE_HZ", "TICK_MAX", "TICK_MIN", "Clock", "NonFinite", "OffGrid", "epoch_from"]
+__all__ = ["HARP_TICK_RATE_HZ", "TICK_MAX", "TICK_MIN", "Clock", "epoch_from"]

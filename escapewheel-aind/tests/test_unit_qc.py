@@ -16,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from escapewheel_writer.sources.defect import SourceDefect
+from escapewheel_writer.errors import SourceDefect
 
 from escapewheel_aind.unit_qc import METRICS, WAVEFORM_METRICS, UnitQCSource
 from tests.nwbfixture import array, group, text

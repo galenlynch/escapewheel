@@ -17,7 +17,7 @@ from typing import Any, ClassVar
 import numpy as np
 from numpy.typing import NDArray
 
-from .defect import SourceDefect
+from ..errors import SourceDefect
 from .sorter import STREAM, SortedStream
 from .store import SourceStore, source_root
 from .zarr_compat import DenseV2, attrs, attrs_at

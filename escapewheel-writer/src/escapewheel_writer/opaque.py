@@ -6,7 +6,6 @@
 - :func:`shown` -- a path rendered for a report.
 - :class:`Payload` -- a payload an in-process adapter hands the build as bytes.
 - :class:`StagedPayload` -- one payload a source delivered, not yet bound.
-- :exc:`PayloadRefused` -- a delivery holds something a packet cannot own.
 - :data:`DELIVERIES`, :data:`ROOT` -- where payloads lie under the staging area, and under the
   packet root.
 
@@ -24,16 +23,14 @@ from pathlib import Path
 
 from escapewheel_reader.uri import representable
 
+from .errors import PayloadRefused
+
 #: Where under the staging area each source's `opaque_location` lies, one directory per source kind.
 #: Apart from `array_location`'s, which an adapter writes into directly.
 DELIVERIES = "opaque-deliveries"
 
 #: The packet-root directory publishing each payload at `opaque/<resource_id>/<name>` (Part 03 §3.1).
 ROOT = "opaque"
-
-
-class PayloadRefused(ValueError):
-    """A delivery holds something a packet cannot own, or a payload binds no single resource."""
 
 
 @dataclass(frozen=True)
@@ -175,4 +172,4 @@ def size(path: Path) -> int:
     return sum(member.stat().st_size for member in path.rglob("*") if member.is_file())
 
 
-__all__ = ["DELIVERIES", "ROOT", "Payload", "PayloadRefused", "StagedPayload", "read", "size", "write"]
+__all__ = ["DELIVERIES", "ROOT", "Payload", "StagedPayload", "read", "size", "write"]

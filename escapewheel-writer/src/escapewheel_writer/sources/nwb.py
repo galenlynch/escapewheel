@@ -9,7 +9,7 @@
 
 The adapter emits no units or spikes: an NWB stores spike times as float seconds and ticks are not
 fitted from them, so units and spikes come from the sorter. Times on a clock other than the one
-declared raise :exc:`~escapewheel_writer.clock.OffGrid` rather than convert to plausible ticks.
+declared raise :exc:`~escapewheel_writer.errors.OffGrid` rather than convert to plausible ticks.
 """
 
 from __future__ import annotations
@@ -27,12 +27,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..clock import TickGrid, zone_of
+from ..errors import SourceDefect, UnsupportedEncoding
 from .compensations import Compensates
-from .defect import SourceDefect
 from .store import SourceStore, source_root
 from .values import sex as _sex
 from .values import utc_offset as _offset
-from .zarr_compat import UnsupportedEncoding
 
 #: NWB writes the literal string ``None`` where a value is absent -- in `laser_location`,
 #: `auto_train_stage`, `was_generated_by`. Treated as null when mapped into a typed core
@@ -1249,4 +1248,4 @@ def _resolve(root: Path) -> Path:
     raise SourceDefect(f"{root} is not an NWB-Zarr directory and holds {len(candidates)} of them")
 
 
-__all__ = ["ABSENT", "NWBSource", "SourceDefect"]  # SourceDefect re-exported from `.defect`
+__all__ = ["ABSENT", "NWBSource"]

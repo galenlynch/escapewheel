@@ -7,9 +7,9 @@ from zoneinfo import ZoneInfo
 import pytest
 from escapewheel_writer import Clock
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
+from escapewheel_writer.errors import SourceDefect
 from escapewheel_writer.recipe import SourceSpec
 from escapewheel_writer.session import Context, _composed
-from escapewheel_writer.sources import SourceDefect
 
 from escapewheel_aind.session import SessionSource
 

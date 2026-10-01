@@ -29,7 +29,7 @@ import pyarrow as pa
 from numpy.typing import NDArray
 
 from ..clock import Clock
-from .defect import SourceDefect
+from ..errors import SourceDefect
 from .store import source_root
 from .zarr_compat import attrs, attrs_at, read_array
 

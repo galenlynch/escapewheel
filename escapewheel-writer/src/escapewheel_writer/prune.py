@@ -18,7 +18,8 @@ from typing import Any
 
 from escapewheel_reader.uri import decode, is_absolute
 
-from .writer import MANIFEST, MANIFESTS, STAGING, NotCommitted, PromotionRecordUnreadable, read_promotion, semver
+from .errors import NotCommitted, PromotionRecordUnreadable
+from .writer import MANIFEST, MANIFESTS, STAGING, read_promotion, semver
 
 #: Part 05 §15.5. One superseded manifest, and no age limit: a packet is an archival artifact where a
 #: table is an operational one, so age alone never expires one.

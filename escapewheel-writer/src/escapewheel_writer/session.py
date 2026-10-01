@@ -4,7 +4,6 @@
 - :func:`order` -- the recipe's sources, each after the sources it consumes.
 - :func:`materializers` -- the recipe's `[[materialize]]` entries as callables `commit` runs.
 - :class:`Context` -- what earlier sources produced, for the sources that consume it.
-- :exc:`RecipeError` -- a recipe that cannot be built.
 - :data:`MATERIALIZERS` -- the analysis resources a recipe may ask for by name.
 - :data:`BATCH_ROWS`, :data:`TOLERANCE` -- rows per streamed batch, and the most error a clock
   mapping may carry, in seconds.
@@ -32,8 +31,9 @@ from escapewheel_validator import CheckedRegistryContext, RegistryRejected, chec
 from numpy.typing import NDArray
 
 from . import opaque
-from .amending import AmendmentRefused, Held
+from .amending import Held
 from .declaration import SOURCE_CACHE
+from .errors import AmendmentRefused, RecipeError, ReplacementRefused, SourceDefect
 from .extensions import load_checked as load_extension_context
 from .recipe import (
     RECIPE_SUPPLIES,
@@ -46,8 +46,8 @@ from .recipe import (
     reached_by,
     redacted,
 )
-from .replacing import Replaced, ReplacementRefused, read_replaced
-from .sources import ADAPTERS, SourceDefect
+from .replacing import Replaced, read_replaced
+from .sources import ADAPTERS
 from .sources.compensations import describe
 from .writer import PacketWriter
 
@@ -71,10 +71,6 @@ BATCH_ROWS = 1_000_000
 #: error at any anchor distance, and far below anything that moves an analysis. One parent
 #: tick would sit below the estimator's median error and gate on measurement noise.
 TOLERANCE = 3e-3
-
-
-class RecipeError(Exception):
-    """A recipe cannot be built: a source kind is unknown, or its dependencies do not order."""
 
 
 @dataclass
@@ -1430,7 +1426,6 @@ __all__ = [
     "MATERIALIZERS",
     "TOLERANCE",
     "Context",
-    "RecipeError",
     "build",
     "materializers",
     "order",

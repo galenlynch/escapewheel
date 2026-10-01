@@ -8,7 +8,8 @@ import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader.errors import NotAligned
 
-from escapewheel_writer.materialize import Collided, spike_events
+from escapewheel_writer.errors import Collided
+from escapewheel_writer.materialize import spike_events
 
 from .conftest import REGISTRY
 

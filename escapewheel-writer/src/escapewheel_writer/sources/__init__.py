@@ -3,7 +3,6 @@
 - :class:`HarpSource`, :class:`OpenEphysSource`, :class:`SorterSource`, :class:`SyncSource`,
   :class:`NWBSource`, :class:`WaveformSource`, :class:`LFPSource` -- the built-in adapters.
 - :class:`SortedStream`, :class:`SyncStream` -- one stream of a sorting, and of a sync tree.
-- :exc:`SourceDefect` -- a source cannot supply what a build asked of it.
 - :func:`discovered` -- the source kinds that installed distributions register, keyed by name.
 - :data:`ADAPTERS` -- a mapping from each built-in kind a recipe may name to its class.
 - :data:`SOURCE_GROUP` -- the entry-point group a distribution registers an adapter under.
@@ -16,7 +15,6 @@ import warnings
 from importlib.metadata import entry_points
 from typing import Any
 
-from .defect import SourceDefect
 from .harp import HarpSource
 from .lfp import LFPSource
 from .nwb import NWBSource
@@ -77,7 +75,6 @@ __all__ = [
     "OpenEphysSource",
     "SortedStream",
     "SorterSource",
-    "SourceDefect",
     "SyncSource",
     "SyncStream",
     "WaveformSource",

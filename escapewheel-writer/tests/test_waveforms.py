@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 import zarr
 
-from escapewheel_writer.sources import SourceDefect
+from escapewheel_writer.errors import SourceDefect
 from escapewheel_writer.sources.waveforms import WaveformSource
 
 UNITS, CHANNELS, SAMPLES = 3, 5, 4

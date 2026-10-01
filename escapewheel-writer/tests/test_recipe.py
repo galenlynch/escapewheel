@@ -6,6 +6,7 @@ from typing import ClassVar
 
 import pytest
 
+from escapewheel_writer.errors import SourceDefect
 from escapewheel_writer.recipe import RECIPE_SUPPLIES, Recipe
 from escapewheel_writer.session import (
     Context,
@@ -15,7 +16,7 @@ from escapewheel_writer.session import (
     _refuse_a_discarded_fact,
     order,
 )
-from escapewheel_writer.sources import ADAPTERS, SourceDefect
+from escapewheel_writer.sources import ADAPTERS
 
 BASE = """
 [packet]

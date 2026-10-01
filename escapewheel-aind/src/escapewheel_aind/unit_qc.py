@@ -20,13 +20,12 @@ from typing import Any, ClassVar
 
 import numpy as np
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
-from escapewheel_writer.sources.defect import SourceDefect
+from escapewheel_writer.errors import SourceDefect, UnsupportedEncoding
 from escapewheel_writer.sources.nwb import _clean
 from escapewheel_writer.sources.sorter import STREAM as STREAM_NAME
 from escapewheel_writer.sources.sorter import SortedStream
 from escapewheel_writer.sources.store import SourceStore, source_root
 from escapewheel_writer.sources.waveforms import ANALYZERS
-from escapewheel_writer.sources.zarr_compat import UnsupportedEncoding
 from numpy.typing import NDArray
 
 #: The analyzer extensions holding each table's metrics, as a data frame of one array per column.

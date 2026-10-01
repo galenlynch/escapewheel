@@ -4,8 +4,8 @@ import json
 
 import pytest
 
+from escapewheel_writer.errors import SourceDefect
 from escapewheel_writer.sources.lfp import LFPSource
-from escapewheel_writer.sources.nwb import SourceDefect
 
 CLOCK = "experiment1.Neuropix-PXI-100.45883-1.samples"
 #: The clock's own `core.clocks` row, which is what a build supplies (Part 12 §4).

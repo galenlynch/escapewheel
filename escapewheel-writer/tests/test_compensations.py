@@ -76,8 +76,9 @@ def test_the_nwb_source_declares_an_offset_it_kept(tmp_path):
 
 def test_strict_refuses_a_build_that_worked_around_something(tmp_path, registry):
     """Every note is a place the packet says less than the source could have."""
+    from escapewheel_writer.errors import RecipeError
     from escapewheel_writer.recipe import Recipe
-    from escapewheel_writer.session import RecipeError, build
+    from escapewheel_writer.session import build
     from tests import sorterfixture
 
     root = sorterfixture.build(tmp_path)
@@ -109,8 +110,9 @@ owns = ["core.units", "core.clocks", "core.curation_versions", "core.sorting_run
 
 def test_a_build_refuses_a_recipe_its_check_refuses(tmp_path, registry):
     """Part 05 §3.5: before any source is opened, whether or not a caller checked it first."""
+    from escapewheel_writer.errors import RecipeError
     from escapewheel_writer.recipe import Recipe
-    from escapewheel_writer.session import RecipeError, build
+    from escapewheel_writer.session import build
 
     path = tmp_path / "session.toml"
     path.write_text(

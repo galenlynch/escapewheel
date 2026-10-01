@@ -20,7 +20,8 @@ from escapewheel_validator import Report, validate
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.stores import digest, digest_resource, listing
 
-from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version, retained, semver
+from .errors import NotCommitted
+from .writer import MANIFEST, MANIFESTS, _bump, _version, retained, semver
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
 #: records a prefix's Part 04 §5.4 per-member listing with the entity tag the store handed over,

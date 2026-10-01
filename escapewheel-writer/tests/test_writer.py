@@ -9,13 +9,14 @@ from escapewheel_reader import check_sources, open_packet
 from escapewheel_validator import RegistryRejected, validate
 
 from escapewheel_writer import CommitRefused, PacketWriter
-from escapewheel_writer.amending import AmendmentRefused, Held
+from escapewheel_writer.amending import Held
 from escapewheel_writer.encoding import (
     DELTA_COLUMNS,
     DICTIONARY_COLUMNS,
     NO_DICTIONARY,
     inefficient,
 )
+from escapewheel_writer.errors import AmendmentRefused
 from escapewheel_writer.writer import _options
 
 
@@ -151,7 +152,7 @@ def test_a_packet_without_sessions_is_refused(tmp_path, registry):
 
 def test_a_naive_timestamp_is_refused(tmp_path, registry, minimal):
     """Part 03 requires a UTC offset; assuming one would be a guess."""
-    from escapewheel_writer.arrow import NaiveTimestamp
+    from escapewheel_writer.errors import NaiveTimestamp
 
     naive = {**minimal, "core.sessions": [{**minimal["core.sessions"][0], "session_start_time": "2026-08-27T00:00:00"}]}
     with pytest.raises(NaiveTimestamp, match="no UTC offset"):
@@ -508,7 +509,7 @@ def test_every_manifest_is_retained(tmp_path, registry, minimal):
 
 
 def test_amending_an_uncommitted_root_is_refused(tmp_path, registry, minimal):
-    from escapewheel_writer.writer import NotCommitted
+    from escapewheel_writer.errors import NotCommitted
 
     with pytest.raises(NotCommitted, match="no committed"):
         _amend(tmp_path / "nothing", registry, {"core.processing_runs": _runs()})

@@ -6,8 +6,6 @@
   require, over records and over a streamed batch.
 - :func:`localize` -- a naive wall-clock value with a declared IANA zone attached.
 - :func:`canonical_json` -- a mapping or sequence as canonical JSON.
-- :exc:`NaiveTimestamp` -- a wall-clock value carried no UTC offset.
-- :exc:`CarriedNotAnInteger` -- a carried identifier arrived as something other than a number.
 - :data:`ARROW`, :data:`COERCE` -- mappings from a registry column type to its Arrow type, and to
   the coercion applied before Arrow sees a value.
 
@@ -27,23 +25,14 @@ from zoneinfo import ZoneInfo
 import pyarrow as pa
 from escapewheel_reader.ordering import stored_order
 
-
-class NaiveTimestamp(ValueError):
-    """A wall-clock value carried no UTC offset.
-
-    Part 03 requires wall-clock columns to be ``TIMESTAMP(MICROS, UTC)``, so a value without an
-    offset is not merely inconvenient -- it is unlocatable, and assuming UTC would be a guess.
-    Real source metadata gets this wrong: an aind-data-schema `session.json` may stamp `+00:00`
-    on a local wall clock. Refusing naive values does not catch a wrong offset, but it does stop
-    a writer inventing one.
-    """
+from .errors import CarriedNotAnInteger, NaiveTimestamp
 
 
 def localize(value: datetime | str, zone: ZoneInfo) -> datetime:
     """Attach a declared IANA zone to a naive wall-clock value.
 
     An adapter that knows its source's zone may call this; the writer itself never guesses
-    (see :class:`NaiveTimestamp`). The zone must be an IANA zone, **not** a fixed offset,
+    (see :exc:`~escapewheel_writer.errors.NaiveTimestamp`). The zone must be an IANA zone, **not** a fixed offset,
     because a fixed offset is wrong for half the year and the error is silent.
 
     A session may fall in daylight time while the epoch its free-running clock counts from fell
@@ -234,10 +223,6 @@ def sort_key(resource: str, spec: Mapping[str, Any]) -> list[str] | None:
         Sort columns, or None if the table declares no key.
     """
     return stored_order(resource, spec) or None
-
-
-class CarriedNotAnInteger(ValueError):
-    """A carried identifier arrived as something other than the source's own number."""
 
 
 def _is_string_carried_identifier(column: Mapping[str, Any]) -> bool:

@@ -11,7 +11,8 @@ from escapewheel_reader import open_packet
 
 from escapewheel_writer import Clock, OffGrid, PacketWriter
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.sources import NWBSource, SourceDefect
+from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.sources import NWBSource
 from escapewheel_writer.sources.nwb import _sex, ucum_code
 from tests import nwbfixture
 

@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 
-from escapewheel_writer.sources import SorterSource, SourceDefect
+from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.sources import SorterSource
 from escapewheel_writer.sources.sorter import PROJECTION
 from tests import sorterfixture
 

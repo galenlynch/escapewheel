@@ -43,7 +43,7 @@ from escapewheel_reader.uri import canonical, is_absolute
 
 from . import opaque
 from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_CACHE
-from .sources import SourceDefect
+from .errors import SourceDefect
 
 #: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
 #: identifier is dotted, so no undotted token can collide with it.

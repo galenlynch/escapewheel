@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 
-from escapewheel_writer.sources.zarr_compat import DenseV2, UnsupportedEncoding, attrs, members, read_array
+from escapewheel_writer.errors import UnsupportedEncoding
+from escapewheel_writer.sources.zarr_compat import DenseV2, attrs, members, read_array
 from tests import nwbfixture
 
 

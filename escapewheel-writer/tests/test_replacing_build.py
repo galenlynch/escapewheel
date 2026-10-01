@@ -9,10 +9,11 @@ import pytest
 from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
+from escapewheel_writer.errors import RecipeError, ReplacementRefused
 from escapewheel_writer.recipe import Recipe
-from escapewheel_writer.replacing import ReplacementRefused, read_replaced
+from escapewheel_writer.replacing import read_replaced
 from escapewheel_writer.scripts.cli import register
-from escapewheel_writer.session import RecipeError, build
+from escapewheel_writer.session import build
 from tests.conftest import REGISTRY
 from tests.test_amending_build import _amending, packet  # noqa: F401
 from tests.test_build_end_to_end import _recipe

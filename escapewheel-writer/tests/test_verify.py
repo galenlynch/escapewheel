@@ -5,8 +5,8 @@ import json
 import pytest
 
 from escapewheel_writer import PacketWriter
+from escapewheel_writer.errors import NotCommitted
 from escapewheel_writer.verify import verify
-from escapewheel_writer.writer import NotCommitted
 
 from .conftest import read_registry, rebind_registry
 

@@ -16,8 +16,8 @@ from typing import Any, ClassVar
 
 import numpy as np
 
+from ..errors import SourceDefect
 from .compensations import Compensates
-from .defect import SourceDefect
 from .nwb import contact_columns, contact_ids, ucum_code
 from .store import SourceStore, source_root
 

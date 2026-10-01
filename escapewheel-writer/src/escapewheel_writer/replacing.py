@@ -2,7 +2,6 @@
 
 - :func:`read_replaced` -- the manifest at each entry, as a :class:`Replaced`.
 - :class:`Replaced` -- one packet a build replaces, as described by the manifest at its entry.
-- :exc:`ReplacementRefused` -- an entry names something a build cannot replace.
 
 An entry is a packet root or a manifest file, and a relative entry resolves against the recipe.
 Every refusal happens here, before any source opens.
@@ -20,11 +19,8 @@ from typing import Any
 import jsonschema
 from escapewheel_validator.manifest import manifest_schema
 
+from .errors import ReplacementRefused
 from .writer import MANIFEST
-
-
-class ReplacementRefused(Exception):
-    """A recipe's `[packet].replaces` names what a build cannot replace (Part 05 §3.5)."""
 
 
 @dataclass(frozen=True)

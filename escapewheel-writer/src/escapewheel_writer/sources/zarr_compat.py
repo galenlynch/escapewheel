@@ -4,11 +4,11 @@
 - :class:`DenseV2` -- a multi-dimensional array, read a slab of rows at a time.
 - :func:`members` -- a group's children by name.
 - :func:`attrs`, :func:`attrs_at` -- a node's attributes, from its `.zattrs` or the `.zmetadata`.
-- :exc:`UnsupportedEncoding` -- an array uses an encoding this module will not decode.
 
 :func:`read_array` never consults a fill value, so it reads a vlen-bytes array with a numeric one,
-which zarr-python refuses. A pickled array raises :exc:`UnsupportedEncoding`, and its values are in
-the plain column beside it.
+which zarr-python refuses. A pickled array raises
+:exc:`~escapewheel_writer.errors.UnsupportedEncoding`, and its values are in the plain column
+beside it.
 """
 
 from __future__ import annotations
@@ -21,9 +21,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-
-class UnsupportedEncoding(ValueError):
-    """An array uses an encoding this package will not decode, such as ``pickle``."""
+from ..errors import UnsupportedEncoding
 
 
 def _meta(path: Path) -> dict[str, Any] | None:
@@ -245,4 +243,4 @@ class DenseV2:
         return np.frombuffer(buffer, dtype=self.dtype).reshape(self.chunks, order=self._order)
 
 
-__all__ = ["DenseV2", "UnsupportedEncoding", "attrs", "members", "read_array"]
+__all__ = ["DenseV2", "attrs", "members", "read_array"]

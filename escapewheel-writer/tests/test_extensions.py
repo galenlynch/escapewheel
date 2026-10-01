@@ -10,7 +10,7 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import RegistryRejected
 
 from escapewheel_writer import PacketWriter
-from escapewheel_writer.writer import CommitRefused
+from escapewheel_writer.errors import CommitRefused, ExtensionNotFound, RecipeError
 
 EXTENSION = {
     "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
@@ -229,7 +229,7 @@ def test_a_builtin_kind_cannot_be_shadowed(tmp_path, monkeypatch):
 
 def test_an_unknown_kind_names_what_is_known(tmp_path, monkeypatch):
     from escapewheel_writer.recipe import SourceSpec
-    from escapewheel_writer.session import Context, RecipeError, _build_source
+    from escapewheel_writer.session import Context, _build_source
 
     monkeypatch.setattr("escapewheel_writer.sources.discovered", lambda: {"tasklog": _Registered})
     spec = SourceSpec(kind="nonesuch", root=tmp_path, owns=())
@@ -404,7 +404,7 @@ def test_an_unknown_extension_says_what_is_installed(monkeypatch):
     from escapewheel_writer import extensions as ext
 
     monkeypatch.setattr(ext, "installed", lambda: {"opto_tagging": {}, "unit_qc": {}})
-    with pytest.raises(ext.ExtensionNotFound, match="opto_tagging, unit_qc"):
+    with pytest.raises(ExtensionNotFound, match="opto_tagging, unit_qc"):
         ext.load("nonesuch")
 
 
@@ -535,7 +535,7 @@ def _build_refuses(recipe, registry, monkeypatch):
         raise AssertionError("a source was opened")
 
     monkeypatch.setattr(session, "_build_source", opened)
-    with pytest.raises(session.RecipeError) as refused:
+    with pytest.raises(RecipeError) as refused:
         session.build(recipe, registry)
     assert not (recipe.out / "staging").exists(), "refused before anything was prepared"
     return str(refused.value)

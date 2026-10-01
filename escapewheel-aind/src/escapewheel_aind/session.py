@@ -22,8 +22,8 @@ from zoneinfo import ZoneInfo
 
 from escapewheel_writer.clock import Clock, epoch_from, zone_of
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
+from escapewheel_writer.errors import SourceDefect
 from escapewheel_writer.sources.compensations import Compensates
-from escapewheel_writer.sources.defect import SourceDefect
 from escapewheel_writer.sources.store import source_root
 from escapewheel_writer.sources.values import sex as _sex
 from escapewheel_writer.sources.values import utc_offset as _offset

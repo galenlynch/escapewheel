@@ -13,8 +13,8 @@ from escapewheel_reader import open_packet
 from escapewheel_validator.stores import listing_digest
 
 from escapewheel_writer import declaration, delivery, opaque
-from escapewheel_writer.opaque import Payload, PayloadRefused
-from escapewheel_writer.sources import SourceDefect
+from escapewheel_writer.errors import PayloadRefused, SourceDefect
+from escapewheel_writer.opaque import Payload
 from escapewheel_writer.writer import ExternalMedia, PacketWriter
 from tests import opaquefixture
 

@@ -9,7 +9,8 @@ from escapewheel_validator import validate
 
 import escapewheel_writer.writer as module
 from escapewheel_writer import CommitRefused, PacketWriter
-from escapewheel_writer.writer import MANIFEST, PROMOTION, STAGING, PromotionRecordUnreadable, read_promotion
+from escapewheel_writer.errors import PromotionRecordUnreadable
+from escapewheel_writer.writer import MANIFEST, PROMOTION, STAGING, read_promotion
 from tests.test_writer import _runs, _write
 
 

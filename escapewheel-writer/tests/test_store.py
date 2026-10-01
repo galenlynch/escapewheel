@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
+from escapewheel_writer.errors import UnsupportedEncoding
 from escapewheel_writer.sources.store import SourceStore, store_for
-from escapewheel_writer.sources.zarr_compat import UnsupportedEncoding
 from tests import nwbfixture
 
 #: One clock's `core.clocks` row, which is the shape the `clocks` term takes.

@@ -15,8 +15,9 @@ import pytest
 
 from escapewheel_writer import Clock, declaration, delivery
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
+from escapewheel_writer.errors import SourceDefect
 from escapewheel_writer.recipe import TERMS
-from escapewheel_writer.sources import ADAPTERS, NWBSource, SourceDefect
+from escapewheel_writer.sources import ADAPTERS, NWBSource
 from tests import nwbfixture
 
 SESSION = "mini_2025-04-09"

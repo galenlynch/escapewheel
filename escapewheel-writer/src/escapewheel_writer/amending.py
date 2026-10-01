@@ -3,7 +3,6 @@
 - :class:`Held` -- a committed packet version: its rows, the numbers it assigned, and the
   settlement of each delivered table against them.
 - :func:`owned` -- the assigned identifiers a table's rows own, each with its `*_name` column.
-- :exc:`AmendmentRefused` -- the amendment would change a held row, or the packet cannot be amended.
 - :data:`PREVAILING` -- the tables whose held rows prevail over every source.
 
 The writer uses the validator's test of whether a delivered row joins a held group
@@ -27,6 +26,7 @@ from escapewheel_reader import Manifest, Packet
 from escapewheel_validator.amendment import PREFERENCES, Version, absent, quoted
 
 from .arrow import sort_key
+from .errors import AmendmentRefused
 
 #: Tables the packet identifies itself by, whose held rows prevail over every source in an amending
 #: build (Part 05 §3.5).
@@ -37,10 +37,6 @@ SHOWN = 3
 
 #: Where the packet a build amends keeps its manifest.
 MANIFEST = "packet.json"
-
-
-class AmendmentRefused(ValueError):
-    """An amendment would change what Part 05 §15.2 forbids, or a build cannot amend this packet."""
 
 
 def owned(spec: Mapping[str, Any]) -> list[tuple[str, str]]:
@@ -446,4 +442,4 @@ def _ordered(resource_id: str, spec: Mapping[str, Any], parts: Sequence[pa.Table
     return combined
 
 
-__all__ = ["PREVAILING", "AmendmentRefused", "Held", "owned"]
+__all__ = ["PREVAILING", "Held", "owned"]

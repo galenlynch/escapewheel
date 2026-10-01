@@ -22,12 +22,12 @@ from escapewheel_reader.registries import gunzip_member
 from escapewheel_validator import RegistryRejected, check_registry_context_bytes
 
 from .. import compare
-from ..amending import AmendmentRefused, Held
+from ..amending import Held
+from ..errors import AmendmentRefused, CommitRefused, ReplacementRefused, SourceDefect
 from ..extensions import load_checked as load_extension_context
 from ..recipe import RECIPE_SUPPLIES, Recipe, contributes, produces
-from ..replacing import ReplacementRefused, read_replaced
+from ..replacing import read_replaced
 from ..session import build, materializers
-from ..writer import CommitRefused
 
 
 def declaration_protocols() -> tuple[str, ...]:
@@ -512,7 +512,6 @@ def _declare(args: argparse.Namespace) -> int:
 def _deliver(args: argparse.Namespace) -> int:
     """Run one adapter and deliver its rows over the protocol the build reached it by."""
     from .. import delivery
-    from ..sources import SourceDefect
 
     # Read to end of file before anything is written, which is what a build supplies and all it
     # supplies on this stream (Part 12 §4).

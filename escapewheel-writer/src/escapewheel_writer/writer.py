@@ -5,10 +5,6 @@
 - :class:`StagedArray` -- a dense array to write into the packet, with the layout it takes.
 - :class:`ExternalArray`, :class:`ExternalMedia` -- an array, and an image or video, the packet
   references rather than owns.
-- :exc:`CommitRefused` -- validation's verdict was not ``passed``, so nothing was committed.
-- :exc:`NotCommitted` -- there is no committed packet at a root to amend.
-- :exc:`PromotionRecordUnreadable` -- a staging area holds a promotion record this writer cannot
-  read.
 - :func:`read_promotion` -- the version and paths of the promotion record at a root.
 - :func:`retained` -- the name of a manifest's retained copy.
 - :func:`semver` -- a sort key for a `packet_version`.
@@ -57,6 +53,7 @@ from . import opaque
 from .amending import Held
 from .arrow import build, number_batch, schema, sort_key
 from .encoding import encodings, inefficient
+from .errors import CommitRefused, NotCommitted, PayloadRefused, PromotionRecordUnreadable
 from .keys import Keys
 
 
@@ -336,10 +333,6 @@ def semver(text: str) -> tuple[int, ...]:
     return tuple(int(part) if part.isdigit() else -1 for part in str(text).split("."))
 
 
-class PromotionRecordUnreadable(Exception):
-    """A staging area holds a promotion record this writer cannot read (Part 05 §6)."""
-
-
 def _record_promotion(staging: Path, packet_version: str, paths: Iterable[str]) -> None:
     """Write the promotion record durably, before anything is written outside `staging` (Part 05 §6)."""
     body = json.dumps({"packet_version": packet_version, "paths": sorted(set(paths))}, indent=2) + "\n"
@@ -423,10 +416,6 @@ def _bump(version: str) -> str:
     """
     major, minor, patch, *_ = (*version.split("."), "0", "0", "0")
     return f"{int(major)}.{int(minor)}.{int(patch) + 1}"
-
-
-class NotCommitted(Exception):
-    """There is no committed packet at this root to amend."""
 
 
 @dataclass(frozen=True)
@@ -565,21 +554,6 @@ def _digest(path: Path) -> dict[str, str]:
     from escapewheel_validator.stores import digest
 
     return {"algorithm": "sha256", "value": digest(str(path))}
-
-
-class CommitRefused(Exception):
-    """The packet's verdict was not ``passed``, so nothing was committed (Part 05 §9.2).
-
-    Attributes
-    ----------
-    report : Report
-        The findings. The staging directory is left in place for inspection.
-    """
-
-    def __init__(self, report: Report, staging: Path) -> None:
-        super().__init__(f"packet {report.verdict()}, {report.errors} error(s); staged resources left at {staging}")
-        self.report = report
-        self.staging = staging
 
 
 class PacketWriter:
@@ -1247,7 +1221,7 @@ class PacketWriter:
             if resource_id not in delivered
         ]
         if problems or unbound:
-            raise opaque.PayloadRefused("; ".join([*problems, *unbound]) + " (Part 12 §5)")
+            raise PayloadRefused("; ".join([*problems, *unbound]) + " (Part 12 §5)")
         return bound
 
     @property
@@ -2175,11 +2149,8 @@ __all__ = [
     "PROVENANCE",
     "REGISTRIES",
     "STAGING",
-    "CommitRefused",
     "ExternalMedia",
-    "NotCommitted",
     "PacketWriter",
-    "PromotionRecordUnreadable",
     "read_promotion",
     "semver",
 ]
