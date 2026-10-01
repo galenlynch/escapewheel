@@ -261,10 +261,10 @@ def test_a_contact_the_source_cannot_name_is_refused(tmp_path):
 def test_init_can_draft_an_lfp_source(nwb):
     """It is the only kind that produces external resources, so it is the only one whose
     `uri_base` and `verify` a recipe has to set — and it could not be drafted at all."""
-    from escapewheel_writer.scripts.cli import HINTS, KINDS, _open
+    from escapewheel_writer.scripts.cli import HINTS, KINDS, open_for_inspection
 
     assert "lfp" in KINDS
-    assert _open("lfp", nwb, "s1").offers() == _source(nwb).offers()
+    assert open_for_inspection("lfp", nwb, "s1").offers() == _source(nwb).offers()
     assert any("verify" in hint for hint in HINTS["lfp"])
 
 

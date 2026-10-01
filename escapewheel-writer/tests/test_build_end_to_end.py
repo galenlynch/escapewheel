@@ -177,10 +177,10 @@ def test_sources_sharing_a_root_record_it_once():
     """A source stating no root states none to record."""
     from types import SimpleNamespace
 
-    from escapewheel_writer.session import _source_roots
+    from escapewheel_writer.session import source_roots
 
     document = {"source": [{"kind": "sync", "root": "raw"}, {"kind": "harp", "root": "raw"}, {"kind": "thermistor"}]}
-    assert _source_roots(SimpleNamespace(document=document)) == ["raw"]
+    assert source_roots(SimpleNamespace(document=document)) == ["raw"]
 
 
 def test_a_clock_name_is_what_its_identifier_stands_for(committed):

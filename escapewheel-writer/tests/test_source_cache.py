@@ -124,16 +124,16 @@ def test_a_recipe_setting_a_term_is_refused(tmp_path):
 
 
 def _context(recipe, location):
-    from escapewheel_writer.session import Context, _source_cache
+    from escapewheel_writer.session import Context, resolved_source_cache
 
     context = Context(session_id="s1", workspace=Path(f"{recipe.out}.deliveries"))
-    context.source_cache = _source_cache(location, recipe.out, context)
+    context.source_cache = resolved_source_cache(location, recipe.out, context)
     return context
 
 
 def test_an_accepting_adapter_is_supplied_the_location_and_no_other_is(tmp_path, monkeypatch):
     """In its input object, with no environment variable set, and to no adapter that did not ask."""
-    from escapewheel_writer.session import _supplied
+    from escapewheel_writer.session import supplied_to
 
     for variable in ("ESCAPEWHEEL_SOURCE_CACHE", "TMPDIR"):
         monkeypatch.delenv(variable, raising=False)
@@ -141,16 +141,16 @@ def test_an_accepting_adapter_is_supplied_the_location_and_no_other_is(tmp_path,
     recipe = Recipe.load(_recipe(tmp_path, sorted_root, raw))
     context = _context(recipe, tmp_path / "cache")
     sorter = next(spec for spec in recipe.sources if spec.kind == "sorter")
-    assert _supplied(sorter, recipe, context)["source_cache"] == str((tmp_path / "cache").resolve())
+    assert supplied_to(sorter, recipe, context)["source_cache"] == str((tmp_path / "cache").resolve())
 
     declining = type("Declining", (), {"NEEDS": ("root", "session_id"), "ACCEPTS": ()})
     monkeypatch.setattr(recipe_module, "adapter_for", lambda kind: declining)
-    assert "source_cache" not in _supplied(sorter, recipe, context)
+    assert "source_cache" not in supplied_to(sorter, recipe, context)
 
 
 @pytest.mark.parametrize("inside", ["packet", "packet.deliveries/sorter", "packet/.staging"])
 def test_a_location_inside_the_packet_or_a_delivery_is_supplied_to_no_adapter(tmp_path, inside):
-    from escapewheel_writer.session import _supplied
+    from escapewheel_writer.session import supplied_to
 
     sorted_root, raw = _sources(tmp_path)
     recipe = Recipe.load(_recipe(tmp_path, sorted_root, raw))
@@ -158,7 +158,7 @@ def test_a_location_inside_the_packet_or_a_delivery_is_supplied_to_no_adapter(tm
     assert context.source_cache is None
     assert NoteCode.NO_SOURCE_CACHE in codes(context.notes)
     sorter = next(spec for spec in recipe.sources if spec.kind == "sorter")
-    assert "source_cache" not in _supplied(sorter, recipe, context)
+    assert "source_cache" not in supplied_to(sorter, recipe, context)
 
 
 def test_a_delivered_adapter_is_handed_the_location_only_where_it_accepts_it(tmp_path):
@@ -368,11 +368,14 @@ def test_import_keeps_the_location_beside_the_packet_unless_told_otherwise(tmp_p
     """On the packet's disk rather than under `TMPDIR`, which is RAM wherever `/tmp` is a tmpfs."""
     from argparse import Namespace
 
-    from escapewheel_writer.scripts.cli import _source_cache
+    from escapewheel_writer.scripts.cli import import_source_cache
 
     out = tmp_path / "packets" / "786867-packet"
-    assert _source_cache(Namespace(source_cache=None, no_source_cache=False), out) == (
+    assert import_source_cache(Namespace(source_cache=None, no_source_cache=False), out) == (
         tmp_path / "packets" / ".escapewheel-source-cache"
     )
-    assert _source_cache(Namespace(source_cache=tmp_path / "named", no_source_cache=False), out) == tmp_path / "named"
-    assert _source_cache(Namespace(source_cache=None, no_source_cache=True), out) is None
+    assert (
+        import_source_cache(Namespace(source_cache=tmp_path / "named", no_source_cache=False), out)
+        == tmp_path / "named"
+    )
+    assert import_source_cache(Namespace(source_cache=None, no_source_cache=True), out) is None

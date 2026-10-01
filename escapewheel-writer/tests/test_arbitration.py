@@ -70,13 +70,15 @@ def test_the_scaffolder_names_only_kinds_a_build_knows():
 def test_every_kind_the_scaffolder_offers_can_be_opened_alone():
     """`init` and `inspect` construct a source from a root and nothing else.
 
-    `waveforms` sat in `KINDS` and `_open` turned it away, so the argument passed validation and
+    `waveforms` sat in `KINDS` and `open_for_inspection` turned it away, so the argument passed validation and
     the command then failed on the next line.
     """
     from escapewheel_writer.scripts import cli
 
     source = Path(cli.__file__).read_text()
-    opener = next(n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.FunctionDef) and n.name == "_open")
+    opener = next(
+        n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.FunctionDef) and n.name == "open_for_inspection"
+    )
     opens = {
         n.comparators[0].value
         for n in ast.walk(opener)
@@ -85,25 +87,25 @@ def test_every_kind_the_scaffolder_offers_can_be_opened_alone():
         and isinstance(n.left, ast.Name)
         and n.left.id == "kind"
     }
-    assert set(KINDS) == opens, f"KINDS is {sorted(KINDS)}, _open takes {sorted(opens)}"
+    assert set(KINDS) == opens, f"KINDS is {sorted(KINDS)}, open_for_inspection takes {sorted(opens)}"
 
 
 def test_the_build_dispatches_on_no_kind():
     """Every source is constructed from, and asked for its rows with, what it declares.
 
-    Both used to branch per kind: `_build_source` passed a different set of extras for each, and
+    Both used to branch per kind: `build_source` passed a different set of extras for each, and
     the call side passed three adapters values they never declared -- a mapping of rates, a
     closure, and eight keyword arguments -- which Part 12 §4 forbids a build to require and
     which no protocol could carry. A branch reappearing in either is a value that belongs in the
     adapter's `NEEDS`.
 
-    `_harvest` is not in the list: it reads what a source produced rather than supplying it, and
+    `harvest` is not in the list: it reads what a source produced rather than supplying it, and
     what replaces its per-kind reach is a delivery rather than a declaration.
     """
     from escapewheel_writer import session
 
     source = Path(session.__file__).read_text()
-    checked = {"_build_source", "_composed", "_add_records"}
+    checked = {"build_source", "composed", "_add_records"}
     functions = [n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.FunctionDef) and n.name in checked]
     assert {n.name for n in functions} == checked
     for function in functions:

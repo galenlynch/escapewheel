@@ -7,6 +7,23 @@
 - :data:`MATERIALIZERS` -- the analysis resources a recipe may ask for by name.
 - :data:`TOLERANCE` -- the most error a clock mapping may carry, in seconds.
 
+The steps of a build, each of which its tests run alone:
+
+- :func:`build_source`, :func:`supplied_to`, :func:`filled_terms` -- one source opened or
+  delivered, what the build supplies it, and the terms the build can fill for it.
+- :func:`resolved_source_cache`, :func:`source_roots` -- the source cache a build supplies, and
+  the roots a recipe's sources state.
+- :func:`harvest`, :func:`rows_reader` -- what later sources consume of one source's rows, and
+  a reader of those rows.
+- :func:`compare_declared_facts`, :func:`compare_held_facts` -- what a source states against
+  the recipe, and against the packet being amended.
+- :func:`composed`, :func:`note_unclaimed`, :func:`refuse_a_discarded_fact` -- the rows a build
+  composes, a note of rows nothing claims, and the refusal of a preference that discards a
+  stated value.
+- :func:`time_origin`, :func:`bound_for`, :func:`declare_withheld` -- the session's time
+  origin, the bound a clock is mapped at, and the terminal-anchor test's result on each clock.
+- :func:`grouped_encoding_exceptions` -- the recipe's `[encoding]` block by resource and column.
+
 A build orders sources by what each adapter declares it consumes, not by the registry's
 references, and filters a source's rows to the resources the recipe leaves it owning.
 """
@@ -161,7 +178,7 @@ class Context:
     #: `core.clock_observation_intervals` rows, whatever source produced them, since R39's
     #: origin is a minimum across all of them and no single adapter sees them all.
     observed: list[dict[str, Any]] = field(default_factory=list)
-    #: What `_bound_for` measured, for the import run's parameters (Part 02 §12.6).
+    #: What `bound_for` measured, for the import run's parameters (Part 02 §12.6).
     measured_bound: dict[str, Any] = field(default_factory=dict)
     #: The anchors and the bound, once `alignment` has settled them.
     _alignment: tuple[dict[str, Any], float] | None = None
@@ -202,7 +219,7 @@ class Context:
             by_clock = _anchors(self)
             reach = {row["clock_id"]: (int(row["start_tick"]), int(row["stop_tick"])) for row in self.observed}
             rate = self.reference.tick_rate_num / (self.reference.tick_rate_den or 1) if self.reference else 1.0
-            bound, self.measured_bound = _bound_for(by_clock, reach, TOLERANCE, rate)
+            bound, self.measured_bound = bound_for(by_clock, reach, TOLERANCE, rate)
             self._alignment = (dict(by_clock), bound)
         return self._alignment
 
@@ -251,7 +268,7 @@ def order(recipe: Recipe) -> list[SourceSpec]:
     return ordered
 
 
-def _terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collection[str]) -> dict[str, Any]:
+def filled_terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collection[str]) -> dict[str, Any]:
     """Return what this build can fill of Part 12 §4's vocabulary, for this source.
 
     A term absent from the result is one this recipe cannot fill, which is a refusal rather than an
@@ -310,7 +327,7 @@ def _reference(recipe: Recipe, context: Context) -> Any:
     return clock
 
 
-def _supplied(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, Any]:
+def supplied_to(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, Any]:
     """Return what a build supplies this source, resolved against what it declares (Part 05 §3.4).
 
     Each name in the declaration resolves against Part 12 §4's terms first and the recipe's
@@ -323,7 +340,7 @@ def _supplied(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, A
     make it mandatory.
     """
     names = declared(spec)["needs"]
-    terms = _terms(spec, recipe, context, names)
+    terms = filled_terms(spec, recipe, context, names)
     supplied: dict[str, Any] = {}
     for name in names:
         if name in TERMS:
@@ -341,7 +358,7 @@ def _supplied(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, A
     return {**supplied, "options": dict(spec.options)}
 
 
-def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAdapter:
+def build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAdapter:
     """Construct one adapter, or run it and read what it delivered (Part 05 §3.9).
 
     One construction for every kind, built-in or registered by another distribution, and one
@@ -355,7 +372,7 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceA
     from .sources import discovered
     from .sources.store import store_for
 
-    supplied = _supplied(spec, recipe, context)
+    supplied = supplied_to(spec, recipe, context)
     options = supplied.pop("options")
     if (protocol := reached_by(spec)) is not None and spec.delivery is not None:
         # The URI rather than the root this build resolved, and the options that open it beside
@@ -471,7 +488,7 @@ def _named(source: SourceAdapter, spec: SourceSpec) -> str:
     return str(source.path) if isinstance(source, Located) else spec.kind
 
 
-def _compare_declared_facts(spec: SourceSpec, source: SourceAdapter, context: Context, recipe: Recipe) -> None:
+def compare_declared_facts(spec: SourceSpec, source: SourceAdapter, context: Context, recipe: Recipe) -> None:
     """Compare what the recipe declares against what this source states (Part 05 §3.6).
 
     Three dispositions, and which one applies is the fact's rather than the source's. A fact that
@@ -486,7 +503,7 @@ def _compare_declared_facts(spec: SourceSpec, source: SourceAdapter, context: Co
     """
     declared, notes = recipe.declared_facts, source.notes
     if context.held_facts is not None:
-        _compare_held_facts(spec, source, context.held_facts, notes, context.fact_types)
+        compare_held_facts(spec, source, context.held_facts, notes, context.fact_types)
         return
     for fact, attribute in sorted(source.STATES.items()):
         stated = getattr(source, attribute, None)
@@ -536,7 +553,7 @@ def _compare_declared_facts(spec: SourceSpec, source: SourceAdapter, context: Co
             )
 
 
-def _compare_held_facts(
+def compare_held_facts(
     spec: SourceSpec, source: SourceAdapter, held: Mapping[str, Any], notes: list[str], fact_types: Mapping[str, str]
 ) -> None:
     """Compare what a source states against the amended packet's row, which prevails (Part 05 §3.6)."""
@@ -575,7 +592,9 @@ HARVESTED = (
 )
 
 
-def _rows(source: SourceAdapter, records: Mapping[str, list[dict[str, Any]]]) -> Callable[[str], list[dict[str, Any]]]:
+def rows_reader(
+    source: SourceAdapter, records: Mapping[str, list[dict[str, Any]]]
+) -> Callable[[str], list[dict[str, Any]]]:
     """Return a reader for one source's rows, whichever way they reached this process.
 
     An adapter in this process hands over records; one delivered out of process hands over a
@@ -591,7 +610,7 @@ def _rows(source: SourceAdapter, records: Mapping[str, list[dict[str, Any]]]) ->
     return rows
 
 
-def _harvest(
+def harvest(
     spec: SourceSpec,
     source: SourceAdapter,
     context: Context,
@@ -600,7 +619,7 @@ def _harvest(
 ) -> None:
     """Take from what a source produced whatever the sources after it consume.
 
-    Keyed on the resource rather than on the kind, for the reason `_composed` is: which adapter
+    Keyed on the resource rather than on the kind, for the reason `composed` is: which adapter
     declared a clock is not what makes it a clock, and a build that dispatched on the kind could
     only harvest from the kinds it was written against.
     """
@@ -631,7 +650,7 @@ def _harvest(
         for row in rows(CORE_CLOCK_OBSERVATION_INTERVALS):
             if row["clock_id"] == reference.clock_id:
                 context.windows[spec.kind] = (int(row["start_tick"]), int(row["stop_tick"]))
-    _compare_declared_facts(spec, source, context, recipe)
+    compare_declared_facts(spec, source, context, recipe)
 
 
 def _anchors(context: Context) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]]:
@@ -647,7 +666,7 @@ def _anchors(context: Context) -> dict[str, tuple[NDArray[np.int64], NDArray[np.
     }
 
 
-def _bound_for(
+def bound_for(
     by_clock: Mapping[str, tuple[NDArray[np.int64], NDArray[np.int64]]],
     reach: Mapping[str, tuple[int, int]],
     tolerance: float,
@@ -710,7 +729,7 @@ def _bound_for(
     return report["used"], report
 
 
-def _time_origin(
+def time_origin(
     context: Context,
     intervals: list[dict[str, Any]],
     by_clock: Mapping[str, tuple[NDArray[np.int64], NDArray[np.int64]]],
@@ -772,7 +791,7 @@ def _add_batches(
     return produced
 
 
-def _composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, Any]]]:
+def composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, Any]]]:
     """Return the rows this build composes rather than any one source producing them.
 
     `core.event_stream_observation_intervals` is the case: one source declares the window it
@@ -929,7 +948,7 @@ def build(  # noqa: C901
         say=say,
         payloads=payloads(checked_registry, extension_documents),
     )
-    context.source_cache = _source_cache(source_cache, recipe.out, context)
+    context.source_cache = resolved_source_cache(source_cache, recipe.out, context)
     if recipe.session.get("reference_clock_id"):
         context.reference = _reference_clock(recipe, context)
     writer = PacketWriter(
@@ -945,7 +964,7 @@ def build(  # noqa: C901
         session=session_id,
         # An extension reaches the writer across a file or a subprocess, so what it says about its
         # own columns arrives as recipe data rather than as a Python object it hands over.
-        encoding_exceptions=_encoding_exceptions(recipe),
+        encoding_exceptions=grouped_encoding_exceptions(recipe),
         workspace=context.workspace,
         replaces=[r.item() for r in replaced],
     )
@@ -968,16 +987,16 @@ def build(  # noqa: C901
     drained: dict[str, int] = {}
     for spec in order(recipe):
         say(f"{spec.kind} -> {', '.join(spec.owns) or 'nothing it owns'}")
-        source = _build_source(spec, recipe, context)
+        source = build_source(spec, recipe, context)
         context.sources[spec.kind] = source
         # Once, and used twice: an adapter's records are expensive to build, and the harvest and
         # the staging are two readings of one set of rows.
         records = source.records()
-        _harvest(spec, source, context, recipe, _rows(source, records))
+        harvest(spec, source, context, recipe, rows_reader(source, records))
 
         produced = _add_records(writer, spec, records, context, counts, arbitrated=frozenset(recipe.preferred))
         produced.update(_add_batches(writer, spec, source, counts, staged=set(produced)))
-        _note_unclaimed(spec, source, produced, frozenset(recipe.preferred))
+        note_unclaimed(spec, source, produced, frozenset(recipe.preferred))
         for staged in source.staged_arrays() if isinstance(source, StagesArrays) else ():
             # A delivered array is bytes an adapter already wrote (Part 12 §5), so what there
             # is to say about it is what is on disk; one staged in process is values, and its
@@ -1010,8 +1029,8 @@ def build(  # noqa: C901
         if isinstance(source, DeclaresCompensations):
             applied.extend(source.compensations)
 
-    _refuse_a_discarded_fact(writer, context, recipe)
-    _declare_withheld(context, writer, say)
+    refuse_a_discarded_fact(writer, context, recipe)
+    declare_withheld(context, writer, say)
     if held is None:
         # An amendment keeps the packet's session row, derived facts included (Part 05 §3.6).
         _declare_origin(context, say)
@@ -1031,7 +1050,7 @@ def build(  # noqa: C901
     run = _import_run(recipe, applied, context)
     run["processing_run_id"] = writer.name_apart("processing_run_id", run["processing_run_id"])
     writer.add(CORE_PROCESSING_RUNS, [run])
-    if roots := _source_roots(recipe):
+    if roots := source_roots(recipe):
         # A root the packet already records keeps its row, and the import still names it (Part 05 §7).
         recorded = {} if held is None else held.source_files(writer.keys)
         if added := [root for root in roots if root not in recorded]:
@@ -1228,7 +1247,7 @@ def _preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, ses
     return rows
 
 
-def _source_cache(configured: str | Path | None, out: Path, context: Context) -> Path | None:
+def resolved_source_cache(configured: str | Path | None, out: Path, context: Context) -> Path | None:
     """Return the location this build supplies as `source_cache`, creating it, or None (Part 12 §10).
 
     Refused inside the packet root or the delivery workspace, where a build replaces what it finds,
@@ -1277,7 +1296,7 @@ def _say_notes(kind: str, source: SourceAdapter, seen: int, say: Callable[[str],
     return len(notes)
 
 
-def _source_roots(recipe: Recipe) -> list[str]:
+def source_roots(recipe: Recipe) -> list[str]:
     """Return each distinct `root` the recipe's sources state, as written (Part 05 §7).
 
     As written rather than as this build resolved it: a relative root resolves against wherever
@@ -1352,7 +1371,7 @@ def _add_records(
         Rows the source produced per resource, claimed or not, for `_unclaimed` to report.
     """
     produced: dict[str, int] = {}
-    for resource, rows in {**records, **_composed(spec, context)}.items():
+    for resource, rows in {**records, **composed(spec, context)}.items():
         produced[resource] = len(rows)
         if resource in arbitrated:
             # Kept rather than counted, so Part 05 §3.4 can compare what the winner staged against
@@ -1369,7 +1388,7 @@ def _add_records(
     return produced
 
 
-def _encoding_exceptions(recipe: Recipe) -> dict[str, dict[str, tuple[str, ...]]]:
+def grouped_encoding_exceptions(recipe: Recipe) -> dict[str, dict[str, tuple[str, ...]]]:
     """Group the recipe's `[encoding]` block the way `encoding.encodings` reads it.
 
     `resource.column` splits at the last dot, since a resource ID is itself dotted.
@@ -1384,7 +1403,7 @@ def _encoding_exceptions(recipe: Recipe) -> dict[str, dict[str, tuple[str, ...]]
     return {how: {r: tuple(c) for r, c in tables.items()} for how, tables in grouped.items()}
 
 
-def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Recipe) -> None:
+def refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Recipe) -> None:
     """Refuse where preferring a source discarded a value another source stated (Part 05 §3.4).
 
     Part 05 §3.4 spends a preference to buy silence about a discarded row, on the premise that the
@@ -1441,7 +1460,7 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
         )
 
 
-def _note_unclaimed(
+def note_unclaimed(
     spec: SourceSpec, source: SourceAdapter, produced: Mapping[str, int], preferred: frozenset[str] = frozenset()
 ) -> None:
     """Note what a source produced that nothing in the recipe claims.
@@ -1481,7 +1500,7 @@ def _note_unclaimed(
     )
 
 
-def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) -> None:
+def declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) -> None:
     """Put Part 02 §12.6's terminal-anchor test on each clock it examined (R99 §3.2).
 
     The sync source computes this and emits only the reference clock's row; the probe clock rows
@@ -1540,7 +1559,7 @@ def _declare_origin(context: Context, say: Callable[[str], None]) -> None:
     if bound != BOUND:
         context.session_extra["alignment_bound"] = bound
         say(f"  alignment_bound {bound:g} median anchor intervals (R99 §3.1)")
-    origin = _time_origin(context, context.observed, by_clock, bound)
+    origin = time_origin(context, context.observed, by_clock, bound)
     if origin is None:
         say("  no t_zero_tick: a clock's observation start does not map to the reference (Part 01 §2.2)")
         return
@@ -1565,7 +1584,23 @@ __all__ = [
     "MATERIALIZERS",
     "TOLERANCE",
     "Context",
+    "bound_for",
     "build",
+    "build_source",
+    "compare_declared_facts",
+    "compare_held_facts",
+    "composed",
+    "declare_withheld",
+    "filled_terms",
+    "grouped_encoding_exceptions",
+    "harvest",
     "materializers",
+    "note_unclaimed",
     "order",
+    "refuse_a_discarded_fact",
+    "resolved_source_cache",
+    "rows_reader",
+    "source_roots",
+    "supplied_to",
+    "time_origin",
 ]

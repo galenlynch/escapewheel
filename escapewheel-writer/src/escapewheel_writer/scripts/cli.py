@@ -4,6 +4,8 @@
   ``prune-cache``, ``declare`` and ``deliver`` to ``escapewheel``.
 - :func:`declaration_protocols` -- Part 12 §3's protocol group, imported only when called.
 - :data:`KINDS` -- the source kinds ``init`` and ``inspect`` can open with nothing but a root.
+- :func:`open_for_inspection` -- one of those kinds, opened with the least that will open it.
+- :func:`import_source_cache` -- the source cache ``import`` supplies a build.
 
 ``deliver`` reads the terms a build supplies from standard input and takes no argument beyond the
 kind, so running it by hand is `escapewheel deliver nwb < supplied.json`.
@@ -48,15 +50,15 @@ def declaration_protocols() -> tuple[str, ...]:
 #: What the recipe declares rather than reading from a source, spelled for a draft's comment.
 SUPPLIES_NOTE = "the recipe supplies core.sessions, core.subjects and core.processing_runs"
 
-#: Kinds `_open` can construct with nothing but a root, which is what `init` and `inspect`
+#: Kinds `open_for_inspection` can construct with nothing but a root, which is what `init` and `inspect`
 #: need. Narrower than the kinds a build accepts: `video` needs a clock, `session` a zone,
 #: and `waveforms` the sorting it describes, so none can be opened on its own.
-#: `test_arbitration.py` refuses a kind here that `_open` would turn away, and one that
+#: `test_arbitration.py` refuses a kind here that `open_for_inspection` would turn away, and one that
 #: `sources.ADAPTERS` does not know.
 KINDS = ("lfp", "nwb", "sorter", "sync")
 
 #: Options an adapter requires that no inspection can supply, drafted so the recipe builds.
-#: `_build_source` pops these; without them a build dies on a KeyError rather than a finding.
+#: `session.build_source` pops these; without them a build dies on a KeyError rather than a finding.
 REQUIRED = {
     "nwb": (("zone", '"America/Los_Angeles"', "the rig's zone, which resolves a naive stamp"),),
 }
@@ -66,7 +68,7 @@ REQUIRED = {
 GUESSED = "  # GUESS: nothing inspected says this; check it"
 
 
-def _open(kind: str, root: Path, session_id: str) -> SourceAdapter:
+def open_for_inspection(kind: str, root: Path, session_id: str) -> SourceAdapter:
     """Construct a source for inspection, with the least configuration that will open it."""
     from ..sources import NWBSource, SorterSource, SyncSource
 
@@ -91,7 +93,7 @@ def _open(kind: str, root: Path, session_id: str) -> SourceAdapter:
 
 def _inspect(args: argparse.Namespace) -> int:
     """Report what one source offers (Part 05 §4.1)."""
-    source = _open(args.kind, args.root, args.session_id)
+    source = open_for_inspection(args.kind, args.root, args.session_id)
     offered = source.offers()
     print(f"{args.kind}  {args.root}")
     for resource, rows in sorted(offered.items()):
@@ -110,7 +112,7 @@ def _init(args: argparse.Namespace) -> int:
         kind, _, root = pair.partition("=")
         if kind not in KINDS or not root:
             raise SystemExit(f"error: --source takes kind=path, with kind one of {', '.join(KINDS)}")
-        offers[kind] = dict(_open(kind, Path(root), args.session_id).offers())
+        offers[kind] = dict(open_for_inspection(kind, Path(root), args.session_id).offers())
 
     lines = [
         "# Drafted by `escapewheel init` from what each source reported holding.",
@@ -296,7 +298,7 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
             extension_contexts=extension_contexts,
             say=say,
             strict=args.strict,
-            source_cache=_source_cache(args, recipe.out),
+            source_cache=import_source_cache(args, recipe.out),
             replaced=replaced,
         )
     except RegistryRejected as exc:
@@ -344,7 +346,7 @@ def _bound_registries(root: Path) -> dict[str, bytes]:
     return {name: gunzip_member((root / bound["path"]).read_bytes()) for name, bound in registries.items()}
 
 
-def _source_cache(args: argparse.Namespace, out: Path) -> Path | None:
+def import_source_cache(args: argparse.Namespace, out: Path) -> Path | None:
     """Return the location `import` supplies as `source_cache`: the one named, else beside the packet.
 
     Beside rather than under `TMPDIR`, which is RAM wherever `/tmp` is a tmpfs, so a cgroup cap
@@ -721,4 +723,4 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     deliver.set_defaults(func=_deliver)
 
 
-__all__ = ["KINDS", "register"]
+__all__ = ["KINDS", "import_source_cache", "open_for_inspection", "register"]

@@ -115,7 +115,7 @@ def test_the_adapters_that_share_a_root_share_its_store(tmp_path, registry):
     theirs.
     """
     from escapewheel_writer.recipe import Recipe
-    from escapewheel_writer.session import Context, _build_source
+    from escapewheel_writer.session import Context, build_source
 
     root = nwbfixture.build(tmp_path)
     text = f"""
@@ -151,6 +151,6 @@ owns = ["core.array_channels"]
         units=[{"device_name": "probeA", "local_unit_label": "0", "unit_id": 1}],
         clocks={PROBE_CLOCK["clock_id"]: PROBE_CLOCK},
     )
-    built = [_build_source(spec, recipe, context) for spec in recipe.sources]
+    built = [build_source(spec, recipe, context) for spec in recipe.sources]
     assert built[0].store is built[1].store
     assert len(context.stores) == 1

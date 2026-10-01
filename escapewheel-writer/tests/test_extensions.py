@@ -223,11 +223,11 @@ def test_a_registered_source_kind_is_built(tmp_path, monkeypatch):
     leaves NWB's own mechanism unused."""
     from escapewheel_writer import session as session_module
     from escapewheel_writer.recipe import SourceSpec
-    from escapewheel_writer.session import Context, _build_source
+    from escapewheel_writer.session import Context, build_source
 
     monkeypatch.setattr("escapewheel_writer.sources.discovered", lambda: {"tasklog": _Registered})
     spec = SourceSpec(kind="tasklog", root=tmp_path, owns=("task.trials",), options={"zone": "utc"})
-    built = _build_source(spec, None, Context(session_id="s001"))
+    built = build_source(spec, None, Context(session_id="s001"))
     assert isinstance(built, _Registered)
     assert built.session_id == "s001" and built.options == {"zone": "utc"}
     assert session_module is not None
@@ -243,12 +243,12 @@ def test_a_builtin_kind_cannot_be_shadowed(tmp_path, monkeypatch):
 
 def test_an_unknown_kind_names_what_is_known(tmp_path, monkeypatch):
     from escapewheel_writer.recipe import SourceSpec
-    from escapewheel_writer.session import Context, _build_source
+    from escapewheel_writer.session import Context, build_source
 
     monkeypatch.setattr("escapewheel_writer.sources.discovered", lambda: {"tasklog": _Registered})
     spec = SourceSpec(kind="nonesuch", root=tmp_path, owns=())
     with pytest.raises(UnknownSourceKind) as refused:
-        _build_source(spec, None, Context(session_id="s001"))
+        build_source(spec, None, Context(session_id="s001"))
     assert refused.value.kind == "nonesuch"
     assert "tasklog" in refused.value.known
 
@@ -551,7 +551,7 @@ def _build_refuses(recipe, registry, monkeypatch):
     def opened(*_args, **_kwargs):
         raise AssertionError("a source was opened")
 
-    monkeypatch.setattr(session, "_build_source", opened)
+    monkeypatch.setattr(session, "build_source", opened)
     with pytest.raises(RecipeUnsound) as refused:
         session.build(recipe, registry)
     assert not (recipe.out / "staging").exists(), "refused before anything was prepared"

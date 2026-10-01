@@ -412,7 +412,7 @@ def test_a_hand_over_with_nowhere_to_go_is_refused_over_a_protocol(tmp_path):
 def test_opaque_location_is_supplied_empty_under_staging_one_per_source(tmp_path):
     """Part 12 §4: supplied empty, since what is found there is bound; apart from `array_location`'s."""
     from escapewheel_writer.recipe import TERMS, SourceSpec
-    from escapewheel_writer.session import Context, _terms
+    from escapewheel_writer.session import Context, filled_terms
 
     assert "opaque_location" in TERMS
     context = Context(session_id="s001")
@@ -420,7 +420,7 @@ def test_opaque_location_is_supplied_empty_under_staging_one_per_source(tmp_path
     stale = context.staging / opaque.DELIVERIES / "clips" / "core.clip"
     stale.mkdir(parents=True)
     locations = {
-        kind: _terms(
+        kind: filled_terms(
             SourceSpec(kind=kind, root=tmp_path, owns=()), None, context, ["opaque_location", "array_location"]
         )
         for kind in ("clips", "more")
@@ -434,11 +434,13 @@ def test_opaque_location_is_supplied_empty_under_staging_one_per_source(tmp_path
 
 def test_opaque_location_is_supplied_only_where_declared(tmp_path):
     from escapewheel_writer.recipe import SourceSpec
-    from escapewheel_writer.session import Context, _terms
+    from escapewheel_writer.session import Context, filled_terms
 
     context = Context(session_id="s001")
     context.staging = tmp_path / "staging"
-    assert "opaque_location" not in _terms(SourceSpec(kind="plain", root=tmp_path, owns=()), None, context, ["root"])
+    assert "opaque_location" not in filled_terms(
+        SourceSpec(kind="plain", root=tmp_path, owns=()), None, context, ["root"]
+    )
     assert context.opaque_locations == {}
 
 

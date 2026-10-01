@@ -665,10 +665,10 @@ def _context(session_id=SESSION, **fields):
 
 def test_a_build_reaches_a_delivered_source_through_the_same_construction(tmp_path, nwb, harp):
     """Which route a source took reaches nothing downstream: what comes back is adapter-shaped."""
-    from escapewheel_writer.session import _build_source
+    from escapewheel_writer.session import build_source
 
     context = _context(reference=harp, workspace=tmp_path / "work")
-    built = _build_source(_spec(tmp_path, nwb), None, context)
+    built = build_source(_spec(tmp_path, nwb), None, context)
     assert isinstance(built, delivery.Delivered)
     assert sorted(built.offers()) == sorted(NWBSource.PRODUCES)
     assert built.offers()["core.electrodes"] == 2
@@ -681,11 +681,11 @@ def test_a_build_reaches_a_delivered_source_through_the_same_construction(tmp_pa
 
 def test_a_shipped_adapter_whose_entry_names_no_protocol_is_served_over_one(tmp_path, nwb, harp):
     """Part 12 §3: a delivery table takes an adapter this build ships out of process."""
-    from escapewheel_writer.session import _build_source
+    from escapewheel_writer.session import build_source
 
     said = []
     context = _context(reference=harp, workspace=tmp_path / "work", say=said.append)
-    built = _build_source(_spec(tmp_path, nwb, protocol=""), None, context)
+    built = build_source(_spec(tmp_path, nwb, protocol=""), None, context)
     assert isinstance(built, delivery.Delivered)
     assert any("over stream-v0.1" in line for line in said), said
 
@@ -732,13 +732,13 @@ def test_a_file_written_outside_the_delivery_root_is_not_a_delivery(tmp_path, su
 def test_an_array_location_is_under_staging_and_supplied_empty(tmp_path):
     """So an array moves into the packet by rename (Part 12 §5), and no leftover binds."""
     from escapewheel_writer.recipe import SourceSpec
-    from escapewheel_writer.session import _terms
+    from escapewheel_writer.session import filled_terms
 
     context = _context(staging=tmp_path / "packet" / "staging")
     stale = context.staging / "deliveries" / "waveforms" / "core.waveform_mean.zarr"
     stale.mkdir(parents=True)
     spec = SourceSpec(kind="waveforms", root=tmp_path, owns=())
-    location = _terms(spec, None, context, ["array_location"])["array_location"]
+    location = filled_terms(spec, None, context, ["array_location"])["array_location"]
     assert location == str(context.staging / "deliveries" / "waveforms")
     assert not stale.exists() and not stale.parent.exists()
 
@@ -757,14 +757,14 @@ def _recipe_declaring(tmp_path, spec, *, subject_id):
 
 def test_a_delivered_source_still_has_its_facts_compared(tmp_path, nwb, harp):
     """Part 05 §3.6's comparison runs on the report's `stated` as it runs on an attribute."""
-    from escapewheel_writer.session import _build_source, _compare_declared_facts
+    from escapewheel_writer.session import build_source, compare_declared_facts
 
     spec = _spec(tmp_path, nwb, report_path=tmp_path / "report.json")
     context = _context(reference=harp, workspace=tmp_path / "work")
-    built = _build_source(spec, None, context)
+    built = build_source(spec, None, context)
     recipe = _recipe_declaring(tmp_path, spec, subject_id="786867")
     with pytest.raises(SourceDefect) as refused:
-        _compare_declared_facts(spec, built, context, recipe)
+        compare_declared_facts(spec, built, context, recipe)
     assert refused.value.code is SourceFault.FACT_DIFFERS
     assert refused.value.where == "subject.subject_id"
 
@@ -775,12 +775,14 @@ def test_the_harvest_reads_a_delivered_source_s_rows(tmp_path, nwb, harp):
     Which is what lets a source be delivered at all: by the time a build harvests, the process
     that produced the rows has exited.
     """
-    from escapewheel_writer.session import _build_source, _harvest, _rows
+    from escapewheel_writer.session import build_source, harvest, rows_reader
 
     spec = _spec(tmp_path, nwb)
     context = _context(reference=harp, workspace=tmp_path / "work")
-    built = _build_source(spec, None, context)
-    _harvest(spec, built, context, _recipe_declaring(tmp_path, spec, subject_id="m001"), _rows(built, built.records()))
+    built = build_source(spec, None, context)
+    harvest(
+        spec, built, context, _recipe_declaring(tmp_path, spec, subject_id="m001"), rows_reader(built, built.records())
+    )
     assert context.event_streams, "the NWB declares the streams a later source's windows cover"
     assert [row["clock_id"] for row in context.clocks.values()] == ["harp"]
 

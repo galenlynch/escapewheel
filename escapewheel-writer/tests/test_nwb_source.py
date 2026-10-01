@@ -14,7 +14,8 @@ from escapewheel_writer.clock import HARP_TICK_RATE_HZ
 from escapewheel_writer.errors import FixedOffsetZone, SourceDefect, SourceFault, UsageError, UsageFault
 from escapewheel_writer.notes import NoteCode, coded, codes
 from escapewheel_writer.sources import NWBSource
-from escapewheel_writer.sources.nwb import _sex, ucum_code
+from escapewheel_writer.sources.nwb import ucum_code
+from escapewheel_writer.sources.values import sex
 from tests import nwbfixture
 
 KIND = "task.trials"
@@ -219,7 +220,7 @@ def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
     the set, so the mapping is what stands between a source's spelling and a Tier 1 failure.
     """
     assert source.records()["core.subjects"][0]["sex"] == "male"
-    assert [_sex(v) for v in ("M", "Male", "male", "F", "Female", "H", "O")] == [
+    assert [sex(v) for v in ("M", "Male", "male", "F", "Female", "H", "O")] == [
         "male",
         "male",
         "male",
@@ -230,7 +231,7 @@ def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
     ]
     # `U` is unknown, and Part 03 §5.6 makes that a null rather than `other`: recording it as `other`
     # asserts a sex the source never claimed, where a null says the source did not say.
-    assert [_sex(v) for v in ("U", "unknown", "", None)] == [None, None, None, None]
+    assert [sex(v) for v in ("U", "unknown", "", None)] == [None, None, None, None]
 
 
 # -- what it will not decode ---------------------------------------------------------

@@ -11,6 +11,7 @@ Serving, in the adapter's process:
   writes.
 - :func:`report_of` -- an adapter's report on its run.
 - :func:`as_table` -- records as a table with every column that any row carries.
+- :func:`protocol_supplies` -- the terms one protocol adds to what a build supplies.
 
 Reading, in the build's process:
 
@@ -586,7 +587,7 @@ def fetch(
     # A Unix socket's address holds about a hundred bytes, fewer than a packet's path may take, so
     # the socket is named in a directory of its own and not in the workspace.
     with tempfile.TemporaryDirectory(prefix="ew-") as socket_home:
-        locations = _protocol_supplies(protocol, workspace, Path(socket_home), report_path)
+        locations = protocol_supplies(protocol, workspace, Path(socket_home), report_path)
         for term in PROTOCOL_TERMS[protocol]:
             # Supplied empty (Part 05 §2): a build reads a delivery by name, so a file an earlier
             # run left would pass for this one's.
@@ -731,7 +732,7 @@ def _tail(notes: Sequence[str]) -> str:
     return "\n  " + "\n  ".join(notes) if notes else ""
 
 
-def _protocol_supplies(protocol: str, workspace: Path, socket_home: Path, report_path: Path | None) -> dict[str, str]:
+def protocol_supplies(protocol: str, workspace: Path, socket_home: Path, report_path: Path | None) -> dict[str, str]:
     """Return the terms this protocol requires, which an adapter may not declare and a build supplies."""
     supplies = {}
     for term in PROTOCOL_TERMS[protocol]:
@@ -981,6 +982,7 @@ __all__ = [
     "fetch",
     "infers",
     "offered",
+    "protocol_supplies",
     "report_of",
     "serve",
 ]

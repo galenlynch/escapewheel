@@ -9,7 +9,7 @@ import pytest
 from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.notes import NoteCode, coded, codes
 from escapewheel_writer.recipe import SourceSpec
-from escapewheel_writer.session import Context, _composed, _harvest
+from escapewheel_writer.session import Context, composed, harvest
 
 BEGAN = datetime(2025, 4, 10, 0, 25, 12, tzinfo=UTC)
 ENDED = datetime(2025, 4, 10, 2, 38, 44, tzinfo=UTC)
@@ -42,7 +42,7 @@ class Stub:
 
 
 def _recipe(session=None, subject=None, overrides=None):
-    """The parts of a Recipe `_harvest` reads, which a whole one would only pad out."""
+    """The parts of a Recipe `harvest` reads, which a whole one would only pad out."""
     session = {"session_id": "s001", **(session or {})}
     subject = subject or {}
     return SimpleNamespace(
@@ -82,13 +82,13 @@ def recipe_for(subject_id, **overrides):
 
 def test_both_bounds_come_from_the_windows():
     context = _context()
-    _harvest(Spec(), Stub(), context, recipe_with(), _no_rows)
+    harvest(Spec(), Stub(), context, recipe_with(), _no_rows)
     assert context.session_extra == {"session_start_time": BEGAN, "session_end_time": ENDED}
 
 
 def test_a_recipe_that_agrees_says_nothing():
     source = Stub()
-    _harvest(Spec(), source, _context(), recipe_with(session_start_time="2025-04-10T00:25:12Z"), _no_rows)
+    harvest(Spec(), source, _context(), recipe_with(session_start_time="2025-04-10T00:25:12Z"), _no_rows)
     assert source.notes == []
 
 
@@ -96,7 +96,7 @@ def test_a_recipe_that_disagrees_is_reported_and_overridden():
     """A transcription of the same fact, differing, is worth hearing about."""
     source = Stub()
     context = _context()
-    _harvest(Spec(), source, context, recipe_with(session_start_time="2025-04-10T00:30:00Z"), _no_rows)
+    harvest(Spec(), source, context, recipe_with(session_start_time="2025-04-10T00:30:00Z"), _no_rows)
     assert context.session_extra["session_start_time"] == BEGAN
     assert codes(source.notes) == [NoteCode.SOURCE_VALUE_USED]
 
@@ -108,14 +108,14 @@ def test_a_subject_the_source_contradicts_is_refused():
     """Part 05 §3.6. One recipe declared 786867 against a session stating 776259, and every packet
     built from it asserted 6,781 units from an animal that was never in the rig."""
     with pytest.raises(SourceDefect) as refused:
-        _harvest(Spec(), Stub(subject_id="776259"), _context(), recipe_for("786867"), _no_rows)
+        harvest(Spec(), Stub(subject_id="776259"), _context(), recipe_for("786867"), _no_rows)
     assert refused.value.code is SourceFault.FACT_DIFFERS
     assert refused.value.where == "subject.subject_id"
 
 
 def test_a_subject_the_source_agrees_with_passes_silently():
     source = Stub(subject_id="776259")
-    _harvest(Spec(), source, _context(), recipe_for("776259"), _no_rows)
+    harvest(Spec(), source, _context(), recipe_for("776259"), _no_rows)
     assert [n for n in source.notes if "subject" in n] == []
 
 
@@ -123,7 +123,7 @@ def test_a_source_stating_no_subject_leaves_the_declaration_unchecked():
     """Part 05 §3.6: silence is a fact about the source, not a disagreement -- but it is reported,
     so a build log tells a verified subject from an asserted one."""
     source = Stub(subject_id=None)
-    _harvest(Spec(), source, _context(), recipe_for("776259"), _no_rows)
+    harvest(Spec(), source, _context(), recipe_for("776259"), _no_rows)
     assert NoteCode.FACT_UNCHECKED in codes(source.notes)
 
 
@@ -131,7 +131,7 @@ def test_an_override_lets_the_recipe_win_and_says_why():
     """Part 05 §3.6. The refusal is what an override lifts, and the reason is what it leaves behind."""
     source = Stub(subject_id="776259")
     recipe = recipe_for("786867", **{"subject.subject_id": "the session names the wrong animal"})
-    _harvest(Spec(), source, _context(), recipe, _no_rows)
+    harvest(Spec(), source, _context(), recipe, _no_rows)
     (overridden,) = coded(source.notes, NoteCode.FACT_OVERRIDDEN)
     assert "the session names the wrong animal" in overridden
 
@@ -140,14 +140,14 @@ def test_an_override_that_changes_nothing_is_reported():
     """Part 05 §3.6: a stale override costs a line of the log, not a build."""
     source = Stub(subject_id="776259")
     recipe = recipe_for("776259", **{"subject.subject_id": "no longer needed"})
-    _harvest(Spec(), source, _context(), recipe, _no_rows)
+    harvest(Spec(), source, _context(), recipe, _no_rows)
     assert NoteCode.OVERRIDE_UNNEEDED in codes(source.notes)
 
 
 def test_a_number_and_a_string_naming_one_subject_agree():
     """Part 05 §3.6: `session.json` states 776259 as a number; comparing what was written would refuse."""
     source = Stub(subject_id=776259)
-    _harvest(Spec(), source, _context(), recipe_for("776259"), _no_rows)
+    harvest(Spec(), source, _context(), recipe_for("776259"), _no_rows)
     assert source.notes == []
 
 
@@ -159,7 +159,7 @@ WATCHING = SourceSpec(kind="session", root="session.json", owns=("core.event_str
 def _watched(window, streams):
     context = Context(session_id="s1", event_streams=list(streams))
     context.windows["session"] = window
-    return _composed(WATCHING, context).get("core.event_stream_observation_intervals", [])
+    return composed(WATCHING, context).get("core.event_stream_observation_intervals", [])
 
 
 def test_every_stream_shares_the_window_its_source_declared():

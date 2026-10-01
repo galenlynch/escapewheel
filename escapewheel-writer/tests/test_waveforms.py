@@ -323,7 +323,7 @@ def test_a_unit_the_build_harvested_resolves_under_a_prefix(tmp_path: Path, pref
     """
     from types import SimpleNamespace
 
-    from escapewheel_writer.session import Context, _harvest, _rows
+    from escapewheel_writer.session import Context, harvest, rows_reader
     from escapewheel_writer.sources.sorter import SorterSource
     from tests import sorterfixture
 
@@ -336,7 +336,7 @@ def test_a_unit_the_build_harvested_resolves_under_a_prefix(tmp_path: Path, pref
     sorter = SorterSource(root, session_id="s1", prefix=prefix)
     context = Context(session_id="s1")
     recipe = SimpleNamespace(session={}, subject={}, overrides={}, declared_facts={})
-    _harvest(SimpleNamespace(kind="sorter"), sorter, context, recipe, _rows(sorter, sorter.records()))
+    harvest(SimpleNamespace(kind="sorter"), sorter, context, recipe, rows_reader(sorter, sorter.records()))
     minted = {row["unit_id"] for row in sorter.units()}
     assert {row["unit_id"] for row in context.units} == minted
 
