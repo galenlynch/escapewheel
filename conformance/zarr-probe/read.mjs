@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const version = JSON.parse(readFileSync(join(here, "node_modules/zarrita/package.json"))).version;
 console.log("zarrita", version, "node", process.version);
-for (const set of ["arrays", "more", "writer_arrays"]) {
+for (const set of ["arrays", "more", "writer_arrays", "endian"]) {
   const index = join(here, set, "expected.json");
   if (!existsSync(index)) continue;
   const expected = JSON.parse(readFileSync(index));

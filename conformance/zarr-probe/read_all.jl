@@ -3,7 +3,7 @@ using Zarr
 
 # Each set's expected.json maps array to sum, except write.py's, which holds one "sum" for all.
 println("Zarr.jl ", pkgversion(Zarr), "  julia ", VERSION)
-for set in ("arrays", "more", "writer_arrays")
+for set in ("arrays", "more", "writer_arrays", "endian")
     index = joinpath(@__DIR__, set, "expected.json")
     isfile(index) || continue
     text = read(index, String)

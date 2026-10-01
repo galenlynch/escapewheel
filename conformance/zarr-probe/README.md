@@ -6,16 +6,24 @@ Produces the evidence cited in
 which [R137](../../revisions/accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md)
 raised the v3 reader floor on.
 
-Three writers produce array sets, each with an `expected.json` of element sums: `write.py` the
-floor and v2 arrays under `arrays/`, `write_more.py` Blosc shuffle modes and codecs and sharded
-pipelines under `more/`, and `write_writer.py` the reference writer's default, sharded, and delta
-outputs under `writer_arrays/`. Five readers check every set by int64 element sum. Re-run them
+Four writers produce array sets, each with an `expected.json` of element sums:
+
+- `write.py` writes the floor and v2 arrays under `arrays/`;
+- `write_more.py` writes Blosc shuffle modes and codecs and sharded pipelines under `more/`;
+- `write_writer.py` writes the reference writer's default, sharded, and delta outputs under
+  `writer_arrays/`;
+- `write_endian.py` writes big-endian arrays under `endian/`, four as v3 and one as v2. The sum of
+  their unswapped bytes differs from the sum of their values, so a reader that ignores the declared
+  byte order reports a wrong sum.
+
+Five readers check every set by int64 element sum. Re-run them
 against newer library versions before trusting the floor. From this directory:
 
 ```bash
 uv run --no-project --with 'zarr>=3' --with numcodecs --with zstandard python write.py
 uv run --no-project --with 'zarr>=3' --with numcodecs --with zstandard python write_more.py
 uv run --project ../../escapewheel-writer python write_writer.py
+uv run --no-project --with 'zarr>=3' --with numcodecs --with zstandard python write_endian.py
 
 uv run --no-project --with 'zarr>=3' --with numcodecs --with zstandard python read_zarr_python.py
 uv run --no-project --with 'zarr>=3' --with tensorstore python read_tensorstore.py

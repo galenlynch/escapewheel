@@ -4,7 +4,7 @@ import json
 import pathlib
 
 HERE = pathlib.Path(__file__).parent
-SETS = ("arrays", "more", "writer_arrays")
+SETS = ("arrays", "more", "writer_arrays", "endian")
 
 
 def arrays():

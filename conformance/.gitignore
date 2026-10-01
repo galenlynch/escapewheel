@@ -2,6 +2,7 @@
 spec-sweep/tables02.json
 zarr-probe/arrays/
 zarr-probe/more/
+zarr-probe/endian/
 zarr-probe/writer_arrays/
 zarr-probe/node_modules/
 zarr-probe/realistic/
