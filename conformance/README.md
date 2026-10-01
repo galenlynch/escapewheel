@@ -8,7 +8,7 @@ specification's own tree cannot answer alone. Its directories are of two kinds.
 | directory | checks |
 |---|---|
 | `registries/` | the registries against the v0.1 Part 02 table ledger in `spec-sweep/tables.py`, and every Tier 2 rule executed by an engine |
-| `rule-language/` | the Tier 2 rule language against its vectors, and every shipped rule against typed empty relations |
+| `rule-language/` | the Tier 2 rule language against its vectors, and every shipped rule against the language's static profile |
 | `unit-identity/` | packet-local unit identity across the core and extension registries |
 | `specification-framework/` | that the framework checks reject conflicting declarations and projections |
 | `registry-contract/` | R126's registry migration against its frozen pre-migration side |

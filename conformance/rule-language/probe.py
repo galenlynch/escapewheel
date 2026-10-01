@@ -141,7 +141,10 @@ def profile_defects() -> list[str]:
 
 
 def shipped_rule_defects() -> list[str]:
-    """Check and execute every shipped rule against typed empty relations."""
+    """Check every shipped rule against the profile and the declarations it may name.
+
+    Executing a shipped rule exercises no vector, so `conformance/registries/check.py` does it.
+    """
     core = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
     documents = [
         core,
@@ -151,37 +154,20 @@ def shipped_rule_defects() -> list[str]:
             for path in sorted((ROOT / directory).glob("*.json"))
         ],
     ]
-    connection = duckdb.connect()
     defects: list[str] = []
-    tables = [
-        {
-            name: declaration["table"]
-            for name, declaration in document["resources"].items()
-            if declaration["kind"] == "table"
-        }
-        for document in documents
-    ]
-    try:
-        for namespace in sorted({name.split(".", 1)[0] for document in tables for name in document}):
-            connection.sql(f"CREATE SCHEMA {namespace}")
-        for document in tables:
-            for resource, table in document.items():
-                columns = ", ".join(f'"{c["name"]}" {DDL[c["type"]]}' for c in table["columns"])
-                connection.sql(f"CREATE TABLE {resource} ({columns})")
-        count = 0
-        for source, document in zip(documents, tables, strict=True):
-            for table in document.values():
-                for rule in table["rules"]:
-                    count += 1
-                    try:
-                        check_rule(rule["sql"], source, core_resources=core)
-                        connection.sql(rule["sql"]).fetchall()
-                    except Exception as exc:
-                        defects.append(f"{rule['id']}: {str(exc).splitlines()[0]}")
-        if count != 139:
-            defects.append(f"shipped rule count is {count}, expected 139")
-    finally:
-        connection.close()
+    count = 0
+    for document in documents:
+        for declaration in document["resources"].values():
+            if declaration["kind"] != "table":
+                continue
+            for rule in declaration["table"]["rules"]:
+                count += 1
+                try:
+                    check_rule(rule["sql"], document, core_resources=core)
+                except Exception as exc:
+                    defects.append(f"{rule['id']}: {str(exc).splitlines()[0]}")
+    if count != 139:
+        defects.append(f"shipped rule count is {count}, expected 139")
     return defects
 
 
@@ -190,7 +176,7 @@ def main() -> int:
     groups = {
         "incorporated profile and anchors": profile_defects(),
         "machine-readable rule-language vectors": vector_defects(),
-        "139 shipped rules statically check, bind, and execute empty": shipped_rule_defects(),
+        "139 shipped rules statically check and bind": shipped_rule_defects(),
     }
     for label, defects in groups.items():
         print(f"{'FAIL' if defects else 'ok  '}  {label}" + (f" ({len(defects)})" if defects else ""))
