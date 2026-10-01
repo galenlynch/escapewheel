@@ -13,9 +13,12 @@ bind; this rendering exposes the generated registry content for inspection.
 import argparse
 import json
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
+
+from specdoc import GenerationError
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = HERE.parent / "artifacts/logical_schemas.json"
@@ -204,7 +207,7 @@ def fill(text: str, filled: dict[str, str]) -> str:
     """Replace each generated region's body, leaving the prose around it untouched."""
     named = {name for _, name, _ in REGION.findall(text)}
     if named != set(filled):
-        raise SystemExit(f"README regions {sorted(named)} do not match what render.py fills {sorted(filled)}")
+        raise GenerationError(f"README regions {sorted(named)} do not match what render.py fills {sorted(filled)}")
     return REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", text)
 
 
@@ -223,16 +226,20 @@ def main() -> tuple[Path, Path]:
 def _run(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--check", action="store_true", help="write nothing, and fail where a rendering is stale")
-    if parser.parse_args(argv).check:
-        rendered = outputs(json.loads(REGISTRY.read_text()))
-        stale = [path for path, text in rendered.items() if not path.is_file() or path.read_text() != text]
-        for path in stale:
-            print(f"{path.name} is stale; run `python build.py`")
-        if not stale:
-            print(f"{', '.join(path.name for path in rendered)} current")
-        return 1 if stale else 0
-    for path in main():
-        print(f"wrote {path.name}: {len(path.read_text().splitlines())} lines")
+    try:
+        if parser.parse_args(argv).check:
+            rendered = outputs(json.loads(REGISTRY.read_text()))
+            stale = [path for path, text in rendered.items() if not path.is_file() or path.read_text() != text]
+            for path in stale:
+                print(f"{path.name} is stale; run `python build.py`")
+            if not stale:
+                print(f"{', '.join(path.name for path in rendered)} current")
+            return 1 if stale else 0
+        for path in main():
+            print(f"wrote {path.name}: {len(path.read_text().splitlines())} lines")
+    except GenerationError as error:
+        print(error, file=sys.stderr)
+        return 1
     return 0
 
 

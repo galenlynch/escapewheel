@@ -11,11 +11,13 @@ nothing here writes outside it.
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import assemble
 import render
 from canonical import dumps
+from specdoc import GenerationError
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
@@ -256,20 +258,24 @@ def main(argv: list[str] | None = None) -> int:
     """Write every output, or with `--check` report each stale one and write nothing."""
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument("--check", action="store_true", help="write nothing, and fail where an output is stale")
-    if parser.parse_args(argv).check:
-        paths = stale()
-        for path in paths:
-            print(f"{path.relative_to(TREE)} is stale; run `python build.py`")
-        if not paths:
-            print("every file build.py writes is current")
-        return 1 if paths else 0
+    try:
+        if parser.parse_args(argv).check:
+            paths = stale()
+            for path in paths:
+                print(f"{path.relative_to(TREE)} is stale; run `python build.py`")
+            if not paths:
+                print("every file build.py writes is current")
+            return 1 if paths else 0
 
-    for path in assemble.main():
-        print(f"wrote {path.relative_to(TREE)}")
-    # Rendered here rather than by hand, so the readable form cannot drift from the content.
-    print(f"wrote {', '.join(p.name for p in render.main())}")
-    print(f"wrote {render_physical_profile().relative_to(TREE)}")
-    print(f"wrote {', '.join(str(p.relative_to(TREE)) for p in render_manifest())}")
+        for path in assemble.main():
+            print(f"wrote {path.relative_to(TREE)}")
+        # Rendered here rather than by hand, so the readable form cannot drift from the content.
+        print(f"wrote {', '.join(p.name for p in render.main())}")
+        print(f"wrote {render_physical_profile().relative_to(TREE)}")
+        print(f"wrote {', '.join(str(p.relative_to(TREE)) for p in render_manifest())}")
+    except GenerationError as error:
+        print(error, file=sys.stderr)
+        return 1
     return 0
 
 

@@ -77,16 +77,22 @@ def _check_counts() -> tuple[int, int]:
     return per_document, calls(ast.parse((ROOT / "spec/tools/check.py").read_text()), "check") + loop
 
 
+def _ledger():
+    """Return the clause ledger's module, imported from where it sits."""
+    if (revisions := str(ROOT / "revisions")) not in sys.path:
+        sys.path.insert(0, revisions)
+    import ledger
+
+    return ledger
+
+
 def _clause_count() -> int:
     """Decision clauses across the accepted revisions, from the ledger that disposes of them.
 
     Imported rather than recounted: what counts as a clause is `ledger.py`'s judgement, and a
     second implementation here would be a second answer.
     """
-    sys.path.insert(0, str(ROOT / "revisions"))
-    import ledger
-
-    return len(ledger.clauses())
+    return len(_ledger().clauses())
 
 
 def _corpus_count() -> int:
@@ -188,7 +194,11 @@ def facts() -> dict[str, str]:
 
 def main() -> int:
     """Fill every marked region, reporting which documents changed."""
-    filled = facts()
+    try:
+        filled = facts()
+    except _ledger().LedgerError as error:
+        print(error, file=sys.stderr)
+        return 1
     changed, found = [], documents()
     for path in found:
         name = str(path.relative_to(ROOT))

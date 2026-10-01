@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from canonical import canonical, dumps
+from specdoc import GenerationError
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
@@ -66,7 +67,7 @@ def expand(template: str, resource: str, call: dict, key: list[str]) -> list[dic
         Rules in the same shape a written one has.
     """
     if template != "interval":
-        raise SystemExit(f"{resource}: unknown rule template {template!r}")
+        raise GenerationError(f"{resource}: unknown rule template {template!r}")
 
     start, stop = call["start"], call["stop"]
     report = ", ".join(dict.fromkeys([*key, start, stop]))
@@ -129,7 +130,7 @@ def _column(resource: str, column: dict[str, Any]) -> tuple[dict, dict | None]:
             "resource_columns": [name],
         }
     if not {"resource", "column"} <= set(target) <= {"resource", "column", "specialises"}:
-        raise SystemExit(
+        raise GenerationError(
             f"{resource}.{name}: a column's references is a resource ID, or a table of "
             f"`resource`, `column` and optionally `specialises`, not {sorted(target)}"
         )
@@ -153,7 +154,7 @@ def _table(resource: str, source: dict[str, Any]) -> dict[str, Any]:
             references.append(reference)
     for reference in source.get("references", []):
         if len(reference["columns"]) < 2:
-            raise SystemExit(
+            raise GenerationError(
                 f"{resource}: a single-column reference is written on its column, "
                 f"not as a [[references]] entry ({reference['columns']})"
             )
@@ -180,7 +181,7 @@ def _resource(path: Path) -> dict[str, Any]:
     if source.get("kind") == "table":
         resource["table"] = _table(path.stem, source)
     elif written := sorted(set(source) & set(TABLE)):
-        raise SystemExit(f"{path.name}: a {source.get('kind')} resource declares {written}")
+        raise GenerationError(f"{path.name}: a {source.get('kind')} resource declares {written}")
     return resource
 
 
@@ -203,5 +204,8 @@ def main(targets: dict[Path, Path] | None = None) -> list[Path]:
 
 
 if __name__ == "__main__":
-    for path in main():
-        print(f"wrote {path.relative_to(TREE)}")
+    try:
+        for path in main():
+            print(f"wrote {path.relative_to(TREE)}")
+    except GenerationError as error:
+        raise SystemExit(str(error)) from None

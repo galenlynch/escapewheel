@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from specdoc import GenerationError
+
 HERE = Path(__file__).resolve().parent
 _SCHEMA = json.loads((HERE.parent / "artifacts/registry.schema.json").read_text())
 
@@ -36,7 +38,7 @@ def _ordered(value: dict[str, Any], kind: str, where: str) -> dict[str, Any]:
     """Return `value` with its keys in the meta-schema's order for `kind`."""
     order = ORDER[kind]
     if unknown := sorted(set(value) - set(order)):
-        raise SystemExit(f"{where}: {kind} keys the meta-schema does not declare: {unknown}")
+        raise GenerationError(f"{where}: {kind} keys the meta-schema does not declare: {unknown}")
     return {key: value[key] for key in order if key in value}
 
 

@@ -24,6 +24,7 @@ import assemble
 import conventions
 from canonical import dumps
 from checkers.registry_document import check_registry_context_bytes
+from specdoc import GenerationError
 
 RULE_LANGUAGE = "escapewheel-rule-sql-v0.2"
 
@@ -77,14 +78,18 @@ def main() -> int:
     parser.add_argument("directories", nargs="+", type=Path)
     args = parser.parse_args()
     directories = [path.resolve() for path in args.directories]
-    if args.action == "build":
-        for directory in directories:
-            for path in assemble.main(assemble.extension_sources(directory)):
-                print(f"wrote {path.relative_to(ROOT)}")
-        return 0
-    core = check_registry_context_bytes((TREE / "artifacts/logical_schemas.json").read_bytes())
-    meta_id = json.loads((TREE / "artifacts/registry.schema.json").read_text())["$id"]
-    failures = [failure for directory in directories for failure in _check(directory, core, meta_id)]
+    try:
+        if args.action == "build":
+            for directory in directories:
+                for path in assemble.main(assemble.extension_sources(directory)):
+                    print(f"wrote {path.relative_to(ROOT)}")
+            return 0
+        core = check_registry_context_bytes((TREE / "artifacts/logical_schemas.json").read_bytes())
+        meta_id = json.loads((TREE / "artifacts/registry.schema.json").read_text())["$id"]
+        failures = [failure for directory in directories for failure in _check(directory, core, meta_id)]
+    except GenerationError as error:
+        print(error, file=sys.stderr)
+        return 1
     for failure in failures:
         print(f"FAIL  {failure}")
     return 1 if failures else 0

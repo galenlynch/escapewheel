@@ -135,5 +135,17 @@ class ProcessSemanticsTests(unittest.TestCase):
         self.assertEqual([site for site in sites if not site.startswith("spec/parts/07_")], [])
 
 
+class LedgerErrorTests(unittest.TestCase):
+    """An unreadable ledger raises the ledger's own error, which an importer can catch."""
+
+    def test_malformed_ledger_names_the_file(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch) / "applied.toml"
+            path.write_text("[clause\n")
+            with mock.patch.object(ledger, "LEDGER", path), self.assertRaises(ledger.LedgerError) as raised:
+                ledger.recorded()
+        self.assertTrue(str(raised.exception).startswith("applied.toml: "))
+
+
 if __name__ == "__main__":
     unittest.main()

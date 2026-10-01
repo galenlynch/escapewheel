@@ -37,6 +37,11 @@ REGISTRY_ROOTS = ("spec/artifacts", "extensions", "escapewheel-aind/extensions")
 
 DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 
+
+class LedgerError(Exception):
+    """An accepted record or a ledger file no clause set can be read from; the message names it."""
+
+
 #: `## 3.` and `### 3.1 ` alike, which is every section a part declares.
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
 DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
@@ -243,10 +248,10 @@ def clauses() -> dict[str, str]:
             }
             named = DECLARED_SECTION.findall(declared.group(1))
             if not named:
-                raise SystemExit(f"{path.name}: `Decision clauses` enumerates no section")
+                raise LedgerError(f"{path.name}: `Decision clauses` enumerates no section")
             for section in named:
                 if section not in titles:
-                    raise SystemExit(f"{path.name}: `Decision clauses` names absent §{section}")
+                    raise LedgerError(f"{path.name}: `Decision clauses` names absent §{section}")
                 found[f"R{number} §{section}"] = titles[section]
             continue
         # Every section from 2 onward, at either depth. Section 1 is Motivation by convention;
@@ -286,7 +291,7 @@ def recorded() -> dict[str, dict[str, str]]:
     except tomllib.TOMLDecodeError as exc:
         # Appending an entry that already exists is the usual cause, and tomllib's traceback
         # says so only in its last line.
-        raise SystemExit(f"{LEDGER.name}: {exc}") from None
+        raise LedgerError(f"{LEDGER.name}: {exc}") from None
 
 
 def main() -> int:
@@ -355,4 +360,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        status = main()
+    except LedgerError as error:
+        raise SystemExit(str(error)) from None
+    raise SystemExit(status)

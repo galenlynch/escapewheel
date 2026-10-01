@@ -5,6 +5,7 @@ frozen v0.1 documents, and executing the Tier 2 rules, lie outside it.
 """
 
 import json
+import sys
 import tomllib
 from collections import Counter
 from collections.abc import Callable, Iterable
@@ -20,6 +21,7 @@ from canonical import dumps
 from checkers.descriptor import check_physical_profile, override_errors
 from checkers.registry_document import check_registry_context_bytes
 from checkers.rule_language import RuleProfileError, check_rule
+from specdoc import GenerationError
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
@@ -405,13 +407,17 @@ def main() -> int:
     core = tables(registry)
     check = Checks()
 
-    identity_checks(check, registry_bytes, registry)
-    profile_checks(check, registry, core)
-    source_checks(check, core)
-    convention_checks(check, core)
-    projection_checks(check, registry)
-    schema_checks(check, registry)
-    rule_checks(check, registry, core)
+    try:
+        identity_checks(check, registry_bytes, registry)
+        profile_checks(check, registry, core)
+        source_checks(check, core)
+        convention_checks(check, core)
+        projection_checks(check, registry)
+        schema_checks(check, registry)
+        rule_checks(check, registry, core)
+    except GenerationError as error:
+        print(error, file=sys.stderr)
+        return 1
 
     print(
         f"\n{len(core)} tables, {sum(len(t['columns']) for t in core.values())} columns, "

@@ -28,6 +28,8 @@ import re
 import sys
 from pathlib import Path
 
+from specdoc import GenerationError
+
 HERE = Path(__file__).resolve().parent
 REGISTRY = HERE.parent / "artifacts" / "logical_schemas.json"
 
@@ -44,7 +46,7 @@ def table(resource: str, tables: dict) -> str:
     question needs all three, and the registry is the only place they agree.
     """
     if resource not in tables:
-        raise SystemExit(f"columns.py: {resource} is not a resource of the registry")
+        raise GenerationError(f"columns.py: {resource} is not a resource of the registry")
     rows = "\n".join(
         f"| `{c['name']}` | `{c['type']}` | {c['presence']} | {c['description']} |" for c in tables[resource]["columns"]
     )
@@ -68,16 +70,20 @@ def main() -> int:
         if declaration["kind"] == "table"
     }
     stale, written = [], 0
-    for path in sorted((HERE.parent / "parts").glob("[0-9][0-9]_*.md")):
-        old = path.read_text()
-        new = render(old, tables)
-        if new == old:
-            continue
-        if args.check:
-            stale.append(path.name)
-        else:
-            path.write_text(new)
-            written += 1
+    try:
+        for path in sorted((HERE.parent / "parts").glob("[0-9][0-9]_*.md")):
+            old = path.read_text()
+            new = render(old, tables)
+            if new == old:
+                continue
+            if args.check:
+                stale.append(path.name)
+            else:
+                path.write_text(new)
+                written += 1
+    except GenerationError as error:
+        print(error, file=sys.stderr)
+        return 1
     if stale:
         print("stale column tables: " + ", ".join(stale) + " — run `python columns.py`")
         return 1
