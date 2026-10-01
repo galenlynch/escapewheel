@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 3 proposals and 3 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 2 proposals and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -138,7 +138,7 @@ be fixed without a revision:
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Three drafts await acceptance and three proposals await promotion
+## 3a. Four drafts await acceptance and two proposals await promotion
 
 The drafts are under `revisions/drafts/` and the proposals under `revisions/proposals/`.
 
@@ -165,8 +165,9 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
   state the clause. Three questions are open in it, the first being whether to pay for the audit
   that reading implies. No code waits on it.
 - **The ledger resolves a superseded entry's successor and keeps no ratchet.** A process-domain
-  proposal split from the one above: `by` becomes a required, resolved field, R107 §3.5's entry is
-  corrected, and the ratchet that rewrites `applied.toml` is removed. Ready to promote.
+  draft, promoted 2026-10-01 and not accepted, split from the proposal above: `by` becomes a
+  required field naming one later accepted revision, R107 §3.5's entry is corrected, and the
+  ratchet that rewrites `applied.toml` is removed.
 - **A delivery carries the compensations its adapter applied.** A draft, promoted 2026-10-01 and
   not accepted, for the defect REFACTOR.md §4 lists. A delivery may carry a table under the
   reserved resource identifier `compensations`, whose rows state an identifier, a defect, an action

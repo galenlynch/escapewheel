@@ -23,8 +23,8 @@ The revision guide says that the ledger claims no semantic fidelity and leaves f
 That review happens once, when the clause is incorporated, and nothing records which text the
 reviewer took to state the clause.
 
-A companion proposal, `the-ledger-resolves-a-superseded-entrys-successor-and-keeps-no-ratchet.md`,
-carries two smaller defects of the same tool. Neither proposal depends on the other.
+A draft, `the-ledger-resolves-a-superseded-entrys-successor-and-keeps-no-ratchet.md`, carries two
+smaller defects of the same tool. Neither document depends on the other.
 
 ## 2. Evidence
 
