@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .errors import ClockMismatch
+from .errors import ClockMismatch, NotDeclared
 from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -54,7 +54,7 @@ def _clock(packet: Any, event_type: str, session_id: int | None) -> int:
         session_id=session_id,
     )
     if not streams.num_rows:
-        raise KeyError(f"no {event_type!r} stream in {STREAMS}")
+        raise NotDeclared(f"no {event_type!r} stream in {STREAMS}")
     on = sorted({v for v in streams.column("clock_id").unique().to_pylist() if v is not None})
     spikes = packet.table(SPIKES, columns=["clock_id"], session_id=session_id).column("clock_id").unique().to_pylist()
     reference = sorted({v for v in spikes if v is not None})
@@ -176,7 +176,7 @@ def aligned_spikes(
     ------
     ClockMismatch
         If the events and the spikes are not counted on the same clock.
-    KeyError
+    NotDeclared
         If the packet holds no events of this type.
 
     Examples

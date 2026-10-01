@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_reader import declared, kinds, open_packet, resolved, specialised, unresolved
+from escapewheel_reader import NotDeclared, declared, kinds, open_packet, resolved, specialised, unresolved
 
 from .conftest import install_registry, read_registry
 
@@ -129,17 +129,17 @@ def test_a_kind_declaring_no_specialising_reference_does_not_resolve(packet_root
     rows = read_registry(packet_root)
     del rows["resources"]["task.trials"]["table"]["references"][1]["specialises"]
     install_registry(packet_root, rows)
-    with pytest.raises(LookupError, match="declares no specialising reference"):
+    with pytest.raises(NotDeclared, match="declares no specialising reference"):
         resolved(open_packet(packet_root), "core.intervals", "task.trials")
 
 
 def test_naming_a_kind_the_packet_lacks_says_so(packet_root):
-    with pytest.raises(LookupError, match="does not hold"):
+    with pytest.raises(NotDeclared, match="does not hold"):
         resolved(open_packet(packet_root), "core.intervals", "task.trials")
 
 
 def test_a_table_with_no_discriminator_says_so(packet_root):
-    with pytest.raises(LookupError, match="declares no discriminator"):
+    with pytest.raises(NotDeclared, match="declares no discriminator"):
         kinds(open_packet(packet_root), "core.units")
 
 

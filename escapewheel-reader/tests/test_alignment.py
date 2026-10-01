@@ -14,7 +14,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_reader import ClockMismatch, open_packet
+from escapewheel_reader import ClockMismatch, NotDeclared, open_packet
 from escapewheel_reader.alignment import (
     aligned_spikes,
     assigned_spikes,
@@ -162,8 +162,8 @@ def test_an_unknown_assignment_is_refused(aligned_packet):
 
 
 def test_an_absent_event_type_is_a_lookup_failure(aligned_packet):
-    """Nothing to align to is a missing key, not an empty result."""
-    with pytest.raises(KeyError, match="no 'lick' stream"):
+    """Nothing to align to is a lookup failure, not an empty result."""
+    with pytest.raises(NotDeclared, match="no 'lick' stream"):
         aligned_spikes(aligned_packet, "lick", 30)
 
 

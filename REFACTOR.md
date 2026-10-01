@@ -130,7 +130,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
       declared from.
 - [x] Give `UnresolvableAxis` a reason code. It is raised at 20 sites, for causes that tests tell
       apart by text.
-- [ ] Replace the deliberate `LookupError` and `KeyError` raises with `NotDeclared(PacketError,
+- [x] Replace the deliberate `LookupError` and `KeyError` raises with `NotDeclared(PacketError,
       LookupError)`.
 
 ### 5.2 Validator
@@ -320,5 +320,12 @@ plan left open, as it was made.
 - `AxisFault` has sixteen members for the twenty raise sites of `UnresolvableAxis`. Sites that
   report the same fault in two places share a member: a missing catalog row, an absent label
   table, a bad coordinate array, and an incomplete origin form.
+- `NotDeclared` replaces twelve raises: a stream of an event type, a run for a scope, a clock's
+  tick rate, a table's support, the discriminator lookups, and a reference between two tables,
+  which was a `ResourceNotFoundError` naming no resource. It is no `KeyError`, so a caller that
+  caught `KeyError` from `aligned_spikes`, `preferred_run` or `observed_seconds` catches
+  `LookupError` or `NotDeclared` instead; no package in the repository did.
+- `Dataset.table` raises `ResourceNotFoundError` with `resource_id` where no packet holds the
+  resource, as `Packet.resource` does, in place of a `KeyError`.
 - `escapewheel_writer.materialize` no longer exports `NotAligned`. The reader's `errors` module
   is its one home, as §2 drops old import paths.

@@ -20,7 +20,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from . import clocks
-from .errors import NotAligned, ResourceNotFoundError
+from .errors import NotAligned, NotDeclared
 from .observation import attach_support, unit_windows
 from .runs import check as _check_runs
 
@@ -337,7 +337,7 @@ def _reference_columns(packet: Packet, resource_id: str, parent: str) -> list[st
     for reference in _references(packet, resource_id):
         if reference["resource"] == parent:
             return list(reference["columns"])
-    raise ResourceNotFoundError(f"the registry declares no reference from {resource_id} to {parent}")
+    raise NotDeclared(f"the registry declares no reference from {resource_id} to {parent}")
 
 
 def _unit_clocks(packet: Packet, keys: Sequence[str], **narrow: Any) -> dict[tuple[Any, ...], Any]:

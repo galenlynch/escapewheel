@@ -7,7 +7,7 @@ import pyarrow as pa
 import pytest
 
 from escapewheel_reader import open_packet
-from escapewheel_reader.errors import AmbiguousRun
+from escapewheel_reader.errors import AmbiguousRun, NotDeclared
 from escapewheel_reader.runs import ambiguities, check, preferences, preferred_run
 
 from .conftest import SESSION, UNITS, _resource, _write
@@ -168,7 +168,7 @@ def test_preferred_run_rejects_an_unknown_purpose(tmp_path, packet_root):
     """Asking about a purpose the packet has no run for is a lookup failure, not ambiguity."""
     runs = [(1, "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "unknown", runs)
-    with pytest.raises(KeyError, match="no 'spike_sorting' run for scope 'probe_9'"):
+    with pytest.raises(NotDeclared, match="no 'spike_sorting' run for scope 'probe_9'"):
         preferred_run(packet, "spike_sorting", "core.probes", "probe_9")
 
 

@@ -10,6 +10,7 @@ import pytest
 from escapewheel_reader import (
     Dataset,
     MultiSessionUnresolved,
+    ResourceNotFoundError,
     open_dataset,
     open_packet,
     session_scoped,
@@ -247,8 +248,9 @@ def test_a_query_names_what_it_needs(two):
 
 def test_a_resource_no_packet_holds_is_not_a_view(two):
     assert two._view("core.absent") is None
-    with pytest.raises(KeyError, match="core.absent"):
+    with pytest.raises(ResourceNotFoundError) as refused:
         two.table("core.absent")
+    assert refused.value.resource_id == "core.absent"
 
 
 # -- what R86 requires and does not specify --------------------------------------------

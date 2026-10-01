@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from .errors import MultiSessionUnresolved
+from .errors import MultiSessionUnresolved, ResourceNotFoundError
 from .location import Location
 from .packet import Packet, open_packet
 from .resources import TableResource
@@ -323,6 +323,8 @@ class Dataset:
         ------
         MultiSessionUnresolved
             If a packet holds several sessions and the resource does not carry `session_id`.
+        ResourceNotFoundError
+            If no packet of the dataset holds the resource.
         """
         parts = []
         for packet in self._packets:
@@ -338,7 +340,7 @@ class Dataset:
                 part = self._stamp(packet, resource_id, part)
             parts.append(part)
         if not parts:
-            raise KeyError(f"no packet in this dataset declares {resource_id}")
+            raise ResourceNotFoundError(f"no packet in this dataset declares {resource_id}", resource_id=resource_id)
         return pa.concat_tables(parts, promote_options="permissive")
 
     def _stamp(self, packet: Packet, resource_id: str, table: pa.Table) -> pa.Table:

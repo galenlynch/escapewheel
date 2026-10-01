@@ -12,6 +12,7 @@
   :class:`NoTimeOrigin`, :class:`AmbiguousRun`, :class:`UnresolvableChannelIndex`,
   :class:`UnresolvableAxis`, :class:`MultiSessionUnresolved`, :class:`NotAligned`,
   :class:`Unanchored`, :class:`ClockMismatch`, :class:`StaleSupport`.
+- :class:`NotDeclared` -- what was asked for is declared by neither the packet nor its registry.
 - :class:`PhysicalProfileError` -- the bundled profile descriptor is malformed or inconsistent.
 """
 
@@ -259,6 +260,15 @@ class StaleSupport(Refused, ValueError):
     Raised when the row count has changed since the support was attached -- a filter, a slice
     or a concatenation. The support itself is still true of the thing it was read for; it is
     the association with *these rows* that has broken, so re-read rather than adjust.
+    """
+
+
+class NotDeclared(PacketError, LookupError):
+    """What was asked for is declared by neither the packet nor its registry.
+
+    A stream of an event type, a run for a scope, a discriminator on a table, a reference between
+    two tables, a clock's tick rate, or a table's support. The packet is readable; the thing named
+    is not in it.
     """
 
 

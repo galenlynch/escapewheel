@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from .errors import StaleSupport
+from .errors import NotDeclared, StaleSupport
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
@@ -378,7 +378,7 @@ def observed_seconds(packet: Any, windows: pa.Table) -> float:
 
     Raises
     ------
-    KeyError
+    NotDeclared
         If a window names a clock the packet does not declare, or one with no rate. Refused
         rather than skipped: a missing rate would silently shorten the denominator.
     """
@@ -396,7 +396,7 @@ def observed_seconds(packet: Any, windows: pa.Table) -> float:
     for row in windows.to_pylist():
         hz = rates.get(row["clock_id"])
         if not hz:
-            raise KeyError(f"clock {row['clock_id']!r} declares no tick rate, so its windows have no duration")
+            raise NotDeclared(f"clock {row['clock_id']!r} declares no tick rate, so its windows have no duration")
         total += (row["stop_tick"] - row["start_tick"] + 1) / hz
     return total
 
@@ -494,7 +494,7 @@ def rate_of(packet: Any, table: pa.Table) -> float:
 
     Raises
     ------
-    LookupError
+    NotDeclared
         If the table carries no support. Nothing is guessed: the caller resolves the windows
         with :func:`unit_windows` and divides with :func:`rate`.
     StaleSupport
@@ -502,7 +502,7 @@ def rate_of(packet: Any, table: pa.Table) -> float:
     """
     windows = support_of(table)
     if windows is None:
-        raise LookupError(
+        raise NotDeclared(
             "this table carries no support, so its rate has no denominator; "
             "resolve one with unit_windows or stream_windows and use rate()"
         )

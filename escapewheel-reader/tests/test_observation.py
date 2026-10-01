@@ -12,7 +12,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_reader import StaleSupport, open_packet
+from escapewheel_reader import NotDeclared, StaleSupport, open_packet
 from escapewheel_reader.observation import (
     DECLARED,
     INHERITED,
@@ -188,7 +188,7 @@ def test_a_clock_without_a_rate_is_refused(tmp_path, observed_packet):
     )
     pq.write_table(blank, path, compression="zstd")
     packet = open_packet(observed_packet.root)
-    with pytest.raises(KeyError, match="declares no tick rate"):
+    with pytest.raises(NotDeclared, match="declares no tick rate"):
         observed_seconds(packet, unit_windows(packet))
 
 
@@ -380,7 +380,7 @@ def test_a_range_narrowed_read_carries_no_support(observed_packet):
     """The span is the caller's choice, so the observation window is no denominator for it."""
     narrowed = observed_packet.spike_times(UNITS[0], t_tick=(0, 100))
     assert support_of(narrowed) is None
-    with pytest.raises(LookupError, match="no support"):
+    with pytest.raises(NotDeclared, match="no support"):
         rate_of(observed_packet, narrowed)
 
 

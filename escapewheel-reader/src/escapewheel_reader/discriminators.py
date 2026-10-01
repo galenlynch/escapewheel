@@ -18,6 +18,8 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from .errors import NotDeclared
+
 #: The field a discriminator declares beyond its role to take the paired-value shape.
 SHAPES = {"discriminates": "paired value"}
 
@@ -126,9 +128,9 @@ def _one(packet: Any, resource_id: str, column: str | None) -> Discriminator:
     on = [d for d in declared(packet) if d.resource == resource_id and (column is None or d.column == column)]
     if not on:
         named = f" named {column}" if column else ""
-        raise LookupError(f"{resource_id} declares no discriminator{named}")
+        raise NotDeclared(f"{resource_id} declares no discriminator{named}")
     if len(on) > 1:
-        raise LookupError(
+        raise NotDeclared(
             f"{resource_id} declares several discriminators; name one of {', '.join(sorted(d.column for d in on))}"
         )
     return on[0]
@@ -175,7 +177,7 @@ def _reference_back(packet: Any, source: str, target: str) -> tuple[list[str], l
     for reference in registries(packet).get(source, {}).get("references", []):
         if reference.get("resource") == target:
             return list(reference["columns"]), list(reference["resource_columns"])
-    raise LookupError(f"{source} declares no reference to {target}, which discriminates_via requires (Part 02 §8.3)")
+    raise NotDeclared(f"{source} declares no reference to {target}, which discriminates_via requires (Part 02 §8.3)")
 
 
 def _specialising_reference(packet: Any, kind: str, found: Discriminator) -> tuple[list[str], list[str]]:
@@ -188,7 +190,7 @@ def _specialising_reference(packet: Any, kind: str, found: Discriminator) -> tup
     for reference in registries(packet).get(kind, {}).get("references", []):
         if reference.get("specialises") == named:
             return list(reference["columns"]), list(reference["resource_columns"])
-    raise LookupError(f"{kind} declares no specialising reference naming {named} (Part 02 §8.3)")
+    raise NotDeclared(f"{kind} declares no specialising reference naming {named} (Part 02 §8.3)")
 
 
 def _key(packet: Any, resource: str) -> list[str]:
@@ -205,7 +207,7 @@ def _paired_target(packet: Any, kind: str, found: Discriminator) -> str:
     """
     key = _key(packet, kind)
     if len(key) != 1:
-        raise LookupError(f"{kind} has a {len(key)}-column key, which a paired value cannot name")
+        raise NotDeclared(f"{kind} has a {len(key)}-column key, which a paired value cannot name")
     holder = registries(packet).get(found.specialised, {}).get("columns", [])
     value = next((c for c in holder if c["name"] == found.discriminates), {})
     declared_columns = {c["name"]: c for c in registries(packet).get(kind, {}).get("columns", [])}
@@ -213,7 +215,7 @@ def _paired_target(packet: Any, kind: str, found: Discriminator) -> str:
         return key[0]
     named = f"{key[0].removesuffix('_id')}_name"
     if named not in declared_columns:
-        raise LookupError(
+        raise NotDeclared(
             f"{kind} keys on an assigned {key[0]} and carries no {named} to match a paired value against (Part 02 §8.3)"
         )
     return named
@@ -241,12 +243,12 @@ def resolved(packet: Any, resource_id: str, kind: str, *, column: str | None = N
 
     Raises
     ------
-    LookupError
+    NotDeclared
         If the resource declares no such discriminator, or the packet does not hold the kind.
     """
     found = _one(packet, resource_id, column)
     if kind not in {r.resource_id for r in packet.resources()}:
-        raise LookupError(f"the packet does not hold {kind}, which {found.resource}.{found.column} names")
+        raise NotDeclared(f"the packet does not hold {kind}, which {found.resource}.{found.column} names")
     named = packet.table(kind)
 
     rows = packet.table(found.specialised)

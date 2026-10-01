@@ -121,6 +121,7 @@ Errors
    ResourceNotFoundError
    ResourceUnreadableError
    UnsupportedCodecError
+   NotDeclared
    Refused
    NoTimeOrigin
    NotAligned

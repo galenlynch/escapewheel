@@ -16,7 +16,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from .errors import AmbiguousRun
+from .errors import AmbiguousRun, NotDeclared
 
 #: Where the run log lives, and where a preference over it lives (R9 §2, Part 01 §2.6).
 RUNS = "core.processing_runs"
@@ -198,7 +198,7 @@ def preferred_run(
     ------
     AmbiguousRun
         If several runs share the purpose and none is preferred (Part 01 §2.6).
-    KeyError
+    NotDeclared
         If no run matches the purpose at all.
     """
     rows = _rows(packet, RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"])
@@ -211,7 +211,7 @@ def preferred_run(
         and (session_id is None or row["session_id"] == session_id)
     ]
     if not matching:
-        raise KeyError(f"no {activity_type!r} run for scope {scope!r} in {scope_kind!r}")
+        raise NotDeclared(f"no {activity_type!r} run for scope {scope!r} in {scope_kind!r}")
 
     sessions = {row["session_id"] for row in matching}
     for candidate in sessions:
