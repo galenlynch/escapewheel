@@ -1,7 +1,8 @@
 """Every exception this package raises on purpose; each derives from :exc:`WriterError`.
 
 The codes an error or a reported problem carries are declared beside the classes:
-:class:`RecipeFault`, :class:`SourceFault`, :class:`PayloadFault` and :class:`UsageFault`.
+:class:`RecipeFault`, :class:`AmendmentFault`, :class:`SourceFault`, :class:`PayloadFault` and
+:class:`UsageFault`.
 
 A recipe that cannot be built:
 
@@ -346,12 +347,51 @@ class ReplacementRefused(WriterError):
         self.problems = list(problems)
 
 
+class AmendmentFault(StrEnum):
+    """Why a packet cannot be amended, as the code an :exc:`AmendmentRefused` carries."""
+
+    #: The root holds no published manifest, so there is no packet to amend.
+    NO_PACKET = "no_packet"
+    #: A held table carries an assigned identifier with no name beside it, or a null one.
+    HELD_NAME_ABSENT = "held_name_absent"
+    #: A held name or number already stands for something else of its kind.
+    HELD_KEY_TAKEN = "held_key_taken"
+    #: Delivered rows would change or grow a group of rows the packet holds.
+    CHANGES_HELD = "changes_held"
+
+
 class AmendmentRefused(WriterError, ValueError):
-    """An amendment would change what Part 05 §15.2 forbids, or a build cannot amend this packet."""
+    """An amendment would change what Part 05 §15.2 forbids, or a build cannot amend this packet.
+
+    Attributes
+    ----------
+    code : AmendmentFault
+        Which refusal it is, whatever the names in the message.
+    resource_id : str or None
+        The table the refusal concerns; None where it concerns the packet.
+    """
+
+    def __init__(self, message: str, *, code: AmendmentFault, resource_id: str | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.resource_id = resource_id
 
 
 class ExtensionNotFound(WriterError):
-    """A recipe names an extension that is neither a file nor an installed distribution."""
+    """A recipe names an extension that is neither a file nor an installed distribution.
+
+    Attributes
+    ----------
+    named : str
+        The entry as the recipe names it.
+    known : tuple of str
+        The extensions installed distributions register.
+    """
+
+    def __init__(self, message: str, *, named: str, known: Sequence[str] = ()) -> None:
+        super().__init__(message)
+        self.named = named
+        self.known = tuple(known)
 
 
 class DeclarationUnreadable(WriterError, ValueError):
@@ -766,7 +806,19 @@ class NonFinite(WriterError, ValueError):
     Placeholder streams do occur -- an NWB may carry a behaviour stream holding a single NaN --
     so a caller that expects them filters first and says so, rather than letting a NaN become
     an arbitrary integer.
+
+    Attributes
+    ----------
+    n_non_finite : int
+        How many values were NaN or infinite.
+    n_values : int
+        How many values were given.
     """
+
+    def __init__(self, message: str, *, n_non_finite: int, n_values: int) -> None:
+        super().__init__(message)
+        self.n_non_finite = n_non_finite
+        self.n_values = n_values
 
 
 class NaiveTimestamp(WriterError, ValueError):
@@ -800,7 +852,19 @@ class Collided(WriterError, NotAligned):
     distinct on the probe. Refusing costs nothing usable: a histogram over collapsed spikes
     undercounts them, so a clock that coarse makes this table the wrong instrument rather than a
     broken one, and Part 06 §2 makes not building it an ordinary outcome.
+
+    Attributes
+    ----------
+    unit_id : int
+        The unit whose spikes collide.
+    t_tick : int
+        The reference tick two of them convert to.
     """
+
+    def __init__(self, message: str, *, unit_id: int, t_tick: int) -> None:
+        super().__init__(message)
+        self.unit_id = unit_id
+        self.t_tick = t_tick
 
 
 class PacketOccupied(WriterError, FileExistsError):
@@ -840,4 +904,14 @@ class NotCommitted(WriterError):
 
 
 class PromotionRecordUnreadable(WriterError):
-    """A staging area holds a promotion record this writer cannot read (Part 05 §6)."""
+    """A staging area holds a promotion record this writer cannot read (Part 05 §6).
+
+    Attributes
+    ----------
+    path : Path
+        The promotion record.
+    """
+
+    def __init__(self, message: str, *, path: Path) -> None:
+        super().__init__(message)
+        self.path = path

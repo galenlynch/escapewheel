@@ -40,8 +40,9 @@ def test_a_wrong_rate_is_refused_rather_than_silently_rescaling():
 
 
 def test_non_finite_is_refused():
-    with pytest.raises(NonFinite, match="1 of 3"):
+    with pytest.raises(NonFinite) as refused:
         harp().ticks([1.0, np.nan, 2.0])
+    assert (refused.value.n_non_finite, refused.value.n_values) == (1, 3)
 
 
 def test_an_empty_input_is_empty_not_an_error():

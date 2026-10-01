@@ -32,6 +32,11 @@ from .errors import Collided
 RESOURCE = "analysis.spike_events"
 
 
+def _collided(unit_id: int, t_tick: int) -> Collided:
+    """Return the refusal naming the unit and the reference tick two of its spikes share."""
+    return Collided(f"unit {unit_id} has two spikes on reference tick {t_tick}", unit_id=unit_id, t_tick=t_tick)
+
+
 def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) -> None:
     """Raise where two consecutive spikes of one unit share a converted tick (Part 06 §4).
 
@@ -43,9 +48,9 @@ def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) 
         hit = np.flatnonzero((units[1:] == units[:-1]) & (np.diff(ticks) == 0))
         if hit.size:
             at = int(hit[0]) + 1
-            raise Collided(f"unit {int(units[at])} has two spikes on reference tick {int(ticks[at])}")
+            raise _collided(int(units[at]), int(ticks[at]))
     if carry is not None and units.size and units[0] == carry[0] and ticks[0] == carry[1]:
-        raise Collided(f"unit {int(units[0])} has two spikes on reference tick {int(ticks[0])}")
+        raise _collided(int(units[0]), int(ticks[0]))
 
 
 #: Rows per batch, and therefore per row group and per unit of writer memory. Measured: 128 K

@@ -45,6 +45,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .clock import Clock
 from .errors import (
+    AmendmentFault,
     AmendmentRefused,
     CarriedNotAnInteger,
     Collided,
@@ -97,6 +98,7 @@ except PackageNotFoundError:
 from .verify import verify
 
 __all__ = [
+    "AmendmentFault",
     "AmendmentRefused",
     "CarriedNotAnInteger",
     "Clock",

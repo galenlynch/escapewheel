@@ -48,6 +48,7 @@ the codes an error or a reported problem carries.
    RecipeFault
    ReplacementRefused
    AmendmentRefused
+   AmendmentFault
    ExtensionNotFound
    DeclarationUnreadable
    SourceDefect

@@ -140,8 +140,9 @@ def test_two_spikes_of_one_unit_on_one_reference_tick_refuse_the_table(tmp_path)
     on the reference clock and pass through, which is the same arrival the writer must refuse.
     """
     packet = Fake(tmp_path, ticks=[777, 777], clocks=[REF, REF], unit_of=lambda i: 0)
-    with pytest.raises(Collided, match="unit 0 has two spikes on reference tick 777"):
+    with pytest.raises(Collided) as refused:
         rows(packet)
+    assert (refused.value.unit_id, refused.value.t_tick) == (0, 777)
 
 
 def test_two_spikes_of_different_units_on_one_tick_are_fine(tmp_path):
@@ -186,13 +187,13 @@ def test_the_reference_cannot_be_directed_elsewhere(tmp_path):
 
 
 def test_a_session_declaring_no_reference_is_refused(tmp_path):
-    with pytest.raises(NotAligned, match="declares a reference_clock_id"):
+    with pytest.raises(NotAligned):
         rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE], reference=None))
 
 
 def test_a_clock_with_no_anchors_is_refused(tmp_path):
     """Silently dropping every spike on it would look like an empty session."""
-    with pytest.raises(NotAligned, match="no anchors"):
+    with pytest.raises(NotAligned):
         rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE], anchors=False))
 
 

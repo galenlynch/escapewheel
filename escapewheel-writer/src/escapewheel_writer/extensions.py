@@ -35,7 +35,7 @@ def _document(loaded: Any, source: str) -> dict[str, Any]:
         return loaded
     if isinstance(loaded, (str, Path)):
         return dict(json.loads(Path(loaded).read_text()))
-    raise ExtensionNotFound(f"{source} loaded {type(loaded).__name__}, not a document or a path to one")
+    raise ExtensionNotFound(f"{source} loaded {type(loaded).__name__}, not a document or a path to one", named=source)
 
 
 def installed() -> dict[str, dict[str, Any]]:
@@ -70,7 +70,9 @@ def load(named: str, *, base: Path | None = None) -> dict[str, Any]:
         return available[named]
     known = ", ".join(sorted(available)) or "none installed"
     raise ExtensionNotFound(
-        f"{named!r} is neither a file nor an installed extension; registered under {EXTENSION_GROUP}: {known}"
+        f"{named!r} is neither a file nor an installed extension; registered under {EXTENSION_GROUP}: {known}",
+        named=named,
+        known=sorted(available),
     )
 
 
@@ -85,7 +87,9 @@ def load_checked(named: str, core: CheckedRegistryContext, *, base: Path | None 
         return check_registry_context(available[named], core=core)
     known = ", ".join(sorted(available)) or "none installed"
     raise ExtensionNotFound(
-        f"{named!r} is neither a file nor an installed extension; registered under {EXTENSION_GROUP}: {known}"
+        f"{named!r} is neither a file nor an installed extension; registered under {EXTENSION_GROUP}: {known}",
+        named=named,
+        known=sorted(available),
     )
 
 

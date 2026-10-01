@@ -384,9 +384,9 @@ def read_promotion(root: Path) -> tuple[str, list[str]] | None:
         version = str(record["packet_version"])
         paths = [str(p) for p in record["paths"]]
     except (OSError, ValueError, KeyError, TypeError) as error:
-        raise PromotionRecordUnreadable(f"{path}: cannot read the promotion record ({error})") from None
+        raise PromotionRecordUnreadable(f"{path}: cannot read the promotion record ({error})", path=path) from None
     if escaping := [p for p in paths if Path(p).is_absolute() or ".." in Path(p).parts or not p]:
-        raise PromotionRecordUnreadable(f"{path}: lists {escaping[0]!r}, which is not under the packet root")
+        raise PromotionRecordUnreadable(f"{path}: lists {escaping[0]!r}, which is not under the packet root", path=path)
     return version, paths
 
 

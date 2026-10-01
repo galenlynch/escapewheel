@@ -107,7 +107,12 @@ class TickGrid:
         if values.size == 0:
             return np.empty(0, dtype=np.int64)
         if not np.isfinite(values).all():
-            raise NonFinite(f"{self.clock_id}: {int((~np.isfinite(values)).sum())} of {values.size} values not finite")
+            non_finite = int((~np.isfinite(values)).sum())
+            raise NonFinite(
+                f"{self.clock_id}: {non_finite} of {values.size} values not finite",
+                n_non_finite=non_finite,
+                n_values=int(values.size),
+            )
 
         exact = values * self.tick_rate_num / self.tick_rate_den
         rounded = np.rint(exact)

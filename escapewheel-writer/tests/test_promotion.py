@@ -88,8 +88,9 @@ def test_an_unreadable_record_is_refused_and_nothing_is_removed(tmp_path, regist
     (root / STAGING).mkdir()
     (root / STAGING / PROMOTION).write_text(body)
     before = _outside_staging(root)
-    with pytest.raises(PromotionRecordUnreadable, match=PROMOTION):
+    with pytest.raises(PromotionRecordUnreadable) as refused:
         _write(root, registry, minimal)
+    assert refused.value.path == root / STAGING / PROMOTION
     assert _outside_staging(root) == before
     assert (root / STAGING / PROMOTION).read_text() == body
 
@@ -99,8 +100,9 @@ def test_an_unreadable_record_refuses_an_amendment(tmp_path, registry, minimal):
     _write(root, registry, minimal)
     (root / STAGING).mkdir()
     (root / STAGING / PROMOTION).write_text("{")
-    with pytest.raises(PromotionRecordUnreadable, match=PROMOTION):
+    with pytest.raises(PromotionRecordUnreadable) as refused:
         PacketWriter(registry, packet_id="s001").amend(root)
+    assert refused.value.path == root / STAGING / PROMOTION
     assert json.loads((root / MANIFEST).read_text())["packet_version"] == "0.1.0"
 
 

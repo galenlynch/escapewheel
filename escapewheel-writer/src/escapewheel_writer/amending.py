@@ -26,7 +26,7 @@ from escapewheel_reader import Manifest, Packet
 from escapewheel_validator.amendment import PREFERENCES, Version, absent, quoted
 
 from .arrow import sort_key
-from .errors import AmendmentRefused
+from .errors import AmendmentFault, AmendmentRefused
 
 #: Tables the packet identifies itself by, whose held rows prevail over every source in an amending
 #: build (Part 05 §3.5).
@@ -115,7 +115,9 @@ class Held:
         _act_on_promotion(root)
         path = root / MANIFEST
         if not path.is_file():
-            raise AmendmentRefused(f"{root} holds no published {MANIFEST}, so there is no packet to amend")
+            raise AmendmentRefused(
+                f"{root} holds no published {MANIFEST}, so there is no packet to amend", code=AmendmentFault.NO_PACKET
+            )
         return cls(root, json.loads(path.read_text()))
 
     @property
@@ -175,21 +177,27 @@ class Held:
                 if named not in present:
                     raise AmendmentRefused(
                         f"{resource_id} holds {column} with no {named}, so an amending build cannot tell a held "
-                        "identifier from one it assigns (Part 05 §3.5)"
+                        "identifier from one it assigns (Part 05 §3.5)",
+                        code=AmendmentFault.HELD_NAME_ABSENT,
+                        resource_id=resource_id,
                     )
                 table = pq.read_table(self.packet.path(resource_id), columns=[column, named])
                 numbers, names = table.column(column).to_pylist(), table.column(named).to_pylist()
                 if None in names:
                     raise AmendmentRefused(
                         f"{resource_id} holds a null {named} for {names.count(None)} row(s), so an amending build "
-                        f"cannot tell a held {column} from one it assigns (Part 05 §3.5)"
+                        f"cannot tell a held {column} from one it assigns (Part 05 §3.5)",
+                        code=AmendmentFault.HELD_NAME_ABSENT,
+                        resource_id=resource_id,
                     )
                 held = self.held_names.setdefault(column, set())
                 for number, name in zip(numbers, names, strict=True):
                     try:
                         keys.hold(column, str(name), int(number))
                     except ValueError as exc:
-                        raise AmendmentRefused(f"{resource_id}: {exc}") from None
+                        raise AmendmentRefused(
+                            f"{resource_id}: {exc}", code=AmendmentFault.HELD_KEY_TAKEN, resource_id=resource_id
+                        ) from None
                     held.add(str(name))
 
     def apart(self, kind: str, name: str) -> str:
@@ -308,7 +316,9 @@ class Held:
         raise AmendmentRefused(
             f"{resource_id}: {int(refused.sum()):,} delivered row(s) neither equal a row the packet holds nor form a "
             f"group it lacks, so amending would change or grow what it holds (Part 05 §15.2); a packet whose "
-            f"canonical data changes is a new packet. First: {rows}"
+            f"canonical data changes is a new packet. First: {rows}",
+            code=AmendmentFault.CHANGES_HELD,
+            resource_id=resource_id,
         )
 
     def settle(self, resource_id: str, delivered: pa.Table, *, derived: Collection[str] = ()) -> pa.Table | None:
@@ -428,7 +438,9 @@ class Held:
         if count:
             raise AmendmentRefused(
                 f"{resource_id}: {count:,} delivered row(s) join groups the packet holds and equal none of its rows, "
-                f"so amending would change or grow what it holds (Part 05 §15.2). First: {shown}"
+                f"so amending would change or grow what it holds (Part 05 §15.2). First: {shown}",
+                code=AmendmentFault.CHANGES_HELD,
+                resource_id=resource_id,
             )
 
 

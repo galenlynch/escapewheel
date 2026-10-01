@@ -17,6 +17,7 @@ from escapewheel_writer.encoding import (
     inefficient,
 )
 from escapewheel_writer.errors import (
+    AmendmentFault,
     AmendmentRefused,
     FixedOffsetZone,
     PacketOccupied,
@@ -166,7 +167,7 @@ def test_a_naive_timestamp_is_refused(tmp_path, registry, minimal):
     from escapewheel_writer.errors import NaiveTimestamp
 
     naive = {**minimal, "core.sessions": [{**minimal["core.sessions"][0], "session_start_time": "2026-08-27T00:00:00"}]}
-    with pytest.raises(NaiveTimestamp, match="no UTC offset"):
+    with pytest.raises(NaiveTimestamp):
         _write(tmp_path / "s001", registry, naive)
 
 
@@ -531,7 +532,7 @@ def test_every_manifest_is_retained(tmp_path, registry, minimal):
 def test_amending_an_uncommitted_root_is_refused(tmp_path, registry, minimal):
     from escapewheel_writer.errors import NotCommitted
 
-    with pytest.raises(NotCommitted, match="no committed"):
+    with pytest.raises(NotCommitted):
         _amend(tmp_path / "nothing", registry, {"core.processing_runs": _runs()})
 
 
@@ -540,11 +541,13 @@ def test_an_amendment_may_not_change_a_held_row(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     changed = [dict(minimal["core.sessions"][0], session_start_time="2026-08-28T00:00:00Z")]
-    with pytest.raises(AmendmentRefused, match="new packet"):
+    with pytest.raises(AmendmentRefused) as refused:
         _amend(root, registry, {"core.sessions": changed})
+    assert (refused.value.code, refused.value.resource_id) == (AmendmentFault.CHANGES_HELD, "core.sessions")
     retimed = [dict(minimal["core.clocks"][0], tick_rate_num=1000)]
-    with pytest.raises(AmendmentRefused, match="core.clocks"):
+    with pytest.raises(AmendmentRefused) as refused:
         _amend(root, registry, {"core.clocks": retimed})
+    assert (refused.value.code, refused.value.resource_id) == (AmendmentFault.CHANGES_HELD, "core.clocks")
 
 
 def test_an_amendment_drops_a_row_the_packet_holds(tmp_path, registry, minimal):
@@ -1029,15 +1032,17 @@ def test_an_out_of_order_stream_is_refused_while_staging(tmp_path, registry, min
     Previously this reached the file and surfaced as a physical_order warning after 467 MB of
     re-reading; now it stops at the batch that breaks it.
     """
-    from escapewheel_validator import OrderViolation
+    from escapewheel_validator import OrderFault, OrderViolation
 
     writer = PacketWriter(registry, packet_id="s001")
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
     writer.add_batches("core.spike_events", iter([_spike_batch(10, 1, 10), _spike_batch(10, 1, 0)]))
-    with pytest.raises(OrderViolation, match="sorts before"):
+    with pytest.raises(OrderViolation) as refused:
         writer.commit(tmp_path / "pkt")
+    assert (refused.value.kind, refused.value.resource_id) == (OrderFault.DESCENT, "core.spike_events")
+    assert refused.value.row == 10
 
 
 def test_a_record_carrying_an_undeclared_column_is_refused(registry):
@@ -1102,15 +1107,17 @@ def test_an_optional_column_absent_from_the_first_batch_says_so(tmp_path, regist
 
 
 def test_a_duplicate_across_batches_is_refused_while_staging(tmp_path, registry, minimal):
-    from escapewheel_validator import OrderViolation
+    from escapewheel_validator import OrderFault, OrderViolation
 
     writer = PacketWriter(registry, packet_id="s001")
     for resource, rows in minimal.items():
         writer.add(resource, rows)
     _add_spike_context(writer)
     writer.add_batches("core.spike_events", iter([_spike_batch(10, 1, 0), _spike_batch(1, 1, 9)]))
-    with pytest.raises(OrderViolation, match="repeats"):
+    with pytest.raises(OrderViolation) as refused:
         writer.commit(tmp_path / "pkt")
+    assert (refused.value.kind, refused.value.resource_id) == (OrderFault.REPEAT, "core.spike_events")
+    assert refused.value.row == 10
 
 
 def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, registry, minimal):

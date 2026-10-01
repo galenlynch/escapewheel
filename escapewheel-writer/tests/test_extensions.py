@@ -414,8 +414,9 @@ def test_an_unknown_extension_says_what_is_installed(monkeypatch):
     from escapewheel_writer import extensions as ext
 
     monkeypatch.setattr(ext, "installed", lambda: {"opto_tagging": {}, "unit_qc": {}})
-    with pytest.raises(ExtensionNotFound, match="opto_tagging, unit_qc"):
+    with pytest.raises(ExtensionNotFound) as refused:
         ext.load("nonesuch")
+    assert (refused.value.named, refused.value.known) == ("nonesuch", ("opto_tagging", "unit_qc"))
 
 
 def test_a_broken_extension_package_is_skipped(monkeypatch):
