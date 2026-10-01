@@ -187,5 +187,4 @@ Parquet stores a low-cardinality string column as codes into a dictionary, and a
 wherever such a column is read without decoding. The helpers in `dictionaries` take the dictionary
 where there is one and the column where there is not. Arrow cannot sort a dictionary column, and
 `group_by` fails across row groups until `Table.unify_dictionaries` reconciles them; both fail
-loudly. The reader, the writer and the validator share these helpers so that they meet those edges
-identically.
+loudly. The reader's modules share these helpers so that they meet those edges identically.

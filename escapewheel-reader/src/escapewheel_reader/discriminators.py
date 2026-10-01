@@ -291,13 +291,4 @@ def specialised(packet: Any, resource_id: str, *, column: str | None = None) -> 
     }
 
 
-__all__ = [
-    "Discriminator",
-    "Unresolved",
-    "declared",
-    "kinds",
-    "registries",
-    "resolved",
-    "specialised",
-    "unresolved",
-]
+__all__ = ["Discriminator", "Unresolved", "declared", "kinds", "resolved", "specialised", "unresolved"]

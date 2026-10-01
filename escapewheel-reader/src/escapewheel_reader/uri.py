@@ -116,3 +116,6 @@ def in_one_form(uri: str) -> bool:
         return canonical(uri) == uri
     except ValueError:
         return False
+
+
+__all__ = ["canonical", "decode", "encode", "in_one_form", "is_absolute", "representable"]

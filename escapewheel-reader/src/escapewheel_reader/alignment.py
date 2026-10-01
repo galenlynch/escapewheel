@@ -280,9 +280,4 @@ def assigned_spikes(
     )
 
 
-__all__ = [
-    "ASSIGNMENTS",
-    "aligned_spikes",
-    "assigned_spikes",
-    "windows_disjoint",
-]
+__all__ = ["aligned_spikes", "assigned_spikes", "windows_disjoint"]

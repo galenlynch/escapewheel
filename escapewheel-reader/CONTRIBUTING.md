@@ -79,6 +79,22 @@ method that delegates to one: a delegate is a second name for the same call, and
 which functions get one. `tests/test_surface.py` checks that no `Packet` method shares a name with
 an exported function.
 
+### Two tiers of public names
+
+Every module declares `__all__`, and a name is public only through one.
+
+- **User tier**: what `__init__` exports. `docs/source/api.rst` documents it by subject.
+- **Support tier**: a name in a module's `__all__` that `__init__` does not export. The validator,
+  the writer and an adapter package import it from that module, and `api.rst` lists it under
+  "Support tier".
+
+A bare name left out of `__all__` is for the reader's own modules, and an underscore name for its
+own module; another package imports neither. A module exports only names it defines, so no module
+passes on another's. `tests/test_surface.py` holds the tiers against `api.rst` in both directions:
+adding a name to an `__all__` means documenting it, and the reverse.
+
+Before taking a name out of a tier, search the other packages for it.
+
 ### Two shapes worth copying
 
 **Refuse rather than choose.** Where the packet does not determine an answer, raise and name the

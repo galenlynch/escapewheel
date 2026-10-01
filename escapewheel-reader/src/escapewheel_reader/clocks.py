@@ -328,18 +328,6 @@ def stored_span(
     return min(lows), max(highs)
 
 
-__all__ = [
-    "BOUND",
-    "align",
-    "anchors",
-    "declared_bound",
-    "extrapolation_error",
-    "mapped",
-    "rate",
-    "reference_clock",
-    "stored_span",
-]
-
 # -- (packet, table) semantics ------------------------------------------------------------
 #
 # These take a packet and a table and return a table. They are free functions rather than
@@ -544,3 +532,17 @@ def seconds(packet: Any, table: pa.Table, *, session_id: int | None = None) -> p
         )
     offset = pc.subtract(table.column("t_tick"), pa.scalar(start, pa.int64()))
     return table.append_column("t_second", pc.divide(pc.cast(offset, pa.float64()), float(num) / float(den)))
+
+
+__all__ = [
+    "BOUND",
+    "align",
+    "anchors",
+    "declared_bound",
+    "extrapolation_error",
+    "mapped",
+    "on_clock",
+    "origin",
+    "reference_clock",
+    "seconds",
+]

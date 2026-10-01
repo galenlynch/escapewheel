@@ -671,3 +671,6 @@ def open_packet(
         Location.of(root, rewrite, resolve_sources(root, sources)),
         Manifest.load(root),
     )
+
+
+__all__ = ["Packet", "open_packet"]

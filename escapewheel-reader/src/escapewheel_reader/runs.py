@@ -285,4 +285,4 @@ def check(packet: Any, activities: Iterable[str] | None = None) -> None:
         )
 
 
-__all__ = ["Ambiguity", "ambiguities", "check", "preferences", "preferred_run"]
+__all__ = ["Ambiguity", "ambiguities", "preferred_run"]

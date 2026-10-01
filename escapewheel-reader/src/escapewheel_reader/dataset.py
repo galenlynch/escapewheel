@@ -419,10 +419,4 @@ def open_dataset(
     return Dataset(opened)
 
 
-__all__ = [
-    "PROJECTED",
-    "Dataset",
-    "Session",
-    "open_dataset",
-    "session_scoped",
-]
+__all__ = ["Dataset", "Session", "open_dataset"]

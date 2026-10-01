@@ -555,3 +555,6 @@ class ArrayResource:
         """
         array = self.open()
         return array[...] if selection is ... else array[selection]
+
+
+__all__ = ["ZARR_METADATA_FILENAMES", "ArrayResource", "TableResource"]

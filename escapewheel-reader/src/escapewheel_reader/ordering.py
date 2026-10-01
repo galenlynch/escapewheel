@@ -13,7 +13,6 @@ from collections.abc import Mapping, Sequence
 from functools import cache
 from typing import Any
 
-from .descriptor import override_errors
 from .profile import physical_profile
 
 
@@ -41,4 +40,4 @@ def overridden(resource: str) -> Sequence[str] | None:
     return list(override) if override else None
 
 
-__all__ = ["overridden", "override_errors", "stored_order"]
+__all__ = ["stored_order"]

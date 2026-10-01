@@ -126,3 +126,6 @@ def _matches(observed: Any, pattern: Any) -> bool:
     if pattern is None:
         return observed is None
     return bool(observed == pattern)
+
+
+__all__ = ["PROFILE_ID", "parquet_floor", "physical_profile", "zarr_floor_admits"]

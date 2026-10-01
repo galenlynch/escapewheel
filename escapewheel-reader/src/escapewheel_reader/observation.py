@@ -549,18 +549,11 @@ def rate(count: int, seconds: float) -> float:
 
 
 __all__ = [
-    "DECLARED",
-    "INHERITED",
-    "ROWS_KEY",
-    "SUPPORT_KEY",
-    "VIEWS",
-    "attach_support",
     "clock_windows",
     "observed_seconds",
     "observed_ticks",
     "rate",
     "rate_of",
-    "register_views",
     "stream_windows",
     "support_of",
     "unit_windows",

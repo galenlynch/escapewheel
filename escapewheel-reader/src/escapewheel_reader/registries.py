@@ -136,4 +136,4 @@ def parse(binding: RegistryBinding, document: bytes) -> dict[str, Any]:
     return parsed
 
 
-__all__ = ["acquire", "gunzip_member", "parse"]
+__all__ = ["acquire", "gunzip_member"]

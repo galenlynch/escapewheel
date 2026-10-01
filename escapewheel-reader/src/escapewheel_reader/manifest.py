@@ -365,3 +365,6 @@ class Manifest:
             ),
             entry=entry,
         )
+
+
+__all__ = ["MANIFESTS_DIRNAME", "MANIFEST_FILENAME", "Manifest", "RegistryBinding", "Resource"]

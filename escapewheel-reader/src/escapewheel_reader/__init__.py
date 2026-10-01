@@ -6,6 +6,10 @@ pass it to the functions below. An access function takes ``(packet, ...)`` and r
 a table, so the two compose. `Packet` has no method doing what one of them does. The
 documentation's Design page explains why each function exists.
 
+Two tiers of names are public. The user tier is this module's ``__all__``. The support tier is for
+another Escapewheel package: each name a module's ``__all__`` holds and this module does not
+export. Any other name is the reader's own.
+
 Its modules:
 
 access
@@ -32,15 +36,18 @@ manifest, resources, location
     What the manifest declares, handles that read it, and where its bytes are.
 errors
     What reading raises.
-resource_ids
-    The core registry's resource IDs that code names.
-profile, descriptor, ordering, registries, dictionaries, sql, uri
-    Shared with the writer and validator.
+sql
+    A resource's name in SQL.
+resource_ids, profile, ordering, registries, uri, scripts.cli
+    The support tier's own modules: resource IDs, the physical profile, stored order, registry
+    acquisition, URI forms, and the command line the other packages extend.
+descriptor, dictionaries
+    The reader's own: the profile descriptor's checks, and dictionary-encoded columns.
 """
 
 from __future__ import annotations
 
-from importlib.metadata import version
+from importlib.metadata import version as _version
 
 from .access import STORED, distinct, events, intervals, spike_times, units
 from .alignment import aligned_spikes, assigned_spikes, windows_disjoint
@@ -56,13 +63,7 @@ from .axes import (
 )
 from .channels import ChannelsUndeclared, electrode_at, kept_channels, runs_without_channels
 from .clocks import BOUND, align, on_clock, origin, reference_clock, seconds
-from .dataset import (
-    PROJECTED,
-    Dataset,
-    Session,
-    open_dataset,
-    session_scoped,
-)
+from .dataset import Dataset, Session, open_dataset
 from .discriminators import (
     Discriminator,
     Unresolved,
@@ -83,6 +84,7 @@ from .errors import (
     NotDeclared,
     NoTimeOrigin,
     PacketError,
+    PhysicalProfileError,
     Refused,
     RegistryFault,
     RegistryUnavailable,
@@ -97,7 +99,7 @@ from .errors import (
     UnresolvedSource,
     UnsupportedCodecError,
 )
-from .location import Location, check_sources, read_sources, sources_schema
+from .location import Location, check_sources, read_sources
 from .manifest import Manifest, RegistryBinding, Resource
 from .observation import (
     clock_windows,
@@ -109,17 +111,15 @@ from .observation import (
     support_of,
     unit_windows,
 )
-from .packet import Packet, Predicate, open_packet, resolve_sources
-from .profile import interface_for, physical_profile
+from .packet import Packet, open_packet
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity, ambiguities, preferred_run
 from .sql import quote, sql_name
 
-__version__ = version("escapewheel-reader")
+__version__ = _version("escapewheel-reader")
 
 __all__ = [
     "BOUND",
-    "PROJECTED",
     "STORED",
     "Ambiguity",
     "AmbiguousRun",
@@ -144,7 +144,7 @@ __all__ = [
     "NumericAxis",
     "Packet",
     "PacketError",
-    "Predicate",
+    "PhysicalProfileError",
     "Refused",
     "RegistryBinding",
     "RegistryFault",
@@ -177,7 +177,6 @@ __all__ = [
     "distinct",
     "electrode_at",
     "events",
-    "interface_for",
     "intervals",
     "kept_channels",
     "kinds",
@@ -187,19 +186,15 @@ __all__ = [
     "open_dataset",
     "open_packet",
     "origin",
-    "physical_profile",
     "preferred_run",
     "quote",
     "rate",
     "rate_of",
     "read_sources",
     "reference_clock",
-    "resolve_sources",
     "resolved",
     "runs_without_channels",
     "seconds",
-    "session_scoped",
-    "sources_schema",
     "specialised",
     "spike_times",
     "sql_name",

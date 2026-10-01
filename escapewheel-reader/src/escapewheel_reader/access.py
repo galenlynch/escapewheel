@@ -406,3 +406,6 @@ def _narrowed(table: pa.Table, span: tuple[int, int] | None) -> pa.Table:
     lower = pa.scalar(span[0], type=ticks.type)
     upper = pa.scalar(span[1], type=ticks.type)
     return table.filter(pc.and_(pc.greater_equal(ticks, lower), pc.less_equal(ticks, upper)))
+
+
+__all__ = ["STORED", "distinct", "events", "intervals", "spike_times", "units"]

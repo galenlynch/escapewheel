@@ -3,8 +3,10 @@ API Reference
 
 .. currentmodule:: escapewheel_reader
 
-Every name here is importable from ``escapewheel_reader``. Open a packet, then pass it to the
-functions in the later sections.
+Two tiers of names are public. The user tier is importable from ``escapewheel_reader``: open a
+packet, then pass it to the functions in the later sections. The support tier is for another
+Escapewheel package, and each of its names is imported from the module shown. A name this page
+does not list is the reader's own and may change without notice.
 
 Opening packets
 ---------------
@@ -69,24 +71,48 @@ Spikes against events
    assigned_spikes
    windows_disjoint
 
-Runs, channels, discriminators and arrays
------------------------------------------
+Runs and channels
+-----------------
 
 .. autosummary::
    :toctree: generated
 
    ambiguities
    preferred_run
+   Ambiguity
    electrode_at
    kept_channels
    runs_without_channels
+   ChannelsUndeclared
+
+Discriminators
+--------------
+
+.. autosummary::
+   :toctree: generated
+
    declared
    kinds
    resolved
    specialised
    unresolved
+   Discriminator
+   Unresolved
+
+Array axes
+----------
+
+.. autosummary::
+   :toctree: generated
+
    describe
    ArrayDescription
+   Axis
+   TickAxis
+   NumericAxis
+   IrregularAxis
+   LabelledAxis
+   Scaling
 
 Manifest, resources and locations
 ---------------------------------
@@ -100,9 +126,17 @@ Manifest, resources and locations
    TableResource
    ArrayResource
    Location
-   resolve_sources
    read_sources
    check_sources
+
+Names in SQL
+------------
+
+.. autosummary::
+   :toctree: generated
+
+   sql_name
+   quote
 
 Errors
 ------
@@ -120,24 +154,66 @@ Errors
    ResourceNotFoundError
    ResourceUnreadableError
    UnsupportedCodecError
+   UnresolvedSource
    NotDeclared
    Refused
    NoTimeOrigin
    NotAligned
+   Unanchored
    AmbiguousRun
    StaleSupport
-   ChannelsUndeclared
    UnresolvableChannelIndex
-   UnresolvedSource
    ClockMismatch
    UnresolvableAxis
    AxisFault
    MultiSessionUnresolved
+   PhysicalProfileError
+
+Support tier
+------------
+
+For the validator, the writer and an adapter package. Every user-tier name is also importable from
+the module that defines it.
+
+.. autosummary::
+   :toctree: generated
+
+   clocks.anchors
+   clocks.declared_bound
+   clocks.extrapolation_error
+   clocks.mapped
+   ordering.stored_order
+   profile.PROFILE_ID
+   profile.physical_profile
+   profile.parquet_floor
+   profile.zarr_floor_admits
+   registries.acquire
+   registries.gunzip_member
+   uri.canonical
+   uri.decode
+   uri.encode
+   uri.in_one_form
+   uri.is_absolute
+   uri.representable
+   location.SOURCES_FILENAME
+   location.SOURCES_VERSION
+   manifest.MANIFEST_FILENAME
+   manifest.MANIFESTS_DIRNAME
+   resources.ZARR_METADATA_FILENAMES
+   scripts.cli.main
+
+``resource_ids`` is in the support tier whole: one constant for each core resource ID that code
+names.
+
+.. autosummary::
+   :toctree: generated
+
+   resource_ids
 
 Modules
 -------
 
-Each module's page lists everything it holds, including what is not exported above.
+A module's page carries its docstring; its public names are documented above.
 
 .. autosummary::
    :toctree: generated
@@ -156,11 +232,9 @@ Each module's page lists everything it holds, including what is not exported abo
    resources
    location
    errors
-   resource_ids
+   sql
    profile
-   descriptor
    ordering
    registries
-   dictionaries
-   sql
    uri
+   scripts.cli

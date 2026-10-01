@@ -274,3 +274,31 @@ class NotDeclared(PacketError, LookupError):
 
 class PhysicalProfileError(PacketError, ValueError):
     """The physical-profile descriptor is malformed or internally inconsistent."""
+
+
+__all__ = [
+    "AmbiguousRun",
+    "AxisFault",
+    "ClockMismatch",
+    "EscapewheelError",
+    "ManifestError",
+    "MultiSessionUnresolved",
+    "NoTimeOrigin",
+    "NotAligned",
+    "NotDeclared",
+    "PacketError",
+    "PhysicalProfileError",
+    "Refused",
+    "RegistryFault",
+    "RegistryUnavailable",
+    "ResourceError",
+    "ResourceNotFoundError",
+    "ResourceUnreadableError",
+    "SourcesError",
+    "StaleSupport",
+    "Unanchored",
+    "UnresolvableAxis",
+    "UnresolvableChannelIndex",
+    "UnresolvedSource",
+    "UnsupportedCodecError",
+]

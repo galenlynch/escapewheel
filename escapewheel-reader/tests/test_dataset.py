@@ -7,14 +7,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_reader import (
-    Dataset,
-    MultiSessionUnresolved,
-    ResourceNotFoundError,
-    open_dataset,
-    open_packet,
-    session_scoped,
-)
+from escapewheel_reader import Dataset, MultiSessionUnresolved, ResourceNotFoundError, open_dataset, open_packet
+from escapewheel_reader.dataset import session_scoped
 
 from .conftest import SESSION, SESSION_NAME, install_registry, read_registry
 

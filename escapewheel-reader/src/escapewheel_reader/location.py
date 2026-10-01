@@ -374,13 +374,4 @@ class Location:
         return self.uri
 
 
-__all__ = [
-    "SOURCES_FILENAME",
-    "SOURCES_VERSION",
-    "Location",
-    "Rewrite",
-    "Sources",
-    "check_sources",
-    "read_sources",
-    "sources_schema",
-]
+__all__ = ["SOURCES_FILENAME", "SOURCES_VERSION", "Location", "check_sources", "read_sources"]
