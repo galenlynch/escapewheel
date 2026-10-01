@@ -108,7 +108,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 - [ ] An adapter served out of process loses its compensations. The build reads `compensations`
       from the source object, and the delivery module never carries the attribute across.
       Stage 2; if the delivery report needs a new key, that part is a specification change.
-- [ ] Three fixture builders write `validator_name` as `escapewheel_validate`. Stage 2.
+- [x] Three fixture builders write `validator_name` as `escapewheel_validate`. Stage 2.
 - [ ] The validator's test registry declares `core.trials`, which the core registry does not
       have. Stage 5.
 - [ ] `BATCH_ROWS` has three definitions and two values in the writer. Stage 2.
@@ -164,7 +164,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 
 ### 6.1 Declared vocabularies (stage 2)
 
-- [ ] Validator: one table of check IDs, each with its default level, its scope and whether a
+- [x] Validator: one table of check IDs, each with its default level, its scope and whether a
       part names it; one function per templated family (`<resource>.physical_order`,
       `<resource>.<column>.outside_reserved_set` and the like). `Report.add` takes an entry. At
       `f30864e`, 30 of the 71 literal IDs appear in no part.
@@ -429,3 +429,47 @@ Found and left as they were, since each changes what the corpus asserts or is ou
   per-registry verdicts are not checked for it.
 - `fixtures/README.md`'s table of variants is incomplete and stale in places.
 - `writing.sql_name` is defined and never called.
+
+### 11.7 Validator vocabularies
+
+- The validator's vocabularies are four string enumerations in `vocabulary.py`: `Level`,
+  `Verdict`, `EvaluationStatus` and `RegistryState`. A member equals the string a report's JSON
+  carries, so a caller comparing against the string is unaffected. A test refuses a vocabulary
+  string written anywhere else in the package, except in the copied checkers and for one phase
+  state in `manifest.py`.
+- The check-ID table is the module `check_table`, since `checks` is the name the generator and
+  the runner give a list of checks. It holds 101 entries: 83 fixed IDs, each a constant named
+  after its ID, and 18 templated families, each a template with one function that builds an ID
+  from its parts. 52 of the 101 are named by no part.
+- An entry records its ID, its default level, its scope and whether a numbered part names it.
+  Scope is one of `packet`, `registry`, `resource` and `column`, and says what one finding of the
+  check names.
+- `Report.add` takes an entry and reports at the entry's level. A check whose level depends on
+  what was found passes `entry.at(level)`: the reader-floor finding, `kind_declared`, and a Tier 1
+  check that could not run.
+- A generated check, a manifest issue and an amendment finding carry an entry in place of an ID
+  string. `Finding.check` stays a string, so a report and its JSON are unchanged.
+- A Tier 2 rule's ID is declared by its registry, and the ID of a registry result's outcome by
+  the registry contract. Both reach a report as entries built by `rule` and `registry_outcome`,
+  carry no named flag, and are outside the table.
+- `Report.add` still accepts a level and an ID string in an entry's place, because the writer
+  reports `verify.unreachable` and `verify.recorded` that way. The form goes when the writer
+  declares its own entries.
+- An entry is named where a numbered part writes its ID standing alone, joined to no longer ID. A
+  family is named where a part writes its template under any placeholder names, or one ID the
+  template admits; `registry.determined_by.resolves` therefore does not name
+  `<resource_id>.determined_by`. The test reads `spec/parts` and is skipped where the
+  specification's tree is not beside the package.
+- The ordering scan's findings under `<resource>.physical_order`, `<resource>.primary_key_unique`
+  and `<resource>.determined_by` name a row by its position. No corpus expectation or tracked file
+  held such a row. An `axis_index`, `position_index` or `channel_index` in an axis finding is a
+  stored value and prints as stored.
+- The one prefix is `sources.`: `source.absolute_uri` becomes `sources.absolute_uri`. That renames
+  one ID where `source.` would rename three, and it matches the resolution document's name. No
+  part, corpus expectation or other package names any of the four.
+
+Found and left as it was, since REFACTOR.md lists no such change:
+
+- The ordering scan raises `KeyError` where a table repeats a primary key and a sort column
+  declared `determined_by` that key is constant in the file. The scan drops the constant column
+  from its batches and the `determined_by` comparison still reads it.
