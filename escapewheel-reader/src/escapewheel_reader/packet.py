@@ -3,7 +3,6 @@
 - :func:`open_packet` -- open a packet at a local directory or a store prefix.
 - :class:`Packet` -- list, resolve and read resources, acquire the registries the packet binds,
   and register tables with DuckDB.
-- :func:`resolve_sources` -- locate the external sources a packet names (Part 04 §5.5).
 """
 
 from __future__ import annotations
@@ -20,7 +19,7 @@ import pyarrow as pa
 import pyarrow.dataset as pads
 
 from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError, ResourceUnreadableError
-from .location import SOURCES_FILENAME, Location, Rewrite, Sources, read_sources
+from .location import Location, Rewrite, Sources, resolve_sources
 from .manifest import Manifest, Resource
 from .observation import VIEWS, register_views
 from .registries import acquire, parse
@@ -597,47 +596,6 @@ def _prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:
         connection.execute("LOAD httpfs")
     with contextlib.suppress(Exception):
         connection.execute("SET enable_object_cache=true")
-
-
-def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | None) -> dict[str, str]:
-    """Work out where each named source is, in the order Part 04 §5.5 fixes.
-
-    The caller's documents come first, in the order given, then `sources.json` at the packet
-    root if it is there. First match wins, so a caller redirects a source without editing
-    anything. A missing default is not an error -- a packet naming no source needs none, and an
-    unresolved one is a fact rather than a defect (Part 04 §5.5).
-
-    A document the caller names is refused if :func:`read_sources` refuses it; the packet's own
-    default then resolves nothing instead, so a broken optional file cannot stop a packet opening.
-
-    Parameters
-    ----------
-    root : Location
-        Packet root, where the default document is looked for.
-    supplied : iterable, optional
-        Mappings of source name to URI, or paths to resolution documents.
-
-    Returns
-    -------
-    dict
-        Source name to URI, earlier entries winning.
-
-    Raises
-    ------
-    SourcesError
-        If a supplied document is unreadable, of an unknown version, or fails the schema.
-    """
-    found: dict[str, str] = {}
-    for one in supplied or ():
-        located = one if isinstance(one, Mapping) else read_sources(Location.of(one))
-        for name, uri in located.items():
-            found.setdefault(name, str(uri))
-    with contextlib.suppress(Exception):
-        # Absent is the common case, and a defective one is the caller's problem only once
-        # something asks for a source it would have located, which then surfaces as unresolved.
-        for name, uri in read_sources(root.join(SOURCES_FILENAME)).items():
-            found.setdefault(name, uri)
-    return found
 
 
 def open_packet(

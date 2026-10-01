@@ -3,6 +3,7 @@
 - :class:`Location` -- one place bytes can be read from, with any caller-supplied rewrite.
 - :func:`read_sources`, :func:`check_sources`, :func:`sources_schema` -- read and check a source
   resolution document (Part 04 §5.5).
+- :func:`resolve_sources` -- locate the external sources a packet names.
 
 A declared `uri` is what the packet says; it becomes a location only once a root and any rewrite
 are applied to it.
@@ -10,9 +11,10 @@ are applied to it.
 
 from __future__ import annotations
 
+import contextlib
 import functools
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from importlib import resources as importlib_resources
 from pathlib import Path, PurePosixPath
@@ -372,6 +374,47 @@ class Location:
     def __str__(self) -> str:
         """Return the URI, which is what a message about this location should show."""
         return self.uri
+
+
+def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | None) -> dict[str, str]:
+    """Work out where each named source is, in the order Part 04 §5.5 fixes.
+
+    The caller's documents come first, in the order given, then `sources.json` at the packet
+    root if it is there. First match wins, so a caller redirects a source without editing
+    anything. A missing default is not an error -- a packet naming no source needs none, and an
+    unresolved one is a fact rather than a defect (Part 04 §5.5).
+
+    A document the caller names is refused if :func:`read_sources` refuses it; the packet's own
+    default then resolves nothing instead, so a broken optional file cannot stop a packet opening.
+
+    Parameters
+    ----------
+    root : Location
+        Packet root, where the default document is looked for.
+    supplied : iterable, optional
+        Mappings of source name to URI, or paths to resolution documents.
+
+    Returns
+    -------
+    dict
+        Source name to URI, earlier entries winning.
+
+    Raises
+    ------
+    SourcesError
+        If a supplied document is unreadable, of an unknown version, or fails the schema.
+    """
+    found: dict[str, str] = {}
+    for one in supplied or ():
+        located = one if isinstance(one, Mapping) else read_sources(Location.of(one))
+        for name, uri in located.items():
+            found.setdefault(name, str(uri))
+    with contextlib.suppress(Exception):
+        # Absent is the common case, and a defective one is the caller's problem only once
+        # something asks for a source it would have located, which then surfaces as unresolved.
+        for name, uri in read_sources(root.join(SOURCES_FILENAME)).items():
+            found.setdefault(name, uri)
+    return found
 
 
 __all__ = ["SOURCES_FILENAME", "SOURCES_VERSION", "Location", "check_sources", "read_sources"]
