@@ -49,7 +49,7 @@ from escapewheel_reader.resource_ids import (
 from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 from escapewheel_reader.uri import decode
 
-from . import amendment, check_table
+from . import amendment, check_table, stores
 from .check_table import CheckEntry
 from .errors import OrderFault, OrderViolation, ResourceMissing, StoreUnreachable, _Unmappable
 from .generate import Check, Specialisation, adjacency_settles_uniqueness, concerns, generate
@@ -69,7 +69,6 @@ from .registry_document import (
     ucum_error,
 )
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
-from .stores import ROUTES, digest_resource, listing, read_member
 from .vocabulary import EvaluationStatus, Level, RegistryState, Verdict
 
 #: Registry column type -> the Arrow type a conforming writer must emit (Part 03 §5.5).
@@ -901,7 +900,7 @@ def check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         )
     for resource in owned:
         try:
-            listing(owned_uri(packet, resource.entry))
+            stores.listing(owned_uri(packet, resource.entry))
         except ResourceMissing as exc:
             report.add(
                 check_table.RESOURCE_MISSING,
@@ -924,7 +923,7 @@ def check_packet_owned_opaque(packet: Packet, report: Report) -> None:
         if resource.is_external or resource.source is not None:
             continue
         try:
-            found = listing(owned_uri(packet, resource.entry))
+            found = stores.listing(owned_uri(packet, resource.entry))
         except ResourceMissing as exc:
             report.add(
                 check_table.RESOURCE_MISSING,
@@ -986,7 +985,7 @@ def check_owned_digests(packet: Packet, report: Report, store_checksums: bool = 
         if not isinstance(claimed := entry.get("digest"), Mapping):
             continue
         try:
-            found = digest_resource(
+            found = stores.digest_resource(
                 owned_uri(packet, entry), str(claimed["algorithm"]), store_checksums=store_checksums
             )
         except StoreUnreachable as exc:
@@ -1026,7 +1025,7 @@ def route_summary(routes: Sequence[tuple[str, str, str]]) -> str:
 
     A finding keeps five rows, so the message carries the route of every digest.
     """
-    taken = [route for route in ROUTES if any(row[2] == route for row in routes)]
+    taken = [route for route in stores.ROUTES if any(row[2] == route for row in routes)]
     if len(taken) == 1:
         return f"route: {taken[0]} for all {len(routes)}"
     return "route: " + "; ".join(
@@ -1196,7 +1195,7 @@ def _compare_external(
     """
     entry = resource.entry
     try:
-        found = listing(uri)
+        found = stores.listing(uri)
     except StoreUnreachable as exc:
         report.add(
             check_table.EXTERNAL_UNREACHABLE,
@@ -1224,7 +1223,7 @@ def _compare_external(
             fields.extend(compare_shape(resource, metadata, axes_by_array, report))
     if checksums and isinstance(claimed := entry.get("digest"), Mapping):
         try:
-            found_digest = digest_resource(uri, str(claimed["algorithm"]), store_checksums=store_checksums)
+            found_digest = stores.digest_resource(uri, str(claimed["algorithm"]), store_checksums=store_checksums)
         except StoreUnreachable as exc:
             report.add(
                 check_table.EXTERNAL_UNREACHABLE,
@@ -1324,7 +1323,7 @@ def _stored_metadata(uri: str, found: Any) -> Mapping[str, Any] | None:
     for key in (ZARR_METADATA_FILENAMES[2], ZARR_METADATA_FILENAMES[3]):
         if any(member.key == key for member in found.members):
             try:
-                parsed = json.loads(read_member(uri, key))
+                parsed = json.loads(stores.read_member(uri, key))
             except (ValueError, StoreUnreachable):
                 return None
             return parsed if isinstance(parsed, Mapping) else None

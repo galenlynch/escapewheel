@@ -1075,7 +1075,7 @@ def test_store_digests_report_what_they_could_not_check(packet_root):
 
 def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypatch):
     """Neither the size nor a recorded digest need change for this to fire, and a multipart tag compares."""
-    from escapewheel_validator import validator as module
+    from escapewheel_validator import stores as module
     from escapewheel_validator.stores import Listing, Member, StoreDigest, listing
 
     def stamped(uri, **kwargs):

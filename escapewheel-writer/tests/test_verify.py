@@ -163,7 +163,7 @@ def test_a_multipart_entity_tag_is_recorded_as_etag_and_compared(tmp_path, regis
     """Part 04 §5.4: an entity tag is recorded verbatim under `etag`, a multipart one included."""
     import importlib
 
-    from escapewheel_validator import validator as validating
+    from escapewheel_validator import stores as validating
     from escapewheel_validator.stores import Listing, Member, listing, store_digest
 
     verifying = importlib.import_module("escapewheel_writer.verify")  # the package exports a function by that name
