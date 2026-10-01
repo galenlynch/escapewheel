@@ -560,26 +560,26 @@ def _deliver(args: argparse.Namespace) -> int:
     return 0
 
 
-def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    """Add ``import``, ``inspect``, ``init``, ``declare`` and ``deliver`` to ``escapewheel``.
-
-    Parameters
-    ----------
-    subcommands : argparse._SubParsersAction
-        The subparser action to register against.
-    """
+def _inspect_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``inspect``, which reports what one source offers."""
     inspect = subcommands.add_parser("inspect", help="report what one source offers (Part 05 §4.1)")
     inspect.add_argument("kind", choices=KINDS)
     inspect.add_argument("root", type=Path)
     inspect.add_argument("--session-id", default="session", help="session the records are scoped to")
     inspect.set_defaults(func=_inspect)
 
+
+def _init_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``init``, which drafts a recipe from what several sources hold."""
     init = subcommands.add_parser("init", help="draft a recipe from what several sources hold")
     init.add_argument("--source", action="append", required=True, metavar="KIND=PATH")
     init.add_argument("--session-id", required=True)
     init.add_argument("--out", type=Path, help="write here rather than to stdout")
     init.set_defaults(func=_init)
 
+
+def _extension_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``extension``, whose verbs draft an extension registry and check one."""
     extension = subcommands.add_parser("extension", help="draft an extension registry, or check one")
     # Two verbs rather than two commands: drafting and checking are the two halves of authoring one
     # document, and a verb is where a third would go.
@@ -608,6 +608,9 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     checking.add_argument("--result", type=Path, help="write the complete portable registry result as JSON")
     checking.set_defaults(func=_extension_check)
 
+
+def _verify_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``verify``, which records what is true of a committed packet's external resources."""
     verifier = subcommands.add_parser(
         "verify", help="record what is true about a committed packet's external resources"
     )
@@ -621,6 +624,9 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     )
     verifier.set_defaults(func=_verify)
 
+
+def _prune_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``prune``, which removes what a committed packet no longer names."""
     pruner = subcommands.add_parser(
         "prune", help="remove what a committed packet no longer names, reporting by default"
     )
@@ -644,6 +650,9 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     pruner.add_argument("--apply", action="store_true", help="remove, rather than report what would be removed")
     pruner.set_defaults(func=_prune)
 
+
+def _import_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``import``, which builds and commits a packet from a recipe."""
     importer = subcommands.add_parser("import", help="build and commit a packet from a recipe")
     importer.add_argument("recipe", type=Path)
     importer.add_argument("--out", type=Path, help="packet root, overriding [packet].out")
@@ -689,6 +698,9 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     kept.add_argument("--no-source-cache", action="store_true", help="supply no source-cache location")
     importer.set_defaults(func=_import)
 
+
+def _prune_cache_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``prune-cache``, which removes what this writer keeps in a source-cache location."""
     cache_pruner = subcommands.add_parser(
         "prune-cache", help="remove what this writer keeps in a source-cache location, reporting by default"
     )
@@ -703,6 +715,9 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     cache_pruner.add_argument("--apply", action="store_true", help="remove, rather than report what would be removed")
     cache_pruner.set_defaults(func=_prune_cache)
 
+
+def _declare_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``declare``, which writes an adapter's declarations as a document."""
     declare = subcommands.add_parser("declare", help="write an adapter's declarations as a document")
     declare.add_argument("kind", help="the source kind, as a recipe entry names it")
     declare.add_argument(
@@ -714,6 +729,9 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     declare.add_argument("--out", type=Path, help="write here rather than to stdout")
     declare.set_defaults(func=_declare)
 
+
+def _deliver_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add ``deliver``, which runs one adapter and hands over its rows."""
     deliver = subcommands.add_parser("deliver", help="run one adapter and hand over its rows")
     deliver.add_argument("kind", help="the source kind to run")
     deliver.add_argument(
@@ -723,6 +741,28 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         help="override the protocol, which is otherwise read from the terms supplied",
     )
     deliver.set_defaults(func=_deliver)
+
+
+def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Add the writer's subcommands to ``escapewheel``, each through its own parser function.
+
+    Parameters
+    ----------
+    subcommands : argparse._SubParsersAction
+        The subparser action to register against.
+    """
+    for add in (
+        _inspect_parser,
+        _init_parser,
+        _extension_parser,
+        _verify_parser,
+        _prune_parser,
+        _import_parser,
+        _prune_cache_parser,
+        _declare_parser,
+        _deliver_parser,
+    ):
+        add(subcommands)
 
 
 __all__ = ["HINTS", "KINDS", "declaration_protocols", "import_source_cache", "open_for_inspection", "register"]
