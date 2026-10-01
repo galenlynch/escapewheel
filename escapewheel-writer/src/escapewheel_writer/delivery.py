@@ -43,7 +43,7 @@ from escapewheel_reader.uri import canonical, is_absolute
 
 from . import opaque
 from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_CACHE
-from .errors import SourceDefect
+from .errors import DeliveryFailed, SourceDefect, SourceFault
 
 #: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
 #: identifier is dotted, so no undotted token can collide with it.
@@ -63,7 +63,9 @@ BATCH_ROWS = 1_000_000
 RETRY = 0.01
 
 #: One protocol's reading half: what arrived per resource, and what was wrong with the run.
-Reader = Callable[[str, Sequence[str], bytes, Mapping[str, Any], Sequence[str]], tuple[dict[str, Any], list[str]]]
+Reader = Callable[
+    [str, Sequence[str], bytes, Mapping[str, Any], Sequence[str]], tuple[dict[str, Any], list[SourceDefect]]
+]
 
 
 def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
@@ -119,7 +121,8 @@ def written_arrays(source: Any, location: str | None) -> int:
     if not location:
         raise SourceDefect(
             "this source stages a dense array and no array_location was supplied; an array crosses "
-            "as bytes under a location a build names (Part 12 §5)"
+            "as bytes under a location a build names (Part 12 §5)",
+            code=SourceFault.NO_ARRAY_LOCATION,
         )
     from .arrays import write_zarr
 
@@ -172,13 +175,17 @@ def construct(kind: str, supplied: Mapping[str, Any]) -> Any:
     adapter = ADAPTERS.get(kind) or discovered().get(kind)
     if adapter is None:
         known = ", ".join(sorted({*ADAPTERS, *discovered()}))
-        raise SourceDefect(f"unknown source kind {kind!r}; this build ships {known}")
+        raise SourceDefect(
+            f"unknown source kind {kind!r}; this build ships {known}", code=SourceFault.UNKNOWN_KIND, where=kind
+        )
     declared = getattr(adapter, "NEEDS", ("root", "session_id"))
     terms = {name: supplied[name] for name in declared if name in supplied and name != "root"}
     if SOURCE_CACHE in supplied and SOURCE_CACHE in getattr(adapter, "ACCEPTS", ()):
         terms[SOURCE_CACHE] = supplied[SOURCE_CACHE]
     if "root" not in supplied:
-        raise SourceDefect(f"{kind}: nothing supplied a root, which every adapter needs")
+        raise SourceDefect(
+            f"{kind}: nothing supplied a root, which every adapter needs", code=SourceFault.NO_ROOT, where=kind
+        )
     options = dict(supplied.get("options", {}))
     # Opened here rather than by the adapter, because how a store is reached is the recipe's fact
     # and an adapter takes a root it can read. Absent, the default applies: a public bucket is
@@ -238,7 +245,9 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
     elif protocol == "flight-v0.1":
         _serve_flight(tables, str(supplied["socket"]))
     else:
-        raise SourceDefect(f"{protocol} is in no group this profile names")
+        raise SourceDefect(
+            f"{protocol} is in no group this profile names", code=SourceFault.PROTOCOL_UNKNOWN, where=protocol
+        )
     if (path := supplied.get("report_path")) and protocol in REPORT_AS_FILE:
         Path(path).write_text(json.dumps(report_of(source), indent=2, default=str) + "\n")
 
@@ -544,9 +553,15 @@ def fetch(
         The rows, and whatever the report carried.
     """
     if isinstance(command, str):
-        raise SourceDefect(f"{kind}: command must be an argument list, not {command!r}; write it as a TOML array")
+        raise SourceDefect(
+            f"{kind}: command must be an argument list, not {command!r}; write it as a TOML array",
+            code=SourceFault.COMMAND_NOT_A_LIST,
+            where=kind,
+        )
     if not command:
-        raise SourceDefect(f"{kind}: a delivered source declares no command to run")
+        raise SourceDefect(
+            f"{kind}: a delivered source declares no command to run", code=SourceFault.NO_COMMAND, where=kind
+        )
     workspace.mkdir(parents=True, exist_ok=True)
     if report_path is not None:
         # A file at a path the recipe names is present after any run that ever wrote one.
@@ -557,7 +572,9 @@ def fetch(
         "flight-v0.1": _read_flight,
     }
     if protocol not in readers:
-        raise SourceDefect(f"{kind}: {protocol} is in no group this profile names")
+        raise SourceDefect(
+            f"{kind}: {protocol} is in no group this profile names", code=SourceFault.PROTOCOL_UNKNOWN, where=protocol
+        )
     # A Unix socket's address holds about a hundred bytes, fewer than a packet's path may take, so
     # the socket is named in a directory of its own and not in the workspace.
     with tempfile.TemporaryDirectory(prefix="ew-") as socket_home:
@@ -585,9 +602,17 @@ def fetch(
     if missing:
         # Reported together rather than one at a time: what a person wants is which resources did
         # not arrive, not which one did not arrive first (Part 05 §4.4).
-        failures.append(f"{len(missing)} resource(s) never arrived: {', '.join(missing)}")
+        failures.append(
+            SourceDefect(
+                f"{len(missing)} resource(s) never arrived: {', '.join(missing)}",
+                code=SourceFault.NEVER_ARRIVED,
+                where=", ".join(missing),
+            )
+        )
     if failures:
-        raise SourceDefect(f"{kind}: " + "; ".join(failures) + _tail(notes))
+        raise DeliveryFailed(
+            f"{kind}: " + "; ".join(str(failure) for failure in failures) + _tail(notes), failures=failures, where=kind
+        )
     delivered = Delivered(
         kind,
         tables,
@@ -601,12 +626,14 @@ def fetch(
     if unresolved := delivered.unresolved():
         raise SourceDefect(
             f"{kind}: {len(unresolved)} referenced resource(s) bind no delivered catalog row "
-            f"(Part 12 §5): {', '.join(unresolved)}" + _tail(notes)
+            f"(Part 12 §5): {', '.join(unresolved)}" + _tail(notes),
+            code=SourceFault.REFERENCE_UNBOUND,
+            where=", ".join(unresolved),
         )
     return delivered
 
 
-def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[str]]:
+def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[SourceDefect]]:
     """Read the resource document a delivery carried, refusing one that does not satisfy its shape.
 
     Refused rather than reported, unlike a report: this is the manifest's own content arriving from
@@ -622,17 +649,17 @@ def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[str
     try:
         document = json.loads(text or "{}")
     except json.JSONDecodeError as exc:
-        return [], [f"the resource document is not JSON ({exc})"]
+        return [], [SourceDefect(f"the resource document is not JSON ({exc})", code=SourceFault.DOCUMENT_NOT_JSON)]
     # Before the shape, which also refuses `external: false` where an entry's uri is absolute or it
     # names a source, but without naming the entry.
     if problems := _entry_refusals(document):
         return [], problems
     if problem := _refuses(document):
-        return [], [f"the resource document {problem}"]
+        return [], [SourceDefect(f"the resource document {problem}", code=SourceFault.DOCUMENT_SHAPE)]
     return [_as_recorded(entry) for entry in document.get("resources", ())], []
 
 
-def _entry_refusals(document: Any) -> list[str]:
+def _entry_refusals(document: Any) -> list[SourceDefect]:
     """Each entry declaring itself packet-owned, or whose uri no reader could resolve, by its `resource_id`.
 
     A resource document describes only a referenced resource, and a packet-owned opaque resource
@@ -647,15 +674,25 @@ def _entry_refusals(document: Any) -> list[str]:
         resource_id = entry.get("resource_id")
         if entry.get("external") is False:
             found.append(
-                f"{resource_id}: declares external: false; a resource document describes only a referenced "
-                "resource, and a packet-owned opaque resource crosses as a payload (Part 12 §5)"
+                SourceDefect(
+                    f"{resource_id}: declares external: false; a resource document describes only a referenced "
+                    "resource, and a packet-owned opaque resource crosses as a payload (Part 12 §5)",
+                    code=SourceFault.ENTRY_NOT_EXTERNAL,
+                    where=str(resource_id),
+                )
             )
         uri = entry.get("uri")
         if isinstance(uri, str) and not is_absolute(uri):
             try:
                 canonical(uri)
             except ValueError as exc:
-                found.append(f"{resource_id}: uri is neither absolute nor a relative reference: {exc} (Part 03 §4)")
+                found.append(
+                    SourceDefect(
+                        f"{resource_id}: uri is neither absolute nor a relative reference: {exc} (Part 03 §4)",
+                        code=SourceFault.ENTRY_URI,
+                        where=str(resource_id),
+                    )
+                )
     return found
 
 
@@ -770,7 +807,7 @@ def _said(collected: Sequence[str]) -> str:
 
 def _read_files(
     kind: str, argv: Sequence[str], crossing: bytes, supplied: Mapping[str, Any], wanted: Sequence[str]
-) -> tuple[dict[str, Any], list[str]]:
+) -> tuple[dict[str, Any], list[SourceDefect]]:
     """`files-v0.1`: the adapter writes Parquet, and discovery reads the footers."""
     root = Path(supplied["delivery_root"])
     root.mkdir(parents=True, exist_ok=True)
@@ -781,7 +818,12 @@ def _read_files(
     if done.returncode:
         # A non-zero exit is a failure whatever arrived: an adapter saying it failed is not
         # overruled by its own output (Part 05 §4.4).
-        failures.append(f"the command exited {done.returncode}{_said([done.stderr.decode(errors='replace')])}")
+        failures.append(
+            SourceDefect(
+                f"the command exited {done.returncode}{_said([done.stderr.decode(errors='replace')])}",
+                code=SourceFault.COMMAND_EXITED,
+            )
+        )
     tables: dict[str, Any] = {}
     if (document := root / f"{RESOURCES}.json").is_file():
         # A file is a file: under this protocol the document went down as JSON, and it reaches the
@@ -792,7 +834,13 @@ def _read_files(
             # The footer, which is what says the file is a delivery rather than a partial write.
             _ = pq.ParquetFile(path).metadata.num_rows
         except pa.ArrowInvalid as exc:
-            failures.append(f"{path.stem}: the delivered file cannot be read ({exc})")
+            failures.append(
+                SourceDefect(
+                    f"{path.stem}: the delivered file cannot be read ({exc})",
+                    code=SourceFault.DELIVERED_FILE_UNREADABLE,
+                    where=path.stem,
+                )
+            )
             continue
         tables[path.stem] = path
     del kind, wanted
@@ -801,7 +849,7 @@ def _read_files(
 
 def _read_stream(
     kind: str, argv: Sequence[str], crossing: bytes, supplied: Mapping[str, Any], wanted: Sequence[str]
-) -> tuple[dict[str, Any], list[str]]:
+) -> tuple[dict[str, Any], list[SourceDefect]]:
     """`stream-v0.1`: concatenated IPC on standard output, ended by the sentinel."""
     del supplied, wanted
     child = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -833,19 +881,26 @@ def _read_stream(
         draining.join(timeout=5)
     failures = []
     if child.returncode:
-        failures.append(f"the command exited {child.returncode}{_said(said)}")
+        failures.append(
+            SourceDefect(f"the command exited {child.returncode}{_said(said)}", code=SourceFault.COMMAND_EXITED)
+        )
     if not ended:
         # Naming the last resource read rather than the first that never arrived: a reader treats
         # end of file as end of stream, so a cut delivery parses clean (Part 12 §6).
         where = f" after {last}" if last else " before anything arrived"
-        failures.append(f"the delivery did not end with the sentinel; the adapter died{where}{_said(said)}")
+        failures.append(
+            SourceDefect(
+                f"the delivery did not end with the sentinel; the adapter died{where}{_said(said)}",
+                code=SourceFault.NO_SENTINEL,
+            )
+        )
     del kind
     return tables, failures
 
 
 def _read_flight(
     kind: str, argv: Sequence[str], crossing: bytes, supplied: Mapping[str, Any], wanted: Sequence[str]
-) -> tuple[dict[str, Any], list[str]]:
+) -> tuple[dict[str, Any], list[SourceDefect]]:
     """`flight-v0.1`: retry the socket until it answers, then one DoGet per descriptor."""
     import pyarrow.flight as fl
 
@@ -856,12 +911,12 @@ def _read_flight(
     _supply(child, crossing)
     draining = _drain(child.stderr, said)
     tables: dict[str, Any] = {}
-    failures: list[str] = []
+    failures: list[SourceDefect] = []
     client = None
     try:
         client = _rendezvous(socket, child)
     except SourceDefect as exc:
-        failures.append(str(exc) + _said(said))
+        failures.append(SourceDefect(str(exc) + _said(said), code=exc.code))
     if client is not None:
         try:
             for info in client.list_flights():
@@ -870,7 +925,9 @@ def _read_flight(
         except fl.FlightError as exc:
             # A failing adapter writes nothing to standard error here, because the diagnosis
             # travels on the connection it was asked over (Part 05 §4.4).
-            failures.append(f"{exc}; detail: {getattr(exc, 'extra_info', b'')!r}")
+            failures.append(
+                SourceDefect(f"{exc}; detail: {getattr(exc, 'extra_info', b'')!r}", code=SourceFault.FLIGHT_ERROR)
+            )
         client.close()
     # A build that started a process owns it, and an adapter may not rely on running code after
     # its last response (Part 12 §8).
@@ -896,7 +953,9 @@ def _rendezvous(socket: str, child: subprocess.Popen[bytes]) -> Any:
             return client
         except (fl.FlightUnavailableError, fl.FlightTimedOutError):
             if child.poll() is not None:
-                raise SourceDefect(f"the adapter exited {child.returncode} before serving") from None
+                raise SourceDefect(
+                    f"the adapter exited {child.returncode} before serving", code=SourceFault.EXITED_BEFORE_SERVING
+                ) from None
             time.sleep(RETRY)
 
 

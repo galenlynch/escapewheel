@@ -21,7 +21,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from ..errors import UnsupportedEncoding
+from ..errors import SourceFault, UnsupportedEncoding
 
 
 def _meta(path: Path) -> dict[str, Any] | None:
@@ -122,12 +122,18 @@ def read_array(path: Path, limit: int | None = None) -> NDArray[Any]:
 
     meta = _meta(path)
     if meta is None:
-        raise UnsupportedEncoding(f"{path} is not a Zarr v2 array")
+        raise UnsupportedEncoding(f"{path} is not a Zarr v2 array", code=SourceFault.NOT_ZARR_V2, where=str(path))
     if len(meta["shape"]) != 1:
-        raise UnsupportedEncoding(f"{path}: rank {len(meta['shape'])}; only 1-D arrays are read here")
+        raise UnsupportedEncoding(
+            f"{path}: rank {len(meta['shape'])}; only 1-D arrays are read here",
+            code=SourceFault.ARRAY_RANK,
+            where=str(path),
+        )
     filters = list(meta.get("filters") or [])
     if any(f.get("id") == "pickle" for f in filters):
-        raise UnsupportedEncoding(f"{path} is pickled; read the plain column beside it instead")
+        raise UnsupportedEncoding(
+            f"{path} is pickled; read the plain column beside it instead", code=SourceFault.PICKLED, where=str(path)
+        )
 
     compressor = numcodecs.get_codec(meta["compressor"]) if meta.get("compressor") else None
     pipeline = [numcodecs.get_codec(f) for f in filters]
@@ -143,7 +149,11 @@ def read_array(path: Path, limit: int | None = None) -> NDArray[Any]:
     for index in range((length + stride - 1) // stride):
         chunk = path / str(index)
         if not chunk.is_file():  # an unwritten chunk is the fill value, which vlen dtypes lack
-            raise UnsupportedEncoding(f"{path}: chunk {index} is absent and the fill value is not decodable")
+            raise UnsupportedEncoding(
+                f"{path}: chunk {index} is absent and the fill value is not decodable",
+                code=SourceFault.FILL_VALUE,
+                where=str(path),
+            )
         buffer: Any = chunk.read_bytes()
         if compressor is not None:
             buffer = compressor.decode(buffer)
@@ -182,12 +192,20 @@ class DenseV2:
     def __init__(self, path: Any) -> None:
         meta = _meta(path)
         if meta is None:
-            raise UnsupportedEncoding(f"{path} is not a Zarr v2 array")
+            raise UnsupportedEncoding(f"{path} is not a Zarr v2 array", code=SourceFault.NOT_ZARR_V2, where=str(path))
         filters = list(meta.get("filters") or [])
         if any(f.get("id") == "pickle" for f in filters):
-            raise UnsupportedEncoding(f"{path} is pickled; this reader decodes values, not references")
+            raise UnsupportedEncoding(
+                f"{path} is pickled; this reader decodes values, not references",
+                code=SourceFault.PICKLED,
+                where=str(path),
+            )
         if len(meta["shape"]) < 2:
-            raise UnsupportedEncoding(f"{path}: rank {len(meta['shape'])}; read_array reads those")
+            raise UnsupportedEncoding(
+                f"{path}: rank {len(meta['shape'])}; read_array reads those",
+                code=SourceFault.ARRAY_RANK,
+                where=str(path),
+            )
         self.path = path
         self.shape = tuple(int(n) for n in meta["shape"])
         self.chunks = tuple(int(n) for n in meta["chunks"])
@@ -202,7 +220,11 @@ class DenseV2:
         """Return rows `[start, stop)` of the slowest axis, whole along every other."""
         start, stop, step = rows.indices(self.shape[0])
         if step != 1:
-            raise UnsupportedEncoding(f"{self.path}: a strided read is not supported; take a contiguous slab")
+            raise UnsupportedEncoding(
+                f"{self.path}: a strided read is not supported; take a contiguous slab",
+                code=SourceFault.STRIDED_READ,
+                where=str(self.path),
+            )
         held = np.full((max(stop - start, 0), *self.shape[1:]), self._blank(), dtype=self.dtype)
         if stop <= start:
             return held

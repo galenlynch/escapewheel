@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 import zarr
 
-from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.sources.waveforms import WaveformSource
 
 UNITS, CHANNELS, SAMPLES = 3, 5, 4
@@ -126,8 +126,9 @@ def test_sd_is_a_second_array_of_the_same_shape(asset: Path) -> None:
 def test_sd_asked_for_and_absent_is_refused(tmp_path: Path) -> None:
     """A recipe that asks for the deviation and does not get it is a defect, not a note."""
     root = build(tmp_path / "sorted", sd=False)
-    with pytest.raises(SourceDefect, match="std"):
+    with pytest.raises(SourceDefect) as refused:
         _source(root, sd=True).array_assets()
+    assert refused.value.code is SourceFault.NO_DEVIATION
 
 
 def test_an_asset_directory_is_accepted_as_well_as_postprocessed(asset: Path) -> None:
@@ -347,10 +348,12 @@ def test_a_unit_the_build_harvested_resolves_under_a_prefix(tmp_path: Path, pref
 def test_no_unit_matching_at_all_is_a_defect(asset: Path) -> None:
     """An array of nothing is not an array, so the build stops rather than committing one."""
     source = WaveformSource(asset, session_id="s1", units=[])
-    with pytest.raises(SourceDefect, match="matches the packet's sorting"):
+    with pytest.raises(SourceDefect) as refused:
         source.array_assets()
+    assert refused.value.code is SourceFault.NO_UNIT_MATCHES
 
 
 def test_an_asset_with_no_analyzer_is_a_defect(tmp_path: Path) -> None:
-    with pytest.raises(SourceDefect, match="postprocessed"):
+    with pytest.raises(SourceDefect) as refused:
         _source(tmp_path / "empty")
+    assert refused.value.code is SourceFault.NO_ANALYZER_DIRECTORY

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.sources import SyncSource
 from escapewheel_writer.sources.sync import phase_discontinuities, suspect_terminals
 from tests import syncfixture
@@ -60,8 +60,10 @@ def anchors_of(source, **kwargs):
 
 
 def test_a_tree_without_record_nodes_is_a_defect(tmp_path):
-    with pytest.raises(SourceDefect, match="no Record Node"):
+    with pytest.raises(SourceDefect) as refused:
         SyncSource(tmp_path, session_id=SESSION)
+    assert refused.value.code is SourceFault.NO_RECORD_NODE
+    assert refused.value.where == str(tmp_path)
 
 
 def test_it_finds_every_stream_both_nodes_saw(source):
@@ -90,13 +92,15 @@ def test_a_stub_is_skipped_and_reported(source):
 def test_a_tree_with_nothing_aligned_is_a_defect(tmp_path):
     events = tmp_path / "Record Node 109" / "experiment1" / "recording1" / "events"
     syncfixture.stream(events, "Neuropix-PXI-100.probeA", first_sample=1000, aligned=False)
-    with pytest.raises(SourceDefect, match="no stream .* carries HARP-aligned"):
+    with pytest.raises(SourceDefect) as refused:
         SyncSource(tmp_path, session_id=SESSION).aligned()
+    assert refused.value.code is SourceFault.NO_ALIGNED_STREAM
 
 
 def test_an_absent_experiment_is_a_defect(tree):
-    with pytest.raises(SourceDefect, match="no TTL events"):
+    with pytest.raises(SourceDefect) as refused:
         SyncSource(tree, session_id=SESSION, experiment="experiment9").streams()
+    assert refused.value.code is SourceFault.NO_TTL_EVENTS
 
 
 # -- the anchors -----------------------------------------------------------------------
@@ -150,8 +154,10 @@ def test_supplying_no_clocks_reaches_a_stream_that_carries_no_ticks(source):
     """Which is what the declared clocks are for: unfiltered, the NI-DAQ is anchored too."""
     assert not [r for r in source.anchors() if "NI-DAQ" in r["clock_id"]]
     every = SyncSource(source.root, session_id=SESSION, first_samples=FIRST_SAMPLES)
-    with pytest.raises(SourceDefect, match="NI-DAQmx-107: no first sample"):
+    with pytest.raises(SourceDefect) as refused:
         every.anchors()
+    assert refused.value.code is SourceFault.NO_FIRST_SAMPLE
+    assert "NI-DAQmx-107" in refused.value.where
 
 
 def test_a_counter_that_goes_backwards_is_refused(tmp_path):
@@ -167,15 +173,17 @@ def test_a_counter_that_goes_backwards_is_refused(tmp_path):
         clocks=PROBE_CLOCKS,
         first_samples=[{"stream": "experiment1.Neuropix-PXI-100.probeA", "first_sample": 1000}],
     )
-    with pytest.raises(SourceDefect, match="do not increase on both clocks"):
+    with pytest.raises(SourceDefect) as refused:
         source.anchors()
+    assert refused.value.code is SourceFault.PULSES_UNORDERED
 
 
 def test_a_line_with_no_edges_is_a_defect(source):
-    with pytest.raises(SourceDefect, match="no rising edge on line 7"):
+    with pytest.raises(SourceDefect) as refused:
         SyncSource(
             source.root, session_id=SESSION, sync_line=7, clocks=PROBE_CLOCKS, first_samples=FIRST_SAMPLES
         ).anchors()
+    assert refused.value.code is SourceFault.NO_RISING_EDGE
 
 
 # -- the first sample ------------------------------------------------------------------
@@ -191,8 +199,9 @@ def test_the_first_sample_is_read_from_disk_when_not_supplied(tmp_path):
 
 
 def test_without_it_the_counter_cannot_be_made_relative(tree):
-    with pytest.raises(SourceDefect, match="no first sample supplied"):
+    with pytest.raises(SourceDefect) as refused:
         SyncSource(tree, session_id=SESSION, clocks=PROBE_CLOCKS).anchors()
+    assert refused.value.code is SourceFault.NO_FIRST_SAMPLE
 
 
 # -- the reference clock ----------------------------------------------------------------
@@ -340,8 +349,9 @@ def test_a_supplied_first_sample_still_wins(tmp_path):
 def test_without_the_file_the_older_routes_still_apply(tree):
     """A tree with neither the file nor the counter array refuses rather than guessing."""
     source = SyncSource(tree, session_id=SESSION, clocks=PROBE_CLOCKS)
-    with pytest.raises(SourceDefect, match="sync_messages"):
+    with pytest.raises(SourceDefect) as refused:
         source.anchors()
+    assert refused.value.code is SourceFault.NO_FIRST_SAMPLE
     assert any("no sync_messages.txt" in note for note in source.notes)
 
 

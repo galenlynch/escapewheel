@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.sources.lfp import LFPSource
 
 CLOCK = "experiment1.Neuropix-PXI-100.45883-1.samples"
@@ -130,8 +130,9 @@ def test_a_non_integer_decimation_is_refused(nwb):
     root = nwb.parent / "odd.nwb"
     _series(root, step_hz=1111.0)
     _contacts(root)
-    with pytest.raises(SourceDefect, match="not an integer"):
+    with pytest.raises(SourceDefect) as refused:
         _source(root).records()
+    assert refused.value.code is SourceFault.NOT_A_DECIMATION
 
 
 def test_the_channel_axis_is_labelled_with_electrodes(nwb):
@@ -218,8 +219,9 @@ def test_an_unknown_verify_mode_is_refused(nwb):
 
 
 def test_a_series_with_no_matching_clock_is_refused(nwb):
-    with pytest.raises(SourceDefect, match="clocks end in"):
+    with pytest.raises(SourceDefect) as refused:
         _source(nwb, clocks=[]).records()
+    assert refused.value.code is SourceFault.NO_ONE_CLOCK
 
 
 def test_an_nwb_with_no_lfp_group_yields_nothing(tmp_path):
@@ -248,8 +250,9 @@ def test_a_contact_the_source_cannot_name_is_refused(tmp_path):
 
     contacts = group(root / "general/extracellular_ephys/electrodes")
     array(contacts / "channel_name", ["CH0", "CH4"], filter_id="vlen-utf8")
-    with pytest.raises(SourceDefect, match="group_name"):
+    with pytest.raises(SourceDefect) as refused:
         _source(root).records()
+    assert refused.value.code is SourceFault.NO_ELECTRODE_GROUPS
 
 
 def test_init_can_draft_an_lfp_source(nwb):

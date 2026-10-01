@@ -17,7 +17,7 @@ from typing import Any, ClassVar
 import numpy as np
 from numpy.typing import NDArray
 
-from ..errors import SourceDefect
+from ..errors import SourceDefect, SourceFault
 from .sorter import STREAM, SortedStream
 from .store import SourceStore, source_root
 from .zarr_compat import DenseV2, attrs, attrs_at
@@ -163,7 +163,9 @@ class WaveformSource:
         path = source_root(root, cache=source_cache)
         self.root = path if path.name == ANALYZERS else path / ANALYZERS
         if not self.root.is_dir():
-            raise SourceDefect(f"{path} holds no {ANALYZERS}/ directory")
+            raise SourceDefect(
+                f"{path} holds no {ANALYZERS}/ directory", code=SourceFault.NO_ANALYZER_DIRECTORY, where=str(path)
+            )
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.experiment = experiment
@@ -195,7 +197,11 @@ class WaveformSource:
         if self.experiment is not None:
             found = [s for s in found if s.experiment == self.experiment]
         if not found:
-            raise SourceDefect(f"{self.root} holds no analyzer for experiment {self.experiment!r}")
+            raise SourceDefect(
+                f"{self.root} holds no analyzer for experiment {self.experiment!r}",
+                code=SourceFault.NO_ANALYZER,
+                where=str(self.root),
+            )
         return found
 
     def _channels(self, stream: SortedStream) -> list[str]:
@@ -207,7 +213,11 @@ class WaveformSource:
         recorded = attrs_at(stream.path, "recording_info").get("recording_attributes") or {}
         found = recorded.get("channel_ids")
         if not found:
-            raise SourceDefect(f"{stream.key}: the analyzer states no channel list, so no contact can be named")
+            raise SourceDefect(
+                f"{stream.key}: the analyzer states no channel list, so no contact can be named",
+                code=SourceFault.NO_CHANNEL_LIST,
+                where=stream.key,
+            )
         return [f"{self.prefix}{stream.device}.{channel}" for channel in found]
 
     def _window(self, stream: SortedStream) -> tuple[int, float]:
@@ -220,7 +230,11 @@ class WaveformSource:
         recorded = attrs_at(stream.path, "recording_info").get("recording_attributes") or {}
         rate = recorded.get("sampling_frequency")
         if "ms_before" not in params or not rate:
-            raise SourceDefect(f"{stream.key}: the analyzer states no ms_before or sampling rate for its templates")
+            raise SourceDefect(
+                f"{stream.key}: the analyzer states no ms_before or sampling rate for its templates",
+                code=SourceFault.NO_TEMPLATE_WINDOW,
+                where=stream.key,
+            )
         return round(float(params["ms_before"]) * float(rate) / 1000.0), float(rate)
 
     def _unit(self, stream: SortedStream) -> str | None:
@@ -258,7 +272,9 @@ class WaveformSource:
             samples.add(self._cut(stream, kept))
 
         if not kept.templates:
-            raise SourceDefect("no unit in the analyzer's templates matches the packet's sorting")
+            raise SourceDefect(
+                "no unit in the analyzer's templates matches the packet's sorting", code=SourceFault.NO_UNIT_MATCHES
+            )
         if kept.missed:
             self.notes.append(f"units: {kept.missed} analyzer unit(s) match no unit in the packet's sorting; skipped")
         if kept.blank:
@@ -271,11 +287,19 @@ class WaveformSource:
                 f"units: {absent} unit(s) of the packet's sorting have no template; stored with no channels"
             )
         if len(samples) != 1 or len(windows) != 1:
-            raise SourceDefect(f"the streams disagree about the template window: {sorted(samples)}, {sorted(windows)}")
+            raise SourceDefect(
+                f"the streams disagree about the template window: {sorted(samples)}, {sorted(windows)}",
+                code=SourceFault.TEMPLATE_WINDOWS_DIFFER,
+            )
         if len(units) != 1:
-            raise SourceDefect(f"the streams disagree about what their values are in: {sorted(str(u) for u in units)}")
+            raise SourceDefect(
+                f"the streams disagree about what their values are in: {sorted(str(u) for u in units)}",
+                code=SourceFault.TEMPLATE_UNITS_DIFFER,
+            )
         if not kept.peak:
-            raise SourceDefect("every template is zero, so no unit has a channel support")
+            raise SourceDefect(
+                "every template is zero, so no unit has a channel support", code=SourceFault.TEMPLATES_ZERO
+            )
 
         held = samples.pop()
         nbefore, rate = windows.pop()
@@ -296,7 +320,7 @@ class WaveformSource:
         }
         if self.sd:
             if not kept.sd_peak:
-                raise SourceDefect("every deviation is zero over the mean's support")
+                raise SourceDefect("every deviation is zero over the mean's support", code=SourceFault.DEVIATIONS_ZERO)
             sd_slabs = [t.sd_slab if t.sd_slab is not None else np.zeros((0, held)) for t in templates]
             sd_values, sd_scale = _quantise(sd_slabs, kept.sd_peak, width, held)
             self._built |= {"sd_values": sd_values, "sd_scale": sd_scale}
@@ -310,12 +334,19 @@ class WaveformSource:
         spread = None
         if self.sd:
             if not (stream.path / f"{TEMPLATES}/{DEVIATION}").is_dir():
-                raise SourceDefect(f"{stream.key}: sd was asked for and the analyzer holds no {DEVIATION}")
+                raise SourceDefect(
+                    f"{stream.key}: sd was asked for and the analyzer holds no {DEVIATION}",
+                    code=SourceFault.NO_DEVIATION,
+                    where=stream.key,
+                )
             spread = _dense(stream.path / f"{TEMPLATES}/{DEVIATION}")
         channels = self._channels(stream)
         if len(labels) != array.shape[0] or mask.shape[0] != array.shape[0]:
             raise SourceDefect(
-                f"{stream.key}: {len(labels)} unit ids and {mask.shape[0]} mask rows against {array.shape[0]} templates"
+                f"{stream.key}: {len(labels)} unit ids and {mask.shape[0]} mask rows "
+                f"against {array.shape[0]} templates",
+                code=SourceFault.TEMPLATES_MISALIGNED,
+                where=stream.key,
             )
 
         total = int(array.shape[0])
@@ -330,7 +361,11 @@ class WaveformSource:
                     kept.missed += 1
                     continue
                 if found in kept.templates or found in kept.empty:
-                    raise SourceDefect(f"{stream.key}: unit {found} has a template in more than one analyzer row")
+                    raise SourceDefect(
+                        f"{stream.key}: unit {found} has a template in more than one analyzer row",
+                        code=SourceFault.UNIT_REPEATED,
+                        where=stream.key,
+                    )
                 live = np.flatnonzero(mask[row])
                 if not live.size:
                     kept.blank += 1

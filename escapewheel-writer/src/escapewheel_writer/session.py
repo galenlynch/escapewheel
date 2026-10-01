@@ -41,6 +41,7 @@ from .errors import (
     RecipeUnsound,
     ReplacementRefused,
     SourceDefect,
+    SourceFault,
     SourcesNotOrdered,
     TermUnfilled,
     UnknownSourceKind,
@@ -487,7 +488,9 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
         elif fact in REFUSES_ON_DIFFERENCE:
             raise SourceDefect(
                 f"{fact} is {want!r} and {getattr(source, 'path', spec.kind)} states {stated!r}; "
-                "a declared fact differs from the source that states it, with no override (Part 05 §3.6)"
+                "a declared fact differs from the source that states it, with no override (Part 05 §3.6)",
+                code=SourceFault.FACT_DIFFERS,
+                where=fact,
             )
         elif fact in SOURCE_WINS:
             notes.append(f"{fact} is {want!r} and {spec.kind} derives {stated!r}; the source's value is used")
@@ -510,7 +513,9 @@ def _compare_held_facts(
         if fact in REFUSES_ON_DIFFERENCE:
             raise SourceDefect(
                 f"{fact} is {kept!r} in the packet and {getattr(source, 'path', spec.kind)} states {stated!r}; "
-                "an amendment keeps the packet's value (Part 05 §3.6)"
+                "an amendment keeps the packet's value (Part 05 §3.6)",
+                code=SourceFault.HELD_FACT_DIFFERS,
+                where=fact,
             )
         notes.append(f"{fact} is {kept!r} in the packet and {spec.kind} states {stated!r}; the packet's value is kept")
 
@@ -747,7 +752,11 @@ def _composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, An
         return {}
     start, stop = window
     if stop < start:
-        raise SourceDefect(f"{resource}: the acquisition window ends at {stop} and starts at {start}")
+        raise SourceDefect(
+            f"{resource}: the acquisition window ends at {stop} and starts at {start}",
+            code=SourceFault.WINDOW_REVERSED,
+            where=resource,
+        )
     # One window for every stream, because they come from a single acquisition: a stream of
     # rare events was watched exactly as long as one of frequent ones, and giving each the
     # extent of its own events would make a rare event look frequent.
@@ -1384,7 +1393,8 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
         raise SourceDefect(
             "preferring a source discarded a fact another stated (Part 05 §3.4). Declare it in "
             "[overrides] with a reason, prefer the other source, or fix the one that states less:"
-            "\n  " + "\n  ".join(sorted(set(lost)))
+            "\n  " + "\n  ".join(sorted(set(lost))),
+            code=SourceFault.FACT_DISCARDED,
         )
 
 

@@ -65,6 +65,13 @@ def array(path: Path, values, *, filter_id: str | None = None, **attributes) -> 
     return path
 
 
+def pickled(path: Path) -> Path:
+    """Declare an array already written as pickled, which no reader here decodes."""
+    marker = path / ".zarray"
+    marker.write_text(json.dumps(json.loads(marker.read_text()) | {"dtype": "|O", "filters": [{"id": "pickle"}]}))
+    return path
+
+
 def text(path: Path, values, **attributes) -> Path:
     """Write a vlen-utf8 array."""
     return array(path, values, filter_id="vlen-utf8", **attributes)

@@ -28,6 +28,8 @@ from escapewheel_writer.sources.store import source_root
 from escapewheel_writer.sources.values import sex as _sex
 from escapewheel_writer.sources.values import utc_offset as _offset
 
+from .errors import AindFault
+
 #: `session.json`'s own name for the file, used to accept either it or its directory.
 SESSION_JSON = "session.json"
 RIG_JSON = "rig.json"
@@ -180,7 +182,7 @@ class SessionSource(Compensates):
         path = source_root(root, cache=source_cache)
         self.path = path if path.is_file() else path / SESSION_JSON
         if not self.path.is_file():
-            raise SourceDefect(f"{path} holds no {SESSION_JSON}")
+            raise SourceDefect(f"{path} holds no {SESSION_JSON}", code=AindFault.NO_SESSION_JSON, where=str(path))
         self.zone = zone
         self.prefix = prefix
         Compensates.__init__(self)
@@ -247,7 +249,11 @@ class SessionSource(Compensates):
         for index, stream in enumerate(self._document.get("data_streams", [])):
             for required in ("stream_start_time", "stream_end_time"):
                 if not stream.get(required):
-                    raise SourceDefect(f"{self.path}: data_streams[{index}] has no {required}")
+                    raise SourceDefect(
+                        f"{self.path}: data_streams[{index}] has no {required}",
+                        code=AindFault.STREAM_FIELD_ABSENT,
+                        where=f"data_streams[{index}]",
+                    )
             modalities = tuple(m["abbreviation"] for m in stream.get("stream_modalities") or [] if isinstance(m, dict))
             out.append(
                 AcquisitionStream(
@@ -266,7 +272,11 @@ class SessionSource(Compensates):
         matching = [stream for stream in self.streams() if stream.ephys is ephys]
         if len(matching) != 1:
             kind = "ephys" if ephys else "non-ephys"
-            raise SourceDefect(f"{self.path}: {len(matching)} {kind} data streams, expected exactly 1")
+            raise SourceDefect(
+                f"{self.path}: {len(matching)} {kind} data streams, expected exactly 1",
+                code=AindFault.NO_ONE_STREAM,
+                where=str(self.path),
+            )
         return matching[0]
 
     def ephys(self) -> AcquisitionStream:
@@ -397,7 +407,11 @@ class SessionSource(Compensates):
         window = self.behavior()
         start, stop = clock.tick_at(window.start), clock.tick_at(window.stop)
         if stop < start:
-            raise SourceDefect(f"{self.path}: data_streams[{window.index}] ends before it starts")
+            raise SourceDefect(
+                f"{self.path}: data_streams[{window.index}] ends before it starts",
+                code=AindFault.STREAM_REVERSED,
+                where=f"data_streams[{window.index}]",
+            )
         return [
             {
                 "session_id": self.session_id,
@@ -420,7 +434,11 @@ class SessionSource(Compensates):
         """
         windows = self.streams()
         if not windows:
-            raise SourceDefect(f"{self.path}: no data_streams, so the session has no extent")
+            raise SourceDefect(
+                f"{self.path}: no data_streams, so the session has no extent",
+                code=AindFault.NO_STREAMS,
+                where=str(self.path),
+            )
         return (
             min(w.start for w in windows).astimezone(UTC),
             max(w.stop for w in windows).astimezone(UTC),
@@ -592,7 +610,9 @@ class SessionSource(Compensates):
             if len(inputs) != len(outputs):
                 raise SourceDefect(
                     f"calibration {name!r} states {len(inputs)} inputs against {len(outputs)} "
-                    "outputs; a point needs both sides (R89 §2.3)"
+                    "outputs; a point needs both sides (R89 §2.3)",
+                    code=AindFault.CALIBRATION_MISALIGNED,
+                    where=name,
                 )
             rows.extend(
                 {

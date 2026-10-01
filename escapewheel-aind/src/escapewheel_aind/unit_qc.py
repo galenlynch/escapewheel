@@ -28,6 +28,8 @@ from escapewheel_writer.sources.store import SourceStore, source_root
 from escapewheel_writer.sources.waveforms import ANALYZERS
 from numpy.typing import NDArray
 
+from .errors import AindFault
+
 #: The analyzer extensions holding each table's metrics, as a data frame of one array per column.
 QUALITY = "extensions/quality_metrics/metrics"
 TEMPLATE = "extensions/template_metrics/metrics"
@@ -146,7 +148,9 @@ class UnitQCSource:
         path = source_root(root, cache=source_cache)
         self.root = path if path.name == ANALYZERS else path / ANALYZERS
         if not self.root.is_dir():
-            raise SourceDefect(f"{path} holds no {ANALYZERS}/ directory")
+            raise SourceDefect(
+                f"{path} holds no {ANALYZERS}/ directory", code=AindFault.NO_ANALYZER_DIRECTORY, where=str(path)
+            )
         self.store = store if store is not None else SourceStore(self.root)
         self.session_id = session_id
         self.experiment = experiment
@@ -172,7 +176,11 @@ class UnitQCSource:
         if self.experiment is not None:
             found = [s for s in found if s.experiment == self.experiment]
         if not found:
-            raise SourceDefect(f"{self.root} holds no analyzer for experiment {self.experiment!r}")
+            raise SourceDefect(
+                f"{self.root} holds no analyzer for experiment {self.experiment!r}",
+                code=AindFault.NO_ANALYZER,
+                where=str(self.root),
+            )
         return found
 
     def _frame(self, stream: SortedStream, group: str) -> dict[str, NDArray[Any]] | None:
@@ -194,7 +202,9 @@ class UnitQCSource:
             if name == "index" or values.dtype.kind in "iufb":
                 columns[name] = values
         if "index" not in columns:
-            raise SourceDefect(f"{stream.key}: {group} names no unit for its rows")
+            raise SourceDefect(
+                f"{stream.key}: {group} names no unit for its rows", code=AindFault.NO_UNIT_INDEX, where=stream.key
+            )
         return columns
 
     def _rows(self, stream: SortedStream, frame: Mapping[str, NDArray[Any]]) -> tuple[list[int], list[Any]]:
@@ -223,7 +233,9 @@ class UnitQCSource:
                     if unit in seen:
                         raise SourceDefect(
                             f"unit {unit} matches rows of both {seen[unit]} and {stream.key}; "
-                            "set `experiment` to the one the sorter reads"
+                            "set `experiment` to the one the sorter reads",
+                            code=AindFault.UNIT_IN_TWO_STREAMS,
+                            where=stream.key,
                         )
                     seen[unit] = stream.key
                 if self.nwb is not None:
@@ -235,7 +247,9 @@ class UnitQCSource:
                 kept, identity = self._rows(stream, template)
                 built["aind_unit_qc.waveform_metrics"] += self._table(template, WAVEFORM_METRICS, kept, identity)
         if not seen:
-            raise SourceDefect("no unit in the analyzer's quality metrics matches the packet's sorting")
+            raise SourceDefect(
+                "no unit in the analyzer's quality metrics matches the packet's sorting", code=AindFault.NO_UNIT_MATCHES
+            )
         if missed:
             self.notes.append(f"units: {missed} analyzer unit(s) match no unit in the packet's sorting; skipped")
         if self.nwb is not None:
@@ -257,14 +271,22 @@ class UnitQCSource:
             assert self.nwb is not None
             names = self.nwb.members("units")
             if "device_name" not in names or "ks_unit_id" not in names:
-                raise SourceDefect(f"{self.nwb.root}/units names no unit by device_name and ks_unit_id")
+                raise SourceDefect(
+                    f"{self.nwb.root}/units names no unit by device_name and ks_unit_id",
+                    code=AindFault.NO_UNIT_NAMES,
+                    where=f"{self.nwb.root}/units",
+                )
             devices = self.nwb.array("units/device_name")
             labels = self.nwb.array("units/ks_unit_id")
             rows: dict[tuple[str, str], int] = {}
             for row, (device, label) in enumerate(zip(devices, labels, strict=True)):
                 key = (str(_clean(device)), _label(label))
                 if key in rows:
-                    raise SourceDefect(f"{self.nwb.root}/units holds unit {key[1]} of {key[0]} twice")
+                    raise SourceDefect(
+                        f"{self.nwb.root}/units holds unit {key[1]} of {key[0]} twice",
+                        code=AindFault.UNIT_REPEATED,
+                        where=f"{self.nwb.root}/units",
+                    )
                 rows[key] = row
             self._nwb_rows = rows
         return self._nwb_rows

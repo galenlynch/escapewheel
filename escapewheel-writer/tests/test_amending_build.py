@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 from escapewheel_reader import open_packet
 
-from escapewheel_writer.errors import RecipeFault, RecipeUnsound, SourceDefect
+from escapewheel_writer.errors import RecipeFault, RecipeUnsound, SourceDefect, SourceFault
 from escapewheel_writer.recipe import Recipe, SourceSpec
 from escapewheel_writer.session import _compare_held_facts, build
 from tests.conftest import REGISTRY
@@ -159,7 +159,9 @@ def test_a_source_s_differing_session_fact_is_reported_and_the_packet_s_kept():
 
 def test_a_source_naming_another_subject_refuses_the_amendment():
     source = _stating(**{"subject.subject_id": "786867"})
-    with pytest.raises(SourceDefect, match="keeps the packet's value"):
+    with pytest.raises(SourceDefect) as refused:
         _compare_held_facts(
             SourceSpec(kind="nwb", root=Path("."), owns=()), source, {"subject.subject_id": "776259"}, [], {}
         )
+    assert refused.value.code is SourceFault.HELD_FACT_DIFFERS
+    assert refused.value.where == "subject.subject_id"

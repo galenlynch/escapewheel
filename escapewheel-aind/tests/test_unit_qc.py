@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 from escapewheel_writer.errors import SourceDefect
 
+from escapewheel_aind.errors import AindFault
 from escapewheel_aind.unit_qc import METRICS, WAVEFORM_METRICS, UnitQCSource
 from tests.nwbfixture import array, group, text
 
@@ -201,21 +202,24 @@ def test_a_stream_without_template_metrics_leaves_that_table_empty_and_says_so(t
 def test_two_experiments_on_one_probe_are_refused_until_one_is_chosen(asset: Path) -> None:
     """Probe names repeat across experiments, so an unscoped read would give one unit two rows."""
     stream(asset, "experiment2_Record Node 109#Neuropix-PXI-100.A_recording1")
-    with pytest.raises(SourceDefect, match="experiment"):
+    with pytest.raises(SourceDefect) as refused:
         UnitQCSource(asset, session_id="s1", units=UNITS).records()
+    assert refused.value.code is AindFault.UNIT_IN_TWO_STREAMS
     scoped = UnitQCSource(asset, session_id="s1", units=UNITS, experiment="experiment1")
     assert len(scoped.records()["aind_unit_qc.metrics"]) == 2
 
 
 def test_an_analyzer_matching_no_unit_is_refused(asset: Path) -> None:
-    with pytest.raises(SourceDefect, match="no unit"):
+    with pytest.raises(SourceDefect) as refused:
         UnitQCSource(asset, session_id="s1", units=[]).records()
+    assert refused.value.code is AindFault.NO_UNIT_MATCHES
 
 
 def test_a_root_without_postprocessed_is_refused(tmp_path: Path) -> None:
     (tmp_path / "sorted").mkdir()
-    with pytest.raises(SourceDefect, match="postprocessed"):
+    with pytest.raises(SourceDefect) as refused:
         UnitQCSource(tmp_path / "sorted", session_id="s1", units=UNITS)
+    assert refused.value.code is AindFault.NO_ANALYZER_DIRECTORY
 
 
 def test_the_postprocessed_directory_is_accepted_as_well_as_the_asset(asset: Path) -> None:
@@ -283,8 +287,9 @@ def test_a_unit_missing_from_the_nwb_is_left_null(asset: Path, tmp_path: Path) -
 def test_an_nwb_naming_no_unit_is_refused(asset: Path, tmp_path: Path) -> None:
     nwb = group(tmp_path / "session.nwb", neurodata_type="NWBFile")
     group(nwb / "units", neurodata_type="Units")
-    with pytest.raises(SourceDefect, match="ks_unit_id"):
+    with pytest.raises(SourceDefect) as refused:
         UnitQCSource(asset, session_id="s1", units=UNITS, nwb=nwb).records()
+    assert refused.value.code is AindFault.NO_UNIT_NAMES
 
 
 def test_the_nwb_is_an_option_a_recipe_may_set() -> None:

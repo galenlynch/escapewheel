@@ -15,7 +15,7 @@ import pytest
 
 from escapewheel_writer import Clock, declaration, delivery
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.errors import RecipeFault, SourceDefect
+from escapewheel_writer.errors import DeliveryFailed, RecipeFault, SourceDefect, SourceFault
 from escapewheel_writer.recipe import TERMS
 from escapewheel_writer.sources import ADAPTERS, NWBSource
 from tests import nwbfixture
@@ -325,7 +325,7 @@ def test_a_report_is_not_required(supplied, tmp_path):
 
 def test_a_resource_that_never_arrived_is_a_failure(supplied, tmp_path):
     """Part 05 §4.4: an absent resource is the run having failed, never nothing to say."""
-    with pytest.raises(SourceDefect, match="never arrived"):
+    with pytest.raises(DeliveryFailed) as refused:
         delivery.fetch(
             "nwb",
             [*ESCAPEWHEEL, "deliver", "nwb"],
@@ -334,11 +334,13 @@ def test_a_resource_that_never_arrived_is_a_failure(supplied, tmp_path):
             wanted=["core.electrodes", "core.units"],
             workspace=tmp_path / "work",
         )
+    assert [failure.code for failure in refused.value.failures] == [SourceFault.NEVER_ARRIVED]
+    assert refused.value.failures[0].where == "core.units"
 
 
 def test_a_non_zero_exit_is_a_failure_whatever_arrived(supplied, tmp_path):
     """An adapter saying it failed is not overruled by its own output (Part 05 §4.4)."""
-    with pytest.raises(SourceDefect, match="exited"):
+    with pytest.raises(DeliveryFailed) as refused:
         delivery.fetch(
             "nwb",
             [*ESCAPEWHEEL, "deliver", "nosuchkind"],
@@ -347,6 +349,7 @@ def test_a_non_zero_exit_is_a_failure_whatever_arrived(supplied, tmp_path):
             wanted=[],
             workspace=tmp_path / "work",
         )
+    assert SourceFault.COMMAND_EXITED in [f.code for f in refused.value.failures]
 
 
 def test_an_adapter_still_ending_the_sentinel_is_not_cut_off(tmp_path):
@@ -388,7 +391,7 @@ def test_a_delivery_cut_short_is_named_by_where_it_stopped(tmp_path):
         "    w.write_table(t)\n"
         "sys.stdout.buffer.flush()\n"
     )
-    with pytest.raises(SourceDefect, match="did not end with the sentinel"):
+    with pytest.raises(DeliveryFailed) as refused:
         delivery.fetch(
             "half",
             [sys.executable, str(script)],
@@ -397,13 +400,14 @@ def test_a_delivery_cut_short_is_named_by_where_it_stopped(tmp_path):
             wanted=["core.sessions"],
             workspace=tmp_path / "work",
         )
+    assert [failure.code for failure in refused.value.failures] == [SourceFault.NO_SENTINEL]
 
 
 def test_what_the_adapter_said_is_reported(tmp_path):
     """Standard error is what `files-v0.1` and `stream-v0.1` carry a failure on (Part 05 §4.4)."""
     script = tmp_path / "loud.py"
     script.write_text("import sys\nprint('the source is half written', file=sys.stderr)\nraise SystemExit(3)\n")
-    with pytest.raises(SourceDefect, match="half written"):
+    with pytest.raises(DeliveryFailed) as refused:
         delivery.fetch(
             "loud",
             [sys.executable, str(script)],
@@ -412,11 +416,13 @@ def test_what_the_adapter_said_is_reported(tmp_path):
             wanted=[],
             workspace=tmp_path / "work",
         )
+    assert [failure.code for failure in refused.value.failures] == [SourceFault.COMMAND_EXITED, SourceFault.NO_SENTINEL]
+    assert "half written" in str(refused.value.failures[0])
 
 
 def test_a_command_that_is_a_string_is_refused(tmp_path):
     """A parse is a quoting convention no recipe declared (Part 05 §3.7)."""
-    with pytest.raises(SourceDefect, match="argument list"):
+    with pytest.raises(SourceDefect) as refused:
         delivery.fetch(
             "nwb",
             "escapewheel deliver nwb",
@@ -425,6 +431,7 @@ def test_a_command_that_is_a_string_is_refused(tmp_path):
             wanted=[],
             workspace=tmp_path / "work",
         )
+    assert refused.value.code is SourceFault.COMMAND_NOT_A_LIST
 
 
 def test_an_array_with_nowhere_to_go_is_refused_rather_than_half_delivered(tmp_path):
@@ -437,8 +444,9 @@ def test_an_array_with_nowhere_to_go_is_refused_rather_than_half_delivered(tmp_p
         def staged_arrays(self):
             return [object()]
 
-    with pytest.raises(SourceDefect, match="no array_location was supplied"):
+    with pytest.raises(SourceDefect) as refused:
         delivery.serve(Stages(), {}, "stream-v0.1")
+    assert refused.value.code is SourceFault.NO_ARRAY_LOCATION
 
 
 def test_an_array_crosses_as_the_bytes_the_adapter_wrote(tmp_path):
@@ -590,8 +598,10 @@ def test_a_delivered_array_no_catalog_row_names_is_refused(registry, tmp_path):
 
 
 def test_an_unknown_kind_names_what_this_build_ships():
-    with pytest.raises(SourceDefect, match="unknown source kind"):
+    with pytest.raises(SourceDefect) as refused:
         delivery.construct("tasklog", {"root": "."})
+    assert refused.value.code is SourceFault.UNKNOWN_KIND
+    assert refused.value.where == "tasklog"
 
 
 def test_a_table_too_large_to_hold_arrives_as_the_stream_it_was_sent_as():
@@ -701,7 +711,7 @@ def test_a_file_written_outside_the_delivery_root_is_not_a_delivery(tmp_path, su
         "import sys, pyarrow as pa, pyarrow.parquet as pq\nsys.stdin.read()\n"
         f"pq.write_table(pa.table({{'trial_id': [1]}}), {str(tmp_path / 'core.trials.parquet')!r})\n"
     )
-    with pytest.raises(SourceDefect, match="never arrived: core.trials"):
+    with pytest.raises(DeliveryFailed) as refused:
         delivery.fetch(
             "astray",
             [sys.executable, str(script)],
@@ -710,6 +720,8 @@ def test_a_file_written_outside_the_delivery_root_is_not_a_delivery(tmp_path, su
             wanted=["core.trials"],
             workspace=tmp_path / "work",
         )
+    assert [failure.code for failure in refused.value.failures] == [SourceFault.NEVER_ARRIVED]
+    assert refused.value.failures[0].where == "core.trials"
 
 
 def test_an_array_location_is_under_staging_and_supplied_empty(tmp_path):
@@ -746,8 +758,10 @@ def test_a_delivered_source_still_has_its_facts_compared(tmp_path, nwb, harp):
     context = _context(reference=harp, workspace=tmp_path / "work")
     built = _build_source(spec, None, context)
     recipe = _recipe_declaring(tmp_path, spec, subject_id="786867")
-    with pytest.raises(SourceDefect, match="786867"):
+    with pytest.raises(SourceDefect) as refused:
         _compare_declared_facts(spec, built, context, recipe)
+    assert refused.value.code is SourceFault.FACT_DIFFERS
+    assert refused.value.where == "subject.subject_id"
 
 
 def test_the_harvest_reads_a_delivered_source_s_rows(tmp_path, nwb, harp):
@@ -779,7 +793,7 @@ def test_what_a_build_supplies_crosses_on_standard_input(tmp_path, supplied):
         "raise SystemExit(7)\n"
     )
     seen = tmp_path / "seen.json"
-    with pytest.raises(SourceDefect, match="exited 7"):
+    with pytest.raises(DeliveryFailed) as refused:
         delivery.fetch(
             "echo",
             [sys.executable, str(script), str(seen)],
@@ -788,6 +802,7 @@ def test_what_a_build_supplies_crosses_on_standard_input(tmp_path, supplied):
             wanted=[],
             workspace=tmp_path / "work",
         )
+    assert SourceFault.COMMAND_EXITED in [f.code for f in refused.value.failures]
     crossed = json.loads(seen.read_text())
     assert crossed["argv"] == [str(seen)], "the command is what the recipe wrote, and nothing more"
     assert crossed["stdin"]["root"] == supplied["root"]
@@ -899,7 +914,7 @@ def test_a_malformed_resource_document_is_refused(tmp_path, supplied):
         "delivery._write(out, delivery.SENTINEL, pa.table({}))\n"
         "out.flush()\n"
     )
-    with pytest.raises(SourceDefect, match="resources.schema.json"):
+    with pytest.raises(DeliveryFailed) as refused:
         delivery.fetch(
             "bad",
             [sys.executable, str(script)],
@@ -908,6 +923,7 @@ def test_a_malformed_resource_document_is_refused(tmp_path, supplied):
             wanted=[],
             workspace=tmp_path / "work",
         )
+    assert [failure.code for failure in refused.value.failures] == [SourceFault.DOCUMENT_SHAPE]
 
 
 def test_a_referenced_resource_no_row_declares_is_refused(tmp_path, supplied):
@@ -926,7 +942,7 @@ def test_a_referenced_resource_no_row_declares_is_refused(tmp_path, supplied):
         "delivery._write(out, delivery.SENTINEL, pa.table({}))\n"
         "out.flush()\n"
     )
-    with pytest.raises(SourceDefect, match="core.nowhere"):
+    with pytest.raises(SourceDefect) as refused:
         delivery.fetch(
             "stray",
             [sys.executable, str(script)],
@@ -935,6 +951,8 @@ def test_a_referenced_resource_no_row_declares_is_refused(tmp_path, supplied):
             wanted=[],
             workspace=tmp_path / "work",
         )
+    assert refused.value.code is SourceFault.REFERENCE_UNBOUND
+    assert refused.value.where == "core.nowhere"
 
 
 @pytest.mark.parametrize(

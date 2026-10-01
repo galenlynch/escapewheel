@@ -27,7 +27,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..clock import TickGrid, zone_of
-from ..errors import SourceDefect, UnsupportedEncoding
+from ..errors import SourceDefect, SourceFault, UnsupportedEncoding
 from .compensations import Compensates
 from .store import SourceStore, source_root
 from .values import sex as _sex
@@ -117,7 +117,11 @@ def contact_ids(columns: Mapping[str, Any], prefix: str = "") -> tuple[list[str]
     not there. The rule lives here once rather than in each of them.
     """
     if "group_name" not in columns:
-        raise SourceDefect("electrodes/group_name: absent, so no contact can be named")
+        raise SourceDefect(
+            "electrodes/group_name: absent, so no contact can be named",
+            code=SourceFault.NO_ELECTRODE_GROUPS,
+            where="electrodes/group_name",
+        )
     group = columns["group_name"]
     if "channel_name" in columns:
         pairs, note = columns["channel_name"], None
@@ -484,7 +488,9 @@ class NWBSource(Compensates):
         """`core.sessions`, one row."""
         start = self._instant(_one(self._array("session_start_time")), "session_start_time")
         if start is None:
-            raise SourceDefect(f"{self.root}: no session_start_time")
+            raise SourceDefect(
+                f"{self.root}: no session_start_time", code=SourceFault.NO_SESSION_START, where=str(self.root)
+            )
         reference = _one(self._array("timestamps_reference_time"))
         metadata = {
             "nwb_identifier": _one(self._array("identifier")),
@@ -875,7 +881,9 @@ class NWBSource(Compensates):
                 held = ", ".join(self.store.members("acquisition")) or "nothing"
                 raise SourceDefect(
                     f"the recipe declares signal {name!r} and this NWB has no "
-                    f"acquisition/{name} with timestamps; acquisition holds {held}"
+                    f"acquisition/{name} with timestamps; acquisition holds {held}",
+                    code=SourceFault.SIGNAL_ABSENT,
+                    where=f"acquisition/{name}",
                 )
             seconds = self.store.array(f"acquisition/{name}/timestamps")
             ticks, finite = self._ticks(seconds, f"acquisition/{name}")
@@ -1120,18 +1128,28 @@ class NWBSource(Compensates):
         if self.interval_kind is None:
             raise SourceDefect(
                 "core.intervals needs an interval_kind naming the resource that specialises these "
-                "intervals (Part 01 §3.10); set it on the nwb source"
+                "intervals (Part 01 §3.10); set it on the nwb source",
+                code=SourceFault.NO_INTERVAL_KIND,
+                where="core.intervals",
             )
         columns = self._table("intervals/trials")
         if not columns:
             return []
         for required in ("start_time", "stop_time"):
             if required not in columns:
-                raise SourceDefect(f"intervals/trials has no {required}")
+                raise SourceDefect(
+                    f"intervals/trials has no {required}",
+                    code=SourceFault.TRIAL_COLUMN_ABSENT,
+                    where=f"intervals/trials/{required}",
+                )
         for edge in ("start_time", "stop_time"):
             if not np.isfinite(columns[edge]).all():
                 missing = int((~np.isfinite(columns[edge])).sum())
-                raise SourceDefect(f"intervals/trials: {missing} trials have no {edge}, so they are not intervals")
+                raise SourceDefect(
+                    f"intervals/trials: {missing} trials have no {edge}, so they are not intervals",
+                    code=SourceFault.TRIAL_EDGE_MISSING,
+                    where=f"intervals/trials/{edge}",
+                )
         start = self.clock.ticks(columns["start_time"])
         stop = self.clock.ticks(columns["stop_time"])
         identifiers = columns.get("id", np.arange(len(start)))
@@ -1245,7 +1263,11 @@ def _resolve(root: Path) -> Path:
     candidates = sorted(child for child in root.iterdir() if child.suffix == ".nwb" and child.is_dir())
     if len(candidates) == 1:
         return candidates[0]
-    raise SourceDefect(f"{root} is not an NWB-Zarr directory and holds {len(candidates)} of them")
+    raise SourceDefect(
+        f"{root} is not an NWB-Zarr directory and holds {len(candidates)} of them",
+        code=SourceFault.NO_ONE_NWB,
+        where=str(root),
+    )
 
 
 __all__ = ["ABSENT", "NWBSource"]

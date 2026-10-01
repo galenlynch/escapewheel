@@ -6,7 +6,7 @@ from typing import ClassVar
 
 import pytest
 
-from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.session import Context, _harvest
 
 BEGAN = datetime(2025, 4, 10, 0, 25, 12, tzinfo=UTC)
@@ -105,8 +105,10 @@ def test_a_recipe_that_disagrees_is_reported_and_overridden():
 def test_a_subject_the_source_contradicts_is_refused():
     """Part 05 §3.6. One recipe declared 786867 against a session stating 776259, and every packet
     built from it asserted 6,781 units from an animal that was never in the rig."""
-    with pytest.raises(SourceDefect, match="786867"):
+    with pytest.raises(SourceDefect) as refused:
         _harvest(Spec(), Stub(subject_id="776259"), _context(), recipe_for("786867"), _no_rows)
+    assert refused.value.code is SourceFault.FACT_DIFFERS
+    assert refused.value.where == "subject.subject_id"
 
 
 def test_a_subject_the_source_agrees_with_passes_silently():

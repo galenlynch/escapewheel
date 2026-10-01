@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.sources import SorterSource
 from escapewheel_writer.sources.sorter import PROJECTION
 from tests import sorterfixture
@@ -50,8 +50,10 @@ def test_it_accepts_the_asset_or_the_curated_directory(asset):
 
 
 def test_a_tree_without_curated_is_a_defect(tmp_path):
-    with pytest.raises(SourceDefect, match="holds no curated/"):
+    with pytest.raises(SourceDefect) as refused:
         SorterSource(tmp_path, session_id=SESSION)
+    assert refused.value.code is SourceFault.NO_CURATED_DIRECTORY
+    assert refused.value.where == str(tmp_path)
 
 
 def test_an_experiment_selects_its_own_streams(asset):
@@ -60,8 +62,9 @@ def test_an_experiment_selects_its_own_streams(asset):
 
 
 def test_an_absent_experiment_is_a_defect(asset):
-    with pytest.raises(SourceDefect, match="no streams for experiment"):
+    with pytest.raises(SourceDefect) as refused:
         SorterSource(asset, session_id=SESSION, experiment="experiment9").streams()
+    assert refused.value.code is SourceFault.NO_STREAM
 
 
 def test_a_shank_keeps_its_stream_and_shares_a_serial(source):
@@ -125,8 +128,9 @@ def test_unit_ids_out_of_order_are_a_defect(tmp_path):
     """`unit_index` offsets into `unit_ids`, which is only meaningful if they increase."""
     sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=[(0, 1)], unit_ids=[5, 1, 2, 3, 4, 6])
     source = SorterSource(tmp_path, session_id=SESSION)
-    with pytest.raises(SourceDefect, match="not strictly increasing"):
+    with pytest.raises(SourceDefect) as refused:
         source.units()
+    assert refused.value.code is SourceFault.UNIT_IDS_UNORDERED
 
 
 # -- the spike summary ----------------------------------------------------------------
@@ -206,8 +210,9 @@ def test_a_fractional_sample_rate_is_a_defect(tmp_path):
     sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=[(0, 1)])
     info = tmp_path / "curated" / sorterfixture.NAMES[0] / "numpysorting_info.json"
     info.write_text(json.dumps({**json.loads(info.read_text()), "sampling_frequency": 30000.5}))
-    with pytest.raises(SourceDefect, match="not a whole number of hertz"):
+    with pytest.raises(SourceDefect) as refused:
         SorterSource(tmp_path, session_id=SESSION).clocks()
+    assert refused.value.code is SourceFault.RATE_NOT_WHOLE
 
 
 # -- the sorter's own timestamp -------------------------------------------------------
@@ -280,8 +285,9 @@ def test_amplitudes_that_do_not_align_are_a_defect(tmp_path):
     zarr = tmp_path / "postprocessed" / f"{sorterfixture.NAMES[0]}.zarr"
     sorterfixture.zarr_array(zarr / "extensions" / "spike_amplitudes" / "amplitudes", np.zeros(3, dtype=np.float32))
     source = SorterSource(tmp_path, session_id=SESSION)
-    with pytest.raises(SourceDefect, match="index-aligned or nothing"):
+    with pytest.raises(SourceDefect) as refused:
         list(source.spike_batches())
+    assert refused.value.code is SourceFault.AMPLITUDES_MISALIGNED
 
 
 # -- what a person decided --------------------------------------------------------------

@@ -11,6 +11,7 @@ from escapewheel_writer.errors import (
     RecipeUnreadable,
     RecipeUnsound,
     SourceDefect,
+    SourceFault,
     SourcesNotOrdered,
 )
 from escapewheel_writer.recipe import RECIPE_SUPPLIES, Recipe
@@ -444,8 +445,10 @@ def test_a_preference_that_discards_a_stated_fact_is_refused(tmp_path, registry)
         "nwb": [{"probe_id": "probeA", "probe_type": None}],
         "sorter": [{"probe_id": "probeA", "probe_type": "NP2000"}],
     }
-    with pytest.raises(SourceDefect, match=r"core\.probes\.probe_type"):
+    with pytest.raises(SourceDefect) as refused:
         _refuse_a_discarded_fact(_Registry(registry), context, _contest(tmp_path))
+    assert refused.value.code is SourceFault.FACT_DISCARDED
+    assert "core.probes.probe_type" in str(refused.value)
 
 
 def test_a_preferred_source_that_stages_nothing_is_refused(tmp_path, registry):
@@ -453,8 +456,10 @@ def test_a_preferred_source_that_stages_nothing_is_refused(tmp_path, registry):
     context = Context(session_id="s001")
     context.stated["core.probes"] = {"sorter": [{"probe_id": "probeA"}]}
     context.stated["core.probes"]["nwb"] = []
-    with pytest.raises(SourceDefect, match="staged none"):
+    with pytest.raises(SourceDefect) as refused:
         _refuse_a_discarded_fact(_Registry(registry), context, _contest(tmp_path))
+    assert refused.value.code is SourceFault.FACT_DISCARDED
+    assert "staged none" in str(refused.value)
 
 
 def test_two_sources_that_agree_are_not_refused(tmp_path, registry):

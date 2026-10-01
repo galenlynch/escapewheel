@@ -1,7 +1,7 @@
 """Every exception this package raises on purpose; each derives from :exc:`WriterError`.
 
 The codes an error or a reported problem carries are declared beside the classes:
-:class:`RecipeFault` and :class:`PayloadFault`.
+:class:`RecipeFault`, :class:`SourceFault` and :class:`PayloadFault`.
 
 A recipe that cannot be built:
 
@@ -21,6 +21,7 @@ A source that cannot supply what a build asked of it:
 
 - :exc:`SourceDefect` -- a source cannot supply what it was asked for, which stops the build.
 - :exc:`UnsupportedEncoding` -- an array uses an encoding this package will not decode.
+- :exc:`DeliveryFailed` -- an adapter run out of process did not deliver what was asked of it.
 - :exc:`PayloadRefused` -- a delivery holds something a packet cannot own.
 
 Values a packet cannot hold:
@@ -341,16 +342,186 @@ class ExtensionNotFound(WriterError):
     """A recipe names an extension that is neither a file nor an installed distribution."""
 
 
+class SourceFault(StrEnum):
+    """Why a source this package ships an adapter for cannot supply what a build asked of it."""
+
+    #: The electrode table has no `group_name` column.
+    NO_ELECTRODE_GROUPS = "no_electrode_groups"
+    #: A series' contacts span several electrode groups, so it records no one probe.
+    SERIES_SPANS_GROUPS = "series_spans_groups"
+    #: Other than one clock belongs to a series' probe.
+    NO_ONE_CLOCK = "no_one_clock"
+    #: An array is not a Zarr v2 array.
+    NOT_ZARR_V2 = "not_zarr_v2"
+    #: An array has a rank its reader does not read.
+    ARRAY_RANK = "array_rank"
+    #: An array is pickled.
+    PICKLED = "pickled"
+    #: A chunk is absent and the fill value cannot stand in for it.
+    FILL_VALUE = "fill_value"
+    #: A strided read was asked of a reader that takes contiguous slabs.
+    STRIDED_READ = "strided_read"
+    #: A series' timestamps give no interval.
+    NO_SAMPLE_INTERVAL = "no_sample_interval"
+    #: A series' interval is not a whole number of its probe's ticks.
+    NOT_A_DECIMATION = "not_a_decimation"
+    #: A clock has no declared tick rate.
+    NO_TICK_RATE = "no_tick_rate"
+    #: The file states no session start time.
+    NO_SESSION_START = "no_session_start"
+    #: The recipe declares a signal the file does not hold with timestamps.
+    SIGNAL_ABSENT = "signal_absent"
+    #: The source was given no `interval_kind`.
+    NO_INTERVAL_KIND = "no_interval_kind"
+    #: The trials table lacks a column every trial needs.
+    TRIAL_COLUMN_ABSENT = "trial_column_absent"
+    #: A trial has no start or no stop.
+    TRIAL_EDGE_MISSING = "trial_edge_missing"
+    #: The root is not an NWB-Zarr directory and does not hold exactly one.
+    NO_ONE_NWB = "no_one_nwb"
+    #: A folder is not named as a curated stream is.
+    STREAM_NAME = "stream_name"
+    #: The root holds no curated directory.
+    NO_CURATED_DIRECTORY = "no_curated_directory"
+    #: No stream belongs to the experiment.
+    NO_STREAM = "no_stream"
+    #: A stream lacks a file the adapter reads.
+    STREAM_FILE_ABSENT = "stream_file_absent"
+    #: A `.npy` file has a format version this reader does not know.
+    NPY_VERSION = "npy_version"
+    #: A stream's unit IDs are not strictly increasing.
+    UNIT_IDS_UNORDERED = "unit_ids_unordered"
+    #: A sampling frequency is not a whole number of hertz.
+    RATE_NOT_WHOLE = "rate_not_whole"
+    #: A stream holds a different number of amplitudes and spikes.
+    AMPLITUDES_MISALIGNED = "amplitudes_misaligned"
+    #: A unit property holds a different number of values and units.
+    PROPERTY_MISALIGNED = "property_misaligned"
+    #: A sample index does not fit the packed sort key.
+    SAMPLE_INDEX_OVERFLOW = "sample_index_overflow"
+    #: The recording holds no TTL events.
+    NO_TTL_EVENTS = "no_ttl_events"
+    #: No stream carries HARP-aligned timestamps.
+    NO_ALIGNED_STREAM = "no_aligned_stream"
+    #: Two streams of one name disagree on samples both recorded.
+    STREAMS_DISAGREE = "streams_disagree"
+    #: Nothing gives a stream's first sample number.
+    NO_FIRST_SAMPLE = "no_first_sample"
+    #: The sync line has no rising edge.
+    NO_RISING_EDGE = "no_rising_edge"
+    #: Sync pulses do not increase on both clocks.
+    PULSES_UNORDERED = "pulses_unordered"
+    #: The root holds no Record Node directory.
+    NO_RECORD_NODE = "no_record_node"
+    #: The root holds no analyzer directory.
+    NO_ANALYZER_DIRECTORY = "no_analyzer_directory"
+    #: No analyzer belongs to the experiment.
+    NO_ANALYZER = "no_analyzer"
+    #: An analyzer states no channel list.
+    NO_CHANNEL_LIST = "no_channel_list"
+    #: An analyzer states no window or sampling rate for its templates.
+    NO_TEMPLATE_WINDOW = "no_template_window"
+    #: No unit the analyzer holds is in the packet's sorting.
+    NO_UNIT_MATCHES = "no_unit_matches"
+    #: The streams' templates span different windows.
+    TEMPLATE_WINDOWS_DIFFER = "template_windows_differ"
+    #: The streams' templates are in different units.
+    TEMPLATE_UNITS_DIFFER = "template_units_differ"
+    #: Every template is zero.
+    TEMPLATES_ZERO = "templates_zero"
+    #: Every deviation is zero over the mean's support.
+    DEVIATIONS_ZERO = "deviations_zero"
+    #: Deviations were asked for and the analyzer holds none.
+    NO_DEVIATION = "no_deviation"
+    #: An analyzer's unit IDs, mask rows and templates differ in number.
+    TEMPLATES_MISALIGNED = "templates_misaligned"
+    #: A unit has a template in more than one analyzer row.
+    UNIT_REPEATED = "unit_repeated"
+    #: A source states a fact the recipe declares otherwise, with no override.
+    FACT_DIFFERS = "fact_differs"
+    #: A source states a fact the amended packet holds otherwise.
+    HELD_FACT_DIFFERS = "held_fact_differs"
+    #: An acquisition window ends before it starts.
+    WINDOW_REVERSED = "window_reversed"
+    #: Preferring a source discarded a fact another stated.
+    FACT_DISCARDED = "fact_discarded"
+    #: A source stages a dense array and was supplied no `array_location`.
+    NO_ARRAY_LOCATION = "no_array_location"
+    #: No adapter is registered for the kind asked for.
+    UNKNOWN_KIND = "unknown_kind"
+    #: An adapter was supplied no root.
+    NO_ROOT = "no_root"
+    #: A protocol is in no group the profile names.
+    PROTOCOL_UNKNOWN = "protocol_unknown"
+    #: A delivery's command is not an argument list.
+    COMMAND_NOT_A_LIST = "command_not_a_list"
+    #: A delivery declares no command.
+    NO_COMMAND = "no_command"
+    #: A delivery failed; :exc:`DeliveryFailed` carries each failure.
+    DELIVERY_FAILED = "delivery_failed"
+    #: The adapter's command exited with a failure.
+    COMMAND_EXITED = "command_exited"
+    #: The adapter exited before it served anything.
+    EXITED_BEFORE_SERVING = "exited_before_serving"
+    #: A delivered file cannot be read.
+    DELIVERED_FILE_UNREADABLE = "delivered_file_unreadable"
+    #: A stream delivery did not end with the sentinel.
+    NO_SENTINEL = "no_sentinel"
+    #: A Flight delivery reported an error.
+    FLIGHT_ERROR = "flight_error"
+    #: The resource document is not JSON.
+    DOCUMENT_NOT_JSON = "document_not_json"
+    #: A resource document's entry declares itself packet-owned.
+    ENTRY_NOT_EXTERNAL = "entry_not_external"
+    #: A resource document's entry has a URI that is neither absolute nor a relative reference.
+    ENTRY_URI = "entry_uri"
+    #: The resource document does not satisfy its schema.
+    DOCUMENT_SHAPE = "document_shape"
+    #: A resource the build asked for never arrived.
+    NEVER_ARRIVED = "never_arrived"
+    #: A referenced resource binds no delivered catalog row.
+    REFERENCE_UNBOUND = "reference_unbound"
+
+
 class SourceDefect(WriterError, ValueError):
     """A source cannot supply what it was asked for, and the build cannot proceed past it.
 
     Carried as an exception rather than a note because it stops a build (Part 05 §4.4), where what
     an adapter worked around goes in the run's report (Part 12 §9).
+
+    Attributes
+    ----------
+    code : str or None
+        Which defect it is, whatever the names in the message: a :class:`SourceFault` from an
+        adapter this package ships, and a code of its own from an adapter released separately.
+        None where the adapter gave none.
+    where : str or None
+        The place the defect lies at, as the message names it: a path, a stream, a column or a
+        resource.
     """
 
+    def __init__(self, message: str, *, code: str | None = None, where: str | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.where = where
 
-class UnsupportedEncoding(WriterError, ValueError):
+
+class UnsupportedEncoding(SourceDefect):
     """An array uses an encoding this package will not decode, such as ``pickle``."""
+
+
+class DeliveryFailed(SourceDefect):
+    """An adapter run out of process did not deliver what the build asked of it (Part 05 §4.4).
+
+    Attributes
+    ----------
+    failures : list of SourceDefect
+        Each failure, carrying its own code.
+    """
+
+    def __init__(self, message: str, *, failures: Sequence[SourceDefect], where: str | None = None) -> None:
+        super().__init__(message, code=SourceFault.DELIVERY_FAILED, where=where)
+        self.failures = list(failures)
 
 
 class PayloadFault(StrEnum):

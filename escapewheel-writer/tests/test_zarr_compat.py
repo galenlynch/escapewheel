@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from escapewheel_writer.errors import UnsupportedEncoding
+from escapewheel_writer.errors import SourceFault, UnsupportedEncoding
 from escapewheel_writer.sources.zarr_compat import DenseV2, attrs, members, read_array
 from tests import nwbfixture
 
@@ -54,21 +54,25 @@ def test_a_limit_of_nothing_reads_nothing(tmp_path):
 
 def test_a_pickled_array_is_refused_not_unpickled(tmp_path):
     nwbfixture.array(tmp_path / "a", ["<ref>"], filter_id="pickle")
-    with pytest.raises(UnsupportedEncoding, match="pickled"):
+    with pytest.raises(UnsupportedEncoding) as refused:
         read_array(tmp_path / "a")
+    assert refused.value.code is SourceFault.PICKLED
+    assert refused.value.where == str(tmp_path / "a")
 
 
 def test_a_multidimensional_array_is_refused(tmp_path):
     path = nwbfixture.array(tmp_path / "a", np.zeros(4))
     marker = path / ".zarray"
     marker.write_text(marker.read_text().replace('"shape": [4]', '"shape": [2, 2]'))
-    with pytest.raises(UnsupportedEncoding, match="rank 2"):
+    with pytest.raises(UnsupportedEncoding) as refused:
         read_array(path)
+    assert refused.value.code is SourceFault.ARRAY_RANK
 
 
 def test_a_missing_array_is_refused(tmp_path):
-    with pytest.raises(UnsupportedEncoding, match="not a Zarr v2 array"):
+    with pytest.raises(UnsupportedEncoding) as refused:
         read_array(tmp_path / "absent")
+    assert refused.value.code is SourceFault.NOT_ZARR_V2
 
 
 def test_members_lists_children_without_zarrs_dot_files(tmp_path):
@@ -141,15 +145,17 @@ def test_an_unwritten_chunk_reads_as_the_fill_value(tmp_path):
 def test_a_one_dimensional_array_is_sent_to_read_array(tmp_path):
     """The two readers split on rank, and each says which one the caller wanted."""
     nwbfixture.array(tmp_path / "a", np.arange(3, dtype=np.int64))
-    with pytest.raises(UnsupportedEncoding, match="read_array"):
+    with pytest.raises(UnsupportedEncoding) as refused:
         DenseV2(tmp_path / "a")
+    assert refused.value.code is SourceFault.ARRAY_RANK
 
 
 def test_a_strided_slab_is_refused(tmp_path):
     """Every caller wants a contiguous block of units, and a stride would quietly mis-place rows."""
     path = _dense(tmp_path / "a", np.zeros((4, 2), dtype=np.int16), (2, 2))
-    with pytest.raises(UnsupportedEncoding, match="strided"):
+    with pytest.raises(UnsupportedEncoding) as refused:
         DenseV2(path)[0:4:2]
+    assert refused.value.code is SourceFault.STRIDED_READ
 
 
 def _rechunk(path, values, stride):

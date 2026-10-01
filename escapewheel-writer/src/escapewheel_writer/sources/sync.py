@@ -26,7 +26,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..clock import HARP_TICK_RATE_HZ, Clock
-from ..errors import SourceDefect
+from ..errors import SourceDefect, SourceFault
 from .store import source_root
 
 #: rig-qc archives the pre-alignment array under this name when it rewrites `timestamps.npy`.
@@ -396,7 +396,11 @@ class SyncSource:
                         )
                     )
         if not found:
-            raise SourceDefect(f"{self.root} holds no TTL events for {self.experiment}/{self.recording}")
+            raise SourceDefect(
+                f"{self.root} holds no TTL events for {self.experiment}/{self.recording}",
+                code=SourceFault.NO_TTL_EVENTS,
+                where=str(self.root),
+            )
         return found
 
     def aligned(self) -> list[SyncStream]:
@@ -415,7 +419,11 @@ class SyncSource:
                 "acquisition-local rather than HARP; skipped"
             )
         if not keep:
-            raise SourceDefect(f"{self.root}: no stream in {self.experiment} carries HARP-aligned timestamps")
+            raise SourceDefect(
+                f"{self.root}: no stream in {self.experiment} carries HARP-aligned timestamps",
+                code=SourceFault.NO_ALIGNED_STREAM,
+                where=str(self.root),
+            )
 
         self._aligned = self._deduplicate(keep)
         return self._aligned
@@ -459,7 +467,9 @@ class SyncSource:
                         f"{name} names two streams that disagree on samples both recorded -- "
                         f"{first.node}/{first.stream} and {other.node}/{other.stream}. The key omits "
                         "the record node, so one would silently take the other's anchors; give them "
-                        "distinct names."
+                        "distinct names.",
+                        code=SourceFault.STREAMS_DISAGREE,
+                        where=name,
                     )
                 drift = np.abs(
                     np.load(first.path / "timestamps.npy")[here] - np.load(other.path / "timestamps.npy")[there]
@@ -506,7 +516,9 @@ class SyncSource:
         if not continuous.is_file():
             raise SourceDefect(
                 f"{stream.key}: no first sample supplied, no {SYNC_MESSAGES}, and {continuous} is "
-                "absent, so a raw counter cannot be made recording-relative"
+                "absent, so a raw counter cannot be made recording-relative",
+                code=SourceFault.NO_FIRST_SAMPLE,
+                where=stream.key,
             )
         return int(np.load(continuous, mmap_mode="r")[0])
 
@@ -515,7 +527,11 @@ class SyncSource:
         states = np.load(stream.path / "states.npy")
         rising = states == self.sync_line
         if not rising.any():
-            raise SourceDefect(f"{stream.key}: no rising edge on line {self.sync_line}")
+            raise SourceDefect(
+                f"{stream.key}: no rising edge on line {self.sync_line}",
+                code=SourceFault.NO_RISING_EDGE,
+                where=stream.key,
+            )
         return (
             np.load(stream.path / "sample_numbers.npy")[rising].astype(np.int64),
             np.load(stream.path / "timestamps.npy")[rising].astype(np.float64),
@@ -663,7 +679,9 @@ class SyncSource:
             raise SourceDefect(
                 f"{stream.key}: sync pulses do not increase on both clocks, so interpolation "
                 "between them is undefined (R13 §3). A counter that reset mid-recording is two "
-                "clocks, not one (Part 01 §3.9)"
+                "clocks, not one (Part 01 §3.9)",
+                code=SourceFault.PULSES_UNORDERED,
+                where=stream.key,
             )
         # The window HARP was observed over is the whole pulse train, recorded before the test
         # below removes anchors: withholding one is a statement about how well its parent tick
@@ -766,7 +784,7 @@ def _resolve(root: Path) -> Path:
     for candidate in (root, root / "ecephys" / "ecephys_clipped", root / "ecephys_clipped", root / "events"):
         if candidate.is_dir() and any(NODE.match(child.name) for child in candidate.iterdir() if child.is_dir()):
             return candidate
-    raise SourceDefect(f"{root} holds no Record Node directories")
+    raise SourceDefect(f"{root} holds no Record Node directories", code=SourceFault.NO_RECORD_NODE, where=str(root))
 
 
 __all__ = ["ARCHIVE", "SyncSource", "SyncStream"]

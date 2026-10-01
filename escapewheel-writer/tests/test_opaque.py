@@ -13,7 +13,7 @@ from escapewheel_reader import open_packet
 from escapewheel_validator.stores import listing_digest
 
 from escapewheel_writer import declaration, delivery, opaque
-from escapewheel_writer.errors import PayloadFault, PayloadRefused, SourceDefect
+from escapewheel_writer.errors import DeliveryFailed, PayloadFault, PayloadRefused, SourceFault
 from escapewheel_writer.opaque import Payload
 from escapewheel_writer.writer import ExternalMedia, PacketWriter
 from tests import opaquefixture
@@ -634,8 +634,11 @@ def _cam(uri, **fields):
 @pytest.mark.parametrize("uri", ["videos/cam 1.mp4", "a%2Fb.mp4", "../b.mp4"])
 def test_a_resource_document_uri_no_reader_could_resolve_is_refused(tmp_path, uri):
     """Part 03 §4: a uri without a scheme is a relative reference, or it is refused."""
-    with pytest.raises(SourceDefect, match="cams: core.cam: uri is neither absolute nor a relative reference"):
+    with pytest.raises(DeliveryFailed) as refused:
         _document_delivery(tmp_path, [_cam(uri, external=True, source="cams")])
+    assert [failure.code for failure in refused.value.failures] == [SourceFault.ENTRY_URI]
+    assert refused.value.failures[0].where == "core.cam"
+    assert refused.value.where == "cams"
 
 
 def test_a_resource_document_uri_is_recorded_in_one_form(tmp_path):
@@ -666,8 +669,11 @@ def test_a_source_relative_uri_is_resolved_by_the_reader(tmp_path, registry, min
 
 def test_a_resource_document_entry_declaring_itself_owned_is_refused(tmp_path):
     """Part 12 §5: a packet-owned opaque resource crosses only as a payload."""
-    with pytest.raises(SourceDefect, match="cams: core.cam: declares external: false"):
+    with pytest.raises(DeliveryFailed) as refused:
         _document_delivery(tmp_path, [_cam("videos/cam.mp4", external=False)])
+    assert [failure.code for failure in refused.value.failures] == [SourceFault.ENTRY_NOT_EXTERNAL]
+    assert refused.value.failures[0].where == "core.cam"
+    assert refused.value.where == "cams"
 
 
 def test_a_resource_document_entry_declaring_nothing_is_recorded_as_external(tmp_path, registry, minimal):

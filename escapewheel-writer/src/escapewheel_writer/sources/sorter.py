@@ -29,7 +29,7 @@ import pyarrow as pa
 from numpy.typing import NDArray
 
 from ..clock import Clock
-from ..errors import SourceDefect
+from ..errors import SourceDefect, SourceFault
 from .store import source_root
 from .zarr_compat import attrs, attrs_at, read_array
 
@@ -130,7 +130,9 @@ def _parse(path: Path) -> SortedStream:
     """Parse a curated folder name, or refuse it."""
     found = STREAM.match(path.name)
     if not found:
-        raise SourceDefect(f"{path.name} is not a curated stream folder name")
+        raise SourceDefect(
+            f"{path.name} is not a curated stream folder name", code=SourceFault.STREAM_NAME, where=path.name
+        )
     return SortedStream(path=path, **found.groupdict())
 
 
@@ -236,7 +238,9 @@ class SorterSource:
         path = source_root(root, cache=source_cache)
         self.root = path if path.name == "curated" else path / "curated"
         if not self.root.is_dir():
-            raise SourceDefect(f"{path} holds no curated/ directory")
+            raise SourceDefect(
+                f"{path} holds no curated/ directory", code=SourceFault.NO_CURATED_DIRECTORY, where=str(path)
+            )
         self.session_id = session_id
         self.experiment = experiment
         self.prefix = prefix
@@ -262,7 +266,11 @@ class SorterSource:
         if self.experiment is not None:
             found = [s for s in found if s.experiment == self.experiment]
         if not found:
-            raise SourceDefect(f"{self.root} holds no streams for experiment {self.experiment!r}")
+            raise SourceDefect(
+                f"{self.root} holds no streams for experiment {self.experiment!r}",
+                code=SourceFault.NO_STREAM,
+                where=str(self.root),
+            )
         return sorted(found, key=lambda s: self._sorting_run_id(s))
 
     def _json(self, stream: SortedStream, name: str) -> dict[str, Any]:
@@ -271,7 +279,11 @@ class SorterSource:
         if key not in self._cache:
             path = stream.path / name
             if not path.is_file():
-                raise SourceDefect(f"{stream.path.name} has no {name}")
+                raise SourceDefect(
+                    f"{stream.path.name} has no {name}",
+                    code=SourceFault.STREAM_FILE_ABSENT,
+                    where=f"{stream.path.name}/{name}",
+                )
             self._cache[key] = json.loads(path.read_text())
         loaded: dict[str, Any] = self._cache[key]
         return loaded
@@ -305,7 +317,11 @@ class SorterSource:
             version = np.lib.format.read_magic(handle)
             read_header = readers.get(version)
             if read_header is None:
-                raise SourceDefect(f"{path}: .npy format version {version}, which this reader does not know")
+                raise SourceDefect(
+                    f"{path}: .npy format version {version}, which this reader does not know",
+                    code=SourceFault.NPY_VERSION,
+                    where=str(path),
+                )
             shape, _, _ = read_header(handle)
         return int(shape[0])
 
@@ -318,7 +334,11 @@ class SorterSource:
         """Return the stream's unit ids, in the order `unit_index` offsets into."""
         ids = np.asarray(self._json(stream, "numpysorting_info.json")["unit_ids"], dtype=np.int64)
         if ids.size and not np.all(np.diff(ids) > 0):
-            raise SourceDefect(f"{stream.key}: unit_ids are not strictly increasing, so unit_index is ambiguous")
+            raise SourceDefect(
+                f"{stream.key}: unit_ids are not strictly increasing, so unit_index is ambiguous",
+                code=SourceFault.UNIT_IDS_UNORDERED,
+                where=stream.key,
+            )
         return ids
 
     def _width(self, stream: SortedStream) -> int:
@@ -377,7 +397,11 @@ class SorterSource:
         for stream in self.streams():
             rate = self._json(stream, "numpysorting_info.json")["sampling_frequency"]
             if float(rate) != int(rate):
-                raise SourceDefect(f"{stream.key}: sampling_frequency {rate} is not a whole number of hertz")
+                raise SourceDefect(
+                    f"{stream.key}: sampling_frequency {rate} is not a whole number of hertz",
+                    code=SourceFault.RATE_NOT_WHOLE,
+                    where=stream.key,
+                )
             rows.append(
                 Clock(
                     clock_id=self._clock_id(stream),
@@ -661,7 +685,9 @@ class SorterSource:
             values = values[: self.sample]
         if values.size != n_spikes:
             raise SourceDefect(
-                f"{stream.key}: {values.size} amplitudes for {n_spikes} spikes; they are index-aligned or nothing"
+                f"{stream.key}: {values.size} amplitudes for {n_spikes} spikes; they are index-aligned or nothing",
+                code=SourceFault.AMPLITUDES_MISALIGNED,
+                where=stream.key,
             )
         return values
 
@@ -777,7 +803,11 @@ class SorterSource:
                 if labels is None:
                     continue
                 if labels.size != ids.size:
-                    raise SourceDefect(f"{stream.key}: {name} has {labels.size} values for {ids.size} units")
+                    raise SourceDefect(
+                        f"{stream.key}: {name} has {labels.size} values for {ids.size} units",
+                        code=SourceFault.PROPERTY_MISALIGNED,
+                        where=stream.key,
+                    )
                 confidence = self._property(stream, CONFIDENCE[source]) if source in CONFIDENCE else None
                 unknown = {str(v) for v in np.unique(labels)} - set(PROJECTION)
                 if unknown:
@@ -880,7 +910,11 @@ class SorterSource:
             index, tick = self._spikes(stream)
             amplitude = self._amplitudes(stream, index.size)
             if tick.size and int(tick.max()) >= 1 << 32:
-                raise SourceDefect(f"{stream.key}: sample index {int(tick.max())} does not fit the packed sort key")
+                raise SourceDefect(
+                    f"{stream.key}: sample index {int(tick.max())} does not fit the packed sort key",
+                    code=SourceFault.SAMPLE_INDEX_OVERFLOW,
+                    where=stream.key,
+                )
             order = np.argsort((index.astype(np.int64) << 32) | tick, kind="stable")
             # Dictionary-encoded against names built once a stream, so no batch builds a Python
             # string per row and `number_batch` maps a few hundred names rather than a million

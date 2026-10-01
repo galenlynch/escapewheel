@@ -16,7 +16,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-from ..errors import SourceDefect
+from ..errors import SourceDefect, SourceFault
 from .compensations import Compensates
 from .nwb import contact_columns, contact_ids, ucum_code
 from .store import SourceStore, source_root
@@ -168,12 +168,18 @@ class LFPSource(Compensates):
         if series.name not in self._probe:
             columns = contact_columns(self.store, self.root / "general/extracellular_ephys/electrodes")
             if "group_name" not in columns:
-                raise SourceDefect("electrodes/group_name: absent, so no series can name its probe")
+                raise SourceDefect(
+                    "electrodes/group_name: absent, so no series can name its probe",
+                    code=SourceFault.NO_ELECTRODE_GROUPS,
+                    where="electrodes/group_name",
+                )
             group = columns["group_name"]
             found = {str(group[int(row)]) for row in self.store.array(series / "electrodes")}
             if len(found) != 1:
                 raise SourceDefect(
-                    f"{series.name}: its contacts span {len(found)} electrode groups, so it records no one probe"
+                    f"{series.name}: its contacts span {len(found)} electrode groups, so it records no one probe",
+                    code=SourceFault.SERIES_SPANS_GROUPS,
+                    where=series.name,
                 )
             self._probe[series.name] = found.pop()
         return self._probe[series.name]
@@ -192,7 +198,9 @@ class LFPSource(Compensates):
         matches = [row["clock_id"] for row in self.clocks if str(row["clock_id"]).endswith(f".{probe}.samples")]
         if len(matches) != 1:
             raise SourceDefect(
-                f"{series.name}: {len(matches)} clocks end in '.{probe}.samples', so the time axis has no clock"
+                f"{series.name}: {len(matches)} clocks end in '.{probe}.samples', so the time axis has no clock",
+                code=SourceFault.NO_ONE_CLOCK,
+                where=series.name,
             )
         return str(matches[0])
 
@@ -206,7 +214,9 @@ class LFPSource(Compensates):
     def _zarray(self, path: Path) -> dict[str, Any]:
         meta = self.store.zarray(path)
         if meta is None:
-            raise SourceDefect(f"{path}: no .zarray, so it is not a Zarr v2 array")
+            raise SourceDefect(
+                f"{path}: no .zarray, so it is not a Zarr v2 array", code=SourceFault.NOT_ZARR_V2, where=str(path)
+            )
         return meta
 
     def _zattrs(self, path: Path) -> dict[str, Any]:
@@ -229,12 +239,18 @@ class LFPSource(Compensates):
         """
         stamps = self.store.head(series / "timestamps", 2)
         if stamps.size < 2 or not np.isfinite(stamps).all() or stamps[1] == stamps[0]:
-            raise SourceDefect(f"{series.name}: timestamps give no interval, so the axis step is unknown")
+            raise SourceDefect(
+                f"{series.name}: timestamps give no interval, so the axis step is unknown",
+                code=SourceFault.NO_SAMPLE_INTERVAL,
+                where=series.name,
+            )
         exact = clock_rate * float(stamps[1] - stamps[0])
         step = round(exact)
         if step < 1 or abs(exact - step) > 1e-3:
             raise SourceDefect(
-                f"{series.name}: {exact:.6f} probe ticks a sample is not an integer, so this is not a decimation"
+                f"{series.name}: {exact:.6f} probe ticks a sample is not an integer, so this is not a decimation",
+                code=SourceFault.NOT_A_DECIMATION,
+                where=series.name,
             )
         return int(step)
 
@@ -248,7 +264,11 @@ class LFPSource(Compensates):
         for series in self._series:
             meta = self._zarray(series / DATA)
             if meta.get("zarr_format") != 2:
-                raise SourceDefect(f"{series.name}: zarr_format {meta.get('zarr_format')}, expected 2")
+                raise SourceDefect(
+                    f"{series.name}: zarr_format {meta.get('zarr_format')}, expected 2",
+                    code=SourceFault.NOT_ZARR_V2,
+                    where=series.name,
+                )
             array = ExternalArray(
                 array_asset_id=self.array_asset_id(series),
                 declaration_id="core.array_asset_instances",
@@ -365,14 +385,22 @@ class LFPSource(Compensates):
                 }
             )
             if len(meta["shape"]) != 2:
-                raise SourceDefect(f"{series.name}: rank {len(meta['shape'])}, expected (time, channel)")
+                raise SourceDefect(
+                    f"{series.name}: rank {len(meta['shape'])}, expected (time, channel)",
+                    code=SourceFault.ARRAY_RANK,
+                    where=series.name,
+                )
         return rows
 
     def _clock_rate(self, clock_id: str) -> float:
         """Return the declared tick rate of a clock, from the row the build supplied for it."""
         rate = self._rates.get(clock_id)
         if rate is None:
-            raise SourceDefect(f"{clock_id}: no declared tick rate, so an axis step in ticks cannot be derived")
+            raise SourceDefect(
+                f"{clock_id}: no declared tick rate, so an axis step in ticks cannot be derived",
+                code=SourceFault.NO_TICK_RATE,
+                where=clock_id,
+            )
         return float(rate)
 
     def _electrodes(self) -> tuple[Path, dict[str, Any], list[str]]:

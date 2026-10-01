@@ -1,13 +1,19 @@
 """The package's exceptions are one taxonomy, defined in one module."""
 
+import ast
 import importlib
 import inspect
 import pkgutil
+from enum import StrEnum
+from pathlib import Path
 
 from escapewheel_reader.errors import EscapewheelError
 
 import escapewheel_writer
 from escapewheel_writer import errors
+
+#: The classes an adapter raises with a code.
+DEFECTS = {"SourceDefect", "UnsupportedEncoding"}
 
 
 def _defined():
@@ -51,3 +57,19 @@ def test_every_exception_is_documented_in_the_module_docstring():
     for name, cls in inspect.getmembers(errors, inspect.isclass):
         if issubclass(cls, BaseException) and cls.__module__ == errors.__name__:
             assert f":exc:`{name}`" in errors.__doc__, name
+
+
+def test_a_code_is_its_name_in_lower_case():
+    """A code is compared and logged, so its two spellings differ in case alone."""
+    for _, codes in inspect.getmembers(errors, inspect.isclass):
+        if issubclass(codes, StrEnum) and codes.__module__ == errors.__name__:
+            for member in codes:
+                assert member.value == member.name.lower(), member
+
+
+def test_every_defect_this_package_raises_carries_a_code():
+    """A caller tells defects apart by code, so one raised without a code is one it cannot tell."""
+    for path in sorted(Path(escapewheel_writer.__file__).parent.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Call) and getattr(node.func, "id", None) in DEFECTS:
+                assert any(keyword.arg == "code" for keyword in node.keywords), f"{path.name}:{node.lineno}"

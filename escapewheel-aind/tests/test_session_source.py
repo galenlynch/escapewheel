@@ -11,6 +11,7 @@ from escapewheel_writer.errors import SourceDefect
 from escapewheel_writer.recipe import SourceSpec
 from escapewheel_writer.session import Context, _composed
 
+from escapewheel_aind.errors import AindFault
 from escapewheel_aind.session import SessionSource
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
@@ -119,8 +120,10 @@ def test_it_accepts_the_asset_directory_or_the_file(asset):
 
 
 def test_a_missing_session_json_is_a_defect(tmp_path):
-    with pytest.raises(SourceDefect, match="holds no session.json"):
+    with pytest.raises(SourceDefect) as refused:
         _session(tmp_path)
+    assert refused.value.code is AindFault.NO_SESSION_JSON
+    assert refused.value.where == str(tmp_path)
 
 
 def test_a_fixed_offset_is_refused(asset):
@@ -137,8 +140,10 @@ def test_the_streams_split_on_ephys_modules(source):
 
 def test_a_stream_missing_its_window_is_a_defect(tmp_path):
     asset = build(tmp_path, streams=[{"ephys_modules": []}])
-    with pytest.raises(SourceDefect, match="has no stream_start_time"):
+    with pytest.raises(SourceDefect) as refused:
         _session(asset).streams()
+    assert refused.value.code is AindFault.STREAM_FIELD_ABSENT
+    assert refused.value.where == "data_streams[0]"
 
 
 def test_an_ambiguous_split_is_a_defect(tmp_path):
@@ -146,8 +151,9 @@ def test_an_ambiguous_split_is_a_defect(tmp_path):
         tmp_path,
         streams=[{"stream_start_time": EPHYS_START, "stream_end_time": EPHYS_STOP, "ephys_modules": []}] * 2,
     )
-    with pytest.raises(SourceDefect, match="2 non-ephys data streams"):
+    with pytest.raises(SourceDefect) as refused:
         _session(asset).behavior()
+    assert refused.value.code is AindFault.NO_ONE_STREAM
 
 
 # -- the offset that is not trusted --------------------------------------------------
@@ -256,8 +262,9 @@ def test_an_inverted_window_is_a_defect(tmp_path, harp):
         streams=[{"stream_start_time": EPHYS_STOP, "stream_end_time": EPHYS_START, "ephys_modules": []}],
     )
     source = _session(asset, reference_clock={**HARP_ROW, "tick_zero_utc": harp.tick_zero_utc})
-    with pytest.raises(SourceDefect, match="ends before it starts"):
+    with pytest.raises(SourceDefect) as refused:
         source.records()
+    assert refused.value.code is AindFault.STREAM_REVERSED
 
 
 def test_a_window_cannot_be_placed_on_a_clock_whose_tick_zero_is_unknown(source):
@@ -360,8 +367,9 @@ def test_the_curve_becomes_points_in_the_order_stated(asset):
 def test_a_series_with_unequal_sides_is_refused(asset):
     """A point needs both halves, and truncating one would invent a curve nothing measured."""
     lopsided = WATER | {"output": {"water volume (ul):": [2.35]}}
-    with pytest.raises(SourceDefect, match="a point needs both sides"):
+    with pytest.raises(SourceDefect) as refused:
         rig(asset, [lopsided]).calibration_points()
+    assert refused.value.code is AindFault.CALIBRATION_MISALIGNED
 
 
 def test_six_modules_citing_one_file_are_one_calibration(tmp_path):

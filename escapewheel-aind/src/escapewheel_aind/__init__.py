@@ -16,6 +16,8 @@ unit_qc
     The unit quality metrics a sorting analyzer computes, as the ``aind_unit_qc`` extension.
 compensations
     The upstream faults these adapters work around, recorded in the packet.
+errors
+    The codes a defect from these adapters carries.
 
 The package depends on `escapewheel-writer` and nothing in the writer imports it. A build refuses a
 kind it neither ships nor is told how to reach, so a recipe naming one of these sets

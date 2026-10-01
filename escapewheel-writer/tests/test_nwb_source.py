@@ -11,7 +11,7 @@ from escapewheel_reader import open_packet
 
 from escapewheel_writer import Clock, OffGrid, PacketWriter
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.sources import NWBSource
 from escapewheel_writer.sources.nwb import _sex, ucum_code
 from tests import nwbfixture
@@ -427,8 +427,10 @@ def test_trial_metadata_is_carried_unless_turned_off(source, bare):
 
 def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, harp):
     nwb = nwbfixture.build(tmp_path, trial_stop=np.nan)
-    with pytest.raises(SourceDefect, match="stop_time"):
+    with pytest.raises(SourceDefect) as refused:
         NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND).records()
+    assert refused.value.code is SourceFault.TRIAL_EDGE_MISSING
+    assert refused.value.where == "intervals/trials/stop_time"
 
 
 # -- end to end ----------------------------------------------------------------------
