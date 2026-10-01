@@ -168,7 +168,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
       part names it; one function per templated family (`<resource>.physical_order`,
       `<resource>.<column>.outside_reserved_set` and the like). `Report.add` takes an entry. At
       `f30864e`, 30 of the 71 literal IDs appear in no part.
-- [ ] Validator: a `Level` enumeration, and constants for verdicts and evaluation statuses. The
+- [x] Validator: a `Level` enumeration, and constants for verdicts and evaluation statuses. The
       writer compares against them where it now compares against `"valid"`.
 - [x] Settle `source.absolute_uri` against the three `sources.*` IDs: one prefix.
 - [x] Reader: the resource-ID module of §2, the packet file names, and the profile ID, each
@@ -179,7 +179,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
       a derived `offers()`. One streaming surface.
 - [x] Writer: the delivery module uses the protocol-name constants the declaration module already
       defines.
-- [ ] Shared helpers defined once: `semver`, the provenance resource list, identifier quoting, the
+- [x] Shared helpers defined once: `semver`, the provenance resource list, identifier quoting, the
       tables a registry declares, the manifest-entry builder, the adapter lookup with its
       unknown-kind refusal.
 
@@ -820,3 +820,33 @@ Found and left as they were:
   command binds a registry an amended packet binds and the recipe does not name, where `build`
   and `import_packet` called directly do not; and no test in the repository amends with a
   materializer.
+
+### 11.18 The sync split, the shared helpers and the vocabularies
+
+- `sources/sync_checks` holds the pure array functions of the sync adapter and exports
+  `phase_discontinuities` and `suspect_terminals`. Its two citations of a revision's measurement
+  are exempted by file path in `revisions/repoint.py`, so the two paths in that table moved in
+  the same commit. The table is process tooling and no specification part.
+- The validator quotes an identifier with the reader's `sql.quote`, and `amendment.quoted` is
+  deleted; this supersedes §11.16's sentence about it. The two differed only on a name holding a
+  quotation mark, and every identifier quoted comes from a registry whose result is valid, whose
+  meta-schema patterns admit none. The validator keeps `literal` for a file path. String-literal
+  quoting still has three definitions, the reader's two private ones and the validator's, which
+  §6.1 does not list and nobody compared.
+- `documents.resource_entry` composes a manifest's resource entry for a table, a staged or
+  referenced array, a payload and referenced media, with member order kept so a manifest's bytes
+  are unchanged. A corpus builder that hand-writes an entry does so to produce a deliberately
+  wrong packet independent of the writer, and the packet fixture of §11.16 keeps its own.
+- `kinds.required_adapter` is the one adapter lookup and raises `UnknownSourceKind`. A delivery
+  turns it into a `SourceDefect` with the unknown-kind code, and the exit statuses of the
+  delivery and of `declare` are unchanged. The message now reads "known kinds are" at the two
+  callers that said "this build ships".
+- A recipe `Problem.level` is the validator's `Level`, whose members equal their strings, so
+  rendered output is unchanged. `fixtures/corpus.py` compares a verdict against `Verdict`
+  members; a corpus record keeps a string level because the records import no validator and are
+  read from the syntax tree. The level a delivery writes into a run report is Part 12 §9's
+  vocabulary and stays a string.
+- `spec/tools/checkers/registry_invariants.py` keeps its own reading of the tables a registry
+  declares, since a tree tool imports nothing outside the tree.
+- The writer's contributor guide and its performance page cite the part that states a rule. aind
+  has no documentation tree and no importable tier, which its README now states.
