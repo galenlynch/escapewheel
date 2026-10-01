@@ -7,6 +7,7 @@ clock arrangement without building a registry around it.
 import pyarrow as pa
 import pytest
 from escapewheel_reader import ResourceNotFoundError
+from escapewheel_reader.protocols import Memo
 
 from escapewheel_validator.validator import Report, _check_time_origin
 
@@ -17,7 +18,7 @@ ANCHORS = [(t, 30 * t + 500) for t in range(0, 11_000, 1000)]
 class _Packet:
     def __init__(self, tables):
         self._tables = tables
-        self._anchor_cache = None
+        self.memo = Memo()
 
     def table(self, resource_id, columns=None):
         if resource_id not in self._tables:

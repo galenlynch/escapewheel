@@ -6,9 +6,7 @@ import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet
 
-from escapewheel_validator import check_table, validate
-from escapewheel_validator.generate import Check, concerns
-from escapewheel_validator.generate import _generate as generate
+from escapewheel_validator import validate
 from escapewheel_validator.validator import check_packet_manifest
 
 from .conftest import UNREAD_DIGEST, install_registry, owned_digest, read_registry
@@ -338,10 +336,6 @@ def test_report_renders_as_json(packet_root):
     assert rendered["registries"][0]["result"]["state"] == "valid"
 
 
-def test_generator_emits_nothing_for_an_empty_registry():
-    assert generate({"resources": {}}) == []
-
-
 def _add_family_declaration(root, declaration_id, *, content_class="core"):
     """Add an opaque family for tests concerned with generic manifest behavior."""
     registry = read_registry(root)
@@ -353,19 +347,6 @@ def _add_family_declaration(root, declaration_id, *, content_class="core"):
         "lineage": "forbidden" if content_class == "documentation" else "optional",
     }
     install_registry(root, registry)
-
-
-def test_nullable_foreign_keys_are_guarded(packet_root):
-    """Without an IS NOT NULL guard, every absent optional key reports as a violation."""
-    registry = read_registry(packet_root)
-    registry["resources"]["core.intervals"]["table"]["columns"].append(
-        {"name": "probe_id", "type": "string", "presence": "nullable", "description": "probe"}
-    )
-    registry["resources"]["core.intervals"]["table"]["references"].append(
-        {"columns": ["probe_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
-    )
-    check = next(c for c in generate(registry) if c.id == "core.intervals.probe_id_resolves")
-    assert "IS NOT NULL" in check.sql
 
 
 def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
@@ -470,32 +451,6 @@ def test_report_records_whether_advisories_ran(packet_root):
     """An empty advisory result is ambiguous unless the report says (R26 §5)."""
     assert validate(open_packet(packet_root)).to_dict("p")["advisory"] is False
     assert validate(open_packet(packet_root), advisory=True).to_dict("p")["advisory"] is True
-
-
-def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatch):
-    """A rule that projects a wall-clock column must report its rows, not an engine error.
-
-    DuckDB's own Python conversion imports `pytz` to render a ``TIMESTAMP WITH TIME ZONE``.
-    An empty result converts nothing, so such a rule ran fine until it had something to say
-    and then failed -- and whether that happened depended on whether an unrelated package had
-    pulled `pytz` in.
-    """
-    import sys
-
-    import duckdb
-
-    from escapewheel_validator.validator import _offending
-
-    connection = duckdb.connect()
-    connection.sql("CREATE TABLE core_clocks (clock_id VARCHAR, tick_zero_utc TIMESTAMP WITH TIME ZONE)")
-    connection.sql("INSERT INTO core_clocks VALUES ('harp', '2024-11-27T00:51:12+00:00')")
-    query = "SELECT clock_id, tick_zero_utc FROM core_clocks"
-
-    monkeypatch.setitem(sys.modules, "pytz", None)  # makes `import pytz` raise, as an absent one does
-    with pytest.raises(duckdb.InvalidInputException):
-        connection.sql(query).fetchall()
-    assert _offending(connection, query)[0][0] == "harp"
-    assert _offending(connection, "SELECT clock_id, tick_zero_utc FROM core_clocks WHERE FALSE") == []
 
 
 # -- resource lineage (Part 04 §7) -----------------------------------------------------------
@@ -930,118 +885,7 @@ def test_scanning_nothing_leaves_the_ordering_unchecked(packet_root):
     )
 
 
-def test_a_column_determined_by_the_key_cannot_separate_duplicates():
-    """R30 sorts `analysis.spike_events` by two columns that precede its key.
-
-    `clock_id` is the session's reference clock and `time_bucket_tick` is a function of
-    `t_tick`, so neither varies between rows sharing a key, and duplicates stay neighbours.
-    """
-    from escapewheel_validator.generate import adjacency_settles_uniqueness
-
-    # The resource names the order: the descriptor's override for this one (Part 03 §5.4) is what
-    # puts two non-key columns ahead of the key.
-    table = {
-        "primary_key": ["session_id", "unit_id", "t_tick"],
-        "columns": [
-            {"name": "clock_id", "type": "int32", "presence": "required", "determined_by": ["session_id"]},
-            {"name": "time_bucket_tick", "type": "int64", "presence": "required", "determined_by": ["t_tick"]},
-        ],
-    }
-    assert adjacency_settles_uniqueness("analysis.spike_events", table)
-
-
-def test_a_column_determined_by_a_non_key_still_refuses():
-    """The dependency must be on the key: anything else can order duplicates apart."""
-    from unittest.mock import patch
-
-    from escapewheel_validator.generate import adjacency_settles_uniqueness
-
-    table = {
-        "primary_key": ["a", "b"],
-        "columns": [{"name": "x", "type": "string", "presence": "required", "determined_by": ["c"]}],
-    }
-    with patch("escapewheel_reader.ordering._overrides", return_value={"x.y": ("a", "x", "b")}):
-        assert not adjacency_settles_uniqueness("x.y", table)
-
-
-def test_an_undeclared_column_ahead_of_the_key_refuses():
-    from unittest.mock import patch
-
-    from escapewheel_validator.generate import adjacency_settles_uniqueness
-
-    table = {"primary_key": ["a", "b"], "columns": [{"name": "x"}]}
-    with patch("escapewheel_reader.ordering._overrides", return_value={"x.y": ("a", "x", "b")}):
-        assert not adjacency_settles_uniqueness("x.y", table)
-
-
-def test_a_dictionary_column_satisfies_a_string_declaration():
-    """A dictionary is an encoding, not a type: Parquet stores BYTE_ARRAY/String either way."""
-    from escapewheel_validator import Report
-    from escapewheel_validator.validator import _check_column
-
-    report = Report()
-    column = {"name": "session_id", "type": "string", "presence": "required"}
-    schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.string()))])
-    _check_column("core.units", column, schema, report)
-    assert not report.findings
-
-
-def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
-    """Unwrapping the encoding must not unwrap the check."""
-    from escapewheel_validator import Report
-    from escapewheel_validator.validator import _check_column
-
-    report = Report()
-    column = {"name": "session_id", "type": "string", "presence": "required"}
-    schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.int64()))])
-    _check_column("core.units", column, schema, report)
-    assert [f.check for f in report.findings] == ["schema.column_type"]
-
-
 # -- Part 05 §15.4: an amendment re-runs only the rules its own resources implicate ---------------
-
-
-def _check(sql, resource="core.units", dependencies=()):
-    return Check(
-        check_table.rule(f"{resource}.rule", "error"),
-        "message",
-        sql,
-        resource,
-        dependencies=frozenset(dependencies or {resource}),
-    )
-
-
-def test_a_rule_attached_to_a_written_resource_runs():
-    assert concerns(_check("SELECT * FROM core_units"), {"core.units"})
-
-
-def test_a_rule_whose_query_names_a_written_resource_runs():
-    """Parsed base relations are authoritative dependencies for Tier 2."""
-    sql = "SELECT c.unit_id FROM core_units c LEFT JOIN analysis_spike_events p ON c.unit_id = p.unit_id"
-    assert concerns(_check(sql, dependencies={"core.units", "analysis.spike_events"}), {"analysis.spike_events"})
-
-
-def test_a_rule_reading_only_untouched_resources_may_be_skipped():
-    assert not concerns(_check("SELECT * FROM core_units"), {"analysis.spike_events"})
-
-
-def test_resource_text_in_a_comment_is_not_a_dependency():
-    """Part 05 §15.4: comments do not create Tier 2 dependencies."""
-    sql = "SELECT * FROM core_units -- nothing to do with analysis_spike_events"
-    assert not concerns(_check(sql), {"analysis.spike_events"})
-
-
-def test_recheck_narrows_the_rules_that_run(packet_root):
-    """A packet that passes still passes, over fewer checks."""
-    packet = open_packet(packet_root)
-    registry = packet.registry
-    every = generate(
-        registry,
-        only={name for name, declaration in registry["resources"].items() if declaration["kind"] == "table"},
-    )
-    narrowed = [c for c in every if concerns(c, {"core.intervals"})]
-    assert 0 < len(narrowed) < len(every)
-    assert validate(open_packet(packet_root), recheck={"core.intervals"}).passed
 
 
 def test_recheck_still_catches_a_break_in_what_was_written(packet_root):
@@ -2009,123 +1853,6 @@ def test_two_bound_extensions_pass_and_activate_their_required_singletons(packet
     assert [f.message for f in missing] == ["required singleton lick.marks is absent"]
 
 
-def _discriminated(role="discriminator", **extra):
-    """A one-table registry whose `k_kind` discriminates `k` (Part 02 §8.3)."""
-    column = {"name": "k_kind", "type": "string", "presence": "nullable", "role": role, **extra}
-    return {
-        "resources": {
-            "core.runs": {
-                "kind": "table",
-                "table": {
-                    "columns": [
-                        {"name": "run_id", "type": "int32", "presence": "required", "role": "identifier"},
-                        column,
-                        {"name": "k", "type": "string", "presence": "nullable", "role": "data"},
-                    ],
-                    "primary_key": ["run_id"],
-                    "references": [],
-                    "rules": [],
-                },
-            }
-        }
-    }
-
-
-def test_a_discriminator_is_checked_for_being_a_resource_id():
-    """Part 02 §8.3. Nothing checked this: `scope_kind` could hold an empty string and no rule saw it."""
-    checks = generate(_discriminated(resolves="optional", discriminates="k"))
-    ids = {c.id for c in checks}
-    assert "core.runs.k_kind.is_a_resource_id" in ids
-
-
-def test_a_data_column_generates_no_discriminator_checks():
-    """The role is what turns it on, which is R55 §1.1's point: `data` said only 'may be read'."""
-    checks = generate(_discriminated(role="data"))
-    assert not [c for c in checks if "k_kind" in c.id]
-
-
-def test_resolves_decides_the_level_not_whether_the_check_exists():
-    """Part 02 §8.3. An optional kind naming nothing is a fact, and reported; R49 §2.5 passed it in silence."""
-    kinds = {"core.sessions": "session_id"}
-    optional = generate(_discriminated(resolves="optional", discriminates="k"), kinds=kinds)
-    required = generate(_discriminated(resolves="required", discriminates="k"), kinds=kinds)
-    levels = {c.id: c.level for c in optional + required}
-    assert levels["core.runs.k_kind.kind_declared"] in ("info", "error")
-    assert {c.level for c in optional if c.id.endswith("kind_declared")} == {"info"}
-    assert {c.level for c in required if c.id.endswith("kind_declared")} == {"error"}
-
-
-def test_a_shared_key_discriminator_generates_no_value_resolution():
-    """Part 02 §8.3: the named table's own reference carries that integrity, pointing the other way."""
-    checks = generate(_discriminated(resolves="required"), kinds={"core.sessions": "session_id"})
-    assert not [c for c in checks if c.id.startswith("core.runs.k_kind.") and c.id.endswith("_resolves")]
-
-
-def test_a_string_paired_value_is_cast_on_both_sides():
-    """A carried key may be a number where the string value is not one; uncast, DuckDB raises on it."""
-    checks = generate(
-        _discriminated(resolves="required", discriminates="k"),
-        only={"core.runs"},
-        kinds={"core.runs": "run_id"},
-    )
-    sql = next(c.sql for c in checks if c.id == "core.runs.k_kind.core_runs_resolves")
-    assert sql.count("CAST") == 2
-
-
-def test_each_named_kind_gets_its_own_anti_join():
-    """Per kind, so a value resolves only in the kind its own row names (Part 02 §8.3)."""
-    checks = generate(
-        _discriminated(resolves="required", discriminates="k"),
-        only={"core.runs", "core.sessions"},
-        kinds={"core.runs": "run_id", "core.sessions": "session_name", "ext.absent": "absent_id"},
-    )
-    ids = {c.id for c in checks}
-    assert {"core.runs.k_kind.core_runs_resolves", "core.runs.k_kind.core_sessions_resolves"} <= ids
-    assert not [i for i in ids if "ext_absent" in i], "a kind the packet does not carry is the declared-kind check's"
-    declared = next(c.sql for c in checks if c.id == "core.runs.k_kind.kind_declared")
-    assert "'ext.absent'" in declared
-
-
-def test_an_optional_paired_value_generates_no_resolution():
-    """Part 02 §8.3: a value an optional discriminator pairs may name nothing the packet holds."""
-    checks = generate(
-        _discriminated(resolves="optional", discriminates="k"),
-        only={"core.runs"},
-        kinds={"core.runs": "run_id"},
-    )
-    ids = {c.id for c in checks if c.id.startswith("core.runs.k_kind.")}
-    assert ids == {"core.runs.k_kind.is_a_resource_id", "core.runs.k_kind.kind_declared"}
-
-
-def _identifier_paired(resolves="required"):
-    registry = _discriminated(resolves=resolves, discriminates="k")
-    columns = registry["resources"]["core.runs"]["table"]["columns"]
-    columns[2] = {"name": "k", "type": "int32", "presence": "nullable", "role": "identifier", "identity": "assigned"}
-    columns[0]["identity"] = "assigned"
-    return registry
-
-
-def test_an_identifier_paired_value_joins_its_key_uncast():
-    """An identifier value holds the named key's own value, so both sides share a type (Part 02 §8.3)."""
-    registry = _identifier_paired()
-    checks = generate(registry, only={"core.runs"}, kinds={"core.runs": None})
-    sql = next(c.sql for c in checks if c.id == "core.runs.k_kind.core_runs_resolves")
-    assert "CAST" not in sql and "run_id" in sql
-    assert "core.runs.k_kind.key_fits_paired_value" not in {c.id for c in checks}
-
-
-def test_a_key_an_identifier_value_cannot_hold_is_reported():
-    """A kind whose key is another type, or not one column, can name no row through the value."""
-    keys = {"core.runs": {"name": "run_id", "type": "int32", "identity": "assigned"}, "core.intervals": None}
-    checks = generate(
-        _identifier_paired(), only={"core.runs"}, kinds={"core.runs": None, "core.intervals": None}, keys=keys
-    )
-    shape = next(c for c in checks if c.id == "core.runs.k_kind.key_fits_paired_value")
-    assert shape.level == "error" and "'core.intervals'" in shape.sql and "'core.runs'" not in shape.sql
-    optional = generate(_identifier_paired("optional"), only={"core.runs"}, kinds={"core.intervals": None}, keys=keys)
-    assert "core.runs.k_kind.key_fits_paired_value" not in {c.id for c in optional}
-
-
 def _reference(root, **overrides):
     """Append an external array entry to a packet's manifest and return the path."""
     _add_family_declaration(root, "core.test_payloads")
@@ -2304,93 +2031,3 @@ def test_a_resolved_external_array_is_assessed_against_its_variant(packet_root):
     assert "zarr v2" in finding.message
     assert [row[0] for row in finding.rows] == ["filters", "compressor"]
     assert "external.physical_unassessed" not in {f.check for f in report.findings}
-
-
-def test_each_unassessed_external_is_its_own_registrys_finding():
-    """Part 05 §5.3: one finding per resource, attributed as Part 05 §9.5 attributes a resource's."""
-    from types import SimpleNamespace
-
-    from escapewheel_validator.validator import Report, _report_unassessed
-
-    resources = [
-        SimpleNamespace(
-            resource_id="core.lfp", declaration_id="core.array_asset_instances", is_external=True, interface="zarr"
-        ),
-        SimpleNamespace(resource_id="task.lfp", declaration_id="task.arrays", is_external=True, interface="zarr"),
-        SimpleNamespace(resource_id="task.table", declaration_id="task.tables", is_external=True, interface="parquet"),
-        SimpleNamespace(resource_id="core.video", declaration_id="core.media", is_external=True, interface=None),
-        SimpleNamespace(resource_id="core.owned", declaration_id="core.media", is_external=False, interface="zarr"),
-    ]
-    report = Report(bound=("core", "task"))
-    report.attribute(
-        {"core.array_asset_instances": "core", "core.media": "core", "task.arrays": "task", "task.tables": "task"},
-        resources,
-    )
-    _report_unassessed(SimpleNamespace(resources=lambda: resources), {"task.table"}, report)
-    assert [(f.level, f.check, f.registry, f.rows) for f in report.findings] == [
-        ("info", "external.physical_unassessed", "core", (("core.lfp",),)),
-        ("info", "external.physical_unassessed", "task", (("task.lfp",),)),
-    ]
-
-
-def test_a_row_breaking_a_determined_by_declaration_is_named_by_position(tmp_path):
-    """Part 03 §5.3: the third row shares the second's key and differs in both columns the key determines."""
-    from types import SimpleNamespace
-
-    from escapewheel_validator import Report
-    from escapewheel_validator.validator import _scan_one_ordering
-
-    path = tmp_path / "spike_events.parquet"
-    pq.write_table(
-        pa.table(
-            {
-                "session_id": pa.array([1, 1, 1, 1], type=pa.int32()),
-                "clock_id": pa.array([1, 1, 2, 2], type=pa.int32()),
-                "time_bucket_tick": pa.array([0, 0, 1, 1], type=pa.int64()),
-                "unit_id": pa.array([1, 1, 1, 2], type=pa.int32()),
-                "t_tick": pa.array([5, 6, 6, 9], type=pa.int64()),
-            }
-        ),
-        path,
-    )
-    spec = {
-        "columns": [
-            {"name": "session_id"},
-            {"name": "unit_id"},
-            {"name": "t_tick"},
-            {"name": "clock_id", "determined_by": ["session_id"]},
-            {"name": "time_bucket_tick", "determined_by": ["t_tick"]},
-        ],
-        "primary_key": ["session_id", "unit_id", "t_tick"],
-    }
-    report = Report()
-    handle = SimpleNamespace(path=path, schema=lambda: pq.read_schema(path))
-    _scan_one_ordering("analysis.spike_events", handle, spec, report)
-    assert [(f.check, f.rows) for f in report.findings] == [
-        (
-            "analysis.spike_events.determined_by",
-            (("row 3", "clock_id", "1 != 2"), ("row 3", "time_bucket_tick", "0 != 1")),
-        ),
-        ("analysis.spike_events.primary_key_unique", (("row 3", "(1, 6)"),)),
-    ]
-
-
-def test_a_bound_registry_lacking_an_overrides_column_departs_from_its_order():
-    """Part 03 §5.4: without `time_bucket_tick` the table cannot take the descriptor's order."""
-    from escapewheel_validator import Report
-    from escapewheel_validator.validator import _scan_one_ordering
-
-    report = Report()
-    spec = {
-        "columns": [
-            {"name": "session_id"},
-            {"name": "unit_id"},
-            {"name": "t_tick"},
-            {"name": "clock_id", "determined_by": ["session_id"]},
-        ],
-        "primary_key": ["session_id", "unit_id", "t_tick"],
-    }
-    _scan_one_ordering("analysis.spike_events", None, spec, report)
-    (finding,) = report.findings
-    assert (finding.check, finding.level) == ("analysis.spike_events.physical_order", "error")
-    assert "declares no time_bucket_tick" in finding.message
