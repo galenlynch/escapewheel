@@ -395,12 +395,12 @@ class UnitQCSource:
         return rows
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
-        """Every table this adapter builds, keyed by resource ID, each present even where empty."""
-        return dict(self._read())
+        """Every table this adapter builds that has a row, keyed by resource ID."""
+        return {resource: rows for resource, rows in self._read().items() if rows}
 
     def offers(self) -> dict[str, int]:
         """Which resources this source supplies from its root, and how many rows (Part 05 §4.1)."""
-        return {resource: len(rows) for resource, rows in self._read().items()}
+        return {resource: len(rows) for resource, rows in self.records().items()}
 
 
 def _label(value: Any) -> str:

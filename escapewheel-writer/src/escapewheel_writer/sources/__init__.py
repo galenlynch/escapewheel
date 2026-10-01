@@ -15,6 +15,7 @@ import warnings
 from importlib.metadata import entry_points
 from typing import Any
 
+from ..protocols import SourceAdapter
 from .harp import HarpSource
 from .lfp import LFPSource
 from .nwb import NWBSource
@@ -37,7 +38,7 @@ SOURCE_GROUP = "escapewheel.sources"
 #:
 #: A kind absent here is not unknown: `discovered()` supplies the rest, and a recipe naming one
 #: declares how a build reaches it (Part 05 §3.9).
-ADAPTERS: dict[str, Any] = {
+ADAPTERS: dict[str, type[SourceAdapter]] = {
     "harp": HarpSource,
     "openephys": OpenEphysSource,
     "sorter": SorterSource,

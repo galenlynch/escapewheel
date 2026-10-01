@@ -191,7 +191,7 @@ class OpenEphysSource:
 
     def offers(self) -> dict[str, int]:
         """Part 05 §4.1: how many rows of each resource this root holds."""
-        return {CORE_DEVICES: len(self.devices())}
+        return {resource: len(rows) for resource, rows in self.records().items()}
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records, keyed by resource ID."""

@@ -84,6 +84,15 @@ directory named by its `core.array_assets` row's `resource_id`, which is all the
 — so that row must carry the `resource_id`. A referenced array is not copied; the adapter returns
 its resource declaration. An adapter never chooses final packet paths or commits resources.
 
+`escapewheel_writer.protocols` states what a build asks of an adapter. Every adapter satisfies
+`SourceAdapter`: `records`, `offers`, `notes` and the class's declaration. Each thing only some
+adapters have is one capability protocol, which a build tests for and an adapter satisfies by
+having its members: `Streams`, `StagesArrays`, `ReferencesArrays`, `ReferencesMedia`,
+`StagesPayloads`, `DeclaresCompensations`, `WithholdsAnchors` and `Located`. A table with no rows
+is omitted from `records`, `batches` and `offers` alike, and `offers` is the row counts of the
+first two; an adapter whose rows need what only a build supplies counts them from the source
+instead, as `LFPSource` does.
+
 An adapter this package ships declares no `PROTOCOLS`; one registered by another distribution
 declares the protocols it supports, since it is released apart from the writer (Part 12 §3).
 `Recipe.check` checks every adapter class as the document `escapewheel declare` would generate.

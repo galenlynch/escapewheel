@@ -327,11 +327,7 @@ class VideoSource(Compensates):
 
     def offers(self) -> dict[str, int]:
         """Part 05 §4.1: how many rows of each resource this root holds."""
-        videos = self.videos()
-        return {
-            CORE_MEDIA_ASSETS: len(videos),
-            CORE_MEDIA_FRAMES: sum(self.frame_count(v) for v in videos),
-        }
+        return {**{resource: len(rows) for resource, rows in self.records().items()}, **self.stream_rows()}
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records. Frames stream, so they are not here."""
@@ -345,7 +341,12 @@ class VideoSource(Compensates):
             for video in self.videos():
                 yield from self._frames(video)
 
-        return {CORE_MEDIA_FRAMES: every()}
+        return {CORE_MEDIA_FRAMES: every()} if self.videos() else {}
+
+    def stream_rows(self) -> dict[str, int]:
+        """How many frames `batches` streams, counted from each camera's container."""
+        frames = sum(self.frame_count(video) for video in self.videos())
+        return {CORE_MEDIA_FRAMES: frames} if frames else {}
 
 
 def _ffprobe(video: Path, entries: str) -> str:

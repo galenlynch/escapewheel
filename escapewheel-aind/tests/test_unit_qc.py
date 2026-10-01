@@ -192,12 +192,12 @@ def test_a_template_metric_arrives_as_its_declared_type(asset: Path) -> None:
     assert {(name, kind) for name, kind in arrived if kind is not type(None)} <= set(declared.items())
 
 
-def test_a_stream_without_template_metrics_leaves_that_table_empty_and_says_so(tmp_path: Path) -> None:
+def test_a_stream_without_template_metrics_omits_that_table_and_says_so(tmp_path: Path) -> None:
     root = stream(tmp_path / "sorted", "experiment1_Record Node 109#Neuropix-PXI-100.A_recording1", template=False)
     source = UnitQCSource(root, session_id="s1", units=UNITS)
     built = source.records()
-    assert built["aind_unit_qc.waveform_metrics"] == []
-    assert set(built) == set(UnitQCSource.PRODUCES)
+    assert set(built) == set(UnitQCSource.PRODUCES) - {"aind_unit_qc.waveform_metrics"}
+    assert set(source.offers()) == set(built)
     (absent,) = coded(source.notes, AindNote.NO_METRIC_GROUP)
     assert "template_metrics" in absent
     assert source.offers()["aind_unit_qc.metrics"] == 2

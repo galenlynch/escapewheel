@@ -1020,12 +1020,17 @@ class SorterSource:
         held = (self._npy_rows(s.path / "spikes.npy") for s in self.streams())
         return sum(n if self.sample is None else min(n, self.sample) for n in held)
 
+    def batches(self) -> dict[str, Iterator[pa.RecordBatch]]:
+        """`core.spike_events`, where the sorting holds a spike."""
+        return {CORE_SPIKE_EVENTS: self.spike_batches()} if self.spike_count else {}
+
+    def stream_rows(self) -> dict[str, int]:
+        """How many spikes `batches` streams."""
+        return {CORE_SPIKE_EVENTS: self.spike_count} if self.spike_count else {}
+
     def offers(self) -> dict[str, int]:
         """Which resources this source supplies from its root, and how many rows (Part 05 §4.1)."""
-        return {
-            **{resource: len(rows) for resource, rows in self.records().items()},
-            CORE_SPIKE_EVENTS: self.spike_count,
-        }
+        return {**{resource: len(rows) for resource, rows in self.records().items()}, **self.stream_rows()}
 
 
 __all__ = ["DESIGNATED", "LABEL_SOURCES", "PROJECTION", "STREAM_WORKERS", "SortedStream", "SorterSource"]

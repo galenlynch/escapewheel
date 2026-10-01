@@ -38,7 +38,6 @@ from escapewheel_reader.resource_ids import (
     CORE_PROCESSING_RUNS,
     CORE_SESSIONS,
     CORE_SOURCE_FILES,
-    CORE_SPIKE_EVENTS,
     CORE_SUBJECTS,
     CORE_UNITS,
 )
@@ -48,7 +47,7 @@ from numpy.typing import NDArray
 from . import opaque
 from .amending import Held
 from .declaration import SOURCE_CACHE
-from .encoding import STREAMED_BATCH_ROWS
+from .delivery import Delivered
 from .errors import (
     AmendmentRefused,
     MaterializerNotFound,
@@ -64,6 +63,17 @@ from .errors import (
 )
 from .extensions import load_checked as load_extension_context
 from .notes import Note, NoteCode
+from .protocols import (
+    DeclaresCompensations,
+    Located,
+    ReferencesArrays,
+    ReferencesMedia,
+    SourceAdapter,
+    StagesArrays,
+    StagesPayloads,
+    Streams,
+    WithholdsAnchors,
+)
 from .recipe import (
     RECIPE_SUPPLIES,
     TERMS,
@@ -127,7 +137,7 @@ class Context:
     """
 
     session_id: str
-    sources: dict[str, Any] = field(default_factory=dict)
+    sources: dict[str, SourceAdapter] = field(default_factory=dict)
     units: list[dict[str, Any]] = field(default_factory=list)
     clocks: dict[str, dict[str, Any]] = field(default_factory=dict)
     stores: dict[Any, Any] = field(default_factory=dict)
@@ -331,7 +341,7 @@ def _supplied(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, A
     return {**supplied, "options": dict(spec.options)}
 
 
-def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
+def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAdapter:
     """Construct one adapter, or run it and read what it delivered (Part 05 §3.9).
 
     One construction for every kind, built-in or registered by another distribution, and one
@@ -456,7 +466,12 @@ def _normalized(value: Any, declared_type: str | None) -> Any:
     return str(value)
 
 
-def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, recipe: Recipe) -> None:
+def _named(source: SourceAdapter, spec: SourceSpec) -> str:
+    """Name a source in a message about what it states: by its path where it has one, else by its kind."""
+    return str(source.path) if isinstance(source, Located) else spec.kind
+
+
+def _compare_declared_facts(spec: SourceSpec, source: SourceAdapter, context: Context, recipe: Recipe) -> None:
     """Compare what the recipe declares against what this source states (Part 05 §3.6).
 
     Three dispositions, and which one applies is the fact's rather than the source's. A fact that
@@ -469,11 +484,11 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
     value is taken: which is how `core.sessions` gets both its ends from the windows a session
     source declares, whether that source ran here or delivered them from elsewhere.
     """
-    declared, notes = recipe.declared_facts, getattr(source, "notes", context.notes)
+    declared, notes = recipe.declared_facts, source.notes
     if context.held_facts is not None:
         _compare_held_facts(spec, source, context.held_facts, notes, context.fact_types)
         return
-    for fact, attribute in sorted(getattr(source, "STATES", {}).items()):
+    for fact, attribute in sorted(source.STATES.items()):
         stated = getattr(source, attribute, None)
         block, _, field = fact.partition(".")
         if stated is not None and fact in SOURCE_WINS and block == "session":
@@ -500,7 +515,7 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
             notes.append(Note(f"{fact} is {want!r} over {spec.kind}'s {stated!r}: {reason}", NoteCode.FACT_OVERRIDDEN))
         elif fact in REFUSES_ON_DIFFERENCE:
             raise SourceDefect(
-                f"{fact} is {want!r} and {getattr(source, 'path', spec.kind)} states {stated!r}; "
+                f"{fact} is {want!r} and {_named(source, spec)} states {stated!r}; "
                 "a declared fact differs from the source that states it, with no override (Part 05 §3.6)",
                 code=SourceFault.FACT_DIFFERS,
                 where=fact,
@@ -522,10 +537,10 @@ def _compare_declared_facts(spec: SourceSpec, source: Any, context: Context, rec
 
 
 def _compare_held_facts(
-    spec: SourceSpec, source: Any, held: Mapping[str, Any], notes: list[str], fact_types: Mapping[str, str]
+    spec: SourceSpec, source: SourceAdapter, held: Mapping[str, Any], notes: list[str], fact_types: Mapping[str, str]
 ) -> None:
     """Compare what a source states against the amended packet's row, which prevails (Part 05 §3.6)."""
-    for fact, attribute in sorted(getattr(source, "STATES", {}).items()):
+    for fact, attribute in sorted(source.STATES.items()):
         stated = getattr(source, attribute, None)
         if stated is None:
             continue
@@ -535,7 +550,7 @@ def _compare_held_facts(
             continue
         if fact in REFUSES_ON_DIFFERENCE:
             raise SourceDefect(
-                f"{fact} is {kept!r} in the packet and {getattr(source, 'path', spec.kind)} states {stated!r}; "
+                f"{fact} is {kept!r} in the packet and {_named(source, spec)} states {stated!r}; "
                 "an amendment keeps the packet's value (Part 05 §3.6)",
                 code=SourceFault.HELD_FACT_DIFFERS,
                 where=fact,
@@ -560,7 +575,7 @@ HARVESTED = (
 )
 
 
-def _rows(source: Any, records: Mapping[str, list[dict[str, Any]]]) -> Callable[[str], list[dict[str, Any]]]:
+def _rows(source: SourceAdapter, records: Mapping[str, list[dict[str, Any]]]) -> Callable[[str], list[dict[str, Any]]]:
     """Return a reader for one source's rows, whichever way they reached this process.
 
     An adapter in this process hands over records; one delivered out of process hands over a
@@ -571,15 +586,14 @@ def _rows(source: Any, records: Mapping[str, list[dict[str, Any]]]) -> Callable[
     def rows(resource: str) -> list[dict[str, Any]]:
         if resource in records:
             return records[resource]
-        reader = getattr(source, "rows", None)
-        return list(reader(resource)) if reader is not None else []
+        return source.rows(resource) if isinstance(source, Delivered) else []
 
     return rows
 
 
 def _harvest(
     spec: SourceSpec,
-    source: Any,
+    source: SourceAdapter,
     context: Context,
     recipe: Recipe,
     rows: Callable[[str], list[dict[str, Any]]],
@@ -725,7 +739,7 @@ def _time_origin(
 
 
 def _add_batches(
-    writer: PacketWriter, spec: SourceSpec, source: Any, counts: dict[str, int], staged: Collection[str] = ()
+    writer: PacketWriter, spec: SourceSpec, source: SourceAdapter, counts: dict[str, int], staged: Collection[str] = ()
 ) -> dict[str, int]:
     """Stream whatever a source streams, rather than holding it as Python mappings.
 
@@ -741,17 +755,11 @@ def _add_batches(
         `_unclaimed` to compare against the recipe.
     """
     produced: dict[str, int] = {}
-    if hasattr(source, "spike_batches"):
-        # Counted from the arrays' headers, so an unclaimed spike table still reports its size.
-        produced[CORE_SPIKE_EVENTS] = source.spike_count
-        if CORE_SPIKE_EVENTS in spec.claims:
-            writer.add_batches(CORE_SPIKE_EVENTS, source.spike_batches(batch_rows=STREAMED_BATCH_ROWS))
-            counts[CORE_SPIKE_EVENTS] = produced[CORE_SPIKE_EVENTS]
-    streamed = getattr(source, "batches", None)
-    if streamed is None:
+    if not isinstance(source, Streams):
         return produced
-    offered = source.offers()
-    for resource_id, batches in streamed().items():
+    # Counted without reading, so an unclaimed table still reports its size.
+    offered = source.stream_rows()
+    for resource_id, batches in source.batches().items():
         if resource_id in staged:
             # One table comes from one path, which is what keeps the declared sort enforceable:
             # a resource this build composed is already written, and what the source delivered
@@ -970,42 +978,37 @@ def build(  # noqa: C901
         produced = _add_records(writer, spec, records, context, counts, arbitrated=frozenset(recipe.preferred))
         produced.update(_add_batches(writer, spec, source, counts, staged=set(produced)))
         _note_unclaimed(spec, source, produced, frozenset(recipe.preferred))
-        # Any adapter may stage arrays, not only the waveform one. A source that has them says
-        # so by defining `staged_arrays`; the kind it happens to be is not the question.
-        for staged in getattr(source, "staged_arrays", lambda: ())():
+        for staged in source.staged_arrays() if isinstance(source, StagesArrays) else ():
             # A delivered array is bytes an adapter already wrote (Part 12 §5), so what there
             # is to say about it is what is on disk; one staged in process is values, and its
             # shape is what a reader of the log wants before it costs anything to write.
-            if staged.values is None:
-                written = sum(f.stat().st_size for f in staged.written.rglob("*") if f.is_file())
-                say(f"  array {staged.resource_id} delivered, {written / 1e6:.1f} MB written")
+            if staged.values is None and staged.written is not None:
+                stored = sum(f.stat().st_size for f in staged.written.rglob("*") if f.is_file())
+                say(f"  array {staged.resource_id} delivered, {stored / 1e6:.1f} MB written")
             else:
                 say(
                     f"  array {staged.array_asset_id} {staged.values.shape} {staged.values.dtype}, "
                     f"{staged.values.nbytes / 1e6:.1f} MB raw"
                 )
             writer.add_array(staged.resource_id, staged)
-        # Any adapter may reference an array, not only the LFP one: a source says so by defining
-        # `external_arrays`, and what kind it happens to be is not the question (Part 04 §5.1).
-        for resource_id, array in getattr(source, "external_arrays", dict)().items():
+        for resource_id, array in (source.external_arrays() if isinstance(source, ReferencesArrays) else {}).items():
             writer.reference_array(resource_id, array)
             say(f"  referenced {resource_id}")
-        # Any adapter may reference media, not only this kind: a source says so by defining
-        # `external_media`, and what kind it happens to be is not the question (Part 04 §5.1).
-        for resource_id, media in getattr(source, "external_media", dict)().items():
+        for resource_id, media in (source.external_media() if isinstance(source, ReferencesMedia) else {}).items():
             writer.reference_media(resource_id, media)
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
             say(f"  referenced {resource_id}{size}")
         # An adapter in this process may hand its payloads over as bytes, which the build writes where
         # a protocol adapter would have, so both are read back and refused the same way (Part 12 §5).
         location = context.opaque_locations.get(spec.kind)
-        opaque.write(getattr(source, "staged_payloads", lambda: ())(), location, spec.kind)
+        opaque.write(source.staged_payloads() if isinstance(source, StagesPayloads) else (), location, spec.kind)
         if location is not None:
             for payload in writer.add_payloads(spec.kind, location, owned=spec.owns):
                 say(f"  payload {payload.resource_id}: {opaque.shown(Path(payload.path.name))}")
 
         drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
-        applied.extend(getattr(source, "compensations", []))
+        if isinstance(source, DeclaresCompensations):
+            applied.extend(source.compensations)
 
     _refuse_a_discarded_fact(writer, context, recipe)
     _declare_withheld(context, writer, say)
@@ -1262,9 +1265,9 @@ def _source_cache(configured: str | Path | None, out: Path, context: Context) ->
     return where
 
 
-def _say_notes(kind: str, source: Any, seen: int, say: Callable[[str], None], strict: bool) -> int:
+def _say_notes(kind: str, source: SourceAdapter, seen: int, say: Callable[[str], None], strict: bool) -> int:
     """Report a source's notes past the `seen` already reported, and return the new total."""
-    notes = list(getattr(source, "notes", []))
+    notes = list(source.notes)
     for note in notes[seen:]:
         say(f"  note: {note}")
     if strict and len(notes) > seen:
@@ -1439,7 +1442,7 @@ def _refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Rec
 
 
 def _note_unclaimed(
-    spec: SourceSpec, source: Any, produced: Mapping[str, int], preferred: frozenset[str] = frozenset()
+    spec: SourceSpec, source: SourceAdapter, produced: Mapping[str, int], preferred: frozenset[str] = frozenset()
 ) -> None:
     """Note what a source produced that nothing in the recipe claims.
 
@@ -1467,11 +1470,10 @@ def _note_unclaimed(
         for resource, rows in produced.items()
         if rows and resource not in spec.claims and resource not in by_design
     }
-    notes = getattr(source, "notes", None)
-    if not dropped or notes is None:
+    if not dropped:
         return
     listed = ", ".join(f"{resource} ({rows:,} rows)" for resource, rows in sorted(dropped.items()))
-    notes.append(
+    source.notes.append(
         Note(
             f"{spec.kind} produced {listed}, which no source in this recipe claims; discarded",
             NoteCode.UNCLAIMED_DISCARDED,
@@ -1487,9 +1489,10 @@ def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None])
     states are the point: a clock the test never reached keeps both columns null, where one it
     reached and kept records `false` (Part 02 §12.6).
     """
-    withheld = getattr(context.sources.get("sync"), "withheld", None)
+    tester = context.sources.get("sync")
+    withheld = tester.withheld if isinstance(tester, WithholdsAnchors) else None
     if not withheld:
-        if any(getattr(source, "kind", None) for source in context.sources.values()):
+        if any(isinstance(source, Delivered) for source in context.sources.values()):
             # A delivered source states what it produced and nothing about another source's rows,
             # and this is a fact about the sorter's clock rows. No resource carries it, so it does
             # not cross -- and a packet missing it says nothing, which is why this says it here.

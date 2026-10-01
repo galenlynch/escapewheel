@@ -479,26 +479,28 @@ class LFPSource(Compensates):
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Return every table this source supplies."""
-        return {
+        built = {
             CORE_ARRAY_ASSETS: self.array_assets(),
             CORE_ARRAY_DIMENSIONS: self.array_dimensions(),
             CORE_ARRAY_LABELS: self.array_labels(),
             CORE_ARRAY_CHANNELS: self.array_channels(),
         }
+        return {resource: rows for resource, rows in built.items() if rows}
 
     def offers(self) -> dict[str, int]:
         """Part 05 §4.1: how many rows of each resource this source can supply.
 
-        `core.array_channels` and `core.array_labels` are counted from each series' electrode
-        region, which is what both iterate.
+        Counted from each series and its electrode region rather than from `records`, whose rows
+        need the clocks a build supplies and an inspection has none.
         """
         channels = sum(len(self.store.array(series / "electrodes")) for series in self._series)
-        return {
+        counted = {
             CORE_ARRAY_ASSETS: len(self._series),
             CORE_ARRAY_DIMENSIONS: 2 * len(self._series),
             CORE_ARRAY_LABELS: channels,
             CORE_ARRAY_CHANNELS: channels,
         }
+        return {resource: rows for resource, rows in counted.items() if rows}
 
 
 def _member_entry(member: Any, digest: str | None = None) -> dict[str, Any]:

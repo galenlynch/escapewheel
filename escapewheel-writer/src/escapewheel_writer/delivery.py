@@ -39,7 +39,7 @@ from typing import Any, cast
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-from escapewheel_reader.resource_ids import CORE_ARRAY_ASSETS, CORE_MEDIA_ASSETS, CORE_SPIKE_EVENTS
+from escapewheel_reader.resource_ids import CORE_ARRAY_ASSETS, CORE_MEDIA_ASSETS
 from escapewheel_reader.uri import canonical, is_absolute
 
 from . import opaque
@@ -47,6 +47,8 @@ from .declaration import FILES, FLIGHT, PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_C
 from .encoding import STREAMED_BATCH_ROWS
 from .errors import DeliveryFailed, SourceDefect, SourceFault
 from .notes import Note, NoteCode
+from .protocols import ReferencesArrays, ReferencesMedia, SourceAdapter, StagesArrays, StagesPayloads, Streams
+from .writer import ExternalArray, ExternalMedia
 
 #: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
 #: identifier is dotted, so no undotted token can collide with it.
@@ -92,7 +94,7 @@ def _flat(value: Any) -> Any:
     return canonical_json(value) if isinstance(value, (Mapping, list, tuple)) else value
 
 
-def offered(source: Any) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
+def offered(source: SourceAdapter) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
     """Everything one adapter has to deliver, per resource, without materializing a large one.
 
     A table that streams stays a stream: `core.spike_events` is 10^8 rows, and a delivery that
@@ -101,21 +103,19 @@ def offered(source: Any) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
     delivering: dict[str, Iterator[pa.RecordBatch] | pa.Table] = {}
     for resource, rows in source.records().items():
         delivering[resource] = as_table(rows)
-    if hasattr(source, "spike_batches"):
-        delivering[CORE_SPIKE_EVENTS] = source.spike_batches(batch_rows=STREAMED_BATCH_ROWS)
-    for resource, batches in (getattr(source, "batches", dict)() or {}).items():
-        delivering[resource] = batches
+    if isinstance(source, Streams):
+        delivering.update(source.batches())
     return delivering
 
 
-def written_arrays(source: Any, location: str | None) -> int:
+def written_arrays(source: SourceAdapter, location: str | None) -> int:
     """Write every array this source stages into the location a build supplied (Part 12 §5).
 
     The adapter writes, because an array does not cross as rows and a reference to one a build
     cannot open is no use to it. Each goes in a directory named by its catalog row's `resource_id`,
     which is all a build binds it by.
     """
-    staged = list(getattr(source, "staged_arrays", lambda: ())())
+    staged = list(source.staged_arrays()) if isinstance(source, StagesArrays) else []
     if not staged:
         return 0
     if not location:
@@ -133,7 +133,7 @@ def written_arrays(source: Any, location: str | None) -> int:
     return len(staged)
 
 
-def referenced(source: Any) -> dict[str, Any] | None:
+def referenced(source: SourceAdapter) -> dict[str, Any] | None:
     """Return the resource document for what this source references rather than writes.
 
     One entry per resource, each a manifest resource entry (Part 04 §5), carrying what the
@@ -142,26 +142,30 @@ def referenced(source: Any) -> dict[str, Any] | None:
     """
     from dataclasses import fields
 
+    declared: dict[str, ExternalArray | ExternalMedia] = {}
+    if isinstance(source, ReferencesArrays):
+        declared.update(source.external_arrays())
+    if isinstance(source, ReferencesMedia):
+        declared.update(source.external_media())
     entries = []
-    for attribute, kind in (("external_arrays", "array"), ("external_media", "media")):
-        for resource_id, resource in (getattr(source, attribute, dict)() or {}).items():
-            entry = {"resource_id": resource_id, "external": True}
-            for field in fields(resource):
-                value = getattr(resource, field.name)
-                if (
-                    value is not None
-                    and not field.name.endswith("_asset_id")
-                    and field.name not in {"physical_profile", "codecs", "format"}
-                ):
-                    entry[field.name] = value
-            entries.append(entry)
+    for resource_id, resource in declared.items():
+        entry = {"resource_id": resource_id, "external": True}
+        for field in fields(resource):
+            value = getattr(resource, field.name)
+            if (
+                value is not None
+                and not field.name.endswith("_asset_id")
+                and field.name not in {"physical_profile", "codecs", "format"}
+            ):
+                entry[field.name] = value
+        entries.append(entry)
     return {"resources": entries} if entries else None
 
 
 # -- the serving half -------------------------------------------------------------------
 
 
-def construct(kind: str, supplied: Mapping[str, Any]) -> Any:
+def construct(kind: str, supplied: Mapping[str, Any]) -> SourceAdapter:
     """Build one adapter from the JSON object a build passed, and from nothing else.
 
     The terms the adapter declared arrive at the top level and the recipe's options under
@@ -208,7 +212,7 @@ def infers(supplied: Mapping[str, Any]) -> str:
     return STREAM
 
 
-def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any = None) -> None:
+def serve(source: SourceAdapter, supplied: Mapping[str, Any], protocol: str, *, out: Any = None) -> None:
     """Deliver one adapter's rows over the protocol a build reached it by.
 
     Parameters
@@ -225,7 +229,7 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
         platform translating a line ending corrupts the stream (Part 12 §6).
     """
     written_arrays(source, supplied.get("array_location"))
-    handed = getattr(source, "staged_payloads", lambda: ())()
+    handed = source.staged_payloads() if isinstance(source, StagesPayloads) else ()
     opaque.write(handed, supplied.get("opaque_location"), type(source).__name__)
     delivering = offered(source)
     # A resource this source has nothing for arrives empty rather than not arriving, so a build
@@ -252,15 +256,15 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
         Path(path).write_text(json.dumps(report_of(source), indent=2, default=str) + "\n")
 
 
-def report_of(source: Any) -> dict[str, Any]:
+def report_of(source: SourceAdapter) -> dict[str, Any]:
     """Return the run's report (Part 12 §9): what a build cannot derive from the delivery.
 
     `stated` is the half no static document can carry -- a declared field's value needs the source
     read -- and the notes an adapter accumulated are the other: what it worked around, and why a
     table that is short is legitimately short.
     """
-    stated = {field: getattr(source, attribute, None) for field, attribute in getattr(source, "STATES", {}).items()}
-    problems = [{"level": "info", "message": note} for note in getattr(source, "notes", ())]
+    stated = {field: getattr(source, attribute, None) for field, attribute in source.STATES.items()}
+    problems = [{"level": "info", "message": note} for note in source.notes]
     return {"stated": {f: v for f, v in stated.items() if v is not None}, "problems": problems}
 
 
@@ -492,6 +496,10 @@ class Delivered:
     def batches(self) -> dict[str, Iterator[pa.RecordBatch]]:
         """Return every resource too large to hold, as the stream it arrived as."""
         return {resource: _batches(table) for resource, table in self.tables.items() if not self.held(resource)}
+
+    def stream_rows(self) -> dict[str, int]:
+        """Return the rows of every resource too large to hold."""
+        return {resource: rows for resource, rows in self.offers().items() if not self.held(resource)}
 
 
 def _attribute(field: str) -> str:

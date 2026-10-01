@@ -16,7 +16,6 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 from escapewheel_reader.errors import EscapewheelError
 from escapewheel_reader.manifest import MANIFEST_FILENAME
@@ -33,6 +32,7 @@ from .. import compare
 from ..amending import Held
 from ..errors import AmendmentRefused, CommitRefused, ReplacementRefused, SourceDefect
 from ..extensions import load_checked as load_extension_context
+from ..protocols import SourceAdapter
 from ..recipe import RECIPE_SUPPLIES, Recipe, contributes, produces
 from ..replacing import read_replaced
 from ..session import build, materializers
@@ -66,7 +66,7 @@ REQUIRED = {
 GUESSED = "  # GUESS: nothing inspected says this; check it"
 
 
-def _open(kind: str, root: Path, session_id: str) -> Any:
+def _open(kind: str, root: Path, session_id: str) -> SourceAdapter:
     """Construct a source for inspection, with the least configuration that will open it."""
     from ..sources import NWBSource, SorterSource, SyncSource
 
@@ -96,7 +96,7 @@ def _inspect(args: argparse.Namespace) -> int:
     print(f"{args.kind}  {args.root}")
     for resource, rows in sorted(offered.items()):
         print(f"  {resource:44s} {rows:>12,}")
-    for note in getattr(source, "notes", []):
+    for note in source.notes:
         print(f"  note: {note}")
     if not offered:
         print("  offers nothing")
@@ -110,7 +110,7 @@ def _init(args: argparse.Namespace) -> int:
         kind, _, root = pair.partition("=")
         if kind not in KINDS or not root:
             raise SystemExit(f"error: --source takes kind=path, with kind one of {', '.join(KINDS)}")
-        offers[kind] = _open(kind, Path(root), args.session_id).offers()
+        offers[kind] = dict(_open(kind, Path(root), args.session_id).offers())
 
     lines = [
         "# Drafted by `escapewheel init` from what each source reported holding.",

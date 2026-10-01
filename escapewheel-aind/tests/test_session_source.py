@@ -427,7 +427,7 @@ def test_the_calibration_resources_are_staged_when_present(tmp_path):
     assert len(got["core.calibration_points"]) == 3
     assert len(got["core.calibration_devices"]) == 2
     assert source.offers() == {
-        "core.subjects": 0,
+        "core.clocks": 1,
         "core.calibrations": 2,
         "core.calibration_points": 3,
         "core.calibration_devices": 2,

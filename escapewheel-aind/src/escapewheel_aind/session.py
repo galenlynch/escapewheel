@@ -695,12 +695,7 @@ class SessionSource(Compensates):
 
     def offers(self) -> dict[str, int]:
         """Part 05 §4.1: how many rows of each resource this root holds."""
-        return {
-            CORE_SUBJECTS: len(self.subjects()),
-            CORE_CALIBRATIONS: len(self.calibrations()),
-            CORE_CALIBRATION_POINTS: len(self.calibration_points()),
-            CORE_CALIBRATION_DEVICES: len(self.calibration_devices()),
-        }
+        return {resource: len(rows) for resource, rows in self.records().items()}
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Return the tables this source owns.

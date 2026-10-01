@@ -228,7 +228,8 @@ def test_a_series_with_no_matching_clock_is_refused(nwb):
 
 def test_an_nwb_with_no_lfp_group_yields_nothing(tmp_path):
     source = _source(tmp_path / "empty.nwb")
-    assert source.records()["core.array_assets"] == []
+    assert source.records() == {}
+    assert source.offers() == {}
     assert NoteCode.NO_LFP_SERIES in codes(source.notes)
 
 
