@@ -12,13 +12,12 @@ bind; this rendering exposes the generated registry content for inspection.
 
 import argparse
 import json
-import re
 import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from specdoc import GenerationError, registry_tables
+from specdoc import GenerationError, fill_regions, named_regions, region_names, registry_tables
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = HERE.parent / "artifacts/logical_schemas.json"
@@ -153,7 +152,7 @@ README = HERE.parent / "source/README.md"
 
 #: Where the README's generated regions begin and end. A count stated in prose is a count that
 #: goes stale: the README once disagreed with the generated registry's table and rule counts.
-REGION = re.compile(r"(<!-- BEGIN generated: (\w+) -->\n).*?(<!-- END generated: \2 -->)", re.DOTALL)
+REGION = named_regions("generated")
 
 
 def regions(registry: dict[str, Any]) -> dict[str, str]:
@@ -205,10 +204,10 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
 
 def fill(text: str, filled: dict[str, str]) -> str:
     """Replace each generated region's body, leaving the prose around it untouched."""
-    named = {name for _, name, _ in REGION.findall(text)}
+    named = region_names(REGION, text)
     if named != set(filled):
         raise GenerationError(f"README regions {sorted(named)} do not match what render.py fills {sorted(filled)}")
-    return REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", text)
+    return fill_regions(REGION, text, lambda name: filled[name] + "\n")
 
 
 def outputs(registry: dict[str, Any]) -> dict[Path, str]:

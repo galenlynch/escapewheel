@@ -245,3 +245,57 @@ def test_a_registry_gives_its_tables_and_not_its_other_resources():
 def test_a_resource_missing_what_a_valid_registry_gives_it_raises(resource):
     with pytest.raises(KeyError):
         specdoc.registry_tables({"resources": {"core.units": resource}})
+
+
+MARKED = "above\n<!-- BEGIN GENERATED ORDERS -->\nstale\nrows\n<!-- END GENERATED ORDERS -->\nbelow\n"
+
+
+def test_a_generated_region_takes_its_lines_between_markers_that_stay():
+    assert specdoc.replace_generated_region(MARKED, "ORDERS", ["one", "two"]) == (
+        "above\n<!-- BEGIN GENERATED ORDERS -->\none\ntwo\n<!-- END GENERATED ORDERS -->\nbelow\n"
+    )
+
+
+def test_a_generated_region_left_without_lines_keeps_only_its_markers():
+    assert specdoc.replace_generated_region(MARKED, "ORDERS", []) == (
+        "above\n<!-- BEGIN GENERATED ORDERS -->\n<!-- END GENERATED ORDERS -->\nbelow\n"
+    )
+
+
+@pytest.mark.parametrize("text", ["no markers", "<!-- BEGIN GENERATED ORDERS -->\nopened and never closed\n"])
+def test_a_generated_region_missing_a_marker_raises(text):
+    with pytest.raises(ValueError):
+        specdoc.replace_generated_region(text, "ORDERS", ["one"])
+
+
+NAMED = (
+    "prose\n<!-- BEGIN facts: tables -->\nold\n<!-- END facts: tables -->\n"
+    "between\n<!-- BEGIN facts: rules -->\n<!-- END facts: rules -->\n"
+    "<!-- BEGIN generated: other -->\nnot a fact\n<!-- END generated: other -->\n"
+)
+
+
+def test_named_regions_of_one_kind_are_found_by_name():
+    assert specdoc.region_names(specdoc.named_regions("facts"), NAMED) == {"tables", "rules"}
+    assert specdoc.region_names(specdoc.named_regions("generated"), NAMED) == {"other"}
+
+
+def test_a_region_closed_under_another_name_is_no_region():
+    text = "<!-- BEGIN facts: tables -->\nold\n<!-- END facts: rules -->\n"
+
+    assert specdoc.region_names(specdoc.named_regions("facts"), text) == set()
+
+
+def test_each_named_region_is_filled_from_its_name_and_the_rest_is_kept():
+    filled = specdoc.fill_regions(specdoc.named_regions("facts"), NAMED, lambda name: f"{name} now\n")
+
+    assert filled == (
+        "prose\n<!-- BEGIN facts: tables -->\ntables now\n<!-- END facts: tables -->\n"
+        "between\n<!-- BEGIN facts: rules -->\nrules now\n<!-- END facts: rules -->\n"
+        "<!-- BEGIN generated: other -->\nnot a fact\n<!-- END generated: other -->\n"
+    )
+
+
+def test_what_fills_a_region_may_refuse_a_name():
+    with pytest.raises(KeyError):
+        specdoc.fill_regions(specdoc.named_regions("facts"), NAMED, {"tables": "only\n"}.__getitem__)

@@ -5,7 +5,7 @@ Only the standard library is imported, so a tool outside the tree's environment 
 
 import re
 import subprocess
-from collections.abc import Iterator
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 
 #: A numbered part's file name: two digits, an underscore, then its subject.
@@ -151,3 +151,38 @@ def tracked_files(root: Path, *pathspecs: str, whole_names: bool = True) -> list
         return listing.stdout.split()
     exact = subprocess.run([*command, "-z", "--", *pathspecs], cwd=root, capture_output=True, check=True)
     return [name.decode() for name in exact.stdout.split(b"\0") if name]
+
+
+def replace_generated_region(text: str, name: str, lines: Iterable[str]) -> str:
+    """Return `text` with `lines` between `<!-- BEGIN GENERATED name -->` and its `END` marker.
+
+    Each marker keeps a line of its own. ValueError where `text` lacks either.
+    """
+    begin, end = f"<!-- BEGIN GENERATED {name} -->", f"<!-- END GENERATED {name} -->"
+    before, remainder = text.split(begin, 1)
+    _, after = remainder.split(end, 1)
+    return before + "\n".join([begin, *lines, end]) + after
+
+
+def named_regions(kind: str) -> re.Pattern[str]:
+    """Match `<!-- BEGIN kind: name -->` through `<!-- END kind: name -->`.
+
+    The groups are the opening marker with its line end, the name, and the closing marker, which
+    is what `region_names` and `fill_regions` read.
+    """
+    kind = re.escape(kind)
+    return re.compile(rf"(<!-- BEGIN {kind}: (\w+) -->\n).*?(<!-- END {kind}: \2 -->)", re.DOTALL)
+
+
+def region_names(pattern: re.Pattern[str], text: str) -> set[str]:
+    """Return the name of each region of `text` that `pattern` matches."""
+    return {match.group(2) for match in pattern.finditer(text)}
+
+
+def fill_regions(pattern: re.Pattern[str], text: str, body: Callable[[str], str]) -> str:
+    """Return `text` with each region's content replaced by what `body` returns for its name.
+
+    `pattern` has the three groups `named_regions` gives. The content is placed as returned, so
+    it ends its own last line.
+    """
+    return pattern.sub(lambda match: match.group(1) + body(match.group(2)) + match.group(3), text)

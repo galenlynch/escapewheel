@@ -17,7 +17,7 @@ from pathlib import Path
 import assemble
 import render
 from canonical import dumps
-from specdoc import GenerationError
+from specdoc import GenerationError, replace_generated_region
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
@@ -30,16 +30,9 @@ PART_03 = PARTS / "03_portable_physical_profile.md"
 PART_04 = PARTS / "04_packet_catalog.md"
 
 
-def _replace_region(text: str, name: str, rows: list[str]) -> str:
-    begin, end = f"<!-- BEGIN GENERATED {name} -->", f"<!-- END GENERATED {name} -->"
-    before, remainder = text.split(begin, 1)
-    _, after = remainder.split(end, 1)
-    return before + "\n".join([begin, *rows, end]) + after
-
-
 def fill_physical_profile(text: str, descriptor: dict) -> str:
     """Replace Part 03's generated regions with their projections of the profile descriptor."""
-    text = _replace_region(
+    text = replace_generated_region(
         text,
         "PHYSICAL PROFILE",
         [
@@ -52,7 +45,7 @@ def fill_physical_profile(text: str, descriptor: dict) -> str:
         ],
     )
     tables = descriptor["interfaces"][descriptor["kind_interfaces"]["table"]]
-    return _replace_region(
+    return replace_generated_region(
         text,
         "OVERRIDING ORDERS",
         [
@@ -167,11 +160,7 @@ def manifest_table(schema: dict, pointer: str) -> str:
 def fill_manifest_tables(text: str, schema: dict) -> str:
     """Replace each generated Part 04 region with its projection of the manifest schema."""
     for region, pointer in MANIFEST_TABLES.items():
-        begin = f"<!-- BEGIN GENERATED MANIFEST FIELDS: {region} -->"
-        end = f"<!-- END GENERATED MANIFEST FIELDS: {region} -->"
-        before, remainder = text.split(begin, 1)
-        _, after = remainder.split(end, 1)
-        text = before + begin + "\n" + manifest_table(schema, pointer) + "\n" + end + after
+        text = replace_generated_region(text, f"MANIFEST FIELDS: {region}", [manifest_table(schema, pointer)])
     return text
 
 

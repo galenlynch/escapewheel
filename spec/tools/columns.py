@@ -28,7 +28,7 @@ import re
 import sys
 from pathlib import Path
 
-from specdoc import GenerationError, part_paths, registry_tables
+from specdoc import GenerationError, fill_regions, part_paths, registry_tables
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = HERE.parent / "artifacts" / "logical_schemas.json"
@@ -55,7 +55,7 @@ def table(resource: str, tables: dict) -> str:
 
 def render(text: str, tables: dict) -> str:
     """Return `text` with every marked block filled from the registry."""
-    return BLOCK.sub(lambda m: m.group(1) + table(m.group(2), tables) + m.group(3), text)
+    return fill_regions(BLOCK, text, lambda resource: table(resource, tables))
 
 
 def main() -> int:

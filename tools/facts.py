@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT / "spec/tools"))
 
 import specdoc
 
-REGION = re.compile(r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL)
+REGION = specdoc.named_regions("facts")
 
 
 def documents() -> list[Path]:
@@ -194,10 +194,10 @@ def main() -> int:
     for path in found:
         name = str(path.relative_to(ROOT))
         before = path.read_text()
-        named = {n for _, n, _ in REGION.findall(before)}
+        named = specdoc.region_names(REGION, before)
         if unknown := named - set(filled):
             raise SystemExit(f"{name} declares facts {sorted(unknown)} that facts.py does not compute")
-        after = REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", before)
+        after = specdoc.fill_regions(REGION, before, lambda fact: filled[fact] + "\n")
         if after != before:
             path.write_text(after)
             changed.append(name)
