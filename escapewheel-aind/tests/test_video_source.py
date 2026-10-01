@@ -48,7 +48,7 @@ def test_an_unprefixed_asset_is_named_by_its_video(root):
 
 
 def test_a_prefix_reaches_every_asset_id_its_name_and_its_resource(root):
-    """R53 §2.5: every ID this source mints, and its name, carries the prefix; the clock is given."""
+    """Every ID this source mints, and its name, carries the prefix; the clock is given."""
     source = _source(root, prefix="A_")
     (row,) = source.media_assets()
     assert (row["media_asset_id"], row["media_asset_name"], row["resource_id"]) == (

@@ -69,7 +69,7 @@ def sha256_of(path: Path) -> dict[str, str]:
     revalidation after an amendment to what the amendment wrote. Costs 0.5% of a build -- the bytes
     were just written, so they are in page cache and hash at ~2 GB/s.
 
-    A prefix goes through Part 04 §4.3's listing, a single file is its own bytes; `digest` already
+    A prefix goes through that section's listing, a single file is its own bytes; `digest` already
     distinguishes them.
     """
     from escapewheel_validator.stores import digest

@@ -45,7 +45,7 @@ def test_every_option_an_adapter_reads_is_declared(kind):
     A parameter holding a default is an option a recipe may set, and one a recipe may set and no
     declaration names is refused (Part 12 §4) -- so an option added here without being declared
     would refuse every recipe setting it. `store` is the exception: a handle a recipe cannot
-    carry, supplied where the class accepts one rather than declared (Part 12 §4). `source_cache`
+    carry, supplied where the class accepts one rather than declared. `source_cache`
     is a term and declared anyway, the one `accepts` may name.
     """
     adapter = KINDS[kind]

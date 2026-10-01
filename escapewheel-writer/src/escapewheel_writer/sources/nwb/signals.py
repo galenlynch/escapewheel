@@ -58,7 +58,7 @@ class Signals(NWBFile):
         staged = []
         for name in self.signals:
             ticks, values = self._signal(name)
-            del ticks  # the axis is a clock and its anchors, not an array (R20 §2.1)
+            del ticks  # the axis is a clock and its anchors, not an array
             # Delta, because a densely sampled signal is smooth and its differences compress far
             # better than its values. Part 03 §6.4 permits any codec, but delta is outside the v3
             # reader floor: Zarr.jl, TensorStore, and zarrs cannot read it (Part 10 §5), and a
@@ -94,7 +94,7 @@ class Signals(NWBFile):
                     "device_id": self.signal_device_id(name),
                     # No `array_asset_name`: Part 02 §8.2's rule for a clock holds for an asset
                     # too -- the name is what the identifier stands for, and the numbering fills
-                    # it from exactly that where a row leaves it unset (R53 §2.5). A source's own
+                    # it from exactly that where a row leaves it unset. A source's own
                     # label here would leave the packet with no record of what the identifier
                     # was minted from, and nothing to join a row to its manifest entry by.
                     # The description stays where it is read from, and is what the
@@ -111,14 +111,14 @@ class Signals(NWBFile):
         return f"{self.prefix}{name}.dispatch"
 
     def array_dimensions(self) -> list[dict[str, Any]]:
-        """`core.array_dimensions`, one axis per signal, in R20 §2.1's regular form.
+        """`core.array_dimensions`, one axis per signal, in Part 03 §6.3's regular form.
 
         Tick `k` is sample `k`. That is not an approximation: a HARP device schedules its
         dispatch on its own microsecond timer, accumulating rather than re-basing, so the
         samples are evenly spaced on that counter. What is *not* even is the HARP timestamp
         each message carries, because the timer and the timestamp count different oscillators,
-        parts per million apart, which over a session reaches hundreds of ticks. R20 §2.1 puts
-        exactly that difference in `core.clock_anchors` rather than in the axis.
+        parts per million apart, which over a session reaches hundreds of ticks. Exactly that
+        difference belongs in `core.clock_anchors` rather than in the axis.
         """
         return [
             {
@@ -145,9 +145,7 @@ class Signals(NWBFile):
                     "session_id": self.session_id,
                     # The float alone (Part 02 §12.4). This rate is measured from the dispatch
                     # spacing rather than declared, so a rational would be one the source never
-                    # stated -- the rounding Part 02 §12.4 says this format does not do on a
-                    # source's behalf. R95 §4 keeps the float expressible for exactly this: a
-                    # rate someone measured is recorded as measured.
+                    # stated, and a rate someone measured is recorded as measured.
                     "tick_rate_hz": round(rate, 6) if rate else None,
                     "origin": "the device's first dispatched sample; tick k is sample k",
                     # `clock_name` is left for the numbering to fill from `clock_id` (Part 02 §8.2);

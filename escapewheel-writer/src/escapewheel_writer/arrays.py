@@ -153,7 +153,7 @@ def _codec(name: str, *, differenced: bool = False) -> Any:
         return GzipCodec()
     if name == "blosc":
         # zstd inside blosc: 11.4% smaller than plain zstd on real waveforms, matching the 11%
-        # R3 §7.3 measured on synthetic ephys.
+        # measured on synthetic ephys.
         return BloscCodec(cname="zstd", shuffle="bitshuffle" if differenced else "shuffle")
     raise UsageError(f"{name} is not a bytes codec this writer emits", code=UsageFault.UNKNOWN_CODEC, where=name)
 

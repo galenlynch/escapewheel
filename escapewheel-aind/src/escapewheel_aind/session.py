@@ -470,13 +470,13 @@ class SessionSource(Compensates):
             max(w.stop for w in windows).astimezone(UTC),
         )
 
-    # -- calibrations (R89) -----------------------------------------------------------
+    # -- calibrations -----------------------------------------------------------------
 
     @property
     def _rig(self) -> dict[str, Any]:
         """The `rig.json` beside this `session.json`, or an empty document where there is none.
 
-        Absent is not a defect: a packet holding no calibration is conforming (R89 §3), and the
+        Absent is not a defect: a packet holding no calibration is conforming, and the
         rig document is a separate file that an asset may not carry.
         """
         if self._rig_document is None:
@@ -521,7 +521,7 @@ class SessionSource(Compensates):
     def stated_date_of_birth(self) -> date | None:
         """The date of birth this document writes, read as the calendar date it is."""
         born = stated_text(self._subject.get("date_of_birth"))
-        # A date of birth is a calendar date (R4 §3.3), and this document writes one, so there is
+        # A date of birth is a calendar date, and this document writes one, so there is
         # no instant to localize and nothing can move it by a day.
         return date.fromisoformat(born) if born else None
 
@@ -531,14 +531,13 @@ class SessionSource(Compensates):
         `general/subject` states a species too, so this is the record rather than the only
         source. What it adds is what the exporter's projection has no place for: a
         `background_strain` key the NWB lacks entirely, and a date of birth with no timezone, where
-        the NWB writes a midnight with an offset, which a conversion can move to another day
-        (R4 §3.3). Nothing translates either way: both already spell the name as NCBI Taxonomy
-        does, and a writer that guessed one from a common name would be inventing a fact
-        (R101 §3.4).
+        the NWB writes a midnight with an offset, which a conversion can move to another
+        day. Nothing translates either way: both already spell the name as NCBI Taxonomy
+        does, and a writer that guessed one from a common name would be inventing a fact.
 
         Everything the standard does not model goes to `metadata` (Part 02 §8.6), the taxon identifier
-        included -- `NCBI:txid10090` is what survives a renaming the name does not (R59 §1), and no
-        column holds one. The name itself is not repeated there, which Part 02 §8.6 forbids.
+        included -- `NCBI:txid10090` is what survives a renaming the name does not, and no
+        column holds one. The name itself is not repeated there, which that section forbids.
         """
         document = self._subject
         if not document:
@@ -625,7 +624,7 @@ class SessionSource(Compensates):
             **({CORE_CLOCK_OBSERVATION_INTERVALS: watched} if (watched := self.watched()) else {}),
             # Omitted rather than staged empty where the document is absent, as a calibration is.
             **({CORE_SUBJECTS: subjects} if (subjects := self.subjects()) else {}),
-            # An asset carrying no calibration is conforming (R89 §3), so the resources are
+            # An asset carrying no calibration is conforming, so the resources are
             # omitted rather than staged empty -- a manifest entry a packet cannot answer for.
             **{resource: rows for resource, rows in calibrations.items() if rows},
         }

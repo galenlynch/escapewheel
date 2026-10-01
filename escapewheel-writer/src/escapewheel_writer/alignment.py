@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 #: The most error a mapping may carry before Part 01 §3.9 calls it undefined, in **seconds**.
 #:
 #: A duration rather than a tick count, because it is a claim about time and not about one
-#: clock's granularity. Three milliseconds is R40's default: several times the estimator's own
+#: clock's granularity. Three milliseconds is that section's default: several times the estimator's own
 #: error at any anchor distance, and far below anything that moves an analysis. One parent
 #: tick would sit below the estimator's median error and gate on measurement noise.
 TOLERANCE = 3e-3
@@ -58,10 +58,10 @@ def bound_for(
     """Choose the bound to map at, measuring it as Part 01 §3.9 requires.
 
     A packet whose earliest data sits inside one median anchor interval of its first anchor
-    needs nothing; Part 01 §3.9's default covers it and this returns it unmeasured. Where it does
+    needs nothing; the default bound covers it and this returns it unmeasured. Where it does
     not -- and withholding a displaced first anchor (Part 02 §12.6) is what usually makes it not --
     the writer may go further only by measuring the estimator at the distance it intends to
-    use and finding its **95th percentile** within `tolerance` (Part 01 §3.9). The median is not a
+    use and finding its **95th percentile** within `tolerance`. The median is not a
     statement about what a consumer may rely on.
 
     Parameters
@@ -73,7 +73,7 @@ def bound_for(
         ends count: a session whose sync train stops well before its recording does needs the
         bound at the far end, and only the window says so.
     tolerance : float
-        The most error the mapping may carry, in seconds (Part 01 §3.9).
+        The most error the mapping may carry, in seconds.
     rate : float
         The parent clock's rate in hertz, which turns that duration into the parent ticks the
         measurement is in.
@@ -102,7 +102,7 @@ def bound_for(
         "distance": distance,
         "tolerance_seconds": tolerance,
         # Every statistic, so a reader may judge the packet by a stricter rule than the
-        # writer applied (Part 01 §3.9).
+        # writer applied.
         "p95_error_seconds": round(worst / rate, 9),
         "median_error_seconds": round(max((m["median"] for m in measured.values() if m), default=0.0) / rate, 9),
         "max_error_seconds": round(max((m["max"] for m in measured.values() if m), default=0.0) / rate, 9),
@@ -121,8 +121,8 @@ def time_origin(
     """Part 01 §2.2: the earliest observation start among the session's clocks, on the reference.
 
     Returns None where any clock's window start cannot be mapped, since a minimum taken over
-    some of the clocks is not the minimum Part 01 §2.2 requires a writer to declare -- and R39
-    §2.4 says an origin the writer cannot compute is one it must not state.
+    some of the clocks is not the minimum a writer is required to declare -- and an
+    origin the writer cannot compute is one it must not state.
     """
     reference = context.reference.clock_id if context.reference else None
     starts: list[int] = []
@@ -141,12 +141,12 @@ def time_origin(
 
 
 def declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) -> None:
-    """Put Part 02 §12.6's terminal-anchor test on each clock it examined (R99 §3.2).
+    """Put Part 02 §12.6's terminal-anchor test on each clock it examined.
 
     The sync source computes this and emits only the reference clock's row; the probe clock rows
     are the sorter's, and the sorter's `CONSUMES` runs it first, so they are already staged. Three
     states are the point: a clock the test never reached keeps both columns null, where one it
-    reached and kept records `false` (Part 02 §12.6).
+    reached and kept records `false`.
     """
     tester = context.sources.get("sync")
     withheld = tester.withheld if isinstance(tester, WithholdsAnchors) else None
@@ -158,7 +158,7 @@ def declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) 
             context.notes.append(
                 Note(
                     "the terminal-anchor test's result is not recorded: the source that runs it was "
-                    "delivered, and no resource carries a fact about another source's rows (R99 §3.2)",
+                    "delivered, and no resource carries a fact about another source's rows",
                     NoteCode.ANCHOR_TEST_UNRECORDED,
                 )
             )
@@ -175,10 +175,7 @@ def declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) 
         },
     )
     dropped = sum(entry["n_withheld"] for entry in withheld.values())
-    say(
-        f"  terminal-anchor test recorded on {stamped} of {len(withheld)} clocks, "
-        f"{dropped} anchor(s) withheld (R99 §3.2)"
-    )
+    say(f"  terminal-anchor test recorded on {stamped} of {len(withheld)} clocks, {dropped} anchor(s) withheld")
     if stamped != len(withheld):
         context.notes.append(
             Note(
@@ -190,15 +187,15 @@ def declare_withheld(context: Context, writer: Any, say: Callable[[str], None]) 
 
 
 def declare_origin(context: Context, say: Callable[[str], None]) -> None:
-    """Put R39's time origin on the session, or say why the packet gets none."""
+    """Put Part 01 §2.2's time origin on the session, or say why the packet gets none."""
     if not (context.observed and context.reference):
         return
     by_clock, bound = context.alignment()
-    # R99 §3.1: a null column is a writer that stayed within Part 01 §3.9's default, so only a
+    # Part 02 §12.6: a null column is a writer that stayed within the default bound, so only a
     # measured widening is recorded. Set before the origin, which may decline to be stated.
     if bound != BOUND:
         context.session_extra["alignment_bound"] = bound
-        say(f"  alignment_bound {bound:g} median anchor intervals (R99 §3.1)")
+        say(f"  alignment_bound {bound:g} median anchor intervals")
     origin = time_origin(context, context.observed, by_clock, bound)
     if origin is None:
         say("  no t_zero_tick: a clock's observation start does not map to the reference (Part 01 §2.2)")

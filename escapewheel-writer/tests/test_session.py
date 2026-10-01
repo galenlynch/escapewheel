@@ -90,7 +90,7 @@ def test_rows_another_source_owns_are_noted_without_a_preference(tmp_path):
 def test_a_preferred_resource_draws_a_refusal_rather_than_a_note(tmp_path):
     """Part 05 §3.4 replaces the note for a preferred resource with something stronger.
 
-    A preference exempts a resource from Part 05 §3.4's report. What makes that sound is not the
+    A preference exempts a resource from that section's report. What makes that sound is not the
     silence but the refusal: `refuse_a_discarded_fact` fails the build where the displaced source
     stated a value the preferred one did not, which a note only mentioned.
     """

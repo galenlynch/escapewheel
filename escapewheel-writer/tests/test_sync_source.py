@@ -137,7 +137,7 @@ def test_anchor_index_is_contiguous_from_zero(source):
 
 
 def test_both_sequences_increase_together(source):
-    """R13 §3: interpolation is only defined if they do."""
+    """Part 01 §3.9: interpolation is only defined if they do."""
     for pairs in anchors_of(source).values():
         ticks, parents = zip(*pairs, strict=True)
         assert all(b > a for a, b in pairwise(ticks))
@@ -268,7 +268,7 @@ def test_a_clean_train_withholds_nothing():
 
 
 def test_a_displaced_first_anchor_is_withheld():
-    """The upstream defect R37 §5 traces: only the first anchor of a stream is misplaced."""
+    """The upstream defect the test exists for: only the first anchor of a stream is misplaced."""
     first, last, residuals = suspect_terminals(*_train(displacement=200))
     assert (first, last) == (True, False)
     assert residuals["first"] == pytest.approx(200, abs=2)
@@ -281,7 +281,7 @@ def test_too_short_a_train_is_not_judged():
     assert suspect_terminals(ticks[:5], parents[:5]) == (False, False, {})
 
 
-# -- the reference clock's window (R38 §2.1) -------------------------------------------
+# -- the reference clock's window ------------------------------------------------------
 
 
 def test_the_harp_window_spans_the_sync_train(source):
@@ -357,10 +357,10 @@ def test_without_the_file_the_older_routes_still_apply(tree):
 
 
 def test_phase_steps_are_rows_of_their_own_table(source):
-    """R99 §3.3: a step is a row, not a list inside a JSON string keyed by a clock name."""
+    """Part 02 §12.6: a step is a row, not a list inside a JSON string keyed by a clock name."""
     rows = source.phase_steps()
     assert all(set(r) == {"clock_id", "t_tick", "parent_tick", "shift_seconds", "anchor_interval_span"} for r in rows)
-    # The clock is named the way an anchor row names it, so R53 assigns both the same id.
+    # The clock is named the way an anchor row names it, so numbering assigns both the same id.
     assert {r["clock_id"] for r in rows} <= set(anchors_of(source))
 
 

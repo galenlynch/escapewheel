@@ -299,7 +299,7 @@ def test_the_extent_spans_every_stream(source):
     assert start.tzinfo is not None and stop > start
 
 
-# -- calibrations (R89) --------------------------------------------------------------
+# -- calibrations --------------------------------------------------------------------
 
 TRANSFORM = "behavior/calibration_info_np2_2025_04_09T10_00_00.npy"
 CALIBRATED = "2025-04-09T10:00:00+00:00"
@@ -360,7 +360,7 @@ def test_a_series_with_unequal_sides_is_refused(asset):
 
 
 def test_six_modules_citing_one_file_are_one_calibration(tmp_path):
-    """R89 §1.4. A `device_id` on the calibration would record six where the rig performed one."""
+    """A `device_id` on the calibration would record six where the rig performed one."""
     asset = build(tmp_path, streams=modules("46100", "46122", "50209", "46113", "45883", "46116"))
     source = _session(asset)
     (row,) = source.calibrations()
@@ -391,7 +391,7 @@ def test_a_transform_with_no_date_is_null_rather_than_invented(tmp_path):
 
 
 def test_an_asset_with_no_rig_document_states_no_calibration(source):
-    """A packet holding none is conforming (R89 §3), so an absent file is not a defect."""
+    """A packet holding none is conforming, so an absent file is not a defect."""
     assert source.calibrations() == [] and source.calibration_points() == []
 
 
@@ -416,7 +416,7 @@ def test_the_calibration_resources_are_staged_when_present(tmp_path):
     }
 
 
-# -- prefix (R53 §2.5) ------------------------------------------------------------------
+# -- prefix -----------------------------------------------------------------------------
 
 
 def test_a_prefix_reaches_every_calibration_and_the_device_it_covers(tmp_path):

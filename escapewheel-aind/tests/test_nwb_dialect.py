@@ -41,7 +41,7 @@ def only(rows, **match):
 
 
 def _stream_of(source, event_type):
-    """The stream emitting one kind of event, which R91 §3.1 makes the stream's property."""
+    """The stream emitting one kind of event, which Part 01 §3.12 makes the stream's property."""
     return next(s["event_stream_id"] for s in source.event_streams() if s["event_type"] == event_type)
 
 
@@ -97,7 +97,7 @@ def test_an_electrodes_bag_carries_only_what_no_column_holds(source):
 
 
 def test_an_unregistered_electrode_gets_no_ccf_row(source):
-    """An absent frame is an absent row, which is the whole point of R19's shape."""
+    """An absent frame is an absent row, which is the whole point of a row per frame."""
     assert not [
         c
         for c in source.records()["core.electrode_coordinates"]
@@ -116,7 +116,7 @@ def test_this_pipelines_contact_label_repeats_and_so_is_not_an_identity(source):
 
 
 def test_a_unit_coordinate_needs_the_pipelines_unit_identity(nwb, harp):
-    """The join is `(device_name, ks_unit_id)`: the probe plus the sorter's label (R83, R81)."""
+    """The join is `(device_name, ks_unit_id)`: the probe plus the sorter's label."""
     units = nwbfixture.units(nwb)
     source = AindNWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, units=units, interval_kind=KIND)
     assert source.unit_coordinates() == [
@@ -137,7 +137,7 @@ def test_a_unit_coordinate_needs_the_pipelines_unit_identity(nwb, harp):
 
 def test_a_prefix_reaches_the_names_and_leaves_the_unit_join_alone(nwb, harp):
     """The join is on the file's own `device_name`, which a recipe's prefix does not rename; the
-    packet's names are minted with their identifiers and carry it (R53 §2.5)."""
+    packet's names are minted with their identifiers and carry it (Part 02 §8.2)."""
     units = nwbfixture.units(nwb)
     source = AindNWBSource(
         nwb, reference_clock=harp.record(), zone=PACIFIC, prefix="A_", units=units, interval_kind=KIND
@@ -178,7 +178,7 @@ def test_trial_timing_columns_become_events(source):
 
 
 def test_a_trial_event_lands_on_the_declared_clock(source, harp):
-    """R91 §3.2 struck `core.events.clock_id`: the tick is on the clock its stream declares."""
+    """Part 01 §3.11: `core.events` has no `clock_id`, and the tick is on the clock its stream declares."""
     stream = _stream_of(source, "go_cue")
     go = next(e for e in source.events() if e["stream_id"] == stream)
     assert "clock_id" not in go
@@ -187,7 +187,7 @@ def test_a_trial_event_lands_on_the_declared_clock(source, harp):
 
 
 def test_a_trial_event_does_not_name_its_interval(source):
-    """R11 §5 struck the column; carrying it as JSON would keep the letter and lose the point."""
+    """An event references no interval; carrying one as JSON would keep the letter and lose the point."""
     go = next(e for e in source.events() if e["stream_id"] == _stream_of(source, "go_cue"))
     assert "payload" not in go or "trial_id" not in (go.get("payload") or {})
 

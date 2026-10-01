@@ -45,7 +45,7 @@ def parquet_options(
     it is what lets a file state which of several possible orderings it is in rather than
     leaving a reader to infer it from statistics. It is only truthful because both write paths
     produce the declared order: the records path sorts in `arrow.build_table`, and the streaming path
-    is checked by the validator's physical-order shim (R12 §4) before the commit completes.
+    is checked by the validator's physical-order shim (Part 05 §5.3) before the commit completes.
     """
     options: dict[str, Any] = {"compression": "zstd", "data_page_version": "1.0"}
     # A caller may hand over a column as dictionary codes rather than decoding what Parquet is

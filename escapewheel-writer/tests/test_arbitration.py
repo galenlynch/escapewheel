@@ -136,9 +136,9 @@ def test_a_recipe_supplied_resource_is_declared(resource):
 
 
 def test_a_name_records_what_its_identifier_stands_for():
-    """R53 §2.5: a `*_name` is the string the number was minted from, and nothing else.
+    """Part 02 §8.2: a `*_name` is the string the number was minted from, and nothing else.
 
-    No exception: R85 wants a name unique within its packet, and one that drops the recipe's prefix
+    No exception: a name is unique within its packet, and one that drops the recipe's prefix
     its identifier carries collides once two sessions share a packet under different prefixes.
 
     Read statically rather than by running the adapters, because what is wrong is visible in the

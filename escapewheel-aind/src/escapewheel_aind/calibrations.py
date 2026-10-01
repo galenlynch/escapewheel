@@ -29,12 +29,12 @@ def calibration_rows(
 ) -> list[dict[str, Any]]:
     """`core.calibrations`: what was measured about an instrument so its numbers can be read.
 
-    Two shapes, because a source states a calibration more than one way (R89 §1.3). A
+    Two shapes, because a source states a calibration more than one way. A
     `rig.json` entry is a curve, and its type is the quantity its own output label names --
     the vocabulary is open (Part 02 §9.3), so the source's word for what it measured is a value
     rather than something to map onto a closed set. An `ephys_module` states a manipulator
-    transform, one calibration cited by every module sharing its file and timestamp (R89
-    §1.4), whose content is an array this adapter does not read: the row records that the
+    transform, one calibration cited by every module sharing its file and timestamp,
+    whose content is an array this adapter does not read: the row records that the
     calibration was in force and that the packet holds nothing further (Part 02 §12.3).
 
     `rig` is the `rig.json` document, `modules` every `ephys_module` the session states, and
@@ -58,7 +58,7 @@ def calibration_rows(
                 "output_unit": _unit(output),
                 "array_asset_id": None,
                 "detail_kind": None,
-                # R89 §2.6: what the source said that no column above models. The note is not
+                # Part 02 §8.6: what the source said that no column above models. The note is not
                 # `description`, which carries the source's own description field.
                 "metadata": _bag(notes=stated_text(entry.get("notes"))),
             }
@@ -74,8 +74,8 @@ def calibration_rows(
                 "description": None,
                 "input_unit": None,
                 "output_unit": None,
-                # R89 §2.4 wants the array asset; this adapter does not read the `.npy`, so the
-                # content is unrecorded (Part 02 §12.3). The path is `calibration_name`, which is the
+                # Such content is an array asset's; this adapter does not read the `.npy`, so the
+                # content is unrecorded. The path is `calibration_name`, which is the
                 # identifier the source used for it, so nothing repeats it in `metadata`.
                 "array_asset_id": None,
                 "detail_kind": None,
@@ -100,7 +100,7 @@ def point_rows(rig: Mapping[str, Any], *, session_id: str, prefix: str) -> list[
         if len(inputs) != len(outputs):
             raise SourceDefect(
                 f"calibration {name!r} states {len(inputs)} inputs against {len(outputs)} "
-                "outputs; a point needs both sides (R89 §2.3)",
+                "outputs; a point needs both sides",
                 code=AindFault.CALIBRATION_MISALIGNED,
                 where=name,
             )
@@ -123,7 +123,7 @@ def device_rows(modules: Sequence[Mapping[str, Any]], *, session_id: str, prefix
     The assembly name is the device name the acquisition chain gives the same probe, and the
     writer numbers both from that name under one recipe prefix (Part 05 §4.3), so the reference
     resolves without this adapter seeing `core.devices`. A calibration covering a device the
-    packet does not hold gets no row, which is a fact rather than a defect (R89 §2.2) -- which is
+    packet does not hold gets no row, which is a fact rather than a defect (Part 02 §12.3) -- which is
     why the lick spouts of a water calibration appear here only if some source built them.
     """
     rows = []

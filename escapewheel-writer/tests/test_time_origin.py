@@ -1,4 +1,4 @@
-"""R39's time origin, and the measured bound Part 01 §3.9 requires to reach it.
+"""Part 01 §2.2's time origin, and the measured bound Part 01 §3.9 requires to reach it.
 
 Both are arithmetic over anchors rather than adapter behaviour, so they are exercised
 directly: an origin that is wrong by a tick is invisible in a packet and shifts every second
@@ -15,7 +15,7 @@ from escapewheel_writer.session import Context
 AP, HARP = 30000, 31250
 
 #: Sixty anchors a second apart, and a probe clock whose tick 0 falls a second before the
-#: first of them -- which is what withholding a displaced first anchor leaves (R37 §1).
+#: first of them -- which is what withholding a displaced first anchor leaves.
 FIRST = 2 * AP
 TICKS = FIRST + np.arange(60, dtype=np.int64) * AP
 PARENTS = np.rint(TICKS * (HARP / AP)).astype(np.int64) + 553_191_712_312
@@ -41,7 +41,7 @@ def test_the_far_end_of_the_window_counts_too():
 
 
 def test_data_inside_one_interval_needs_no_measurement():
-    """A packet that says nothing about its bound is unchanged by R37 (§3.3)."""
+    """A packet that says nothing about its bound stays within the default (Part 02 §12.6)."""
     bound, measured = bound_for(BY_CLOCK, {"probe": (FIRST - AP + 1, int(TICKS[-1]))}, TOLERANCE, HARP)
     assert (bound, measured) == (1.0, {})
 
@@ -111,7 +111,7 @@ def test_a_clock_with_no_anchors_yields_no_origin():
     assert time_origin(context_on(), intervals, BY_CLOCK, bound=2.0) is None
 
 
-# -- R99 §3.2: the terminal-anchor test reaches the clock rows the sorter staged ------------
+# -- the terminal-anchor test reaches the clock rows the sorter staged ----------------------
 
 
 class _Sync:

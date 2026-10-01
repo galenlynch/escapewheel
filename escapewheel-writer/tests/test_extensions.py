@@ -1,4 +1,4 @@
-"""A packet carries an extension's table the same way it carries a core one (R17)."""
+"""A packet carries an extension's table the same way it carries a core one (Part 09 §5.6)."""
 
 import copy
 import json
@@ -218,7 +218,7 @@ class _Registered:
 
 
 def test_a_registered_source_kind_is_built(tmp_path, monkeypatch):
-    """R17's problem one layer down: an extension's table needs an adapter that knows a raw
+    """The extension problem one layer down: an extension's table needs an adapter that knows a raw
     format this package never will, and editing the writer to add one is the gradient that
     leaves NWB's own mechanism unused."""
     from escapewheel_writer import session as session_module
@@ -310,7 +310,7 @@ def test_a_draft_reads_what_the_data_shows(tmp_path):
 
 
 def test_every_guess_is_reported(tmp_path):
-    """R48 §2.2 refuses a default because a forgotten classification would look deliberate, and a
+    """Part 02 §8.1 admits no default because a forgotten classification would look deliberate, and a
     generated file is exactly where a forgotten one hides."""
     from escapewheel_writer.scaffold import draft
 
@@ -323,7 +323,7 @@ def test_every_guess_is_reported(tmp_path):
 
 
 def test_a_draft_does_not_validate_until_finished(tmp_path):
-    """The draft is deliberately incomplete: R7 needs a key or an explicit null with a reason."""
+    """The draft is deliberately incomplete: a table needs a key or an explicit null with a reason."""
     import json
 
     import jsonschema

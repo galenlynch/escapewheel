@@ -12,7 +12,7 @@ from escapewheel_writer.facts import refuse_a_discarded_fact
 from escapewheel_writer.session import Context
 from tests.builders import contested_recipe
 
-# -- R108: a preference discards no stated fact --------------------------------------------
+# -- a preference discards no stated fact --------------------------------------------------
 
 
 class _Registry:

@@ -68,7 +68,7 @@ class SorterSource:
         The build's source-cache location, which a store root is read through (Part 12 §10).
     parent_clock_id : str, optional
         The clock these sample clocks align to, where another source supplies the anchors.
-        Left null a packet with more than one clock cannot satisfy R27 §2.
+        Left null, the clocks of a packet holding more than one are unrelated.
     emit_probes : bool, default True
         Emit `core.probes` from the stream names, which carry the serial. Set False when
         another adapter owns that table, since two adapters emitting it would collide on the
@@ -265,7 +265,7 @@ class SorterSource:
 
     # -- identity ---------------------------------------------------------------------
 
-    # These compose a *name*. `arrow.build_table` maps it to the integer the column holds (R53 §2.1),
+    # These compose a *name*. `arrow.build_table` maps it to the integer the column holds (Part 02 §8.2),
     # against one `Keys` shared by every adapter -- because the recipe exists precisely because
     # four sources can each produce `core.probes`, and two of them numbering the same probe
     # differently is a defect no foreign key could see: both values resolve, to different rows.
@@ -289,7 +289,7 @@ class SorterSource:
         within each run and a run is one probe, so a label repeats across a session's units. The
         number must follow ascending
         `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces it (Part 05 §4.3),
-        and `PacketWriter._preassign` assigns in sorted-name order -- so the name is those three,
+        and `numbering.preassign` assigns in sorted-name order -- so the name is those three,
         with the label zero-padded to `width` to make its text order its numeric one. Run and
         curation ids are themselves assigned in sorted-name order, which is what makes ordering
         by their names the same as ordering by their numbers.
@@ -307,7 +307,7 @@ class SorterSource:
 
         No `tick_zero_utc` and no alignment columns: a curated sorting records neither when
         sample 0 happened nor how this stream relates to any other. Both are another source's
-        to supply, and until one does R27 §4 refuses the packet rather than let the clocks
+        to supply, and until one does the packet is refused rather than letting the clocks
         look convertible.
         """
         rows = []
@@ -381,7 +381,7 @@ class SorterSource:
                     "sorting_run_id": self._sorting_run_id(stream),
                     "session_id": self.session_id,
                     "probe_id": self._probe_id(stream),
-                    # R41 §2.1: the sorting is reachable from the provenance graph, which is
+                    # The sorting is reachable from the provenance graph, which is
                     # what lets a packet carrying two of them say which to read.
                     "processing_run_id": self._run_id(stream, "spike_sorting"),
                     "sorter_name": log.get("sorter_name") or params.get("sorter_name"),
@@ -398,7 +398,7 @@ class SorterSource:
         return rows
 
     def _run_id(self, stream: SortedStream, activity: str) -> str:
-        """Return the `core.processing_runs` ID for one activity on one stream (R41 §2.1)."""
+        """Return the `core.processing_runs` ID for one activity on one stream."""
         if activity == "curation" and self.curation is not None:
             return f"{self._curation_id(stream)}.curation"
         return f"{self.prefix}{stream.key}.{activity}"
@@ -406,7 +406,7 @@ class SorterSource:
     def processing_runs(self) -> list[dict[str, Any]]:
         """`core.processing_runs`, one per stream per activity that made something here.
 
-        R9 records what ran; R41 §2.1 makes the sorting and the curation *reachable* from it,
+        A run records what ran (Part 01 §2.4), and the sorting and the curation each name theirs,
         which is the whole basis for saying later which of two sortings a consumer should read.
         The facts come from the sorted asset's own logs -- the same ones `sorting_runs` and
         `curation_versions` already report -- so this restates nothing the packet must derive.
@@ -425,9 +425,9 @@ class SorterSource:
                     "processing_run_id": self._run_id(stream, "spike_sorting"),
                     "session_id": self.session_id,
                     "activity_type": "spike_sorting",
-                    # R44 §2.1. The probe is what a sorting is *about*, so two sortings of one
-                    # probe are alternatives and several probes sorted once each are not. R49 §2.2
-                    # names the kind as a resource ID, so a consumer resolves it from the registry.
+                    # The probe is what a sorting is *about*, so two sortings of one
+                    # probe are alternatives and several probes sorted once each are not. The kind
+                    # is a resource ID (Part 02 §8.3), so a consumer resolves it from the registry.
                     "scope_kind": CORE_PROBES,
                     "scope": self._probe_id(stream),
                     "software_name": log.get("sorter_name") or "unknown",
@@ -469,7 +469,7 @@ class SorterSource:
                     "curation_id": self._curation_id(stream),
                     "sorting_run_id": self._sorting_run_id(stream),
                     "session_id": self.session_id,
-                    "processing_run_id": self._run_id(stream, "curation"),  # R41 §2.1
+                    "processing_run_id": self._run_id(stream, "curation"),
                     "curation_tool": "spikeinterface",
                     "metadata": {
                         "format_version": curation.get("format_version"),
@@ -482,7 +482,7 @@ class SorterSource:
         return rows
 
     def sorting_run_channels(self) -> list[dict[str, Any]]:
-        """`core.sorting_run_channels`, the channels each run used in its own order (R83 §2.1).
+        """`core.sorting_run_channels`, the channels each run used in its own order (Part 02 §12.2).
 
         A sorting drops bad channels before it runs, so a channel index it emits afterwards
         counts what it kept, and `extremum_channel_index` read as a contact position names the
@@ -494,7 +494,7 @@ class SorterSource:
         `NWBSource._electrode_ids` composes, and a name is what makes the two agree without
         this adapter having to run after that one.
 
-        Part 02 §12.2 forbids inferring the list, so a stream whose analyzer states none contributes
+        That section forbids inferring the list, so a stream whose analyzer states none contributes
         no rows and says so.
         """
         rows = []
@@ -584,7 +584,7 @@ class SorterSource:
                     "local_unit_label": str(int(label)),
                     "quality_label": PROJECTION.get(raw) if raw is not None else None,
                     "quality_label_source": DESIGNATED if raw is not None else None,
-                    # R96 §3: both belong to the sorting run and a spike cannot reach it, so the
+                    # Part 02 §12.1: both belong to the sorting run and a spike cannot reach it, so the
                     # unit carries them and `core.spike_events` resolves each in one hop.
                     "amplitude_unit": amplitude_unit(self.root, stream, self.notes),
                     "clock_id": self._clock_id(stream),
@@ -638,7 +638,7 @@ class SorterSource:
     def unit_quality_labels(self) -> list[dict[str, Any]]:
         """`core.unit_quality_labels`, one row per (unit, source).
 
-        R22 §1: real curation emits labels no closed vocabulary covers. Four automated
+        Real curation emits labels no closed vocabulary covers. Four automated
         sources disagree here -- bombcell alone emits `non_soma`, which projects to null
         rather than being forced into `noise`, because "recorded off-soma" is a different
         claim from "not a unit".
@@ -713,7 +713,7 @@ class SorterSource:
                 rows = selected.size
                 # `pa.repeat` for `session_id`, which is constant within a stream: a
                 # million-element Python list would cost more than the spikes. No `clock_id`:
-                # the tick reaches its clock through the unit (R96 §3.4).
+                # the tick reaches its clock through the unit.
                 columns = {
                     "session_id": pa.repeat(pa.scalar(self.session_id, pa.string()), rows),
                     "unit_id": pa.DictionaryArray.from_arrays(pa.array(index[selected], type=pa.int32()), unit_names),

@@ -48,7 +48,7 @@ class Devices(NWBFile):
                 "model": identity["model"],
                 "serial_number": serial,
                 "parent_device_id": attachment.get("parent_device_id"),
-                # R85 §2.1: the dock of that headstage. Null where no attachment is stated, and
+                # The dock of that headstage. Null where no attachment is stated, and
                 # null is what a consumer must read as unrecorded rather than parse out of a name.
                 "parent_port": attachment.get("parent_port"),
                 "metadata": identity["metadata"],

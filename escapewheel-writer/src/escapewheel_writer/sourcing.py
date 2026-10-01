@@ -94,7 +94,7 @@ def filled_terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Col
     """
     terms: dict[str, Any] = {"root": spec.root, "session_id": context.session_id}
     if "reference_clock" in needed:
-        # The row, not the object: everything a build supplies is data (Part 12 §4).
+        # The row, not the object: everything a build supplies is data.
         terms["reference_clock"] = _reference(recipe, context).record()
     if "clocks" in needed and context.clocks:
         terms["clocks"] = [context.clocks[clock_id] for clock_id in sorted(context.clocks)]
@@ -109,7 +109,7 @@ def filled_terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Col
         terms["array_location"] = str(location)
     if "opaque_location" in needed:
         # One directory per source for the same reason, apart from `array_location`'s so neither
-        # delivery can pass for the other (Part 12 §5).
+        # delivery can pass for the other.
         location = context.staging / opaque.DELIVERIES / spec.kind
         if location.exists():
             shutil.rmtree(location)
@@ -151,7 +151,7 @@ def supplied_to(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str,
     before anything is opened, so reaching the refusal here means the recipe was not checked.
 
     The recipe's remaining options travel too, under `options`, so no option can collide with a
-    term. They are the ones an adapter can run without, which Part 12 §4 gives no way to
+    term. They are the ones an adapter can run without, which that section gives no way to
     declare: a declared name a recipe does not set resolves to nothing, so declaring one would
     make it mandatory.
     """
@@ -218,7 +218,7 @@ def build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAd
         )
     # In process, adapters reading one Zarr root share an open store, so they cannot disagree about
     # what is in it and the electrode table is parsed once. A handle is not something an adapter may
-    # declare (Part 12 §4), so it is supplied where the class accepts one rather than from a
+    # declare, so it is supplied where the class accepts one rather than from a
     # table of kinds -- and an adapter out of process is handed none and opens its own.
     if "store" in inspect.signature(adapter).parameters:
         options.setdefault("store", store_for(spec.root, context.stores, cache=supplied.get(SOURCE_CACHE)))

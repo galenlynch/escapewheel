@@ -103,7 +103,7 @@ def test_the_digest_identifies_the_parameters(tmp_path):
     assert one.digest != other.digest
 
 
-# -- R63: a recipe declares what it narrows ------------------------------------------------
+# -- a recipe declares what it narrows -----------------------------------------------------
 
 
 def test_a_source_that_declares_no_owns_takes_what_it_produces(tmp_path, registry):
@@ -111,7 +111,7 @@ def test_a_source_that_declares_no_owns_takes_what_it_produces(tmp_path, registr
     recipe = Recipe.load(write_recipe(tmp_path, '\n[[source]]\nkind = "sorter"\nroot = "s"\n'))
     owns = set(recipe.sources[0].owns)
     assert "core.units" in owns and "core.unit_quality_labels" in owns and "core.spike_events" in owns
-    # RECIPE_SUPPLIES is not an adapter's to claim (R63 §3).
+    # RECIPE_SUPPLIES is not an adapter's to claim.
     assert not owns & set(RECIPE_SUPPLIES)
 
 
@@ -180,7 +180,7 @@ def test_a_partly_supplied_resource_is_contributed_not_owned(tmp_path, registry)
 
 
 def test_what_a_source_produces_is_what_it_can_emit():
-    """R63 §4: a PRODUCES that drifts from the code reintroduces the defect one level up."""
+    """Part 05 §3.4: a PRODUCES that drifts from the code declares what the adapter cannot emit."""
 
     for kind, adapter in ADAPTERS.items():
         declared = set(getattr(adapter, "PRODUCES", ()))

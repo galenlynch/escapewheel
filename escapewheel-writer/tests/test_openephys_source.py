@@ -78,7 +78,7 @@ def test_each_chain_element_that_reports_a_version_is_a_device(source):
 
 
 def test_a_headstage_declares_the_port_it_attached_to(source):
-    """R85 §2.1. The coordinate the name carries, in a column a consumer may read."""
+    """Part 01 §3.5. The coordinate the name carries, in a column a consumer may read."""
     rows = by_name(source.devices())
     assert rows["headstage.slot3.port2"]["parent_port"] == "2"
     assert rows["headstage.slot3.port4"]["parent_port"] == "4"
@@ -86,7 +86,7 @@ def test_a_headstage_declares_the_port_it_attached_to(source):
 
 
 def test_a_link_the_file_gives_no_coordinate_for_leaves_the_port_null(source):
-    """R85 §2.1. A connect board has a parent and no stated place on it; a basestation has neither."""
+    """A connect board has a parent and no stated place on it; a basestation has neither."""
     rows = by_name(source.devices())
     assert rows["connect_board.slot3"]["parent_device_id"] == "basestation.slot3"
     assert rows["connect_board.slot3"]["parent_port"] is None
@@ -95,7 +95,7 @@ def test_a_link_the_file_gives_no_coordinate_for_leaves_the_port_null(source):
 
 
 def test_a_probe_is_attached_by_the_name_the_nwb_gives_its_device(source):
-    """R67 §1.2. `custom_probe_name` joins to the NWB without going through a serial."""
+    """`custom_probe_name` joins to the NWB without going through a serial."""
     attached = source.attachments()
     assert attached["50198"] == {"parent_device_id": "headstage.slot3.port2", "parent_port": "1"}
     assert attached["50197"] == {"parent_device_id": "headstage.slot3.port4", "parent_port": "2"}
@@ -135,7 +135,7 @@ def test_the_metadata_bag_does_not_restate_the_port(source):
 
 
 def test_a_prefix_reaches_every_device_and_every_link(tmp_path):
-    """R53 §2.5: an ID, its name and each reference to it carry the prefix, so links still resolve."""
+    """An ID, its name and each reference to it carry the prefix, so links still resolve."""
     node = tmp_path / "Record Node 109"
     node.mkdir()
     (node / "settings.xml").write_text(SETTINGS)

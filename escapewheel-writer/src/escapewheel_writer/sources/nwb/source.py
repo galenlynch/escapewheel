@@ -195,7 +195,7 @@ class NWBSource(Devices, Electrodes, Signals, Events):
             "species": columns.get("species"),
             "sex": _sex(columns.get("sex")),
             "genotype": columns.get("genotype"),
-            # A date of birth is a calendar date (R4 §3.3): the local date as written is the
+            # A date of birth is a calendar date: the local date as written is the
             # fact, and converting it through UTC could move it by a day.
             "date_of_birth": born.date() if born is not None else None,
             "strain": columns.get("strain"),

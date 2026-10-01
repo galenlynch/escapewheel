@@ -20,7 +20,7 @@ from escapewheel_writer.staging import parquet_options
 def _spike_batch(n, unit, first_tick):
     """One batch of core.spike_events, already in the registry's sort order.
 
-    `unit` is the number the writer assigned (R81 §2.1), not the sorter's label: a batch is
+    `unit` is the number the writer assigned (Part 02 §12.1), not the sorter's label: a batch is
     written as given, so a caller streaming one supplies identifiers the packet already knows.
     """
     return pa.record_batch(
@@ -37,7 +37,7 @@ def _add_spike_context(writer):
     """The rows core.spike_events references, so a commit can validate."""
     writer.add("core.sorting_runs", [{"sorting_run_id": "sort_1", "session_id": "s001"}])
     writer.add("core.curation_versions", [{"curation_id": "cur_1", "sorting_run_id": "sort_1", "session_id": "s001"}])
-    # R96 §3: the unit names the clock its ticks are counted on and the unit of measure its
+    # The unit names the clock its ticks are counted on and the unit of measure its
     # amplitudes are in, and a spike reaches both in one hop.
     writer.add(
         "core.units",
@@ -172,7 +172,7 @@ def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
     spec = registry["resources"]["core.spike_events"]["table"]
     batch = pa.record_batch(
         {
-            # int32 since R53 §2.1. `write_stream` is below `add_batches`, which is where a
+            # int32 (Part 02 §5.3). `write_stream` is below `add_batches`, which is where a
             # streamed batch's identifiers are numbered, so this builds them already numbered.
             "session_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
             "unit_id": pa.repeat(pa.scalar(1, pa.int32()), rows),
@@ -313,7 +313,7 @@ def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, regist
     writer.commit(root, materialize=[derive])
 
     runs = pq.read_table(root / "tables" / "core" / "processing_runs.parquet")
-    # R53: the key is a number and the name is what it stands for. Both runs are present, and
+    # The key is a number and the name is what it stands for. Both runs are present, and
     # the materializer's run is numbered by the same Keys the staged rows used.
     assert sorted(runs.column("processing_run_name").to_pylist()) == ["run_derived", "run_import"]
     assert sorted(runs.column("processing_run_id").to_pylist()) == [0, 1]
@@ -324,8 +324,8 @@ def test_a_materializer_may_add_rows_to_an_already_staged_table(tmp_path, regist
 def _run(run_id, activity="import"):
     """One `core.processing_runs` row.
 
-    The activity is a parameter because R82 §2.2 makes two runs of one activity declare their
-    scopes, and a derived run is a materialization rather than a second import (Part 06 §5).
+    The activity is a parameter because two runs of one activity declare their
+    scopes (Part 01 §2.6), and a derived run is a materialization rather than a second import (Part 06 §5).
     """
     return {
         "processing_run_id": run_id,

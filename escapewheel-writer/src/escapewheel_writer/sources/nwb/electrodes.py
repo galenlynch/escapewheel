@@ -17,7 +17,7 @@ class Electrodes(NWBFile):
 
     #: Part 01 §3.24: the unit every coordinate this adapter writes is in. No NWB states one; what
     #: makes this the packet's answer is that this adapter passed the values through unconverted,
-    #: and R19 §3 declared micrometres when it named the columns `x_um`, `y_um` and `z_um`.
+    #: and micrometres is what the files it reads hold.
     COORDINATE_UNIT: ClassVar[str] = "um"
 
     #: Part 02 §12.7: each frame's axes in index order, named for the field the values are read
@@ -29,7 +29,7 @@ class Electrodes(NWBFile):
     #: an atlas frame is a producer's addition, and a dialect adds it by extending this.
     FRAME_AXES: ClassVar[dict[str, tuple[str, ...]]] = {"probe": ("rel_x", "rel_y")}
 
-    #: R64 §1.3: the basis travels with the columns a value comes from rather than with the
+    #: Part 01 §3.8: the basis travels with the columns a value comes from rather than with the
     #: frame's name. `rel_x` is the shank's own layout and so is true by construction, where a
     #: CCF triple is what a registration found. `planned` cannot be imported from either -- an
     #: exported file records where a probe was, never where it was aimed, and a targeting record
@@ -40,7 +40,7 @@ class Electrodes(NWBFile):
     #: `spike_times`, `electrodes` and the waveform columns, and no coordinate.
     UNIT_AXES: ClassVar[tuple[str, ...]] = ()
 
-    #: The frame those axes are in, and what a position in it claims (R64 §1.3). Empty while
+    #: The frame those axes are in, and what a position in it claims. Empty while
     #: `UNIT_AXES` is, since a frame with no axes names nothing; a dialect sets both together.
     UNIT_FRAME: ClassVar[str] = ""
     UNIT_BASIS: ClassVar[str] = "measured"
@@ -65,7 +65,7 @@ class Electrodes(NWBFile):
         if "inter_sample_shift" in columns:
             self.notes.append(
                 Note(
-                    "electrodes/inter_sample_shift: not emitted; R19 puts it on core.array_channels "
+                    "electrodes/inter_sample_shift: not emitted; it belongs on core.array_channels "
                     "and this adapter emits no array assets",
                     NoteCode.SAMPLE_SHIFT_NOT_EMITTED,
                 )
@@ -122,7 +122,7 @@ class Electrodes(NWBFile):
     def electrode_coordinates(self) -> list[dict[str, Any]]:
         """`core.electrode_coordinates`, one row per electrode per populated frame.
 
-        Rows per frame rather than one NaN-padded triple (R19 §3): a file may leave `x`/`y`/`z`,
+        Rows per frame rather than one NaN-padded triple: a file may leave `x`/`y`/`z`,
         the columns NWB specifies, NaN for every electrode while it populates other frames whose
         coverage differs.
         """
@@ -132,7 +132,7 @@ class Electrodes(NWBFile):
         """`core.electrode_coordinate_values`, one row per axis of each coordinate (Part 01 §3.8).
 
         An axis this file leaves empty gets no row. That is a position the source did not state
-        on that axis, which Part 01 §3.8 forbids a consumer reading as a zero.
+        on that axis, which a consumer may not read as a zero (Part 02 §12.7).
         """
         return [
             {
@@ -159,7 +159,7 @@ class Electrodes(NWBFile):
     def coordinate_frames(self) -> list[dict[str, Any]]:
         """`core.coordinate_frames`, one row per frame this file populates (Part 01 §3.24).
 
-        `atlas` and `atlas_version` are null. Base NWB names neither, and Part 01 §3.24 forbids
+        `atlas` and `atlas_version` are null. Base NWB names neither, and that section forbids
         reading one out of the frame's name, `ccf` being a label rather than a version.
         """
         return [
@@ -235,7 +235,7 @@ class Electrodes(NWBFile):
         return found
 
     def unit_coordinates(self) -> list[dict[str, Any]]:
-        """`core.unit_coordinates`, a unit's position per populated frame (R28).
+        """`core.unit_coordinates`, a unit's position per populated frame.
 
         Empty without `unit_identity` and `UNIT_AXES`. Where a subclass supplies both, a unit
         whose coordinates are all absent still gets no row.

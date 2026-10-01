@@ -141,7 +141,7 @@ def test_the_asset_directory_is_accepted_as_well_as_the_nwb(tmp_path, harp):
 
 
 def test_seconds_become_ticks_on_the_declared_clock(source):
-    """R91 §3.1 puts the kind on the stream, so a tick is found through the stream that emits it."""
+    """Part 01 §3.12 puts the kind on the stream, so a tick is found through the stream that emits it."""
     records = source.records()
     kind = {s["event_stream_id"]: s["event_type"] for s in records["core.event_streams"]}
     events = records["core.events"]
@@ -312,7 +312,7 @@ def _more_devices(nwb):
 
 
 def test_a_name_carries_the_prefix_its_identifier_does(nwb, harp):
-    """R53 §2.5 and R85: a name is the string its identifier is minted from, so it is unique in a
+    """Part 02 §8.2: a name is the string its identifier is minted from, so it is unique in a
     packet holding two sessions under different prefixes only if it carries the prefix too."""
     _more_devices(nwb)
     records = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, prefix="A_", interval_kind=KIND).records()
@@ -387,7 +387,7 @@ def test_a_frame_declares_its_axes_by_the_names_it_read_them_from(source):
     ]
     assert {a["axis_direction"] for a in axes} == {None}
     assert {a["unit"] for a in axes} == {"um"}
-    # Part 01 §3.24: no artifact of these sessions names the atlas, so neither column is filled.
+    # No artifact of these sessions names the atlas, so neither column is filled.
     frames = source.records()["core.coordinate_frames"]
     assert {(f["atlas"], f["atlas_version"]) for f in frames} == {(None, None)}
 
@@ -414,7 +414,7 @@ def test_the_nwb_id_is_a_label_and_the_name_is_unique_in_the_packet(source):
 
 
 def test_a_task_column_is_not_a_core_column(source):
-    """R54 §2.3 struck them: a task's shape is the extension's, not the format's."""
+    """Core declares none: a task's shape is the extension's, not the format's."""
     trial = source.records()["core.intervals"][0]
     assert not {"choice", "rewarded", "condition_id", "stimulus_id"} & set(trial)
 
@@ -514,7 +514,7 @@ def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
 
     packet = open_packet(tmp_path / "packet")
     assert list(packet.sessions) == [SESSION]
-    # R91 §3.2 keys and sorts events `(session_id, stream_id, t_tick)`, so ticks ascend within a
+    # Events are keyed and sorted `(session_id, stream_id, t_tick)`, so ticks ascend within a
     # stream and not across them -- the layout a filter on one stream prunes.
     written = packet.table("core.events")
     assert sorted(written.column("t_tick").to_pylist()) == [31250, 62500]

@@ -151,7 +151,7 @@ class Clock:
     origin : str
         What tick 0 means. Free text; `core.clocks.origin` is required.
     tick_zero_utc : datetime, optional
-        Wall-clock instant of tick 0 (R6). Offset-aware, or omitted. A free-running clock's
+        Wall-clock instant of tick 0 (Part 01 §3.9). Offset-aware, or omitted. A free-running clock's
         tick 0 is a power-on instant that no source declares, so this is usually derived --
         see `escapewheel_aind.session.SessionSource.epoch`, which records the
         derivation as a note because the packet has nowhere to carry its ±1 s uncertainty.

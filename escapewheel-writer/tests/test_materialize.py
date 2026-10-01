@@ -14,9 +14,8 @@ from escapewheel_writer.materialize import spike_events
 from .conftest import REGISTRY
 
 AP, HARP = 30000, 31250
-#: Identifiers are `int32` since R53, and so is what a materialised row carries. The strings
-#: these were let the materializer's dictionary path pass a test after the format had stopped
-#: producing anything it could encode.
+#: Identifiers are `int32` (Part 02 §5.3), and so is what a materialised row carries: a string
+#: here would exercise a dictionary path no packet reaches.
 REF, PROBE = 0, 1
 SESSION, RUN, CURATION = 0, 0, 0
 
@@ -60,13 +59,13 @@ class Fake:
                 "parent_tick": ap.tolist() if anchors else [],
             }
         )
-        # R96 §3.4 struck `core.spike_events.clock_id` and §3.3 resolves a tick's clock through
-        # the unit, so the clock is declared once per unit and the spike carries none.
+        # `core.spike_events` has no `clock_id` and a tick's clock resolves through the unit
+        # (Part 02 §12.1), so the clock is declared once per unit and the spike carries none.
         identifiers = [unit_of(i) for i in range(len(ticks))]
         by_unit: dict[int, int] = {}
         for unit, clock in zip(identifiers, clocks, strict=True):
             if by_unit.setdefault(unit, clock) != clock:
-                raise AssertionError(f"unit {unit} on two clocks, which R96 §3.3 leaves unsayable")
+                raise AssertionError(f"unit {unit} on two clocks, which `core.units` cannot say")
         ordered = sorted(by_unit)
         self._units = pa.table(
             {
@@ -175,7 +174,7 @@ def test_each_clock_is_counted_separately(tmp_path):
 
 
 def test_the_reference_comes_from_the_session(tmp_path):
-    """R27 §2: the session declares what its times are reported on."""
+    """Part 01 §3.3: the session declares what its times are reported on."""
     out = rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE]))
     assert out["clock_id"] == [REF]
 
@@ -250,7 +249,7 @@ def test_units_stay_grouped_inside_a_bucket(tmp_path):
 def test_identity_columns_survive(tmp_path):
     out = rows(Fake(tmp_path, ticks=[1000, 1000 + AP], clocks=[PROBE] * 2))
     assert out["unit_id"] == [0, 1]
-    # R81 §2.3: the spike row identifies its unit by one column, and the run and curation
+    # The spike row identifies its unit by one column, and the run and curation
     # are attributes of `core.units` a join away.
     assert out["unit_id"] == out["unit_id"]
 
@@ -260,7 +259,7 @@ def test_a_batch_where_nothing_maps_yields_nothing(tmp_path):
     assert list(spike_events(Fake(tmp_path, ticks=[far], clocks=[PROBE]))) == []
 
 
-# -- provenance (R31) -------------------------------------------------------------------
+# -- provenance -------------------------------------------------------------------------
 
 
 class Recorder:

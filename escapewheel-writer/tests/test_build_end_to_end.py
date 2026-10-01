@@ -28,7 +28,7 @@ from tests import sorterfixture, syncfixture
 from tests.conftest import REGISTRY
 
 #: The two streams the recipe sorts. `sorterfixture.build` would add the same probe sorted in a
-#: second experiment, which R82 refuses as an alternative the packet does not choose between.
+#: second experiment, which Part 05 §12 refuses as an alternative the packet does not choose between.
 STREAMS = (
     "experiment1_Record Node 109#Neuropix-PXI-100.50720-1_recording1",
     "experiment1_Record Node 109#Neuropix-PXI-100.50720-2_recording1",

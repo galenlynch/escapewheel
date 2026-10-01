@@ -106,7 +106,7 @@ class Context:
         adapter puts this on declare no other.
     clocks : dict
         Clock ID to that clock's `core.clocks` row, for a source placing an array axis on one.
-        An axis advances in ticks (R20 §2), so a step cannot be derived without the rate, and
+        An axis advances in ticks (Part 03 §6.3), so a step cannot be derived without the rate, and
         the row is what carries it.
     stores : dict
         Resolved source root and source-cache location to the open store. Three adapters in a
@@ -140,7 +140,7 @@ class Context:
     #: Session facts a source derived that the recipe does not state, merged into
     #: `core.sessions` after every source has run.
     session_extra: dict[str, Any] = field(default_factory=dict)
-    #: `core.clock_observation_intervals` rows, whatever source produced them, since R39's
+    #: `core.clock_observation_intervals` rows, whatever source produced them, since the time
     #: origin is a minimum across all of them and no single adapter sees them all.
     observed: list[dict[str, Any]] = field(default_factory=list)
     #: What `bound_for` measured, for the import run's parameters (Part 02 §12.6).
@@ -336,7 +336,7 @@ def build(  # noqa: C901
         delivery workspace is supplied to no adapter, and the build notes that and proceeds.
     replaced : sequence of Replaced, optional
         The packets `[packet].replaces` names, already read by a caller that compares against them.
-        Read here where absent, before any source opens (Part 05 §3.5).
+        Read here where absent, before any source opens.
 
     Returns
     -------
@@ -408,7 +408,7 @@ def build(  # noqa: C901
         _from_packet(context, held, writer, session_id)
     context.staging = writer.stage_at(recipe.out)
 
-    # Part 05 §3.1: the recipe supplies `core.subjects` only where no source owns it, so a packet
+    # The recipe supplies `core.subjects` only where no source owns it, so a packet
     # whose NWB claims the table gets the row that file states rather than a hand-typed one.
     if recipe.subject and CORE_SUBJECTS not in recipe.owners:
         writer.add(CORE_SUBJECTS, [dict(recipe.subject)])
@@ -450,7 +450,7 @@ def build(  # noqa: C901
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
             say(f"  referenced {resource_id}{size}")
         # An adapter in this process may hand its payloads over as bytes, which the build writes where
-        # a protocol adapter would have, so both are read back and refused the same way (Part 12 §5).
+        # a protocol adapter would have, so both are read back and refused the same way.
         location = context.opaque_locations.get(spec.kind)
         opaque.write(source.staged_payloads() if isinstance(source, StagesPayloads) else (), location, spec.kind)
         if location is not None:
@@ -704,14 +704,14 @@ def _add_records(
     for resource, rows in {**records, **composed(spec, context)}.items():
         produced[resource] = len(rows)
         if resource in arbitrated:
-            # Kept rather than counted, so Part 05 §3.4 can compare what the winner staged against
+            # Kept rather than counted, so the build can compare what the winner staged against
             # what the source it displaced stated. Only where a preference arbitrates, which is
             # what keeps this bounded.
             context.stated.setdefault(resource, {})[spec.kind] = rows
         if resource not in spec.claims or resource in context.payloads:
             continue
         if resource == CORE_CLOCK_OBSERVATION_INTERVALS:
-            # R39's origin is a minimum across every clock, and no adapter sees them all.
+            # The time origin is a minimum across every clock, and no adapter sees them all.
             context.observed.extend(rows)
         writer.add(resource, rows)
         counts[resource] = counts.get(resource, 0) + len(rows)

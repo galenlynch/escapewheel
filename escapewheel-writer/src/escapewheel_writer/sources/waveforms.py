@@ -215,7 +215,7 @@ class WaveformSource:
         return found
 
     def _channels(self, stream: SortedStream) -> list[str]:
-        """Return the contacts the sorting ran on, in the order its channel axis counts them (R83 §2.1).
+        """Return the contacts the sorting ran on, in the order its channel axis counts them (Part 02 §12.2).
 
         Named the way `SorterSource.sorting_run_channels` names them, so the two agree without
         either adapter having to run after the other.
@@ -428,12 +428,12 @@ class WaveformSource:
         return {
             "array_asset_id": asset_id,
             # The packet identity `staged_arrays` gives the array, so a delivered one binds to this
-            # row by name alone (Part 12 §5).
+            # row by name alone.
             "resource_id": f"core.{asset_id}",
             "session_id": self.session_id,
             "semantic_type": semantic_type,
             # No `array_asset_name`: the numbering fills it from what `array_asset_id` stands for
-            # (R53 §2.5), and a phrase this adapter invented is not that.
+            # (Part 02 §8.2), and a phrase this adapter invented is not that.
             "clock_id": clock_id,
             "sample_rate_hz": built["rate"],
             "unit": built["unit"],
@@ -542,7 +542,7 @@ class WaveformSource:
         return rows
 
     def unit_electrodes(self) -> list[dict[str, Any]]:
-        """`core.unit_electrodes`, one row per unit per contact it has signal on (R28).
+        """`core.unit_electrodes`, one row per unit per contact it has signal on.
 
         These are the contacts the channel axis's labels name, and they are the analyzer's
         `sparsity_mask` rather than an inspection of the values: the export pads to every channel, so a reader of
@@ -552,7 +552,7 @@ class WaveformSource:
         `is_primary` is the template's own negative peak. Reading `extremum_channel_index` instead
         names the wrong electrode whenever the sorting dropped a channel below it.
 
-        R28 `amplitude` is left null. The source measures one amplitude per unit, not per
+        `amplitude` is left null. The source measures one amplitude per unit, not per
         electrode, and no reduction of the template reproduces it.
         """
         built = self._read()

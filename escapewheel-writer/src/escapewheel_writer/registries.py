@@ -44,7 +44,7 @@ class Declarations:
         assert isinstance(checked_registry, Mapping)
         self.core: Mapping[str, Any] = checked_registry
         #: Extension registries this packet carries (Part 09 §5.3), by `extension_id`. An extension is a
-        #: registry document in R2's format, so everything below resolves a resource against core
+        #: registry document like core's, so everything below resolves a resource against core
         #: and then these -- there is no second code path for an extension's tables.
         self.extensions: dict[str, Mapping[str, Any]] = {}
         for supplied in extensions:
@@ -104,8 +104,8 @@ class Declarations:
     def spec(self, resource_id: str) -> Mapping[str, Any] | None:
         """Return the registry entry for one resource, core or extension, or None if undefined.
 
-        One lookup for both, because R17 §3's claim is that an extension needs no second code
-        path: it is a registry document in R2's format, so a table of one is a table of the other.
+        One lookup for both, because an extension needs no second code path (Part 09 §5.6):
+        it is a registry document like core's, so a table of one is a table of the other.
         """
         declaration = self.declaration(resource_id)
         if declaration is None or declaration.get("kind") != "table":

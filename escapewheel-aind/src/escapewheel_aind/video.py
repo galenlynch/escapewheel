@@ -214,9 +214,9 @@ class VideoSource(Compensates):
 
         A container states a *time base* -- seconds per timestamp -- and core carries the
         reciprocal, so `core.media_assets` agrees with `core.clocks` about what a rational rate
-        looks like. The inversion happens here, once, which is the boundary Part 01 §3.18 puts it at.
+        looks like. The inversion happens here, once, which is the boundary that section puts it at.
 
-        Rational rather than a float, for the reason R33 gives: 1/90000 has no exact decimal and a
+        Rational rather than a float, because 1/90000 has no exact decimal and a
         rounded one accumulates over the millions of frames a session holds.
         """
         num, _, den = _ffprobe(video, "stream=time_base").strip().partition("/")

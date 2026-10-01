@@ -47,10 +47,10 @@ class Events(NWBFile):
     def event_streams(self) -> list[dict[str, Any]]:
         """`core.event_streams`, one row per acquisition TimeSeries.
 
-        `processing_run_id` is null, which R23 §4 defines as *came off the device as
+        `processing_run_id` is null, which says the events *came off the device as
         recorded*: an acquisition TimeSeries is what the rig detected and logged online.
 
-        `event_type` is the stream's, not the event's (R91 §3.1), and it is the source's field
+        `event_type` is the stream's, not the event's (Part 01 §3.12), and it is the source's field
         name normalised -- `left_lick_time` becomes `left_lick`. Nothing derives it at read time:
         this is the writer stating what kind of event the stream emits.
         """
@@ -87,7 +87,7 @@ class Events(NWBFile):
     def events(self) -> list[dict[str, Any]]:
         """`core.events`, one row per timestamp on an acquisition TimeSeries.
 
-        An event is a tick on a stream (R91 §3.2): no identifier, no name, and no type of its
+        An event is a tick on a stream (Part 01 §3.11): no identifier, no name, and no type of its
         own, the type being the stream's. The row is traceable back to the NWB through its
         stream, which carries the source's field name.
         """
@@ -132,7 +132,7 @@ class Events(NWBFile):
                         # No payload naming the interval: as JSON the reference would be untyped,
                         # unjoinable, and invisible to every check. An event belongs to whatever
                         # intervals contain it, which may be none or several, and containment is
-                        # a query against `core.intervals` rather than a column (R11 §5, R54 §3).
+                        # a query against `core.intervals` rather than a column.
                     }
                 )
         return rows

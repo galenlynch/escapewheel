@@ -44,7 +44,7 @@ def owned(spec: Mapping[str, Any]) -> list[tuple[str, str]]:
     """Return each assigned identifier a table's rows own, with the `*_name` column naming it.
 
     Owned means in the primary key and exported through no reference, which is where `number`
-    fills the name (R53 §2.3.1).
+    fills the name (Part 02 §8.2).
     """
     exported = {c for ref in spec.get("references", ()) for c in ref["columns"]}
     primary = set(spec.get("primary_key") or ())

@@ -127,7 +127,7 @@ def test_a_manifest_with_no_timestamp_is_kept_and_said_so(packet):
 
 
 def test_a_retained_registry_lives_as_long_as_the_manifest_naming_it_survives(packet):
-    """R61 §2.3. Kept while its manifest is kept, and an orphan in the run that expires it."""
+    """Kept while its manifest is kept, and an orphan in the run that expires it."""
     kept = prune(packet, keep_versions=2)
     assert "0.1.0.json.gz" not in [p.name for p in kept.orphans]
     expiring = prune(packet, keep_versions=1)

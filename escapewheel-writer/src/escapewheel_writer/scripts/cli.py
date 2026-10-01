@@ -197,7 +197,7 @@ def _init(args: argparse.Namespace) -> int:
 HINTS = {
     "lfp": (
         '# uri_base = "s3://bucket/prefix"   # where the referenced arrays actually live',
-        '# verify = "members"                # record R51 members and store digests, at list cost',
+        '# verify = "members"                # record Part 04 §5.4 members and store digests, at list cost',
         '# verify = "sha256"                 # digest every byte too: 75 s here, 88 s from S3',
     ),
 }
@@ -453,8 +453,8 @@ def _extension(args: argparse.Namespace) -> int:
     for decision in drafted.decisions:
         print(f"  {decision}")
     print(
-        "\nThe draft does not validate until every role is chosen, which is deliberate: R48 §2.2 "
-        "\nrefuses a default because a forgotten classification would look like a decision."
+        "\nThe draft does not validate until every role is chosen, which is deliberate: Part 02 §8.1 "
+        "\nadmits no default because a forgotten classification would look like a decision."
     )
     return 0
 

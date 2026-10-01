@@ -351,7 +351,7 @@ class LFPSource(Compensates):
                     "session_id": self.session_id,
                     # No `array_asset_name`: Part 02 §8.2's rule for a clock holds for an asset
                     # too -- the name is what the identifier stands for, and the numbering fills
-                    # it from exactly that where a row leaves it unset (R53 §2.5). A source's own
+                    # it from exactly that where a row leaves it unset. A source's own
                     # label here would leave the packet with no record of what the identifier
                     # was minted from, and nothing to join a row to its manifest entry by.
                     # The series name reaches the manifest entry's `uri` through `external_arrays`.
@@ -449,7 +449,7 @@ class LFPSource(Compensates):
         ]
 
     def array_channels(self) -> list[dict[str, Any]]:
-        """`core.array_channels`, one row per channel of every series (R19 §2)."""
+        """`core.array_channels`, one row per channel of every series."""
         if not self._series:
             return []
         table, columns, _ = self._electrodes()

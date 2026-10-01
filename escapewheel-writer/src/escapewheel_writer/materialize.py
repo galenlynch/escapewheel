@@ -65,7 +65,7 @@ def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) 
 
 #: Bucket width in seconds of the reference clock. The dial trades scattered-unit access
 #: against time-window access, through how many row groups fit in one bucket; 300 s was the
-#: best of 10, 60 and 300 measured. Not normative (R30 §3.3).
+#: best of 10, 60 and 300 measured. Not normative.
 BUCKET_SECONDS = 300
 
 
@@ -89,11 +89,11 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
 
 
 def _unit_clocks(packet: Any) -> NDArray[np.int64]:
-    """Each unit's `clock_id`, indexed by `unit_id` (R96 §3.3).
+    """Each unit's `clock_id`, indexed by `unit_id` (Part 02 §12.1).
 
-    A spike's tick is on its unit's clock, which `core.spike_events` carries no copy of (R96 §3.4),
+    A spike's tick is on its unit's clock, which `core.spike_events` carries no copy of,
     so the hop is one column of the far smaller `core.units`. An array rather than a mapping
-    because R81 §2.1 numbers `unit_id` densely from zero, so the lookup is an index.
+    because `unit_id` is numbered densely from zero, so the lookup is an index.
     """
     units = packet.table(CORE_UNITS)
     identifiers = units.column("unit_id").to_numpy(zero_copy_only=False)
@@ -278,7 +278,7 @@ def spike_events(
     dropped : dict of int to int, optional
         Unmappable spikes counted by the `clock_id` they were on, accumulated here since a
         generator cannot return them. Every clock a spike is on gets an entry, zero included,
-        because Part 06 §4 requires the producing run to record each.
+        because the producing run is required to record each.
 
     Yields
     ------
@@ -298,13 +298,13 @@ def spike_events(
     by_clock = anchors(packet)
     handle = packet.table_resource(CORE_SPIKE_EVENTS)
     columns = ["session_id", "unit_id", "t_tick"]
-    # `t_tick` reaches its clock by a `clock_from` hop to `core.units.clock_id` (R96 §3.3), so a
+    # `t_tick` reaches its clock by a `clock_from` hop to `core.units.clock_id`, so a
     # spike's clock is resolved through its unit rather than carried per row. Resolved once into
-    # an array indexed by `unit_id`, which R81 §2.1 numbers densely from zero: a dict lookup per
+    # an array indexed by `unit_id`, which is numbered densely from zero: a dict lookup per
     # spike would materialise a Python object for every row.
     on_clock = _unit_clocks(packet)
     # Types come from the registry rather than being spelled here. Every identifier is an
-    # `int32` (R53), four bytes a row, so nothing here needs to avoid decoding one.
+    # `int32` (Part 02 §5.3), four bytes a row, so nothing here needs to avoid decoding one.
     registry = packet.registry
     spike_spec = registry["resources"][ANALYSIS_SPIKE_EVENTS]["table"]
     out = arrow_schema(spike_spec, {*columns, "clock_id", "time_bucket_tick"})
@@ -319,12 +319,12 @@ def spike_events(
             if units.size and int(units.max()) >= on_clock.size:
                 raise NotAligned(
                     f"a spike names unit {int(units.max())}, which `core.units` does not declare, "
-                    f"so its tick reaches no clock (R96 §3.3)"
+                    f"so its tick reaches no clock"
                 )
             clocks = on_clock[units]
             timed = pa.record_batch({"t_tick": batch.column("t_tick"), "clock_id": pa.array(clocks)})
             parent, keep = mapped(timed, reference, by_clock, bound)
-            # Part 06 §4: counted per clock whether or not any are dropped. A recorded zero is
+            # Counted per clock whether or not any are dropped. A recorded zero is
             # the evidence that clock's bound was sufficient; silence is what let a reader and
             # this writer disagree about which spikes exist without either noticing.
             for clock in np.unique(clocks).tolist():
@@ -386,8 +386,8 @@ def materialize_spike_events(
     names it.
 
     `bucket_seconds` goes in `parameters` because it cannot be recovered from the data -- a
-    table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s
-    (Part 06 §5). So does each clock's count of spikes this could not place (Part 06 §4), which is
+    table whose buckets all happen to be non-empty looks the same at 300 s as at 299 s.
+    So does each clock's count of spikes this could not place (Part 06 §4), which is
     otherwise invisible: a derived table one row short looks exactly like a derived table. `memory_budget`
     and `scratch` do not: they change how the rows are produced, not which rows they are, and
     recording them would make two identical packets claim different provenance.
@@ -408,7 +408,7 @@ def materialize_spike_events(
         "processing_run_id": writer.name_apart("processing_run_id", run_id),
         "session_id": session,
         "activity_type": "materialization",
-        # R44 §2.1: session-wide, so the session is the scope. Both stay null on a
+        # Session-wide, so the session is the scope. Both stay null on a
         # multi-session packet rather than naming one of several, because a writer that
         # cannot determine a run's scope records none (Part 01 §2.6). Part 02 §8.3: the pair is set
         # together or not at all.
@@ -419,7 +419,7 @@ def materialize_spike_events(
         "parameters": {
             "bucket_seconds": bucket_seconds,
             "bound": bound,
-            # Part 06 §4. Recorded per clock and even when zero: that a bound was sufficient
+            # Recorded per clock and even when zero: that a bound was sufficient
             # is a fact about this packet, not an assumption a reader should have to make.
             "spikes_without_a_defined_mapping": None,
         },

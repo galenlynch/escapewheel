@@ -4,7 +4,7 @@
 - :class:`SyncStream` -- one stream's TTL events, and whether its timestamps were aligned.
 - :class:`RecordingStart`, :func:`read_sync_messages` -- when a record node began, and each
   stream's counter at that moment.
-- :func:`suspect_terminals` -- R37 §3.2's test of a clock's first and last anchor.
+- :func:`suspect_terminals` -- the test of a clock's first and last anchor.
 - :func:`phase_discontinuities` -- the places where the parent clock advances by more or less
   than a clock's own rate predicts.
 - :data:`ARCHIVE` -- the file whose presence marks a stream as aligned.
@@ -94,7 +94,7 @@ def read_sync_messages(path: Path, node: str) -> RecordingStart | None:
     )
 
 
-#: How many neighbours a terminal anchor is predicted from in R37 §3.2's test, and how many
+#: How many neighbours a terminal anchor is predicted from in `suspect_terminals`, and how many
 #: interior anchors the same prediction is repeated at to get the distribution it is judged
 #: against. Thirty neighbours is what R37 §3.1 measured a local rate over; six hundred
 #: positions is enough for a stable 99th percentile and costs a millisecond.
@@ -104,13 +104,13 @@ NEIGHBOURS, INTERIOR = 30, 600
 #:
 #: 400 µs sits between how far an undisturbed anchor interval's parent advance departs from the
 #: clock's own median ratio and what a known upstream discontinuity costs, with about twice the
-#: margin either way. It is well below R40's 3 ms alignment tolerance, so a packet can carry a
+#: margin either way. It is well below Part 01 §3.9's 3 ms alignment tolerance, so a packet can carry a
 #: reported discontinuity and still align within bound -- reporting is not refusing.
 DISCONTINUITY = 4e-4
 
 #: Which percentile of a clock's own interior residuals a terminal anchor must stay inside.
 #: Stated on the clock's spread rather than as a fixed tolerance because anchor quality is a
-#: property of a rig and a session, not of the format (R37 §3.2).
+#: property of a rig and a session, not of the format.
 SUSPECT_PERCENTILE = 99.0
 
 
@@ -120,7 +120,7 @@ def phase_discontinuities(
     """Find places where the parent clock's phase steps against this clock's own rate.
 
     An anchor interval should advance the parent by the interval's own length times the clock
-    ratio. Where it does not, the parent's phase moved -- and because R13's map is exact at
+    ratio. Where it does not, the parent's phase moved -- and because a clock's map is exact at
     every anchor, the map faithfully carries that step rather than smoothing it away. Nothing
     downstream can see it, so the writer says so.
 
@@ -162,7 +162,7 @@ def phase_discontinuities(
 
 
 def _predict(at: int, ticks: NDArray[np.int64], parents: NDArray[np.int64], frm: int) -> float:
-    """R37 §3.1's estimator: the fitted rate, applied from the anchor at index `frm`."""
+    """Predict a parent tick by the test's estimator: the fitted rate, applied from the anchor at index `frm`."""
     centre_t, centre_p = float(ticks.mean()), float(parents.mean())
     dt = ticks.astype(np.float64) - centre_t
     slope = float(dt @ (parents.astype(np.float64) - centre_p) / (dt @ dt))
@@ -181,8 +181,7 @@ def suspect_terminals(
     Each terminal anchor is predicted from the `neighbours` anchors on its inward side and
     the residual compared against the same one-sided residual taken at `interior` interior
     positions. A terminal anchor outside that distribution's 99th percentile is one the
-    writer has reason to believe is misplaced, and R37 §3.2 says such an anchor is not
-    written.
+    writer has reason to believe is misplaced, and such an anchor is withheld (Part 02 §12.6).
 
     The interior positions are the control that makes the test mean anything: they run the
     identical estimator where nothing is suspected, so a large residual at the end is
@@ -364,7 +363,7 @@ class SyncSource:
         #: asks must get the same instant, and the note about how far the nodes disagreed is
         #: said once.
         self._epoch: datetime | None = None
-        #: Clock ID to what R37 §3.2's test withheld from it, for the run's parameters. Every
+        #: Clock ID to what the terminal-anchor test withheld from it, for the run's parameters. Every
         #: clock aligned appears here, dropping nothing included (Part 02 §12.6).
         self.withheld: dict[str, dict[str, Any]] = {}
         #: Clock ID to phase steps found in the parent's alignment, for the run's parameters.
@@ -659,7 +658,7 @@ class SyncSource:
         Returns
         -------
         list of dict
-            Sorted by `(clock_id, anchor_index)`, as R13 §3 requires.
+            Sorted by `(clock_id, anchor_index)`, the order `core.clock_anchors` declares.
         """
         rows = []
         for stream in self.aligned():
@@ -687,7 +686,7 @@ class SyncSource:
     def pulses(self, stream: SyncStream, clock: str) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
         """One stream's usable sync pulses as `(ticks, parent ticks)`, memoized.
 
-        Memoized because reading a stream's pulses is where R37 §3.2's test runs and where the
+        Memoized because reading a stream's pulses is where the terminal-anchor test runs and where the
         observed span is recorded, and both must happen exactly once however many times a
         caller asks for the anchors. Keyed on the clock name, since that is what the caller
         varies -- a stream anchored to nothing never reaches here.
@@ -701,7 +700,7 @@ class SyncSource:
         if not ((np.diff(ticks) > 0).all() and (np.diff(parents) > 0).all()):
             raise SourceDefect(
                 f"{stream.key}: sync pulses do not increase on both clocks, so interpolation "
-                "between them is undefined (R13 §3). A counter that reset mid-recording is two "
+                "between them is undefined. A counter that reset mid-recording is two "
                 "clocks, not one (Part 01 §3.9)",
                 code=SourceFault.PULSES_UNORDERED,
                 where=stream.key,
@@ -723,7 +722,7 @@ class SyncSource:
                 Note(
                     f"{stream.key}: withheld the {' and '.join(withheld)} anchor; residual "
                     f"{residuals['first']:.0f}/{residuals['last']:.0f} parent ticks against a "
-                    f"{residuals['threshold']:.0f}-tick interior threshold (R37 §3.2)",
+                    f"{residuals['threshold']:.0f}-tick interior threshold",
                     NoteCode.ANCHOR_WITHHELD,
                 )
             )
@@ -748,7 +747,7 @@ class SyncSource:
         return ticks, parents
 
     def observation_intervals(self) -> list[dict[str, Any]]:
-        """`core.clock_observation_intervals` for the reference clock (R38 §2.1).
+        """`core.clock_observation_intervals` for the reference clock (Part 02 §12.5).
 
         The window is the span of the sync train, which is HARP-native and so needs no
         conversion: every pulse carries a HARP time, and their extent is the interval over
@@ -769,7 +768,7 @@ class SyncSource:
         ]
 
     def phase_steps(self) -> list[dict[str, Any]]:
-        """`core.clock_phase_steps`, one row per step in a clock's alignment (R99 §3.3).
+        """`core.clock_phase_steps`, one row per step in a clock's alignment (Part 02 §12.6).
 
         A step is reported and never corrected. `anchors` is what detects them, and is memoized
         on the pulses, so asking for it here costs nothing and removes the order dependence

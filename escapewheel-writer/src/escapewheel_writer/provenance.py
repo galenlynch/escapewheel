@@ -112,7 +112,7 @@ def import_run(
         "processing_run_id": f"import.{recipe.digest[:12]}",
         "session_id": recipe.session.get("session_id"),
         "activity_type": "import",
-        # R44 §2.1: an import is session-wide, and a session-wide run names the session.
+        # Part 01 §2.6: an import is session-wide, and a session-wide run names the session.
         "scope_kind": CORE_SESSIONS,
         "scope": recipe.session.get("session_id"),
         "software_name": "escapewheel-writer",

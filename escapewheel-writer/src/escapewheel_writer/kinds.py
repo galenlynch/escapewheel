@@ -37,7 +37,7 @@ def states(kind: str) -> Mapping[str, str]:
 
     Part 05 §3.4 puts the obligation on the build rather than on the adapter, so a kind whose adapter
     declares nothing is reported by `check` rather than silently treated as stating nothing --
-    which is the failure `produces` has, and which R63 §4 left open.
+    which is the failure `produces` has.
     """
     adapter = adapter_for(kind)
     stated = getattr(adapter, "STATES", None) if adapter is not None else None
@@ -64,7 +64,7 @@ def needs(kind: str) -> tuple[str, ...]:
     be constructed without are recorded, rather than a table here keyed by kind.
     """
     # The floor is what every adapter needs and no declaration can omit: a root to open and the
-    # session it is built for (Part 12 §4).
+    # session it is built for.
     adapter = adapter_for(kind)
     return tuple(getattr(adapter, "NEEDS", ("root", "session_id")) if adapter is not None else ())
 
@@ -73,7 +73,7 @@ def accepts(kind: str) -> tuple[str, ...]:
     """Return the options an adapter of this kind reads and can run without (Part 05 §3.4).
 
     Separate from `needs` because the two differ in what a recipe owes: a declared need a recipe
-    does not set is refused, so an option holding a default is declarable only here (R119 §2.1).
+    does not set is refused, so an option holding a default is declarable only here.
     """
     adapter = adapter_for(kind)
     return tuple(getattr(adapter, "ACCEPTS", ()) if adapter is not None else ())

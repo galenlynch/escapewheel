@@ -18,6 +18,6 @@ def test_a_device_is_named_by_its_schema(tmp_path):
 
 
 def test_a_prefix_reaches_the_device_id_and_its_name(tmp_path):
-    """R53 §2.5 and R85: the name is what the ID is minted from, prefix included."""
+    """Part 02 §8.2: the name is what the ID is minted from, prefix included."""
     (row,) = harp(tmp_path, prefix="A_").devices()
     assert (row["device_id"], row["device_name"]) == ("A_SniffDetector", "A_SniffDetector")

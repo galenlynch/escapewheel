@@ -24,7 +24,7 @@ def named(label, run=SHANK1):
 
 
 def keyed(rows, label, run=SHANK1):
-    """Rows for one unit, which `unit_id` alone now identifies (R81 §2.1)."""
+    """Rows for one unit, which `unit_id` alone identifies (Part 02 §12.1)."""
     return [r for r in rows if r["unit_id"] == named(label, run)]
 
 
@@ -100,7 +100,7 @@ def test_unit_index_is_resolved_through_unit_ids(source):
 
 
 def test_a_unit_name_is_unique_across_runs(source):
-    """R81 §1.2: the sorter numbers from zero in each run, so its label names two units.
+    """The sorter numbers from zero in each run, so its label names two units.
 
     Both streams carry every label in the fixture, and the packet keys on `unit_id` alone --
     which works only because what the adapter hands the writer is the run, the curation and the
@@ -179,7 +179,7 @@ def test_confidence_travels_where_the_source_reports_one(source):
 
 
 def test_the_designated_label_comes_from_the_decoder(source):
-    """R11 §3 closed the column to sua/mua/noise, which is what the decoder emits natively."""
+    """The column is closed to sua/mua/noise, which is what the decoder emits natively."""
     unit = keyed(rows_of(source, "core.units"), 0)[0]
     assert (unit["quality_label"], unit["quality_label_source"]) == ("sua", "decoder")
 
@@ -198,7 +198,7 @@ def test_each_stream_gets_its_own_clock(source):
 
 
 def test_a_clock_claims_no_epoch_and_no_alignment(source):
-    """A curated sorting records neither, and R27 §4 refuses a packet that pretends otherwise."""
+    """A curated sorting records neither, and a packet that pretends otherwise is refused."""
     for clock in rows_of(source, "core.clocks"):
         assert clock.get("tick_zero_utc") is None
         assert clock.get("transform_slope") is None
@@ -262,7 +262,7 @@ def test_batches_are_bounded_by_the_requested_size(source):
 
 
 def test_amplitudes_arrive_with_their_unit(source):
-    """R11 §2: the unit belongs to the sorting context, not the spike."""
+    """The unit belongs to the sorting context, not the spike."""
     assert rows_of(source, "core.units")[0]["amplitude_unit"] == "uV"
     assert "amplitude" in next(source.spike_batches()).schema.names
 
@@ -362,7 +362,7 @@ def test_a_sample_clock_declares_the_recording_it_counts(source):
     """The window is `[0, length - 1]`, from the analyzer's `recording_info`.
 
     It comes from the recording rather than from the spikes on purpose: a denominator taken
-    from the numerator makes every firing rate identical (R25 §3), and a unit that fired
+    from the numerator makes every firing rate identical (Part 01 §3.13.1), and a unit that fired
     nothing was still observed.
     """
     rows = source.observation_intervals()
@@ -372,7 +372,7 @@ def test_a_sample_clock_declares_the_recording_it_counts(source):
 
 
 def test_the_window_contains_every_spike_on_its_clock(source):
-    """R38 §2.5's claim, which is what makes `within_observation` worth inheriting."""
+    """The claim that makes `within_observation` worth inheriting."""
     stop = {r["clock_id"]: r["stop_tick"] for r in source.observation_intervals()}
     for row in source.units():
         clock = f"{row['sorting_run_id']}.samples"
@@ -392,7 +392,7 @@ def test_a_multi_segment_recording_declares_no_window(tmp_path):
     assert NoteCode.SEVERAL_SEGMENTS in codes(source.notes)
 
 
-# -- provenance the currency mechanism needs (R41 §2.1) ---------------------------------
+# -- provenance the currency mechanism needs --------------------------------------------
 
 
 def test_each_stream_declares_the_runs_that_made_it(source):
@@ -419,7 +419,7 @@ def test_a_sorting_and_its_curation_name_different_runs(source):
 
 
 def test_every_run_declares_its_scope(source):
-    """R44 §2.1: without it, twelve probes sorted once each look like twelve alternatives."""
+    """Without it, twelve probes sorted once each look like twelve alternatives."""
     runs = rows_of(source, "core.processing_runs")
     assert all(r.get("scope") for r in runs), "a run with no scope is undeterminable (Part 01 §2.6)"
 
@@ -447,14 +447,14 @@ def test_supersedes_is_left_unset(source):
 
 
 def test_a_run_declares_the_channels_it_used(source):
-    """R83 §2.1: the analyzer's list, in its own order, naming the contact at each position."""
+    """Part 02 §12.2: the analyzer's list, in its own order, naming the contact at each position."""
     rows = [r for r in rows_of(source, "core.sorting_run_channels") if r["sorting_run_id"] == SHANK1]
     assert [r["channel_index"] for r in rows] == [0, 1, 2, 3]
     assert [r["electrode_id"] for r in rows] == [f"50720-1.{c}" for c in sorterfixture.CHANNEL_IDS]
 
 
 def test_a_channel_index_is_not_a_contact_position(source):
-    """R83 §1.1's whole point, in four rows: `CH2` was dropped, so index 2 is `CH3`."""
+    """The table's whole point, in four rows: `CH2` was dropped, so index 2 is `CH3`."""
     rows = [r for r in rows_of(source, "core.sorting_run_channels") if r["sorting_run_id"] == SHANK1]
     at = {r["channel_index"]: r["electrode_id"] for r in rows}
     assert at[2] == "50720-1.CH3"

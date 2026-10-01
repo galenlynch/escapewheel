@@ -61,7 +61,7 @@ def zarr_array(path: Path, values) -> Path:
 N_SAMPLES = (100,)
 
 #: What the analyzer says it ran on: four contacts of a five-contact probe, `CH2` dropped, so a
-#: channel index and a contact position part company at index 2 (R83 §1.1).
+#: channel index and a contact position part company at index 2.
 CHANNEL_IDS = ("CH0", "CH1", "CH3", "CH4")
 
 
@@ -139,7 +139,7 @@ def stream(
         (zarr / ".zgroup").write_text(json.dumps({"zarr_format": 2}))
         (zarr / ".zattrs").write_text(json.dumps({"settings": {"return_in_uV": return_in_uv}}))
         # `recording_info` lives only in the consolidated metadata, as SpikeInterface writes
-        # it, and carries the recording length R38 2.3 makes a sample clock's window.
+        # it, and carries the recording length that is a sample clock's window.
         recording = {"recording_attributes": {"sampling_frequency": 30000.0}}
         if n_samples is not None:
             recording["recording_attributes"]["num_samples"] = list(n_samples)

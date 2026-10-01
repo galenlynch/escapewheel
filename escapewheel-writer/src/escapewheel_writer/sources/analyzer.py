@@ -128,7 +128,7 @@ def channel_ids(curated: Path, stream: SortedStream) -> list[str] | None:
 
 
 def amplitude_unit(curated: Path, stream: SortedStream, notes: list[str]) -> str | None:
-    """`uV` or `{adc}`, from the analyzer's own setting (R11 §2).
+    """`uV` or `{adc}`, from the analyzer's own setting.
 
     Null when no analyzer is present, which is also when no amplitudes are emitted --
     `amplitude_unit_declared` binds only where amplitudes exist.

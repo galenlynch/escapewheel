@@ -48,8 +48,8 @@ MANUAL_CATEGORY = "quality"
 CONFIDENCE = {"decoder": "decoder_probability", "unitrefine": "unitrefine_probability"}
 
 #: Which source fills `core.units.quality_label`. The decoder emits `sua`/`mua`/`noise`
-#: natively, which is the vocabulary R11 §3 closed the column to and the reason it chose
-#: `sua` over the more common `good`.
+#: natively, which is the vocabulary the column is closed to: `sua`, where `good` is the more
+#: common word.
 DESIGNATED = "decoder"
 
 

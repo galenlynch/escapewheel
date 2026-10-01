@@ -102,7 +102,7 @@ def _source(root, **kwargs):
 
 
 def test_the_time_axis_is_ticks_on_the_probes_own_clock(nwb):
-    """R20: three integers replace 7,983,750 float64 timestamps, and 24 is derived not assumed."""
+    """Part 03 §6.3: three integers replace 7,983,750 float64 timestamps, and 24 is derived not assumed."""
     axis = _source(nwb).records()["core.array_dimensions"][0]
     assert axis["clock_id"] == CLOCK
     assert (axis["origin_tick"], axis["step_tick_num"], axis["step_tick_den"]) == (0, 24, 1)

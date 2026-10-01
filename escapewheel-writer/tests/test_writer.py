@@ -24,7 +24,7 @@ def test_constructor_rejects_a_nonvalid_registry_with_the_complete_result():
 
 
 def test_stamp_sets_columns_on_rows_already_added(registry, minimal):
-    """R99 §3.2: the fact arrives after the row it belongs on is staged."""
+    """The fact arrives after the row it belongs on is staged."""
     writer = PacketWriter(registry, packet_id="s001")
     for resource_id, records in minimal.items():
         writer.add(resource_id, records)
@@ -129,14 +129,14 @@ def test_tables_are_written_in_the_registry_order(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     commit_tables(root, registry, {**minimal, "core.subjects": out_of_order + minimal["core.subjects"]})
     written = open_packet(root).table("core.subjects")
-    # R53 §2.1: the key is the number. Numbers are assigned in name order, so a packet does not
+    # The key is the number. Numbers are assigned in name order, so a packet does not
     # depend on the order an adapter emitted in, and the names come back in the order they name.
     assert written.column("subject_id").to_pylist() == [0, 1, 2, 3]
     assert written.column("subject_name").to_pylist() == ["m001", "m002", "m003", "m004"]
 
 
 def test_a_packet_without_sessions_is_refused(tmp_path, registry):
-    """R1 §6: the manifest's session inventory may not be empty."""
+    """Part 04 §3: the manifest's session inventory may not be empty."""
     writer = PacketWriter(registry, packet_id="p")
     writer.add("core.subjects", [{"subject_id": "m001", "species": "Mus musculus", "sex": "male"}])
     with pytest.raises(UsageError) as refused:

@@ -15,7 +15,7 @@ from escapewheel_writer.errors import (
 )
 from tests.builders import commit_tables, import_runs
 
-# -- amending a committed packet (R32) --------------------------------------------------
+# -- amending a committed packet --------------------------------------------------------
 
 
 def _amend(root, registry, tables, **kwargs):

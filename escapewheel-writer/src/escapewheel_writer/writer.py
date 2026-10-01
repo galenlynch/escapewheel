@@ -147,7 +147,7 @@ class PacketWriter:
         #: The staging area `stage_at` prepared, which `commit` keeps rather than clearing.
         self._prepared: Path | None = None
         #: The packet version this writer amends, whose numbers seed `keys` and against whose rows
-        #: every table settles (Part 05 §4.3), or None for a new packet.
+        #: every table settles, or None for a new packet.
         self._held: Held | None = None
         #: For an amendment, the packet root and the new version, which name a file that would
         #: otherwise overwrite one the packet holds (Part 03 §9).
@@ -244,8 +244,8 @@ class PacketWriter:
         """Fill `session_id` on a session-scoped table's rows that omit it (Part 02 §7.1).
 
         Filled centrally rather than in each of the eight adapters, because the value is the
-        session this build is for: Part 02 §7.1 puts it in the adapter the build constructed, and
-        that is one value here. It is not inferred from a name, which Part 02 §7.1 forbids and
+        session this build is for: that section puts it in the adapter the build constructed, and
+        that is one value here. It is not inferred from a name, which it forbids and
         Part 01 §3.5 forbids a consumer for the same reason.
 
         Only where the packet holds one session, so a multi-session build cannot be stamped with
@@ -283,11 +283,11 @@ class PacketWriter:
     def stamp(self, resource_id: str, match: str, values: Mapping[Any, Mapping[str, Any]]) -> int:
         """Set columns on rows already added, matched on one column's value.
 
-        Named `stamp` rather than `amend` because :meth:`amend` is R32's packet amendment, which
+        Named `stamp` rather than `amend` because :meth:`amend` is Part 05 §15.1's packet amendment, which
         is a different operation on a different thing.
 
-        R99 §3.2 is why this exists. The sync source learns which of a clock's terminal anchors
-        it withheld only by reading that clock's pulses, and the sync adapter's `CONSUMES` runs the sorter
+        Part 02 §12.6's terminal-anchor record is why this exists. The sync source learns which of a
+        clock's terminal anchors it withheld only by reading that clock's pulses, and its `CONSUMES` runs the sorter
         first because the sync source needs the sorter's clocks to know which streams to anchor
         at all -- so the row the fact belongs on is already here when the fact becomes known.
 
@@ -335,7 +335,7 @@ class PacketWriter:
         The caller MUST yield batches already in the registry's declared sort order, since
         nothing here reorders them -- that is the point. Disorder is not silently accepted:
         the validator's physical-order check reads the staged file before the commit
-        completes, which is where R12 §4 puts it.
+        completes (Part 05 §5.3).
 
         Parameters
         ----------
@@ -768,12 +768,12 @@ class PacketWriter:
         root = Path(root)
         act_on_promotion(root)
         refuse_occupied(root)
-        # R1 §6 makes the session inventory part of the manifest and the schema requires it
+        # Part 04 §3 makes the session inventory part of the manifest and the schema requires it
         # non-empty. Refusing here beats letting the staged manifest fail its own schema,
         # which surfaces as an unhelpful error from a directory the caller never named.
         if not self._tables.get(CORE_SESSIONS):
             raise UsageError(
-                "a packet declares at least one session; core.sessions is empty (R1 §6)", code=UsageFault.NO_SESSION
+                "a packet declares at least one session; core.sessions is empty", code=UsageFault.NO_SESSION
             )
 
         # Before anything is written, since binding needs only the rows and refuses outright.
@@ -795,7 +795,7 @@ class PacketWriter:
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
         # Part 03 §5.5's rules are good guesses, and a column one guesses wrong
         # about is said aloud rather than silently paid for. A report, not a refusal: every
-        # encoding is permitted (Part 03 §5.5), so the packet is conforming whichever it got.
+        # encoding is permitted, so the packet is conforming whichever it got.
         for note in sorted(set(self._encoding_notes)):
             say(f"  encoding: {note}")
         for report in self._after_stage:
@@ -836,7 +836,7 @@ class PacketWriter:
             clock = time.perf_counter()
         # Scan the order of everything except what `write_stream` compared on the way in.
         # Not a shortcut around the check: the same comparison ran, over the same rows, from
-        # the same code, one step earlier (R12 §4 still governs where it lives).
+        # the same code, one step earlier.
         staged = {e["resource_id"] for e in entries}
         report = validate(open_packet(staging), limits=limits, scan=staged - self._ordered)
         say(f"validated in {time.perf_counter() - clock:.1f} s")

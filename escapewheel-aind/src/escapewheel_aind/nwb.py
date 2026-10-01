@@ -46,13 +46,13 @@ class AindNWBSource(NWBSource):
     """
 
     #: Two frames rather than one. `rel_x` and `rel_y` are core 2.9.0's; the CCF triple is this
-    #: pipeline's, and R59 §1 measured two of its exporters disagreeing about which names to use.
+    #: pipeline's, and two of its exporters disagree about which names to use.
     FRAME_AXES: ClassVar[dict[str, tuple[str, ...]]] = {
         "probe": ("rel_x", "rel_y"),
         "ccf": CCF_AXES,
     }
 
-    #: R64 §1.3: the basis travels with the columns a value comes from rather than with the frame's
+    #: Part 01 §3.8: the basis travels with the columns a value comes from rather than with the frame's
     #: name. A shank position is true by construction; a CCF triple is what a registration found.
     FRAME_BASIS: ClassVar[dict[str, str]] = {"probe": "nominal", "ccf": "measured"}
 
@@ -72,7 +72,7 @@ class AindNWBSource(NWBSource):
     }
 
     #: `animal_response` and the reward histories are named although core declares no column for
-    #: them (R54 §2.3): naming them is what keeps them out of `core.intervals.metadata` rather than
+    #: them: naming them is what keeps them out of `core.intervals.metadata` rather than
     #: swept in as unmapped, since they belong to the task's own extension.
     TRIAL_MAPPED: ClassVar[frozenset[str]] = frozenset(
         {
@@ -93,7 +93,7 @@ class AindNWBSource(NWBSource):
     CARRIED_ELECTRODE: ClassVar[tuple[str, ...]] = ("ccf_name", "ccf_structure_id_path")
 
     #: Where an exporter puts the atlas structure id. The two spellings are one fact from two
-    #: versions of one pipeline (R59 §1).
+    #: versions of one pipeline.
     REGION_ID: ClassVar[tuple[str, ...]] = ("brain_region_id", "ccf_id")
     #: Where it puts the label. `location` is core NWB's; `ccf_acronym` is this pipeline's.
     REGION_LABEL: ClassVar[tuple[str, ...]] = ("ccf_acronym", "location")
@@ -148,7 +148,7 @@ class AindNWBSource(NWBSource):
         return self.prefix + matched["device"] if matched else None
 
     def annotation(self, columns: Mapping[str, Any], index: int, frame: str) -> dict[str, Any]:
-        """Return the atlas annotation for one coordinate row (R59 §2.1).
+        """Return the atlas annotation for one coordinate row (Part 01 §3.8).
 
         Only an atlas frame carries one, the frame being the space the structure id is numbered in
         (Part 01 §3.24), so a probe-relative position gets nothing.
@@ -170,7 +170,7 @@ class AindNWBSource(NWBSource):
         """Return NWB unit rows paired with the identity the build assigned them, in row order.
 
         The join is `(device_name, ks_unit_id)`: the probe plus the sorter's own label, which this
-        file carries because it was derived from the sorting. A run is one probe (R83) and runs
+        file carries because it was derived from the sorting. A run is one probe and runs
         reuse labels, so the probe is what makes the pair unique.
 
         The key uses the file's own `device_name`, unprefixed, because it names a probe as *this

@@ -307,7 +307,7 @@ def fetch(
     missing = [resource for resource in wanted if resource not in tables]
     if missing:
         # Reported together rather than one at a time: what a person wants is which resources did
-        # not arrive, not which one did not arrive first (Part 05 §4.4).
+        # not arrive, not which one did not arrive first.
         failures.append(
             SourceDefect(
                 f"{len(missing)} resource(s) never arrived: {', '.join(missing)}",

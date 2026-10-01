@@ -69,7 +69,7 @@ def _normalized(value: Any, declared_type: str | None) -> Any:
     """Reduce a value to the type the packet stores it as, so two spellings compare equal.
 
     A `session.json` may state a subject as a number where a recipe declares it as a string, and
-    an NWB states a date of birth as a timestamp where R4 §3.3 makes the column a calendar date.
+    an NWB states a date of birth as a timestamp where the column is a calendar date.
     Comparing what was written would refuse both. A wall clock is the same problem
     with more spellings -- `Z` against `+00:00`, and a `T` against the space `str` puts there -- so
     it is compared as the instant it names rather than as the text either side wrote.
@@ -119,7 +119,7 @@ def compare_declared_facts(spec: SourceSpec, source: SourceAdapter, context: Con
         want = declared[fact]
         reason = recipe.overrides.get(fact)
         if stated is None:
-            # Part 05 §3.6: silence is a fact about the source, not a disagreement -- but it is
+            # Silence is a fact about the source, not a disagreement -- but it is
             # reported, so a build log tells a verified fact from an asserted one.
             notes.append(Note(f"{fact} {want!r} went unchecked; {spec.kind} states none", NoteCode.FACT_UNCHECKED))
             continue
@@ -187,17 +187,17 @@ def compare_held_facts(
 def refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Recipe) -> None:
     """Refuse where preferring a source discarded a value another source stated (Part 05 §3.4).
 
-    Part 05 §3.4 spends a preference to buy silence about a discarded row, on the premise that the
+    That section spends a preference to buy silence about a discarded row, on the premise that the
     loser's copy is redundant. A preference is declared before either source is opened, so nothing
     checked the premise: one naming a source that turns out to state less, or nothing at all, buys
     the same silence and loses the difference. A preferred source producing no rows while another
     does is the limiting case, every value being discarded.
 
     Compared over declared columns. `metadata` is schemaless by design (Part 02 §8.6), so two sources
-    filling it differently is not a difference this can weigh, and Part 02 §8.6 already binds it.
+    filling it differently is not a difference this can weigh, and that section already binds it.
 
-    A build refuses rather than composing the row from both, which would be a fact no source stated
-    (Part 05 §3.4). The recipe resolves it: name the fact in `[overrides]` with its reason (Part 05 §3.6),
+    A build refuses rather than composing the row from both, which would be a fact no source stated.
+    The recipe resolves it: name the fact in `[overrides]` with its reason (Part 05 §3.6),
     prefer the other source, or fix the one that states less.
     """
     kinds = {spec.kind for spec in recipe.sources}

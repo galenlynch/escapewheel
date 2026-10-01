@@ -26,11 +26,11 @@ from .store import source_root
 SETTINGS = "settings.xml"
 
 #: Each element of the chain: how its identity is formed, which attributes describe it, what it
-#: hangs off (Part 01 §3.5), and which attribute names the coordinate it hangs off at (R85 §2.1). A
+#: hangs off (Part 01 §3.5), and which attribute names the coordinate it hangs off at. A
 #: basestation is the root -- the PXI chassis it sits in is not described by this file, and
 #: inventing a device for it would assert something unmeasured. A connect board has a parent and
 #: no coordinate: `slot` identifies the basestation and the board alike, so the file states no
-#: place on the one where the other sits, and R85 §2.1 wants that left null rather than invented.
+#: place on the one where the other sits, and that is left null rather than invented.
 CHAIN = (
     (
         "basestation",
@@ -160,10 +160,10 @@ class OpenEphysSource:
                     "firmware_version": _stated(probe.get(firmware)) if firmware else None,
                     "hardware_version": _stated(probe.get(hardware)),
                     "serial_number": _stated(probe.get(serial)),
-                    # Part 01 §3.5: each element names the one below it in the chain. A basestation
+                    # Each element names the one below it in the chain. A basestation
                     # is the root here, because nothing in this file describes the PXI chassis.
                     "parent_device_id": self.prefix + _identity(parent, probe) if parent else None,
-                    # R85 §2.1: and where the file coordinates that link, which port of it.
+                    # And where the file coordinates that link, which port of it.
                     "parent_port": probe.get(port) if port else None,
                     # Part 02 §8.6: what the key states and no column holds. `port` is excluded
                     # because `parent_port` above is the column that holds it.
@@ -176,8 +176,8 @@ class OpenEphysSource:
 
         `custom_probe_name` is what Open Ephys calls the probe and what the NWB names its
         Device, so the two join without going through a serial number -- which matters for a
-        quad-base probe, where one serial covers four stream names (R67 §1.2). The dock is the
-        probe's `parent_port` (R85 §2.1), and it does not distinguish those four: all four bases
+        quad-base probe, where one serial covers four stream names. The dock is the
+        probe's `parent_port`, and it does not distinguish those four: all four bases
         report one dock, which is why Part 01 §3.5 keeps a port out of identity.
         """
         return {

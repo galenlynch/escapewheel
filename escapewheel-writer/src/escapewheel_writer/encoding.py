@@ -126,7 +126,7 @@ def leading_identifier(spec: Mapping[str, Any], keys: list[str]) -> str | None:
 
     A table is sorted by its key (Part 03 §5.3), so the first key column ascends and every later one
     only ascends *within* the group above it. `session_id` is skipped because a packet holds one
-    session (R1), which makes it constant rather than ascending.
+    session, which makes it constant rather than ascending.
     """
     roles = {c["name"]: c.get("role") for c in spec.get("columns", ())}
     for name in keys:

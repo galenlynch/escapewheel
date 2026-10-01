@@ -138,7 +138,7 @@ def prune(
         A committed packet.
     keep_versions, keep_days : optional
         Override the packet's declared retention. Both are floors: a manifest is expired only
-        where both permit it (Part 05 §15.5).
+        where both permit it.
     apply : bool, default False
         Remove. The default reports.
 
@@ -225,7 +225,7 @@ def prune(
     )
     if not apply:
         return plan
-    for path in plan.orphans:  # Part 05 §15.5: orphans before the manifests that identify them
+    for path in plan.orphans:  # orphans before the manifests that identify them
         path.unlink(missing_ok=True)
     for path in plan.expired:
         path.unlink(missing_ok=True)

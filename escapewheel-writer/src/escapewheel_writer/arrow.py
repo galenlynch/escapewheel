@@ -133,7 +133,7 @@ def _bounded(low: int, high: int, kind: str) -> Any:
     truncates each element silently. A wrapped identifier is a *valid* `int32` -- it satisfies
     not-null, it satisfies uniqueness unless it happens to collide, and its foreign key resolves
     if the wrapped value happens to name a row -- so no rule in the registry can see it, and by
-    the time the rules run the evidence is gone (R12 §4's class of defect).
+    the time the rules run the evidence is gone.
     """
 
     def check(value: Any, column: str) -> Any:
@@ -147,7 +147,7 @@ def _bounded(low: int, high: int, kind: str) -> Any:
             raise OutOfRange(
                 f"{column}: {number} does not fit {kind}; Part 02 §5.3 refuses the write rather than "
                 f"wrapping. Declare the wider type (Part 02 §5.3) or assign an identifier and record "
-                f"the source's own value as its name (R53 §2.3.1)"
+                f"the source's own value as its name (Part 02 §8.2)"
             )
         return value
 
@@ -226,7 +226,7 @@ def sort_key(resource: str, spec: Mapping[str, Any]) -> list[str] | None:
 
 
 def _is_string_carried_identifier(column: Mapping[str, Any]) -> bool:
-    """Return whether R128's catalog binding is the string identifier exception."""
+    """Return whether the column is the catalog binding's string identifier (Part 02 §2.6)."""
     return (
         column["name"] == "resource_id"
         and column.get("role") == "identifier"
@@ -252,7 +252,7 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paire
     remembers. A **carried** one is already the source's own number and is only coerced. Where
     the table owns an assigned identifier -- it is in the primary key and is not exported through
     a reference -- the matching `*_name` is filled in with the name that was mapped, which is
-    what R53 §2.3.1 requires and what nothing else could supply by the time the row is written.
+    what Part 02 §8.2 requires and what nothing else could supply by the time the row is written.
     An identifier paired value in `paired` is numbered in the map its row's kind names, since it
     holds the key of whichever resource that is.
     """
@@ -298,7 +298,7 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paire
                     row[name] = int(value)
                 except (TypeError, ValueError):
                     raise CarriedNotAnInteger(
-                        f"{name} is a carried identifier (R53 §2.3), so it holds the source's own "
+                        f"{name} is a carried identifier, so it holds the source's own "
                         f"number -- but this row carries {value!r}. Either the source supplies an "
                         f"integer and the adapter is composing a string from it, or the column is "
                         f"assigned rather than carried and the registry says otherwise."
@@ -351,7 +351,7 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
     expanding it to compare row by row would cost a million Python strings a batch.
 
     A batch cannot supply a `*_name`: it has no room for a column the caller did not yield, and
-    the table it streams is a fact table, which R53 §2.3.1 does not ask one of.
+    the table it streams is a fact table, which owns no identifier a name pairs with.
     """
     columns = dict(zip(batch.schema.names, batch.columns, strict=True))
     target = {
@@ -402,7 +402,7 @@ def build_table(
     records : sequence of Mapping
         The rows, in any order.
     keys : Keys, optional
-        Assigns the integers identifier columns hold (R53). Absent, identifiers are left as
+        Assigns the integers identifier columns hold. Absent, identifiers are left as
         given -- which only a caller building a table with no identifier in it can want.
     paired : Mapping, optional
         For each identifier paired value, the map its row's kind numbers it in (see `number`).

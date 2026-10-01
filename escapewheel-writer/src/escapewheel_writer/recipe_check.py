@@ -209,7 +209,7 @@ def _states_problems(recipe: Recipe) -> list[_Found]:
     """Adapters a build cannot ask which recipe fields they state (Part 05 §3.4).
 
     Refused rather than defaulted: an adapter that declares nothing would otherwise read as
-    one that states nothing, which is the failure R63 §4 records for `PRODUCES`.
+    one that states nothing, which is the failure `PRODUCES` has.
     """
     problems: list[_Found] = []
     for spec in sorted(recipe.sources, key=lambda s: s.kind):
@@ -532,7 +532,7 @@ def _option_problems(recipe: Recipe) -> list[_Found]:
     a recipe's business, so only the names that fall through to the recipe's options are
     reported here. An option the adapter names nowhere is the converse: the recipe states
     something about the packet that never reaches the source, and its author's next evidence
-    would be its absence from the output (Part 12 §4).
+    would be its absence from the output.
     """
     problems: list[_Found] = [
         _Found(RecipeFault.OPTION_UNSET, f"source {spec.kind} requires {name!r}, which this entry does not set")

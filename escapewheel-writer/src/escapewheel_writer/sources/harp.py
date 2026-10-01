@@ -120,7 +120,7 @@ class HarpSource:
                 "hardware_version": _clean(declared.get("hardwareTargets")),
                 "serial_number": None,
                 # whoAmI is on `model`; what remains is nothing, so the column stays empty rather
-                # than restating what two typed columns now carry (R66 §1.2).
+                # than restating what two typed columns carry.
                 "metadata": None,
             }
         return [rows[name] for name in sorted(rows)]

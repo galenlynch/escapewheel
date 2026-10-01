@@ -19,7 +19,7 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from escapewheel_validator import registry_meta_schema
 
-#: R2 §4's vocabulary, keyed by what pyarrow reports. A type outside this is a defect in the
+#: Part 02 §5.1's types, keyed by what pyarrow reports. A type outside this is a defect in the
 #: source rather than a gap here: Part 02 §5.2 bans nested types so a native reader stays viable.
 ARROW_TO_REGISTRY = {
     "string": "string",
@@ -37,7 +37,7 @@ ARROW_TO_REGISTRY = {
     "date32[day]": "date",
 }
 
-#: What a name suggests, which is a hint and not an answer (R48 §3), so every application of it
+#: What a name suggests, which is a hint and not an answer, so every application of it
 #: is reported.
 NAME_HINTS = (("_tick", "coordinate"), ("_index", "structural_index"), ("_id", "identifier"))
 
@@ -75,7 +75,7 @@ def _column(table: pa.Table, name: str, resource: str, decisions: list[str]) -> 
     field_ = table.schema.field(name)
     declared = _registry_type(field_.type)
     if declared is None:
-        decisions.append(f"{resource}.{name}: {field_.type} is outside R2 §4's vocabulary; map it by hand")
+        decisions.append(f"{resource}.{name}: {field_.type} is outside Part 02 §5.1's types; map it by hand")
         declared = "string"
     entry: dict[str, Any] = {
         "name": name,
@@ -104,15 +104,15 @@ def _column(table: pa.Table, name: str, resource: str, decisions: list[str]) -> 
             f"{resource}.{name}: needs a vocabulary, closed with an enum, open, or free, unless its role is "
             f"discriminator (Part 02 §9.3); this data holds {len(distinct)} distinct value(s){listed}"
         )
-    # No role is written, deliberately. R48 §2.2 refuses a default because a forgotten
+    # No role is written, deliberately. Part 02 §8.1 admits no default because a forgotten
     # classification would look deliberate, and a *generated* file is where a forgotten one
     # hides best: a draft that validated is a draft nobody finishes. So the hint is reported and
     # the document stays invalid until a human supplies the answer.
     hint = next((role for suffix, role in NAME_HINTS if name.endswith(suffix)), None)
     decisions.append(
         f"{resource}.{name}: needs a role"
-        + (f" — the name suggests {hint!r}, which R48 §3 measured is a hint and not an answer" if hint else "")
-        + ("; then `identity`, carried or assigned (R53 §2.3)" if hint == "identifier" else "")
+        + (f" — the name suggests {hint!r}, which is a hint and not an answer" if hint else "")
+        + ("; then `identity`, carried or assigned (Part 02 §8.2)" if hint == "identifier" else "")
     )
     decisions.append(f"{resource}.{name}: needs a description")
     return entry
@@ -140,7 +140,7 @@ def draft(
         table = pq.read_table(path)
         drafted[resource] = {
             "columns": [_column(table, column, resource, decisions) for column in table.column_names],
-            # R7: every table declares a key or explicitly null with a reason. Neither is
+            # Every table declares a key or explicitly null with a reason. Neither is
             # guessable -- a column unique in one session need not be unique in the next.
             "primary_key": None,
             # Part 09 §6.1 lets an extension reference core, and Part 02 §8.3 needs it to where a
@@ -151,7 +151,7 @@ def draft(
             # declared; which columns group its rows is the author's to say.
             "amendment_groups": [],
         }
-        decisions.append(f"{resource}: primary_key is null; declare it or say why not (R7)")
+        decisions.append(f"{resource}: primary_key is null; declare it or say why not")
         decisions.append(f"{resource}: no references; an extension may reference core (Part 09 §6.1)")
         decisions.append(
             f"{resource}: amendment_groups is empty; declare the groups an amendment may add (Part 02 §2.8)"
