@@ -40,8 +40,18 @@ Generated checks and physical order
    generate
    Check
    verify_order
-   OrderViolation
    manifest_schema
+
+Errors
+------
+
+.. autosummary::
+   :toctree: generated
+
+   ValidatorError
+   StoreUnreachable
+   ResourceMissing
+   OrderViolation
 
 Modules
 -------

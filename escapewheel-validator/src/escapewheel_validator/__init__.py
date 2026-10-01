@@ -3,7 +3,8 @@
 :func:`validate` takes a packet opened by `escapewheel_reader` and returns a :class:`Report` of
 findings and verdicts; ``escapewheel validate`` is the same call from the command line.
 :func:`check_packet_manifest` runs the manifest phases alone, and :func:`check_registry_context`
-checks a registry document with no packet in hand.
+checks a registry document with no packet in hand. Every error the package raises on purpose is a
+:class:`ValidatorError`.
 
 Its modules:
 
@@ -30,7 +31,7 @@ not.
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .errors import OrderViolation
+from .errors import OrderViolation, ResourceMissing, StoreUnreachable, ValidatorError
 from .generate import Check, generate
 from .manifest import manifest_schema
 from .registry_document import (
@@ -65,6 +66,9 @@ __all__ = [
     "RegistryRejected",
     "RegistryResult",
     "Report",
+    "ResourceMissing",
+    "StoreUnreachable",
+    "ValidatorError",
     "__version__",
     "check_packet_manifest",
     "check_registry_context",
