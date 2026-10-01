@@ -84,7 +84,9 @@ directory named by its `core.array_assets` row's `resource_id`, which is all the
 — so that row must carry the `resource_id`. A referenced array is not copied; the adapter returns
 its resource declaration. An adapter never chooses final packet paths or commits resources.
 
-`escapewheel_writer.protocols` states what a build asks of an adapter. Every adapter satisfies
+`escapewheel_writer.adapter` holds every name an adapter in another distribution imports from this
+package, and nothing else here is its to import. Its protocols state what a build asks of an
+adapter. Every adapter satisfies
 `SourceAdapter`: `records`, `offers`, `notes` and the class's declaration. Each thing only some
 adapters have is one capability protocol, which a build tests for and an adapter satisfies by
 having its members: `Streams`, `StagesArrays`, `ReferencesArrays`, `ReferencesMedia`,
