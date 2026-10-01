@@ -6,11 +6,12 @@ import ast
 from pathlib import Path
 
 import pytest
+from adapter_columns import emitted
 from escapewheel_writer.adapter import codes
 
 import escapewheel_aind
 from escapewheel_aind.notes import AindNote
-from tests.test_adapter_columns import BUILDERS, emitted
+from tests.test_adapter_columns import BUILDERS
 
 NOTING = sorted(Path(escapewheel_aind.__file__).parent.glob("*.py"))
 

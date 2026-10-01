@@ -11,12 +11,13 @@ import sys
 from importlib.metadata import entry_points
 
 import pytest
+from adapter_columns import emitted
 from escapewheel_writer.adapter import SOURCE_GROUP, SourceDefect, SourceFault
 
 from escapewheel_aind.errors import AindFault
 from escapewheel_aind.unit_qc import UnitQCSource
 from tests import nwbfixture
-from tests.test_adapter_columns import BUILDERS, emitted
+from tests.test_adapter_columns import BUILDERS
 from tests.test_unit_qc import UNITS, nwb_units
 
 ANALYZER = "sorted/postprocessed/experiment1_Record Node 109#Neuropix-PXI-100.A_recording1.zarr"

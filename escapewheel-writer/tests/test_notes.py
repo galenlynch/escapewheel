@@ -9,10 +9,11 @@ import pickle
 from pathlib import Path
 
 import pytest
+from adapter_columns import emitted
 
 import escapewheel_writer
 from escapewheel_writer.notes import Note, NoteCode, coded, codes
-from tests.test_adapter_columns import BUILDERS, emitted
+from tests.test_adapter_columns import BUILDERS
 
 PACKAGE = Path(escapewheel_writer.__file__).parent
 

@@ -87,7 +87,7 @@ core = "sysmon"
 [tool.pytest.ini_options]
 addopts = "--strict-markers --tb=short --cov=src --cov-report=term-missing --cov-fail-under=0"
 testpaths = ["tests"]
-# The NWB fixture this suite shares with the other package's.
+# The fixtures this suite shares with the other package's.
 pythonpath = ["../fixtures/shared"]
 
 [tool.interrogate]

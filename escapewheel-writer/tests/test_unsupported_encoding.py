@@ -11,11 +11,12 @@ import sys
 
 import nwbfixture
 import pytest
+from adapter_columns import emitted
 
 from escapewheel_writer.errors import SourceDefect, SourceFault, UnsupportedEncoding
 from escapewheel_writer.sources import ADAPTERS
 from tests import sorterfixture
-from tests.test_adapter_columns import BUILDERS, emitted
+from tests.test_adapter_columns import BUILDERS
 from tests.test_waveforms import STREAM
 
 #: The arrays each kind needs and its fixture holds, relative to the fixture's root; none for a

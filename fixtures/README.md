@@ -250,6 +250,8 @@ the rows for them. A suite states its columns in its own `tests/conftest.py`.
 `shared/nwbfixture.py` writes the miniature NWB-Zarr file the writer's and aind's suites read, and
 the helpers that write a Zarr v2 group or array. It holds what core NWB declares; aind's
 `tests/nwbfixture.py` adds its producer's columns over that file with the same helpers.
+`shared/adapter_columns.py` lists the columns an adapter hands a build and which of them no
+registry in the tree declares, and each of those two suites runs its own adapters through it.
 
 Each of the four suites reaches `shared/` through `pythonpath` in its pytest configuration, so a
 suite runs from a checkout of the monorepo and not from its package alone.

@@ -8,7 +8,6 @@ column is resolved against core or the extension registry owning the resource's 
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -17,6 +16,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import nwbfixture
 import pytest
+from adapter_columns import emitted, undeclared
 
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
 from escapewheel_writer.sources import ADAPTERS
@@ -28,58 +28,11 @@ from escapewheel_writer.sources.sorter import SorterSource
 from escapewheel_writer.sources.sync import SyncSource
 from escapewheel_writer.sources.waveforms import WaveformSource
 from tests import sorterfixture, syncfixture
-from tests.conftest import REGISTRY
 from tests.test_harp_source import SCHEMA as HARP_SCHEMA
 from tests.test_lfp import CLOCK_ROW, _contacts, _series
 from tests.test_openephys_source import SETTINGS
 from tests.test_sync_source import FIRST_SAMPLES, PROBE_CLOCKS
 from tests.test_waveforms import build as analyzer
-
-EXTENSIONS = {
-    document["extension_id"]: document
-    for document in (
-        json.loads(path.read_text())
-        for directory in ("extensions", "escapewheel-aind/extensions")
-        for path in sorted((Path(__file__).resolve().parents[2] / directory).glob("*.json"))
-    )
-}
-
-
-def declared(resource_id: str) -> set[str] | None:
-    """Columns core or the resource's own extension declares for a table, or None if neither does."""
-    namespace = resource_id.split(".", 1)[0]
-    document = REGISTRY if resource_id in REGISTRY["resources"] else EXTENSIONS.get(namespace)
-    declaration = (document or {}).get("resources", {}).get(resource_id)
-    if declaration is None or declaration.get("kind") != "table":
-        return None
-    return {column["name"] for column in declaration["table"]["columns"]}
-
-
-def emitted(source: Any) -> dict[str, set[str]]:
-    """Every column a source hands a build, by resource, over each path the build stages from."""
-    found: dict[str, set[str]] = {}
-    for resource_id, rows in source.records().items():
-        found.setdefault(resource_id, set()).update(key for row in rows for key in row)
-    for resource_id, batches in getattr(source, "batches", dict)().items():
-        for batch in batches:
-            found.setdefault(resource_id, set()).update(batch.schema.names)
-    if hasattr(source, "spike_batches"):
-        for batch in source.spike_batches(batch_rows=4):
-            found.setdefault("core.spike_events", set()).update(batch.schema.names)
-    return found
-
-
-def undeclared(source: Any) -> dict[str, list[str]]:
-    """What of `emitted` no registry declares: a whole resource as `['*']`, else its stray columns."""
-    wrong = {}
-    for resource_id, columns in emitted(source).items():
-        known = declared(resource_id)
-        if known is None:
-            wrong[resource_id] = ["*"]
-        elif extra := sorted(columns - known):
-            wrong[resource_id] = extra
-    return wrong
-
 
 # -- one fixture per kind ----------------------------------------------------------------
 

@@ -8,7 +8,6 @@ extension registry owning the resource's namespace.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -17,6 +16,7 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pytest
+from adapter_columns import emitted, undeclared
 from escapewheel_writer.adapter import HARP_TICK_RATE_HZ, SOURCE_GROUP, Clock
 
 from escapewheel_aind import video
@@ -29,51 +29,6 @@ from tests.test_session_source import build as session_json
 from tests.test_unit_qc import UNITS as QC_UNITS
 from tests.test_unit_qc import stream as analyzer
 from tests.test_video_source import HARP_ROW, TIMING
-
-ROOT = Path(__file__).resolve().parents[2]
-CORE = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
-EXTENSIONS = {
-    document["extension_id"]: document
-    for document in (
-        json.loads(path.read_text())
-        for directory in ("extensions", "escapewheel-aind/extensions")
-        for path in sorted((ROOT / directory).glob("*.json"))
-    )
-}
-
-
-def declared(resource_id: str) -> set[str] | None:
-    """Columns core or the resource's own extension declares for a table, or None if neither does."""
-    namespace = resource_id.split(".", 1)[0]
-    document = CORE if resource_id in CORE["resources"] else EXTENSIONS.get(namespace)
-    declaration = (document or {}).get("resources", {}).get(resource_id)
-    if declaration is None or declaration.get("kind") != "table":
-        return None
-    return {column["name"] for column in declaration["table"]["columns"]}
-
-
-def emitted(source: Any) -> dict[str, set[str]]:
-    """Every column a source hands a build, by resource, over each path the build stages from."""
-    found: dict[str, set[str]] = {}
-    for resource_id, rows in source.records().items():
-        found.setdefault(resource_id, set()).update(key for row in rows for key in row)
-    for resource_id, batches in getattr(source, "batches", dict)().items():
-        for batch in batches:
-            found.setdefault(resource_id, set()).update(batch.schema.names)
-    return found
-
-
-def undeclared(source: Any) -> dict[str, list[str]]:
-    """What of `emitted` no registry declares: a whole resource as `['*']`, else its stray columns."""
-    wrong = {}
-    for resource_id, columns in emitted(source).items():
-        known = declared(resource_id)
-        if known is None:
-            wrong[resource_id] = ["*"]
-        elif extra := sorted(columns - known):
-            wrong[resource_id] = extra
-    return wrong
-
 
 # -- one fixture per kind ----------------------------------------------------------------
 
