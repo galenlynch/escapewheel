@@ -1176,6 +1176,12 @@ section = "3.3"
 title = "Ownership"
 aliases = []
 
+[anchor.ew-recipe-provenance-record]
+part = "05"
+section = "3.2"
+title = "The recipe is the provenance record"
+aliases = []
+
 [anchor.ew-recipe-purpose]
 part = "05"
 section = "3.1"

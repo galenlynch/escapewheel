@@ -3337,6 +3337,7 @@ name it: the row's key where that key is carried, and its `*_name` where it is a
 can therefore name a scope before any identifier is assigned. §12 states what a build writes for
 each entry.
 
+<a id="ew-recipe-provenance-record" data-spec-anchor="canonical"></a>
 ### 3.2 The recipe is the provenance record
 
 A writer MUST record the recipe in the import run's parameters, and its digest as the run's `code_uri`. A committed packet therefore states what produced it.
