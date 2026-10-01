@@ -96,9 +96,10 @@ Every module declares `__all__`, and a name is public only through one.
   "Support tier".
 
 A bare name left out of `__all__` is for the reader's own modules, and an underscore name for its
-own module; another package imports neither. A module exports only names it defines, so no module
-passes on another's. `tests/test_surface.py` holds the tiers against `api.rst` in both directions:
-adding a name to an `__all__` means documenting it, and the reverse.
+own module and the test file named for it; another package imports neither. A module exports only
+names it defines, so no module passes on another's. `tests/test_surface.py` holds the tiers
+against `api.rst` in both directions: adding a name to an `__all__` means documenting it, and the
+reverse.
 
 Before taking a name out of a tier, search the other packages for it.
 

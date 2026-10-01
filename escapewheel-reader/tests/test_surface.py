@@ -168,3 +168,15 @@ def test_no_packet_method_mirrors_an_exported_function():
     functions = {name for name in _user() if inspect.isfunction(getattr(escapewheel_reader, name))}
     members = {name for name in vars(Packet) if not name.startswith("_")}
     assert not functions & members
+
+
+def test_a_test_imports_an_underscore_name_only_from_the_module_it_is_named_for():
+    """So a helper two test files share has a public name, in `conftest.py` or the shared fixture."""
+    for path in sorted(Path(__file__).parent.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            for alias in node.names:
+                if alias.name.startswith("_") and not alias.name.startswith("__"):
+                    named_for = f"{PACKAGE}.{path.stem.removeprefix('test_')}"
+                    assert not node.level and node.module == named_for, f"{path.name}: {node.module}.{alias.name}"
