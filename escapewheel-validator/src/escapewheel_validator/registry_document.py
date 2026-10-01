@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
+from enum import Enum
 from functools import cache
 from importlib.resources import files
 from typing import Any
@@ -462,19 +463,18 @@ def _check_mapping(
         phases.extend(_skipped(name, "registry.phase.prerequisite_unsupported") for name in PHASES[4:])
         return _complete(phases, None)
 
-    universe = dict(_tables(document))
-    declaration_universe = dict(document["resources"])
+    tables = dict(_tables(document))
+    declarations = dict(document["resources"])
     if class_name == "extension" and core_usable and core is not None:
-        universe = dict(_tables(core)) | universe
-        declaration_universe = dict(core["resources"]) | declaration_universe
+        tables = dict(_tables(core)) | tables
+        declarations = dict(core["resources"]) | declarations
     assert descriptor is not None
     semantic = _semantic_outcomes(
         document,
-        universe,
         class_name,
         core_usable,
         descriptor,
-        declaration_universe,
+        {Universe.TABLES: tables, Universe.DECLARATIONS: declarations},
     )
     phases.append(_phase("semantic", semantic))
     rules = _rule_outcomes(document, core if core_usable and class_name == "extension" else None)
@@ -506,82 +506,29 @@ def _required_column(table: Mapping[str, Any], name: str) -> bool:
 
 def _semantic_outcomes(
     document: Mapping[str, Any],
-    universe: Mapping[str, Any],
     class_name: str,
     core_usable: bool,
-    descriptor: Mapping[str, Any] | None = None,
-    declaration_universe: Mapping[str, Any] | None = None,
+    descriptor: Mapping[str, Any],
+    universes: Mapping[Universe, Mapping[str, Any]],
 ) -> list[Outcome]:
-    checks = _semantic_checks()
-    if descriptor is None:
-        descriptor = json.loads(CONTRACT.read_text())
+    """Run each semantic invariant the descriptor applies to this class of document."""
+    invariants = {invariant.id: invariant for invariant in INVARIANTS}
     outcomes: list[Outcome] = []
-    core_dependent = {
-        "registry.reference.resolves",
-        "registry.reference.target_key",
-        "registry.reference.compatible",
-        "registry.session_scope.path",
-        "registry.context_source.resolves",
-        "registry.resource.catalog",
-        "registry.resource.array_axes",
-        "registry.resource.dependency",
-        "registry.resource.canonical_targets",
-        "registry.discriminator.specialisation",
-    }
     for entry in descriptor["invariants"]:
-        invariant = str(entry["id"])
         if entry["phase"] != "semantic" or class_name not in entry["classes"]:
             continue
-        check = checks[invariant]
-        selected_universe = (
-            declaration_universe
-            if invariant.startswith("registry.resource.") and declaration_universe is not None
-            else universe
-        )
-        outcomes.extend(check(document, selected_universe, class_name, core_usable))
-        if class_name == "extension" and not core_usable and invariant in core_dependent:
+        invariant = invariants[str(entry["id"])]
+        outcomes.extend(invariant.check(document, universes[invariant.universe], class_name, core_usable))
+        if class_name == "extension" and not core_usable and invariant.needs_core:
             outcomes.append(
                 Outcome(
                     "incomplete",
-                    invariant,
+                    invariant.id,
                     reason="registry.phase.prerequisite_incomplete",
                     detail="usable core context is required for cross-registry resolution",
                 )
             )
     return outcomes
-
-
-def _semantic_checks() -> dict[str, Any]:
-    """Map every descriptor semantic ID to its sole implementation."""
-    return {
-        "registry.namespace.owned": _namespace_owned,
-        "registry.namespace.reference_direction": _reference_direction,
-        "registry.column.name_unique": _column_names,
-        "registry.primary_key.resolves": _primary_keys,
-        "registry.reference.resolves": _references_resolve,
-        "registry.reference.target_key": _reference_targets_key,
-        "registry.reference.compatible": _references_compatible,
-        "registry.session_scope.path": _session_scope,
-        "registry.identity.name": _identity_names,
-        "registry.identity.registry_id": _registry_id,
-        "registry.metadata.eligibility": _metadata,
-        "registry.determined_by.resolves": _determined_by,
-        "registry.discriminator.declaration": _discriminator_declarations,
-        "registry.discriminator.path": _discriminator_paths,
-        "registry.context_source.resolves": _context_sources,
-        "registry.authority.uri": _authority_uris,
-        "registry.rule.id_unique": _rule_ids_unique,
-        "registry.rule.id_owner": _rule_ids_owned,
-        "registry.core.device_detail": _core_device_detail,
-        "registry.resource.classification": _resource_classification,
-        "registry.resource.instance": _resource_instance,
-        "registry.resource.catalog": _resource_catalog,
-        "registry.resource.array_axes": _resource_array_axes,
-        "registry.resource.dependency": _resource_dependency,
-        "registry.resource.canonical_targets": _resource_canonical_targets,
-        "registry.amendment_groups.resolves": _amendment_groups,
-        "registry.discriminator.specialisation": _specialisations,
-    }
 
 
 def _resource_classification(
@@ -1650,6 +1597,60 @@ def _core_device_detail(
         for resource, table in _tables(document).items()
         if resource != "core.devices" and table["primary_key"] and table["primary_key"][0] == "device_id"
     ]
+
+
+class Universe(Enum):
+    """The declarations an invariant resolves a name against: the document's, over usable core's."""
+
+    TABLES = "tables"
+    """Each table-kind resource's table payload, by resource ID."""
+    DECLARATIONS = "declarations"
+    """Each resource's whole declaration, by resource ID."""
+
+
+@dataclass(frozen=True)
+class Invariant:
+    """One semantic invariant of the registry contract, and what its check reads."""
+
+    id: str
+    check: Callable[[Mapping[str, Any], Mapping[str, Any], str, bool], list[Outcome]]
+    universe: Universe = Universe.TABLES
+    needs_core: bool = False
+    """Whether an extension checked without a usable core leaves the invariant incomplete."""
+
+
+#: Every semantic invariant a contract descriptor may name, each with its sole implementation.
+INVARIANTS = (
+    Invariant("registry.namespace.owned", _namespace_owned),
+    Invariant("registry.namespace.reference_direction", _reference_direction),
+    Invariant("registry.column.name_unique", _column_names),
+    Invariant("registry.primary_key.resolves", _primary_keys),
+    Invariant("registry.reference.resolves", _references_resolve, needs_core=True),
+    Invariant("registry.reference.target_key", _reference_targets_key, needs_core=True),
+    Invariant("registry.reference.compatible", _references_compatible, needs_core=True),
+    Invariant("registry.session_scope.path", _session_scope, needs_core=True),
+    Invariant("registry.identity.name", _identity_names),
+    Invariant("registry.identity.registry_id", _registry_id),
+    Invariant("registry.metadata.eligibility", _metadata),
+    Invariant("registry.determined_by.resolves", _determined_by),
+    Invariant("registry.discriminator.declaration", _discriminator_declarations),
+    Invariant("registry.discriminator.path", _discriminator_paths),
+    Invariant("registry.context_source.resolves", _context_sources, needs_core=True),
+    Invariant("registry.authority.uri", _authority_uris),
+    Invariant("registry.rule.id_unique", _rule_ids_unique),
+    Invariant("registry.rule.id_owner", _rule_ids_owned),
+    Invariant("registry.core.device_detail", _core_device_detail),
+    Invariant("registry.resource.classification", _resource_classification, Universe.DECLARATIONS),
+    Invariant("registry.resource.instance", _resource_instance, Universe.DECLARATIONS),
+    Invariant("registry.resource.catalog", _resource_catalog, Universe.DECLARATIONS, needs_core=True),
+    Invariant("registry.resource.array_axes", _resource_array_axes, Universe.DECLARATIONS, needs_core=True),
+    Invariant("registry.resource.dependency", _resource_dependency, Universe.DECLARATIONS, needs_core=True),
+    Invariant(
+        "registry.resource.canonical_targets", _resource_canonical_targets, Universe.DECLARATIONS, needs_core=True
+    ),
+    Invariant("registry.amendment_groups.resolves", _amendment_groups),
+    Invariant("registry.discriminator.specialisation", _specialisations, needs_core=True),
+)
 
 
 def _rule_outcomes(document: Mapping[str, Any], core: Mapping[str, Any] | None) -> list[Outcome]:
