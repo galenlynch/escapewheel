@@ -19,13 +19,20 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import numpy as np
-from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
-from escapewheel_writer.errors import SourceDefect, UnsupportedEncoding
-from escapewheel_writer.notes import Note
-from escapewheel_writer.sources.nwb import clean
-from escapewheel_writer.sources.sorter import STREAM_FOLDER, SortedStream
-from escapewheel_writer.sources.store import SourceStore, source_root
-from escapewheel_writer.sources.waveforms import ANALYZERS
+from escapewheel_writer.adapter import (
+    ANALYZERS,
+    FILES,
+    FLIGHT,
+    STREAM,
+    STREAM_FOLDER,
+    Note,
+    SortedStream,
+    SourceDefect,
+    SourceStore,
+    UnsupportedEncoding,
+    clean,
+    source_root,
+)
 from numpy.typing import NDArray
 
 from .errors import AindFault

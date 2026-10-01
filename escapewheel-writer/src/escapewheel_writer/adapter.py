@@ -11,7 +11,8 @@ What an adapter returns and raises:
 
 - :class:`StagedArray`, :class:`ExternalArray`, :class:`ExternalMedia`, :class:`Payload` -- an
   array the packet will own, an array or media it references, and an opaque payload.
-- :class:`SourceDefect`, :class:`SourceFault` -- a source the adapter cannot read, and its code.
+- :class:`SourceDefect`, :class:`SourceFault`, :class:`UnsupportedEncoding` -- a source the
+  adapter cannot read, its code, and a source stored in an encoding the adapter does not read.
 - :class:`Note`, :class:`NoteCode`, :func:`coded`, :func:`codes` -- what an adapter worked around.
 - :class:`Compensation`, :class:`Compensates`, :data:`COMPENSATION_GROUP` -- a registered
   workaround for a source defect, the mixin that records each one applied, and the entry-point
@@ -29,9 +30,13 @@ What an adapter reads with:
 
 How an adapter is found and run:
 
-- :data:`SOURCE_GROUP` -- the entry-point group a distribution registers an adapter under.
-- :data:`STREAM`, :data:`FILES`, :data:`FLIGHT` -- the delivery protocols an adapter may declare
-  (Part 12 §3).
+- :data:`SOURCE_GROUP`, :func:`discovered`, :data:`ADAPTERS` -- the entry-point group a
+  distribution registers an adapter under, the adapters registered, and the built-in ones.
+- :data:`STREAM`, :data:`FILES`, :data:`FLIGHT`, :data:`PROTOCOLS` -- the delivery protocols an
+  adapter may declare (Part 12 §3), and all of them.
+- :func:`document_of`, :func:`shape_problems`, :data:`TERMS` -- the declaration document a
+  class generates, where one fails the published schema, and the terms a build supplies
+  (Part 12 §4, §7).
 - :func:`serve` -- deliver an opened adapter's rows by one protocol.
 
 :class:`NWBSource` is the one adapter meant for subclassing, by a dialect of NWB. A dialect
@@ -42,9 +47,9 @@ reads the file through `attrs` and `table`.
 """
 
 from .clock import HARP_TICK_RATE_HZ, TICK_MAX, TICK_MIN, Clock, epoch_from, zone_of
-from .declaration import FILES, FLIGHT, STREAM
+from .declaration import FILES, FLIGHT, PROTOCOLS, STREAM, document_of, shape_problems
 from .delivery import serve
-from .errors import SourceDefect, SourceFault
+from .errors import SourceDefect, SourceFault, UnsupportedEncoding
 from .notes import Note, NoteCode, coded, codes
 from .opaque import Payload
 from .protocols import (
@@ -58,7 +63,8 @@ from .protocols import (
     Streams,
     WithholdsAnchors,
 )
-from .sources import SOURCE_GROUP
+from .recipe import TERMS
+from .sources import ADAPTERS, SOURCE_GROUP, discovered
 from .sources.compensations import COMPENSATION_GROUP, Compensates, Compensation
 from .sources.nwb import ABSENT, NWBSource, clean
 from .sources.sorter import STREAM_FOLDER, SortedStream
@@ -69,14 +75,17 @@ from .writer import ExternalArray, ExternalMedia, StagedArray
 
 __all__ = [
     "ABSENT",
+    "ADAPTERS",
     "ANALYZERS",
     "COMPENSATION_GROUP",
     "FILES",
     "FLIGHT",
     "HARP_TICK_RATE_HZ",
+    "PROTOCOLS",
     "SOURCE_GROUP",
     "STREAM",
     "STREAM_FOLDER",
+    "TERMS",
     "TICK_MAX",
     "TICK_MIN",
     "Clock",
@@ -101,13 +110,17 @@ __all__ = [
     "StagesArrays",
     "StagesPayloads",
     "Streams",
+    "UnsupportedEncoding",
     "WithholdsAnchors",
     "clean",
     "coded",
     "codes",
+    "discovered",
+    "document_of",
     "epoch_from",
     "serve",
     "sex",
+    "shape_problems",
     "source_root",
     "utc_offset",
     "zone_of",

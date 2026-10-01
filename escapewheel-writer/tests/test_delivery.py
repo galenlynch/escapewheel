@@ -60,14 +60,14 @@ def supplied(nwb, harp):
 def test_every_shipped_adapter_generates_a_valid_document(kind):
     """Generated rather than maintained (Part 12 §7), so this is what an author starts from."""
     jsonschema = pytest.importorskip("jsonschema")
-    document = declaration.of(ADAPTERS[kind], kind, ["stream-v0.1"])
+    document = declaration.document_of(ADAPTERS[kind], kind, ["stream-v0.1"])
     assert not list(jsonschema.Draft202012Validator(declaration.schema()).iter_errors(document))
     assert document["kind"] == kind
 
 
 def test_a_generated_document_carries_what_the_adapter_accepts():
     """An option with a default is declarable only here, so `sample` crosses as the adapter's."""
-    document = declaration.of(ADAPTERS["sorter"], "sorter", ["stream-v0.1"])
+    document = declaration.document_of(ADAPTERS["sorter"], "sorter", ["stream-v0.1"])
     assert "sample" in document["accepts"]
     assert "sample" not in document["needs"]
 
@@ -101,7 +101,7 @@ def test_ownership_from_the_documents_is_ownership_from_the_classes():
     from_document = {
         resource: kind
         for kind in sorted(ADAPTERS)
-        for resource in declaration.of(ADAPTERS[kind], kind, ["stream-v0.1"])["produces"]
+        for resource in declaration.document_of(ADAPTERS[kind], kind, ["stream-v0.1"])["produces"]
     }
     from_class = {resource: kind for kind in sorted(ADAPTERS) for resource in sorted(ADAPTERS[kind].PRODUCES)}
     assert from_document == from_class
@@ -109,14 +109,14 @@ def test_ownership_from_the_documents_is_ownership_from_the_classes():
 
 def test_a_document_round_trips_through_a_file(tmp_path):
     written = tmp_path / "nwb.json"
-    document = declaration.of(ADAPTERS["nwb"], "nwb", ["flight-v0.1"])
+    document = declaration.document_of(ADAPTERS["nwb"], "nwb", ["flight-v0.1"])
     written.write_text(json.dumps(document))
     assert declaration.load(written) == document
 
 
 def test_a_shipped_class_generates_no_protocol_unless_given_one():
     """Only a shipped adapter may state none (Part 12 §3), and its document then fails the schema."""
-    bare = declaration.of(ADAPTERS["nwb"], "nwb")
+    bare = declaration.document_of(ADAPTERS["nwb"], "nwb")
     assert "protocols" not in bare
     assert declaration.shape_problems(bare) == ["declaration: 'protocols' is a required property"]
     assert declaration.shape_problems(bare, shipped=True) == []
@@ -162,7 +162,7 @@ def test_declare_refuses_a_protocol_for_a_class_stating_its_own(monkeypatch, cap
 )
 def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected, registry):
     """Part 12 §7's checks, each firing on its own and naming what is wrong."""
-    sound = declaration.of(ADAPTERS["nwb"], "nwb", ["stream-v0.1"])
+    sound = declaration.document_of(ADAPTERS["nwb"], "nwb", ["stream-v0.1"])
     found = declaration.refusals(
         {**sound, **broken},
         tables={
@@ -177,7 +177,7 @@ def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected,
 
 
 def test_a_sound_declaration_is_refused_for_nothing(registry):
-    sound = declaration.of(ADAPTERS["nwb"], "nwb", ["stream-v0.1"])
+    sound = declaration.document_of(ADAPTERS["nwb"], "nwb", ["stream-v0.1"])
     tables = {
         name: resource["table"] for name, resource in registry["resources"].items() if resource["kind"] == "table"
     }

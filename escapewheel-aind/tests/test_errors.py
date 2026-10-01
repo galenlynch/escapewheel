@@ -8,7 +8,7 @@ import pkgutil
 from enum import StrEnum
 from pathlib import Path
 
-from escapewheel_writer.errors import WriterError
+from escapewheel_writer import WriterError
 
 import escapewheel_aind
 from escapewheel_aind import errors

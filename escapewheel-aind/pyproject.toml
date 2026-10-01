@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 # Source kinds this distribution registers, by the name a recipe names them. The group is
-# `escapewheel_writer.sources.SOURCE_GROUP`, and `sources.discovered()` loads it; a registered kind
+# `escapewheel_writer.adapter.SOURCE_GROUP`, and `adapter.discovered()` loads it; a registered kind
 # is constructed exactly as a built-in one is (`session.build`), so nothing here is a lesser source.
 [project.entry-points."escapewheel.sources"]
 session = "escapewheel_aind.session:SessionSource"

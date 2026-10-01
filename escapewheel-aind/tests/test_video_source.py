@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pyarrow as pa
 import pytest
-from escapewheel_writer.notes import codes
-from escapewheel_writer.writer import PacketWriter
+from escapewheel_writer import PacketWriter
+from escapewheel_writer.adapter import codes
 
 from escapewheel_aind import video
 from escapewheel_aind.notes import AindNote

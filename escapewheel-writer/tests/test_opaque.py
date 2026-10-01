@@ -480,7 +480,7 @@ def _source(tmp_path, kind, tree, owns, route="in-process"):
         return body + "in_process = true\n"
     script = tmp_path / "serve.py"
     script.write_text(SERVE.format(here=str(Path(__file__).resolve().parents[1])))
-    document = declaration.of(opaquefixture.Clips, kind)
+    document = declaration.document_of(opaquefixture.Clips, kind)
     (tmp_path / f"{kind}.json").write_text(json.dumps(document))
     command = json.dumps([sys.executable, str(script), route])
     return body + f'\n[source.delivery]\ndeclaration = "{kind}.json"\nprotocol = "{route}"\ncommand = {command}\n'

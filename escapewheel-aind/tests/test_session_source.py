@@ -5,12 +5,8 @@ from datetime import UTC, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
-from escapewheel_writer import Clock
-from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.errors import FixedOffsetZone, NaiveTimestamp, SourceDefect, UsageError, UsageFault
-from escapewheel_writer.notes import coded, codes
-from escapewheel_writer.recipe import SourceSpec
-from escapewheel_writer.session import Context, _composed
+from escapewheel_writer import FixedOffsetZone, NaiveTimestamp, SourceDefect, UsageError, UsageFault
+from escapewheel_writer.adapter import HARP_TICK_RATE_HZ, Clock, coded, codes
 
 from escapewheel_aind.errors import AindFault
 from escapewheel_aind.notes import AindNote
@@ -94,23 +90,15 @@ def located(asset, harp):
     return _session(asset, reference_clock={**HARP_ROW, "tick_zero_utc": harp.tick_zero_utc})
 
 
-def windows(source, clock, event_stream_ids):
-    """The rows the build composes from the window this source declared and another's streams.
+def window(source, clock):
+    """The window this source declares it watched the reference clock over, in that clock's ticks.
 
-    The window reaches the build as `core.clock_observation_intervals` on the reference clock,
-    which is a row like any other -- so a source delivered from another process is harvested the
-    same way as one running here.
+    It reaches a build as a `core.clock_observation_intervals` row on the reference clock, and the
+    build gives it to every event stream another source declares.
     """
     watched = source.records().get("core.clock_observation_intervals", [])
-    context = Context(session_id=SESSION, reference=clock, event_streams=list(event_stream_ids))
-    context.windows["session"] = next(
-        ((int(row["start_tick"]), int(row["stop_tick"])) for row in watched if row["clock_id"] == clock.clock_id),
-        None,
-    )
-    if context.windows["session"] is None:
-        del context.windows["session"]
-    spec = SourceSpec(kind="session", root=source.path, owns=("core.event_stream_observation_intervals",))
-    return _composed(spec, context).get("core.event_stream_observation_intervals", [])
+    (declared,) = [row for row in watched if row["clock_id"] == clock.clock_id]
+    return int(declared["start_tick"]), int(declared["stop_tick"])
 
 
 # -- reading -------------------------------------------------------------------------
@@ -224,41 +212,35 @@ def test_a_naive_instant_locates_nothing(harp):
 # -- observation intervals -----------------------------------------------------------
 
 
-def test_every_stream_shares_the_declared_window(located, harp):
-    rows = windows(located, harp, ["left_lick_time", "right_reward_delivery_time"])
-    assert {(r["start_tick"], r["stop_tick"]) for r in rows} == {(361_751_236_188, 361_996_511_468)}
-    assert [(r["start_tick"], r["stop_tick"]) for r in rows] == [(rows[0]["start_tick"], rows[0]["stop_tick"])] * 2
+def test_it_declares_one_window_on_the_reference_clock(located, harp):
+    assert window(located, harp) == (361_751_236_188, 361_996_511_468)
 
 
 def test_the_window_contains_the_events_it_declares(located, harp):
     """The independent check on the epoch: the events must fall inside the declared window."""
-    row = windows(located, harp, ["left_lick_time"])[0]
-    assert row["start_tick"] <= FIRST_EVENT_TICK
-    assert row["stop_tick"] >= LAST_EVENT_TICK
+    start, stop = window(located, harp)
+    assert start <= FIRST_EVENT_TICK
+    assert stop >= LAST_EVENT_TICK
 
 
 def test_the_window_is_wider_than_the_events(located, harp):
     """Deriving it from the events instead would lose this slack and bias every rate upward."""
-    row = windows(located, harp, ["left_lick_time"])[0]
-    leading = (FIRST_EVENT_TICK - row["start_tick"]) / HARP_TICK_RATE_HZ
-    trailing = (row["stop_tick"] - LAST_EVENT_TICK) / HARP_TICK_RATE_HZ
+    start, stop = window(located, harp)
+    leading = (FIRST_EVENT_TICK - start) / HARP_TICK_RATE_HZ
+    trailing = (stop - LAST_EVENT_TICK) / HARP_TICK_RATE_HZ
     assert 0 < leading < 1
     assert 39 < trailing < 40
 
 
 def test_it_uses_the_behaviour_window_not_the_ephys_one(located, harp):
-    row = windows(located, harp, ["left_lick_time"])[0]
-    assert (row["stop_tick"] - row["start_tick"]) / HARP_TICK_RATE_HZ == pytest.approx(7848.8, abs=0.1)
+    start, stop = window(located, harp)
+    assert (stop - start) / HARP_TICK_RATE_HZ == pytest.approx(7848.8, abs=0.1)
 
 
 def test_the_ephys_window_is_the_other_one_this_source_declares(source):
     """Which is why the behaviour window is named rather than taken as the first declared."""
     ephys = source.ephys()
     assert (ephys.stop - ephys.start).total_seconds() == pytest.approx(6387.0, abs=0.1)
-
-
-def test_no_streams_means_no_intervals(located, harp):
-    assert windows(located, harp, []) == []
 
 
 def test_an_inverted_window_is_a_defect(tmp_path, harp):

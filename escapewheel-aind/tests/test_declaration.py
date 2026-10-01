@@ -12,10 +12,8 @@ import json
 from pathlib import Path
 
 import pytest
-from escapewheel_writer import declaration
-from escapewheel_writer.errors import RecipeFault
-from escapewheel_writer.recipe import TERMS, Recipe
-from escapewheel_writer.sources import discovered
+from escapewheel_writer import Recipe, RecipeFault
+from escapewheel_writer.adapter import PROTOCOLS, TERMS, discovered, document_of, shape_problems
 
 #: The kinds this distribution registers, read back through the same discovery a build uses rather
 #: than named here, so a kind added to `pyproject.toml` is swept without editing this file.
@@ -34,10 +32,10 @@ def test_every_registered_adapter_generates_a_valid_document(kind):
     A kind registered by another distribution is released independently of a build, so its class
     must state its protocols; a build refuses one that states none (Part 12 §3).
     """
-    document = declaration.of(KINDS[kind], kind)
-    assert declaration.shape_problems(document) == []
+    document = document_of(KINDS[kind], kind)
+    assert shape_problems(document) == []
     assert document["kind"] == kind
-    assert set(document["protocols"]) <= set(declaration.PROTOCOLS)
+    assert set(document["protocols"]) <= set(PROTOCOLS)
 
 
 @pytest.mark.parametrize("kind", sorted(KINDS))
@@ -67,7 +65,7 @@ def test_every_option_an_adapter_reads_is_declared(kind):
 def test_ownership_from_the_documents_is_ownership_from_the_classes():
     """The two forms are one declaration, so what a build settles from them cannot differ."""
     from_document = {
-        resource: kind for kind in sorted(KINDS) for resource in declaration.of(KINDS[kind], kind)["produces"]
+        resource: kind for kind in sorted(KINDS) for resource in document_of(KINDS[kind], kind)["produces"]
     }
     from_class = {resource: kind for kind in sorted(KINDS) for resource in sorted(KINDS[kind].PRODUCES)}
     assert from_document == from_class

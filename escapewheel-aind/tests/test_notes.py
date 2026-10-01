@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 
 import pytest
-from escapewheel_writer.notes import codes
+from escapewheel_writer.adapter import codes
 
 import escapewheel_aind
 from escapewheel_aind.notes import AindNote

@@ -518,7 +518,7 @@ def _declare(args: argparse.Namespace) -> int:
     if args.protocol and getattr(adapter, "PROTOCOLS", ()):
         print(f"{args.kind} declares its own protocols; --protocol is for an adapter that states none", file=sys.stderr)
         return 2
-    document = declaration.of(adapter, args.kind, args.protocol or [declaration.STREAM])
+    document = declaration.document_of(adapter, args.kind, args.protocol or [declaration.STREAM])
     if problems := declaration.shape_problems(document):
         for problem in problems:
             print(f"  {problem}", file=sys.stderr)

@@ -10,7 +10,7 @@ because it says where the measurement lives.
 
 from __future__ import annotations
 
-from escapewheel_writer.sources.compensations import Compensation
+from escapewheel_writer.adapter import Compensation
 
 #: Registered under `escapewheel.compensations`, which `compensations.registered()` merges with the
 #: writer's own. An identifier here never replaces one declared there.

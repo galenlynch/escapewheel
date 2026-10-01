@@ -28,7 +28,7 @@ The package sits in the monorepo beside `escapewheel-writer` and depends on it, 
 Nothing in the writer imports this package.
 
 Its kinds register through the `escapewheel.sources` entry-point group, which
-`escapewheel_writer.sources.discovered()` loads, rather than by being listed in that package's
+`escapewheel_writer.adapter.discovered()` loads, rather than by being listed in that package's
 built-in table. A registered kind is constructed exactly as a built-in one is, so nothing here is a
 lesser source — the one difference a recipe sees is that a build will not reach a kind it neither
 ships nor is told how to run, so a recipe naming one of these sets `in_process = true` or gives it

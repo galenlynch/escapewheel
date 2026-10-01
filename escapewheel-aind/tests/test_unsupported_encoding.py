@@ -11,8 +11,7 @@ import sys
 from importlib.metadata import entry_points
 
 import pytest
-from escapewheel_writer.errors import SourceDefect, SourceFault
-from escapewheel_writer.sources import SOURCE_GROUP
+from escapewheel_writer.adapter import SOURCE_GROUP, SourceDefect, SourceFault
 
 from escapewheel_aind.errors import AindFault
 from escapewheel_aind.unit_qc import UnitQCSource

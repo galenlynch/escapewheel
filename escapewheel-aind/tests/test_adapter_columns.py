@@ -17,9 +17,7 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pytest
-from escapewheel_writer import Clock
-from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.sources import SOURCE_GROUP
+from escapewheel_writer.adapter import HARP_TICK_RATE_HZ, SOURCE_GROUP, Clock
 
 from escapewheel_aind import video
 from escapewheel_aind.nwb import AindNWBSource

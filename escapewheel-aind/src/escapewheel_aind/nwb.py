@@ -15,9 +15,7 @@ from collections.abc import Mapping
 from typing import Any, ClassVar
 
 from escapewheel_reader.resource_ids import CORE_UNIT_COORDINATE_VALUES, CORE_UNIT_COORDINATES
-from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
-from escapewheel_writer.notes import Note
-from escapewheel_writer.sources.nwb import NWBSource, clean
+from escapewheel_writer.adapter import FILES, FLIGHT, STREAM, Note, NWBSource, clean
 
 from .notes import AindNote
 

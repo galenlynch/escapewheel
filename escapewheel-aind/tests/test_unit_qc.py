@@ -16,8 +16,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from escapewheel_writer.errors import SourceDefect
-from escapewheel_writer.notes import coded, codes
+from escapewheel_writer.adapter import SourceDefect, coded, codes
 
 from escapewheel_aind.errors import AindFault
 from escapewheel_aind.notes import AindNote

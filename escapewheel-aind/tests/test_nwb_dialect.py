@@ -9,8 +9,7 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pytest
-from escapewheel_writer import Clock
-from escapewheel_writer.clock import HARP_TICK_RATE_HZ
+from escapewheel_writer.adapter import HARP_TICK_RATE_HZ, Clock
 
 from escapewheel_aind.nwb import AindNWBSource
 from tests import nwbfixture
@@ -159,7 +158,7 @@ def test_a_unit_row_matching_no_unit_is_skipped_and_counted(nwb, harp):
 
 def test_the_declared_resources_include_the_unit_coordinates():
     """The base reader declares neither, which is what a recipe arbitrates between them on."""
-    from escapewheel_writer.sources.nwb import NWBSource
+    from escapewheel_writer.adapter import NWBSource
 
     added = AindNWBSource.PRODUCES - NWBSource.PRODUCES
     assert added == {"core.unit_coordinates", "core.unit_coordinate_values"}
@@ -215,7 +214,9 @@ def test_a_signal_names_the_harp_device_under_the_same_prefix(nwb, harp, tmp_pat
 
     The schema's parse is stubbed, since its YAML parser is the writer's `harp` extra and not ours.
     """
-    from escapewheel_writer.sources import HarpSource
+    from escapewheel_writer.adapter import ADAPTERS
+
+    HarpSource = ADAPTERS["harp"]
 
     monkeypatch.setattr(HarpSource, "_read", lambda self, path: {"device": "SniffDetector", "whoAmI": 1401})
 

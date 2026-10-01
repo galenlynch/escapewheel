@@ -1,6 +1,6 @@
 """An adapter's declarations as a document a build reads without importing the adapter (Part 12 §7).
 
-- :func:`of` -- the document for one adapter class, generated from what the class declares.
+- :func:`document_of` -- the document for one adapter class, generated from what the class declares.
 - :func:`load` -- a declaration document read from a file, with its shape checked.
 - :func:`shape_problems` -- where a declaration fails the published schema.
 - :func:`refusals` -- the reasons a build refuses a declaration, given the registry and the recipe.
@@ -69,7 +69,7 @@ def schema() -> dict[str, Any]:
     return parsed
 
 
-def of(adapter: Any, kind: str, protocols: Sequence[str] = ()) -> dict[str, Any]:
+def document_of(adapter: Any, kind: str, protocols: Sequence[str] = ()) -> dict[str, Any]:
     """Return the document for one adapter class, generated from what it already declares.
 
     Parameters
@@ -267,8 +267,8 @@ __all__ = [
     "REPORT_AS_FILE",
     "SOURCE_CACHE",
     "STREAM",
+    "document_of",
     "load",
-    "of",
     "refusals",
     "schema",
     "shape_problems",

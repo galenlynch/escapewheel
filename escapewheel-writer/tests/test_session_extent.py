@@ -8,7 +8,8 @@ import pytest
 
 from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.notes import NoteCode, coded, codes
-from escapewheel_writer.session import Context, _harvest
+from escapewheel_writer.recipe import SourceSpec
+from escapewheel_writer.session import Context, _composed, _harvest
 
 BEGAN = datetime(2025, 4, 10, 0, 25, 12, tzinfo=UTC)
 ENDED = datetime(2025, 4, 10, 2, 38, 44, tzinfo=UTC)
@@ -148,3 +149,33 @@ def test_a_number_and_a_string_naming_one_subject_agree():
     source = Stub(subject_id=776259)
     _harvest(Spec(), source, _context(), recipe_for("776259"), _no_rows)
     assert source.notes == []
+
+
+# -- the windows a build composes --------------------------------------------------------
+
+WATCHING = SourceSpec(kind="session", root="session.json", owns=("core.event_stream_observation_intervals",))
+
+
+def _watched(window, streams):
+    context = Context(session_id="s1", event_streams=list(streams))
+    context.windows["session"] = window
+    return _composed(WATCHING, context).get("core.event_stream_observation_intervals", [])
+
+
+def test_every_stream_shares_the_window_its_source_declared():
+    """One acquisition watched them all, so a stream of rare events gets no shorter a window."""
+    rows = _watched((100, 900), ["licks", "rewards"])
+    assert [(row["event_stream_id"], row["start_tick"], row["stop_tick"]) for row in rows] == [
+        ("licks", 100, 900),
+        ("rewards", 100, 900),
+    ]
+
+
+def test_no_streams_means_no_windows():
+    assert _watched((100, 900), []) == []
+
+
+def test_a_window_ending_before_it_starts_is_a_defect():
+    with pytest.raises(SourceDefect) as refused:
+        _watched((900, 100), ["licks"])
+    assert refused.value.code is SourceFault.WINDOW_REVERSED

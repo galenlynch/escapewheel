@@ -24,11 +24,7 @@ from urllib.parse import quote
 import numpy as np
 import pyarrow as pa
 from escapewheel_reader.resource_ids import CORE_MEDIA_ASSET_INSTANCES, CORE_MEDIA_ASSETS, CORE_MEDIA_FRAMES
-from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
-from escapewheel_writer.notes import Note
-from escapewheel_writer.sources.compensations import Compensates
-from escapewheel_writer.sources.store import source_root
-from escapewheel_writer.writer import ExternalMedia
+from escapewheel_writer.adapter import FILES, FLIGHT, STREAM, Compensates, ExternalMedia, Note, source_root
 
 from .notes import AindNote
 

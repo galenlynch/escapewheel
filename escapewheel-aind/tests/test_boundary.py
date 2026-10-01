@@ -13,7 +13,8 @@ import tomllib
 from importlib.metadata import entry_points
 from pathlib import Path
 
-from escapewheel_writer.sources import SOURCE_GROUP
+import escapewheel_writer
+from escapewheel_writer.adapter import SOURCE_GROUP
 
 PYPROJECT = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text())
 
@@ -42,6 +43,28 @@ def test_every_registered_kind_loads():
         except Exception as exc:  # noqa: BLE001 - the point is to report every one, not the first
             failed[entry.name] = f"{type(exc).__name__}: {exc}"
     assert failed == {}
+
+
+def test_only_the_two_tiers_of_the_writer_are_imported():
+    """`escapewheel_writer` and `escapewheel_writer.adapter`: its other modules may change without notice."""
+    root = Path(__file__).resolve().parents[1]
+    beyond = set()
+    for path in sorted([*root.glob("src/**/*.py"), *root.glob("tests/*.py")]):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Import):
+                imported = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module == "escapewheel_writer":
+                user = escapewheel_writer.__all__
+                imported = [node.module if a.name in user else f"{node.module}.{a.name}" for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0:
+                imported = [node.module or ""]
+            else:
+                continue
+            tiers = {"escapewheel_writer", "escapewheel_writer.adapter"}
+            beyond |= {
+                f"{path.name}: {name}" for name in imported if "escapewheel_writer" in name and name not in tiers
+            }
+    assert beyond == set()
 
 
 def test_the_writer_does_not_import_this_package():
