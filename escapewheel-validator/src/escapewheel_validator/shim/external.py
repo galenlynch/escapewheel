@@ -33,7 +33,7 @@ def resolve_external(
 ) -> set[str]:
     """Level 3 (Part 04 §5.3): resolve external URIs and check what was claimed about them.
 
-    Requested explicitly, never by default. Part 04 §5.3 keeps structural validation off the
+    Requested explicitly, never by default. Structural validation stays off the
     network because reachability, credentials and whether the validator is offline are
     properties of the reader's situation rather than of the packet.
 
@@ -53,11 +53,11 @@ def resolve_external(
         this mode is a list operation; off separately for that reason.
     store_digests : bool, default False
         Also compare each declared member's `store_digest` against what the store reports now
-        (Part 04 §5.4). The listing already performed carries the values, so this costs what the
+        (see `_compare_members`). The listing already performed carries the values, so this costs what the
         level below it does, and it answers a weaker question than `checksums` does.
     store_checksums : bool, default True
         With `checksums`, take the store's full-object checksums in place of reading an object
-        where it reports one in the digest's algorithm (Part 04 §5.3).
+        where it reports one in the digest's algorithm.
 
     Returns
     -------
@@ -186,7 +186,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
 
     This is what makes level 3a per-member rather than aggregate: `size_bytes` on the resource is
     a total, so two members changing in opposite directions leave it correct. It is also what
-    enforces Part 04 §5.4's rule that a digested listing is the declared one -- where the declared
+    enforces the rule that a digested listing is the declared one -- where the declared
     members and the store agree, Part 04 §4.3's listing is the same either way, so `digest` and
     `members` cannot describe different things.
     """

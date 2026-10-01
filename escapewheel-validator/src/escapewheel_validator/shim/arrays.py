@@ -115,7 +115,7 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, ArrayAxe
 
 
 def check_packet_owned_arrays(packet: Packet, report: Report) -> None:
-    """Layer 1c: every packet-owned array against its own Zarr metadata (Part 04 §5.3, level 2).
+    """Check every packet-owned array against its own Zarr metadata (Part 04 §5.3, level 2).
 
     Always runs, and needs no Zarr: a Zarr array's metadata is a JSON document in the store,
     which `ArrayResource` parses directly. The packet owns these bytes, so an array it
@@ -123,7 +123,7 @@ def check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     external array is level 3 and stays with the requested mode, and `report_unassessed` reports it
     where that mode did not read it.
 
-    Storage, not values, so the shim and not SQL (R12 §4): no query can see a chunk grid or a codec
+    Storage, not values, so the shim and not SQL (Part 05 §5.3): no query can see a chunk grid or a codec
     pipeline.
     """
     # A resource naming a source is not packet-owned whatever `external` says, and `check_sources`
@@ -193,7 +193,7 @@ def declared_axes(packet: Packet) -> dict[str, ArrayAxes]:  # noqa: C901
     """Resolve each dense array's axes, labels and channels through its declaration and catalog row.
 
     The label rows are in the table the axes table's `coordinate_resource` names as its
-    `discriminates_via` (Part 03 §6.3); they and `core.array_channels` reach the array through their
+    `discriminates_via`; they and `core.array_channels` reach the array through their
     reference to the axes table.
     """
     declarations: dict[str, Mapping[str, Any]] = {}
@@ -295,7 +295,7 @@ class _AxisFault(Enum):
 
 
 def _axis_findings(shape: Sequence[int], axes: ArrayAxes) -> dict[_AxisFault, list[tuple[Any, ...]]]:
-    """Compare one array's shape with its label and channel rows, by fault (Part 03 §6.3)."""
+    """Compare one array's shape with its label and channel rows, by fault."""
     length = dict(enumerate(shape))
     found: dict[_AxisFault, list[tuple[Any, ...]]] = {fault: [] for fault in _AxisFault}
     for axis in sorted(axes.labelled | set(axes.labels)):

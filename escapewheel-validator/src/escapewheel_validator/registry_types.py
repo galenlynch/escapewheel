@@ -52,7 +52,7 @@ def visible_declarations(
 def registry_meta_schema() -> dict[str, Any]:
     """Part 02 §9.2's published meta-schema, as this distribution copies it.
 
-    Public because Part 02 §9.2 makes its `$id` something a writer has to state: a document declares
+    Public because its `$id` is something a writer has to state: a document declares
     which meta-schema governs it, and the writer that emits the declaration must not keep its own
     copy of the URI.
     """
@@ -61,7 +61,7 @@ def registry_meta_schema() -> dict[str, Any]:
     return parsed
 
 
-#: Registry column type -> the DuckDB type used for the empty stand-in tables below.
+#: Registry column type -> the DuckDB type of the empty table standing in for an absent one.
 DDL = {
     "string": "VARCHAR",
     "int32": "INTEGER",

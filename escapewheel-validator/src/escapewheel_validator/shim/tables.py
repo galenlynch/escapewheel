@@ -31,7 +31,7 @@ from .floors import check_parquet_floor
 
 
 def check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> dict[str, Any]:
-    """Layer 2: column presence and physical type, which SQL cannot see (R12 §4)."""
+    """Check column presence and physical type, which SQL cannot see (Part 05 §5.3)."""
     declared = {r.resource_id for r in packet.resources()}
     present: dict[str, Any] = {}
     for resource_id, spec in tables.items():
@@ -69,7 +69,7 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
     # A dictionary is an encoding, not a type. Parquet has no dictionary type at all: the column
     # is BYTE_ARRAY/String either way, and only the Arrow schema pyarrow stores as metadata
     # distinguishes them. Comparing the wrapper would reject a conforming file over how its
-    # writer chose to hold the column, which is the storage-versus-meaning line R12 §4 draws.
+    # writer chose to hold the column.
     if pa.types.is_dictionary(actual):
         actual = actual.value_type
     if str(actual) != ARROW_TYPES[column["type"]]:
@@ -81,7 +81,7 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
 
 
 def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str, str]]:
-    """Pairs of this table's columns holding equal values in every row (Part 05 §5.3).
+    """Pairs of this table's columns holding equal values in every row.
 
     Bounded by the footer, not by a row sample. Two columns can hold equal values in every row
     only if their per-chunk minimum, maximum and null count agree, which Parquet already records,

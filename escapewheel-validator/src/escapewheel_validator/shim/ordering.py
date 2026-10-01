@@ -173,7 +173,7 @@ def check_ordering(
     report: Report,
     scan: Collection[str] | None = None,
 ) -> set[str]:
-    """Layer 3: declared sort order, and the uniqueness that order settles (Part 03 §5.3, Part 03 §5.3).
+    """Check declared sort order, and the uniqueness that order settles (Part 03 §5.3).
 
     One pass answers both. A table sorted by its primary key puts duplicates next to each
     other, so comparing neighbours — which this scan already does to find descents — decides
@@ -207,13 +207,13 @@ def _scan_one_ordering(  # noqa: C901
     resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report
 ) -> bool:
     """One table's ordering scan. True where uniqueness must fall back to the aggregate."""
-    # Part 03 §5.3 puts every table in its key's order unless the descriptor overrides it (Part 03
-    # §5.4), so both come from `escapewheel_reader.ordering`.
+    # A table is in its key's order unless the descriptor overrides it (Part 03 §5.4), so both
+    # come from `escapewheel_reader.ordering`.
     keys = stored_order(resource_id, spec)
     unique = spec["primary_key"] if adjacency_settles_uniqueness(resource_id, spec) else None
     declared = {c["name"] for c in spec.get("columns", ())}
     if missing := [k for k in keys if k not in declared]:
-        # Part 03 §5.4: the bound registry cannot hold the required order, so the table departs.
+        # The bound registry cannot hold the required order, so the table departs.
         report.add(
             check_table.physical_order(resource_id),
             f"the bound registry declares no {', '.join(missing)}, so the table cannot be in its "
@@ -221,7 +221,7 @@ def _scan_one_ordering(  # noqa: C901
             registry=report.resource_owner(resource_id),
         )
         return bool(unique)
-    # Part 03 §5.3: the declarations this table's adjacency argument leans on.
+    # The declarations this table's adjacency argument leans on.
     determined = (
         [
             c["name"]
@@ -271,7 +271,7 @@ def _scan_one_ordering(  # noqa: C901
             if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
                 duplicated.append((start, _row_at(batch, unique, 0)))
             duplicated.extend((start + offset, _row_at(batch, unique, offset)) for offset in repeats)
-            # Part 03 §5.3. Two rows sharing the key must agree on every column declared a function
+            # Two rows sharing the key must agree on every column declared a function
             # of it; where they do not, the declaration is false and the waiver it earns is
             # unearned. Reported apart from the duplicate, because the repair is different.
             for offset in repeats:
@@ -305,7 +305,7 @@ def _scan_one_ordering(  # noqa: C901
             registry=report.resource_owner(resource_id),
         )
         # Adjacency settles uniqueness only for a file actually in order: a duplicate anywhere but
-        # beside its twin is invisible to a scan of neighbours. Part 03 §5.3 makes the departure an
+        # beside its twin is invisible to a scan of neighbours. The departure is an
         # error, and uniqueness still falls back to the aggregate rather than being skipped.
         return bool(unique)
     if duplicated:

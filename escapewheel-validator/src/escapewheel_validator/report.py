@@ -87,7 +87,7 @@ class Report:
     findings : list of Finding
         Every finding, in the order the layers ran.
     advisory : bool
-        Whether advisory rules were run (R26 §5). Recorded because an empty advisory
+        Whether advisory rules were run (Part 02 §10.2). Recorded because an empty advisory
         result is otherwise ambiguous between "none fired" and "not asked for".
     bound : tuple of str
         The registry IDs the manifest binds, each of which receives a verdict.
@@ -120,8 +120,7 @@ class Report:
         evaluation was withheld, or never reached, is ``incomplete`` rather than ``passed``. The
         packet's verdict is the worst of its own findings' and every bound registry's.
 
-        Advisory rules cannot be ``error`` (Part 02 §10.2), so no verdict depends on the
-        ``advisory`` flag.
+        Advisory rules cannot be ``error``, so no verdict depends on the ``advisory`` flag.
         """
         if registry is None:
             failed = any(f.level == Level.ERROR and f.registry is None for f in self.findings)
@@ -172,8 +171,8 @@ class Report:
     def complete(self, registry: str) -> None:
         """Record a registry's evaluation complete, unless an outcome recorded for it says otherwise.
 
-        Called once every check the registry directs has run, since a verdict of ``passed`` needs
-        the evaluation recorded complete (Part 05 §9.5).
+        Called once every check the registry directs has run, since :meth:`verdict` passes a
+        registry only where its evaluation is recorded complete.
         """
         if not any(e.registry == registry and e.status != EvaluationStatus.COMPLETE for e in self.evaluations):
             self.record_evaluation(registry, EvaluationStatus.COMPLETE)
@@ -246,7 +245,7 @@ class Report:
         """Render the report as the JSON structure Part 05 describes.
 
         ``status`` is the packet's verdict and ``verdicts`` each bound registry's. A finding whose
-        ``registry`` is null belongs to the packet (Part 05 §9.5).
+        ``registry`` is null belongs to the packet.
 
         Parameters
         ----------
@@ -262,7 +261,6 @@ class Report:
             "packet_id": packet_id,
             "status": self.verdict(),
             "verdicts": {name: self.verdict(name) for name in self.bound},
-            # An empty advisory list is ambiguous between "none fired" and "not run" (R26 §5).
             "advisory": self.advisory,
             "validator": {"name": "escapewheel_validator", "version": _version()},
             "summary": {"errors": self.errors, "warnings": self.warnings},

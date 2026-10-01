@@ -213,19 +213,18 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
 
 
 def check_sources(packet: Packet, report: Report) -> None:
-    """R80: what a source declaration must be, decided without reaching the network.
+    """Check what a source declaration must be, without reaching the network (Part 04 §5.5).
 
     Two things are structural and one is not; the manifest schema already requires `external` beside
     a `source`. A `source` names a body of data rather than a location, so the entry's `uri` MUST be
-    relative to it (Part 04 §5.5). `sources.json` MUST
-    NOT be a declared resource (Part 04 §5.5): being outside the manifest is what keeps Part 03 §8.1's
-    immutability off it, and a packet that declared it would freeze the one file that has to
-    stay editable.
+    relative to it. `sources.json` MUST NOT be a declared resource: being outside the manifest is
+    what keeps Part 03 §8.1's immutability off it, and a packet that declared it would freeze the
+    one file that has to stay editable.
 
-    Whether a source **resolves** is not structural and is reported rather than failed. Part 04 §5.5
-    makes an unresolved source a fact about the reader's situation -- which mirrors it can reach
-    -- and Part 04 §5.3 keeps structural validation off the network, so this reports what the
-    packet names and leaves reachability to the mode that asks for it.
+    Whether a source **resolves** is not structural and is reported rather than failed. An
+    unresolved source is a fact about the reader's situation -- which mirrors it can reach -- and
+    Part 04 §5.3 keeps structural validation off the network, so this reports what the packet names
+    and leaves reachability to the mode that asks for it.
     """
     named: dict[str, list[str]] = {}
     for resource in packet.resources():
@@ -257,7 +256,7 @@ def check_sources(packet: Packet, report: Report) -> None:
         f"{len(named) - len(unresolved)} located by a resolution document",
     )
     if unresolved:
-        # A fact, not a defect (Part 04 §5.5): the packet is conforming and this reader cannot reach
+        # A fact, not a defect: the packet is conforming and this reader cannot reach
         # those bytes. Reported so a report says which, rather than leaving it to a later failure.
         report.add(
             check_table.SOURCES_UNRESOLVED,

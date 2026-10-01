@@ -99,12 +99,12 @@ def validate(
         only them is already answered.
     external : bool, default False
         Resolve external URIs and check the `digest`, `size_bytes` and `members` claimed for
-        them (Part 04 §5.3, level 3). Off by default because Part 04 §5.3 forbids structural validation
+        them (Part 04 §5.3, level 3). Off by default because that section forbids structural validation
         reaching for a resource the packet does not own: whether one is reachable is a property
         of the reader's situation, not of the packet. An unreachable resource is a warning; one
         that resolves and disagrees with its claim is an error.
     checksums : bool, default False
-        Establish every recorded `digest`: each packet-owned resource (Part 04 §5.3, level 2), and
+        Establish every recorded `digest`: each packet-owned resource (level 2), and
         with `external`, each external one too (level 3c). Separate because reading costs every
         byte, and a packet may reference far more than it owns. The report names each digest's
         route.
@@ -116,7 +116,7 @@ def validate(
         not checked, and the report says how many were skipped.
     store_checksums : bool, default True
         With `checksums`, take a store's full-object checksums in the digest's algorithm in place
-        of reading those objects (Part 04 §5.3). A composite value is never taken, an object the
+        of reading those objects. A composite value is never taken, an object the
         store reports nothing for is read, and a local packet has no store checksums to take.
     superseded : Mapping, optional
         The manifest this one supersedes, for a writer validating an amendment before it retains

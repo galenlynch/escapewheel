@@ -107,7 +107,7 @@ def run_rules(
     unsound: set[str] | None = None,
     recheck: Collection[str] | None = None,
 ) -> None:
-    """Layer 4: Tier 1 checks generated from structure, then Tier 2 rules (R2 §7)."""
+    """Run Tier 1 checks generated from structure, then Tier 2 rules (Part 05 §§5.1 and 5.2)."""
     registry = core_context.document
     assert isinstance(registry, Mapping)
     extension_documents = [
@@ -325,7 +325,7 @@ def _resolve_column(spec: Mapping[str, Any]) -> str | None:
     """Return the column a paired value joins to, or None where the resource is not namable.
 
     Part 02 §8.3 requires a single-column key, since a paired value holds one identifier. Which
-    column it *matches* then follows from R53 §2.3: an `assigned` key is a number this format
+    column it *matches* follows from the key's identity: an `assigned` key is a number this format
     chose at build time, so a value written before the build cannot hold it and the join is on
     the `*_name` the owner carries for exactly this purpose. A `carried` key is the source's own
     number and is stable, so the join is on the key itself.
@@ -348,7 +348,7 @@ def _namable(
     """Every table a discriminator may name: core's, and the carried tables of each extension.
 
     Part 02 §8.3 lets a kind name an extension table, and that is the case a check must reach.
-    Core's absent tables get empty stand-ins in _layer4, so all of them can be joined; an
+    Core's absent tables get empty stand-ins in `run_rules`, so all of them can be joined; an
     extension's do not, so only what the packet carries can be.
     """
     tables = dict(table_contracts(registry))
@@ -452,7 +452,7 @@ def _check_extensions(
 ) -> None:
     """Run each directing extension registry's generated and declared checks (Part 05 §5.4).
 
-    R17 §3's claim is that nothing here is per-extension: the same `generate` produces an
+    Nothing here is per-extension: the same `generate` produces an
     extension's Tier 1 checks from its structure and carries its Tier 2 rules, because an
     extension registry *is* a registry document. What this function adds is which tables its
     references may resolve against -- core's, since Part 09 §6.1 lets an extension reference them and
