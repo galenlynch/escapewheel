@@ -96,6 +96,12 @@ supplies for itself, so a copy matches its source byte for byte. Checks needing 
 not hold — the Tier 2 rules' execution in DuckDB, Git history, the frozen v0.1 documents — lie in
 `conformance/`.
 
+What the tools share lies in `spec/tools/specdoc.py`: finding the numbered parts, the heading,
+anchor and citation grammars, a record's metadata rows, JSON Pointer resolution, the files Git
+would commit, a registry's tables, region replacement, the check reporter, and the error a
+generator raises. It imports only the standard library, so the scripts in `revisions/` and `tools/`
+import it from where it sits. A helper a second script needs goes there, not into a second copy.
+
 ## 4. The one command
 
 ```bash
