@@ -281,7 +281,7 @@ Known obstacles:
 - [ ] `verify.py`: one stage record type and one spelling of the interpreter. `--quick` runs no
       package suite; either it gains a marked fast subset or its documentation says so.
 - [ ] Two verifier stages execute every shipped rule over empty tables. Keep one.
-- [ ] Ledger, as a process proposal. Preferred form: `headings.toml` locks a
+- [x] Ledger, as a process proposal. Preferred form: `headings.toml` locks a
       whitespace-normalized digest of each section an applied clause lands in, and a changed
       digest prints those clauses for re-reading before it is relocked. The ledger has 830
       clauses, of which 501 are applied. The same proposal covers validating a superseded
@@ -329,3 +329,21 @@ plan left open, as it was made.
   resource, as `Packet.resource` does, in place of a `KeyError`.
 - `escapewheel_writer.materialize` no longer exports `NotAligned`. The reader's `errors` module
   is its one home, as §2 drops old import paths.
+
+### 11.2 The ledger proposal
+
+The proposal is `revisions/proposals/the-ledger-locks-the-text-an-applied-clause-lands-in.md`. It
+departs from §9's preferred form in one place and settles three points §9 left open.
+
+- The lock is a file of its own beside the ledger under `revisions/`, and `headings.toml` does not
+  hold it. The specification tree is checked from a copy of itself alone, the ledger that says
+  which sections carry clauses lies outside that copy, and eight applied targets land in the
+  revision guide.
+- A section's digest covers its subsections, since a citation of the section number names that
+  extent. Ten sections that carry clauses have subsections.
+- The digest leaves out generated regions as well as collapsing whitespace. Seven sections that
+  carry clauses enclose a region a generator rewrites.
+- A clause that strikes a requirement and has no successor is disposed `applied` at the section it
+  struck from. One entry, R107 §3.5, is recorded `superseded` with no `by` today.
+
+Writing the tool waits on the proposal's promotion and acceptance.

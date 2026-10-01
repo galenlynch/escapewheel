@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 3 proposals and 0 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 4 proposals and 0 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -53,7 +53,7 @@ code lands in a module the refactor moves.
 3. An accepted revision is incorporated after the stage 4 splits, so its code lands once.
 4. New adapters follow stage 2, where the adapter contract becomes a declared protocol: the one
    that delivers the files a recipe names (§3b) and a packet-owned option for video.
-5. The ledger-fidelity proposal and `bench/` (§3c) go with stage 5 and the tooling work.
+5. `bench/` (§3c) goes with stage 5 and the tooling work.
 
 ---
 
@@ -130,9 +130,9 @@ errors, declared vocabularies, the public surface, module splits, and structural
 begins in the reader. One question from the 2026-09-06 request is not answered by it: which
 problems a dependency already solves that this code solves again.
 
-## 3a. Three proposals await promotion
+## 3a. Four proposals await promotion
 
-All three are committed under `revisions/proposals/` and none is promoted.
+All four are committed under `revisions/proposals/` and none is promoted.
 
 - **The reader floor bounds an array's byte order.** It supersedes R3 §7.1's little-endian and
   `fill_value` sentences, which the ledger records as applied and no part states, and narrows the
@@ -146,6 +146,10 @@ All three are committed under `revisions/proposals/` and none is promoted.
 - **Core declares a catalog of sidecars.** §3b describes it. Two questions are open in it: whether
   a sidecar is of class `documentation` or `core`, and whether its table is scoped to the packet
   or to a session.
+- **The ledger locks the text an applied clause lands in.** A process-domain proposal: the ledger
+  keeps a digest of each section an applied clause names, and a changed digest fails the check and
+  lists the clauses to re-read. It also makes a superseded entry's `by` required and checked, and
+  removes the ratchet that rewrites `applied.toml`. No code waits on it.
 
 ## 3b. A file the packet only indexes has no declaration
 
@@ -254,7 +258,7 @@ natural.
 - **A delivered adapter's compensations are dropped.** Section 4 of REFACTOR.md lists the defect. If carrying
   them needs a new key in the delivery report (Part 12 §9), that part is a revision.
 - **The ledger cannot see that an applied clause's text has gone.** Two accepted sentences were
-  lost this way and found by hand. Section 9 of REFACTOR.md describes the process proposal still to write.
+  lost this way and found by hand. The fourth proposal of §3a addresses it.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
