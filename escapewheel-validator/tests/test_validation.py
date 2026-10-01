@@ -2176,7 +2176,7 @@ def test_a_source_with_an_absolute_uri_is_refused(packet_root):
     _reference(packet_root, uri="s3://elsewhere/data")
     report = validate(open_packet(packet_root))
     assert not report.passed
-    assert any(f.check == "source.absolute_uri" and f.level == "error" for f in report.findings)
+    assert any(f.check == "sources.absolute_uri" and f.level == "error" for f in report.findings)
 
 
 def test_a_source_on_a_packet_owned_resource_is_refused(packet_root):

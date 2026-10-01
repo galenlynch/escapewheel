@@ -144,7 +144,7 @@ PACKET_RESOURCE_LINEAGE_CYCLE = _named("packet.resource.lineage_cycle", _ERROR, 
 
 # Source declarations.
 SOURCES_DECLARED = _unnamed("sources.declared", _ERROR, _RESOURCE)
-SOURCE_ABSOLUTE_URI = _unnamed("source.absolute_uri", _ERROR, _RESOURCE)
+SOURCES_ABSOLUTE_URI = _unnamed("sources.absolute_uri", _ERROR, _RESOURCE)
 SOURCES_DECLARED_COUNT = _unnamed("sources.declared_count", _INFO, _PACKET)
 SOURCES_UNRESOLVED = _unnamed("sources.unresolved", _INFO, _PACKET)
 
@@ -423,10 +423,10 @@ __all__ = [
     "RESOURCE_UNREADABLE",
     "SCHEMA_COLUMN_ABSENT",
     "SCHEMA_COLUMN_TYPE",
+    "SOURCES_ABSOLUTE_URI",
     "SOURCES_DECLARED",
     "SOURCES_DECLARED_COUNT",
     "SOURCES_UNRESOLVED",
-    "SOURCE_ABSOLUTE_URI",
     "TABLE",
     "TIME_ORIGIN_NOT_EARLIEST",
     "TIME_ORIGIN_UNMAPPABLE",

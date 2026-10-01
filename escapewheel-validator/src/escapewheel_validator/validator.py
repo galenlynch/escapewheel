@@ -1049,7 +1049,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
         named.setdefault(source, []).append(resource.resource_id)
         if "://" in resource.uri:
             report.add(
-                check_table.SOURCE_ABSOLUTE_URI,
+                check_table.SOURCES_ABSOLUTE_URI,
                 f"{resource.resource_id} names source {source!r} and an absolute uri {resource.uri!r}; "
                 "where a source is named the uri is a path under it (Part 04 §5.5)",
                 registry=report.resource_owner(resource.resource_id),
