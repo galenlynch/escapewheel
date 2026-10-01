@@ -6,7 +6,8 @@ findings and verdicts; ``escapewheel validate`` is the same call from the comman
 checks a registry document with no packet in hand. Every error the package raises on purpose is a
 :class:`ValidatorError`. A finding's level, a verdict, an evaluation's status and a registry result's
 state are members of :class:`Level`, :class:`Verdict`, :class:`EvaluationStatus` and
-:class:`RegistryState`, each equal to the string a report's JSON carries.
+:class:`RegistryState`, each equal to the string a report's JSON carries. Every check a finding is
+reported under is a :class:`CheckEntry` of :mod:`.check_table`, at a :class:`Scope`.
 
 Its modules:
 
@@ -20,6 +21,8 @@ registry_document, rule_language
     A registry document's own conformance, and the static check of its Tier 2 SQL.
 amendment
     An amendment compared with the version it supersedes.
+check_table
+    Every check ID the package declares, with its level, its scope and whether a part names it.
 errors
     Every exception the package raises on purpose.
 stores
@@ -35,6 +38,8 @@ not.
 
 from importlib.metadata import PackageNotFoundError, version
 
+from . import check_table
+from .check_table import CheckEntry, Scope
 from .errors import (
     FormatCheckUnavailable,
     OrderFault,
@@ -72,6 +77,7 @@ except PackageNotFoundError:  # pragma: no cover - only when running from a sour
 
 __all__ = [
     "Check",
+    "CheckEntry",
     "CheckedRegistryContext",
     "Evaluation",
     "EvaluationStatus",
@@ -87,6 +93,7 @@ __all__ = [
     "ReplacedPacketUnreadable",
     "Report",
     "ResourceMissing",
+    "Scope",
     "StoreUnreachable",
     "UnknownAlgorithm",
     "ValidatorError",
@@ -95,6 +102,7 @@ __all__ = [
     "check_packet_manifest",
     "check_registry_context",
     "check_registry_context_bytes",
+    "check_table",
     "generate",
     "manifest_schema",
     "validate",

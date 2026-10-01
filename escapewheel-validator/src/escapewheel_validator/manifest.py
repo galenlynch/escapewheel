@@ -36,6 +36,8 @@ from escapewheel_reader import Location, RegistryBinding, RegistryFault, Registr
 from escapewheel_reader.registries import acquire
 from escapewheel_reader.uri import in_one_form
 
+from . import check_table
+from .check_table import CheckEntry
 from .errors import FormatCheckUnavailable, ReplacedPacketUnreadable
 from .registry_document import CheckedRegistryContext, check_registry_context_bytes
 from .stores import listing_digest
@@ -48,7 +50,7 @@ MANIFEST_FILENAME = "packet.json"
 class Issue:
     """One manifest finding, at `error` as every Part 04 §10 finding is."""
 
-    check: str
+    check: CheckEntry
     message: str
     rows: tuple[tuple[Any, ...], ...] = ()
     #: The registry a binding finding concerns, or None for a packet finding (Part 05 §9.5).
@@ -141,13 +143,13 @@ def check_json(raw: bytes, issues: list[Issue]) -> Any:
     try:
         document = json.loads(raw.decode("utf-8"), object_pairs_hook=_Object)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        issues.append(Issue("packet.manifest.invalid_json", f"the manifest is not UTF-8 JSON: {exc}"))
+        issues.append(Issue(check_table.PACKET_MANIFEST_INVALID_JSON, f"the manifest is not UTF-8 JSON: {exc}"))
         return None
     repeated = list(_repeated(document))
     for where, name in repeated:
         issues.append(
             Issue(
-                "packet.manifest.duplicate_member",
+                check_table.PACKET_MANIFEST_DUPLICATE_MEMBER,
                 f"{where or '<root>'} repeats member {name!r}",
                 ((where, name),),
             )
@@ -169,7 +171,7 @@ def check_shape(document: Any, issues: list[Issue]) -> bool:
         instance = _pointer(list(error.absolute_path))
         schema = "#" + _pointer(list(error.absolute_schema_path))
         issues.append(
-            Issue("packet.manifest.schema", f"{instance or '<root>'}: {error.message}", ((instance, schema),))
+            Issue(check_table.PACKET_MANIFEST_SCHEMA, f"{instance or '<root>'}: {error.message}", ((instance, schema),))
         )
     return not errors
 
@@ -191,19 +193,21 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
     resources: list[Mapping[str, Any]] = document["resources"]
     counts = Counter(entry["resource_id"] for entry in resources)
     for resource_id in sorted(name for name, count in counts.items() if count > 1):
-        issues.append(Issue("packet.resource.id_unique", f"{resource_id}: {counts[resource_id]} entries share this ID"))
+        issues.append(
+            Issue(check_table.PACKET_RESOURCE_ID_UNIQUE, f"{resource_id}: {counts[resource_id]} entries share this ID")
+        )
     for entry in resources:
         if entry.get("external") is not True and "digest" not in entry:
             issues.append(
                 Issue(
-                    "packet.resource.digest_missing",
+                    check_table.PACKET_RESOURCE_DIGEST_MISSING,
                     f"{entry['resource_id']}: the packet owns this resource and records no digest (Part 04 §4.3)",
                 )
             )
         if not in_one_form(entry["uri"]):
             issues.append(
                 Issue(
-                    "packet.resource.uri_form",
+                    check_table.PACKET_RESOURCE_URI_FORM,
                     f"{entry['resource_id']}: uri {entry['uri']!r} is neither absolute nor a relative reference "
                     "in Part 03 §4's one form",
                     ((entry["resource_id"], entry["uri"]),),
@@ -215,13 +219,15 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
         keys = Counter(member["key"] for member in members)
         for key in sorted(name for name, count in keys.items() if count > 1):
             issues.append(
-                Issue("packet.resource.member_unique", f"{entry['resource_id']}: member {key!r} is listed twice")
+                Issue(
+                    check_table.PACKET_RESOURCE_MEMBER_UNIQUE, f"{entry['resource_id']}: member {key!r} is listed twice"
+                )
             )
         total = sum(member["size_bytes"] for member in members)
         if "size_bytes" in entry and entry["size_bytes"] != total:
             issues.append(
                 Issue(
-                    "packet.resource.member_size",
+                    check_table.PACKET_RESOURCE_MEMBER_SIZE,
                     f"{entry['resource_id']}: size_bytes {entry['size_bytes']} differs from its members' {total}",
                 )
             )
@@ -229,7 +235,7 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
         if "digest" in entry and prefix_digest(members) != entry["digest"]["value"]:
             issues.append(
                 Issue(
-                    "packet.resource.member_digest",
+                    check_table.PACKET_RESOURCE_MEMBER_DIGEST,
                     f"{entry['resource_id']}: digest is not the Part 04 §4.3 value of its member list",
                 )
             )
@@ -238,7 +244,7 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
     if len(cores) != 1:
         issues.append(
             Issue(
-                "packet.registry.core_count",
+                check_table.PACKET_REGISTRY_CORE_COUNT,
                 f"the manifest binds {len(cores)} core registries; exactly one is required",
                 tuple((name,) for name in cores),
             )
@@ -247,7 +253,7 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
     for path in sorted(name for name, count in paths.items() if count > 1):
         issues.append(
             Issue(
-                "packet.registry.path_unique",
+                check_table.PACKET_REGISTRY_PATH_UNIQUE,
                 f"{path}: {paths[path]} registry descriptors share this path",
                 tuple((name,) for name, descriptor in sorted(registries.items()) if descriptor["path"] == path),
             )
@@ -257,7 +263,7 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
         if item["packet_id"] == document["packet_id"] and major(item["packet_version"]) >= own:
             issues.append(
                 Issue(
-                    "packet.replaces.major_version",
+                    check_table.PACKET_REPLACES_MAJOR_VERSION,
                     f"replaces item {position} names this packet_id at {item['packet_version']}, whose major "
                     f"version is not below this packet's {document['packet_version']} (Part 04 §3)",
                     ((position, item["packet_id"], item["packet_version"]),),
@@ -400,9 +406,9 @@ def _checked(data: bytes, core: bytes | None) -> CheckedRegistryContext:
 
 #: The check Part 04 §10 names for each way acquiring a bound registry fails.
 _ACQUISITION_CHECK = {
-    RegistryFault.MISSING: "packet.registry.missing",
-    RegistryFault.UNREADABLE: "packet.registry.unreadable",
-    RegistryFault.DIGEST: "packet.registry.digest",
+    RegistryFault.MISSING: check_table.PACKET_REGISTRY_MISSING,
+    RegistryFault.UNREADABLE: check_table.PACKET_REGISTRY_UNREADABLE,
+    RegistryFault.DIGEST: check_table.PACKET_REGISTRY_DIGEST,
 }
 
 
@@ -452,15 +458,20 @@ def _compare(
     found: list[Issue] = []
     if registry["registry_id"] != name:
         found.append(
-            Issue("packet.registry.identity", f"{name}: the document's registry_id is {registry['registry_id']!r}")
+            Issue(
+                check_table.PACKET_REGISTRY_IDENTITY,
+                f"{name}: the document's registry_id is {registry['registry_id']!r}",
+            )
         )
     role = "extension" if "extension_id" in registry else "core"
     if role != binding.role:
-        found.append(Issue("packet.registry.role", f"{name}: bound as {binding.role}, but the document is {role}"))
+        found.append(
+            Issue(check_table.PACKET_REGISTRY_ROLE, f"{name}: bound as {binding.role}, but the document is {role}")
+        )
     if registry["registry_version"] != binding.version:
         found.append(
             Issue(
-                "packet.registry.version",
+                check_table.PACKET_REGISTRY_VERSION,
                 f"{name}: bound as {binding.version}, but the document is {registry['registry_version']}",
             )
         )
@@ -469,7 +480,7 @@ def _compare(
         if registry.get(member) != manifest[member]:
             found.append(
                 Issue(
-                    "packet.registry.standard",
+                    check_table.PACKET_REGISTRY_STANDARD,
                     f"{name}: {member} {registry.get(member)!r} differs from the manifest's {manifest[member]!r}",
                 )
             )

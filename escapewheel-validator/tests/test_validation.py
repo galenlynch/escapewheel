@@ -6,7 +6,7 @@ import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet
 
-from escapewheel_validator import validate
+from escapewheel_validator import check_table, validate
 from escapewheel_validator.generate import Check, concerns
 from escapewheel_validator.generate import _generate as generate
 from escapewheel_validator.validator import check_packet_manifest
@@ -999,8 +999,7 @@ def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
 
 def _check(sql, resource="core.units", dependencies=()):
     return Check(
-        f"{resource}.rule",
-        "error",
+        check_table.rule(f"{resource}.rule", "error"),
         "message",
         sql,
         resource,

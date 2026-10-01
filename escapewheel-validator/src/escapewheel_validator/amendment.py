@@ -26,6 +26,9 @@ from typing import Any
 
 import pyarrow.parquet as pq
 
+from . import check_table
+from .check_table import CheckEntry
+
 #: Tables whose rows record what ran rather than what was measured, so writing one leaves no derived
 #: resource stale (Part 05 §15.2).
 PROVENANCE = frozenset({"core.processing_runs", "core.source_files", "core.processing_run_inputs"})
@@ -228,7 +231,7 @@ def chain_reaches(entries: Mapping[str, Mapping[str, Any]], start: str, targets:
 class Finding:
     """One comparison finding, about a resource or, where `resource` is None, the packet."""
 
-    check: str
+    check: CheckEntry
     resource: str | None
     message: str
     rows: Sequence[Sequence[Any]] = ()
@@ -278,7 +281,7 @@ def compare(
     if changed:
         found.append(
             Finding(
-                "amendment.identity_changed",
+                check_table.AMENDMENT_IDENTITY_CHANGED,
                 None,
                 f"the amendment changes {', '.join(f for f, _, _ in changed)}, which no amendment changes "
                 "(Part 05 §15.2)",
@@ -292,12 +295,14 @@ def compare(
     for resource in sorted(set(before) & canonical):
         if resource not in now:
             found.append(
-                Finding("amendment.resource_changed", resource, f"{resource} is removed; no amendment removes one")
+                Finding(
+                    check_table.AMENDMENT_RESOURCE_CHANGED, resource, f"{resource} is removed; no amendment removes one"
+                )
             )
         elif now[resource].get("uri") != before[resource].get("uri") and kinds.get(resource) != "table":
             found.append(
                 Finding(
-                    "amendment.resource_changed",
+                    check_table.AMENDMENT_RESOURCE_CHANGED,
                     resource,
                     f"{resource} is named at another uri; no amendment changes a canonical resource but a table",
                     [(before[resource].get("uri"), now[resource].get("uri"))],
@@ -320,7 +325,7 @@ def compare(
         if reached is not None:
             found.append(
                 Finding(
-                    "amendment.derived_resource_stale",
+                    check_table.AMENDMENT_DERIVED_RESOURCE_STALE,
                     resource,
                     f"{resource} is kept at its uri, and its derived_from chain reaches {reached}, which the "
                     "amendment writes; derive it again or remove it (Part 05 §15.2)",
@@ -349,7 +354,7 @@ def _compare_table(
         if count:
             found.append(
                 Finding(
-                    "amendment.row_changed",
+                    check_table.AMENDMENT_ROW_CHANGED,
                     resource,
                     f"{resource}: {count:,} superseded row(s) the amendment does not hold unchanged; an amendment "
                     "changes and removes no canonical row (Part 05 §15.2)",
@@ -374,7 +379,7 @@ def _compare_table(
         )
         found.append(
             Finding(
-                "amendment.group_grown",
+                check_table.AMENDMENT_GROUP_GROWN,
                 resource,
                 f"{resource}: {int(total):,} added row(s) join groups the superseded version holds: {why} "
                 "(Part 05 §15.2)",

@@ -60,6 +60,15 @@ and a registry result's state a `RegistryState`. Each is a string enumeration wh
 the strings the JSON report carries, so `report.verdict() == Verdict.PASSED` and
 `report.verdict() == "passed"` are one test.
 
+Every check ID the validator declares is an entry of `escapewheel_validator.check_table`, which
+gives its default level, its scope (`packet`, `registry`, `resource` or `column`) and whether a
+numbered part of the specification names it. A fixed ID is a constant named after it, and an ID
+built from a resource or a column comes from its family's function, so
+`finding.check == check_table.OWNED_DIGEST.id` and
+`finding.check == check_table.physical_order("core.trials").id` compare against the table instead
+of a string. A Tier 2 rule's ID is the registry's and a registry result's outcome's is the registry
+contract's, and neither is in the table.
+
 ## Resource digests
 
 Every resource the packet owns records a `digest` naming its algorithm: `sha256`, `crc64nvme`,

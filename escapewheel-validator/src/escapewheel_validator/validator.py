@@ -26,9 +26,10 @@ import tempfile
 from collections import Counter
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from enum import Enum, auto
 from importlib import resources as importlib_resources
 from pathlib import Path
-from typing import Any
+from typing import Any, overload
 
 import numpy as np
 import pyarrow as pa
@@ -41,7 +42,8 @@ from escapewheel_reader.ordering import stored_order
 from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_floor_admits
 from escapewheel_reader.uri import decode
 
-from . import amendment
+from . import amendment, check_table
+from .check_table import CheckEntry
 from .errors import OrderFault, OrderViolation, ResourceMissing, StoreUnreachable, _Unmappable
 from .generate import Check, Specialisation, adjacency_settles_uniqueness, concerns, generate
 from .manifest import (
@@ -117,8 +119,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
         declaration = visible.get(entry.declaration_id)
         if declaration is None:
             report.add(
-                Level.ERROR,
-                "packet.resource.declaration_unknown",
+                check_table.PACKET_RESOURCE_DECLARATION_UNKNOWN,
                 f"{entry.resource_id}: declaration {entry.declaration_id!r} is not visible",
             )
             continue
@@ -126,23 +127,20 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
         mode = instances["mode"]
         if mode == "singleton" and entry.resource_id != entry.declaration_id:
             report.add(
-                Level.ERROR,
-                "packet.resource.singleton_identity",
+                check_table.PACKET_RESOURCE_SINGLETON_IDENTITY,
                 f"{entry.resource_id}: singleton identity must equal {entry.declaration_id}",
                 registry=report.owner(entry.declaration_id),
             )
         if mode == "family" and entry.resource_id.split(".", 1)[0] != entry.declaration_id.split(".", 1)[0]:
             report.add(
-                Level.ERROR,
-                "packet.resource.family_namespace",
+                check_table.PACKET_RESOURCE_FAMILY_NAMESPACE,
                 f"{entry.resource_id}: family identity is outside {entry.declaration_id}'s namespace",
                 registry=report.owner(entry.declaration_id),
             )
         for dependency in declaration["requires"]:
             if dependency not in by_id:
                 report.add(
-                    Level.ERROR,
-                    "packet.resource.dependency_missing",
+                    check_table.PACKET_RESOURCE_DEPENDENCY_MISSING,
                     f"{entry.resource_id}: required singleton {dependency} is absent",
                     registry=report.owner(entry.declaration_id),
                 )
@@ -150,8 +148,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
             axes = declaration["array"]["axes_resource"]
             if axes not in by_id:
                 report.add(
-                    Level.ERROR,
-                    "packet.resource.array_axes_missing",
+                    check_table.PACKET_RESOURCE_ARRAY_AXES_MISSING,
                     f"{entry.resource_id}: declaration-selected axes resource {axes} is absent",
                     registry=report.owner(entry.declaration_id),
                 )
@@ -159,15 +156,13 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
         present = "derived_from" in entry.entry
         if declaration["lineage"] == "required" and not present:
             report.add(
-                Level.ERROR,
-                "packet.resource.derived_from_required",
+                check_table.PACKET_RESOURCE_DERIVED_FROM_REQUIRED,
                 f"{entry.resource_id}: derived_from is required by {entry.declaration_id}",
                 registry=report.owner(entry.declaration_id),
             )
         elif declaration["lineage"] == "forbidden" and present:
             report.add(
-                Level.ERROR,
-                "packet.resource.derived_from_forbidden",
+                check_table.PACKET_RESOURCE_DERIVED_FROM_FORBIDDEN,
                 f"{entry.resource_id}: derived_from is forbidden by {entry.declaration_id}",
                 registry=report.owner(entry.declaration_id),
             )
@@ -183,8 +178,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
             and declaration_id not in by_id
         ):
             report.add(
-                Level.ERROR,
-                "packet.resource.required_missing",
+                check_table.PACKET_RESOURCE_REQUIRED_MISSING,
                 f"required singleton {declaration_id} is absent",
                 registry=report.owner(declaration_id),
             )
@@ -207,8 +201,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
             )
             if any(all(value is not None for value in row) for row in values):
                 report.add(
-                    Level.ERROR,
-                    "packet.resource.reference_target_missing",
+                    check_table.PACKET_RESOURCE_REFERENCE_TARGET_MISSING,
                     f"{declaration_id}: populated foreign key {columns} requires {target}",
                     registry=report.owner(declaration_id),
                 )
@@ -228,8 +221,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
             values = packet.table(catalog_id, columns=[column]).column(column).to_pylist()
         except (PacketError, OSError, pa.ArrowException) as exc:
             report.add(
-                Level.ERROR,
-                "packet.resource.catalog_table_unreadable",
+                check_table.PACKET_RESOURCE_CATALOG_TABLE_UNREADABLE,
                 f"{catalog_id}.{column}: {exc}",
                 registry=report.owner(catalog_id),
             )
@@ -242,8 +234,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
             ]
             if count != 1 or len(matches) != 1:
                 report.add(
-                    Level.ERROR,
-                    "packet.resource.catalog_row_binding",
+                    check_table.PACKET_RESOURCE_CATALOG_ROW_BINDING,
                     f"{catalog_id}.{column}={value!r} does not bind one {declaration_id} resource",
                     registry=report.owner(declaration_id),
                 )
@@ -251,8 +242,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
         for entry in entries:
             if entry.declaration_id == declaration_id and entry.resource_id not in catalog_values:
                 report.add(
-                    Level.ERROR,
-                    "packet.resource.catalog_row_binding",
+                    check_table.PACKET_RESOURCE_CATALOG_ROW_BINDING,
                     f"{entry.resource_id}: no row in {catalog_id}.{column}",
                     registry=report.owner(declaration_id),
                 )
@@ -276,15 +266,13 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
             source_declaration = None if source_entry is None else visible.get(source_entry.declaration_id)
             if source_declaration is None:
                 report.add(
-                    Level.ERROR,
-                    "packet.resource.lineage_unresolved",
+                    check_table.PACKET_RESOURCE_LINEAGE_UNRESOLVED,
                     f"{entry.resource_id}: lineage source {source!r} is absent or undeclared",
                     registry=report.owner(entry.declaration_id),
                 )
             elif source_declaration["content_class"] not in permitted[declaration["content_class"]]:
                 report.add(
-                    Level.ERROR,
-                    "packet.resource.lineage_class",
+                    check_table.PACKET_RESOURCE_LINEAGE_CLASS,
                     f"{entry.resource_id}: {declaration['content_class']} may not derive from "
                     f"{source_declaration['content_class']}",
                     registry=report.owner(entry.declaration_id),
@@ -295,7 +283,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
 
     for node in graph:
         if cyclic(node, frozenset()):
-            report.add(Level.ERROR, "packet.resource.lineage_cycle", f"lineage cycle reaches {node}")
+            report.add(check_table.PACKET_RESOURCE_LINEAGE_CYCLE, f"lineage cycle reaches {node}")
             break
 
 
@@ -452,29 +440,38 @@ class Report:
         self.registries.append(RegistryEvaluation(subject, context.result, directs_checks, core))
         for outcome in context.result.findings:
             self.add(
-                Level.ERROR,
-                outcome.id,
+                check_table.registry_outcome(outcome.id),
                 f"{subject} registry {outcome.instance or '<root>'}: "
                 f"{outcome.detail or outcome.reason or outcome.state}",
                 registry=subject,
             )
 
+    @overload
+    def add(
+        self, check: CheckEntry, message: str, /, rows: Sequence[Sequence[Any]] = (), registry: str | None = None
+    ) -> None: ...
+
+    @overload
     def add(
         self,
         level: str,
         check: str,
         message: str,
+        /,
         rows: Sequence[Sequence[Any]] = (),
         registry: str | None = None,
-    ) -> None:
-        """Record a finding.
+    ) -> None: ...
+
+    def add(self, check: CheckEntry | str, *given: Any, **named: Any) -> None:
+        """Record a finding under an entry of the check table, at the entry's level.
+
+        A caller outside this package whose check the table does not hold gives a level and a check
+        ID in the entry's place, as ``add(level, check, message, ...)``.
 
         Parameters
         ----------
-        level : Level or str
-            The finding's level, as a member or the string equal to one.
-        check : str
-            Identifier of the check.
+        check : CheckEntry
+            The check, from :mod:`.check_table`; `CheckEntry.at` gives it at another level.
         message : str
             What went wrong.
         rows : sequence, optional
@@ -482,8 +479,22 @@ class Report:
         registry : str, optional
             The bound registry the finding belongs to; None for the packet.
         """
+        if isinstance(check, CheckEntry):
+            self._record(check.level, check.id, *given, **named)
+        else:
+            self._record(Level(check), *given, **named)
+
+    def _record(
+        self,
+        level: Level,
+        check: str,
+        message: str,
+        rows: Sequence[Sequence[Any]] = (),
+        registry: str | None = None,
+    ) -> None:
+        """Append one finding, keeping its first five rows as strings."""
         self.findings.append(
-            Finding(Level(level), check, message, tuple(tuple(str(v) for v in row) for row in list(rows)[:5]), registry)
+            Finding(level, check, message, tuple(tuple(str(v) for v in row) for row in list(rows)[:5]), registry)
         )
 
     def to_dict(self, packet_id: str) -> dict[str, Any]:
@@ -676,8 +687,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
             continue
         if reference is None:
             report.add(
-                Level.ERROR,
-                "time.origin_unmappable",
+                check_table.TIME_ORIGIN_UNMAPPABLE,
                 f"session {session} declares t_zero_tick but no reference clock to state it on",
                 [(str(session),)],
                 registry="core",
@@ -689,8 +699,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
                 mapped.append(_onto(start, clock, reference, graph, by_clock, BOUND if bound is None else float(bound)))
             except _Unmappable as refused:
                 report.add(
-                    Level.ERROR,
-                    "time.origin_unmappable",
+                    check_table.TIME_ORIGIN_UNMAPPABLE,
                     f"session {session}: {clock}'s observation start {start} does not map to {reference}, "
                     f"so no origin is defined ({refused})",
                     [(str(session), str(clock), str(start))],
@@ -703,8 +712,7 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
             # disagreement is rounding rather than a wrong origin.
             if abs(int(stated) - expected) > 1:
                 report.add(
-                    Level.ERROR,
-                    "time.origin_not_earliest",
+                    check_table.TIME_ORIGIN_NOT_EARLIEST,
                     f"session {session} declares t_zero_tick {stated} but its earliest observation start "
                     f"on {reference} is {expected}",
                     [(str(session), str(stated), str(expected))],
@@ -752,8 +760,7 @@ def _check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report
     members = ("codecs",) if zarr_format == 3 else ("filters", "compressor")
     observed = [(member, json.dumps(metadata.get(member), separators=(",", ":"))) for member in members]
     report.add(
-        _floor_level(resource),
-        "physical.outside_reader_floor",
+        check_table.PHYSICAL_OUTSIDE_READER_FLOOR.at(_floor_level(resource)),
         f"{resource.resource_id}: zarr {variant} "
         + "; ".join(f"{member} {value}" for member, value in observed)
         + " is outside the reader floor of Part 03 §6.4",
@@ -777,8 +784,7 @@ def _check_parquet_floor(resource: Any, metadata: Any, report: Report) -> None:
     observed += [("encoding", value) for value in sorted(encodings - set(floor["encodings"]))]
     if observed:
         report.add(
-            _floor_level(resource),
-            "physical.outside_reader_floor",
+            check_table.PHYSICAL_OUTSIDE_READER_FLOOR.at(_floor_level(resource)),
             f"{resource.resource_id}: parquet "
             + ", ".join(f"{member} {value}" for member, value in observed)
             + " is outside the reader floor of Part 03 §5.5",
@@ -795,8 +801,7 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAx
         rank = len(handle.shape)
     except (ResourceUnreadableError, OSError, ValueError, KeyError) as exc:
         report.add(
-            Level.ERROR,
-            "array.unreadable",
+            check_table.ARRAY_UNREADABLE,
             f"{resource.resource_id}: {exc}",
             registry=report.resource_owner(resource.resource_id),
         )
@@ -804,8 +809,7 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAx
 
     if handle.zarr_format != 3:
         report.add(
-            Level.ERROR,
-            "array.not_zarr_v3",
+            check_table.ARRAY_NOT_ZARR_V3,
             f"{resource.resource_id} is packet-owned but stored as Zarr v{handle.zarr_format}; "
             "Part 03 §6.1 allows v2 only for an array the packet references",
             registry=report.resource_owner(resource.resource_id),
@@ -813,8 +817,7 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAx
 
     if "transpose" in actual:
         report.add(
-            Level.ERROR,
-            "array.transpose_codec",
+            check_table.ARRAY_TRANSPOSE_CODEC,
             f"{resource.resource_id} uses the transpose codec, which Part 03 §6.2 forbids: axes are stored in the "
             "order the packet declares them",
             registry=report.resource_owner(resource.resource_id),
@@ -824,16 +827,14 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAx
 
     if (grid := metadata.get("chunk_grid", {}).get("name")) != "regular":
         report.add(
-            Level.ERROR,
-            "array.irregular_chunk_grid",
+            check_table.ARRAY_IRREGULAR_CHUNK_GRID,
             f"{resource.resource_id} declares a {grid!r} chunk grid; Part 03 §6.1 requires a regular one",
             registry=report.resource_owner(resource.resource_id),
         )
 
     if "fill_value" not in metadata:
         report.add(
-            Level.ERROR,
-            "array.no_fill_value",
+            check_table.ARRAY_NO_FILL_VALUE,
             f"{resource.resource_id} declares no fill_value, which Part 03 §6.1 requires",
             registry=report.resource_owner(resource.resource_id),
         )
@@ -843,19 +844,17 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAx
     shape = [int(n) for n in handle.shape]
     if set(axes.names) != set(range(rank)):
         report.add(
-            Level.ERROR,
-            "array.rank_disagrees_with_dimensions",
+            check_table.ARRAY_RANK_DISAGREES_WITH_DIMENSIONS,
             f"{resource.resource_id} has rank {rank} but its declaration-selected axes resource "
             f"gives axis_index {sorted(axes.names) or 'none'}; Part 03 §6.3 requires one row per stored axis",
             registry=report.resource_owner(resource.resource_id),
         )
         return
-    _report_axes(resource, shape, axes, "array.", report)
+    _report_axes(resource, shape, axes, _OWNED_AXIS_CHECKS, report)
     names = [axes.names[axis] for axis in range(rank)]
     if metadata.get("dimension_names") != names:
         report.add(
-            Level.ERROR,
-            "array.dimension_names",
+            check_table.ARRAY_DIMENSION_NAMES,
             f"{resource.resource_id} stores dimension_names {metadata.get('dimension_names')!r} where its axes "
             f"resource names {names!r}; Part 03 §6.5 requires a packet-owned array to carry them",
             registry=report.resource_owner(resource.resource_id),
@@ -882,8 +881,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     declared = _declared_axes(packet)
     if not declared:
         report.add(
-            Level.ERROR,
-            "array.no_array_dimensions_table",
+            check_table.ARRAY_NO_ARRAY_DIMENSIONS_TABLE,
             f"{len(owned)} packet-owned array(s) but no declaration-selected axes rows were resolved",
         )
     for resource in owned:
@@ -891,8 +889,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
             listing(_owned_uri(packet, resource.entry))
         except ResourceMissing as exc:
             report.add(
-                Level.ERROR,
-                "resource.missing",
+                check_table.RESOURCE_MISSING,
                 f"{resource.resource_id}: {exc}",
                 registry=report.resource_owner(resource.resource_id),
             )
@@ -915,8 +912,7 @@ def _check_packet_owned_opaque(packet: Packet, report: Report) -> None:
             found = listing(_owned_uri(packet, resource.entry))
         except ResourceMissing as exc:
             report.add(
-                Level.ERROR,
-                "resource.missing",
+                check_table.RESOURCE_MISSING,
                 f"{resource.resource_id}: {exc}",
                 registry=report.resource_owner(resource.resource_id),
             )
@@ -926,8 +922,7 @@ def _check_packet_owned_opaque(packet: Packet, report: Report) -> None:
         keys = () if found.is_single_object else [member.key for member in found.members]
         for directory, names, reason in findings(decode(resource.uri), keys):
             report.add(
-                Level.WARNING,
-                "physical.opaque_name_portability",
+                check_table.PHYSICAL_OPAQUE_NAME_PORTABILITY,
                 describe(resource.resource_id, directory, names, reason),
                 [(resource.resource_id, directory, *names)],
                 registry=report.resource_owner(resource.resource_id),
@@ -939,8 +934,7 @@ def _report_unassessed(packet: Packet, assessed: Collection[str], report: Report
     for resource in packet.resources():
         if resource.is_external and resource.interface is not None and resource.resource_id not in assessed:
             report.add(
-                Level.INFO,
-                "external.physical_unassessed",
+                check_table.EXTERNAL_PHYSICAL_UNASSESSED,
                 f"{resource.resource_id}: its {resource.interface} metadata was not read, so its physical "
                 "version, codecs, compression and encodings are unassessed",
                 [(resource.resource_id,)],
@@ -952,8 +946,7 @@ def _report_page_types_unassessed(tables: int, report: Report) -> None:
     """Part 03 §5.5: a validator comparing only footers states that it did not assess data-page types."""
     if tables:
         report.add(
-            Level.INFO,
-            "physical.page_types_unassessed",
+            check_table.PHYSICAL_PAGE_TYPES_UNASSESSED,
             f"{tables} Parquet footer(s) compared with the floor's compressions and encodings; data-page "
             "types were not assessed, since they are recorded in page headers",
         )
@@ -983,8 +976,7 @@ def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool =
             )
         except StoreUnreachable as exc:
             report.add(
-                Level.ERROR,
-                "resource.missing",
+                check_table.RESOURCE_MISSING,
                 f"{resource.resource_id}: {exc}",
                 registry=report.resource_owner(resource.resource_id),
             )
@@ -995,8 +987,7 @@ def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool =
             matched += 1
         else:
             report.add(
-                Level.ERROR,
-                "owned.digest",
+                check_table.OWNED_DIGEST,
                 f"{resource.resource_id}: {found.algorithm} gives {found.value[:16]}…, manifest records "
                 f"{str(claimed['value'])[:16]}… — a packet-owned resource is immutable (Part 03 §8.1) and "
                 "Part 05 §15.4 bounds revalidation on that",
@@ -1004,8 +995,7 @@ def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool =
             )
     if checked:
         report.add(
-            Level.INFO,
-            "owned.verified",
+            check_table.OWNED_VERIFIED,
             f"{matched} of {checked} packet-owned resource(s) hold their recorded digest; {_routes(routes)}",
             routes,
         )
@@ -1050,8 +1040,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
         if source is None:
             if Path(str(resource.entry.get("uri", ""))).name == SOURCES_FILENAME:
                 report.add(
-                    Level.ERROR,
-                    "sources.declared",
+                    check_table.SOURCES_DECLARED,
                     f"{resource.resource_id} declares {SOURCES_FILENAME} as a resource; Part 04 §5.5 keeps it "
                     "outside the manifest so Part 03 §8.1's immutability does not reach it",
                     registry=report.resource_owner(resource.resource_id),
@@ -1060,8 +1049,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
         named.setdefault(source, []).append(resource.resource_id)
         if "://" in resource.uri:
             report.add(
-                Level.ERROR,
-                "source.absolute_uri",
+                check_table.SOURCE_ABSOLUTE_URI,
                 f"{resource.resource_id} names source {source!r} and an absolute uri {resource.uri!r}; "
                 "where a source is named the uri is a path under it (Part 04 §5.5)",
                 registry=report.resource_owner(resource.resource_id),
@@ -1071,8 +1059,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
     located = dict(packet.location.sources)
     unresolved = sorted(name for name in named if name not in located)
     report.add(
-        Level.INFO,
-        "sources.declared_count",
+        check_table.SOURCES_DECLARED_COUNT,
         f"{len(named)} source(s) named by {sum(len(v) for v in named.values())} resource(s); "
         f"{len(named) - len(unresolved)} located by a resolution document",
     )
@@ -1080,8 +1067,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
         # A fact, not a defect (Part 04 §5.5): the packet is conforming and this reader cannot reach
         # those bytes. Reported so a report says which, rather than leaving it to a later failure.
         report.add(
-            Level.INFO,
-            "sources.unresolved",
+            check_table.SOURCES_UNRESOLVED,
             f"{len(unresolved)} source(s) no available resolution document locates (Part 04 §5.5)",
             [(name, ", ".join(named[name][:3])) for name in unresolved[:20]],
         )
@@ -1143,8 +1129,7 @@ def _resolve_external(
         except UnresolvedSource as exc:
             # Which sources resolve is the reader's situation (Part 04 §5.5): unreachable, not wrong.
             report.add(
-                Level.WARNING,
-                "external.unreachable",
+                check_table.EXTERNAL_UNREACHABLE,
                 f"{resource.resource_id}: {exc}",
                 registry=report.resource_owner(resource.resource_id),
             )
@@ -1160,8 +1145,7 @@ def _resolve_external(
             unchecksummed.append(resource.resource_id)
     if unchecksummed:
         report.add(
-            Level.WARNING,
-            "external.no_checksum",
+            check_table.EXTERNAL_NO_CHECKSUM,
             f"{len(unchecksummed)} of {checked} resolved resource(s) record no digest, so a digest "
             "was asked for and nothing was compared against (Part 04 §5.2)",
             [(name,) for name in unchecksummed],
@@ -1170,8 +1154,7 @@ def _resolve_external(
         did = ", ".join(f"{count} {field}" for field, count in sorted(compared.items())) or "nothing"
         established = f"; digest {_routes(routes)}" if routes else ""
         report.add(
-            Level.INFO,
-            "external.verified",
+            check_table.EXTERNAL_VERIFIED,
             f"{checked} external resource(s) resolved; compared {did}{established}",
             routes,
         )
@@ -1201,8 +1184,7 @@ def _compare_external(
         found = listing(uri)
     except StoreUnreachable as exc:
         report.add(
-            Level.WARNING,
-            "external.unreachable",
+            check_table.EXTERNAL_UNREACHABLE,
             f"{resource.resource_id}: {exc}",
             registry=report.resource_owner(resource.resource_id),
         )
@@ -1214,8 +1196,7 @@ def _compare_external(
         fields.append("size_bytes")
         if found.size_bytes != claimed:
             report.add(
-                Level.ERROR,
-                "external.size_bytes",
+                check_table.EXTERNAL_SIZE_BYTES,
                 f"{resource.resource_id}: {found.size_bytes:,} bytes over {len(found.members)} object(s), "
                 f"manifest claims {claimed:,}",
                 registry=report.resource_owner(resource.resource_id),
@@ -1231,8 +1212,7 @@ def _compare_external(
             found_digest = digest_resource(uri, str(claimed["algorithm"]), store_checksums=store_checksums)
         except StoreUnreachable as exc:
             report.add(
-                Level.WARNING,
-                "external.unreachable",
+                check_table.EXTERNAL_UNREACHABLE,
                 f"{resource.resource_id}: {exc}",
                 registry=report.resource_owner(resource.resource_id),
             )
@@ -1242,8 +1222,7 @@ def _compare_external(
             routes.append((resource.resource_id, found_digest.algorithm, found_digest.route))
         if found_digest.value != claimed["value"]:
             report.add(
-                Level.ERROR,
-                "external.digest",
+                check_table.EXTERNAL_DIGEST,
                 f"{resource.resource_id}: {found_digest.algorithm} gives {found_digest.value[:16]}…, "
                 f"manifest records {str(claimed['value'])[:16]}…",
                 registry=report.resource_owner(resource.resource_id),
@@ -1265,16 +1244,14 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
     claimed = {str(entry.get("key", "")): entry for entry in declared}
     if missing := sorted(claimed.keys() - held.keys()):
         report.add(
-            Level.ERROR,
-            "external.members",
+            check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: {len(missing)} declared member(s) the store does not hold",
             [(key,) for key in missing[:20]],
             registry=report.resource_owner(resource.resource_id),
         )
     if extra := sorted(held.keys() - claimed.keys()):
         report.add(
-            Level.ERROR,
-            "external.members",
+            check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: the store holds {len(extra)} member(s) the manifest does not "
             "declare, so a digest over the declared listing would not describe it",
             [(key,) for key in extra[:20]],
@@ -1286,8 +1263,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
         if claimed[key].get("size_bytes") is not None and claimed[key]["size_bytes"] != held[key].size_bytes
     ):
         report.add(
-            Level.ERROR,
-            "external.members",
+            check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: {len(sized)} member(s) differ in size from the manifest",
             [(key, claimed[key]["size_bytes"], held[key].size_bytes) for key in sized[:20]],
             registry=report.resource_owner(resource.resource_id),
@@ -1305,16 +1281,14 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             changed.append(key)
     if changed:
         report.add(
-            Level.ERROR,
-            "external.store_digest",
+            check_table.EXTERNAL_STORE_DIGEST,
             f"{resource.resource_id}: {len(changed)} member(s) changed in place since recording",
             [(key,) for key in changed[:20]],
             registry=report.resource_owner(resource.resource_id),
         )
     if skipped:
         report.add(
-            Level.WARNING,
-            "external.no_store_digest",
+            check_table.EXTERNAL_NO_STORE_DIGEST,
             f"{resource.resource_id}: {len(skipped)} of {len(claimed)} member(s) not checked -- the "
             "manifest recorded no store digest, or the store offers none (Part 04 §5.4)",
             [(key,) for key in skipped[:20]],
@@ -1474,15 +1448,19 @@ def _declared_axes(packet: Packet) -> dict[str, _ArrayAxes]:  # noqa: C901
 _EXAMPLES = 20
 
 
-def _axis_findings(shape: Sequence[int], axes: _ArrayAxes) -> dict[str, list[tuple[Any, ...]]]:
-    """Compare one array's shape with its label and channel rows, by check name (Part 03 §6.3)."""
+class _AxisFault(Enum):
+    """One way an array's label and channel rows disagree with its shape (Part 03 §6.3)."""
+
+    LABEL_POSITION = auto()
+    DEPENDS_ON_POSITION = auto()
+    LABEL_MISSING = auto()
+    CHANNEL_INDEX = auto()
+
+
+def _axis_findings(shape: Sequence[int], axes: _ArrayAxes) -> dict[_AxisFault, list[tuple[Any, ...]]]:
+    """Compare one array's shape with its label and channel rows, by fault (Part 03 §6.3)."""
     length = dict(enumerate(shape))
-    found: dict[str, list[tuple[Any, ...]]] = {
-        "label_position_out_of_range": [],
-        "depends_on_position_out_of_range": [],
-        "label_missing": [],
-        "channel_index_out_of_range": [],
-    }
+    found: dict[_AxisFault, list[tuple[Any, ...]]] = {fault: [] for fault in _AxisFault}
     for axis in sorted(axes.labelled | set(axes.labels)):
         if axis not in length:
             continue
@@ -1491,11 +1469,11 @@ def _axis_findings(shape: Sequence[int], axes: _ArrayAxes) -> dict[str, list[tup
         seen: set[tuple[int, int]] = set()
         for depends_on, position in axes.labels.get(axis, []):
             if not 0 <= position < length[axis]:
-                found["label_position_out_of_range"].append(
+                found[_AxisFault.LABEL_POSITION].append(
                     (f"axis_index {axis}", f"position_index {position}", f"length {length[axis]}")
                 )
             elif outer_length is not None and not 0 <= depends_on < outer_length:
-                found["depends_on_position_out_of_range"].append(
+                found[_AxisFault.DEPENDS_ON_POSITION].append(
                     (f"axis_index {axis}", f"depends_on_position_index {depends_on}", f"length {outer_length}")
                 )
             else:
@@ -1511,33 +1489,50 @@ def _axis_findings(shape: Sequence[int], axes: _ArrayAxes) -> dict[str, list[tup
             where = f"position_index {position}"
             if outer_length is not None:
                 where = f"depends_on_position_index {depends_on}, {where}"
-            found["label_missing"].append((f"axis_index {axis}", where, f"{missing} missing"))
+            found[_AxisFault.LABEL_MISSING].append((f"axis_index {axis}", where, f"{missing} missing"))
     for axis, channel in axes.channels:
         if axis in length and not 0 <= channel < length[axis]:
-            found["channel_index_out_of_range"].append(
+            found[_AxisFault.CHANNEL_INDEX].append(
                 (f"axis_index {axis}", f"channel_index {channel}", f"length {length[axis]}")
             )
     return found
 
 
 _AXIS_MESSAGES = {
-    "label_position_out_of_range": "label row(s) name a position_index beyond the axis (Part 03 §6.3)",
-    "depends_on_position_out_of_range": (
+    _AxisFault.LABEL_POSITION: "label row(s) name a position_index beyond the axis (Part 03 §6.3)",
+    _AxisFault.DEPENDS_ON_POSITION: (
         "label row(s) name a depends_on_position_index beyond the axis depended on (Part 03 §6.3)"
     ),
-    "label_missing": "position(s) of a labelled axis have no label row (Part 03 §6.3)",
-    "channel_index_out_of_range": "core.array_channels row(s) name a channel_index beyond their axis (Part 05 §5.3)",
+    _AxisFault.LABEL_MISSING: "position(s) of a labelled axis have no label row (Part 03 §6.3)",
+    _AxisFault.CHANNEL_INDEX: "core.array_channels row(s) name a channel_index beyond their axis (Part 05 §5.3)",
+}
+
+#: The check each fault of a packet-owned array is reported under.
+_OWNED_AXIS_CHECKS = {
+    _AxisFault.LABEL_POSITION: check_table.ARRAY_LABEL_POSITION_OUT_OF_RANGE,
+    _AxisFault.DEPENDS_ON_POSITION: check_table.ARRAY_DEPENDS_ON_POSITION_OUT_OF_RANGE,
+    _AxisFault.LABEL_MISSING: check_table.ARRAY_LABEL_MISSING,
+    _AxisFault.CHANNEL_INDEX: check_table.ARRAY_CHANNEL_INDEX_OUT_OF_RANGE,
+}
+
+#: The check each fault of an external array is reported under.
+_EXTERNAL_AXIS_CHECKS = {
+    _AxisFault.LABEL_POSITION: check_table.EXTERNAL_ARRAY_LABEL_POSITION_OUT_OF_RANGE,
+    _AxisFault.DEPENDS_ON_POSITION: check_table.EXTERNAL_ARRAY_DEPENDS_ON_POSITION_OUT_OF_RANGE,
+    _AxisFault.LABEL_MISSING: check_table.EXTERNAL_ARRAY_LABEL_MISSING,
+    _AxisFault.CHANNEL_INDEX: check_table.EXTERNAL_ARRAY_CHANNEL_INDEX_OUT_OF_RANGE,
 }
 
 
-def _report_axes(resource: Any, shape: Sequence[int], axes: _ArrayAxes, prefix: str, report: Report) -> None:
-    """Report each way an array's label and channel rows disagree with its shape, under `prefix`."""
-    for name, rows in _axis_findings(shape, axes).items():
+def _report_axes(
+    resource: Any, shape: Sequence[int], axes: _ArrayAxes, entries: Mapping[_AxisFault, CheckEntry], report: Report
+) -> None:
+    """Report each way an array's label and channel rows disagree with its shape, under its entry of `entries`."""
+    for fault, rows in _axis_findings(shape, axes).items():
         if rows:
             report.add(
-                Level.ERROR,
-                f"{prefix}{name}",
-                f"{resource.resource_id}: {_AXIS_MESSAGES[name]}",
+                entries[fault],
+                f"{resource.resource_id}: {_AXIS_MESSAGES[fault]}",
                 rows,
                 registry=report.resource_owner(resource.resource_id),
             )
@@ -1561,14 +1556,13 @@ def _compare_shape(
         return []
     if set(axes.names) != set(range(len(shape))):
         report.add(
-            Level.ERROR,
-            "external.array_rank",
+            check_table.EXTERNAL_ARRAY_RANK,
             f"{resource.resource_id} is stored with rank {len(shape)} but its declaration-selected "
             f"axes resource gives axis_index {sorted(axes.names)}; Part 03 §6.3 requires one row per stored axis",
             registry=report.resource_owner(resource.resource_id),
         )
         return ["rank"]
-    _report_axes(resource, [int(n) for n in shape], axes, "external.array_", report)
+    _report_axes(resource, [int(n) for n in shape], axes, _EXTERNAL_AXIS_CHECKS, report)
     return ["rank", *(["labels"] if axes.labelled else []), *(["channels"] if axes.channels else [])]
 
 
@@ -1583,7 +1577,7 @@ def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) ->
         try:
             schema = handle.schema()
         except PacketError as exc:
-            report.add(Level.ERROR, "resource.missing", str(exc), registry=report.resource_owner(resource_id))
+            report.add(check_table.RESOURCE_MISSING, str(exc), registry=report.resource_owner(resource_id))
             continue
         present[resource_id] = handle
         for column in spec["columns"]:
@@ -1602,8 +1596,7 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
     if column["name"] not in schema.names:
         if column["presence"] != "optional":
             report.add(
-                Level.ERROR,
-                "schema.column_absent",
+                check_table.SCHEMA_COLUMN_ABSENT,
                 f"{resource_id}.{column['name']} absent (presence={column['presence']})",
                 registry=report.resource_owner(resource_id),
             )
@@ -1617,8 +1610,7 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
         actual = actual.value_type
     if str(actual) != ARROW_TYPES[column["type"]]:
         report.add(
-            Level.ERROR,
-            "schema.column_type",
+            check_table.SCHEMA_COLUMN_TYPE,
             f"{resource_id}.{column['name']} is {actual}, registry declares {column['type']}",
             registry=report.resource_owner(resource_id),
         )
@@ -1813,8 +1805,7 @@ def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], re
             continue
         for a, b in pairs:
             report.add(
-                Level.INFO,
-                f"{resource_id}.columns_duplicated",
+                check_table.columns_duplicated(resource_id),
                 f"{a} and {b} hold equal values in every row",
                 registry=report.resource_owner(resource_id),
             )
@@ -1840,8 +1831,7 @@ def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, An
             continue
         if index is None:
             report.add(
-                Level.INFO,
-                f"{resource_id}.metadata_unfilled",
+                check_table.metadata_unfilled(resource_id),
                 "metadata is declared and the file omits it",
                 registry=report.resource_owner(resource_id),
             )
@@ -1855,8 +1845,7 @@ def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, An
         else:
             if meta.num_rows and nulls == meta.num_rows:
                 report.add(
-                    Level.INFO,
-                    f"{resource_id}.metadata_unfilled",
+                    check_table.metadata_unfilled(resource_id),
                     "metadata is null in every row",
                     registry=report.resource_owner(resource_id),
                 )
@@ -1882,8 +1871,7 @@ def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any]
             outside = sorted({v for v in table.column(name).to_pylist() if v is not None and v not in set(reserved)})
             if outside:
                 report.add(
-                    Level.INFO,
-                    f"{resource_id}.{name}.outside_reserved_set",
+                    check_table.outside_reserved_set(resource_id, name),
                     f"{len(outside)} value(s) outside the reserved set: "
                     f"{', '.join(repr(v) for v in outside[:5])}" + (" ..." if len(outside) > 5 else ""),
                     registry=report.resource_owner(resource_id),
@@ -1901,19 +1889,18 @@ def _check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], rep
             if not any(entry.get("uri") == UCUM_URI for entry in column.get("authority", ())):
                 continue
             name = column["name"]
-            check = f"{resource_id}.{name}.ucum_code"
+            check = check_table.ucum_code(resource_id, name)
             registry = report.resource_owner(resource_id) or "core"
             try:
                 values = pc.unique(pq.read_table(handle.path, columns=[name]).column(name)).to_pylist()
             except (OSError, pa.ArrowException, KeyError) as exc:
                 report.record_evaluation(
-                    registry, EvaluationStatus.INCOMPLETE, rule=check, detail=str(exc).splitlines()[0][:160]
+                    registry, EvaluationStatus.INCOMPLETE, rule=check.id, detail=str(exc).splitlines()[0][:160]
                 )
                 continue
             invalid = sorted(value for value in values if value is not None and ucum_error(value) is not None)
             if invalid:
                 report.add(
-                    Level.ERROR,
                     check,
                     f"{len(invalid)} value(s) are not UCUM codes: {', '.join(repr(v) for v in invalid[:5])}"
                     + (" ..." if len(invalid) > 5 else ""),
@@ -1965,8 +1952,7 @@ def _scan_one_ordering(  # noqa: C901
     if missing := [k for k in keys if k not in declared]:
         # Part 03 §5.4: the bound registry cannot hold the required order, so the table departs.
         report.add(
-            Level.ERROR,
-            f"{resource_id}.physical_order",
+            check_table.physical_order(resource_id),
             f"the bound registry declares no {', '.join(missing)}, so the table cannot be in its "
             f"required order ({', '.join(keys)})",
             registry=report.resource_owner(resource_id),
@@ -1991,7 +1977,7 @@ def _scan_one_ordering(  # noqa: C901
         keys, unique, batches = _ordering_scan(handle, keys, unique)
     except (OSError, pa.ArrowException) as exc:
         report.add(
-            Level.ERROR, "resource.unreadable", f"{resource_id}: {exc}", registry=report.resource_owner(resource_id)
+            check_table.RESOURCE_UNREADABLE, f"{resource_id}: {exc}", registry=report.resource_owner(resource_id)
         )
         return False
     damaged = None
@@ -2036,21 +2022,19 @@ def _scan_one_ordering(  # noqa: C901
         # The order cannot be established, so nothing partial is reported for it: what the scan
         # saw before the damage says nothing about the file as a whole.
         report.add(
-            Level.ERROR, "resource.unreadable", f"{resource_id}: {damaged}", registry=report.resource_owner(resource_id)
+            check_table.RESOURCE_UNREADABLE, f"{resource_id}: {damaged}", registry=report.resource_owner(resource_id)
         )
         return False
     if broken:
         report.add(
-            Level.ERROR,
-            f"{resource_id}.determined_by",
+            check_table.determined_by(resource_id),
             "a column declared determined_by the key differs between two rows sharing it",
             [(f"row {i}", col, f"{a} != {b}") for i, col, a, b in broken[:ORDER_REPORT]],
             registry=report.resource_owner(resource_id),
         )
     if offending:
         report.add(
-            Level.ERROR,
-            f"{resource_id}.physical_order",
+            check_table.physical_order(resource_id),
             f"rows are not in declared sort order ({', '.join(keys)})",
             [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending[:ORDER_REPORT]],
             registry=report.resource_owner(resource_id),
@@ -2061,8 +2045,7 @@ def _scan_one_ordering(  # noqa: C901
         return bool(unique)
     if duplicated:
         report.add(
-            Level.ERROR,
-            f"{resource_id}.primary_key_unique",
+            check_table.primary_key_unique(resource_id),
             "duplicate primary key",
             [(f"row {i}", str(row)) for i, row in duplicated[:ORDER_REPORT]],
             registry=report.resource_owner(resource_id),
@@ -2337,8 +2320,7 @@ def _tier2(context: CheckedRegistryContext, core_context: CheckedRegistryContext
                 continue
             checked.append(
                 Check(
-                    rule["id"],
-                    rule["level"],
+                    check_table.rule(rule["id"], rule["level"]),
                     rule["message"],
                     parsed.sql,
                     resource,
@@ -2411,14 +2393,13 @@ def _run_checks(
                 )
             else:
                 report.add(
-                    Level.ERROR,
-                    check.id,
+                    check.entry.at(Level.ERROR),
                     f"check could not run: {str(exc).splitlines()[0][:90]}",
                     registry=registry_id,
                 )
             continue
         if rows:
-            report.add(check.level, check.id, check.message, rows, registry=registry_id)
+            report.add(check.entry, check.message, rows, registry=registry_id)
     prior_failure = any(e.registry == registry_id and e.status != EvaluationStatus.COMPLETE for e in report.evaluations)
     if finalize and not tier2_incomplete and not prior_failure:
         report.record_evaluation(registry_id, EvaluationStatus.COMPLETE)
@@ -2426,7 +2407,7 @@ def _run_checks(
 
 def _check_manifest_sessions(packet: Packet, report: Report) -> None:
     """Compare the manifest inventory with ``core.sessions`` at the Part 05 shim."""
-    check = "core.sessions.manifest_sessions_match"
+    check = check_table.CORE_SESSIONS_MANIFEST_SESSIONS_MATCH
     message = (
         "the manifest's session inventory and core.sessions disagree; the manifest names a "
         "session by its session_name, since an assigned session_id means nothing outside the "
@@ -2442,14 +2423,14 @@ def _check_manifest_sessions(packet: Packet, report: Report) -> None:
                 if value is not None
             ]
         except (PacketError, OSError, pa.ArrowException) as exc:
-            report.record_evaluation("core", EvaluationStatus.INCOMPLETE, rule=check, detail=str(exc))
+            report.record_evaluation("core", EvaluationStatus.INCOMPLETE, rule=check.id, detail=str(exc))
             return
     listed = list(packet.manifest.sessions)
     listed_set, table_set = set(listed), set(table_values)
     rows = [(value,) for value in table_values if value not in listed_set]
     rows.extend((value,) for value in listed if value not in table_set)
     if rows:
-        report.add(Level.ERROR, check, message, rows, registry="core")
+        report.add(check, message, rows, registry="core")
 
 
 def _resolve_column(spec: Mapping[str, Any]) -> str | None:
@@ -2603,8 +2584,7 @@ def _check_extensions(
         carried = declared & {r.resource_id for r in packet.resources(kind="table")}
         if absent := sorted(declared - carried):
             report.add(
-                Level.INFO,
-                "extension.table_absent",
+                check_table.EXTENSION_TABLE_ABSENT,
                 f"{extension_id}: declares {len(absent)} table(s) this packet does not carry",
                 [(name,) for name in absent],
                 registry=extension_id,
@@ -2626,8 +2606,7 @@ def _check_extensions(
             checks = [check for check in checks if concerns(check, recheck)]
         _run_checks(connection, checks, report, extension_id, unreadable or set())
         report.add(
-            Level.INFO,
-            "extension.validated",
+            check_table.EXTENSION_VALIDATED,
             f"{extension_id}: {len(checks)} check(s) over {len(carried)} table(s)",
             registry=extension_id,
         )
@@ -2744,7 +2723,7 @@ def validate(
     if bound is None:
         return report
     for message, rows in confirm_replaced(packet.manifest.entry, replaced):
-        report.add(Level.WARNING, "packet.replaces.mismatch", message, rows)
+        report.add(check_table.PACKET_REPLACES_MISMATCH, message, rows)
     core_context = bound.core
     extensions = {name: context.document for name, context in bound.extensions.items()}
     directing = ([] if core_context is None else [(bound.core_id, core_context.document)]) + list(extensions.items())
@@ -2854,7 +2833,7 @@ def _check_amendment(
             connection.close()
     for finding in found:
         owner = None if finding.resource is None else report.resource_owner(finding.resource)
-        report.add(Level.ERROR, finding.check, finding.message, finding.rows, registry=owner)
+        report.add(finding.check, finding.message, finding.rows, registry=owner)
 
 
 def check_packet_manifest(
@@ -2887,13 +2866,13 @@ def check_packet_manifest(
     try:
         raw = location.join(MANIFEST_FILENAME).read_bytes() if manifest is None else manifest
     except Exception as exc:  # noqa: BLE001 - what a store raises on a failed read is its own business
-        report.add(Level.ERROR, "packet.manifest.invalid_json", f"no readable {MANIFEST_FILENAME} at {location}: {exc}")
+        report.add(check_table.PACKET_MANIFEST_INVALID_JSON, f"no readable {MANIFEST_FILENAME} at {location}: {exc}")
         return report, None
     report.bound = named_registries(raw)
     document = check_manifest(raw, issues)
     bound = None if document is None else bind_registries(location, document, issues)
     for issue in issues:
-        report.add(Level.ERROR, issue.check, issue.message, issue.rows, registry=issue.registry)
+        report.add(issue.check, issue.message, issue.rows, registry=issue.registry)
     if bound is not None:
         for name, context in bound.contexts.items():
             report.record_registry(name, context, directs_checks=bound.directs(name), core=name == bound.core_id)

@@ -18,9 +18,11 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from escapewheel_reader import quote, sql_name
+from escapewheel_reader import quote
 from escapewheel_reader.ordering import stored_order
 
+from . import check_table
+from .check_table import CheckEntry
 from .registry_document import CheckedRegistryContext, RegistryRejected
 from .vocabulary import Level, RegistryState
 
@@ -31,10 +33,8 @@ class Check:
 
     Attributes
     ----------
-    id : str
-        Stable identifier, e.g. ``core.trials.primary_key_unique``.
-    level : str
-        ``error``, ``warning``, or ``info``.
+    entry : CheckEntry
+        The check a finding is reported under, which holds its ID and its level.
     message : str
         What a non-empty result means.
     sql : str
@@ -46,8 +46,7 @@ class Check:
         runner skips the check rather than reporting a query that cannot bind (Part 02 §§6, 10.1).
     """
 
-    id: str
-    level: str
+    entry: CheckEntry
     message: str
     sql: str
     resource: str
@@ -59,6 +58,16 @@ class Check:
         """Default a generated check's inputs to its attached resource."""
         if not self.dependencies:
             object.__setattr__(self, "dependencies", frozenset({self.resource}))
+
+    @property
+    def id(self) -> str:
+        """The check ID, e.g. ``core.trials.primary_key_unique``."""
+        return self.entry.id
+
+    @property
+    def level(self) -> Level:
+        """The level of a finding of this check."""
+        return self.entry.level
 
 
 @dataclass(frozen=True)
@@ -160,8 +169,7 @@ def _discriminator(
     col = quote(column["name"])
     checks = [
         Check(
-            f"{resource}.{column['name']}.is_a_resource_id",
-            Level.ERROR,
+            check_table.is_a_resource_id(resource, column["name"]),
             f"{column['name']} holds a value that is not a dotted resource ID",
             f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND NOT regexp_matches({col}, '{RESOURCE_ID}')",
             resource,
@@ -173,11 +181,12 @@ def _discriminator(
     declared = ", ".join(f"'{k}'" for k in sorted(kinds))
     checks.append(
         Check(
-            f"{resource}.{column['name']}.kind_declared",
             # Part 02 §8.3. Where an unresolvable kind is a fact rather than a defect it is still
             # reported: passed in silence, an extension kind would go unchecked without anything
             # saying so.
-            Level.ERROR if column.get("resolves") == "required" else Level.INFO,
+            check_table.kind_declared(resource, column["name"]).at(
+                Level.ERROR if column.get("resolves") == "required" else Level.INFO
+            ),
             f"{column['name']} names a resource this packet does not declare",
             f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({declared})",
             resource,
@@ -214,8 +223,7 @@ def _discriminator(
                 )
             checks.append(
                 Check(
-                    f"{resource}.{column['name']}.{sql_name(kind)}_is_specialised",
-                    Level.ERROR,
+                    check_table.is_specialised(resource, column["name"], kind),
                     message,
                     sql,
                     resource,
@@ -245,8 +253,7 @@ def _kind_matches(found: Specialisation, reachable: Collection[str]) -> list[Che
         joins, value = f"JOIN {found.target} s ON {on} LEFT JOIN {found.holder} h ON {via}", f"h.{col}"
     return [
         Check(
-            f"{found.detail}.{'_'.join(c for c, _ in found.on)}.names_a_row_of_its_kind",
-            Level.ERROR,
+            check_table.names_a_row_of_its_kind(found.detail, [c for c, _ in found.on]),
             f"a row specialises a {found.target} row whose {found.column} does not name {found.detail} (Part 02 §8.3)",
             f"SELECT {detail} FROM {found.detail} t {joins} WHERE {value} IS NULL OR {value} <> '{found.detail}'",
             found.detail,
@@ -313,8 +320,7 @@ def _paired_value(
     if misfits:
         checks.append(
             Check(
-                f"{resource}.{column['name']}.key_fits_paired_value",
-                Level.ERROR,
+                check_table.key_fits_paired_value(resource, column["name"]),
                 f"{column['name']} names a resource whose primary key is not one column {paired} can hold "
                 "(Part 02 §8.3)",
                 f"SELECT DISTINCT {col} FROM {name} WHERE {col} IN ({', '.join(repr(k) for k in misfits)})",
@@ -352,8 +358,7 @@ def _paired_value(
         )
         checks.append(
             Check(
-                f"{resource}.{column['name']}.{sql_name(kind)}_resolves",
-                Level.ERROR,
+                check_table.paired_value_resolves(resource, column["name"], kind),
                 f"{paired} names no row of {kind}, which {column['name']} names (Part 02 §8.3)",
                 f"SELECT DISTINCT {selected} FROM {rows}{join} "
                 f"WHERE {kind_of} = '{kind}' AND r.{quote(paired)} IS NOT NULL "
@@ -365,8 +370,7 @@ def _paired_value(
     if via is not None:
         checks.append(
             Check(
-                f"{resource}.{column['name']}.specialised_row_has_kind",
-                Level.ERROR,
+                check_table.specialised_row_has_kind(resource, column["name"]),
                 f"a {holder} row pairs {paired} with no kind, since its {column['name']} is null (Part 02 §8.3)",
                 f"SELECT {selected} FROM {rows}{join} WHERE {kind_of} IS NULL",
                 resource,
@@ -444,8 +448,7 @@ def _generate(  # noqa: C901
             if column["presence"] == "required":
                 checks.append(
                     Check(
-                        f"{resource}.{column['name']}.not_null",
-                        Level.ERROR,
+                        check_table.not_null(resource, column["name"]),
                         f"required column {column['name']} contains nulls",
                         f"SELECT * FROM {name} WHERE {quote(column['name'])} IS NULL",
                         resource,
@@ -455,8 +458,7 @@ def _generate(  # noqa: C901
                 # `isfinite` is null for null, so a null stays presence's concern alone.
                 checks.append(
                     Check(
-                        f"{resource}.{column['name']}.finite",
-                        Level.ERROR,
+                        check_table.finite(resource, column["name"]),
                         f"{column['name']} holds NaN or an infinity",
                         f"SELECT * FROM {name} WHERE NOT isfinite({quote(column['name'])})",
                         resource,
@@ -468,8 +470,7 @@ def _generate(  # noqa: C901
                 col = quote(column["name"])
                 checks.append(
                     Check(
-                        f"{resource}.{column['name']}.in_vocabulary",
-                        Level.ERROR,
+                        check_table.in_vocabulary(resource, column["name"]),
                         f"{column['name']} carries a value outside its closed vocabulary",
                         f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({allowed})",
                         resource,
@@ -487,8 +488,7 @@ def _generate(  # noqa: C901
             columns = ", ".join(quote(k) for k in key)
             checks.append(
                 Check(
-                    f"{resource}.primary_key_unique",
-                    Level.ERROR,
+                    check_table.primary_key_unique(resource),
                     "duplicate primary key",
                     f"SELECT {columns}, COUNT(*) AS n FROM {name} GROUP BY {columns} HAVING COUNT(*) > 1",
                     resource,
@@ -514,8 +514,7 @@ def _generate(  # noqa: C901
             selected = ", ".join("c." + quote(a) for a in ref["columns"])
             checks.append(
                 Check(
-                    f"{resource}.{'_'.join(ref['columns'])}_resolves",
-                    Level.ERROR,
+                    check_table.reference_resolves(resource, ref["columns"]),
                     f"{', '.join(ref['columns'])} does not resolve to {ref['resource']}",
                     f"SELECT DISTINCT {selected} FROM {name} c LEFT JOIN {parent} p ON {on} WHERE {where}",
                     resource,
@@ -527,7 +526,9 @@ def _generate(  # noqa: C901
         for rule in table.get("rules", []) if declared else []:
             if rule.get("advisory") and not advisory:
                 continue
-            checks.append(Check(rule["id"], rule["level"], rule["message"], rule["sql"], resource, tier=2))
+            checks.append(
+                Check(check_table.rule(rule["id"], rule["level"]), rule["message"], rule["sql"], resource, tier=2)
+            )
 
     return checks
 

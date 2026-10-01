@@ -120,6 +120,11 @@ packet, which is worse than having no check.
   in `vocabulary.py`, never string literals.** Each member equals the string a report's JSON
   carries, so a caller holding that string compares against the member. `tests/test_vocabulary.py`
   holds the rule.
+- **A check ID is written once, in `check_table.py`.** A new check adds an entry there with its
+  default level, its scope and whether a numbered part names it: a constant for a fixed ID, a
+  template and a function for a family built from a resource or a column. `Report.add` takes the
+  entry and reports at its level; `entry.at(level)` is for a check whose level depends on what was
+  found. No other module writes an ID as a string. `tests/test_check_table.py` holds the rule.
 
 ## An advisory rule is not a compromise
 

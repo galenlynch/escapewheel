@@ -32,6 +32,19 @@ Each is a string enumeration whose members equal the strings a report's JSON car
    EvaluationStatus
    RegistryState
 
+Check IDs
+---------
+
+Every check ID the package declares is an entry of :mod:`check_table`: a constant for each fixed
+ID, and a function for each family whose IDs are built from a resource or a column.
+:meth:`Report.add` takes an entry.
+
+.. autosummary::
+   :toctree: generated
+
+   CheckEntry
+   Scope
+
 Checking a registry document
 ----------------------------
 
@@ -84,6 +97,7 @@ Each module's page lists what it holds beyond the names above.
    registry_document
    rule_language
    amendment
+   check_table
    errors
    stores
    opaque
