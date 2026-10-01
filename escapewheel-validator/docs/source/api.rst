@@ -52,6 +52,7 @@ Errors
    StoreUnreachable
    ResourceMissing
    OrderViolation
+   OrderFault
 
 Modules
 -------

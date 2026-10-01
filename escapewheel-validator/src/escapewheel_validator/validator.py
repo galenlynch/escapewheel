@@ -42,7 +42,7 @@ from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_flo
 from escapewheel_reader.uri import decode
 
 from . import amendment
-from .errors import OrderViolation, ResourceMissing, StoreUnreachable, _Unmappable
+from .errors import OrderFault, OrderViolation, ResourceMissing, StoreUnreachable, _Unmappable
 from .generate import Check, Specialisation, adjacency_settles_uniqueness, concerns, generate
 from .manifest import (
     MANIFEST_FILENAME,
@@ -2092,7 +2092,7 @@ def verify_order(batches: Iterable[Any], keys: Sequence[str], unique: Sequence[s
     Raises
     ------
     OrderViolation
-        On the first row that breaks the declared order, naming where it is.
+        On the first row that breaks the declared order, carrying its index and its fault.
     """
     tail: tuple[Any, ...] | None = None
     start = 0
@@ -2100,21 +2100,27 @@ def verify_order(batches: Iterable[Any], keys: Sequence[str], unique: Sequence[s
         if batch.num_rows:
             first = _row_at(batch, keys, 0)
             if tail is not None and _sortable(first) < _sortable(tail):
-                raise OrderViolation(f"row {start} sorts before the row above it: {tail} then {first}")
+                raise OrderViolation(OrderFault.DESCENT, start, f"sorts before the row above it: {tail} then {first}")
             descents, repeats = _breaks(batch, keys, unique)
             if descents:
                 offset = descents[0]
                 raise OrderViolation(
-                    f"row {start + offset} sorts before the row above it: "
-                    f"{_row_at(batch, keys, offset - 1)} then {_row_at(batch, keys, offset)}"
+                    OrderFault.DESCENT,
+                    start + offset,
+                    "sorts before the row above it: "
+                    f"{_row_at(batch, keys, offset - 1)} then {_row_at(batch, keys, offset)}",
                 )
             if unique:
                 if tail is not None and _row_at(batch, unique, 0) == _tail_key(tail, keys, unique):
-                    raise OrderViolation(f"row {start} repeats the key above it: {_row_at(batch, unique, 0)}")
+                    raise OrderViolation(
+                        OrderFault.REPEAT, start, f"repeats the key above it: {_row_at(batch, unique, 0)}"
+                    )
                 if repeats:
                     offset = repeats[0]
                     raise OrderViolation(
-                        f"row {start + offset} repeats the key above it: {_row_at(batch, unique, offset)}"
+                        OrderFault.REPEAT,
+                        start + offset,
+                        f"repeats the key above it: {_row_at(batch, unique, offset)}",
                     )
             tail = _row_at(batch, keys, batch.num_rows - 1)
             start += batch.num_rows

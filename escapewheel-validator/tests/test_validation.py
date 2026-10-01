@@ -872,27 +872,41 @@ def test_ordered_batches_pass_through_unchanged():
 
 
 def test_a_descent_inside_a_batch_is_caught():
-    from escapewheel_validator import OrderViolation, verify_order
+    from escapewheel_validator import OrderFault, OrderViolation, verify_order
 
     bad = pa.record_batch({"unit_id": pa.array(["u1"] * 3), "t_tick": pa.array([0, 5, 2], type=pa.int64())})
-    with pytest.raises(OrderViolation, match="row 2 sorts before"):
+    with pytest.raises(OrderViolation) as refused:
         list(verify_order(iter([bad]), KEYS))
+    assert (refused.value.kind, refused.value.row, refused.value.resource_id) == (OrderFault.DESCENT, 2, None)
 
 
 def test_a_descent_on_a_batch_seam_is_caught():
     """The case a per-batch check misses: each batch is ordered, the pair is not."""
-    from escapewheel_validator import OrderViolation, verify_order
+    from escapewheel_validator import OrderFault, OrderViolation, verify_order
 
-    with pytest.raises(OrderViolation, match="row 5 sorts before"):
+    with pytest.raises(OrderViolation) as refused:
         list(verify_order(iter([_batch(10), _batch(0)]), KEYS))
+    assert (refused.value.kind, refused.value.row) == (OrderFault.DESCENT, 5)
 
 
 def test_a_duplicate_on_a_batch_seam_is_caught():
-    from escapewheel_validator import OrderViolation, verify_order
+    from escapewheel_validator import OrderFault, OrderViolation, verify_order
 
     tail = pa.record_batch({"unit_id": pa.array(["u1"]), "t_tick": pa.array([4], type=pa.int64())})
-    with pytest.raises(OrderViolation, match="row 5 repeats"):
+    with pytest.raises(OrderViolation) as refused:
         list(verify_order(iter([_batch(0), tail]), KEYS, unique=KEYS))
+    assert (refused.value.kind, refused.value.row) == (OrderFault.REPEAT, 5)
+
+
+def test_a_violation_is_worded_by_position_and_names_its_table_once_known():
+    """The stored row is an index, so the sixth row is stored as 5 and reads as row 6."""
+    from escapewheel_validator import OrderViolation, verify_order
+
+    with pytest.raises(OrderViolation) as refused:
+        list(verify_order(iter([_batch(10), _batch(0)]), KEYS))
+    assert str(refused.value).startswith("row 6 sorts before the row above it")
+    refused.value.resource_id = "core.spike_events"
+    assert str(refused.value).startswith("core.spike_events: row 6 sorts before")
 
 
 def test_an_empty_batch_does_not_break_the_seam():

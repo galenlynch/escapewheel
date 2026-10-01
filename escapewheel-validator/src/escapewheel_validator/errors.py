@@ -3,7 +3,8 @@
 - :class:`ValidatorError` -- the base, under the reader's `EscapewheelError`.
 - :class:`StoreUnreachable`, :class:`ResourceMissing` -- a store could not be reached, or was
   reached and holds nothing under the URI.
-- :class:`OrderViolation` -- a stream of batches leaves its declared order or repeats a key.
+- :class:`OrderViolation` -- a stream of batches leaves its declared order or repeats a key, as
+  one :class:`OrderFault`.
 - :class:`_Unmappable` -- a tick reaches no value on another clock; raised and caught inside the
   time-origin check.
 
@@ -13,6 +14,8 @@ from the specification's tree, outside this taxonomy.
 """
 
 from __future__ import annotations
+
+from enum import StrEnum
 
 from escapewheel_reader import EscapewheelError
 
@@ -43,8 +46,39 @@ class ResourceMissing(StoreUnreachable):
     """The store was reached and holds nothing under the URI."""
 
 
+class OrderFault(StrEnum):
+    """How a row departs from the order its table declares."""
+
+    #: The row sorts before the row above it.
+    DESCENT = "descent"
+    #: The row repeats the key of the row above it.
+    REPEAT = "repeat"
+
+
 class OrderViolation(ValidatorError):
-    """A stream of batches is not in the order it declares, or repeats a key."""
+    """A stream of batches is not in the order it declares, or repeats a key.
+
+    Attributes
+    ----------
+    kind : OrderFault
+        Which departure the row makes.
+    row : int
+        Index of the offending row in the stream. The message gives its position, which starts
+        at 1.
+    resource_id : str or None
+        The table the stream is for, or None until a caller that knows it says so.
+    """
+
+    def __init__(self, kind: OrderFault, row: int, detail: str, *, resource_id: str | None = None) -> None:
+        super().__init__(detail)
+        self.kind = kind
+        self.row = row
+        self.resource_id = resource_id
+
+    def __str__(self) -> str:
+        """Name the table where it is known, then the row by position and what it does."""
+        table = "" if self.resource_id is None else f"{self.resource_id}: "
+        return f"{table}row {self.row + 1} {self.args[0]}"
 
 
 class _Unmappable(ValidatorError):

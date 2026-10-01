@@ -1400,7 +1400,8 @@ class PacketWriter:
                     # Naming the table, because the streaming path writes through untouched and
                     # the caller is what has to be fixed: a message about two rows says nothing
                     # about which of a packet's forty tables they came from.
-                    raise OrderViolation(f"{resource_id}: {exc}") from None
+                    exc.resource_id = resource_id
+                    raise
                 if sort_key(resource_id, spec):
                     self._ordered.add(resource_id)
                 if not path.exists():
