@@ -135,11 +135,11 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 
 ### 5.2 Validator
 
-- [ ] Add `ValidatorError`; `StoreUnreachable`, `ResourceMissing` and `OrderViolation` derive from
+- [x] Add `ValidatorError`; `StoreUnreachable`, `ResourceMissing` and `OrderViolation` derive from
       it and gain attributes (`uri`, `key`; `resource_id`, `row`, `kind`).
-- [ ] Replace the built-in raises that escape `validate` (an unreadable replaced packet, an
+- [x] Replace the built-in raises that escape `validate` (an unreadable replaced packet, an
       unknown digest algorithm) with named classes.
-- [ ] `RegistryRejected` and `RuleProfileError` live in the checkers copied from `spec/tools`, so
+- [x] `RegistryRejected` and `RuleProfileError` live in the checkers copied from `spec/tools`, so
       they change at that source or stay as they are.
 
 ### 5.3 Writer and adapters
@@ -278,7 +278,7 @@ Known obstacles:
 - [ ] Generators raise an error class and `main` converts it, in place of `SystemExit` raised
       inside importable functions.
 - [ ] `framework.py`: move its expected-value data out and cut `defects` by phase.
-- [ ] `verify.py`: one stage record type and one spelling of the interpreter. `--quick` runs no
+- [x] `verify.py`: one stage record type and one spelling of the interpreter. `--quick` runs no
       package suite; either it gains a marked fast subset or its documentation says so.
 - [ ] Two verifier stages execute every shipped rule over empty tables. Keep one.
 - [x] Ledger, as a process proposal. Preferred form: `headings.toml` locks a
@@ -347,3 +347,37 @@ departs from §9's preferred form in one place and settles three points §9 left
   struck from. One entry, R107 §3.5, is recorded `superseded` with no `by` today.
 
 Writing the tool waits on the proposal's promotion and acceptance.
+
+### 11.3 Validator errors
+
+- `StoreUnreachable.key` is None where the failure concerns everything under the URI, such as a
+  listing or an unknown scheme, and the member's key where one member was being read.
+  `read_member` fills `key` in on an error raised below it.
+- `OrderViolation.kind` is an `OrderFault`, a string enumeration of two members, `DESCENT` and
+  `REPEAT`. `row` is an index into the stream, and the message prints the row's position.
+  `resource_id` is None from `verify_order`, which is not told the table; the writer sets it on
+  the exception it catches, in place of raising a second one with the table prepended.
+- `UnknownAlgorithm` and `ReplacedPacketUnreadable` keep `ValueError` and `FileNotFoundError` as
+  second bases, since callers and tests caught those. `FormatCheckUnavailable` keeps no built-in
+  base, because no caller catches `RuntimeError`.
+- `_Unmappable` moves under `ValidatorError`, keeps its private name and drops `ValueError`. It
+  is raised and caught inside the time-origin check and never leaves `validate`.
+- `RegistryRejected` and `RuleProfileError` stay as they are, in the modules copied from the
+  specification's tree. The taxonomy test reads the exempt modules from the copy map.
+- `generate()` keeps its `TypeError` for an argument that is no checked context: it guards a
+  programming error and refuses no input.
+- `escapewheel validate` catches `EscapewheelError` once, prints the refusal to standard error
+  and exits with status 1. A `--replaced` path holding no readable manifest exits with status 2,
+  the status the command already returns where that path is absent; an unparsable manifest there
+  used to leave as a traceback.
+- The validator's findings still print a row's index where `OrderViolation` now prints its
+  position. The findings change to positions with the check-ID table of §6.1.
+
+### 11.4 The verifier
+
+- Every stage is a `Stage` record naming the uv project whose environment runs it, so the
+  interpreter has one spelling. `--quick` runs no package suite and its documentation says so; it
+  gains no fast subset.
+- A stage declares whether it writes tracked files. The four that do run first, alone and in
+  order, and the rest run together, bounded by `--jobs`. This is outside the plan of §9 and was
+  asked for to shorten a run.
