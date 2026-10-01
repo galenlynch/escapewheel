@@ -167,12 +167,13 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
 - **The ledger resolves a superseded entry's successor and keeps no ratchet.** A process-domain
   proposal split from the one above: `by` becomes a required, resolved field, R107 §3.5's entry is
   corrected, and the ratchet that rewrites `applied.toml` is removed. Ready to promote.
-- **An adapter's report states the compensations it applied.** Opened 2026-10-01 for the defect
-  REFACTOR.md §4 lists. The run report (Part 12 §9) gains an optional `compensations` member whose
-  entries describe themselves, as it already carries a source's stated values, and Part 05 §4.3
-  says what a recorded compensation states. A reserved delivery resource is the alternative: it
-  could refuse a malformed list and costs a second reserved identifier in every protocol. Ready
-  to promote. The writer's serving and reading code wait on it.
+- **A delivery carries the compensations its adapter applied.** Opened 2026-10-01 for the defect
+  REFACTOR.md §4 lists. A delivery may carry a table under the reserved resource identifier
+  `compensations`, whose rows describe themselves and cross as any table does in each protocol; a
+  build records them and refuses a table it cannot read. Part 05 §4.3 says what a recorded
+  compensation states. A member of the run report is the alternative, and a report is optional.
+  Two questions are open and neither blocks promotion: an evidence column, and whether an adapter
+  that applied none delivers an empty table. The writer's serving and reading code wait on it.
 
 ## 3b. A file the packet only indexes has no declaration
 

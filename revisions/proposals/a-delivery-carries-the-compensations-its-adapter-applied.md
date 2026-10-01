@@ -1,12 +1,12 @@
-# An adapter's report states the compensations it applied
+# A delivery carries the compensations its adapter applied
 
 | | |
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | 2026-10-01 |
-| **Based on** | `0130e51d311e1f90ec0b48925f99a86d3bf579a2` |
+| **Based on** | `01ef23a4674067c47392cff670ce9c99a570a4f0` |
 | **Decision domain** | specification |
-| **Affects** | Part 05 §4.3's sentence on a compensation; Part 12 §9's members of a run report |
+| **Affects** | Part 05 §4.3's sentence on a compensation; Part 12 §5's list of what a delivery states; Part 12 §6's reserved resource identifiers |
 
 ## 1. Problem
 
@@ -55,18 +55,31 @@ finds on one field applies that compensation only to a source that carries the o
 document cannot say which compensations a run applied, which is the reason Part 12 §7 gives for
 carrying a source's stated values in the run's report and not in the declaration document.
 
-### 2.5 The report already carries a fact an adapter owes
+### 2.5 A report is optional and a delivery is not
 
-Part 12 §7 requires an adapter that declares a non-empty `states` to return the stated values, and
-they travel under `stated` in the report. A build reads a declared field absent from the report as
-unstated. Part 12 §9 forbids a build to require a report or to fail on a report's contents alone,
-and requires it to report what one contains.
+Part 12 §9 forbids a build to require a report or to fail on a report's contents alone. A build
+treats a report it did not see appear as absent, and under `files-v0.1` and `stream-v0.1` a report
+is a file beside the delivery, at a path the recipe names. A fact carried there is lost without a
+failure where the file is not written.
 
-Part 12 §5 keeps the resource document out of the report for a stated reason: a fact a manifest
-cannot be written without does not travel in a report. A manifest can be written without a
-compensation, which is recorded in a row of `core.processing_runs`.
+Part 12 §5 keeps the resource document for a referenced resource out of the report for that
+reason, and carries it in the delivery under the reserved resource identifier `resources`. A build
+refuses a document that fails its schema. Part 12 §6 reserves two undotted values of `resource_id`
+under `stream-v0.1`, `end` and `resources`, and notes that a resource identifier is dotted, so no
+undotted token collides with either.
 
-### 2.6 The reference build records a delivered adapter's compensations nowhere
+One fact an adapter owes does travel in the report: the values of the recipe fields it declares
+under `states` (Part 12 §7). A build reads a declared field absent from the report as unstated.
+
+### 2.6 A delivery already carries rows by one rule in every protocol
+
+Part 12 §3 gives each protocol its way of carrying a table: a Parquet file named by the resource
+identifier under `files-v0.1`, an Arrow IPC stream whose schema names the resource under
+`stream-v0.1`, and a descriptor for each resource under `flight-v0.1`. The resource document is
+JSON, so it travels as a file under `files-v0.1` and as text in a single-row table under the other
+two (Part 12 §6). A list of compensations is a set of rows with the same few text columns.
+
+### 2.7 The reference build records a delivered adapter's compensations nowhere
 
 The reference build keeps a registry of compensations, each an identifier with a defect, an action
 and the evidence for the defect. It holds six: three for adapters the writer ships and three for
@@ -90,7 +103,7 @@ import the adapter. The resolution preserves:
 
 - Part 05 §4.3's rule that every compensation applied is recorded;
 - Part 12 §9's rules that a build requires no report and does not fail on a report's contents alone;
-- the three protocols and their reserved resource identifiers (Part 12 §6); and
+- the way each of the three protocols carries a table (Part 12 §3); and
 - the conformance of every existing packet and every existing adapter that applies no compensation.
 
 ## 4. Options and tradeoffs
@@ -99,33 +112,41 @@ import the adapter. The resolution preserves:
 |---|---|
 | keep the current rules | an adapter reached by a protocol cannot comply with Part 05 §4.3, and its packets omit the record |
 | the declaration document lists an adapter's compensations | a static document says which compensations an adapter may apply and not which a run applied (§2.4); the schema is closed and requires all eight members, so it changes for every adapter |
-| a reserved delivery resource carries them, as `resources` carries referenced resources | part of the delivery, so a build can refuse a malformed list; it reserves a second undotted identifier under `stream-v0.1`, adds a file under `files-v0.1` and a descriptor under `flight-v0.1`, and a schema for the document, for a list of a few strings |
-| the report carries them under a new member (preferred direction) | follows `stated` (§2.5): an adapter that applied a compensation returns it in its report, and a build records what the report holds; one member is added to Part 12 §9 and no protocol changes |
+| a reserved delivery resource carries them as a JSON document, as `resources` carries referenced resources | part of the delivery, so a build can refuse a malformed list; it needs a schema for the document and travels as text in a single-row table under two protocols (§2.6), for what are already rows |
+| the report carries them under a new member | follows `stated` (§2.5) and changes no protocol; a report is optional, so a missing or malformed one loses the record with no failure |
+| a reserved delivery resource carries them as a table (preferred direction) | in band: the rows cross as any table does in each protocol (§2.6), and a build can refuse a table it cannot read; Part 12 §6 reserves a third undotted identifier |
 
-Under the preferred direction a report gains an optional member, `compensations`, an array with one
-entry for each compensation the run applied. An adapter that applied one returns it there, as an
-adapter that declares `states` returns its values under `stated`. An absent or empty member says
-that the run applied none.
+Under the preferred direction a delivery may carry one more table, under the reserved resource
+identifier `compensations`, with one row for each compensation the run applied. It crosses as a
+table crosses in the protocol in use: `compensations.parquet` in `delivery_root`, a stream whose
+`resource_id` is `compensations`, or a descriptor of that name. No JSON document and no schema file
+is added, since the rows are records and Part 12 already says how records cross.
 
-**An entry describes itself.** It carries an identifier, the defect and the action as text, so a
-build records it without knowing the adapter (§2.6). An identifier is a name the adapter's author
+The table is preferred to the report member because Part 05 §4.3 requires the record, and a
+channel a build may not depend on cannot carry a required record (§2.5).
+
+**A row describes itself.** It carries an identifier, the defect and the action as text, so a
+build records it without knowing the adapter (§2.7). An identifier is a name the adapter's author
 chooses, namespaced as a resource identifier is, so two adapters do not collide.
 
-**A build records each entry it is given** in the import run's parameters, beside those of the
-adapters in its own process, and reports each as it reports a problem. Part 05 §4.3 says what a
-recorded compensation states: its identifier, the defect and the action. It keeps the rule that a
-pass-through is a compensation.
+**A build records each row** in the import run's parameters, beside the compensations of the
+adapters in its own process. Part 05 §4.3 says what a recorded compensation states: its identifier,
+the defect and the action. It keeps the rule that a pass-through is a compensation.
 
-**A build does not fail on the member.** Part 12 §9 stands: a report is not required, and a
-malformed entry is reported and does not fail the build. A run whose report never appears records no
-compensation, as it reports no problem and no stated value. That is the cost of this route against
-the reserved resource, which could refuse. It is the cost Part 12 already accepts for a stated
-value, and a compensation is the same kind of fact: something the adapter alone knows about its run
-that the packet can be written without.
+**A build refuses a table it cannot read.** A table that lacks a column, or holds a row with an
+empty identifier, defect or action, fails the delivery, naming the source, as a resource document
+that fails its schema does. The table is no resource of the packet: a build does not stage it, does
+not count it among the resources the recipe left the source owning, and resolves no declaration for
+it.
+
+**An adapter that applied none delivers no table.** An absent table says that the run applied no
+compensation, so every existing adapter that applies none conforms unchanged. Part 12 §5's rule
+that an owned resource with no rows arrives empty applies to a resource the recipe asked for, and
+no recipe asks for this one.
 
 **Part 05 §4.3's "declare" is read as stating at run time.** The sentence gains the two channels:
 an adapter in the writer's process states its compensations to the build directly, and an adapter
-reached by a protocol states them in its report.
+reached by a protocol delivers them.
 
 A delivered sync source's withheld-anchor result is a second fact that no delivery carries. It
 concerns another source's rows and is a separate decision.
@@ -137,19 +158,22 @@ concerns another source's rows and is a separate decision.
 | semantic prose | Unchanged. A compensation is a fact about an import and no concept of Part 01. |
 | logical prose, registry meta-schema, declarations and rules | Unchanged. `core.processing_runs.parameters` keeps its declaration, and no rule reads it for a compensation. |
 | physical profiles | Unchanged. No storage property is involved. |
-| packet manifest and other JSON Schemas | Unchanged. A report's shape is stated in Part 12 §9's prose and no schema; the adapter declaration and delivery schemas are untouched. |
-| validation and import | Part 05 §4.3 says what a recorded compensation states and names the two channels. Part 12 §9 gains the `compensations` member and the build's duty to record it. No validator check is added: a validator cannot tell from a packet which compensations a run applied. |
+| packet manifest and other JSON Schemas | Unchanged. The table's columns are stated in Part 12 §5's prose, as a delivered table's are stated by its declaration, and no schema file describes a delivery's tables. |
+| validation and import | Part 05 §4.3 says what a recorded compensation states and names the two channels. Part 12 §5 gains the table, its columns, the build's duty to record its rows and the refusal of one it cannot read. Part 12 §6 reserves `compensations` beside `end` and `resources`. No validator check is added: a validator cannot tell from a packet which compensations a run applied. |
 | extension registries | Unchanged. |
-| reader, writer, validator, adapters, code generation | The reference build's serving code writes the member and its reading code records it. An adapter the build ships is unchanged. An adapter released apart writes the member where it applies a compensation; one that applies none is unchanged. The reader and validator are unchanged. |
+| reader, writer, validator, adapters, code generation | The reference build's serving code delivers the table and its reading code records the rows. An adapter the build ships is unchanged. An adapter released apart delivers the table where it applies a compensation; one that applies none is unchanged. The reader and validator are unchanged. |
 | existing packets | Unchanged in conformance. A packet built from a delivered adapter before the change lacks the record, and only a rebuild adds it. |
-| conformance fixtures and implementation tests | No packet fixture, since no validator decides the rule. Build tests: a delivered adapter's compensation is recorded as an in-process one's is; a report without the member records none; a malformed entry is reported and does not fail the build. |
+| conformance fixtures and implementation tests | No packet fixture, since no validator decides the rule. Build tests, under each of the three protocols: a delivered adapter's compensation is recorded as an in-process one's is; a delivery without the table records none; a table lacking a column, or holding an empty identifier, is refused. |
 | revision lifecycle, ledger, evidence and tooling | The ordinary ledger and evidence records. A note on the accepted clause placed at Part 05 §4.3's sentence, if the draft finds one. |
-| generated publications and developer documentation | The combined specification regenerates. The writer's adapter guide documents the member. |
+| generated publications and developer documentation | The combined specification regenerates. The writer's adapter guide documents the table. |
 
 ## 6. Open questions
 
-1. Whether an entry carries the evidence for its defect as a third text member. The reference build
+1. Whether a row carries the evidence for its defect as a fourth text column. The reference build
    requires one of every registered compensation. Either answer leaves the direction unchanged.
+2. Whether an adapter that applied no compensation delivers an empty table, so that a build can
+   tell a run that applied none from an adapter that states none. Requiring it changes every
+   existing adapter; the direction above does not require it.
 
 ## 7. Promotion criteria
 
