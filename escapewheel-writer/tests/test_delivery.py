@@ -209,6 +209,22 @@ def test_the_rows_are_the_rows_the_adapter_produced(protocol, supplied, nwb, har
         assert got.rows(resource) == delivery.as_table(here.get(resource, [])).to_pylist(), resource
 
 
+def test_a_workspace_path_longer_than_a_socket_address_still_delivers(supplied, tmp_path):
+    """A Unix socket's address holds about a hundred bytes, and a packet's path is not bounded by it."""
+    pytest.importorskip("pyarrow.flight")
+    workspace = tmp_path / ("d" * 60) / ("e" * 60) / "work"
+    wanted = ["core.electrodes", "core.probes"]
+    got = delivery.fetch(
+        "nwb",
+        [*ESCAPEWHEEL, "deliver", "nwb"],
+        {**supplied, "wanted": wanted},
+        protocol="flight-v0.1",
+        wanted=wanted,
+        workspace=workspace,
+    )
+    assert sorted(got.tables) == wanted
+
+
 def test_stage_one_agrees_with_what_arrived(supplied, tmp_path):
     got = delivery.fetch(
         "nwb",

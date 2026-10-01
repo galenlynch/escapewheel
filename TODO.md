@@ -262,11 +262,6 @@ natural.
   column from its batches, then reads the dropped column at each repeat. A single-clock
   `analysis.spike_events` with a repeated key reaches it. A constant column agrees with itself, so
   the repair leaves it out of the comparison. Not in REFACTOR.md's list, so it waits for a decision.
-- **A deep output path overflows the Flight socket's name.** `delivery.py` names the socket under
-  the output's delivery directory, and a Unix socket path holds 107 bytes, so a long path fails
-  with an uncaught `FlightServerError`. The repair names the socket in a short temporary
-  directory. Not in REFACTOR.md's list, so it waits for a decision; it also blocks running the
-  writer's suite under `pytest-xdist`.
 - **Four corpus packets expected to warn are not checked to pass**, and `tone_in_place_of_its_own`
   names no registry. REFACTOR.md §11.6 lists them.
 - **The ledger cannot see that an applied clause's text has gone.** Two accepted sentences were

@@ -29,6 +29,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
@@ -535,8 +536,7 @@ def fetch(
         Where a report is expected. Removed before the run, so last week's findings are not
         reported as this run's (Part 12 §9).
     workspace : Path
-        A directory to put a delivery and a socket in, beside the packet; a successful commit
-        removes it.
+        A directory to put a delivery in, beside the packet; a successful commit removes it.
 
     Returns
     -------
@@ -551,20 +551,6 @@ def fetch(
     if report_path is not None:
         # A file at a path the recipe names is present after any run that ever wrote one.
         report_path.unlink(missing_ok=True)
-    locations = _protocol_supplies(protocol, workspace, report_path)
-    for term in PROTOCOL_TERMS[protocol]:
-        # Supplied empty (Part 05 §2): a build reads a delivery by name, so a file an earlier run
-        # left would pass for this one's.
-        if (leftover := Path(locations[term])).is_dir():
-            shutil.rmtree(leftover)
-        else:
-            leftover.unlink(missing_ok=True)
-    supplied = {**supplied, **locations}
-    # On standard input, not in the argument list: an argument has a size no profile can raise,
-    # and one term carrying a record per unit can exceed it (Part 12 §4).
-    crossing = json.dumps(supplied, default=str).encode()
-    argv = list(command)
-    started = time.perf_counter()
     readers: dict[str, Reader] = {
         "stream-v0.1": _read_stream,
         "files-v0.1": _read_files,
@@ -572,7 +558,24 @@ def fetch(
     }
     if protocol not in readers:
         raise SourceDefect(f"{kind}: {protocol} is in no group this profile names")
-    tables, failures = readers[protocol](kind, argv, crossing, supplied, wanted)
+    # A Unix socket's address holds about a hundred bytes, fewer than a packet's path may take, so
+    # the socket is named in a directory of its own and not in the workspace.
+    with tempfile.TemporaryDirectory(prefix="ew-") as socket_home:
+        locations = _protocol_supplies(protocol, workspace, Path(socket_home), report_path)
+        for term in PROTOCOL_TERMS[protocol]:
+            # Supplied empty (Part 05 §2): a build reads a delivery by name, so a file an earlier
+            # run left would pass for this one's.
+            if (leftover := Path(locations[term])).is_dir():
+                shutil.rmtree(leftover)
+            else:
+                leftover.unlink(missing_ok=True)
+        supplied = {**supplied, **locations}
+        # On standard input, not in the argument list: an argument has a size no profile can
+        # raise, and one term carrying a record per unit can exceed it (Part 12 §4).
+        crossing = json.dumps(supplied, default=str).encode()
+        argv = list(command)
+        started = time.perf_counter()
+        tables, failures = readers[protocol](kind, argv, crossing, supplied, wanted)
     say(f"  delivered {len(tables)} resource(s) over {protocol} in {time.perf_counter() - started:.1f} s")
 
     document, malformed = _document(kind, tables.pop(RESOURCES, None))
@@ -683,11 +686,11 @@ def _tail(notes: Sequence[str]) -> str:
     return "\n  " + "\n  ".join(notes) if notes else ""
 
 
-def _protocol_supplies(protocol: str, workspace: Path, report_path: Path | None) -> dict[str, str]:
+def _protocol_supplies(protocol: str, workspace: Path, socket_home: Path, report_path: Path | None) -> dict[str, str]:
     """Return the terms this protocol requires, which an adapter may not declare and a build supplies."""
     supplies = {}
     for term in PROTOCOL_TERMS[protocol]:
-        supplies[term] = str(workspace / ("delivery" if term == "delivery_root" else "adapter.sock"))
+        supplies[term] = str(workspace / "delivery" if term == "delivery_root" else socket_home / "adapter.sock")
     if report_path is not None and protocol in REPORT_AS_FILE:
         supplies["report_path"] = str(report_path)
     return supplies

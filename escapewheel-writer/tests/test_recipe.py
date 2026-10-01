@@ -774,7 +774,7 @@ def test_a_recipe_naming_no_protocol_reaches_the_adapter_by_one_it_declares(tmp_
     (spec,) = Recipe.load(write(tmp_path, DELIVERED.format(declaration=named))).sources
     assert spec.delivery.protocol == ""
     assert reached_by(spec) == "flight-v0.1"
-    assert set(_protocol_supplies("flight-v0.1", tmp_path, tmp_path / "report.json")) == {"socket"}
+    assert set(_protocol_supplies("flight-v0.1", tmp_path, tmp_path, tmp_path / "report.json")) == {"socket"}
 
 
 def test_a_recipe_naming_a_protocol_its_adapter_does_not_declare_is_refused(tmp_path, registry):
