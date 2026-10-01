@@ -1,6 +1,7 @@
 """The documents a commit writes beside a packet's resources, and the values they state (Part 04).
 
 - :func:`manifest` -- a new packet's manifest.
+- :func:`resource_entry` -- a staged resource's manifest entry.
 - :func:`with_lineage` -- each derived resource's `derived_from` on its manifest entry.
 - :func:`sources_document` -- the default resolution document for the sources referenced.
 - :func:`store_registries` -- the bound registries, stored, with their descriptors.
@@ -121,6 +122,50 @@ def manifest(
     if replaces:
         document["replaces"] = [dict(item) for item in replaces]
     return document
+
+
+def resource_entry(
+    resource_id: str,
+    declaration_id: str,
+    uri: str,
+    *,
+    owned: Path | None = None,
+    size_bytes: int | None = None,
+    referenced: ExternalArray | ExternalMedia | None = None,
+) -> dict[str, Any]:
+    """Return a staged resource's manifest entry (Part 04 §4.1).
+
+    Parameters
+    ----------
+    resource_id, declaration_id, uri : str
+        What the entry names, binds and locates.
+    owned : Path, optional
+        Where a packet-owned resource is staged, whose digest the entry records.
+    size_bytes : int, optional
+        A packet-owned resource's size, where its entry states one.
+    referenced : ExternalArray or ExternalMedia, optional
+        An external resource, whose entry records what the binding says was true of it (Part 04
+        §5.2). Given in place of `owned`.
+    """
+    entry: dict[str, Any] = {
+        "resource_id": resource_id,
+        "declaration_id": declaration_id,
+        "uri": uri,
+        "validation_state": VALIDATION_NOT_RUN,
+    }
+    if referenced is None:
+        assert owned is not None
+        if size_bytes is not None:
+            entry["size_bytes"] = size_bytes
+        entry["digest"] = sha256_of(owned)
+        return entry
+    entry["external"] = True
+    for name in ("source", "digest", "size_bytes", "verified_at"):
+        if (value := getattr(referenced, name)) is not None:
+            entry[name] = dict(value) if name == "digest" else value
+    if (members := getattr(referenced, "members", None)) is not None:
+        entry["members"] = [dict(member) for member in members]
+    return entry
 
 
 def with_lineage(entries: list[dict[str, Any]], derived: Mapping[str, Sequence[str]]) -> list[dict[str, Any]]:
@@ -260,12 +305,11 @@ def store_registries(
 
 
 __all__ = [
-    "VALIDATION_NOT_RUN",
     "VALIDATION_PASSED",
     "bump",
     "manifest",
+    "resource_entry",
     "retain",
-    "sha256_of",
     "sources_document",
     "store_registries",
     "with_lineage",

@@ -35,10 +35,9 @@ from .arrow import build_table, number_batch, sort_key
 from .attachments import Attachments
 from .bindings import ExternalArray, ExternalMedia, StagedArray
 from .documents import (
-    VALIDATION_NOT_RUN,
     bump,
     manifest,
-    sha256_of,
+    resource_entry,
     sources_document,
     with_lineage,
 )
@@ -587,14 +586,7 @@ class PacketWriter:
                     )
                 )
             check_parquet_floor(path)
-            entry: dict[str, Any] = {
-                "resource_id": resource_id,
-                "declaration_id": resource_id,
-                "uri": encode(relative.split("/")),
-                "validation_state": VALIDATION_NOT_RUN,
-            }
-            entry["digest"] = sha256_of(path)
-            entries.append(entry)
+            entries.append(resource_entry(resource_id, resource_id, encode(relative.split("/")), owned=path))
         return entries
 
     def _prefer_added_runs(self, held: Held | None) -> None:

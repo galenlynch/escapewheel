@@ -16,7 +16,7 @@ from escapewheel_reader.uri import encode
 
 from . import opaque
 from .bindings import ExternalArray, ExternalMedia, StagedArray, check_reference
-from .documents import VALIDATION_NOT_RUN, sha256_of
+from .documents import resource_entry
 from .errors import PayloadFault, PayloadProblem, PayloadRefused, UsageError, UsageFault
 from .registries import Declarations
 
@@ -228,16 +228,8 @@ class Attachments:
                 if spec.dimension_names is None:
                     spec = replace(spec, dimension_names=self._dimension_names(spec))
                 size = write_zarr(path, spec)
-            entries.append(
-                {
-                    "resource_id": resource_id,
-                    "declaration_id": declaration_id,
-                    "uri": encode(relative.split("/")),
-                    "validation_state": VALIDATION_NOT_RUN,
-                    "size_bytes": size,
-                    "digest": sha256_of(path),
-                }
-            )
+            uri = encode(relative.split("/"))
+            entries.append(resource_entry(resource_id, declaration_id, uri, owned=path, size_bytes=size))
         return entries
 
     def stage_payloads(self, staging: Path, bound: Sequence[tuple[opaque.StagedPayload, str]]) -> list[dict[str, Any]]:
@@ -252,55 +244,25 @@ class Attachments:
             directory.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(payload.path.parent), str(directory))
             staged = directory / payload.path.name
+            uri = encode((opaque.ROOT, payload.resource_id, payload.path.name))
             entries.append(
-                {
-                    "resource_id": payload.resource_id,
-                    "declaration_id": declaration_id,
-                    "uri": encode((opaque.ROOT, payload.resource_id, payload.path.name)),
-                    "validation_state": VALIDATION_NOT_RUN,
-                    "size_bytes": opaque.size(staged),
-                    "digest": sha256_of(staged),
-                }
+                resource_entry(payload.resource_id, declaration_id, uri, owned=staged, size_bytes=opaque.size(staged))
             )
         return entries
 
     def array_entries(self) -> list[dict[str, Any]]:
         """Return a manifest entry per referenced array. Copies nothing and reads nothing."""
-        entries = []
-        for resource_id, array in self.arrays.items():
-            declaration_id = array.declaration_id
-            entry = {
-                "resource_id": resource_id,
-                "declaration_id": declaration_id,
-                "uri": array.uri,
-                "validation_state": VALIDATION_NOT_RUN,
-                "external": True,
-            }
-            for name in ("source", "digest", "size_bytes", "verified_at"):
-                if (value := getattr(array, name)) is not None:
-                    entry[name] = dict(value) if name == "digest" else value
-            if array.members is not None:
-                entry["members"] = [dict(member) for member in array.members]
-            entries.append(entry)
-        return entries
+        return [
+            resource_entry(resource_id, array.declaration_id, array.uri, referenced=array)
+            for resource_id, array in self.arrays.items()
+        ]
 
     def media_entries(self) -> list[dict[str, Any]]:
         """Return a manifest entry per referenced media asset. Copies nothing and reads nothing."""
-        entries = []
-        for resource_id, media in self.media.items():
-            declaration_id = media.declaration_id
-            entry = {
-                "resource_id": resource_id,
-                "declaration_id": declaration_id,
-                "uri": media.uri,
-                "validation_state": VALIDATION_NOT_RUN,
-                "external": True,
-            }
-            for name in ("source", "digest", "size_bytes", "verified_at"):
-                if (value := getattr(media, name)) is not None:
-                    entry[name] = dict(value) if name == "digest" else value
-            entries.append(entry)
-        return entries
+        return [
+            resource_entry(resource_id, media.declaration_id, media.uri, referenced=media)
+            for resource_id, media in self.media.items()
+        ]
 
     def _bind_catalog_row(
         self,
