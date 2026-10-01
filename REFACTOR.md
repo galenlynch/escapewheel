@@ -749,7 +749,8 @@ Found and left as they were:
   that adapter's own option.
 - Compensations are not carried across a delivery, and §4's item stays open. The run report of
   Part 12 §9 has no member for them and a delivery reserves no resource for them, so either
-  route is a specification change and waits for a decision.
+  route is a specification change and waits for a decision. A proposal now covers it, preferring a
+  member of the run report, which already carries a source's stated values.
 - Found and left as behaviour §4 does not list: `facts.refuse_a_discarded_fact` skips a
   resource fewer than two source kinds stated, so a preferred in-process source that omits an
   empty table is not refused where the same source delivered out of process is.
