@@ -1992,6 +1992,8 @@ def _scan_one_ordering(  # noqa: C901
             check_table.RESOURCE_UNREADABLE, f"{resource_id}: {exc}", registry=report.resource_owner(resource_id)
         )
         return False
+    # A column the scan dropped holds one value, so it agrees with itself at every repeated key.
+    determined = [name for name in determined if name in keys]
     damaged = None
     while True:
         # Stepped rather than iterated, so a page that fails to decompress becomes a finding
