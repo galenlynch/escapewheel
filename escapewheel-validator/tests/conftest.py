@@ -324,7 +324,7 @@ def packet_root(tmp_path):
                 "validation": {
                     "status": "passed",
                     "validated_at": "2026-08-26T00:00:00Z",
-                    "validator_name": "escapewheel_validate",
+                    "validator_name": "escapewheel_validator",
                     "validator_version": "0.1.0",
                 },
             },
