@@ -160,6 +160,6 @@ of Part 03 §6.1 to do so.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
 - [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
-- [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The exact proposal and its final appraisal state are tracked in the current commit.
-- [ ] The proposal has explicit approval to advance to a revision draft.
+- [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
+- [x] The exact proposal and its final appraisal state are tracked in the current commit.
+- [x] The proposal has explicit approval to advance to a revision draft.
