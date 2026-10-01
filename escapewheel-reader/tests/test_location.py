@@ -89,8 +89,9 @@ def test_a_source_no_document_locates_is_refused(tmp_path):
     """Part 04 §5.5: a fact about the reader's situation, raised where the bytes are asked for."""
     from escapewheel_reader import UnresolvedSource
 
-    with pytest.raises(UnresolvedSource, match="raw_nwb"):
+    with pytest.raises(UnresolvedSource) as refused:
         Location.of(tmp_path).resolve("processing/data", "raw_nwb")
+    assert refused.value.source == "raw_nwb"
 
 
 def test_an_entry_naming_no_source_is_unchanged(tmp_path):

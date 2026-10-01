@@ -63,8 +63,9 @@ def test_resources_resolve_through_the_manifest(packet_root, tmp_path):
 
 def test_unknown_resource_names_what_is_available(packet_root):
     pkt = open_packet(packet_root)
-    with pytest.raises(ResourceNotFoundError, match="core.intervals"):
+    with pytest.raises(ResourceNotFoundError, match="core.intervals") as refused:
         pkt.resource("core.probes")
+    assert refused.value.resource_id == "core.probes"
 
 
 def test_declared_but_absent_resource(packet_root):

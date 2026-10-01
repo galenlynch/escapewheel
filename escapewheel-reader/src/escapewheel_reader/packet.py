@@ -155,7 +155,9 @@ class Packet:
             return self._by_id[resource_id]
         except KeyError:
             known = ", ".join(sorted(self._by_id)) or "none"
-            raise ResourceNotFoundError(f"{resource_id!r} is not declared; the packet has: {known}") from None
+            raise ResourceNotFoundError(
+                f"{resource_id!r} is not declared; the packet has: {known}", resource_id=resource_id
+            ) from None
 
     def path(self, resource_id: str) -> Path:
         """Resolve a resource's URI to a filesystem path.
@@ -698,7 +700,7 @@ def resolve_sources(root: Location, supplied: Iterable[Sources | str | Path] | N
 
     Raises
     ------
-    ManifestError
+    SourcesError
         If a supplied document is unreadable, of an unknown version, or fails the schema.
     """
     found: dict[str, str] = {}

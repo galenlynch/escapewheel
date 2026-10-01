@@ -16,7 +16,7 @@ import pyarrow as pa
 import pyarrow.dataset as pads
 import pyarrow.parquet as pq
 
-from .errors import ResourceUnreadableError, UnsupportedCodecError
+from .errors import ResourceUnreadableError, UnresolvedSource, UnsupportedCodecError
 from .location import Location
 from .manifest import Resource
 from .profile import variant_for_zarr_format, zarr_floor_admits
@@ -37,8 +37,13 @@ def _locate(resource: Resource, root: Location) -> Location:
     """Where a declared resource's bytes are, naming the resource when its URI names no place."""
     try:
         return root.resolve(resource.uri, resource.source)
+    except UnresolvedSource as exc:
+        exc.resource_id = resource.resource_id
+        raise
     except ResourceUnreadableError as exc:
-        raise ResourceUnreadableError(f"{resource.resource_id}: {exc}") from exc
+        raise ResourceUnreadableError(
+            f"{resource.resource_id}: {exc}", resource_id=resource.resource_id, source=resource.source
+        ) from exc
 
 
 def _resolve(resource: Resource, root: Location) -> Path:
@@ -67,11 +72,17 @@ def _resolve(resource: Resource, root: Location) -> Path:
         # URI itself.
         raise ResourceUnreadableError(
             f"{resource.resource_id}: {where} is {where.scheme}:, which has no local path; "
-            "open it through a store that speaks that scheme"
+            "open it through a store that speaks that scheme",
+            resource_id=resource.resource_id,
+            source=resource.source,
         )
     resolved = where.path
     if not resolved.exists():
-        raise ResourceUnreadableError(f"{resource.resource_id}: {resource.uri} does not resolve under {root}")
+        raise ResourceUnreadableError(
+            f"{resource.resource_id}: {resource.uri} does not resolve under {root}",
+            resource_id=resource.resource_id,
+            source=resource.source,
+        )
     return resolved
 
 
@@ -181,7 +192,7 @@ class TableResource:
         try:
             return self.location.store()
         except ResourceUnreadableError as exc:
-            raise ResourceUnreadableError(f"{self.resource_id}: {exc}") from exc
+            raise ResourceUnreadableError(f"{self.resource_id}: {exc}", resource_id=self.resource_id) from exc
 
     def to_arrow(self, *, columns: list[str] | None = None) -> pa.Table:
         """Read the resource into memory, in stored order.
@@ -377,7 +388,9 @@ class ArrayResource:
         for version, name in _ZARR_METADATA.items():
             if where.join(name).exists():
                 return version
-        raise ResourceUnreadableError(f"{self.resource_id}: {where} holds no Zarr metadata document")
+        raise ResourceUnreadableError(
+            f"{self.resource_id}: {where} holds no Zarr metadata document", resource_id=self.resource_id
+        )
 
     @property
     def _is_local(self) -> bool:

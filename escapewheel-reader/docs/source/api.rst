@@ -111,12 +111,16 @@ Errors
 .. autosummary::
    :toctree: generated
 
+   EscapewheelError
    PacketError
    ManifestError
+   SourcesError
    RegistryUnavailable
+   ResourceError
    ResourceNotFoundError
    ResourceUnreadableError
    UnsupportedCodecError
+   Refused
    NoTimeOrigin
    NotAligned
    AmbiguousRun

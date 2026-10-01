@@ -21,7 +21,7 @@ from urllib.parse import unquote, urlparse
 
 import jsonschema
 
-from .errors import ManifestError, ResourceUnreadableError, UnresolvedSource
+from .errors import ResourceUnreadableError, SourcesError, UnresolvedSource
 from .uri import decode, is_absolute
 
 #: A substitution a caller supplies at open time: declared URI prefix to replacement.
@@ -99,20 +99,20 @@ def read_sources(where: Location) -> dict[str, str]:
 
     Raises
     ------
-    ManifestError
+    SourcesError
         If the document is unparsable, declares a version this reader does not know, or fails
         the schema, naming each place it fails.
     """
     try:
         parsed = json.loads(where.read_bytes())
     except Exception as exc:
-        raise ManifestError(f"{where} is not a readable source resolution document: {exc}") from exc
+        raise SourcesError(f"{where} is not a readable source resolution document: {exc}") from exc
     declared = parsed.get("sources_standard_version") if isinstance(parsed, Mapping) else None
     if declared != SOURCES_VERSION:
-        raise ManifestError(f"{where} declares {declared!r}, and this reader knows {SOURCES_VERSION!r}")
+        raise SourcesError(f"{where} declares {declared!r}, and this reader knows {SOURCES_VERSION!r}")
     failures = check_sources(parsed)
     if failures:
-        raise ManifestError(f"{where} does not satisfy the source resolution schema: " + "; ".join(failures))
+        raise SourcesError(f"{where} does not satisfy the source resolution schema: " + "; ".join(failures))
     return {name: str(entry["uri"]) for name, entry in parsed["sources"].items()}
 
 
@@ -281,7 +281,9 @@ class Location:
             located = dict(self.sources).get(source)
             if located is None:
                 known = ", ".join(sorted(dict(self.sources))) or "none"
-                raise UnresolvedSource(f"no resolution document locates source {source!r}; this reader has: {known}")
+                raise UnresolvedSource(
+                    f"no resolution document locates source {source!r}; this reader has: {known}", source=source
+                )
             return Location(located, self.rewrite, self.sources).resolve(declared)
         for prefix, replacement in self.rewrite:
             if declared.startswith(prefix):

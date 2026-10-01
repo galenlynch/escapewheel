@@ -1,31 +1,36 @@
-"""Every exception this package raises on purpose.
+"""Every exception this package raises on purpose; each derives from :class:`PacketError`.
 
-- :class:`ManifestError` -- the manifest is absent, unparsable, or of the wrong shape.
+- :class:`EscapewheelError` -- the base the validator's and the writer's errors share.
+- :class:`ManifestError`, :class:`SourcesError` -- the manifest, or a source resolution document,
+  is absent, unparsable, or of the wrong shape.
 - :class:`RegistryUnavailable` -- a bound registry cannot be acquired or fails its digest.
-- :class:`ResourceNotFoundError`, :class:`ResourceUnreadableError` -- a resource is undeclared,
-  or does not resolve to readable bytes.
-- :class:`UnsupportedCodecError` -- an array uses a codec the installed Zarr cannot decode.
-- :class:`NoTimeOrigin` -- seconds were asked for and the packet declares no origin.
-- :class:`AmbiguousRun` -- several runs produced the same thing and none is preferred.
-- :class:`UnresolvableChannelIndex` -- a channel index names no electrode of its run.
-- :class:`UnresolvedSource` -- no resolution document locates a named source.
-- :class:`UnresolvableAxis` -- an array's declarations do not determine one answer.
-- :class:`MultiSessionUnresolved` -- a scoped table cannot say which session a row is from.
-- :class:`NotAligned`, :class:`Unanchored` -- a clock's anchors reach no reference, or are too few.
-- :class:`ClockMismatch` -- spikes and events are counted on different clocks.
-- :class:`StaleSupport` -- a table's rows changed after its support was attached.
+- :class:`ResourceError` -- one resource cannot be read, and the rest of the packet can:
+  :class:`ResourceNotFoundError`, :class:`ResourceUnreadableError`,
+  :class:`UnsupportedCodecError`, :class:`UnresolvedSource`.
+- :class:`Refused` -- the data is readable and the operation asked of it has no one right answer:
+  :class:`NoTimeOrigin`, :class:`AmbiguousRun`, :class:`UnresolvableChannelIndex`,
+  :class:`UnresolvableAxis`, :class:`MultiSessionUnresolved`, :class:`NotAligned`,
+  :class:`Unanchored`, :class:`ClockMismatch`, :class:`StaleSupport`.
 - :class:`PhysicalProfileError` -- the bundled profile descriptor is malformed or inconsistent.
 """
 
 from __future__ import annotations
 
 
-class PacketError(Exception):
+class EscapewheelError(Exception):
+    """Base class for every error an Escapewheel package raises on purpose."""
+
+
+class PacketError(EscapewheelError):
     """Base class for every error raised by this package."""
 
 
 class ManifestError(PacketError):
     """The packet manifest is absent, unparsable, or does not conform to its schema."""
+
+
+class SourcesError(ManifestError):
+    """A source resolution document is unparsable, of an unknown version, or fails its schema."""
 
 
 class RegistryUnavailable(PacketError):
@@ -49,38 +54,69 @@ class RegistryUnavailable(PacketError):
         self.reason = reason
 
 
-class ResourceNotFoundError(PacketError):
+class ResourceError(PacketError):
+    """One resource cannot be read, which leaves every other resource of the packet readable.
+
+    Attributes
+    ----------
+    resource_id : str or None
+        The resource, or None where the error was raised below the point that knows it.
+    source : str or None
+        The named source the resource's location is relative to, where it has one.
+    """
+
+    def __init__(self, message: str, *, resource_id: str | None = None, source: str | None = None) -> None:
+        super().__init__(message)
+        self.resource_id = resource_id
+        self.source = source
+
+
+class ResourceNotFoundError(ResourceError):
     """A resource was requested that the manifest does not declare."""
 
 
-class ResourceUnreadableError(PacketError):
+class ResourceUnreadableError(ResourceError):
     """A declared resource does not resolve to a readable file."""
 
 
-class UnsupportedCodecError(PacketError):
-    """The reader cannot decode a codec one resource uses (Part 03 §6.1).
+class UnsupportedCodecError(ResourceError):
+    """The reader cannot decode a codec one resource uses (Part 03 §6.4).
 
     Raised when the resource's values are asked for, never when the packet opens, so only that
     resource fails.
 
     Attributes
     ----------
-    resource_id : str
-        The resource that cannot be read.
     outside_floor : bool or None
-        Whether the resource lies outside its interface's reader floor (Part 03 §6.4). False means
-        this installation lacks a feature every conforming reader supports, so the installation is
+        Whether the resource lies outside its interface's reader floor. False means this
+        installation lacks a feature every conforming reader supports, so the installation is
         what to repair; True means the packet chose a feature beyond the portability guarantee.
         None where the metadata is reachable only through Zarr, which just failed to read it.
     """
 
     def __init__(self, resource_id: str, message: str, *, outside_floor: bool | None) -> None:
-        super().__init__(f"{resource_id}: {message}")
-        self.resource_id = resource_id
+        super().__init__(f"{resource_id}: {message}", resource_id=resource_id)
         self.outside_floor = outside_floor
 
 
-class NoTimeOrigin(PacketError):
+class UnresolvedSource(ResourceError):
+    """An external resource names a source no available resolution document locates (Part 04 §5.5).
+
+    A fact rather than a defect: which mirrors a reader can reach is a property of the reader,
+    so the packet is not invalid. It is raised when the bytes are actually asked for, and the
+    resource is otherwise readable metadata.
+    """
+
+
+class Refused(PacketError):
+    """The data is readable, and the operation asked of it has no one right answer.
+
+    Each subclass names a case where every fallback is plausible and wrong, so the reader raises
+    in place of choosing one.
+    """
+
+
+class NoTimeOrigin(Refused):
     """The packet declares no `t_zero_tick`, so seconds are not defined (Part 01 §2.2).
 
     Tick zero, the session's wall-clock start and the first datum are all available and all
@@ -89,7 +125,7 @@ class NoTimeOrigin(PacketError):
     """
 
 
-class AmbiguousRun(PacketError):
+class AmbiguousRun(Refused):
     """Several runs produced the same thing and the packet does not say which to read.
 
     Part 01 §2.6. Reading them all concatenated is the failure this prevents: two sortings of one
@@ -99,7 +135,7 @@ class AmbiguousRun(PacketError):
     """
 
 
-class UnresolvableChannelIndex(PacketError):
+class UnresolvableChannelIndex(Refused):
     """A channel index names no electrode of its sorting run (Part 02 §12.2).
 
     `channels_declared` tells the two cases apart, because they call for different repairs.
@@ -115,16 +151,7 @@ class UnresolvableChannelIndex(PacketError):
         self.channels_declared = channels_declared
 
 
-class UnresolvedSource(PacketError):
-    """An external resource names a source no available resolution document locates (Part 04 §5.5).
-
-    A fact rather than a defect: which mirrors a reader can reach is a property of the reader,
-    so the packet is not invalid. It is raised when the bytes are actually asked for, and the
-    resource is otherwise readable metadata.
-    """
-
-
-class UnresolvableAxis(PacketError):
+class UnresolvableAxis(Refused):
     """An array's declared coordinates or scaling do not determine one answer.
 
     Raised rather than falling back to positions, because every fallback is plausible: another
@@ -132,7 +159,7 @@ class UnresolvableAxis(PacketError):
     """
 
 
-class MultiSessionUnresolved(PacketError):
+class MultiSessionUnresolved(Refused):
     """A packet holds several sessions and a scoped table cannot say which row is whose.
 
     Part 05 §13.1 requires a discriminator on every session-scoped table a reader presents. Part
@@ -141,11 +168,11 @@ class MultiSessionUnresolved(PacketError):
     """
 
 
-class NotAligned(ValueError):
+class NotAligned(Refused, ValueError):
     """A clock the spikes are on has no anchors, so its ticks reach no reference."""
 
 
-class Unanchored(ValueError):
+class Unanchored(Refused, ValueError):
     """A clock has too few anchors to define a mapping.
 
     Two anchors define a segment but no median interval worth trusting, so the bound would
@@ -153,7 +180,7 @@ class Unanchored(ValueError):
     """
 
 
-class ClockMismatch(ValueError):
+class ClockMismatch(Refused, ValueError):
     """The spikes and the events are counted on different clocks.
 
     A tick has no meaning beside a tick on another clock, so comparing them would return rows
@@ -161,7 +188,7 @@ class ClockMismatch(ValueError):
     """
 
 
-class StaleSupport(ValueError):
+class StaleSupport(Refused, ValueError):
     """A table carries a support that no longer describes it.
 
     Raised when the row count has changed since the support was attached -- a filter, a slice
@@ -170,5 +197,5 @@ class StaleSupport(ValueError):
     """
 
 
-class PhysicalProfileError(ValueError):
+class PhysicalProfileError(PacketError, ValueError):
     """The physical-profile descriptor is malformed or internally inconsistent."""
