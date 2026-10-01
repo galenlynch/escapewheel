@@ -43,7 +43,7 @@ from escapewheel_reader.resource_ids import CORE_ARRAY_ASSETS, CORE_MEDIA_ASSETS
 from escapewheel_reader.uri import canonical, is_absolute
 
 from . import opaque
-from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_CACHE
+from .declaration import FILES, FLIGHT, PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_CACHE, STREAM
 from .encoding import STREAMED_BATCH_ROWS
 from .errors import DeliveryFailed, SourceDefect, SourceFault
 from .notes import Note, NoteCode
@@ -202,10 +202,10 @@ def infers(supplied: Mapping[str, Any]) -> str:
     the first.
     """
     if "socket" in supplied:
-        return "flight-v0.1"
+        return FLIGHT
     if "delivery_root" in supplied:
-        return "files-v0.1"
-    return "stream-v0.1"
+        return FILES
+    return STREAM
 
 
 def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any = None) -> None:
@@ -238,11 +238,11 @@ def serve(source: Any, supplied: Mapping[str, Any], protocol: str, *, out: Any =
     tables = {name: delivering.get(name, as_table([])) for name in wanted}
     if (document := referenced(source)) is not None:
         tables[RESOURCES] = as_table([{"document": json.dumps(document, default=str)}])
-    if protocol == "stream-v0.1":
+    if protocol == STREAM:
         _serve_stream(tables, out if out is not None else sys.stdout.buffer)
-    elif protocol == "files-v0.1":
+    elif protocol == FILES:
         _serve_files(tables, Path(supplied["delivery_root"]))
-    elif protocol == "flight-v0.1":
+    elif protocol == FLIGHT:
         _serve_flight(tables, str(supplied["socket"]))
     else:
         raise SourceDefect(
@@ -567,9 +567,9 @@ def fetch(
         # A file at a path the recipe names is present after any run that ever wrote one.
         report_path.unlink(missing_ok=True)
     readers: dict[str, Reader] = {
-        "stream-v0.1": _read_stream,
-        "files-v0.1": _read_files,
-        "flight-v0.1": _read_flight,
+        STREAM: _read_stream,
+        FILES: _read_files,
+        FLIGHT: _read_flight,
     }
     if protocol not in readers:
         raise SourceDefect(
