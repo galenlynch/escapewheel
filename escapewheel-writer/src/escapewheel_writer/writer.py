@@ -9,8 +9,6 @@ manifest to ``packet.json`` last, so a reader finds a whole packet or none.
 
 from __future__ import annotations
 
-import gzip
-import hashlib
 import json
 import os
 import shutil
@@ -23,20 +21,18 @@ from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-from escapewheel_reader import Manifest, Packet, check_sources, open_packet
-from escapewheel_reader.location import SOURCES_FILENAME, SOURCES_VERSION
+from escapewheel_reader import Manifest, Packet, open_packet
+from escapewheel_reader.location import SOURCES_FILENAME
 from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
-from escapewheel_reader.profile import PROFILE_ID
 from escapewheel_reader.registries import declared_tables
-from escapewheel_reader.registries import gunzip_member as gzip_member
-from escapewheel_reader.resource_ids import CORE_INTERVALS, CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS, CORE_SESSIONS
+from escapewheel_reader.resource_ids import CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS, CORE_SESSIONS
 from escapewheel_reader.uri import encode
 from escapewheel_validator import (
     CheckedRegistryContext,
     Report,
     validate,
 )
-from escapewheel_validator.amendment import DERIVED, PROVENANCE, chain_reaches, semver
+from escapewheel_validator.amendment import semver
 from escapewheel_validator.errors import OrderViolation
 
 from . import opaque
@@ -44,12 +40,15 @@ from .amending import Held
 from .arrow import build_table, number_batch, sort_key
 from .bindings import ExternalArray, ExternalMedia, StagedArray, check_reference
 from .documents import (
-    VALIDATION_FAILED,
     VALIDATION_NOT_RUN,
     VALIDATION_PASSED,
     bump,
-    first_version,
+    manifest,
+    retain,
     sha256_of,
+    sources_document,
+    store_registries,
+    with_lineage,
     writer_version,
 )
 from .encoding import inefficient
@@ -64,7 +63,8 @@ from .errors import (
     UsageFault,
 )
 from .keys import Keys
-from .layout import PROMOTED, REGISTRIES, STAGING, retained
+from .layout import PROMOTED, STAGING, retained
+from .numbering import paired_kinds, preassign
 from .promotion import act_on_promotion, claim, created, record_promotion, refuse_occupied
 from .registries import Declarations
 from .staging import check_parquet_floor, parquet_options, write_stream
@@ -447,19 +447,6 @@ class PacketWriter:
         """
         self._derived.setdefault(resource_id, []).extend(sources)
 
-    def _with_lineage(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Put each derived resource's `derived_from` on its manifest entry."""
-        if missing := sorted(set(self._derived) - {e["resource_id"] for e in entries}):
-            raise UsageError(
-                f"lineage was recorded for {missing}, which this packet does not carry",
-                code=UsageFault.LINEAGE_UNSTAGED,
-                where=", ".join(missing),
-            )
-        for entry in entries:
-            if lineage := self._derived.get(entry["resource_id"]):
-                entry["derived_from"] = list(lineage)
-        return entries
-
     def add_array(self, resource_id: str, array: StagedArray) -> None:
         """Add a dense array, to be written into the packet as Zarr v3.
 
@@ -841,7 +828,7 @@ class PacketWriter:
         entries = []
         if only is None:
             self._ordered = set()
-        self._preassign()
+        preassign(self._tables, self._declarations, self.keys)
         # Streams first, so a held row may record what a stream only knows once consumed, such
         # as a materializer's count of the spikes it could not place.
         for resource_id in sorted(self.resources, key=lambda r: r not in self._batches):
@@ -880,7 +867,11 @@ class PacketWriter:
                     continue
             else:
                 built = build_table(
-                    resource_id, spec, self._tables[resource_id], self.keys, self._paired_kinds(resource_id)
+                    resource_id,
+                    spec,
+                    self._tables[resource_id],
+                    self.keys,
+                    paired_kinds(self._tables, self._declarations, resource_id),
                 )
                 table = built if self._held is None else self._held.settle(resource_id, built, derived=self._derived)
                 if table is None:
@@ -967,134 +958,24 @@ class PacketWriter:
         if adding:
             self.add(CORE_PREFERRED_RUNS, adding)
 
-    def _preassign(self) -> None:
-        """Assign a number to every name this packet uses, before any table is built (Part 05 §4.3).
-
-        Numbering as each table is staged would let the order tables happen to be written in
-        decide the numbers: `core.sessions` names a `reference_clock_id` and is staged before
-        `core.clocks`, so the clocks would be numbered by the session's mention of one of them.
-        Two builds of the same sources must produce the same packet, which is what lets a rebuild
-        be compared to what it replaced -- and that has to hold across tables, not only within one.
-        """
-        pending: dict[str, set[str]] = {}
-        for resource_id, rows in sorted(self._tables.items()):
-            spec = self.spec(resource_id)
-            if spec is None:
-                continue
-            target = {
-                column: referenced
-                for ref in spec.get("references", [])
-                for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
-            }
-            paired = self._paired_kinds(resource_id)
-            for column in spec["columns"]:
-                name = column["name"]
-                if column.get("role") != "identifier" or column.get("identity") != "assigned":
-                    continue
-                for r in rows:
-                    if r.get(name) is not None:
-                        kind = (paired[name](r) if name in paired else None) or target.get(name, name)
-                        pending.setdefault(kind, set()).add(str(r[name]))
-        for kind in sorted(pending):
-            if kind == "interval_id":
-                continue
-            for value in sorted(pending[kind]):
-                self.keys.of(kind, value)
-        # Part 02 §12.9 numbers intervals by session, kind, clock and bounds, which only their rows
-        # hold, so the rows order the names; a name no interval row carries is an orphan and follows.
-        for row in sorted(self._tables.get(CORE_INTERVALS, []), key=self._interval_order):
-            self.keys.of("interval_id", str(row["interval_id"]))
-        for value in sorted(pending.get("interval_id", ())):
-            self.keys.of("interval_id", value)
-
-    def _interval_order(self, row: Mapping[str, Any]) -> tuple[int, str, int, int, int, str]:
-        """Return where one `core.intervals` row falls in Part 02 §12.9's numbering."""
-        return (
-            self.keys.of("session_id", str(row["session_id"])),
-            str(row["interval_kind"]),
-            self.keys.of("clock_id", str(row["clock_id"])),
-            int(row["start_tick"]),
-            int(row["stop_tick"]),
-            str(row["interval_id"]),
-        )
-
-    def _paired_kinds(self, resource_id: str) -> dict[str, Callable[[Mapping[str, Any]], str | None]]:
-        """Map each identifier paired value on a table to the numbering its row's kind names.
-
-        Part 02 §8.3 lets an identifier hold the key of whichever resource its row's discriminator
-        names, so its map is chosen per row: the named resource's one key column, which is the map
-        that resource numbers its own key in. The kind is read off the records, which still hold
-        names, so a value on a specialised table reaches its discriminator row by the names its
-        reference carries.
-        """
-        found: dict[str, Callable[[Mapping[str, Any]], str | None]] = {}
-        documents = self._declarations.documents
-        for owner, table in ((n, t) for doc in documents for n, t in declared_tables(doc, strict=True).items()):
-            for column in table["columns"]:
-                if column.get("role") != "discriminator" or column.get("discriminates") is None:
-                    continue
-                via = column.get("discriminates_via")
-                holder = owner if via is None else str(via).rsplit(".", 1)[0]
-                if holder != resource_id:
-                    continue
-                found[column["discriminates"]] = self._kind_reader(owner, column["name"], resource_id)
-        return found
-
-    def _kind_reader(self, owner: str, discriminator: str, holder: str) -> Callable[[Mapping[str, Any]], str | None]:
-        """Return a function from a `holder` row to the key column of the resource its kind names."""
-
-        def key_of(resource: Any) -> str | None:
-            spec = self.spec(str(resource)) if resource is not None else None
-            key = list((spec or {}).get("primary_key") or [])
-            return key[0] if len(key) == 1 else None
-
-        if owner == holder:
-            return lambda row: key_of(row.get(discriminator))
-        spec = self.spec(holder) or {}
-        reference = next((r for r in spec.get("references", []) if r["resource"] == owner), None)
-        if reference is None:
-            return lambda row: None
-        ours, theirs = list(reference["columns"]), list(reference["resource_columns"])
-        kinds = {tuple(str(r.get(c)) for c in theirs): r.get(discriminator) for r in self._tables.get(owner, [])}
-        return lambda row: key_of(kinds.get(tuple(str(row.get(c)) for c in ours)))
-
     def _manifest(
         self,
         entries: Sequence[Mapping[str, Any]],
         registries: Mapping[str, Mapping[str, str]],
         report: Report | None,
     ) -> dict[str, Any]:
-        """Build the manifest for these resources, binding the registries `_store_registries` wrote."""
-        sessions = sorted({r["session_id"] for r in self._tables.get(CORE_SESSIONS, []) if "session_id" in r})
-        now = datetime.now(tz=UTC).isoformat().replace("+00:00", "Z")
-        validation = {
-            "status": VALIDATION_NOT_RUN
-            if report is None
-            else (VALIDATION_PASSED if report.passed else VALIDATION_FAILED),
-            "validated_at": now,
-            "validator_name": "escapewheel_validator",
-            "validator_version": writer_version(),
-        }
-        manifest: dict[str, Any] = {
-            "packet_id": self._packet_id,
-            "packet_version": first_version(self._packet_id, self._replaces),
-            "profile_id": PROFILE_ID,
-            "semantic_standard_version": self._declarations.core["semantic_standard_version"],
-            "logical_standard_version": self._declarations.core["logical_standard_version"],
-            "registries": {name: dict(descriptor) for name, descriptor in registries.items()},
-            "created_at": now,
-            "sessions": sessions,
-            "resources": [dict(e) for e in entries],
-            # Part 05 §15.5: declared rather than left to a default, because `prune` reads it and a
-            # packet that says nothing makes the operator's policy invisible to the operation.
-            "retention": dict(self._retention),
-            "validation": validation,
-        }
-        if self._description is not None:
-            manifest["description"] = self._description
-        if self._replaces:
-            manifest["replaces"] = [dict(item) for item in self._replaces]
-        return manifest
+        """Build this packet's manifest for these resources and the registries stored for them."""
+        return manifest(
+            entries,
+            registries,
+            report,
+            packet_id=self._packet_id,
+            core=self._declarations.core,
+            sessions=self.rows(CORE_SESSIONS),
+            retention=self._retention,
+            description=self._description,
+            replaces=self._replaces,
+        )
 
     def declare_source(self, name: str, uri: str) -> None:
         """Record where a named body of referenced data was read from (Part 04 §5.5).
@@ -1112,39 +993,6 @@ class PacketWriter:
             Where this writer read it.
         """
         self._sources[name] = uri
-
-    def _sources_document(self) -> dict[str, Any] | None:
-        """Return Part 04 §5.5's default resolution document, or None where no resource names a source.
-
-        None rather than an empty document, since a document locating nothing is worse than
-        none -- it would answer a lookup the caller meant to answer itself. Written before the
-        manifest, because Part 05 §6 makes publishing the manifest what makes a commit visible.
-
-        Raises
-        ------
-        UsageError
-            If the document would not satisfy its schema, which a writer MUST NOT write (Part 04
-            §5.5). Raised before anything is promoted.
-        """
-        located = {
-            referenced.source: {"uri": self._sources[referenced.source]}
-            for referenced in (*self._referenced_arrays.values(), *self._referenced_media.values())
-            if referenced.source is not None and referenced.source in self._sources
-        }
-        if not located:
-            return None
-        document = {
-            "$schema": "https://escapewheel.org/schemas/sources/0.1.0",
-            "sources_standard_version": SOURCES_VERSION,
-            "description": f"Where {self._packet_id} read its referenced data. Editable: not a packet resource.",
-            "sources": dict(sorted(located.items())),
-        }
-        if problems := check_sources(document):
-            raise UsageError(
-                f"the source resolution document would not satisfy its schema: {'; '.join(problems)}",
-                code=UsageFault.SOURCES_DOCUMENT,
-            )
-        return document
 
     def stage_at(self, root: str | Path) -> Path:
         """Prepare, empty, the staging area `commit` or `amend` will use at `root`, and return it.
@@ -1240,14 +1088,15 @@ class PacketWriter:
 
         # 1. staged resources, plus the registry they were written against
         clock = time.perf_counter()
-        entries = self._with_lineage(
+        entries = with_lineage(
             [
                 *self._stage(staging),
                 *self._stage_arrays(staging),
                 *self._stage_payloads(staging, payloads),
                 *self._reference_arrays(),
                 *self._reference_media(),
-            ]
+            ],
+            self._derived,
         )
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
         # Part 03 §5.5's rules are good guesses, and a column one guesses wrong
@@ -1258,7 +1107,7 @@ class PacketWriter:
         for report in self._after_stage:
             report(say)
         clock = time.perf_counter()
-        registries, _ = self._store_registries(staging)
+        registries, _ = store_registries(self._declarations.documents, staging)
 
         # 2. derive whatever the caller asked for from the staged packet, before anything is
         #    validated or promoted. Part 05 §8 puts materialization inside the import
@@ -1285,7 +1134,7 @@ class PacketWriter:
             touched |= set(self.resources) - {e["resource_id"] for e in entries}
             restaged = self._stage(staging, only=touched)
             kept = [e for e in entries if e["resource_id"] not in touched]
-            entries = self._with_lineage([*kept, *restaged])
+            entries = with_lineage([*kept, *restaged], self._derived)
             (staging / MANIFEST_FILENAME).write_text(
                 json.dumps(self._manifest(entries, registries, None), indent=2) + "\n"
             )
@@ -1303,7 +1152,9 @@ class PacketWriter:
 
         # 3. record every path promotion creates, then move into final paths, the resolution
         #    document first since it alone can still fail
-        sources = self._sources_document()
+        sources = sources_document(
+            self._packet_id, self._sources, (*self._referenced_arrays.values(), *self._referenced_media.values())
+        )
         promoted = [name for name in PROMOTED if (staging / name).exists()]
         creates = [*promoted, *([SOURCES_FILENAME] if sources is not None else []), f"{MANIFEST_FILENAME}.candidate"]
         claim(root, creates)
@@ -1422,23 +1273,24 @@ class PacketWriter:
         payloads = [
             (payload, declaration)
             for payload, declaration in self._bind_payloads()
-            if not self._held_instance(payload.resource_id, declaration)
+            if not held.holds(payload.resource_id, declaration)
         ]
         for instances in (self._staged_arrays, self._referenced_arrays, self._referenced_media):
-            for resource_id in [r for r, i in instances.items() if self._held_instance(r, i.declaration_id)]:
+            for resource_id in [r for r, i in instances.items() if held.holds(r, i.declaration_id)]:
                 del instances[resource_id]
         staging = self._staging(root)
 
         clock = time.perf_counter()
         self._prefer_added_runs()
-        entries = self._with_lineage(
+        entries = with_lineage(
             [
                 *self._stage(staging),
                 *self._stage_arrays(staging),
                 *self._stage_payloads(staging, payloads),
                 *self._reference_arrays(),
                 *self._reference_media(),
-            ]
+            ],
+            self._derived,
         )
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
         for note in sorted(set(self._encoding_notes)):
@@ -1448,7 +1300,7 @@ class PacketWriter:
         clock = time.perf_counter()
         # Before validation, since the validator acquires each registry through the candidate's
         # descriptor (Part 04 §10); one the packet does not yet store is bound under staging/.
-        registries, added_registries = self._store_registries(root, staging=staging)
+        registries, added_registries = store_registries(self._declarations.documents, root, staging=staging)
 
         def candidate(staged: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             """Return the amended manifest with every written resource still under staging/."""
@@ -1478,12 +1330,13 @@ class PacketWriter:
             touched = {r for r, n in counts().items() if n != before.get(r, -1) or r not in before}
             touched |= set(self.resources) - {e["resource_id"] for e in entries}
             restaged = self._stage(staging, only=touched)
-            entries = self._with_lineage([*(e for e in entries if e["resource_id"] not in touched), *restaged])
+            kept = [e for e in entries if e["resource_id"] not in touched]
+            entries = with_lineage([*kept, *restaged], self._derived)
             say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
             clock = time.perf_counter()
 
         amended = candidate(entries)
-        amended["resources"] = self._without_stale(amended["resources"], entries)
+        amended["resources"] = held.without_stale(amended["resources"], entries)
         written = {e["resource_id"] for e in entries}
         report = validate(
             Packet(root, Manifest.from_dict(amended)),
@@ -1527,7 +1380,7 @@ class PacketWriter:
         }
 
         body = (json.dumps(amended, indent=2) + "\n").encode()
-        self._retain(root, superseded, amended, body)
+        retain(root, superseded, amended, body)
         candidate_path = root / f"{MANIFEST_FILENAME}.candidate"
         candidate_path.write_bytes(body)
         os.replace(candidate_path, root / MANIFEST_FILENAME)
@@ -1536,121 +1389,6 @@ class PacketWriter:
             shutil.rmtree(self._workspace)
         say(f"promoted in {time.perf_counter() - clock:.1f} s")
         return report
-
-    def _held_instance(self, resource_id: str, declaration_id: str) -> bool:
-        """Whether a canonical catalog instance is one the amended packet already names.
-
-        Its catalog row then equals the held one or is refused as it settles, so the held instance
-        stands and the delivered copy is dropped with its row (Part 05 §4.3).
-        """
-        held = self._held
-        return held is not None and resource_id in held.entries and held.canonical(declaration_id)
-
-    def _without_stale(
-        self, resources: Sequence[Mapping[str, Any]], written: Sequence[Mapping[str, Any]]
-    ) -> list[Mapping[str, Any]]:
-        """Drop each derived resource the amendment neither wrote nor left current (Part 05 §15.2).
-
-        One whose `derived_from` chain reaches a canonical table the amendment wrote, other than a
-        provenance table, was derived from rows that are no longer all the packet holds.
-        """
-        held = self._held
-        assert held is not None
-        rewritten = {e["resource_id"] for e in written}
-        sources = {r for r in rewritten if held.canonical(r) and r not in PROVENANCE}
-        chains = {e["resource_id"]: e for e in resources}
-        stale = {
-            e["resource_id"]
-            for e in resources
-            if e["resource_id"] not in rewritten
-            and held.classes.get(str(e.get("declaration_id", e["resource_id"]))) in DERIVED
-            and chain_reaches(chains, e["resource_id"], sources)
-        }
-        return [e for e in resources if e["resource_id"] not in stale]
-
-    def _retain(
-        self, root: Path, superseded: Mapping[str, Any], amended: Mapping[str, Any], amended_body: bytes
-    ) -> None:
-        """Keep the exact bytes of every manifest a packet has had (Part 05 §15.3).
-
-        A superseded file is only interpretable if the manifest that named it still exists;
-        without these, an orphan and a stray are indistinguishable and a recorded `digest` points
-        at a state nothing can reconstruct. Exact, because a replacement names a version by the
-        SHA-256 of its manifest (Part 04 §3).
-        """
-        versions = root / MANIFESTS_DIRNAME
-        versions.mkdir(exist_ok=True)
-        for manifest, body in ((superseded, (root / MANIFEST_FILENAME).read_bytes()), (amended, amended_body)):
-            path = versions / retained(manifest)
-            # An existing copy is the one an earlier amendment retained, and retained bytes are
-            # not rewritten.
-            if not path.exists():
-                path.write_bytes(body)
-
-    def _store_registries(
-        self, root: Path, *, staging: Path | None = None
-    ) -> tuple[dict[str, dict[str, str]], list[str]]:
-        """Store core and every extension as Part 03 §3.3 requires, returning their descriptors.
-
-        The digest covers the exact serialized bytes (Part 04 §10). A registry ID and version that
-        the packet's current or a retained manifest already binds is reused where the digest
-        matches and refused where it differs (Part 05 §15.3), so every manifest keeps naming bytes
-        that exist.
-
-        Parameters
-        ----------
-        root : Path
-            Where the registries are bound: the staged packet for a commit, the packet for an
-            amendment.
-        staging : Path, optional
-            For an amendment, where a registry the packet does not yet store is written instead,
-            its descriptor pointing there until promotion moves it (Part 05 §6).
-
-        Returns
-        -------
-        dict
-            A descriptor per registry ID, for the manifest's `registries`.
-        list of str
-            The root-relative final path of each registry written under `staging`.
-        """
-        recorded: dict[tuple[str, str], Mapping[str, str]] = {}
-        for manifest_path in [root / MANIFEST_FILENAME, *sorted((root / MANIFESTS_DIRNAME).glob("*.json"))]:
-            if manifest_path.is_file():
-                for name, bound in json.loads(manifest_path.read_text()).get("registries", {}).items():
-                    recorded.setdefault((name, bound["version"]), bound)
-        descriptors: dict[str, dict[str, str]] = {}
-        added: list[str] = []
-        for document in self._declarations.documents:
-            registry_id = str(document["registry_id"])
-            body = (json.dumps(document, indent=2) + "\n").encode()
-            version = str(document["registry_version"])
-            digest = hashlib.sha256(body).hexdigest()
-            earlier = recorded.get((registry_id, version))
-            relative = earlier["path"] if earlier else f"{REGISTRIES}/{registry_id}/{version}.json.gz"
-            path = root / relative
-            stored = hashlib.sha256(gzip_member(path.read_bytes())).hexdigest() if path.is_file() else None
-            bound = relative
-            if (earlier is not None and earlier["sha256"] != digest) or stored not in {None, digest}:
-                raise UsageError(
-                    f"this packet already binds a different {registry_id} {version} at {relative}; two digests "
-                    "under one registry ID and version cannot both be retained (Part 05 §15.3). Bump registry_version.",
-                    code=UsageFault.REGISTRY_DIGEST_DIFFERS,
-                    where=relative,
-                )
-            if stored is None:
-                if staging is not None:
-                    path = staging / relative
-                    bound = f"{staging.relative_to(root).as_posix()}/{relative}"
-                    added.append(relative)
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(gzip.compress(body, mtime=0))
-            descriptors[registry_id] = {
-                "role": "extension" if "extension_id" in document else "core",
-                "version": version,
-                "path": bound,
-                "sha256": digest,
-            }
-        return descriptors, added
 
 
 __all__ = ["PacketWriter"]

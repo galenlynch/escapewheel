@@ -26,7 +26,7 @@ from escapewheel_reader import Manifest, Packet
 from escapewheel_reader.manifest import MANIFEST_FILENAME
 from escapewheel_reader.resource_ids import CORE_CLOCKS, CORE_SESSIONS, CORE_SOURCE_FILES, CORE_SUBJECTS
 from escapewheel_reader.sql import quote
-from escapewheel_validator.amendment import PREFERENCES, Version, absent
+from escapewheel_validator.amendment import DERIVED, PREFERENCES, PROVENANCE, Version, absent, chain_reaches
 
 from .arrow import sort_key
 from .errors import AmendmentFault, AmendmentRefused
@@ -142,6 +142,34 @@ class Held:
     def canonical(self, resource_id: str) -> bool:
         """Whether a resource's content class is canonical (Part 02 §2.2)."""
         return self.classes.get(resource_id) in {"core", "extension"}
+
+    def holds(self, resource_id: str, declaration_id: str) -> bool:
+        """Whether a canonical catalog instance is one this packet already names.
+
+        Its catalog row then equals the held one or is refused as it settles, so the held instance
+        stands and the delivered copy is dropped with its row (Part 05 §4.3).
+        """
+        return resource_id in self.entries and self.canonical(declaration_id)
+
+    def without_stale(
+        self, resources: Sequence[Mapping[str, Any]], written: Sequence[Mapping[str, Any]]
+    ) -> list[Mapping[str, Any]]:
+        """Drop each derived resource the amendment neither wrote nor left current (Part 05 §15.2).
+
+        One whose `derived_from` chain reaches a canonical table the amendment wrote, other than a
+        provenance table, was derived from rows that are no longer all the packet holds.
+        """
+        rewritten = {e["resource_id"] for e in written}
+        sources = {r for r in rewritten if self.canonical(r) and r not in PROVENANCE}
+        chains = {e["resource_id"]: e for e in resources}
+        stale = {
+            e["resource_id"]
+            for e in resources
+            if e["resource_id"] not in rewritten
+            and self.classes.get(str(e.get("declaration_id", e["resource_id"]))) in DERIVED
+            and chain_reaches(chains, e["resource_id"], sources)
+        }
+        return [e for e in resources if e["resource_id"] not in stale]
 
     def tables_named(self) -> list[str]:
         """Return every table the manifest names, which an amending recipe counts as supplied."""

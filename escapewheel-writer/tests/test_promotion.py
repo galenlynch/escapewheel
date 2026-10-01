@@ -127,13 +127,13 @@ def test_an_interrupted_amendment_is_undone_and_published_on_retry(tmp_path, reg
     """Stopped after the superseded manifest is retained, so the record's retained path exists too."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
-    real = PacketWriter._retain
+    real = module.retain
 
-    def retain(self, *args):
-        real(self, *args)
+    def retain(*args):
+        real(*args)
         raise Interrupted
 
-    monkeypatch.setattr(PacketWriter, "_retain", retain)
+    monkeypatch.setattr(module, "retain", retain)
     with pytest.raises(Interrupted):
         _newer(registry, _runs()).amend(root)
     version, paths = read_promotion(root)
