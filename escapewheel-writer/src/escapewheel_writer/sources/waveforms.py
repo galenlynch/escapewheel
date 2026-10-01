@@ -28,7 +28,7 @@ from numpy.typing import NDArray
 
 from ..errors import SourceDefect, SourceFault
 from ..notes import Note, NoteCode
-from .sorter import STREAM_FOLDER, SortedStream
+from .analyzer import STREAM_FOLDER, SortedStream
 from .store import SourceStore, source_root
 from .zarr_compat import DenseV2, attrs, attrs_at
 

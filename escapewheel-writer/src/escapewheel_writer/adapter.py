@@ -70,10 +70,10 @@ from .protocols import (
 from .recipe import TERMS
 from .serving import serve
 from .sources import ADAPTERS, SOURCE_GROUP, discovered
+from .sources.analyzer import STREAM_FOLDER, SortedStream
 from .sources.compensations import COMPENSATION_GROUP, Compensates, Compensation
 from .sources.nwb.names import ABSENT, clean
 from .sources.nwb.source import NWBSource
-from .sources.sorter import STREAM_FOLDER, SortedStream
 from .sources.store import SourceStore, source_root
 from .sources.values import sex, utc_offset
 from .sources.waveforms import ANALYZERS

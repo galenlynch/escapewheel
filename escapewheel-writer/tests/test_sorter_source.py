@@ -5,7 +5,8 @@ import pytest
 
 from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.notes import NoteCode, codes
-from escapewheel_writer.sources.sorter import PROJECTION, SorterSource
+from escapewheel_writer.sources.sorter import SorterSource
+from escapewheel_writer.sources.sorter_labels import PROJECTION
 from tests import sorterfixture
 
 SESSION = "ecephys_837772_2026-06-27_14-08-21"

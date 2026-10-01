@@ -1,12 +1,6 @@
 """Read a SpikeInterface curated sorting into records, its spikes on the integer ticks it stores.
 
 - :class:`SorterSource` -- a `curated/` tree as records, and its spikes as Arrow batches.
-- :class:`SortedStream` -- one curated stream folder, with its name parsed.
-- :data:`STREAM_FOLDER` -- the pattern a stream folder's name follows.
-- :data:`PROJECTION` -- a mapping from a source's quality label to the closed set that
-  `core.units.quality_label` takes, or to null where no member fits.
-- :data:`LABEL_SOURCES` -- a mapping from each per-unit label file to the `source` of its labels.
-- :data:`DESIGNATED` -- the label source that fills `core.units.quality_label`.
 - :data:`STREAM_WORKERS` -- how many streams are read at once.
 
 `unit_index` in `spikes.npy` is an offset into `unit_ids`, never an identifier: every unit is
@@ -17,10 +11,9 @@ its zero-padded label, and the writer numbers those names in order (Part 02 §12
 from __future__ import annotations
 
 import json
-import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -38,117 +31,21 @@ from escapewheel_reader.resource_ids import (
     CORE_UNIT_QUALITY_LABELS,
     CORE_UNITS,
 )
-from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 from numpy.typing import NDArray
 
 from ..clock import Clock
 from ..encoding import STREAMED_BATCH_ROWS
 from ..errors import SourceDefect, SourceFault
 from ..notes import Note, NoteCode
+from .analyzer import SortedStream, amplitude_unit, amplitudes, channel_ids, parse_stream, recording_length
+from .sorter_labels import DESIGNATED, LABEL_SOURCES, PROJECTION, automated_labels, manual_labels
 from .store import source_root
-from .zarr_compat import attrs, attrs_at, read_array
-
-#: ``experiment1_Record Node 109#Neuropix-PXI-100.50720-1_recording1``. The probe token holds
-#: no underscore, which is what lets the recording suffix be split off unambiguously.
-STREAM_FOLDER = re.compile(
-    r"^(?P<experiment>experiment\d+)_Record Node (?P<node>\d+)#(?P<probe>[^_]+)_(?P<recording>recording\d+)$"
-)
-
-#: A quad-base probe is sorted as four shank streams that share one physical device.
-SHANK = re.compile(r"^(?P<serial>.+?)-(?P<shank>\d+)$")
-
-#: Part 02 §9.3: a source's own label is open, the projection onto the closed set is declared.
-#: `non_soma` projects to null rather than being forced into `noise` -- bombcell means
-#: "a real waveform recorded off-soma", which is not the same claim as "not a unit".
-PROJECTION: dict[str, str | None] = {
-    "good": "sua",
-    "sua": "sua",
-    "mua": "mua",
-    "MUA": "mua",
-    "noise": "noise",
-    "non_soma": None,
-}
-
-#: `properties/<file>.npy` -> the `core.unit_quality_labels.source` it becomes.
-LABEL_SOURCES = {
-    "KSLabel": "kilosort",
-    "bombcell_label": "bombcell",
-    "decoder_label": "decoder",
-    "unitrefine_label": "unitrefine",
-}
-
-#: `curation.json`'s label category that fills the same role the automated sources do. Any
-#: other category becomes `manual:<category>`, since one source may emit one label per unit.
-MANUAL_CATEGORY = "quality"
-
-#: Sources that also report a probability, which becomes `confidence`.
-CONFIDENCE = {"decoder": "decoder_probability", "unitrefine": "unitrefine_probability"}
-
-#: Which source fills `core.units.quality_label`. The decoder emits `sua`/`mua`/`noise`
-#: natively, which is the vocabulary R11 §3 closed the column to and the reason it chose
-#: `sua` over the more common `good`.
-DESIGNATED = "decoder"
-
 
 #: Streams read at once when summarising spikes. Bounded, because the win and the cost pull
 #: apart sharply: a spike file is a struct of three int64 fields, so reading one field pages the
 #: whole 24 bytes per spike, and each concurrent stream is another file resident. Past four, a
 #: further worker saves little time and holds another stream's spikes in memory.
 STREAM_WORKERS = 4
-
-
-@dataclass(frozen=True)
-class SortedStream:
-    """One curated sorting folder, with its name parsed.
-
-    Attributes
-    ----------
-    path : Path
-        The folder.
-    experiment, node, probe, recording : str
-        The four parts of the folder name. `probe` keeps any shank suffix.
-    """
-
-    path: Path
-    experiment: str
-    node: str
-    probe: str
-    recording: str
-
-    @property
-    def serial(self) -> str:
-        """The physical probe's serial, with any shank suffix removed."""
-        found = SHANK.match(self.probe)
-        return found.group("serial") if found else self.probe
-
-    @property
-    def device(self) -> str:
-        """The probe as the surrounding ecosystem names it, shank suffix and all.
-
-        A quad-base probe reaches Open Ephys as four streams (`...-1` through `...-4`), and
-        everything downstream keeps them apart: SpikeInterface sorts each separately, giving
-        four unit-id spaces that each start at 0, and an NWB writes four electrode groups.
-        Part 01 §3.5 admits exactly this: where a source presents several recording entities from
-        one physical object, each is a Probe and all name the same Device. So `probe_id` names the
-        recording entity and `serial_number` carries the object, which is where a grouping belongs
-        rather than inside an identifier that would have to be parsed.
-        """
-        return self.probe.rsplit(".", 1)[-1]
-
-    @property
-    def key(self) -> str:
-        """A stable id fragment for this stream, unique within an asset."""
-        return f"{self.experiment}.{self.probe}"
-
-
-def _parse(path: Path) -> SortedStream:
-    """Parse a curated folder name, or refuse it."""
-    found = STREAM_FOLDER.match(path.name)
-    if not found:
-        raise SourceDefect(
-            f"{path.name} is not a curated stream folder name", code=SourceFault.STREAM_NAME, where=path.name
-        )
-    return SortedStream(path=path, **found.groupdict())
 
 
 class SorterSource:
@@ -277,7 +174,7 @@ class SorterSource:
         The order is the one `core.spike_events` is stored in (Part 03 §5.3), so spike batches can
         be yielded stream by stream without a global sort.
         """
-        found = [_parse(child) for child in self.root.iterdir() if child.is_dir()]
+        found = [parse_stream(child) for child in self.root.iterdir() if child.is_dir()]
         if self.experiment is not None:
             found = [s for s in found if s.experiment == self.experiment]
         if not found:
@@ -360,6 +257,11 @@ class SorterSource:
         """Digits needed so that string order over unit ids matches numeric order."""
         ids = self._unit_ids(stream)
         return max(len(str(int(ids.max()))), 1) if ids.size else 1
+
+    def _unit_names(self, stream: SortedStream) -> Callable[[int], str]:
+        """Return the function composing a unit's name from its label, for one stream."""
+        width = self._width(stream)
+        return lambda label: self._unit_id(stream, label, width)
 
     # -- identity ---------------------------------------------------------------------
 
@@ -579,46 +481,6 @@ class SorterSource:
             )
         return rows
 
-    # -- the analyzer, where amplitudes live -------------------------------------------
-
-    def _analyzer(self, stream: SortedStream) -> Path | None:
-        """Locate the SortingAnalyzer for a stream, if the asset carries one."""
-        path = self.root.parent / "postprocessed" / f"{stream.path.name}.zarr"
-        return path if path.is_dir() else None
-
-    def _recording_length(self, stream: SortedStream) -> int | None:
-        """How many samples the sorted recording holds, from the analyzer's `recording_info`.
-
-        This is the one place the length of the raw acquisition survives into the sorted
-        asset: SpikeInterface records the recording's attributes beside the sorting, so a
-        packet built from a sorting alone can still say when the probe was running without
-        reaching for the compressed AP data or for a JSON that rounds to whole seconds.
-        """
-        analyzer = self._analyzer(stream)
-        if analyzer is None:
-            return None
-        recorded = attrs_at(analyzer, "recording_info").get("recording_attributes") or {}
-        lengths = recorded.get("num_samples") or []
-        if len(lengths) != 1:
-            # Each segment restarts the counter, so a multi-segment recording is more than one
-            # clock (Part 01 §3.9) and its length is not one interval on this one.
-            self.notes.append(
-                Note(
-                    f"{stream.key}: {len(lengths)} recording segments; no observation window written",
-                    NoteCode.SEVERAL_SEGMENTS,
-                )
-            )
-            return None
-        return int(lengths[0])
-
-    def _channel_ids(self, stream: SortedStream) -> list[str] | None:
-        """Return the channels the sorting ran on in its own order, or None where it states none."""
-        analyzer = self._analyzer(stream)
-        if analyzer is None:
-            return None
-        recorded = attrs_at(analyzer, "recording_info").get("recording_attributes") or {}
-        return [str(c) for c in recorded["channel_ids"]] if recorded.get("channel_ids") else None
-
     def sorting_run_channels(self) -> list[dict[str, Any]]:
         """`core.sorting_run_channels`, the channels each run used in its own order (R83 §2.1).
 
@@ -637,7 +499,7 @@ class SorterSource:
         """
         rows = []
         for stream in self.streams():
-            channels = self._channel_ids(stream)
+            channels = channel_ids(self.root, stream)
             if channels is None:
                 self.notes.append(
                     Note(f"{stream.key}: the analyzer states no channel list; none written", NoteCode.NO_CHANNEL_LIST)
@@ -665,7 +527,7 @@ class SorterSource:
         """
         rows = []
         for stream in self.streams():
-            length = self._recording_length(stream)
+            length = recording_length(self.root, stream, self.notes)
             if length is None:
                 continue
             rows.append(
@@ -677,46 +539,6 @@ class SorterSource:
                 }
             )
         return rows
-
-    def _amplitude_unit(self, stream: SortedStream) -> str | None:
-        """`uV` or `{adc}`, from the analyzer's own setting (R11 §2).
-
-        Null when no analyzer is present, which is also when no amplitudes are emitted --
-        `amplitude_unit_declared` binds only where amplitudes exist.
-        """
-        analyzer = self._analyzer(stream)
-        if analyzer is None:
-            return None
-        settings = attrs(analyzer).get("settings") or {}
-        if "return_in_uV" not in settings:
-            self.notes.append(
-                Note(f"{stream.key}: analyzer declares no return_in_uV; amplitude unit unknown", NoteCode.UNIT_UNSTATED)
-            )
-            return None
-        # `{adc}` is a UCUM annotation, a dimensionless count of converter steps (Part 02 §8.4).
-        return "uV" if settings["return_in_uV"] else "{adc}"
-
-    def _amplitudes(self, stream: SortedStream, n_spikes: int) -> NDArray[Any] | None:
-        """Per-spike amplitudes, in the source's own row order, or None."""
-        analyzer = self._analyzer(stream)
-        if analyzer is None:
-            return None
-        path = analyzer / "extensions" / "spike_amplitudes" / "amplitudes"
-        if not (path / ZARR_METADATA_FILENAMES[2]).is_file():
-            self.notes.append(Note(f"{stream.key}: analyzer carries no spike_amplitudes", NoteCode.NO_AMPLITUDES))
-            return None
-        values = read_array(path)
-        # A sample truncates the spikes, so it must truncate their amplitudes by the same rule:
-        # these are index-aligned, and the check below is what guarantees it.
-        if self.sample is not None:
-            values = values[: self.sample]
-        if values.size != n_spikes:
-            raise SourceDefect(
-                f"{stream.key}: {values.size} amplitudes for {n_spikes} spikes; they are index-aligned or nothing",
-                code=SourceFault.AMPLITUDES_MISALIGNED,
-                where=stream.key,
-            )
-        return values
 
     # -- units --------------------------------------------------------------------------
 
@@ -764,7 +586,7 @@ class SorterSource:
                     "quality_label_source": DESIGNATED if raw is not None else None,
                     # R96 §3: both belong to the sorting run and a spike cannot reach it, so the
                     # unit carries them and `core.spike_events` resolves each in one hop.
-                    "amplitude_unit": self._amplitude_unit(stream),
+                    "amplitude_unit": amplitude_unit(self.root, stream, self.notes),
                     "clock_id": self._clock_id(stream),
                     "n_spikes": int(counts[offset]),
                     "first_spike_tick": int(first[offset]) if counts[offset] else None,
@@ -824,103 +646,28 @@ class SorterSource:
         rows = []
         for stream in self.streams():
             ids = self._unit_ids(stream)
-            width = self._width(stream)
-            for name, source in LABEL_SOURCES.items():
-                labels = self._property(stream, name)
-                if labels is None:
-                    continue
-                if labels.size != ids.size:
-                    raise SourceDefect(
-                        f"{stream.key}: {name} has {labels.size} values for {ids.size} units",
-                        code=SourceFault.PROPERTY_MISALIGNED,
-                        where=stream.key,
-                    )
-                confidence = self._property(stream, CONFIDENCE[source]) if source in CONFIDENCE else None
-                unknown = {str(v) for v in np.unique(labels)} - set(PROJECTION)
-                if unknown:
-                    self.notes.append(
-                        Note(
-                            f"{stream.key}/{name}: {sorted(unknown)} have no declared projection; "
-                            "kept verbatim with a null normalized_label",
-                            NoteCode.LABEL_UNPROJECTED,
-                        )
-                    )
-                for offset, label in enumerate(ids):
-                    raw = str(labels[offset])
-                    rows.append(
-                        {
-                            "session_id": self.session_id,
-                            "unit_id": self._unit_id(stream, int(label), width),
-                            "source": source,
-                            "label": raw,
-                            "normalized_label": PROJECTION.get(raw),
-                            "confidence": float(confidence[offset]) if confidence is not None else None,
-                        }
-                    )
+            rows += automated_labels(
+                stream,
+                ids,
+                session_id=self.session_id,
+                unit_id=self._unit_names(stream),
+                read=partial(self._property, stream),
+                notes=self.notes,
+            )
             rows += self.manual_labels(stream)
         return rows
 
     def manual_labels(self, stream: SortedStream) -> list[dict[str, Any]]:
-        """`core.unit_quality_labels` rows from a curation's own manual labels.
-
-        The four automated sources live in `properties/`; these live in `curation.json` and
-        are the only record of what a person decided. Without them a packet's removed units
-        are indistinguishable from its kept ones.
-
-        Removal is checked here rather than emitted. `curation.json` lists `removed` units
-        separately, and where that list is exactly the manually labelled set the label makes
-        removal queryable. That coincidence is a property of a pipeline and not a rule, so a
-        stream where it breaks is reported: the packet would then be hiding a removal no label
-        records, and Part 02 has no column to put one in.
-        """
+        """`core.unit_quality_labels` rows from a curation's own manual labels."""
         curation = self._json(stream, "curation.json")
-        ids = self._unit_ids(stream)
-        width = self._width(stream)
-        known = set(ids.tolist())
-        removed = set(curation.get("removed") or [])
-        labelled = {entry["unit_id"] for entry in curation.get("manual_labels") or []}
-        if removed != labelled:
-            self.notes.append(
-                Note(
-                    f"{stream.key}: {len(removed - labelled)} units are removed by the curation and carry "
-                    f"no manual label, so the packet cannot say they were removed; 02 has no column for it",
-                    NoteCode.REMOVAL_UNRECORDED,
-                )
-            )
-        if stray := labelled - known:
-            self.notes.append(
-                Note(
-                    f"{stream.key}: {len(stray)} manual labels name units the sorting does not have",
-                    NoteCode.LABEL_NAMES_NO_UNIT,
-                )
-            )
-
-        rows = []
-        for entry in curation.get("manual_labels") or []:
-            label = entry["unit_id"]
-            if label not in known:
-                continue
-            for category, values in (entry.get("labels") or {}).items():
-                chosen = list(values) if isinstance(values, list) else [values]
-                if len(chosen) != 1:
-                    self.notes.append(
-                        Note(
-                            f"{stream.key}/unit {label}: {len(chosen)} labels in category {category!r}; "
-                            "kept verbatim and left unprojected, since the closed set holds one value",
-                            NoteCode.SEVERAL_LABELS,
-                        )
-                    )
-                raw = "|".join(str(v) for v in chosen)
-                rows.append(
-                    {
-                        "session_id": self.session_id,
-                        "unit_id": self._unit_id(stream, int(label), width),
-                        "source": "manual" if category == MANUAL_CATEGORY else f"manual:{category}",
-                        "label": raw,
-                        "normalized_label": PROJECTION.get(raw) if len(chosen) == 1 else None,
-                    }
-                )
-        return rows
+        return manual_labels(
+            stream,
+            curation,
+            self._unit_ids(stream),
+            session_id=self.session_id,
+            unit_id=self._unit_names(stream),
+            notes=self.notes,
+        )
 
     # -- spikes, which do not fit in memory as records ----------------------------------
 
@@ -949,7 +696,7 @@ class SorterSource:
             ids = self._unit_ids(stream)
             width = self._width(stream)
             index, tick = self._spikes(stream)
-            amplitude = self._amplitudes(stream, index.size)
+            amplitude = amplitudes(self.root, stream, index.size, sample=self.sample, notes=self.notes)
             if tick.size and int(tick.max()) >= 1 << 32:
                 raise SourceDefect(
                     f"{stream.key}: sample index {int(tick.max())} does not fit the packed sort key",
@@ -1016,12 +763,4 @@ class SorterSource:
         return {**{resource: len(rows) for resource, rows in self.records().items()}, **self.stream_rows()}
 
 
-__all__ = [
-    "DESIGNATED",
-    "LABEL_SOURCES",
-    "PROJECTION",
-    "STREAM_FOLDER",
-    "STREAM_WORKERS",
-    "SortedStream",
-    "SorterSource",
-]
+__all__ = ["STREAM_WORKERS", "SorterSource"]
