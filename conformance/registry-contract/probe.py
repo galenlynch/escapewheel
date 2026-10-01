@@ -17,6 +17,7 @@ from typing import Any
 from unittest.mock import patch
 from xml.etree import ElementTree
 
+from escapewheel_validator import RegistryState
 from escapewheel_validator.registry_document import check_registry
 from ucumvert import get_ucum_parser, parse_ucum
 
@@ -222,8 +223,8 @@ def main() -> int:
     _assert_migration(before, after)
     current = [json.loads((ROOT / path).read_text()) for path in CURRENT]
     core = current[0]
-    assert check_registry(core).state == "valid"
-    assert all(check_registry(extension, core).state == "valid" for extension in current[1:])
+    assert check_registry(core).state == RegistryState.VALID
+    assert all(check_registry(extension, core).state == RegistryState.VALID for extension in current[1:])
     _assert_ucum(current)
     return 0
 

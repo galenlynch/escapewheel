@@ -328,6 +328,8 @@ def ask(root, *, based):
 
 
 def main():
+    from escapewheel_validator import Level
+
     scratch = Path("/mnt/Data/escapewheel/scratch/interval-kinds")
     shutil.rmtree(scratch, ignore_errors=True)
     scratch.mkdir(parents=True)
@@ -337,7 +339,7 @@ def main():
         report = build(root, based=based)
         print(
             f"\n{shape}: committed={report.passed}"
-            + ("" if report.passed else f" — {[f.check for f in report.findings if f.level == 'error'][:3]}")
+            + ("" if report.passed else f" — {[f.check for f in report.findings if f.level == Level.ERROR][:3]}")
         )
         if not report.passed:
             continue

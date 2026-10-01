@@ -12,7 +12,7 @@ import jsonschema
 import numpy as np
 import pytest
 from escapewheel_reader import NumericAxis, Scaling, describe, open_packet
-from escapewheel_validator import RegistryRejected, validate
+from escapewheel_validator import Level, RegistryRejected, check_table, validate
 from escapewheel_writer import CommitRefused
 
 import example
@@ -28,7 +28,7 @@ def _entry(root, resource_id):
 
 
 def _errors(caught):
-    return {(f.check, f.registry) for f in caught.value.report.findings if f.level == "error"}
+    return {(f.check, f.registry) for f in caught.value.report.findings if f.level == Level.ERROR}
 
 
 # -- core ----------------------------------------------------------------------------------
@@ -71,7 +71,9 @@ def test_a_shipped_extension_table_is_declared_read_and_validated(packet_root, r
     assert _entry(packet_root, resource_id)["declaration_id"] == resource_id
     assert packet.table(resource_id).num_rows == len(example.tables()[resource_id])
     validated = [
-        f for f in validate(packet).findings if f.check == "extension.validated" and f.registry == extension_id
+        f
+        for f in validate(packet).findings
+        if f.check == check_table.EXTENSION_VALIDATED.id and f.registry == extension_id
     ]
     assert len(validated) == 1
 
@@ -122,7 +124,9 @@ def test_an_external_array_is_recorded_and_not_copied(packet_root):
     assert entry["external"] is True and entry["uri"].startswith("s3://")
     assert "digest" not in entry
     assert not (packet_root / "arrays" / "core" / "probe0_lfp.zarr").exists()
-    unassessed = [f for f in validate(open_packet(packet_root)).findings if f.check == "external.physical_unassessed"]
+    unassessed = [
+        f for f in validate(open_packet(packet_root)).findings if f.check == check_table.EXTERNAL_PHYSICAL_UNASSESSED.id
+    ]
     assert [row[0] for f in unassessed for row in f.rows] == [example.EXTERNAL]
 
 
