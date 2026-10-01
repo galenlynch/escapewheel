@@ -109,7 +109,7 @@ declares the protocols it supports, since it is released apart from the writer (
 4. **Emit ticks, never seconds.** Time is an integer on a declared clock; float seconds are
    derived downstream. This is why the sorter is the tick authority — the NWB has already baked a
    per-probe alignment into float seconds and thrown the sample index away.
-5. **Declare a `scope` on any `core.processing_runs` row** (R44 §2.1). A run whose subject is
+5. **Declare a `scope` on any `core.processing_runs` row** (Part 01 §2.6). A run whose subject is
    unrecorded is *undeterminable* rather than unique, and a consumer cannot tell whether two runs
    of an activity compete.
 6. **State ordering in `session.CONSUMES`** if another adapter needs your output. A foreign key
@@ -131,10 +131,11 @@ a built-in has — `offers()`, `records()`, `notes`. Built-in kinds are consulte
 plugin cannot shadow `sorter`, and a kind whose import fails is skipped with a warning rather than
 raised: one broken package must not make every other source unavailable.
 
-This is R17's problem one layer down. R17 makes an extension's *schema* data, so no code is needed
-to validate it; this is what keeps its *adapter* from being a patch to this package. Both exist
-for the same reason — declaring an extension has to be easier than adding a column to core, or it
-goes the way of NWB's multiple `TimeIntervals`, which the format permits and nobody uses.
+This is the extension's problem one layer down. An extension's *schema* is data, so no code is
+needed to validate it (Part 09 §5.1); this is what keeps its *adapter* from being a patch to this
+package. Both exist for the same reason — declaring an extension has to be easier than adding a
+column to core, or it goes the way of NWB's multiple `TimeIntervals`, which the format permits and
+nobody uses.
 
 ## An extension declares; it never ships code on the read path
 
@@ -150,8 +151,8 @@ A validator generates its checks from the same document with no per-extension co
 The **only** code an extension may require is a source adapter, and only to *write*. That is the
 import boundary, where reading a raw format genuinely needs code, and it is never on the read
 path. If a capability ever seems to need extension code to *read*, that is the signal to declare
-it instead — which is what R56's `clock_from` did for tick conversion and R55's declared reference
-does for the join.
+it instead — which is what `clock_from` did for tick conversion (Part 02 §8.4) and a
+discriminator's declared reference does for the join (Part 02 §8.3).
 
 ### Emit files. Register code only if you must.
 
@@ -188,9 +189,9 @@ package.export` are all just commands, so isolating an adapter's dependencies is
 rather than a tool this package makes you adopt. A non-zero exit is a failure, and so is a wanted
 resource that never arrives.
 
-Rows arrive as **names, not numbers**: R53 §2.5 assigns identifiers packet-wide before staging, so
-a process outside this one cannot know them and does not need to. Write `session_id` as
-`"ecephys_776259"`; the writer turns it into an `int32`.
+Rows arrive as **names, not numbers**: the writer assigns identifiers packet-wide before any table
+is written (Part 05 §4.3), so a process outside this one cannot know them and does not need to.
+Write `session_id` as `"ecephys_776259"`; the writer turns it into an `int32`.
 
 Reach for an in-process adapter only when you need `Context` — the memoised `SourceStore` so two
 readers of the same bytes cannot disagree, or the electrode and clock maps another source built.
@@ -223,20 +224,21 @@ owns = ["vr_foraging.sites", "vr_foraging.patches"]
 ```
 
 Nothing about carrying one extension is special-cased, so carrying three is carrying one thrice.
-They cannot collide: R17 §2 namespaces every table by its `extension_id`, and the writer refuses a
-document that defines a table outside its own namespace or redefines a core one. A packet binds
-one registry per extension, so `Recipe.check` refuses two entries resolving to one `extension_id`,
-and `PacketWriter` two documents carrying one, rather than keeping the later (Part 05 §3.1).
+They cannot collide: every table's identifier begins with its `extension_id` (Part 09 §5.2), and
+the writer refuses a document that defines a table outside its own namespace or redefines a core
+one. A packet binds one registry per extension, so `Recipe.check` refuses two entries resolving to
+one `extension_id`, and `PacketWriter` two documents carrying one, rather than keeping the later
+(Part 05 §3.1).
 
 Reading the resulting packet needs **none of those packages installed**.
 
 ### Drafting one
 
 `escapewheel extension draft <id> --table name=path.parquet` reads what the data shows — column names,
-their types in R2 §4's vocabulary, and whether a column is ever null — and reports everything it
-cannot know. It writes **no role**, so the draft does not validate until a human supplies them:
-R48 §2.2 refuses a default because a forgotten classification looks deliberate, and a generated
-file is where a forgotten one hides best.
+their types in Part 02 §5.1's vocabulary, and whether a column is ever null — and reports
+everything it cannot know. It writes **no role**, so the draft does not validate until a human
+supplies them: a role has no default (Part 02 §8.1) because a forgotten classification looks
+deliberate, and a generated file is where a forgotten one hides best.
 
 ## Writing is not committing
 

@@ -106,7 +106,7 @@ window, cold: 1 M rows 1.93 s, 4 M rows 4.42 s.
 supported. Measured identically with and without.
 
 **One batch is exactly one row group.** `ParquetWriter.write_batch` defaults to cutting at 2²⁰
-rows, so R30 §3.2's guarantee must be asked for explicitly.
+rows, so a group that ends at a bucket boundary (Part 03 §5.4) must be asked for explicitly.
 
 ## Where an import spends 105.1 s
 
