@@ -80,6 +80,10 @@ pydocstyle = { convention = "numpy" }
 [tool.codespell]
 skip = ".git,*.pdf,*.svg,./docs/build,uv.lock,scratch"
 
+[tool.coverage.run]
+# `sys.monitoring` measures lines at a fraction of the default tracer's cost.
+core = "sysmon"
+
 [tool.pytest.ini_options]
 addopts = "--strict-markers --tb=short --cov=src --cov-report=term-missing --cov-fail-under=0"
 testpaths = ["tests"]
