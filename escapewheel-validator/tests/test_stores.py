@@ -11,7 +11,7 @@ import pytest
 from escapewheel_reader import open_packet
 from fsspec.implementations.memory import MemoryFileSystem
 
-from escapewheel_validator import validate
+from escapewheel_validator import Verification, validate
 from escapewheel_validator.errors import ResourceMissing, StoreUnreachable, UnknownAlgorithm
 from escapewheel_validator.stores import (
     crc32c_python,
@@ -265,16 +265,16 @@ def test_a_report_names_the_store_route(packet_root, object_store):
     _report(objects, "crc64nvme")
     root = _external_packet(packet_root, "crc64nvme")
     ChecksumMemory.reads.clear()
-    report = validate(open_packet(root), external=True, checksums=True)
+    report = validate(open_packet(root), verification=Verification(checksums=True, external=True))
     verified = next(f for f in report.findings if f.check == "external.verified")
     assert "route: store for all 1" in verified.message
     assert ("core.lfp", "crc64nvme", "store") in verified.rows
     assert ChecksumMemory.reads == []
 
     ChecksumMemory.checksums.clear()
-    report = validate(open_packet(root), external=True, checksums=True)
+    report = validate(open_packet(root), verification=Verification(checksums=True, external=True))
     assert "route: computed for all 1" in next(f for f in report.findings if f.check == "external.verified").message
-    read = validate(open_packet(root), external=True, checksums=True, store_checksums=False)
+    read = validate(open_packet(root), verification=Verification(checksums=True, store_checksums=False, external=True))
     assert "external.digest" not in {f.check for f in read.findings}
 
 

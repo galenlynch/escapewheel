@@ -10,6 +10,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader.scripts.cli import main
 
+from escapewheel_validator import Report
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.scripts import cli
 
@@ -56,6 +57,16 @@ def test_validate_exits_on_the_packet_verdict(packet_root, capsys):
     out = capsys.readouterr().out
     assert "[task] task.trials.choice.in_vocabulary" in out
     assert "core: passed" in out and "task: failed" in out
+
+
+def test_a_checksum_flag_asks_for_the_external_level_under_it(packet_root, monkeypatch, capsys):
+    asked = []
+    monkeypatch.setattr(cli, "validate", lambda packet, **options: asked.append(options["verification"]) or Report())
+    for flags in ([], ["--checksums"], ["--store-digests"], ["--external"], ["--checksums", "--no-store-checksums"]):
+        main(["validate", str(packet_root), *flags])
+    assert [modes.resolves_external for modes in asked] == [False, True, True, True, True]
+    assert [modes.checksums for modes in asked] == [False, True, False, False, True]
+    assert [modes.store_checksums for modes in asked] == [True, True, True, True, False]
 
 
 def test_validate_prints_a_refusal_in_place_of_a_traceback(packet_root, monkeypatch, capsys):

@@ -49,6 +49,7 @@ from .shim.tables import (
     check_unit_codes,
 )
 from .shim.time_origin import check_time_origin
+from .verification import Verification
 from .vocabulary import EvaluationStatus
 
 
@@ -59,12 +60,13 @@ def validate(
     limits: Mapping[str, Any] | None = None,
     scan: Collection[str] | None = None,
     recheck: Collection[str] | None = None,
-    external: bool = False,
-    checksums: bool = False,
-    store_digests: bool = False,
-    store_checksums: bool = True,
+    verification: Verification | None = None,
     superseded: Mapping[str, Any] | None = None,
     replaced: Sequence[str | Path] = (),
+    external: bool | None = None,
+    checksums: bool | None = None,
+    store_digests: bool | None = None,
+    store_checksums: bool | None = None,
 ) -> Report:
     """Validate a packet against the registries it binds.
 
@@ -97,27 +99,11 @@ def validate(
         provenance both need. An amendment passes what it writes, because Part 05 §15.1 forbids it
         modifying anything else and Part 03 §8.1 declares those bytes immutable, so a rule reading
         only them is already answered.
-    external : bool, default False
-        Resolve external URIs and check the `digest`, `size_bytes` and `members` claimed for
-        them (Part 04 §5.3, level 3). Off by default because that section forbids structural validation
-        reaching for a resource the packet does not own: whether one is reachable is a property
-        of the reader's situation, not of the packet. An unreachable resource is a warning; one
-        that resolves and disagrees with its claim is an error.
-    checksums : bool, default False
-        Establish every recorded `digest`: each packet-owned resource (level 2), and
-        with `external`, each external one too (level 3c). Separate because reading costs every
-        byte, and a packet may reference far more than it owns. The report names each digest's
-        route.
-    store_digests : bool, default False
-        With `external`, also compare each member's recorded `store_digest` against what the
-        store reports now (Part 04 §5.4). This is the level between the other two: it costs the
-        listing already performed, and it answers "has anything changed in place" rather than
-        "are these the bytes". A member with nothing recorded, or a store offering nothing, is
-        not checked, and the report says how many were skipped.
-    store_checksums : bool, default True
-        With `checksums`, take a store's full-object checksums in the digest's algorithm in place
-        of reading those objects. A composite value is never taken, an object the
-        store reports nothing for is read, and a local packet has no store checksums to take.
+    verification : Verification, optional
+        Which claims about stored bytes to establish beyond structure: recorded digests, store
+        digests, and what the manifest claims of each external resource. The default establishes
+        none, since structural validation reaches for no resource the packet does not own
+        (Part 04 §5.3).
     superseded : Mapping, optional
         The manifest this one supersedes, for a writer validating an amendment before it retains
         that manifest. Absent, the retained manifest immediately preceding this version is compared
@@ -126,6 +112,10 @@ def validate(
         Packet roots, or manifest files, to read as packets the manifest's `replaces` names. Each
         difference from the item it is read as is a `packet.replaces.mismatch` warning (Part 04 §3);
         a packet no one supplies is not looked for.
+    external, checksums, store_digests, store_checksums : bool, optional
+        The modes as separate keywords, for a caller written before `verification`. Each sets the
+        member of :class:`.Verification` it is named for, and `external` is off unless given. Not
+        accepted beside `verification`.
 
     Returns
     -------
@@ -136,7 +126,16 @@ def validate(
     ------
     ReplacedPacketUnreadable
         If no published manifest can be read at a path in `replaced`.
+    TypeError
+        If a mode keyword is given beside `verification`.
     """
+    modes = _modes(
+        verification,
+        external=external,
+        checksums=checksums,
+        store_digests=store_digests,
+        store_checksums=store_checksums,
+    )
     # The manifest the packet carries, which for an amendment's candidate is not the file on disk. A
     # reader already refused bytes the `json` phase would, so re-encoding what it decoded loses no finding.
     manifest = json.dumps(packet.manifest.entry).encode()
@@ -159,9 +158,13 @@ def validate(
     withheld = set(packet.manifest.extensions) - set(extensions)
     packet = packet.with_declarations(effective, *extensions.values())
     check_resource_declarations(packet, effective, extensions, withheld, report)
-    assessed = resolve_external(packet, report, checksums, store_digests, store_checksums) if external else set()
-    if checksums:
-        check_owned_digests(packet, report, store_checksums)
+    assessed = (
+        resolve_external(packet, report, modes.checksums, modes.store_digests, modes.store_checksums)
+        if modes.resolves_external
+        else set()
+    )
+    if modes.checksums:
+        check_owned_digests(packet, report, modes.store_checksums)
     check_packet_owned_arrays(packet, report)
     check_packet_owned_opaque(packet, report)
     check_time_origin(packet, report)
@@ -190,6 +193,16 @@ def validate(
     )
     _check_amendment(packet, [effective, *extensions.values()], tables, report, limits, superseded)
     return report
+
+
+def _modes(verification: Verification | None, **keywords: bool | None) -> Verification:
+    """Return the modes a call asked for, through `verification` or through the separate keywords."""
+    given = {name: value for name, value in keywords.items() if value is not None}
+    if verification is None:
+        return Verification(**{"external": False, **given})
+    if given:
+        raise TypeError(f"validate() takes verification or {', '.join(given)}, not both")
+    return verification
 
 
 def _check_amendment(

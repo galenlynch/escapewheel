@@ -6,7 +6,7 @@ import json
 import pytest
 from escapewheel_reader import open_packet
 
-from escapewheel_validator import validate
+from escapewheel_validator import Verification, validate
 from escapewheel_validator.opaque import colliding, findings, payload_directories, unportable_to_windows
 
 from .conftest import install_registry, read_registry
@@ -67,8 +67,8 @@ def _own(root, resource_id, uri, files, *, declaration_id="core.test_payloads", 
     (root / "packet.json").write_text(json.dumps(manifest))
 
 
-def _validate(root, **options):
-    return validate(open_packet(root), **options)
+def _validate(root, *, external=False, **modes):
+    return validate(open_packet(root), verification=Verification(external=external, **modes))
 
 
 def _portability(report):

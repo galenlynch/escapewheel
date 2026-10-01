@@ -2,6 +2,7 @@
 
 :func:`validate` takes a packet opened by `escapewheel_reader` and returns a :class:`Report` of
 findings and verdicts; ``escapewheel validate`` is the same call from the command line.
+:class:`Verification` says which claims about stored bytes a validation establishes beyond structure.
 :func:`check_packet_manifest` runs the manifest phases alone, and :func:`check_registry_context`
 checks a registry document with no packet in hand. :func:`manifest_schema` and
 :func:`registry_meta_schema` are the two schemas those read. Every error the package raises on purpose is a
@@ -42,6 +43,8 @@ opaque
     Names in an opaque payload that some filesystem cannot hold.
 vocabulary
     The levels, verdicts, evaluation statuses and registry states a report is written in.
+verification
+    The verification modes of a validation.
 
 A rule is SQL that returns offending rows, so the validator needs DuckDB where the reader does
 not.
@@ -75,6 +78,7 @@ from .registry_document import (
 from .registry_types import registry_meta_schema
 from .report import Evaluation, Finding, RegistryEvaluation, Report
 from .validator import check_packet_manifest, validate
+from .verification import Verification
 from .vocabulary import EvaluationStatus, Level, RegistryState, Verdict
 
 try:
@@ -104,6 +108,7 @@ __all__ = [
     "UnknownAlgorithm",
     "ValidatorError",
     "Verdict",
+    "Verification",
     "__version__",
     "check_packet_manifest",
     "check_registry_context",

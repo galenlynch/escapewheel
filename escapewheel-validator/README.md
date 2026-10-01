@@ -92,6 +92,16 @@ reads any object the store reports nothing for. `owned.verified` and `external.v
 digest's route: `computed`, `store`, or `combined`. The CRCs use `awscrt` and `google-crc32c`
 where they are installed and a pure-Python implementation otherwise.
 
+From Python the modes are one `Verification`, which resolves external resources where a mode needs
+them, as the flags do:
+
+```python
+from escapewheel_validator import Verification, validate
+
+validate(packet, verification=Verification(checksums=True))                  # as --checksums
+validate(packet, verification=Verification(checksums=True, external=False))  # packet-owned digests alone
+```
+
 ## What runs
 
 Most of what runs is generated rather than written. The registry the packet embeds decides how

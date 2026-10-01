@@ -19,6 +19,7 @@ from escapewheel_reader.manifest import MANIFEST_FILENAME
 
 from ..errors import ReplacedPacketUnreadable
 from ..validator import check_packet_manifest, validate
+from ..verification import Verification
 from ..vocabulary import EvaluationStatus, Level
 
 
@@ -45,7 +46,6 @@ def _report(args: argparse.Namespace) -> int:
         packet_id = str(args.packet)
     else:
         packet_id = packet.manifest.packet_id
-        # A digest is pointless without resolving, so asking for one asks for the level under it.
         replaced = [path for path in args.replaced if not (path.is_file() or (path / MANIFEST_FILENAME).is_file())]
         if replaced:
             print(f"error: no published manifest at {replaced[0]}")
@@ -53,10 +53,12 @@ def _report(args: argparse.Namespace) -> int:
         report = validate(
             packet,
             advisory=args.advisory,
-            external=args.external or args.checksums or args.store_digests,
-            checksums=args.checksums,
-            store_digests=args.store_digests,
-            store_checksums=args.store_checksums,
+            verification=Verification(
+                checksums=args.checksums,
+                store_digests=args.store_digests,
+                store_checksums=args.store_checksums,
+                external=True if args.external else None,
+            ),
             replaced=args.replaced,
         )
     for finding in report.findings:

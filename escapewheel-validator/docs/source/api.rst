@@ -15,6 +15,7 @@ Validating a packet
    :toctree: generated
 
    validate
+   Verification
    check_packet_manifest
    Report
    Finding
@@ -140,5 +141,6 @@ Each module's page lists what it holds beyond the names above.
    errors
    stores
    vocabulary
+   verification
    shim.ordering
    scripts.cli

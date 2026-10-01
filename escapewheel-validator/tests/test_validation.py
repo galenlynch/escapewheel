@@ -6,7 +6,7 @@ import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet
 
-from escapewheel_validator import validate
+from escapewheel_validator import Verification, validate
 from escapewheel_validator.validator import check_packet_manifest
 
 from .conftest import UNREAD_DIGEST, install_registry, owned_digest, read_registry
@@ -880,7 +880,7 @@ def test_an_external_resource_is_reported_as_unverified_by_default(packet_root):
 
 
 def test_the_requested_mode_resolves_it(packet_root):
-    report = validate(open_packet(_external(packet_root)), external=True)
+    report = validate(open_packet(_external(packet_root)), verification=Verification(external=True))
     assert report.passed
     checks = {f.check for f in report.findings}
     assert "external.verified" in checks
@@ -890,13 +890,13 @@ def test_the_requested_mode_resolves_it(packet_root):
 def test_size_bytes_counts_the_whole_prefix_including_its_metadata(packet_root):
     """A dense array asset is a prefix of many objects, so its size is a list, not a stat.
     Excluding the metadata document would make the writer and the validator disagree."""
-    assert validate(open_packet(_external(packet_root)), external=True).passed
+    assert validate(open_packet(_external(packet_root)), verification=Verification(external=True)).passed
 
 
 def test_a_size_that_disagrees_is_an_error_only_in_that_mode(packet_root):
     root = _external(packet_root, size_bytes=999)
     assert validate(open_packet(root)).passed
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert not report.passed
     assert "external.size_bytes" in {f.check for f in report.findings}
 
@@ -904,7 +904,7 @@ def test_a_size_that_disagrees_is_an_error_only_in_that_mode(packet_root):
 def test_an_unreachable_resource_is_a_warning_not_an_error(packet_root):
     """Reachability is a property of the reader's situation, not of the packet."""
     root = _external(packet_root, uri="file:///nowhere/at/all.zarr")
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert report.passed
     assert "external.unreachable" in {f.check for f in report.findings}
 
@@ -912,7 +912,7 @@ def test_an_unreachable_resource_is_a_warning_not_an_error(packet_root):
 def test_a_requested_digest_with_nothing_recorded_says_so(packet_root):
     """Part 04 §4.3: an external resource need not record a digest.
     Asking for checksums and finding nothing to compare must not report a clean verification."""
-    report = validate(open_packet(_external(packet_root)), external=True, checksums=True)
+    report = validate(open_packet(_external(packet_root)), verification=Verification(checksums=True, external=True))
     assert report.passed, "a claim the packet never made is not a failure"
     assert "external.no_checksum" in {f.check for f in report.findings}
     verified = next(f for f in report.findings if f.check == "external.verified")
@@ -928,7 +928,7 @@ def test_a_recorded_digest_is_compared(packet_root, algorithm):
     entry = next(r for r in manifest["resources"] if r.get("external"))
     entry["digest"] = {"algorithm": algorithm, "value": digest(entry["uri"], algorithm)}
     (root / "packet.json").write_text(json.dumps(manifest))
-    report = validate(open_packet(root), external=True, checksums=True)
+    report = validate(open_packet(root), verification=Verification(checksums=True, external=True))
     assert report.passed
     assert "external.no_checksum" not in {f.check for f in report.findings}
     verified = next(f for f in report.findings if f.check == "external.verified")
@@ -938,15 +938,15 @@ def test_a_recorded_digest_is_compared(packet_root, algorithm):
 
 def test_a_digest_that_disagrees_is_an_error(packet_root):
     root = _external(packet_root, digest={"algorithm": "sha256", "value": "0" * 64})
-    assert validate(open_packet(root), external=True).passed, "not read without checksums"
-    report = validate(open_packet(root), external=True, checksums=True)
+    assert validate(open_packet(root), verification=Verification(external=True)).passed, "not read without checksums"
+    report = validate(open_packet(root), verification=Verification(checksums=True, external=True))
     assert not report.passed
     assert "external.digest" in {f.check for f in report.findings}
 
 
 def test_the_summary_names_what_it_compared(packet_root):
     """ "Resolved and checked" said nothing about which claims were actually tested."""
-    report = validate(open_packet(_external(packet_root)), external=True)
+    report = validate(open_packet(_external(packet_root)), verification=Verification(external=True))
     message = next(f for f in report.findings if f.check == "external.verified").message
     assert "1 rank" in message and "1 size_bytes" in message
 
@@ -965,7 +965,7 @@ def _with_members(root, *, mutate=None):
 
 
 def test_declared_members_are_checked_against_the_store(packet_root):
-    report = validate(open_packet(_with_members(_external(packet_root))), external=True)
+    report = validate(open_packet(_with_members(_external(packet_root))), verification=Verification(external=True))
     assert report.passed
     assert "1 members" in next(f for f in report.findings if f.check == "external.verified").message
 
@@ -976,7 +976,7 @@ def test_a_member_the_store_does_not_hold_is_an_error(packet_root):
         entry["size_bytes"] += 1  # so the entry stays self-consistent and only the store disagrees
 
     root = _with_members(_external(packet_root), mutate=add)
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert not report.passed
     assert "external.members" in {f.check for f in report.findings}
 
@@ -989,14 +989,16 @@ def test_a_member_size_that_disagrees_is_caught_where_the_total_would_not(packet
         entry["members"][1]["size_bytes"] -= 10
 
     root = _with_members(_external(packet_root), mutate=swap)
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert not report.passed, "the total still agrees, so only a per-member check sees this"
     assert "external.members" in {f.check for f in report.findings}
 
 
 def test_store_digests_report_what_they_could_not_check(packet_root):
     """A local filesystem offers no content hash, so every member is skipped, not passed."""
-    report = validate(open_packet(_with_members(_external(packet_root))), external=True, store_digests=True)
+    report = validate(
+        open_packet(_with_members(_external(packet_root))), verification=Verification(store_digests=True, external=True)
+    )
     assert report.passed
     assert "external.no_store_digest" in {f.check for f in report.findings}
     assert "store_digest" not in next(f for f in report.findings if f.check == "external.verified").message
@@ -1029,8 +1031,7 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
                 ],
             )
         ),
-        external=True,
-        store_digests=True,
+        verification=Verification(store_digests=True, external=True),
     )
     assert passing.passed
     assert "1 store_digest" in next(f for f in passing.findings if f.check == "external.verified").message
@@ -1044,8 +1045,7 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
                 ],
             )
         ),
-        external=True,
-        store_digests=True,
+        verification=Verification(store_digests=True, external=True),
     )
     assert not changed.passed
     assert "external.store_digest" in {f.check for f in changed.findings}
@@ -1057,14 +1057,14 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
 def test_an_external_arrays_rank_is_checked_against_the_dimensions(packet_root):
     """The check `_check_one_array` does for a packet-owned array, for an external one."""
     root = _add_array(packet_root, declared=["blosc"], external=True, axes=2)
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert not report.passed
     assert "external.array_rank" in {f.check for f in report.findings}
 
 
 def test_a_matching_rank_passes_and_is_counted(packet_root):
     root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert "external.array_rank" not in {f.check for f in report.findings}
     assert "1 rank" in next(f for f in report.findings if f.check == "external.verified").message
 
@@ -1201,15 +1201,19 @@ def test_an_external_axis_is_checked_against_its_labels(packet_root):
     are not there, or positions with none (Part 03 §6.3)."""
     root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
     _label_axis(root, [(0, 0, 1), (0, 1, 1)])  # axis 1 is 2 long in _zarr_v3's [4, 2, 3]
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert report.passed, [f for f in report.findings if f.level == "error"]
     assert "1 labels" in next(f for f in report.findings if f.check == "external.verified").message
 
     _label_axis(root, [(0, 0, 1), (0, 1, 1), (0, 2, 1)])
-    assert "external.array_label_position_out_of_range" in _checks(validate(open_packet(root), external=True), "")
+    assert "external.array_label_position_out_of_range" in _checks(
+        validate(open_packet(root), verification=Verification(external=True)), ""
+    )
 
     _label_axis(root, [(0, 0, 1)])
-    assert "external.array_label_missing" in _checks(validate(open_packet(root), external=True), "")
+    assert "external.array_label_missing" in _checks(
+        validate(open_packet(root), verification=Verification(external=True)), ""
+    )
 
 
 def test_a_packet_owned_axis_is_checked_against_its_labels(packet_root):
@@ -1273,7 +1277,7 @@ def test_a_referenced_array_may_name_its_axes_otherwise(packet_root):
     document = _zarr_v3()
     del document["dimension_names"]
     root = _add_array(packet_root, declared=["blosc", "sharding_indexed"], document=document, external=True)
-    assert validate(open_packet(root), external=True).passed
+    assert validate(open_packet(root), verification=Verification(external=True)).passed
 
 
 def _channels(root, *, rows):
@@ -1332,12 +1336,12 @@ def test_a_channel_index_beyond_its_axis_is_caught(packet_root):
     """`core.array_channels` describes positions of an axis, so each must be one (Part 05 §5.3)."""
     root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
     _channels(root, rows=2)
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert report.passed
     assert "1 channels" in next(f for f in report.findings if f.check == "external.verified").message
 
     _channels(root, rows=3)
-    report = validate(open_packet(root), external=True)
+    report = validate(open_packet(root), verification=Verification(external=True))
     assert "external.array_channel_index_out_of_range" in _checks(report, "")
 
 
@@ -1359,7 +1363,10 @@ def _record_owned_digests(root, *, algorithm="sha256", corrupt=None):
 
 @pytest.mark.parametrize("algorithm", ["sha256", "crc64nvme", "crc32c", "crc32"])
 def test_packet_owned_digests_are_checked(packet_root, algorithm):
-    report = validate(open_packet(_record_owned_digests(packet_root, algorithm=algorithm)), checksums=True)
+    report = validate(
+        open_packet(_record_owned_digests(packet_root, algorithm=algorithm)),
+        verification=Verification(checksums=True, external=False),
+    )
     assert report.passed
     verified = next(f for f in report.findings if f.check == "owned.verified")
     assert verified.message.startswith("6 of 6") and verified.message.endswith("route: computed for all 6")
@@ -1383,7 +1390,7 @@ def test_a_packet_owned_file_one_byte_off_is_an_error(packet_root, algorithm):
     intervals = next(e for e in manifest["resources"] if e["resource_id"] == "core.intervals")
     intervals["digest"]["value"] = function.hexdigest()
     (root / "packet.json").write_text(json.dumps(manifest))
-    report = validate(open_packet(root), checksums=True)
+    report = validate(open_packet(root), verification=Verification(checksums=True, external=False))
     assert not report.passed
     assert [f.message.split(":")[0] for f in report.findings if f.check == "owned.digest"] == ["core.intervals"]
 
@@ -1391,7 +1398,9 @@ def test_a_packet_owned_file_one_byte_off_is_an_error(packet_root, algorithm):
 def test_a_recorded_digest_is_not_read_without_checksums(packet_root):
     root = _record_owned_digests(packet_root, corrupt="core.intervals")
     assert validate(open_packet(root)).passed, "not read without checksums"
-    assert "owned.digest" in {f.check for f in validate(open_packet(root), checksums=True).findings}
+    assert "owned.digest" in {
+        f.check for f in validate(open_packet(root), verification=Verification(checksums=True, external=False)).findings
+    }
 
 
 def test_a_packet_owned_resource_without_a_digest_fails_the_manifest(packet_root):
@@ -1415,7 +1424,7 @@ def test_a_crc_prefix_digest_is_the_sha256_of_its_listing(packet_root):
     assert [len(value) for _, _, value in rows] == [8, 8]
     assert digest(uri, "crc32c") == listing_digest(rows)
     _record_owned_digests(root, algorithm="crc32c")
-    report = validate(open_packet(root), checksums=True)
+    report = validate(open_packet(root), verification=Verification(checksums=True, external=False))
     assert "owned.digest" not in {f.check for f in report.findings}
     verified = next(f for f in report.findings if f.check == "owned.verified")
     assert verified.message.startswith("9 of 9") and verified.message.endswith("route: computed for all 9")
@@ -1957,7 +1966,7 @@ def test_a_validator_states_that_it_did_not_assess_page_types(packet_root):
 
 def test_a_resolved_external_array_is_assessed_against_its_variant(packet_root):
     """Part 05 §5.3: metadata read in the requested mode is compared, and the resource is not unassessed."""
-    report = validate(open_packet(_external(packet_root)), external=True)
+    report = validate(open_packet(_external(packet_root)), verification=Verification(external=True))
     assert report.passed
     [finding] = _outside(report)
     assert (finding.level, finding.registry) == ("info", "core")
