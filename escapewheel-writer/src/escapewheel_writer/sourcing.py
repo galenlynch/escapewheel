@@ -25,6 +25,7 @@ from escapewheel_reader.resource_ids import (
     CORE_EVENT_STREAMS,
     CORE_UNITS,
 )
+from escapewheel_validator import Level
 
 from . import opaque
 from .declaration import SOURCE_CACHE
@@ -227,7 +228,7 @@ def reference_clock(recipe: Recipe, context: Context) -> Any:
             return spec.clock(context.session_id)
     message = f"no [[clock]] declares {wanted!r}, which [session].reference_clock_id names"
     raise RecipeUnsound(
-        message, path=recipe.path, problems=[Problem("error", message, RecipeFault.REFERENCE_CLOCK_UNDECLARED)]
+        message, path=recipe.path, problems=[Problem(Level.ERROR, message, RecipeFault.REFERENCE_CLOCK_UNDECLARED)]
     )
 
 

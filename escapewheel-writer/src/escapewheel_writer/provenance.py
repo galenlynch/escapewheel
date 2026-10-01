@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from escapewheel_reader.resource_ids import CORE_PROCESSING_RUNS, CORE_SESSIONS
+from escapewheel_validator import Level
 
 from .alignment import alignment_parameters
 from .amending import Held
@@ -45,7 +46,7 @@ def preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, sess
         if run is None:
             problems.append(
                 Problem(
-                    "error",
+                    Level.ERROR,
                     f"[[preferred_run]] {name} names no run the packet holds or this build records",
                     RecipeFault.PREFERRED_RUN_UNKNOWN,
                 )
@@ -59,7 +60,7 @@ def preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, sess
         if differs:
             problems.append(
                 Problem(
-                    "error",
+                    Level.ERROR,
                     f"[[preferred_run]] {name} names a run whose {', '.join(differs)}",
                     RecipeFault.PREFERRED_RUN_DIFFERS,
                 )

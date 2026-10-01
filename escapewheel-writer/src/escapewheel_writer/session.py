@@ -46,6 +46,7 @@ from escapewheel_reader.resource_ids import (
 )
 from escapewheel_validator import (
     CheckedRegistryContext,
+    Level,
     RegistryRejected,
     RegistryState,
     Report,
@@ -329,7 +330,7 @@ class Prepared:
     @property
     def errors(self) -> list[Problem]:
         """The problems that refuse the recipe."""
-        return [problem for problem in self.problems if problem.level == "error"]
+        return [problem for problem in self.problems if problem.level == Level.ERROR]
 
 
 def prepare(
@@ -656,7 +657,7 @@ def _refuse_another_packet(
     if manifest["packet_id"] != recipe.packet_id:
         problems.append(
             Problem(
-                "error",
+                Level.ERROR,
                 f"the packet at {recipe.out} is {manifest['packet_id']}, and [packet].id is {recipe.packet_id}",
                 RecipeFault.AMENDS_OTHER_PACKET,
             )
@@ -664,7 +665,7 @@ def _refuse_another_packet(
     if manifest["packet_version"] != recipe.amends:
         problems.append(
             Problem(
-                "error",
+                Level.ERROR,
                 f"the packet at {recipe.out} is at version {manifest['packet_version']}, and [packet].amends is "
                 f"{recipe.amends}",
                 RecipeFault.AMENDS_OTHER_VERSION,
@@ -673,7 +674,7 @@ def _refuse_another_packet(
     if str(recipe.session.get("session_id")) not in manifest.get("sessions", ()):
         problems.append(
             Problem(
-                "error",
+                Level.ERROR,
                 f"the packet does not list session {recipe.session.get('session_id')}",
                 RecipeFault.AMENDS_OTHER_SESSION,
             )
@@ -683,7 +684,7 @@ def _refuse_another_packet(
         standards = ("logical_standard_version",) + (("semantic_standard_version",) if name == "core" else ())
         problems += [
             Problem(
-                "error",
+                Level.ERROR,
                 f"registry {name} has {standard} {document.get(standard)}, and the packet {manifest.get(standard)}",
                 RecipeFault.AMENDS_OTHER_STANDARD,
             )
@@ -696,7 +697,7 @@ def _refuse_another_packet(
 
 def _amendment_refused(refusal: AmendmentRefused) -> Problem:
     """Return an amendment's refusal as the problem a recipe's refusal carries."""
-    return Problem("error", str(refusal), RecipeFault.AMENDMENT_REFUSED)
+    return Problem(Level.ERROR, str(refusal), RecipeFault.AMENDMENT_REFUSED)
 
 
 def _from_packet(context: Context, held: Held, writer: PacketWriter, session_id: str) -> None:

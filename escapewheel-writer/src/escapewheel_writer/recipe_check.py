@@ -11,6 +11,7 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import Any, NamedTuple
 
 from escapewheel_reader.registries import declared_tables
+from escapewheel_validator import Level
 
 from .errors import RecipeFault
 from .kinds import builtin, importable, state_accessors
@@ -103,7 +104,7 @@ def check(
 
     return [
         Problem(level, message, code)
-        for level, found in (("error", errors), ("warning", warnings), ("info", notes))
+        for level, found in ((Level.ERROR, errors), (Level.WARNING, warnings), (Level.INFO, notes))
         for message, code in sorted({(message, code) for code, message in found})
     ]
 

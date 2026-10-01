@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from escapewheel_reader.resource_ids import CORE_PROCESSING_RUNS, CORE_SESSIONS, CORE_SUBJECTS
+from escapewheel_validator import Level
 from upath import UPath
 
 from .errors import DeclarationUnreadable, RecipeFault, RecipeUnreadable, RecipeUnsound
@@ -106,16 +107,16 @@ class Problem:
 
     Attributes
     ----------
-    level : str
-        ``error``, ``warning`` or ``info``. Only an error refuses the recipe; ``info`` records
-        something the build will do, such as an override it will apply (Part 05 §3.5).
+    level : Level
+        Only an error refuses the recipe; ``info`` records something the build will do, such as
+        an override it will apply (Part 05 §3.5).
     message : str
         What is wrong, naming the recipe's own vocabulary rather than the registry's internals.
     code : RecipeFault
         Which fault it is, whatever the names in the message.
     """
 
-    level: str
+    level: Level
     message: str
     code: RecipeFault
 
@@ -502,18 +503,18 @@ class Recipe:
         try:
             document = tomllib.loads(raw.decode())
         except tomllib.TOMLDecodeError as exc:
-            unreadable = [Problem("error", f"not valid TOML: {exc}", RecipeFault.NOT_TOML)]
+            unreadable = [Problem(Level.ERROR, f"not valid TOML: {exc}", RecipeFault.NOT_TOML)]
             raise RecipeUnreadable(f"{path}: not valid TOML: {exc}", path=path, problems=unreadable) from exc
 
         packet = document.get("packet", {})
         if not packet.get("id"):
-            unnamed = [Problem("error", "[packet] declares no id", RecipeFault.NO_PACKET_ID)]
+            unnamed = [Problem(Level.ERROR, "[packet] declares no id", RecipeFault.NO_PACKET_ID)]
             raise RecipeUnreadable(f"{path}: [packet] declares no id", path=path, problems=unnamed)
         if problems := shape_problems(document):
             raise RecipeUnreadable(
                 f"{path}: not a recipe (Part 05 §3.1):\n  " + "\n  ".join(problems),
                 path=path,
-                problems=[Problem("error", problem, RecipeFault.RECIPE_SHAPE) for problem in problems],
+                problems=[Problem(Level.ERROR, problem, RecipeFault.RECIPE_SHAPE) for problem in problems],
             )
 
         here = path.parent

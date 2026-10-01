@@ -18,6 +18,7 @@ from typing import Any
 
 import jsonschema
 from escapewheel_reader.manifest import MANIFEST_FILENAME
+from escapewheel_validator import Level
 from escapewheel_validator.manifest import manifest_schema
 
 from .errors import RecipeFault, ReplacementRefused
@@ -70,7 +71,7 @@ def read_replaced(entries: Iterable[str], base: Path) -> tuple[Replaced, ...]:
         except (OSError, ValueError) as exc:
             problems.append(
                 Problem(
-                    "error",
+                    Level.ERROR,
                     f"{entry}: no published manifest can be read ({type(exc).__name__})",
                     RecipeFault.REPLACED_UNREADABLE,
                 )
@@ -80,7 +81,7 @@ def read_replaced(entries: Iterable[str], base: Path) -> tuple[Replaced, ...]:
         if not isinstance(manifest, dict) or errors:
             problems.append(
                 Problem(
-                    "error",
+                    Level.ERROR,
                     f"{entry}: the manifest's packet_id or packet_version fails the manifest schema",
                     RecipeFault.REPLACED_NO_IDENTITY,
                 )
@@ -97,7 +98,7 @@ def read_replaced(entries: Iterable[str], base: Path) -> tuple[Replaced, ...]:
     for replaced in read:
         by_digest.setdefault(replaced.sha256, []).append(replaced.entry)
     problems += [
-        Problem("error", f"{' and '.join(named)} read one manifest", RecipeFault.REPLACED_TWICE)
+        Problem(Level.ERROR, f"{' and '.join(named)} read one manifest", RecipeFault.REPLACED_TWICE)
         for named in by_digest.values()
         if len(named) > 1
     ]
