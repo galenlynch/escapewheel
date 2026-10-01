@@ -30,14 +30,14 @@ sys.path.insert(0, str(ROOT / "spec" / "tools"))
 
 import specdoc
 
-#: A heading that opens a numbered section, at any depth.
-HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
+#: A heading that opens a numbered section below a part's title.
+HEADING = specdoc.titled_heading(2)
 
 #: `Part 03 §5.4`, as required by `revisions/CONTRIBUTING.md#ew-citation-context`, and the bare
 #: `03` §5.4 it replaced: a citation
 #: written before that clause still resolves, so both are read here.
 CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
-ANCHOR = re.compile(r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="(canonical|alias)"></a>$')
+ANCHOR = specdoc.ANCHOR
 
 #: History, read against the baseline it was written on, so a change never makes it stale. Every other
 #: tracked file is searched, because a citation is load-bearing wherever it is written.
@@ -115,13 +115,9 @@ def anchor_location(anchor: str) -> tuple[str, str, str] | None:
     """Return the part, section, and title immediately following a canonical anchor."""
     for path in specdoc.part_paths(PARTS):
         pending: set[str] = set()
-        fenced = False
-        for line in path.read_text().splitlines():
-            if line.startswith("```"):
-                fenced = not fenced
+        for _, line in specdoc.outside_fences(path.read_text()):
+            if line is None:
                 pending.clear()
-                continue
-            if fenced:
                 continue
             if match := ANCHOR.fullmatch(line):
                 if match.group(2) == "canonical":

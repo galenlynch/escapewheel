@@ -46,8 +46,7 @@ sys.path.insert(0, str(SPEC / "tools"))
 
 import specdoc
 
-#: `## 3.` and `### 3.1 ` alike; the trailing dot is optional and the numbering may nest.
-HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
+HEADING = specdoc.HEADING
 #: `R92 §2.2`, `R92 §2`. The section may end a sentence, so the trailing dot is trimmed.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
 #: `Part 03 §5.4` and the bare `03` §5.4 it replaced, both resolved. Two digits, not `0` and a
@@ -107,13 +106,9 @@ def numbered(text: str) -> list[str]:
 def anchor_heading(text: str, anchor: str) -> str | None:
     """Return the numbered heading immediately following a canonical anchor."""
     pending = False
-    fenced = False
-    for line in text.splitlines():
-        if line.startswith("```"):
-            fenced = not fenced
+    for _, line in specdoc.outside_fences(text):
+        if line is None:
             pending = False
-            continue
-        if fenced:
             continue
         if anchor in canonical_anchors(line):
             pending = True

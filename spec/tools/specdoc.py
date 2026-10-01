@@ -3,10 +3,19 @@
 Only the standard library is imported, so a tool outside the tree's environment can import this.
 """
 
+import re
+from collections.abc import Iterator
 from pathlib import Path
 
 #: A numbered part's file name: two digits, an underscore, then its subject.
 PART_GLOB = "[0-9][0-9]_*.md"
+
+#: A section number: `3`, `3.1`, `10.2.4`.
+SECTION = r"\d+(?:\.\d+)*"
+#: A numbered heading up to four deep, capturing its number, which a title need not follow.
+HEADING = re.compile(rf"^#{{1,4}} ({SECTION})\.?(?:\s|$)", re.MULTILINE)
+#: A stable anchor on a line of its own, capturing its identifier and `canonical` or `alias`.
+ANCHOR = re.compile(r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="(canonical|alias)"></a>$')
 
 
 class GenerationError(Exception):
@@ -25,3 +34,22 @@ def part_path(directory: Path, number: str) -> Path | None:
     """
     found = sorted(directory.glob(f"{number}_*.md"))
     return found[0] if found else None
+
+
+def titled_heading(shallowest: int) -> re.Pattern[str]:
+    """Match a numbered heading from `shallowest` to four deep, capturing its number and title."""
+    return re.compile(rf"^#{{{shallowest},4}} ({SECTION})\.? +(.+)$", re.MULTILINE)
+
+
+def outside_fences(text: str) -> Iterator[tuple[int, str | None]]:
+    """Yield each line outside a fenced code block with its position, the first line being 1.
+
+    A fence's own line is yielded as None, since it ends whatever the lines before it began.
+    """
+    fenced = False
+    for position, line in enumerate(text.splitlines(), 1):
+        if line.startswith("```"):
+            fenced = not fenced
+            yield position, None
+        elif not fenced:
+            yield position, line

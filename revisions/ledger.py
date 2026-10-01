@@ -47,8 +47,7 @@ class LedgerError(Exception):
     """An accepted record or a ledger file no clause set can be read from; the message names it."""
 
 
-#: `## 3.` and `### 3.1 ` alike, which is every section a part declares.
-HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
+HEADING = specdoc.HEADING
 DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
 DECLARED_SECTION = re.compile(r"§(\d+(?:\.\d+)*)")
 

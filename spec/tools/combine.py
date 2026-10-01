@@ -16,7 +16,7 @@ import re
 import sys
 from pathlib import Path
 
-from specdoc import part_paths
+from specdoc import outside_fences, part_paths
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
@@ -63,14 +63,8 @@ def render() -> str:
 
 def duplicate_ids(rendered: str) -> list[str]:
     """Return raw-HTML anchor identifiers occurring more than once."""
-    outside_fences = []
-    fenced = False
-    for line in rendered.splitlines():
-        if line.startswith("```"):
-            fenced = not fenced
-        elif not fenced:
-            outside_fences.append(line)
-    identifiers = HTML_ID.findall("\n".join(outside_fences))
+    unfenced = [line for _, line in outside_fences(rendered) if line is not None]
+    identifiers = HTML_ID.findall("\n".join(unfenced))
     return sorted({value for value in identifiers if identifiers.count(value) > 1})
 
 

@@ -3,22 +3,27 @@
 from __future__ import annotations
 
 import difflib
-import re
+import sys
+from pathlib import Path
 
-CANONICAL_LINE = re.compile(r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="canonical"></a>$')
-HEADING_LINE = re.compile(r"^#{1,4} \d+(?:\.\d+)*\.?(?:\s|$)")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "spec" / "tools"))
+
+import specdoc
+
+
+def _canonical(line: str) -> str | None:
+    """Return the identifier where `line` is a canonical anchor's own line."""
+    match = specdoc.ANCHOR.fullmatch(line)
+    return match.group(1) if match and match.group(2) == "canonical" else None
 
 
 def canonical_anchor_occurrences(text: str) -> list[str]:
     """Return canonical raw-HTML anchors outside fenced code blocks, in source order."""
-    found = []
-    fenced = False
-    for line in text.splitlines():
-        if line.startswith("```"):
-            fenced = not fenced
-        elif not fenced and (match := CANONICAL_LINE.fullmatch(line)):
-            found.append(match.group(1))
-    return found
+    return [
+        anchor
+        for _, line in specdoc.outside_fences(text)
+        if line is not None and (anchor := _canonical(line)) is not None
+    ]
 
 
 def canonical_anchors(text: str) -> set[str]:
@@ -38,9 +43,9 @@ def anchor_bootstrap_only(before: str, after: str) -> bool:
             inserted = new[start:end]
             if (
                 len(inserted) != 1
-                or CANONICAL_LINE.fullmatch(inserted[0]) is None
+                or _canonical(inserted[0]) is None
                 or end >= len(new)
-                or HEADING_LINE.match(new[end]) is None
+                or specdoc.HEADING.match(new[end]) is None
             ):
                 return False
             insertions.append(inserted[0])
