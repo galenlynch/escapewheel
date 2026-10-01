@@ -33,10 +33,7 @@ from escapewheel_reader.resource_ids import CORE_INTERVALS, CORE_PREFERRED_RUNS,
 from escapewheel_reader.uri import encode
 from escapewheel_validator import (
     CheckedRegistryContext,
-    RegistryRejected,
-    RegistryState,
     Report,
-    check_registry_context,
     validate,
 )
 from escapewheel_validator.amendment import DERIVED, PROVENANCE, chain_reaches, semver
@@ -69,6 +66,7 @@ from .errors import (
 from .keys import Keys
 from .layout import PROMOTED, REGISTRIES, STAGING, retained
 from .promotion import act_on_promotion, claim, created, record_promotion, refuse_occupied
+from .registries import Declarations
 from .staging import check_parquet_floor, parquet_options, write_stream
 
 
@@ -124,53 +122,7 @@ class PacketWriter:
         #: from (Part 02 §7.1). Given rather than read back out of `core.sessions`, because a build adds
         #: that table last, and reading it back would leave every table added before it unfilled.
         self._session = session
-        core_context = registry if isinstance(registry, CheckedRegistryContext) else check_registry_context(registry)
-        if core_context.result.state != RegistryState.VALID:
-            raise RegistryRejected("core", core_context)
-        checked_registry = core_context.document
-        assert isinstance(checked_registry, Mapping)
-        self._registry = checked_registry
-        #: Extension registries this packet carries (Part 09 §5.3), by `extension_id`. An extension is a
-        #: registry document in R2's format, so everything below resolves a resource against core
-        #: and then these -- there is no second code path for an extension's tables.
-        self._extensions: dict[str, Mapping[str, Any]] = {}
-        for supplied in extensions:
-            extension_context = (
-                supplied
-                if isinstance(supplied, CheckedRegistryContext)
-                else check_registry_context(supplied, core=core_context)
-            )
-            if extension_context.core is not core_context:
-                extension_context = check_registry_context(extension_context.document, core=core_context)
-            if extension_context.result.state != RegistryState.VALID:
-                subject = str(extension_context.document.get("extension_id", "extension"))
-                raise RegistryRejected(subject, extension_context)
-            document = extension_context.document
-            assert isinstance(document, Mapping)
-            extension_id = str(document["extension_id"])
-            if extension_id in self._extensions:
-                versions = (self._extensions[extension_id]["registry_version"], document["registry_version"])
-                raise UsageError(
-                    f"two registries for extension {extension_id!r} (versions {versions[0]} and {versions[1]}); a "
-                    "packet binds one per extension (Part 04 §8, Part 05 §3.1), so the writer keeps neither",
-                    code=UsageFault.EXTENSION_TWICE,
-                    where=extension_id,
-                )
-            for resource_id in document["resources"]:
-                if not resource_id.startswith(f"{extension_id}."):
-                    raise UsageError(
-                        f"{resource_id} is not namespaced by {extension_id!r}; Part 09 §5.2 requires it, "
-                        "and an extension MUST NOT define a table in core or analysis",
-                        code=UsageFault.EXTENSION_NAMESPACE,
-                        where=resource_id,
-                    )
-                if resource_id in checked_registry["resources"]:
-                    raise UsageError(
-                        f"{resource_id} redefines a core resource, which Part 09 forbids",
-                        code=UsageFault.EXTENSION_REDEFINES_CORE,
-                        where=resource_id,
-                    )
-            self._extensions[extension_id] = document
+        self._declarations = Declarations(registry, extensions)
         #: Assigns the integer every identifier holds (Part 05 §4.3). One per packet, shared by every
         #: adapter, because two sources numbering the same probe differently is a defect no
         #: foreign key can see: both values resolve, to different rows.
@@ -229,7 +181,7 @@ class PacketWriter:
         AmendmentRefused
             If a held row owns an assigned identifier and gives it no name.
         """
-        documents = (self._registry, *self._extensions.values())
+        documents = self._declarations.documents
         declarations = {rid: decl for document in documents for rid, decl in document["resources"].items()}
         held.bind(
             {rid: table for document in documents for rid, table in declared_tables(document, strict=True).items()},
@@ -245,26 +197,11 @@ class PacketWriter:
 
     def declaration(self, declaration_id: str) -> Mapping[str, Any] | None:
         """Return one logical declaration from core or the owning extension."""
-        if declaration_id in self._registry["resources"]:
-            declaration: Mapping[str, Any] = self._registry["resources"][declaration_id]
-            return declaration
-        for document in self._extensions.values():
-            if declaration_id in document["resources"]:
-                declaration = document["resources"][declaration_id]
-                return declaration
-        return None
+        return self._declarations.declaration(declaration_id)
 
     def spec(self, resource_id: str) -> Mapping[str, Any] | None:
-        """Return the registry entry for one resource, core or extension, or None if undefined.
-
-        One lookup for both, because R17 §3's claim is that an extension needs no second code
-        path: it is a registry document in R2's format, so a table of one is a table of the other.
-        """
-        declaration = self.declaration(resource_id)
-        if declaration is None or declaration.get("kind") != "table":
-            return None
-        spec: Mapping[str, Any] = declaration["table"]
-        return spec
+        """Return the registry entry for one resource, core or extension, or None if undefined."""
+        return self._declarations.spec(resource_id)
 
     def rows(self, resource_id: str) -> Sequence[Mapping[str, Any]]:
         """Return the records added for one table so far, in the order added.
@@ -272,36 +209,6 @@ class PacketWriter:
         Empty for a table with none, and for one added as batches, whose rows no one holds.
         """
         return self._tables.get(resource_id, [])
-
-    def _family_declaration(self, declaration_id: str, resource_id: str, kind: str) -> Mapping[str, Any]:
-        """Resolve an explicit family declaration and check that it admits this instance."""
-        declaration = self.declaration(declaration_id)
-        if declaration is None:
-            raise UsageError(
-                f"{resource_id}: unknown declaration {declaration_id!r}",
-                code=UsageFault.UNKNOWN_DECLARATION,
-                where=resource_id,
-            )
-        if declaration["kind"] != kind:
-            raise UsageError(
-                f"{resource_id}: {declaration_id} has kind {declaration['kind']!r}, not {kind!r}",
-                code=UsageFault.DECLARATION_KIND,
-                where=resource_id,
-            )
-        if declaration["instances"]["mode"] not in {"catalog", "family"}:
-            raise UsageError(
-                f"{resource_id}: {declaration_id} does not admit family instances",
-                code=UsageFault.NOT_A_FAMILY,
-                where=resource_id,
-            )
-        owner = declaration_id.split(".", 1)[0]
-        if not resource_id.startswith(f"{owner}."):
-            raise UsageError(
-                f"{resource_id}: namespace is not owned by declaration {declaration_id!r}",
-                code=UsageFault.INSTANCE_NAMESPACE,
-                where=resource_id,
-            )
-        return declaration
 
     def _bind_catalog_row(
         self,
@@ -356,7 +263,7 @@ class PacketWriter:
         if spec is None:
             raise UndeclaredResource(
                 f"no registry defines a table named {resource_id}; core and "
-                f"{len(self._extensions)} extension(s) were consulted",
+                f"{len(self._declarations.extensions)} extension(s) were consulted",
                 resource_id=resource_id,
             )
         declared = {c["name"] for c in spec["columns"]}
@@ -485,7 +392,7 @@ class PacketWriter:
         if self.spec(resource_id) is None:
             raise UndeclaredResource(
                 f"no registry defines a table named {resource_id}; core and "
-                f"{len(self._extensions)} extension(s) were consulted",
+                f"{len(self._declarations.extensions)} extension(s) were consulted",
                 resource_id=resource_id,
             )
         if resource_id in self._tables:
@@ -586,7 +493,7 @@ class PacketWriter:
             )
         if not array.declaration_id:
             array = self._delivered_binding(resource_id, array)
-        declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
+        declaration = self._declarations.family(array.declaration_id, resource_id, "dense_array")
         self._bind_catalog_row(declaration, resource_id, "array_asset_id", array.array_asset_id)
         self._staged_arrays[resource_id] = array
 
@@ -598,10 +505,7 @@ class PacketWriter:
         declaration and the row's own identifier.
         """
         matching = []
-        for declaration_id in (
-            *self._registry["resources"],
-            *(d for e in self._extensions.values() for d in e["resources"]),
-        ):
+        for declaration_id in [d for document in self._declarations.documents for d in document["resources"]]:
             declaration = self.declaration(declaration_id)
             if declaration is None or declaration["kind"] != "dense_array":
                 continue
@@ -646,7 +550,7 @@ class PacketWriter:
         if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
             raise UsageError(f"{resource_id} already has an array", code=UsageFault.STAGED_TWICE, where=resource_id)
         array = replace(array, uri=check_reference(resource_id, array.uri, array.source))
-        declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
+        declaration = self._declarations.family(array.declaration_id, resource_id, "dense_array")
         self._bind_catalog_row(declaration, resource_id, "array_asset_id", array.array_asset_id)
         self._referenced_arrays[resource_id] = array
 
@@ -672,7 +576,7 @@ class PacketWriter:
         if resource_id in self._referenced_media:
             raise UsageError(f"{resource_id} already has media", code=UsageFault.STAGED_TWICE, where=resource_id)
         media = replace(media, uri=check_reference(resource_id, media.uri, media.source))
-        declaration = self._family_declaration(media.declaration_id, resource_id, "opaque")
+        declaration = self._declarations.family(media.declaration_id, resource_id, "opaque")
         self._bind_catalog_row(declaration, resource_id, "media_asset_id", media.media_asset_id)
         self._referenced_media[resource_id] = media
 
@@ -709,22 +613,6 @@ class PacketWriter:
         self._payloads.extend(found)
         return found
 
-    def _opaque_declarations(self) -> tuple[dict[str, tuple[str, str]], set[str]]:
-        """Every loaded opaque catalog family, to its catalog and column, and every opaque singleton."""
-        families: dict[str, tuple[str, str]] = {}
-        singletons: set[str] = set()
-        for document in (self._registry, *self._extensions.values()):
-            for declaration_id, declaration in document["resources"].items():
-                if declaration["kind"] != "opaque":
-                    continue
-                instances = declaration["instances"]
-                if instances["mode"] == "catalog":
-                    catalog, column = str(instances["catalog_resource"]), str(instances["resource_id_column"])
-                    families[declaration_id] = (catalog, column)
-                elif instances["mode"] == "singleton":
-                    singletons.add(declaration_id)
-        return families, singletons
-
     def _bind_payloads(self) -> list[tuple[opaque.StagedPayload, str]]:
         """Bind each payload by its resource directory's name, refusing before anything is validated.
 
@@ -743,7 +631,7 @@ class PacketWriter:
             Naming each directory and resource ID that binds no resource, binds two, is bound twice,
             or is a singleton the recipe does not leave its source owning.
         """
-        families, singletons = self._opaque_declarations()
+        families, singletons = self._declarations.opaque()
         rows: dict[str, list[str]] = {}
         unbound: list[PayloadProblem] = []
         for declaration_id, (catalog, column) in sorted(families.items()):
@@ -1140,7 +1028,7 @@ class PacketWriter:
         reference carries.
         """
         found: dict[str, Callable[[Mapping[str, Any]], str | None]] = {}
-        documents = [self._registry, *self._extensions.values()]
+        documents = self._declarations.documents
         for owner, table in ((n, t) for doc in documents for n, t in declared_tables(doc, strict=True).items()):
             for column in table["columns"]:
                 if column.get("role") != "discriminator" or column.get("discriminates") is None:
@@ -1191,8 +1079,8 @@ class PacketWriter:
             "packet_id": self._packet_id,
             "packet_version": first_version(self._packet_id, self._replaces),
             "profile_id": PROFILE_ID,
-            "semantic_standard_version": self._registry["semantic_standard_version"],
-            "logical_standard_version": self._registry["logical_standard_version"],
+            "semantic_standard_version": self._declarations.core["semantic_standard_version"],
+            "logical_standard_version": self._declarations.core["logical_standard_version"],
             "registries": {name: dict(descriptor) for name, descriptor in registries.items()},
             "created_at": now,
             "sessions": sessions,
@@ -1732,7 +1620,7 @@ class PacketWriter:
                     recorded.setdefault((name, bound["version"]), bound)
         descriptors: dict[str, dict[str, str]] = {}
         added: list[str] = []
-        for document in (self._registry, *self._extensions.values()):
+        for document in self._declarations.documents:
             registry_id = str(document["registry_id"])
             body = (json.dumps(document, indent=2) + "\n").encode()
             version = str(document["registry_version"])
