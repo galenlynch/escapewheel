@@ -42,8 +42,9 @@ protocols, resource_ids, profile, ordering, registries, uri, scripts.cli
     The support tier's own modules: what a function asks of a packet, resource IDs, the physical
     profile, stored order, registry acquisition, URI forms, and the command line the other
     packages extend.
-descriptor, dictionaries
-    The reader's own: the profile descriptor's checks, and dictionary-encoded columns.
+descriptor, dictionaries, duck
+    The reader's own: the profile descriptor's checks, dictionary-encoded columns, and a packet's
+    tables in DuckDB.
 """
 
 from __future__ import annotations

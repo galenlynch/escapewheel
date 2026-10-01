@@ -6,14 +6,12 @@
 - :func:`rate` -- a count divided by a duration, neither defaulted.
 - :func:`rate_of` -- a table's rows divided by the support attached to it.
 - :func:`attach_support`, :func:`support_of` -- set and read that support.
-- :func:`register_views` -- `unit_observation` and `stream_observation` as DuckDB views.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Collection
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -27,9 +25,6 @@ from .resource_ids import (
     CORE_UNIT_OBSERVATION_INTERVALS,
     CORE_UNITS,
 )
-
-if TYPE_CHECKING:  # pragma: no cover
-    import duckdb
 
 #: Where a resolved window came from. `declared` is the thing's own refinement, `inherited` is
 #: its clock's. Kept because the two mean different things to a writer reading a finding back.
@@ -232,119 +227,6 @@ def stream_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
                 schema=_empty(key).schema,
             )
     return _resolve(own, inherited, key)
-
-
-#: How the SQL path resolves R38's inheritance, as ``{view: spec}``.
-#:
-#: A packet that needs no refinement does not carry the table to refine with -- units inherit
-#: their clock's window in the common case, so `core.unit_observation_intervals` is absent --
-#: and DuckDB binds a view at creation rather than deferring. So the view is assembled from the
-#: parts that can bind: the declaring branch is dropped when its table is absent, and the
-#: inheriting branch's `NOT EXISTS` guard is dropped with it, being vacuously true.
-#:
-#: This restates the CTEs inside the registry's two `within_observation` rules rather than
-#: sharing code with them, and the duplication is deliberate: a rule must be runnable by any
-#: implementation from `logical_schemas.json` alone (R2 §7.4), so it cannot depend on a view
-#: this reader happens to register. `tests/test_observation.py` asserts the two agree on the
-#: same packet, which is drift protection without the coupling.
-VIEWS: dict[str, dict[str, Any]] = {
-    "unit_observation": {
-        "refinements": "core_unit_observation_intervals",
-        # R96 §3.2 put the clock on the unit, so neither arm reaches through `core.sorting_runs`.
-        "declared": (
-            ("core_unit_observation_intervals", "core_units"),
-            """SELECT o.session_id, o.unit_id, u.clock_id,
-                      o.start_tick, o.stop_tick, 'declared' AS source
-               FROM core_unit_observation_intervals o
-               JOIN core_units u ON o.unit_id = u.unit_id""",
-        ),
-        "inherited": (
-            ("core_units", "core_clock_observation_intervals"),
-            """SELECT u.session_id, u.unit_id, u.clock_id,
-                      c.start_tick, c.stop_tick, 'inherited' AS source
-               FROM core_units u
-               JOIN core_clock_observation_intervals c
-                 ON c.session_id = u.session_id AND c.clock_id = u.clock_id
-               {guard}""",
-        ),
-        "guard": """WHERE NOT EXISTS (
-                   SELECT 1 FROM core_unit_observation_intervals o
-                   WHERE o.unit_id = u.unit_id)""",
-    },
-    "stream_observation": {
-        "refinements": "core_event_stream_observation_intervals",
-        "declared": (
-            ("core_event_stream_observation_intervals", "core_event_streams"),
-            """SELECT o.event_stream_id, s.clock_id, o.start_tick, o.stop_tick, 'declared' AS source
-               FROM core_event_stream_observation_intervals o
-               JOIN core_event_streams s ON o.event_stream_id = s.event_stream_id""",
-        ),
-        "inherited": (
-            ("core_event_streams", "core_clock_observation_intervals"),
-            """SELECT s.event_stream_id, s.clock_id, c.start_tick, c.stop_tick, 'inherited' AS source
-               FROM core_event_streams s
-               JOIN core_clock_observation_intervals c
-                 ON c.session_id = s.session_id AND c.clock_id = s.clock_id
-               {guard}""",
-        ),
-        "guard": """WHERE NOT EXISTS (
-                   SELECT 1 FROM core_event_stream_observation_intervals o
-                   WHERE o.event_stream_id = s.event_stream_id)""",
-    },
-}
-
-
-def register_views(connection: duckdb.DuckDBPyConnection, declared: Collection[str] | None = None) -> list[str]:
-    """Register the observation views, using whichever branches the packet can bind.
-
-    A view with no usable branch is skipped, so a packet carrying no observation tables offers
-    no resolved window rather than an empty one that looks answered.
-
-    `declared` is what the **packet** holds, against which `connection` holds whatever has been
-    registered so far. The two differ once registration is by demand rather than wholesale, and
-    conflating them is a silent wrong answer: a refinements table that exists but is not yet
-    registered makes `refined` false, which drops the guard and returns an inherited window for
-    every unit that has a declared one. So a view whose refinements table the packet holds and
-    the connection lacks is skipped rather than built, and gets built when that table arrives.
-
-    Parameters
-    ----------
-    connection : duckdb.DuckDBPyConnection
-        A connection with some of the packet's tables registered.
-    declared : collection of str, optional
-        SQL names of every table the packet declares. Defaults to what is registered, which is
-        correct only when everything has been.
-
-    Returns
-    -------
-    list of str
-        The views created, in registration order.
-    """
-    known = {
-        row[0]
-        for row in connection.sql(
-            "SELECT table_name FROM duckdb_tables() UNION SELECT view_name FROM duckdb_views()"
-        ).fetchall()
-    }
-    held = known if declared is None else set(declared)
-    made = []
-    for name, spec in VIEWS.items():
-        refinements = spec["refinements"]
-        if refinements in held and refinements not in known:
-            continue
-        refined = refinements in known
-        branches = []
-        needs, sql = spec["declared"]
-        if known.issuperset(needs):
-            branches.append(sql)
-        needs, sql = spec["inherited"]
-        if known.issuperset(needs):
-            branches.append(sql.format(guard=spec["guard"] if refined else ""))
-        if not branches:
-            continue
-        connection.sql(f"CREATE OR REPLACE VIEW {name} AS " + " UNION ALL ".join(branches))
-        made.append(name)
-    return made
 
 
 def observed_ticks(windows: pa.Table) -> int:

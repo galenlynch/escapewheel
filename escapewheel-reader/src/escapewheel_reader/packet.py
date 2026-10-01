@@ -7,9 +7,6 @@
 
 from __future__ import annotations
 
-import contextlib
-import re
-import warnings
 from collections.abc import Collection, Iterable, Mapping
 from dataclasses import replace
 from pathlib import Path
@@ -18,21 +15,16 @@ from typing import TYPE_CHECKING, Any, Literal
 import pyarrow as pa
 import pyarrow.dataset as pads
 
-from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError, ResourceUnreadableError
+from . import duck
+from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError
 from .location import Location, Rewrite, Sources, resolve_sources
 from .manifest import Manifest, Resource
-from .observation import VIEWS, register_views
 from .registries import acquire, parse
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity
-from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
-
-    # By name as well as by module: inside the class body `duckdb` is the method, so a
-    # `duckdb.DuckDBPyConnection` annotation after it resolves to the wrong thing.
-    from duckdb import DuckDBPyConnection
 
     from .protocols import PacketLike
 
@@ -457,80 +449,9 @@ class Packet:
         duckdb.DuckDBPyConnection
             The connection, with the requested table resources registered.
         """
-        if connection is not None:
-            con = connection
-        else:
-            try:
-                import duckdb as _duckdb
-            except ImportError as exc:  # pragma: no cover - exercised only without the extra
-                raise ImportError(
-                    "SQL access requires duckdb; install the 'sql' extra. It is optional because a "
-                    "complete read path exists without it: table(), the accessors, and "
-                    "TableResource.dataset() all go through PyArrow."
-                ) from exc
-            con = _duckdb.connect()
-        declared = self._table_resources()
-        if any(not TableResource(r, self._root).is_local for r in declared):
-            _prepare_remote(con)
-        wanted = {r.resource_id for r in declared} if tables == "all" else set(tables or ())
-        if for_query is not None:
-            wanted |= self._named_in(for_query)
-        self._register(con, wanted)
-        return con
-
-    def _table_resources(self) -> tuple[Resource, ...]:
-        """Every resource a SQL engine can be given, tabular or materialized."""
-        return self.resources(kind="table")
-
-    def _register(self, connection: DuckDBPyConnection, wanted: Collection[str]) -> None:
-        """Register the named tables that are not on this connection already, then the views.
-
-        Asking the connection what it holds rather than remembering keeps this correct when a
-        caller registers something itself, and costs one local query against a round trip per
-        table saved.
-        """
-        if not wanted:
-            return
-        # `internal` excludes DuckDB's own catalog views, which are numerous and none of ours.
-        held = {row[0] for row in connection.sql("SELECT view_name FROM duckdb_views() WHERE NOT internal").fetchall()}
-        skipped = []
-        for resource in self._table_resources():
-            if resource.resource_id not in wanted or sql_name(resource.resource_id) in held:
-                continue
-            try:
-                TableResource(resource, self._root).register(connection)
-            except ResourceUnreadableError as exc:
-                # Not silently: an unregistered view fails later as "table does not exist",
-                # which points at the query rather than at the resource that could not be read.
-                skipped.append(f"{resource.resource_id} ({exc})")
-        if skipped:
-            listed = "\n  ".join(skipped)
-            warnings.warn(
-                f"{len(skipped)} table(s) could not be registered and are absent from this connection:\n  {listed}",
-                stacklevel=2,
-            )
-        # After the tables, because DuckDB binds a view at creation and one over a table this
-        # packet does not declare is refused rather than deferred. Re-run rather than run once:
-        # a view skipped for want of an input gains it when that input is registered later.
-        # What the packet declares is passed separately from what is registered, so a view whose
-        # refinements table exists but is not yet registered is skipped rather than built without
-        # its guard (Part 01 §2.2) -- which would answer, wrongly, instead of not answering.
-        register_views(connection, [sql_name(r.resource_id) for r in self._table_resources()])
-
-    def _named_in(self, query: str) -> set[str]:
-        """Which declared tables a query mentions, including the ones its views are built on.
-
-        Registering a table a query does not use costs one footer read; leaving out one it does
-        use fails the query, so this errs towards registering. Matching is on whole words, so a
-        name inside a string literal or a column name still counts -- which is the safe way to
-        be wrong.
-        """
-        words = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", query))
-        needed = set(words)
-        for view, spec in VIEWS.items():
-            if view in words:
-                needed |= set(spec["declared"][0]) | set(spec["inherited"][0]) | {spec["refinements"]}
-        return {r.resource_id for r in self._table_resources() if sql_name(r.resource_id) in needed}
+        return duck.registered(
+            self._root, self.resources(kind="table"), connection=connection, tables=tables, for_query=for_query
+        )
 
     def sql(self, query: str) -> pa.Table:
         """Run a query against this packet's tables.
@@ -577,25 +498,6 @@ class Packet:
                 term = field == value
             expression = term if expression is None else expression & term
         return expression
-
-
-def _prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:
-    """Set up a connection that will read from an object store.
-
-    Two settings, and getting either wrong fails quietly. `httpfs` is what lets DuckDB open an
-    `s3://` URI at all. `enable_object_cache` keeps Parquet footers across queries and is worth
-    16x on a repeated read -- 3.38 s against 0.21 s over one session's spikes -- with no error
-    and no signal when it is off, which is the kind of wrong this package exists to prevent.
-
-    Credentials are deliberately **not** set. Whether a store is reachable is a property of the
-    caller's situation rather than of the packet (Part 04 §5.1), so a caller supplies its own secret;
-    what this removes is the setup a caller cannot be expected to know.
-    """
-    with contextlib.suppress(Exception):  # an older duckdb, or an extension it cannot fetch
-        connection.execute("INSTALL httpfs")
-        connection.execute("LOAD httpfs")
-    with contextlib.suppress(Exception):
-        connection.execute("SET enable_object_cache=true")
 
 
 def open_packet(

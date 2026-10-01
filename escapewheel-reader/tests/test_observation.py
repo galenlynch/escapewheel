@@ -13,6 +13,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from escapewheel_reader import NotDeclared, StaleSupport, access, open_packet
+from escapewheel_reader.duck import register_views
 from escapewheel_reader.observation import (
     DECLARED,
     INHERITED,
@@ -22,7 +23,6 @@ from escapewheel_reader.observation import (
     observed_ticks,
     rate,
     rate_of,
-    register_views,
     stream_windows,
     support_of,
     unit_windows,

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pyarrow as pa
 import pyarrow.compute as pc
 
+from . import duck
 from .errors import MultiSessionUnresolved, ResourceNotFoundError
 from .location import Location
 from .packet import Packet, open_packet
@@ -34,6 +35,9 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 #: discriminator Part 05 §13.1 requires; `session_name` is the label it permits beside one, and
 #: promises nothing about what two packets' matching labels denote.
 PROJECTED = ("session_key", "session_name")
+
+#: What :func:`duck.connect` says of a dataset where DuckDB is absent.
+READS_WITHOUT_SQL = "A dataset is readable without it through table(), which goes through PyArrow."
 
 
 def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
@@ -226,7 +230,7 @@ class Dataset:
             If a packet holds several sessions and a scoped resource does not carry
             `session_id`.
         """
-        con = connection if connection is not None else _connect()
+        con = connection if connection is not None else duck.connect(READS_WITHOUT_SQL)
         wanted = set(self._declared()) if tables == "all" else set(tables or ())
         if for_query is not None:
             wanted |= {r for r in self._declared() if sql_name(r) in for_query}
@@ -377,18 +381,6 @@ def _column_names(packet: Packet, resource_id: str) -> list[str]:
     if declared is not None:
         return [c["name"] for c in declared["columns"]]
     return list(packet.table_resource(resource_id).schema().names)
-
-
-def _connect() -> DuckDBPyConnection:
-    """Open an in-memory DuckDB connection, or say why SQL is unavailable."""
-    try:
-        import duckdb as _duckdb
-    except ImportError as exc:  # pragma: no cover - exercised only without the extra
-        raise ImportError(
-            "SQL access requires duckdb; install the 'sql' extra. A dataset is readable "
-            "without it through table(), which goes through PyArrow."
-        ) from exc
-    return _duckdb.connect()
 
 
 def open_dataset(
