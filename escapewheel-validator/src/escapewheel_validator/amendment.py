@@ -1,9 +1,19 @@
 """Compare an amendment with the version it supersedes (Part 05 §15.6).
 
-Every other check reads the current version alone, and a table gaining a group is a new file, so
-only a comparison of rows shows that no superseded row changed and no group grew. The group test
-(Part 02 §2.8) is shared with a writer settling delivered rows against the packet it amends, so the
-two cannot disagree about which groups a version holds.
+- :func:`compare` -- the changes an amendment made that Part 05 §15.6 forbids, each as a
+  :class:`Finding`.
+- :func:`predecessor` -- the retained manifest whose version immediately precedes the current one.
+- :class:`Version` -- one version's canonical tables as DuckDB views, and the SQL saying whether
+  it holds a row's group.
+- :func:`group_lists`, :func:`chain_reaches` -- a table's group lists, and the first of some
+  resources a `derived_from` chain reaches.
+- :func:`semver`, :func:`quoted`, :func:`literal`, :func:`absent` -- a `packet_version` as a sort
+  key, and the SQL for an identifier, a string, and a column a file omits.
+- :data:`PREFERENCES`, :data:`DERIVED` -- the one table whose held row an amendment may replace,
+  and the content classes whose lineage can go stale.
+
+A writer settling delivered rows against the packet it amends uses :class:`Version`'s group test
+too (Part 02 §2.8), so the two cannot disagree about which groups a version holds.
 """
 
 from __future__ import annotations

@@ -1,4 +1,7 @@
-"""Where the copied checkers find this package's copies of the incorporated artifacts."""
+"""Where the copied checkers find this package's copies of the incorporated artifacts.
+
+- :data:`ARTIFACTS` -- the directory holding them.
+"""
 
 from pathlib import Path
 

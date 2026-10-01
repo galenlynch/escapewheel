@@ -1,26 +1,36 @@
-"""Reach an external resource's bytes, wherever they are.
+"""Reach an external resource's bytes, wherever they are (Part 04 §5.3).
 
-Part 04 §5.1 makes referencing the expected form for a large resource, and in production that means
-an object store. What a packet may then say about those bytes is bounded by two things.
+Listing:
 
-**Nothing here runs by default.** Part 04 §5.3 keeps structural validation off the network:
-reachability, credentials and whether the caller is offline are properties of a situation, not
-of a packet. Every function in this module is reached only from an explicitly requested mode.
+- :func:`listing` -- what a URI holds, as a :class:`Listing` of each :class:`Member`, without
+  reading any of it.
+- :class:`StoreDigest`, :func:`store_digest` -- a store's entity tag for an object, and the one a
+  listing entry carries.
+- :func:`read_member` -- one member read whole.
+- :func:`is_local`, :func:`local_path` -- whether a URI names a filesystem path, and that path.
 
-**What is verified is a point in time.** Part 03 §8: immutability covers packet-owned bytes,
-and an external resource may change or vanish without the packet changing at all. So these
-return what was true when they looked, which is what `verified_at` records beside them.
+Digests (Part 04 §4.3):
 
-This lives with the validator rather than the reader because **no read path uses it**. A table
-resolves to a local path or is handed to DuckDB as a URI; a Zarr array is handed its URI and its
-own library opens it. What needs a store client is Part 04 §4.3's digest -- list a prefix, and hash
-its members -- and both users of it are on that side: this package checks what a manifest claims,
-and `escapewheel-writer` establishes it in the first place through its `verify` setting. The writer
-depends on this package already, because Part 05's commit is validate-then-rename.
+- :func:`digest_resource` -- what a URI holds as a :class:`Digested`: its value, its members'
+  values, and the route that established them.
+- :func:`digest` -- that value alone, reading every byte.
+- :func:`listing_digest` -- a prefix's value from its members' keys, sizes and values.
+- :func:`hasher` -- a streaming hasher for one of :data:`ALGORITHMS`.
+- :func:`store_checksums`, :func:`reported_checksum` -- the full-object checksums a store response
+  reports, and the one a store reports for an object.
+- :data:`ALGORITHMS`, :data:`ROUTES` -- the admitted digest functions, and the ways a digest is
+  established.
+- :data:`crc64nvme_python`, :data:`crc32c_python` -- the CRCs used where no native library is
+  installed.
 
-A local path needs no library. Any other scheme goes through fsspec, which is not a dependency
-of this package -- the `remote` extra brings it, and a backend for the scheme is separate again
-(`s3fs` for `s3://`, `gcsfs` for `gs://`).
+Failures:
+
+- :exc:`StoreUnreachable`, :exc:`ResourceMissing` -- the store could not be reached, or was reached
+  and holds nothing under the URI.
+
+No function here runs unless the caller asks for a mode, and each result states what was true when
+the function looked. A local path needs no library. Any other scheme needs fsspec, which the
+`remote` extra installs, and a backend for that scheme.
 """
 
 from __future__ import annotations
@@ -38,7 +48,7 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 #: Bytes per read when digesting. Large enough that a remote store is not asked a thousand
-#: times for a chunk it would have streamed, small enough to bound memory on a 6.8 GB array.
+#: times for a chunk it would have streamed, small enough to bound memory whatever an array's size.
 BLOCK = 1 << 22
 
 
@@ -65,9 +75,8 @@ def local_path(uri: str) -> Path:
 
 
 #: How many of a prefix's members to read at once when digesting (Part 04 §5.4). Object stores are
-#: latency-bound per object, so this is the difference between a minute and eight over a
-#: session's LFP; the value is modest because a store also rate-limits, and the gain is mostly
-#: had by the eighth worker.
+#: latency-bound per object, so reading several at once is several times faster; the value is
+#: modest because a store also rate-limits, and the gain is mostly had by the eighth worker.
 WORKERS = 8
 
 
@@ -246,9 +255,9 @@ class Listing:
 def listing(uri: str) -> Listing:
     """List what a URI holds, without reading any of it.
 
-    A dense array asset is a *prefix*, not an object: one LFP series is 208 chunk objects plus
-    its metadata document. Sizing it is therefore a list operation, and the total is what
-    `size_bytes` means for such a resource.
+    A dense array asset is a *prefix*, not an object: its chunk objects plus its metadata
+    document. Sizing it is therefore a list operation, and the total is what `size_bytes` means
+    for such a resource.
 
     Raises
     ------
@@ -391,13 +400,12 @@ def digest_resource(
 ) -> Digested:
     """Establish the Part 04 §4.3 digest of what a URI holds.
 
-    Reading every byte is the cost -- 6.8 GB for a session's LFP -- which is why nothing calls
-    this unless asked. With `store_checksums`, an object whose store reports a full-object value in
-    `algorithm` is not read (Part 04 §5.3); one whose store reports none still is.
+    Reading every byte is the cost, which is why nothing calls this unless asked. With
+    `store_checksums`, an object whose store reports a full-object value in `algorithm` is not
+    read (Part 04 §5.3); one whose store reports none still is.
 
     Objects are digested concurrently. An object store rewards that far more than any choice of
-    client does: one LFP array of 208 objects reads at 15.7 MB/s one at a time and 94 MB/s across
-    eight. A local store is not hurt by it.
+    client does, and a local store is not hurt by it.
 
     Parameters
     ----------

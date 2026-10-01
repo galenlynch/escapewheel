@@ -1,6 +1,6 @@
 # Escapewheel Validator
 
-Tools to validate escapewheel packets
+Validate Escapewheel packets against the registries they bind.
 
 ## Installation
 
@@ -12,7 +12,9 @@ cd escapewheel/escapewheel-validator
 uv sync
 ```
 
-## Quick Start
+## Quick start
+
+Open a packet with the reader and pass it to `validate`:
 
 ```python
 from escapewheel_reader import open_packet
@@ -22,6 +24,8 @@ report = validate(open_packet("packet/"))
 report.passed, report.errors, report.warnings
 ```
 
+`escapewheel validate packet/` is the same call from the command line.
+
 ## Documentation
 
 ```{toctree}
@@ -29,6 +33,7 @@ report.passed, report.errors, report.warnings
 :caption: Contents
 
 api
+design
 ```
 
 ## Indices and tables

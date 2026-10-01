@@ -1,10 +1,15 @@
-"""Generate Tier 1 validation checks from a registry.
+"""Generate Tier 1 validation checks from a registry's structure (Part 02 §10.1).
 
-Tier 1 follows from structure alone (Part 02 §10.1): required columns, primary keys, foreign
-keys, closed vocabularies, finite values. Nothing here is written per table. Tier 2 rules carried
-in the registry are passed through unchanged.
+- :func:`generate` -- every check a checked registry implies, followed by its Tier 2 rules.
+- :class:`Check` -- one check: SQL returning offending rows, so an empty result is a pass.
+- :class:`Specialisation` -- one specialising reference, resolved against the packet's tables.
+- :func:`concerns` -- whether an amendment writing some resources obliges a check to run.
+- :func:`adjacency_settles_uniqueness` -- whether a table's sort order puts duplicate primary
+  keys next to each other, so the ordering scan decides uniqueness.
 
-Every check is SQL returning offending rows; an empty result is a pass (R2 §7.3).
+No check is written by hand for a table. The checks for required columns, primary keys, foreign
+keys, closed vocabularies and finite values follow from a registry's structure, and its Tier 2
+rules pass through unchanged.
 """
 
 from __future__ import annotations
@@ -89,7 +94,7 @@ def concerns(check: Check, written: Collection[str]) -> bool:
 
     Generated Tier 1 checks carry dependencies derived from registry structure, while Tier 2
     checks carry base relations returned by the Part 11 parser. Anything else reads only files an
-    amendment may not modify (Part 05 §15.1) and Part 04 §5.1 declares immutable, so it can only
+    amendment may not modify (Part 05 §15.1) and Part 03 §8.1 declares immutable, so it can only
     reach the verdict it reached before.
     """
     return bool(check.dependencies & set(written))
@@ -107,8 +112,8 @@ def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> boo
     `(session_id, clock_id, time_bucket_tick, …)` so a time filter and a unit filter both prune,
     which puts two non-key columns ahead of the key — but `clock_id` is the session's reference
     clock and `time_bucket_tick` is a function of `t_tick`, so neither varies between rows that
-    share a key. Without the declaration a 287 M-row `GROUP BY` runs and spills 27 GB to settle
-    what one comparison per row already answers.
+    share a key. Without the declaration a `GROUP BY` over every spike runs, and spills, to
+    settle what one comparison per row already answers.
 
     False where a sort column genuinely varies within a key: a sort of `(a, x, b)` with key
     `(a, b)` lets `x` order duplicates apart, so neighbours are not enough and the aggregate is
@@ -127,8 +132,8 @@ def adjacency_settles_uniqueness(resource: str, table: Mapping[str, Any]) -> boo
 
 
 #: A dotted resource ID: two lowercase snake_case names. Part 02 §8.3 makes this checkable without
-#: knowing which resources exist, which is what nothing did -- `scope_kind` could hold an empty
-#: string and no rule would see it.
+#: knowing which resources exist, so a discriminator holding an empty string is reported whatever
+#: the packet declares.
 RESOURCE_ID = r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$"
 
 
@@ -169,8 +174,8 @@ def _discriminator(
         Check(
             f"{resource}.{column['name']}.kind_declared",
             # Part 02 §8.3. Where an unresolvable kind is a fact rather than a defect it is still
-            # reported: R49 §2.5's union passed it in silence, which is what let an extension
-            # kind go unchecked without anything saying so.
+            # reported: passed in silence, an extension kind would go unchecked without anything
+            # saying so.
             "error" if column.get("resolves") == "required" else "info",
             f"{column['name']} names a resource this packet does not declare",
             f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({declared})",
@@ -182,9 +187,9 @@ def _discriminator(
     paired = column.get("discriminates")
     if paired is None:
         # A shared-key discriminator: Part 02 §8.3 adds the direction a foreign key cannot point --
-        # a row naming a kind with no counterpart in it, which is Part 01 §3.10a's "a kind that
-        # resolves to nothing is a name again" and which every other check passes. Only where
-        # `resolves` is required: an optional kind naming nothing is a fact (R49), not a defect.
+        # a row naming a kind with no counterpart in it, whose kind is then only a name, and which
+        # every other check passes. Only where `resolves` is required: an optional kind naming
+        # nothing is a fact (R49), not a defect.
         if column.get("resolves") != "required" or not table.get("primary_key"):
             return checks
         key = ", ".join(quote(c) for c in table["primary_key"])
@@ -397,14 +402,14 @@ def _generate(  # noqa: C901
         table, and a foreign key into an absent one cannot be evaluated.
     resolvable : set of str, optional
         Resources a reference may resolve against, beyond this registry's own tables. An
-        extension registry needs core's tables here, since it declares none of them and Part 09 §2
+        extension registry needs core's tables here, since it declares none of them and Part 09 §6.1
         lets it reference them.
     kinds : Mapping, optional
         Every resource a discriminator may name (Part 02 §8.3), mapped to the column a paired value
         joins to -- the `*_name` where the key is assigned, the key where it is carried (R55
         §2.3.3). Supplied by the caller rather than read from this registry, because Part 02 §8.3
-        requires the resolution to reach the packet's *extension* kinds -- the case Part 02 §8.3
-        designed the mechanism for and whose hand-written union quietly matched no branch.
+        requires the resolution to reach the packet's *extension* kinds -- the case the mechanism
+        exists to cover, and one a check built over core alone passes in silence.
     keys : Mapping, optional
         Every resource a discriminator may name, mapped to its one key column's declaration, or
         None where its key is not one column. An identifier paired value must share that
@@ -423,7 +428,7 @@ def _generate(  # noqa: C901
     }
     included = set(tables) if only is None else set(only)
     # What a reference may point at, which is not the same as what gets checks. An extension
-    # declares its own tables and references core's (Part 09 §2), so without this its foreign keys
+    # declares its own tables and references core's (Part 09 §6.1), so without this its foreign keys
     # generate nothing and an orphan validates clean -- the gap R46 closed for core.
     reachable = included if resolvable is None else set(resolvable) | included
 

@@ -1,13 +1,19 @@
-"""Validate a packet against the registry it declares.
+"""Validate a packet against the registries it binds (Part 05 §5).
 
-Four layers: the manifest's shape, the registry it embeds, each resource's physical schema,
-then the rules. No part states that order -- it is this module's, and what each layer owes is
-Part 05 §5's.
+- :func:`validate` -- run every layer over an opened packet and return its :class:`Report`.
+- :func:`check_packet_manifest` -- the manifest and registry-binding phases alone, from the
+  manifest's bytes.
+- :class:`Report` -- the findings, evaluations and registry results, and the verdicts they compose.
+- :class:`Finding`, :class:`Evaluation`, :class:`RegistryEvaluation` -- one finding, one Tier 2
+  evaluation outcome, and one registry document's result.
+- :func:`verify_order` -- pass batches through, raising :exc:`OrderViolation` where they leave
+  their declared order or repeat a key.
+- :func:`registry_meta_schema` -- Part 02 §9.2's meta-schema, as this distribution copies it.
+- :data:`LIMITS` -- the DuckDB settings :func:`validate` bounds itself by.
 
-The split between SQL and this module is not a matter of convenience (R12 §4). SQL covers
-what the data *says* — values, keys, references, vocabularies. This module covers how it is
-*stored* — physical order, file presence, column types — because a query cannot see any of
-that, and a storage-layer check written as SQL fails silently rather than loudly.
+The layers run in order: the manifest's shape, the registries the packet binds, each resource's
+physical schema, then the rules. Storage is checked in Python and not in SQL, because a query
+cannot see how data is stored and a storage check written as SQL passes in silence.
 """
 
 from __future__ import annotations
@@ -838,7 +844,7 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAx
             "error",
             "array.rank_disagrees_with_dimensions",
             f"{resource.resource_id} has rank {rank} but its declaration-selected axes resource "
-            f"gives axis_index {sorted(axes.names) or 'none'}; Part 03 §6.2 requires one row per stored axis",
+            f"gives axis_index {sorted(axes.names) or 'none'}; Part 03 §6.3 requires one row per stored axis",
             registry=report.resource_owner(resource.resource_id),
         )
         return
@@ -1104,13 +1110,12 @@ def _resolve_external(
     Parameters
     ----------
     checksums : bool, default False
-        Also establish each recorded `digest` (level 3c). Reading every byte costs 6.8 GB for a
-        session's LFP, 75 s from local disk and 88 s from S3, where the rest of this mode is a list
-        operation; off separately for that reason.
+        Also establish each recorded `digest` (level 3c). It reads every byte, where the rest of
+        this mode is a list operation; off separately for that reason.
     store_digests : bool, default False
         Also compare each declared member's `store_digest` against what the store reports now
-        (Part 04 §5.4). The listing already performed carries the values, so this is the same 1.31 s
-        the level below it costs, and it answers a weaker question than `checksums` does.
+        (Part 04 §5.4). The listing already performed carries the values, so this costs what the
+        level below it does, and it answers a weaker question than `checksums` does.
     store_checksums : bool, default True
         With `checksums`, take the store's full-object checksums in place of reading an object
         where it reports one in the digest's algorithm (Part 04 §5.3).
@@ -1557,7 +1562,7 @@ def _compare_shape(
             "error",
             "external.array_rank",
             f"{resource.resource_id} is stored with rank {len(shape)} but its declaration-selected "
-            f"axes resource gives axis_index {sorted(axes.names)}; Part 03 §6.2 requires one row per stored axis",
+            f"axes resource gives axis_index {sorted(axes.names)}; Part 03 §6.3 requires one row per stored axis",
             registry=report.resource_owner(resource.resource_id),
         )
         return ["rank"]
@@ -1618,10 +1623,10 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
 
 
 #: Rows per batch when checking physical order, and how many breaks are worth reporting.
-#: Read whole, a real session's spike table is a quarter of a billion rows across five sort
-#: columns -- four of them strings -- which as Python objects is around a billion of them and
-#: will take a workstation down. Batched, peak memory is this many rows however large the
-#: table, and a reader only needs to see that the order broke and where it first did.
+#: Read whole, a spike table's sort columns are a Python object per row and column, which at
+#: hundreds of millions of rows will take a workstation down. Batched, peak memory is this many
+#: rows however large the table, and a reader only needs to see that the order broke and where
+#: it first did.
 ORDER_BATCH = 1 << 20
 ORDER_REPORT = 20
 
@@ -1674,7 +1679,7 @@ def _breaks(batch: Any, keys: Sequence[str], unique: Sequence[str] | None = None
 
     One pass over each column, not two. A descent needs the column's `less` mask and a
     duplicate needs its `same` mask, and a single comparison yields both; asking for them
-    separately compared every column twice, which on the spike table's five-column key was the
+    separately compares every column twice, which on a spike table's five-column key is the
     ordering scan's largest single cost.
 
     A descent at row i means some key decreases there while every earlier key is equal, so the
@@ -1927,9 +1932,9 @@ def _check_ordering(
 
     One pass answers both. A table sorted by its primary key puts duplicates next to each
     other, so comparing neighbours — which this scan already does to find descents — decides
-    uniqueness too. `generate` leaves the `GROUP BY` out for those tables: on 287 M spikes it
-    spilled 26 GB, because the key is four string columns and an aggregate materialises every
-    one of them, while the scan reads them in order and holds one batch.
+    uniqueness too. `generate` leaves the `GROUP BY` out for those tables: an aggregate
+    materialises every key column, and spills where they are strings over a spike table's rows,
+    while the scan reads them in order and holds one batch.
 
     Parameters
     ----------
@@ -1991,8 +1996,8 @@ def _scan_one_ordering(  # noqa: C901
     while True:
         # Stepped rather than iterated, so a page that fails to decompress becomes a finding
         # instead of a traceback -- without wrapping the scan body, where the same exception type
-        # would mean something else. Streaming is not negotiable here: this table is 287 M rows,
-        # and holding its key columns is the difference between one batch and 26 GB.
+        # would mean something else. Streaming is not negotiable here: a spike table's key
+        # columns held whole are gigabytes, where the scan holds one batch.
         try:
             batch = next(batches)
         except StopIteration:
@@ -2073,8 +2078,8 @@ def verify_order(batches: Iterable[Any], keys: Sequence[str], unique: Sequence[s
     The same comparison :func:`_check_ordering` makes against a written file, made instead
     against the batches on their way into one. It is offered because a writer is the one caller
     that can establish a file's order without reading the file: the rows pass through its hands
-    already, so the check costs the comparison and not the 467 MB re-read that finding the same
-    answer afterwards costs on a quarter of a billion spikes.
+    already, so the check costs the comparison and not the re-read of the file that finding the
+    same answer afterwards costs.
 
     The seam between batches is compared as well as the inside of each, so a descent or a
     duplicate landing exactly on a boundary is caught rather than falling between two passes.
@@ -2147,18 +2152,17 @@ _DDL = {
 
 
 #: What a validating DuckDB connection is allowed to take. Left to itself it claims 80% of
-#: system memory and every core, which on a real session's spike table means a quarter of a
-#: billion rows grouped on a five-column key with a hundred-gigabyte budget -- enough to take
-#: a workstation down.
+#: system memory and every core, which on a spike table means hundreds of millions of rows
+#: grouped on a five-column key with most of the machine as its budget -- enough to take a
+#: workstation down.
 #:
 #: `temp_directory` is not optional here. An in-memory DuckDB has none by default, so a memory
 #: limit has nothing to spill *to* and bounds nothing; the two settings only work as a pair.
 #: The default follows the packet, because a temp directory on tmpfs -- which `/tmp` is on
 #: several distributions -- spills into the memory the limit exists to protect.
 #:
-#: Measured on 247,758,402 spikes: bounded this way, every check passes at 4.0 GB peak, and
-#: the one expensive check, `core.spike_events.primary_key_unique`, takes 78 s. So this costs
-#: time and never correctness.
+#: Bounded this way every check still passes, and an aggregate that does not fit spills and
+#: runs slower. So this costs time and never correctness.
 LIMITS: dict[str, Any] = {"memory_limit": "4GB", "threads": 4}
 
 
@@ -2187,8 +2191,8 @@ def _spill_beside(packet: Packet) -> Iterator[Path | None]:
     on several distributions, so spilling there consumes the memory the limit exists to bound
     -- but the packet root is the wrong place to put it: validating a packet would write into
     a directory whose bytes are supposed to be settled (Part 03 §8.1), leave it behind, and fail
-    outright on read-only media. Measured on 287 M spikes, the uniqueness check spills 26 GB,
-    which is 31x the packet it is checking.
+    outright on read-only media. A uniqueness aggregate can spill many times the size of the
+    packet it is checking.
     """
     root = getattr(packet, "root", None)
     if root is None:
@@ -2546,7 +2550,7 @@ def _check_extensions(
     R17 §3's claim is that nothing here is per-extension: the same `generate` produces an
     extension's Tier 1 checks from its structure and carries its Tier 2 rules, because an
     extension registry *is* a registry document. What this function adds is which tables its
-    references may resolve against -- core's, since Part 09 §2 lets an extension reference them and
+    references may resolve against -- core's, since Part 09 §6.1 lets an extension reference them and
     forbids the reverse -- and the registry its findings are filed under, so they decide the
     extension's verdict and never core's (Part 05 §9.5).
     """
@@ -2666,8 +2670,8 @@ def validate(
     checksums : bool, default False
         Establish every recorded `digest`: each packet-owned resource (Part 04 §5.3, level 2), and
         with `external`, each external one too (level 3c). Separate because reading costs every
-        byte -- 0.60 s for the 1,209 MB a packet owns, against 75 s for the 6.8 GB of LFP it merely
-        references. The report names each digest's route.
+        byte, and a packet may reference far more than it owns. The report names each digest's
+        route.
     store_digests : bool, default False
         With `external`, also compare each member's recorded `store_digest` against what the
         store reports now (Part 04 §5.4). This is the level between the other two: it costs the

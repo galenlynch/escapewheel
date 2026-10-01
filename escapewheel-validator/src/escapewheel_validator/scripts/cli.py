@@ -1,5 +1,7 @@
 """The ``escapewheel validate`` subcommand.
 
+- :func:`register` -- add ``validate`` to the ``escapewheel`` command's subcommands.
+
 `escapewheel_reader` owns the ``escapewheel`` entry point and discovers this through the
 ``escapewheel.commands`` group, so installing this package makes the subcommand appear rather
 than competing for the command name.

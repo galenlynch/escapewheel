@@ -1,12 +1,29 @@
-"""Validate Escapewheel packets against the registries they bind.
+"""Validate Escapewheel packets against the registries they bind (Part 05 §5).
 
-Rules are data, not code: Tier 1 checks are generated from each table's structure, and Tier 2
-rules are parsed against the registry's versioned portable language before execution. A completed
-query returns a typed bag of offending rows; invalid, unsupported, and incomplete evaluation are
-reported separately from packet findings.
+:func:`validate` takes a packet opened by `escapewheel_reader` and returns a :class:`Report` of
+findings and verdicts; ``escapewheel validate`` is the same call from the command line.
+:func:`check_packet_manifest` runs the manifest phases alone, and :func:`check_registry_context`
+checks a registry document with no packet in hand.
 
-Validation needs DuckDB because the rules are SQL. Reading does not, which is why this is a
-separate package: `escapewheel_reader` opens a packet with PyArrow alone.
+Its modules:
+
+validator
+    The layers over a packet, and the report they fill.
+manifest
+    Manifest conformance and registry binding (Part 04 §10).
+generate
+    Tier 1 checks generated from a registry's structure.
+registry_document, rule_language
+    A registry document's own conformance, and the static check of its Tier 2 SQL.
+amendment
+    An amendment compared with the version it supersedes.
+stores
+    Listings and digests of external resources, run only where a mode asks.
+opaque
+    Names in an opaque payload that some filesystem cannot hold.
+
+A rule is SQL that returns offending rows, so the validator needs DuckDB where the reader does
+not.
 """
 
 from importlib.metadata import PackageNotFoundError, version

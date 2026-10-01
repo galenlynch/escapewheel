@@ -1,7 +1,17 @@
 """Names in a packet-owned opaque payload that would not survive every copy (Part 05 §5.3).
 
-A payload keeps its names byte for byte (Part 03 §11), so the packet is conformant whatever they
-are; these say which names a case- or normalization-folding filesystem, or Windows, cannot hold.
+- :func:`findings` -- one `(directory, names, reason)` for each set of colliding names and each
+  name Windows cannot hold.
+- :func:`describe` -- one of those as a finding's message.
+- :func:`colliding`, :func:`caseless` -- the sets of distinct names that are a canonical caseless
+  match, and the key they match under.
+- :func:`unportable_to_windows` -- whether Windows cannot hold a name.
+- :func:`payload_directories` -- a mapping from each directory in or above a payload to the names
+  it holds.
+
+A payload keeps its names byte for byte (Part 03 §11), so a packet conforms whatever its names
+are. These functions report the names that Windows, or a filesystem that folds case or
+normalization, cannot hold.
 """
 
 from __future__ import annotations

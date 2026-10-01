@@ -1,4 +1,4 @@
-"""A packet-owned opaque payload: presence, digest, and names (Part 03 §§4, 10, 11.3; Part 05 §5.3)."""
+"""A packet-owned opaque payload: presence, digest, and names (Part 03 §§4, 10, 11; Part 05 §5.3)."""
 
 import hashlib
 import json

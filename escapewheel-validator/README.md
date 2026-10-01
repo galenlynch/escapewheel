@@ -168,7 +168,7 @@ uv run --frozen pytest --cov escapewheel_validator # Tests with coverage
 ### Documentation
 
 ```bash
-sphinx-build -b html docs/source/ docs/build/html
+uv run --frozen --group docs sphinx-build -b html docs/source/ docs/build/html
 ```
 
 ## License

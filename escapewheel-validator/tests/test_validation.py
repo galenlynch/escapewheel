@@ -833,7 +833,7 @@ def test_a_transpose_inside_a_shard_is_caught(packet_root):
 
 
 def test_a_rank_the_dimensions_do_not_cover_is_caught(packet_root):
-    """Part 03 §6.2: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
+    """Part 03 §6.3: axis_index enumerates every stored axis, so two rows cannot describe rank 3."""
     _add_array(packet_root, declared=["sharding_indexed", "blosc"], axes=2)
     assert "array.rank_disagrees_with_dimensions" in _checks(validate(open_packet(packet_root)))
 
@@ -1257,7 +1257,7 @@ def test_a_store_digest_that_changed_in_place_is_an_error(packet_root, monkeypat
     assert "external.store_digest" in {f.check for f in changed.findings}
 
 
-# -- Part 02 §6: an external array's shape against what the packet's tables assert ------------
+# -- Part 05 §5.3: an external array's shape against what the packet's tables assert ----------
 
 
 def test_an_external_arrays_rank_is_checked_against_the_dimensions(packet_root):
@@ -1535,7 +1535,7 @@ def _channels(root, *, rows):
 
 
 def test_a_channel_index_beyond_its_axis_is_caught(packet_root):
-    """`core.array_channels` describes positions of an axis, so each must be one (Part 03 §6.5)."""
+    """`core.array_channels` describes positions of an axis, so each must be one (Part 05 §5.3)."""
     root = _add_array(packet_root, declared=["blosc"], external=True, axes=3)
     _channels(root, rows=2)
     report = validate(open_packet(root), external=True)
@@ -1739,7 +1739,7 @@ def test_an_extensions_closed_vocabulary_is_enforced(packet_root):
 
 
 def test_an_extension_reference_into_core_resolves(packet_root):
-    """Part 09 §2 lets an extension reference core. Without the cross-registry link the anti-join is
+    """Part 09 §6.1 lets an extension reference core. Without the cross-registry link the anti-join is
     never generated and an orphan validates clean -- the gap R46 closed for core."""
     root = _extension(packet_root, mutate=lambda r: r["trial_id"].__setitem__(0, 999))
     report = validate(open_packet(root))

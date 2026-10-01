@@ -1,9 +1,22 @@
 """Manifest conformance before any declaration is used (Part 04 §10).
 
-The `json`, `shape`, and `entries` phases need only the manifest's bytes, and the
-`registry_binding` phase acquires each bound registry through its descriptor. Each phase reports
-findings under Part 04 §10's check IDs; a finding in any of the first three stops evaluation, so a
-later phase never indexes into a document an earlier one rejected.
+- :func:`check_manifest` -- the `json`, `shape` and `entries` phases, stopping at the first that
+  finds anything.
+- :func:`check_json`, :func:`check_shape`, :func:`check_entries` -- each of those phases alone.
+- :func:`bind_registries` -- the `registry_binding` phase, returning what it established as a
+  :class:`Bound`.
+- :class:`Issue` -- one manifest finding, under Part 04 §10's check ID.
+- :func:`confirm_replaced` -- each difference between a supplied packet and the `replaces` item
+  it is read as.
+- :func:`named_registries` -- the registry IDs a manifest's bytes name, read leniently.
+- :func:`manifest_schema`, :func:`format_checker` -- the incorporated schema, and a format checker
+  that asserts `date-time`.
+- :func:`prefix_digest`, :func:`major` -- a member list's digest value, and a `packet_version`'s
+  major version.
+- :data:`MANIFEST_FILENAME` -- the manifest's name under a packet root.
+
+The first three phases need only the manifest's bytes, and a finding in any of them stops
+evaluation, so a later phase never indexes into a document an earlier one rejected.
 """
 
 from __future__ import annotations
