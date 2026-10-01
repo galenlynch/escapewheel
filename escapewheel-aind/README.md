@@ -9,6 +9,19 @@ is where those live: AIND's `session.json` metadata schema, the behaviour videos
 headerless three-column CSV, the dialect columns an AIND pipeline writes into an otherwise
 ordinary NWB, and the unit quality metrics its sorting analyzer computes.
 
+## Source kinds
+
+A recipe names one of these as a `[[source]]`'s `kind`:
+
+| kind | reads |
+|---|---|
+| `session` | `session.json` and `subject.json`: each stream's observation window, and where tick zero sits |
+| `video` | a behaviour video and its CSV: one row per frame on the rig clock |
+| `aind_nwb` | an NWB written by an AIND pipeline, with the columns that pipeline adds |
+| `aind_unit_qc` | a sorting analyzer's unit quality metrics, as the `aind_unit_qc` extension |
+
+[DESIGN.md](DESIGN.md) explains why each reads its source the way it does.
+
 ## It is built as though it were already external
 
 The package sits in the monorepo beside `escapewheel-writer` and depends on it, one direction only.

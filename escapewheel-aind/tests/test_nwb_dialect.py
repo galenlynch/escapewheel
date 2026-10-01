@@ -203,7 +203,7 @@ def test_a_trial_that_never_reached_the_moment_emits_no_event(tmp_path, harp):
 
 
 def test_a_mapped_task_column_is_not_repeated_in_metadata(nwb, harp):
-    """It is in core.events now, so carrying it again would be the duplication Part 02 §6 bans."""
+    """It is in core.events, so carrying it again would be the duplication Part 02 §8.6 forbids."""
     carrying = AindNWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND, trial_metadata=True)
     metadata = carrying.intervals()[0].get("metadata") or {}
     assert "goCue_start_time" not in metadata

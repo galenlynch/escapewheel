@@ -390,7 +390,7 @@ def test_a_module_stating_no_transform_yields_no_calibration(tmp_path):
 
 
 def test_a_transform_with_no_date_is_null_rather_than_invented(tmp_path):
-    """Part 01 §3.5. Three `stick_microscopes` state a calibration and no date for it."""
+    """Part 01 §3.23. Three `stick_microscopes` state a calibration and no date for it."""
     source = _session(build(tmp_path, streams=modules("46100", date=None)))
     assert source.calibrations()[0]["calibrated_at"] is None
 

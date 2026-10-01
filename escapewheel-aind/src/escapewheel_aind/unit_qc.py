@@ -1,21 +1,14 @@
 """The quality pipeline's per-unit metrics, read from the analyzer that computed them.
 
-`aind_unit_qc` holds the SpikeInterface metrics an AIND pipeline computes for every unit. They are
-read from the `SortingAnalyzer` beside the curated sorting, as `waveforms` reads its templates, and
-not from the NWB exported afterwards: the analyzer names each row by the sorter's own unit label, so
-a unit is resolved through the build's `units` term by `(device_name, local_unit_label)` and
-carried as the name the sorter minted. The packet numbers it, so this adapter never needs a
-committed packet to learn an integer.
+- :class:`UnitQCSource` -- `aind_unit_qc.metrics`, `waveform_metrics` and `synchrony`, from the
+  SpikeInterface analyzer beside the curated sorting.
+- :data:`METRICS`, :data:`WAVEFORM_METRICS` -- a mapping from each table's columns to the analyzer
+  columns they are read from.
+- :data:`FILLABLE` -- the metrics a named NWB may supply where the analyzer holds NaN.
 
-Each metric keeps the name the pipeline gives it, which is the vocabulary people search by. The
-one rename is `num_spikes`, which becomes `num_spikes_used` so it cannot be read as core's
-`n_spikes`. The synchrony metric arrives as one column per size, `sync_spike_<size>`, and becomes
-one row per size, so a fourth size is a row rather than a schema change.
-
-Where a recipe names the session's NWB, an amplitude metric the analyzer left NaN is taken from the
-NWB's `units` table, which may have been repaired after the analyzer was written. A unit is filled
-only where every other quality metric both state agrees, so a file from another sorting fills
-nothing.
+The adapter resolves a unit through the build's `units` term by `(device_name, local_unit_label)`.
+An NWB fills a NaN only for a unit on which the NWB and the analyzer agree in every other metric
+that both state.
 """
 
 from __future__ import annotations

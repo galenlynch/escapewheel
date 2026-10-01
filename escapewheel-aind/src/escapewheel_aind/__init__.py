@@ -1,24 +1,25 @@
-"""Source adapters for one institution's formats.
+"""Source adapters for the Allen Institute for Neural Dynamics' own formats.
 
-Core ships adapters for standards -- SpikeInterface, Open Ephys, Harp, NWB -- because many
-institutions read them. What serves one institution lives here: `session.json` and the rest of
-AIND's metadata schema, the behaviour videos and their headerless CSV, the dialect columns an AIND
-pipeline writes into an otherwise ordinary NWB, and the unit quality metrics its sorting analyzer
-computes.
+Each adapter registers a source kind through the ``escapewheel.sources`` entry-point group, so a
+recipe names it as it names a built-in kind. Nothing is imported from this package directly.
 
-The boundary, not the directory, is what this package is for
-------------------------------------------------------------
+Its modules:
 
-It sits in the monorepo beside the writer and is built as though it already lived elsewhere: it
-depends on `escapewheel-writer` the way that package depends on the validator, registers its kinds
-through the `escapewheel.sources` entry-point group rather than by being listed in
-`escapewheel_writer.sources.ADAPTERS`, and imports nothing of the writer that a registered adapter
-released separately could not import. Moving it out is then a packaging change rather than a
-rewrite.
+session
+    ``session.json`` and ``subject.json``: each stream's observation window, and where tick zero
+    sits.
+video
+    A behaviour video's frame times, reconstructed from the camera's own counter.
+nwb
+    The columns and conventions an AIND pipeline adds to an otherwise ordinary NWB.
+unit_qc
+    The unit quality metrics a sorting analyzer computes, as the ``aind_unit_qc`` extension.
+compensations
+    The upstream faults these adapters work around, recorded in the packet.
 
-That discipline costs something a recipe author sees. A build refuses a kind it neither ships nor
-is told how to reach, so a recipe naming one of these declares `in_process = true` or a
-`[source.delivery]` command (Part 05 §3.9) -- where naming a built-in kind declares nothing.
+The package depends on `escapewheel-writer` and nothing in the writer imports it. A build refuses a
+kind it neither ships nor is told how to reach, so a recipe naming one of these sets
+``in_process = true`` or gives a ``[source.delivery]`` command (Part 05 §3.9).
 """
 
 __all__: list[str] = []

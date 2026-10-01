@@ -1,34 +1,12 @@
 """Read `aind-data-schema` metadata JSONs into records.
 
-The JSONs carry two facts no data file in the asset records, and both are about time.
+- :class:`SessionSource` -- reads `session.json` with the `rig.json` and `subject.json` beside it,
+  and yields the subject, the calibrations, the reference clock's row and that clock's observation
+  window.
+- :class:`AcquisitionStream` -- one declared data stream, its window resolved into the rig's zone.
 
-**When each acquisition ran.** `session.json` declares a window per data stream, in wall
-clock. The NWB records when events happened, never when a sensor was watching, so this is
-the only source for the window `core.event_stream_observation_intervals` rows carry -- the
-build pairs it with the streams the NWB declared, since no one source states both. It
-matters because the windows differ: on `inventory/nwb-zarr-776259-2025-04-09.md`'s session the ephys stream runs
-6387 s and the behaviour stream 7849 s, and a reward rate computed against the wrong one is
-wrong by 23%.
-
-**Where tick zero sits.** A HARP clock free-runs from device power-on, so its tick 0 is a
-power-on instant rather than a protocol constant -- 1.157e7 s before this session, 6.7e6 s
-before one on another rig. Nothing in the NWB locates it: its `timestamps_reference_time`
-claims to and is wrong, equalling `session_start_time` while the timestamps are HARP-epoch,
-which places the first lick 134 days after the session. A stream's declared start, paired
-with a tick observed at that start, locates it. See :meth:`SessionSource.epoch`.
-
-The stored offsets are not trusted
-----------------------------------
-
-`session.json` stamps `+00:00` on Pacific wall-clock readings -- a seven-hour error on the
-session this was built from, which Part 05 would import silently. The naive reading is right in
-every stream checked, including the ones whose offset is right, so this adapter drops the
-stored offset and localizes to the declared zone. Every disagreement is reported.
-
-That is the opposite of what :class:`~escapewheel_writer.sources.nwb.NWBSource` does with a bad
-offset, and the difference is the defect. `+00:00` on a local reading is correctable, because
-the reading survives. `-07:53` on a date of birth -- Pacific Local Mean Time -- is not: there
-is nothing to re-localize a date to.
+The adapter drops a stored UTC offset and localizes the reading to the declared zone, because this
+schema may stamp `+00:00` on a local wall clock. It reports each replaced offset in `notes`.
 """
 
 from __future__ import annotations
@@ -94,9 +72,9 @@ class SessionSource(Compensates):
     root : str or Path
         `session.json` itself, or a directory holding one.
     zone : str or zoneinfo.ZoneInfo
-        The rig's wall-clock zone, named or resolved. An IANA zone, not a fixed offset: this
-        session is PDT and the HARP epoch its ticks count from is PST, so a rig constant is wrong
-        half the year.
+        The rig's wall-clock zone, named or resolved. An IANA zone, not a fixed offset: a session
+        may fall in daylight time and the HARP epoch its ticks count from in standard time, so a
+        rig constant is wrong half the year.
     session_id : str, optional
         Overrides the ID derived from the asset directory name.
     prefix : str, optional
@@ -134,7 +112,7 @@ class SessionSource(Compensates):
             "core.clocks",
             # The window this source watched the reference clock over, which is the fact the
             # rows below are composed from: the streams watched in it are the NWB's, so the
-            # build pairs the two (Part 05 §3.3 leaves a row to one source).
+            # build pairs the two (Part 05 §3.4 leaves a row to one source).
             "core.clock_observation_intervals",
             # Declared here because this is the source whose presence makes the resource
             # available, which is what ownership is settled from.
@@ -432,9 +410,8 @@ class SessionSource(Compensates):
     def extent(self) -> tuple[datetime, datetime]:
         """When the session began and ended, across every declared stream.
 
-        The union, not one stream's window: acquisition is staggered -- here ephys starts
-        first and behaviour runs 24 minutes past it -- and a session that ended when its
-        first stream did would exclude data the packet holds.
+        The union, not one stream's window: acquisition is staggered, and a session that ended
+        when its first stream did would exclude data the packet holds.
 
         Returns
         -------
@@ -468,9 +445,8 @@ class SessionSource(Compensates):
         """The `subject.json` beside this `session.json`, or an empty document where there is none.
 
         Absent is not a defect: the document is a separate file an asset may not carry, as
-        `rig.json` is. Both packaged sessions' sorted assets carry one and each states
-        `Mus musculus`; a partial copy of an asset may hold the session document without it,
-        which is a fact about the copy and not about the source.
+        `rig.json` is. A partial copy of an asset may hold the session document without it, which
+        is a fact about the copy and not about the source.
         """
         if self._subject_document is None:
             path = self.path.parent / SUBJECT_JSON
@@ -494,7 +470,7 @@ class SessionSource(Compensates):
 
     @property
     def stated_strain(self) -> str | None:
-        """The background strain, which both packaged sessions leave unset."""
+        """The background strain, or None where the document leaves it unset."""
         return _clean(self._subject.get("background_strain"))
 
     @property
@@ -508,13 +484,13 @@ class SessionSource(Compensates):
     def subjects(self) -> list[dict[str, Any]]:
         """`core.subjects` from `subject.json`, which states what the NWB does not.
 
-        `general/subject` states a species too -- `Mus musculus` in both sessions -- so this is the
-        record rather than the only source. What it adds is what the exporter's projection has no
-        place for: a `background_strain` key the NWB lacks entirely, and a date of birth with no
-        timezone, where the NWB writes `2024-09-24T00:00:00-07:53` and R4 §3.3 exists because
-        converting a midnight through an offset can move the day. Nothing translates either way:
-        both already spell the name as NCBI Taxonomy does, and a writer that guessed one from a
-        common name would be inventing a fact (R101 §3.4).
+        `general/subject` states a species too, so this is the record rather than the only
+        source. What it adds is what the exporter's projection has no place for: a
+        `background_strain` key the NWB lacks entirely, and a date of birth with no timezone, where
+        the NWB writes a midnight with an offset, which a conversion can move to another day
+        (R4 §3.3). Nothing translates either way: both already spell the name as NCBI Taxonomy
+        does, and a writer that guessed one from a common name would be inventing a fact
+        (R101 §3.4).
 
         Everything the standard does not model goes to `metadata` (Part 02 §8.6), the taxon identifier
         included -- `NCBI:txid10090` is what survives a renaming the name does not (R59 §1), and no
@@ -604,7 +580,7 @@ class SessionSource(Compensates):
     def calibration_points(self) -> list[dict[str, Any]]:
         """`core.calibration_points`: the paired series of each calibration that is a curve.
 
-        `rig.json` holds two parallel JSON lists, which Part 02 §6 forbids as a column; a series of
+        `rig.json` holds two parallel JSON lists, which Part 02 §5.2 forbids as a column; a series of
         unequal lengths is a defect in the source rather than something to truncate.
         """
         rows: list[dict[str, Any]] = []
@@ -665,7 +641,7 @@ class SessionSource(Compensates):
     def _calibrated_at(self, raw: str | None, label: str) -> datetime | None:
         """When the calibration was measured, in UTC, or None where the source states none.
 
-        Null rather than invented (Part 01 §3.5). A stated offset is kept here where `_instant`
+        Null rather than invented (Part 01 §3.23). A stated offset is kept here where `_instant`
         discards one: a calibration is dated to the day and its offset is the rig's own, where
         `session_start_time` carries an offset this schema gets wrong often enough to distrust.
         A value with no offset falls back to the declared zone.

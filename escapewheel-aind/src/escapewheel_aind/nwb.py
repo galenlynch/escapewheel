@@ -1,16 +1,11 @@
-"""The columns an AIND pipeline writes into an otherwise ordinary NWB.
+"""Read an NWB written by an AIND pipeline, with the columns that pipeline adds.
 
-An NWB written by this pipeline is base NWB everywhere a base reader looks: the paths are
-`general/subject`, `general/devices`, `general/extracellular_ephys/electrodes`,
-`intervals/trials` and `acquisition`, and `escapewheel_writer.sources.nwb.NWBSource` walks all of
-them. What differs is inside those paths -- seventeen column names the schema does not declare,
-and three conventions that are not columns at all -- measured in
-`inventory/nwb-adapter-base-and-dialect.md`.
+- :class:`AindNWBSource` -- the base NWB adapter, extended to interpret the columns an AIND
+  pipeline adds and the conventions it follows.
 
-Those columns share rows with the standard ones, and Part 05 §3.3 leaves a row to a single source,
-so the dialect cannot be a second adapter contributing columns to the base adapter's rows. It is
-this subclass instead: the base reader does the reading, and the hooks below say what the extra
-columns mean. A recipe names one kind or the other and the winner owns whole rows.
+The added columns sit in the same rows as the standard ones, and one source supplies each row
+(Part 05 §3.4), so this is a subclass of the base adapter and not a second adapter. A recipe names
+this kind or the base kind.
 """
 
 from __future__ import annotations
@@ -25,8 +20,7 @@ from escapewheel_writer.sources.nwb import NWBSource, _clean
 #: ``Model: <model> - Serial number: <serial>``, which is how `aind-data-schema` renders a probe
 #: into an NWB `Device` description. The model itself contains hyphens, so the serial is bounded
 #: explicitly rather than by end-of-line: a lazy `.+?` anchored to `$` swallows the description
-#: after it, which put "20403319544 - Description: duplicate of PRB2_1_2_0640_0" into a serial
-#: number column on every probe of a real session.
+#: after it into the serial number.
 DEVICE_DESCRIPTION = re.compile(
     r"^Model:\s*(?P<model>.*?)\s*-\s*Serial number:\s*(?P<serial>[^\s-]+)"
     r"(?:\s*-\s*Description:\s*(?P<description>.*?))?\s*$"
@@ -45,8 +39,8 @@ CCF_AXES = ("ccf_ml", "ccf_ap", "ccf_dv")
 class AindNWBSource(NWBSource):
     """An AIND-written NWB, read as base NWB plus the columns this pipeline adds.
 
-    Everything the base reader does, it still does. What this adds is the seventeen columns and
-    three conventions base NWB does not define, each at the hook the base reader left for it.
+    The base reader's behaviour is unchanged. Its hooks are filled here to interpret the seventeen
+    columns an AIND pipeline adds and the three conventions it follows, which ``DESIGN.md`` lists.
     """
 
     #: Two frames rather than one. `rel_x` and `rel_y` are core 2.9.0's; the CCF triple is this
@@ -75,9 +69,9 @@ class AindNWBSource(NWBSource):
         "delay_start_time": "delay_start",
     }
 
-    #: `animal_response` and the reward histories are named although R54 §2.3 struck their core
-    #: columns: naming them is what keeps them out of `core.intervals.metadata` rather than swept
-    #: in as unmapped, since they belong to the task's own extension.
+    #: `animal_response` and the reward histories are named although core declares no column for
+    #: them (R54 §2.3): naming them is what keeps them out of `core.intervals.metadata` rather than
+    #: swept in as unmapped, since they belong to the task's own extension.
     TRIAL_MAPPED: ClassVar[frozenset[str]] = frozenset(
         {
             "start_time",
@@ -91,9 +85,9 @@ class AindNWBSource(NWBSource):
         }
     )
 
-    #: Part 02 §8.6: R59 §2 promoted `ccf_id` and `ccf_acronym` to columns of
-    #: `core.electrode_coordinates` and declined to model these two, so the bag is where they
-    #: belong -- only what no column holds may travel in it.
+    #: Part 02 §8.6: `ccf_id` and `ccf_acronym` are columns of `core.electrode_coordinates` and
+    #: these two are not modelled (R59 §2), so the bag is where they belong -- only what no column
+    #: holds may travel in it.
     CARRIED_ELECTRODE: ClassVar[tuple[str, ...]] = ("ccf_name", "ccf_structure_id_path")
 
     #: Where an exporter puts the atlas structure id. The two spellings are one fact from two
@@ -115,9 +109,9 @@ class AindNWBSource(NWBSource):
     def _device_identity(self, described: Mapping[str, Any]) -> dict[str, Any]:
         """Return the model and serial this pipeline packs into a Device's description.
 
-        It sets none of the three attributes core 2.9.0 declares for them -- measured at 0 of 10
-        devices on one session -- so the sentence is parsed rather than ignored. The raw string is
-        kept only where it did not parse, since keeping both would store one fact twice (Part 02 §6).
+        It sets none of the three attributes core 2.9.0 declares for them, so the sentence is
+        parsed rather than ignored. The raw string is kept only where it did not parse, since
+        keeping both would store one fact twice (Part 02 §6).
         """
         raw = str(described.get("description", ""))
         parsed = DEVICE_DESCRIPTION.match(raw)
@@ -132,8 +126,8 @@ class AindNWBSource(NWBSource):
     def _local_electrode_label(self, columns: Mapping[str, Any], index: int) -> str | None:
         """Return this pipeline's own name for a contact, which repeats and so cannot identify one.
 
-        1,920 distinct values over 4,608 rows, because the shanks of a quad-base probe reuse the
-        numbering. It is a label for exactly that reason.
+        The shanks of a quad-base probe reuse the numbering, so it is a label and not an
+        identifier.
         """
         if "electrode_name" not in columns:
             return None
@@ -174,8 +168,8 @@ class AindNWBSource(NWBSource):
         """Return NWB unit rows paired with the identity the build assigned them, in row order.
 
         The join is `(device_name, ks_unit_id)`: the probe plus the sorter's own label, which this
-        file carries because it was derived from the sorting. A run is one probe (R83) and 810
-        distinct labels span 6,781 units over 12 runs, so the probe is what makes the pair unique.
+        file carries because it was derived from the sorting. A run is one probe (R83) and runs
+        reuse labels, so the probe is what makes the pair unique.
 
         The key uses the file's own `device_name`, unprefixed, because it names a probe as *this
         source* calls it -- a quad-base probe is four device names here and one `core.probes` row,

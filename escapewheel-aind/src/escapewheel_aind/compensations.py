@@ -1,14 +1,11 @@
-"""What these adapters do about faults in their sources, recorded rather than assumed.
+"""The compensations these adapters apply for known faults in their sources.
 
-The writer's `escapewheel_writer.sources.compensations` carries the discipline and the reason for
-it; this module is the half belonging to one institution's sources. It reaches a build through the
-`escapewheel.compensations` entry-point group, so a compensation an adapter here applies lands in
-`core.processing_runs.parameters` exactly as a built-in adapter's does.
+- :data:`COMPENSATIONS` -- each compensation by identifier. A build finds them through the
+  `escapewheel.compensations` entry-point group.
 
-Each `evidence` names a document in the monorepo's `inventory/`, which is where the fault was
-measured. Those paths do not resolve from an installed copy of this distribution alone, and they
-are still the right citation: what a packet records is where the measurement lives, not a file it
-can open.
+Each `evidence` names a document in the monorepo's `inventory/`, where the fault was measured. The
+path does not resolve from an installed copy of this distribution. A packet records it anyway,
+because it says where the measurement lives.
 """
 
 from __future__ import annotations

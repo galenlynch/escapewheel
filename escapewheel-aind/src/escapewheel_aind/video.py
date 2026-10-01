@@ -1,47 +1,12 @@
-"""Behaviour videos, referenced rather than copied, with the timing the packet does own.
+"""Behaviour videos as external resources, with one row per frame on the rig clock.
 
-**The timing in the source is wrong and is reconstructed here** (`video.zip_pairing_repaired`).
-The acquiring workflow joins the camera stream to the rig's timestamp stream with `rx:Zip`
-(`dynamic-foraging-task`, `src/workflows/foraging.bonsai:8112`), which pairs by position. The
-host drops frames in bursts, so every drop shifts the pairing by one and the recorded time falls
-behind real time by one trigger period per lost frame -- 93.4 s by the end of a measured session.
+- :class:`VideoSource` -- `core.media_assets` and `core.media_frames` for the videos under a root,
+  each referenced as an external resource.
+- :func:`resource_name` -- a resource-ID name for a video, from its file stem.
 
-What survives intact is the camera's own chunk data: `FrameID` counts exposures and skips where
-one was lost, and the hardware timestamp accounts for every gap. Since the cameras are triggered,
-exposure *k* is trigger *k*, so the frame's time is recovered exactly:
-
-    t_tick = t0 + (FrameID - FrameID_0) x trigger_period
-
-`t0` is the one pairing that is still correct -- nothing has dropped before the first frame -- and
-the trigger period is measured from the file itself. Checked against the camera's independent
-hardware clock, the reconstruction agrees to 35-85 ms over 85 minutes, against the 93 s error it
-replaces.
-
-Three cameras of one session are 10 GB as MP4 and 80 GB as the AVI they were encoded from, so a
-packet that copied them would be mostly video (Part 04 §5.1). What it owns instead is one row per
-frame on a declared clock, which is the part no player can supply: an MP4 knows its own
-presentation timestamps and nothing about the rig's clock. It could own a video instead by declaring
-`opaque_location` and delivering the file as a payload (Part 12 §5).
-
-Each camera writes a CSV beside its video, one line per frame and three columns:
-
-```
-14425755.839584,1379782224,14593876902543944
-```
-
-- the frame's time in **seconds on the rig clock**, which is what `t_tick` is derived from;
-- a **frame counter** that skips where frames were lost, which is what `dropped` is derived from;
-- the **camera's own clock** in nanoseconds, which is what the repair was checked against.
-
-`pts` carries none of the three. It is the frame's presentation timestamp in the **container**,
-an integer of the container's own time base (Part 01 §3.18), which is what locates a row in the file a
-consumer opens. The asset declares the rate those timestamps count at (Part 01 §3.18), so
-`pts * pts_rate_den / pts_rate_num` is seconds of video without opening it, where `t_tick` is the
-same frame on the rig clock.
-
-Frames are numbered in presentation order (Part 01 §3.18), which is why the container index is sorted
-before it is read: packets arrive in decode order, and this stream displaces one by up to three
-positions from where it is shown.
+The source pairs each frame with a time that falls behind by one trigger period for every frame the
+host dropped. The adapter therefore reconstructs `t_tick` from the camera's own frame counter, and
+declares the repair as `video.zip_pairing_repaired`.
 """
 
 from __future__ import annotations
