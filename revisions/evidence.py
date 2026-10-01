@@ -36,7 +36,6 @@ sys.path.insert(0, str(ROOT / "spec" / "tools"))
 
 import specdoc
 
-DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
 CLAUSE = specdoc.SECTION_CITATION
 REVISION = re.compile(r"R(\d+)")
 SHA = re.compile(r"[0-9a-f]{40}")
@@ -251,12 +250,12 @@ def accepted() -> dict[str, tuple[Path, set[str]]]:
     found = {}
     for path in ACCEPTED.glob("R[0-9]*.md"):
         match = REVISION.match(path.name)
-        declared = DECLARED.search(path.read_text()[:2000])
-        if match and declared:
+        declared = specdoc.metadata_value(path.read_text(), "Decision clauses")
+        if match and declared is not None:
             revision = f"R{match.group(1)}"
             found[revision] = (
                 path,
-                {f"{revision} §{s}" for s in CLAUSE.findall(declared.group(1))},
+                {f"{revision} §{s}" for s in CLAUSE.findall(declared)},
             )
     return found
 

@@ -20,6 +20,8 @@ SECTION_CITATION = re.compile(rf"§({SECTION})")
 REVISION_CITATION = re.compile(rf"\bR(\d+) §({SECTION})")
 #: A stable anchor on a line of its own, capturing its identifier and `canonical` or `alias`.
 ANCHOR = re.compile(r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="(canonical|alias)"></a>$')
+#: How many leading characters of a stage document or record its metadata table is read from.
+METADATA_HEAD = 2000
 
 
 class GenerationError(Exception):
@@ -51,6 +53,29 @@ def part_citation(gap: str) -> re.Pattern[str]:
     `gap` is the pattern for what separates the part from the section sign.
     """
     return re.compile(rf"(?:`(\d\d)`|Part (\d\d)){gap}§({SECTION})")
+
+
+def _metadata_row(name: str) -> re.Pattern[str]:
+    """Match `| **Name** | value |` on a line of its own, where `name` is the pattern for the name."""
+    return re.compile(rf"^\|\s*\*\*{name}\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
+
+
+#: A row of a two-column metadata table, capturing its name and its value.
+METADATA_ROW = _metadata_row("(.+?)")
+
+
+def metadata(text: str) -> dict[str, str]:
+    """Return the metadata table at the head of `text`, the last row winning where a name repeats."""
+    return dict(METADATA_ROW.findall(text[:METADATA_HEAD]))
+
+
+def metadata_value(text: str, name: str) -> str | None:
+    """Return what the first metadata row named `name` holds, or None where no row is.
+
+    An empty cell is the empty string, so test the result against None.
+    """
+    match = _metadata_row(re.escape(name)).search(text[:METADATA_HEAD])
+    return match.group(1) if match else None
 
 
 def outside_fences(text: str) -> Iterator[tuple[int, str | None]]:

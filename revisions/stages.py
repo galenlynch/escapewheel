@@ -24,7 +24,6 @@ sys.path.insert(0, str(ROOT / "spec" / "tools"))
 
 import specdoc
 
-ROW = re.compile(r"^\|\s*\*\*(.+?)\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
 HEADING = re.compile(r"^## (\d+)\.\s+(.+?)\s*$", re.MULTILINE)
 NUMBERED = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.?\s+", re.MULTILINE)
 BCP14 = re.compile(r"\b(?:MUST|MUST NOT|SHOULD|SHOULD NOT|MAY|REQUIRED|SHALL|OPTIONAL)\b")
@@ -50,11 +49,6 @@ DRAFT_HEADINGS = {
 }
 
 
-def fields(text: str) -> dict[str, str]:
-    """Return the two-column metadata table at the head of a stage document."""
-    return {name: value for name, value in ROW.findall(text[:2000])}
-
-
 def baseline(path: Path, value: str | None) -> list[str]:
     """Return defects in a document's full baseline commit hash."""
     if value is None:
@@ -76,7 +70,7 @@ def baseline(path: Path, value: str | None) -> list[str]:
 
 def common(path: Path, text: str, expected_status: str) -> list[str]:
     """Return defects shared by proposals and drafts."""
-    meta = fields(text)
+    meta = specdoc.metadata(text)
     errors = baseline(path, meta.get("Based on"))
     if meta.get("Status") != f"**{expected_status}**":
         errors.append(f"status is {meta.get('Status')!r}, expected `**{expected_status}**`")
@@ -89,7 +83,7 @@ def common(path: Path, text: str, expected_status: str) -> list[str]:
 
 def lifecycle_metadata(path: Path, text: str, *, proposal_stage: bool) -> list[str]:
     """Validate prospective decision-domain, change-form, and process-target metadata."""
-    meta = fields(text)
+    meta = specdoc.metadata(text)
     domain = meta.get("Decision domain")
     errors = []
     if domain not in {"specification", "process"}:
@@ -142,7 +136,7 @@ def proposal(path: Path) -> list[str]:
         + lifecycle_metadata(path, text, proposal_stage=True)
         + headings(path, text, PROPOSAL_HEADINGS)
     )
-    meta = fields(text)
+    meta = specdoc.metadata(text)
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", meta.get("Opened", "")):
         errors.append(f"`Opened` is not an ISO date: {meta.get('Opened')!r}")
     if not meta.get("Affects"):
@@ -161,7 +155,7 @@ def draft(path: Path) -> list[str]:
         + lifecycle_metadata(path, text, proposal_stage=False)
         + headings(path, text, DRAFT_HEADINGS)
     )
-    meta = fields(text)
+    meta = specdoc.metadata(text)
     for name in ("Amends", "Depends on", "Profile", "Decision clauses"):
         if not meta.get(name):
             errors.append(f"declares no `{name}` value")
@@ -188,7 +182,7 @@ def accepted(path: Path) -> list[str]:
     if match is None or int(match.group(1)) < 120:
         return []
     text = path.read_text()
-    meta = fields(text)
+    meta = specdoc.metadata(text)
     errors = baseline(path, meta.get("Based on"))
     if not ACCEPTED_STATUS.fullmatch(meta.get("Status", "")):
         errors.append(f"status is {meta.get('Status')!r}, expected accepted status and ISO date")

@@ -48,7 +48,6 @@ class LedgerError(Exception):
 
 
 HEADING = specdoc.HEADING
-DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
 DECLARED_SECTION = specdoc.SECTION_CITATION
 
 
@@ -180,12 +179,7 @@ def unresolved(  # noqa: C901
         revision_path = next(REVISIONS.glob(f"R{revision}-*.md"), None)
         domain = "specification"
         if revision_path is not None and revision >= 120:
-            match = re.search(
-                r"^\|\s*\*\*Decision domain\*\*\s*\|\s*(.*?)\s*\|$",
-                revision_path.read_text()[:2000],
-                re.MULTILINE,
-            )
-            domain = match.group(1) if match else ""
+            domain = specdoc.metadata_value(revision_path.read_text(), "Decision domain") or ""
         for target in found:
             if domain == "process" and "path" not in target:
                 dangling.append((key, "process clause does not use a path-plus-anchor owner"))
@@ -245,12 +239,12 @@ def clauses() -> dict[str, str]:
             continue
         # Current revisions state the exact normative set. This avoids inferring force from a
         # keyword: a declarative "becomes" binds without one, while Background can quote one.
-        if declared := DECLARED.search(text[:2000]):
+        if (declared := specdoc.metadata_value(text, "Decision clauses")) is not None:
             titles = {
                 m.group(1): m.group(2).strip()
                 for m in re.finditer(r"^#{2,4} (\d+(?:\.\d+)*)\.?\s+(.+)$", text, re.MULTILINE)
             }
-            named = DECLARED_SECTION.findall(declared.group(1))
+            named = DECLARED_SECTION.findall(declared)
             if not named:
                 raise LedgerError(f"{path.name}: `Decision clauses` enumerates no section")
             for section in named:

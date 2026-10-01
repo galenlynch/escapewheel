@@ -101,3 +101,42 @@ def test_a_revision_citation_gives_the_revision_and_the_section():
 
 def test_a_section_citation_drops_a_sentence_ending_dot():
     assert specdoc.SECTION_CITATION.findall("§3.1, §4. Then §10.2.4") == ["3.1", "4", "10.2.4"]
+
+
+RECORD = """# A record
+
+| Field | Value |
+|---|---|
+| **Status** | Draft |
+| **Decision clauses** |  §3.1, §3.2  |
+| **Empty** | |
+| **Status** | Accepted |
+
+Prose with | **Not a row** | in it.
+"""
+
+
+def test_the_metadata_table_is_read_with_the_last_of_a_repeated_name():
+    assert specdoc.metadata(RECORD) == {"Status": "Accepted", "Decision clauses": "§3.1, §3.2", "Empty": ""}
+
+
+def test_one_metadata_value_is_the_first_row_of_its_name():
+    assert specdoc.metadata_value(RECORD, "Status") == "Draft"
+    assert specdoc.metadata_value(RECORD, "Decision clauses") == "§3.1, §3.2"
+
+
+def test_an_empty_metadata_cell_is_told_from_an_absent_row():
+    assert specdoc.metadata_value(RECORD, "Empty") == ""
+    assert specdoc.metadata_value(RECORD, "Baseline") is None
+
+
+def test_a_metadata_name_is_read_literally():
+    assert specdoc.metadata_value("| **A.B** | dotted |\n", "A.B") == "dotted"
+    assert specdoc.metadata_value("| **AxB** | other |\n", "A.B") is None
+
+
+def test_metadata_past_the_head_of_the_document_is_not_read():
+    late = "x" * specdoc.METADATA_HEAD + "\n| **Status** | Late |\n"
+
+    assert specdoc.metadata(late) == {}
+    assert specdoc.metadata_value(late, "Status") is None
