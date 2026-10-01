@@ -33,14 +33,6 @@ OVERRIDING_ORDERS = _PROFILE["interfaces"][_PROFILE["kind_interfaces"]["table"]]
 EXTENSION_ID = "dynamic_foraging"
 EXTENSION = json.loads((HERE.parent / "extensions" / f"{EXTENSION_ID}.json").read_text())
 
-#: Every table a fixture may write, core's and the extension's alike.
-SPECS = {
-    name: declaration["table"]
-    for document in (REGISTRY, EXTENSION)
-    for name, declaration in document["resources"].items()
-    if declaration["kind"] == "table"
-}
-
 #: The interval kind the fixture declares, which is the extension table that carries it.
 KIND = "dynamic_foraging.trials"
 
@@ -66,175 +58,197 @@ START = datetime(2026, 8, 20, 14, 0, 0, tzinfo=UTC)
 AP_HZ, BEH_HZ = 30_000, 1_000
 
 
-def table(resource: str, rows: list[dict], readers=None) -> pa.Table:
-    """Build an Arrow table for `resource` with exactly the registry's schema.
+class Numbering:
+    """The number each name takes in one packet, among the tables its registries declare.
 
-    Columns absent from `rows` are emitted as nulls unless the registry marks them
-    optional, in which case they are omitted entirely — exercising all three presence
-    states (Part 02 §6).
-    """
-    spec = SPECS[resource]
-    declared = {c["name"] for c in spec["columns"]}
-    if undeclared := sorted({key for row in rows for key in row} - declared):
-        raise SystemExit(f"{resource}: no column declares {undeclared}, so it would be dropped")
-    rows = number(spec, [dict(r) for r in rows], readers)
-    arrays, fields = [], []
-    for c in spec["columns"]:
-        present = any(c["name"] in r for r in rows)
-        if c["presence"] == "optional" and not present:
-            continue
-        typ = ARROW[c["type"]]
-        arrays.append(pa.array([r.get(c["name"]) for r in rows], type=typ))
-        fields.append(pa.field(c["name"], typ))
-    return pa.table(arrays, schema=pa.schema(fields))
-
-
-#: R53 §2.1: an identifier is an integer. The fixture writes names and numbers them here, one
-#: map per column so every table agrees -- deliberately its own rather than the writer's, since
-#: a hand-built packet exercises the format without going through the writer at all.
-KEYS: dict[str, dict[str, int]] = {}
-
-
-def number(spec, rows, readers=None):
-    """Replace an identifier's name with its number, and fill in the `*_name` that records it.
-
-    `readers` maps an identifier paired value to a function from its row to the map it numbers in.
-    """
-    exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
-    primary = set(spec.get("primary_key") or [])
-    declared = {c["name"] for c in spec["columns"]}
-    # A foreign key numbers in the map of the column it points at. `parent_clock_id` and
-    # `clock_id` are both clocks; numbering them apart makes the parent chain name a clock that
-    # does not exist, which is what Part 01 §3.9 requires to be well-founded.
-    target = {
-        column: referenced
-        for ref in spec.get("references", [])
-        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
-    }
-    identifiers = [c for c in spec["columns"] if c.get("role") == "identifier"]
-    # Read before anything is numbered: a row reaches its kind through its own references.
-    kinds = {name: [reader(r) for r in rows] for name, reader in (readers or {}).items()}
-
-    def kind_of(name, index):
-        return (kinds[name][index] if name in kinds else None) or target.get(name, name)
-
-    # Collect every name before assigning any: `parent_clock_id` and `clock_id` share a map, and
-    # whichever column the loop reached first would otherwise decide the numbering.
-    pending = {}
-    for column in identifiers:
-        if column.get("identity") != "assigned":
-            continue
-        for index, r in enumerate(rows):
-            if r.get(column["name"]) is not None:
-                pending.setdefault(kind_of(column["name"], index), set()).add(str(r[column["name"]]))
-    for kind in sorted(pending):
-        within = KEYS.setdefault(kind, {})
-        for value in sorted(pending[kind]):
-            within.setdefault(value, len(within))
-
-    for column in identifiers:
-        name = column["name"]
-        assigned = column.get("identity") == "assigned"
-        owns = assigned and name in primary and name not in exported
-        named = f"{name.removesuffix('_id')}_name" if owns else None
-        for index, row in enumerate(rows):
-            if row.get(name) is None:
-                continue
-            value = str(row[name])
-            if named is not None and named in declared and row.get(named) is None:
-                row[named] = value
-            if assigned:
-                row[name] = KEYS[kind_of(name, index)][value]
-            elif column["type"] != "string":
-                row[name] = int(row[name])
-    return rows
-
-
-def paired_readers(tables: dict[str, list[dict]], resource: str) -> dict:
-    """Map each identifier paired value `resource` holds to a function from its row to its map.
-
-    Part 02 §8.3 lets an identifier hold the key of whichever resource its row's kind names, so
-    its map is that resource's one key column, chosen per row. A value on a specialised table
-    reaches its kind through the reference back to the discriminator's table, by names.
+    R53 §2.1: an identifier is an integer. The fixture writes names and numbers them here, one
+    map per column so every table agrees -- deliberately its own rather than the writer's, since
+    a hand-built packet exercises the format without going through the writer at all.
     """
 
-    def key_of(kind):
-        key = (SPECS.get(kind) or {}).get("primary_key") or []
-        return key[0] if len(key) == 1 else None
+    def __init__(self, *registries: dict) -> None:
+        #: Every table the packet may write, by resource ID.
+        self.specs = {
+            name: declaration["table"]
+            for document in registries
+            for name, declaration in document["resources"].items()
+            if declaration["kind"] == "table"
+        }
+        #: Each identifier column's map from a name to its number.
+        self.keys: dict[str, dict[str, int]] = {}
 
-    readers = {}
-    for owner, spec in SPECS.items():
-        for column in spec["columns"]:
-            if column.get("role") != "discriminator" or not column.get("discriminates"):
+    def table(self, resource: str, rows: list[dict], readers=None) -> pa.Table:
+        """Build an Arrow table for `resource` with exactly the registry's schema.
+
+        Columns absent from `rows` are emitted as nulls unless the registry marks them
+        optional, in which case they are omitted entirely — exercising all three presence
+        states (Part 02 §6).
+        """
+        spec = self.specs[resource]
+        declared = {c["name"] for c in spec["columns"]}
+        if undeclared := sorted({key for row in rows for key in row} - declared):
+            raise SystemExit(f"{resource}: no column declares {undeclared}, so it would be dropped")
+        rows = self.number(spec, [dict(r) for r in rows], readers)
+        arrays, fields = [], []
+        for c in spec["columns"]:
+            present = any(c["name"] in r for r in rows)
+            if c["presence"] == "optional" and not present:
                 continue
-            via = column.get("discriminates_via")
-            if (owner if via is None else via.rsplit(".", 1)[0]) != resource:
-                continue
-            name = column["name"]
-            if via is None:
-                readers[column["discriminates"]] = lambda row, name=name: key_of(row.get(name))
-                continue
-            back = next(r for r in SPECS[resource]["references"] if r["resource"] == owner)
-            kinds = {tuple(str(r.get(c)) for c in back["resource_columns"]): r.get(name) for r in tables.get(owner, [])}
-            readers[column["discriminates"]] = lambda row, kinds=kinds, ours=back["columns"]: key_of(
-                kinds.get(tuple(str(row.get(c)) for c in ours))
-            )
-    return readers
+            typ = ARROW[c["type"]]
+            arrays.append(pa.array([r.get(c["name"]) for r in rows], type=typ))
+            fields.append(pa.field(c["name"], typ))
+        return pa.table(arrays, schema=pa.schema(fields))
 
+    def number(self, spec, rows, readers=None):
+        """Replace an identifier's name with its number, and fill in the `*_name` that records it.
 
-def preassign(tables: dict[str, list[dict]]) -> None:
-    """Number every name the packet uses, before any table is built.
-
-    Assigning as each table is built would let the order tables happen to be written in decide
-    the numbers: `core.sessions` names a `reference_clock_id` and is written before
-    `core.clocks`, so the clocks would be numbered by the session's mention of one of them.
-    Part 05 §4.3 wants two builds of the same sources to produce the same packet, and this is what
-    makes that hold across tables as well as within one.
-    """
-    pending: dict[str, set[str]] = {}
-    for resource, rows in sorted(tables.items()):
-        spec = SPECS.get(resource)
-        if spec is None:
-            continue
+        `readers` maps an identifier paired value to a function from its row to the map it numbers in.
+        """
+        exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
+        primary = set(spec.get("primary_key") or [])
+        declared = {c["name"] for c in spec["columns"]}
+        # A foreign key numbers in the map of the column it points at. `parent_clock_id` and
+        # `clock_id` are both clocks; numbering them apart makes the parent chain name a clock that
+        # does not exist, which is what Part 01 §3.9 requires to be well-founded.
         target = {
             column: referenced
             for ref in spec.get("references", [])
             for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
         }
-        readers = paired_readers(tables, resource)
-        for column in spec["columns"]:
-            name = column["name"]
-            if column.get("role") != "identifier" or column.get("identity") != "assigned":
+        identifiers = [c for c in spec["columns"] if c.get("role") == "identifier"]
+        # Read before anything is numbered: a row reaches its kind through its own references.
+        kinds = {name: [reader(r) for r in rows] for name, reader in (readers or {}).items()}
+
+        def kind_of(name, index):
+            return (kinds[name][index] if name in kinds else None) or target.get(name, name)
+
+        # Collect every name before assigning any: `parent_clock_id` and `clock_id` share a map, and
+        # whichever column the loop reached first would otherwise decide the numbering.
+        pending = {}
+        for column in identifiers:
+            if column.get("identity") != "assigned":
                 continue
-            for r in rows:
-                if r.get(name) is not None:
-                    kind = (readers[name](r) if name in readers else None) or target.get(name, name)
-                    pending.setdefault(kind, set()).add(str(r[name]))
-    for kind in sorted(pending):
-        if kind == "interval_id":
-            continue
-        within = KEYS.setdefault(kind, {})
-        for value in sorted(pending[kind]):
+            for index, r in enumerate(rows):
+                if r.get(column["name"]) is not None:
+                    pending.setdefault(kind_of(column["name"], index), set()).add(str(r[column["name"]]))
+        for kind in sorted(pending):
+            within = self.keys.setdefault(kind, {})
+            for value in sorted(pending[kind]):
+                within.setdefault(value, len(within))
+
+        for column in identifiers:
+            name = column["name"]
+            assigned = column.get("identity") == "assigned"
+            owns = assigned and name in primary and name not in exported
+            named = f"{name.removesuffix('_id')}_name" if owns else None
+            for index, row in enumerate(rows):
+                if row.get(name) is None:
+                    continue
+                value = str(row[name])
+                if named is not None and named in declared and row.get(named) is None:
+                    row[named] = value
+                if assigned:
+                    row[name] = self.keys[kind_of(name, index)][value]
+                elif column["type"] != "string":
+                    row[name] = int(row[name])
+        return rows
+
+    def paired_readers(self, tables: dict[str, list[dict]], resource: str) -> dict:
+        """Map each identifier paired value `resource` holds to a function from its row to its map.
+
+        Part 02 §8.3 lets an identifier hold the key of whichever resource its row's kind names, so
+        its map is that resource's one key column, chosen per row. A value on a specialised table
+        reaches its kind through the reference back to the discriminator's table, by names.
+        """
+
+        def key_of(kind):
+            key = (self.specs.get(kind) or {}).get("primary_key") or []
+            return key[0] if len(key) == 1 else None
+
+        readers = {}
+        for owner, spec in self.specs.items():
+            for column in spec["columns"]:
+                if column.get("role") != "discriminator" or not column.get("discriminates"):
+                    continue
+                via = column.get("discriminates_via")
+                if (owner if via is None else via.rsplit(".", 1)[0]) != resource:
+                    continue
+                name = column["name"]
+                if via is None:
+                    readers[column["discriminates"]] = lambda row, name=name: key_of(row.get(name))
+                    continue
+                back = next(r for r in self.specs[resource]["references"] if r["resource"] == owner)
+                kinds = {
+                    tuple(str(r.get(c)) for c in back["resource_columns"]): r.get(name) for r in tables.get(owner, [])
+                }
+                readers[column["discriminates"]] = lambda row, kinds=kinds, ours=back["columns"]: key_of(
+                    kinds.get(tuple(str(row.get(c)) for c in ours))
+                )
+        return readers
+
+    def preassign(self, tables: dict[str, list[dict]]) -> None:
+        """Number every name the packet uses, before any table is built.
+
+        Assigning as each table is built would let the order tables happen to be written in decide
+        the numbers: `core.sessions` names a `reference_clock_id` and is written before
+        `core.clocks`, so the clocks would be numbered by the session's mention of one of them.
+        Part 05 §4.3 wants two builds of the same sources to produce the same packet, and this is what
+        makes that hold across tables as well as within one.
+        """
+        pending: dict[str, set[str]] = {}
+        for resource, rows in sorted(tables.items()):
+            spec = self.specs.get(resource)
+            if spec is None:
+                continue
+            target = {
+                column: referenced
+                for ref in spec.get("references", [])
+                for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
+            }
+            readers = self.paired_readers(tables, resource)
+            for column in spec["columns"]:
+                name = column["name"]
+                if column.get("role") != "identifier" or column.get("identity") != "assigned":
+                    continue
+                for r in rows:
+                    if r.get(name) is not None:
+                        kind = (readers[name](r) if name in readers else None) or target.get(name, name)
+                        pending.setdefault(kind, set()).add(str(r[name]))
+        for kind in sorted(pending):
+            if kind == "interval_id":
+                continue
+            within = self.keys.setdefault(kind, {})
+            for value in sorted(pending[kind]):
+                within.setdefault(value, len(within))
+        # Part 02 §12.9 numbers intervals by session, kind, clock and bounds, which only their rows
+        # hold, so the rows order the names; a name no interval row carries is an orphan and follows.
+        within = self.keys.setdefault("interval_id", {})
+        for r in sorted(tables.get("core.intervals", []), key=self.interval_order):
+            within.setdefault(str(r["interval_id"]), len(within))
+        for value in sorted(pending.get("interval_id", ())):
             within.setdefault(value, len(within))
-    # Part 02 §12.9 numbers intervals by session, kind, clock and bounds, which only their rows
-    # hold, so the rows order the names; a name no interval row carries is an orphan and follows.
-    within = KEYS.setdefault("interval_id", {})
-    for r in sorted(tables.get("core.intervals", []), key=interval_order):
-        within.setdefault(str(r["interval_id"]), len(within))
-    for value in sorted(pending.get("interval_id", ())):
-        within.setdefault(value, len(within))
 
+    def interval_order(self, row: dict) -> tuple:
+        """Where one `core.intervals` row falls in Part 02 §12.9's numbering."""
+        return (
+            self.keys["session_id"][str(row["session_id"])],
+            row["interval_kind"],
+            self.keys["clock_id"][str(row["clock_id"])],
+            row["start_tick"],
+            row["stop_tick"],
+            str(row["interval_id"]),
+        )
 
-def interval_order(row: dict) -> tuple:
-    """Where one `core.intervals` row falls in Part 02 §12.9's numbering."""
-    return (
-        KEYS["session_id"][str(row["session_id"])],
-        row["interval_kind"],
-        KEYS["clock_id"][str(row["clock_id"])],
-        row["start_tick"],
-        row["stop_tick"],
-        str(row["interval_id"]),
-    )
+    def sort_table(self, resource: str, t: pa.Table) -> pa.Table:
+        """Apply the stored order (Part 03 §5.3), as a writer should: the key's, unless §5.4 overrides it.
+
+        Sorted by number rather than by name, since Part 02 §12.9 numbers intervals by their bounds.
+        """
+        order = OVERRIDING_ORDERS.get(resource) or self.specs[resource].get("primary_key") or ()
+        keys = [k for k in order if k in t.column_names]
+        if not keys:
+            return t
+        return t.take(pc.sort_indices(t, sort_keys=[(k, "ascending") for k in keys], null_placement="at_end"))
 
 
 def spikes(unit, run, cur, clock, ticks):
@@ -712,18 +726,6 @@ def sql_name(resource):
     return resource.replace(".", "_")
 
 
-def sort_table(resource: str, t: pa.Table) -> pa.Table:
-    """Apply the stored order (Part 03 §5.3), as a writer should: the key's, unless §5.4 overrides it.
-
-    Sorted by number rather than by name, since Part 02 §12.9 numbers intervals by their bounds.
-    """
-    order = OVERRIDING_ORDERS.get(resource) or SPECS[resource].get("primary_key") or ()
-    keys = [k for k in order if k in t.column_names]
-    if not keys:
-        return t
-    return t.take(pc.sort_indices(t, sort_keys=[(k, "ascending") for k in keys], null_placement="at_end"))
-
-
 def crc(polynomial: int, bits: int, data: bytes) -> int:
     """A reflected CRC with all-ones initial value and final XOR, bit by bit (Part 04 §4.3).
 
@@ -756,13 +758,15 @@ def write_packet(
     out: Path,
     tables: dict[str, list[dict]],
     *,
-    raw: dict | None = None,
+    recast: dict | None = None,
     unsorted: frozenset = frozenset(),
     algorithm: str = "sha256",
     extensions: tuple = (),
     numbers: dict[str, dict[str, int]] | None = None,
-):
-    """Write a packet in 03's portable layout. `raw` supplies pre-built Arrow tables for
+) -> Numbering:
+    """Write a packet in 03's portable layout, and return the numbering of its names.
+
+    `recast` maps a resource to a function from its Arrow table to the one written, for
     variants that must violate the registry's own schema; `unsorted` names resources
     written in insertion order, for variants that must violate Part 03 §5.3. Every resource
     records its `digest` under `algorithm`. `extensions` are registry documents bound beside
@@ -770,18 +774,19 @@ def write_packet(
     for variants that must number one otherwise."""
     if out.exists():
         shutil.rmtree(out)
-    KEYS.clear()
-    preassign(tables)
-    KEYS.update({kind: dict(names) for kind, names in (numbers or {}).items()})
+    documents = (REGISTRY, EXTENSION, *extensions)
+    numbering = Numbering(*documents)
+    numbering.preassign(tables)
+    numbering.keys.update({kind: dict(names) for kind, names in (numbers or {}).items()})
     (out / "tables" / "core").mkdir(parents=True)
 
     resources = []
     for resource, rows in tables.items():
-        t = (raw or {}).get(resource)
-        if t is None:
-            t = table(resource, rows, paired_readers(tables, resource))
-            if resource not in unsorted:
-                t = sort_table(resource, t)
+        t = numbering.table(resource, rows, numbering.paired_readers(tables, resource))
+        if resource not in unsorted:
+            t = numbering.sort_table(resource, t)
+        if resource in (recast or {}):
+            t = recast[resource](t)
         namespace, name = resource.split(".", 1)
         rel = f"tables/{namespace}/{name}.parquet"
         (out / "tables" / namespace).mkdir(exist_ok=True)
@@ -799,7 +804,7 @@ def write_packet(
             }
         )
 
-    registries = {document["registry_id"]: bind(out, document) for document in (REGISTRY, EXTENSION, *extensions)}
+    registries = {document["registry_id"]: bind(out, document) for document in documents}
 
     sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
     (out / "packet.json").write_text(
@@ -826,6 +831,7 @@ def write_packet(
         )
         + "\n"
     )
+    return numbering
 
 
 def bind(out, document):
@@ -1274,44 +1280,42 @@ ROW_PACKETS = (
 )
 
 
-def bad_type(out: Path) -> None:
-    c = content()
-    t = table("core.intervals", c["core.intervals"])
-    wrong = t.set_column(
-        t.schema.get_field_index("start_tick"),
-        "start_tick",
-        t.column("start_tick").cast(pa.int32()),
-    )
-    write_packet(out, c, raw={"core.intervals": wrong})
+def retyped(column: str, type_: pa.DataType):
+    """Write `column` as `type_`, which its declaration does not give it."""
+
+    def recast(t: pa.Table) -> pa.Table:
+        return t.set_column(t.schema.get_field_index(column), column, t.column(column).cast(type_))
+
+    return recast
 
 
-def extension_bad_type(out: Path) -> None:
-    # Part 05 §5.4: an extension's table is type-checked as core's are, and the finding is its own.
-    c = content()
-    t = table(KIND, c[KIND])
-    wrong = t.set_column(
-        t.schema.get_field_index("trial_id"),
-        "trial_id",
-        t.column("trial_id").cast(pa.float64()),
-    )
-    write_packet(out, c, raw={KIND: wrong})
+def without_column(column: str):
+    """Leave `column` out of the file."""
 
+    def recast(t: pa.Table) -> pa.Table:
+        return t.drop_columns([column])
 
-def missing_column(out: Path) -> None:
-    c = content()
-    t = table("core.intervals", c["core.intervals"])
-    write_packet(out, c, raw={"core.intervals": t.drop_columns(["clock_id"])})
+    return recast
 
 
 #: Three variants that break the physical schema, not the data.
 SCHEMA_PACKETS = (
-    Packet("bad_type", bad_type, Expected("error", "schema.column_type")),
+    Packet(
+        "bad_type",
+        variant(recast={"core.intervals": retyped("start_tick", pa.int32())}),
+        Expected("error", "schema.column_type"),
+    ),
     Packet(
         "extension_bad_type",
-        extension_bad_type,
+        # Part 05 §5.4: an extension's table is type-checked as core's are, and the finding is its own.
+        variant(recast={KIND: retyped("trial_id", pa.float64())}),
         Expected("error", "schema.column_type", registry="dynamic_foraging"),
     ),
-    Packet("missing_column", missing_column, Expected("error", "schema.column_absent")),
+    Packet(
+        "missing_column",
+        variant(recast={"core.intervals": without_column("clock_id")}),
+        Expected("error", "schema.column_absent"),
+    ),
 )
 
 
@@ -1842,7 +1846,6 @@ CUE_EXTENSION = {
         }
     },
 }
-SPECS["cue.tones"] = CUE_EXTENSION["resources"]["cue.tones"]["table"]
 
 
 #: A fixture-local extension declaring a detail table of `core.devices.device_kind`, which core
@@ -1896,7 +1899,6 @@ RIG_EXTENSION = {
         }
     },
 }
-SPECS["rig.neuropixels"] = RIG_EXTENSION["resources"]["rig.neuropixels"]["table"]
 
 
 def probe_of_kind(kind: str | None):
@@ -2335,16 +2337,15 @@ def amend(
     Part 05 §4.3 has an amending build number. `superseded_identity` sets packet-level fields of
     the first version; `identity` overrides, and `dropped` removes, those of the amended one.
     """
-    write_packet(out, make(), extensions=extensions)
+    held = write_packet(out, make(), extensions=extensions).keys
     if superseded_identity:
         edit_manifest(out, lambda manifest: manifest.update(superseded_identity))
-    held = {kind: dict(names) for kind, names in KEYS.items()}
     edited = make()
     change(edited)
-    KEYS.clear()
-    preassign(edited)
+    unheld = Numbering(REGISTRY, EXTENSION, *extensions)
+    unheld.preassign(edited)
     numbers = {}
-    for kind, names in KEYS.items():
+    for kind, names in unheld.keys.items():
         kept = held.get(kind, {})
         added = sorted((name for name in names if name not in kept), key=names.get)
         start = max(kept.values(), default=-1) + 1
