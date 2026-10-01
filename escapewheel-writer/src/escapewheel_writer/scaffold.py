@@ -17,7 +17,7 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-from escapewheel_validator.validator import registry_meta_schema
+from escapewheel_validator import registry_meta_schema
 
 #: R2 §4's vocabulary, keyed by what pyarrow reports. A type outside this is a defect in the
 #: source rather than a gap here: Part 02 §5.2 bans nested types so a native reader stays viable.

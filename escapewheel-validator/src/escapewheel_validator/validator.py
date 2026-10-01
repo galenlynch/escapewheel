@@ -34,9 +34,6 @@ from .manifest import (
     named_registries,
 )
 from .registry_document import CheckedRegistryContext
-from .registry_types import (
-    registry_meta_schema,  # noqa: F401 - `escapewheel_writer.scaffold` imports it from here
-)
 from .report import Report
 from .rules import LIMITS, bounded, run_rules, spill_beside
 from .shim.arrays import check_packet_owned_arrays
