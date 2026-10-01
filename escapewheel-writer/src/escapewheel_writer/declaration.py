@@ -22,6 +22,8 @@ from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from escapewheel_reader.resource_ids import CORE_SESSIONS, CORE_SUBJECTS
+
 from .errors import DeclarationUnreadable, RecipeFault
 
 #: Part 12 §3's group for `escapewheel-portable-v0.1`: the ways rows cross a process boundary.
@@ -51,7 +53,7 @@ SOURCE_CACHE = "source_cache"
 REPORT_AS_FILE = (FILES, STREAM)
 
 #: The recipe block each `states` entry resolves through, to the core table whose columns it names.
-BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
+BLOCKS = {"session": CORE_SESSIONS, "subject": CORE_SUBJECTS}
 
 
 def schema() -> dict[str, Any]:

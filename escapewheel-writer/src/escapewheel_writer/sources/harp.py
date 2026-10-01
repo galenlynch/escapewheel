@@ -13,6 +13,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, ClassVar
 
+from escapewheel_reader.resource_ids import CORE_DEVICES
+
 from ..notes import Note, NoteCode
 from .store import source_root
 
@@ -47,11 +49,11 @@ class HarpSource:
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
-    PRODUCES = frozenset({"core.devices"})
+    PRODUCES = frozenset({CORE_DEVICES})
 
     #: Part 05 §3.4: what of `PRODUCES` this adapter supplies only part of, which a source entry
     #: without `owns` contributes rather than owns.
-    CONTRIBUTES = frozenset({"core.devices"})
+    CONTRIBUTES = frozenset({CORE_DEVICES})
 
     #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
@@ -125,11 +127,11 @@ class HarpSource:
 
     def offers(self) -> dict[str, int]:
         """Part 05 §4.1: how many rows of each resource this root holds."""
-        return {"core.devices": len(self.devices())}
+        return {CORE_DEVICES: len(self.devices())}
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records, keyed by resource ID."""
-        built = {"core.devices": self.devices()}
+        built = {CORE_DEVICES: self.devices()}
         return {resource: rows for resource, rows in built.items() if rows}
 
 

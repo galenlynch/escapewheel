@@ -15,6 +15,15 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import numpy as np
+from escapewheel_reader.resource_ids import (
+    CORE_ARRAY_ASSET_INSTANCES,
+    CORE_ARRAY_ASSETS,
+    CORE_ARRAY_DIMENSIONS,
+    CORE_ARRAY_LABELS,
+    CORE_ELECTRODES,
+    CORE_UNIT_ELECTRODES,
+    CORE_UNITS,
+)
 from numpy.typing import NDArray
 
 from ..errors import SourceDefect, SourceFault
@@ -104,10 +113,10 @@ class WaveformSource:
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
     PRODUCES = frozenset(
         {
-            "core.array_assets",
-            "core.array_dimensions",
-            "core.array_labels",
-            "core.unit_electrodes",
+            CORE_ARRAY_ASSETS,
+            CORE_ARRAY_DIMENSIONS,
+            CORE_ARRAY_LABELS,
+            CORE_UNIT_ELECTRODES,
         }
     )
 
@@ -115,9 +124,9 @@ class WaveformSource:
     #: without `owns` contributes rather than owns.
     CONTRIBUTES = frozenset(
         {
-            "core.array_assets",
-            "core.array_dimensions",
-            "core.array_labels",
+            CORE_ARRAY_ASSETS,
+            CORE_ARRAY_DIMENSIONS,
+            CORE_ARRAY_LABELS,
         }
     )
 
@@ -463,13 +472,13 @@ class WaveformSource:
                 "array_asset_id": asset_id,
                 "axis_index": 0,
                 "dimension_name": "unit",
-                "coordinate_resource": "core.units",
+                "coordinate_resource": CORE_UNITS,
             },
             {
                 "array_asset_id": asset_id,
                 "axis_index": 1,
                 "dimension_name": "channel",
-                "coordinate_resource": "core.electrodes",
+                "coordinate_resource": CORE_ELECTRODES,
                 "depends_on_axis_index": 0,
             },
             sample_axis,
@@ -581,7 +590,7 @@ class WaveformSource:
                 StagedArray(
                     values=values,
                     resource_id=f"core.{asset_id}",
-                    declaration_id="core.array_asset_instances",
+                    declaration_id=CORE_ARRAY_ASSET_INSTANCES,
                     array_asset_id=asset_id,
                     chunks=chunks,
                     shard=shard_for(values.shape, chunks, self.compressed_per_chunk),
@@ -597,10 +606,10 @@ class WaveformSource:
         `PacketWriter.add_array` from `staged_arrays`.
         """
         built = {
-            "core.array_assets": self.array_assets(),
-            "core.array_dimensions": self.array_dimensions(clock_id=clock_id),
-            "core.array_labels": self.array_labels(),
-            "core.unit_electrodes": self.unit_electrodes(),
+            CORE_ARRAY_ASSETS: self.array_assets(),
+            CORE_ARRAY_DIMENSIONS: self.array_dimensions(clock_id=clock_id),
+            CORE_ARRAY_LABELS: self.array_labels(),
+            CORE_UNIT_ELECTRODES: self.unit_electrodes(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 

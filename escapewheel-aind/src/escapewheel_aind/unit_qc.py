@@ -31,6 +31,7 @@ from numpy.typing import NDArray
 
 from .errors import AindFault
 from .notes import AindNote
+from .resource_ids import AIND_UNIT_QC_METRICS, AIND_UNIT_QC_SYNCHRONY, AIND_UNIT_QC_WAVEFORM_METRICS
 
 #: The analyzer extensions holding each table's metrics, as a data frame of one array per column.
 QUALITY = "extensions/quality_metrics/metrics"
@@ -120,7 +121,7 @@ class UnitQCSource:
     PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
-    PRODUCES = frozenset({"aind_unit_qc.metrics", "aind_unit_qc.waveform_metrics", "aind_unit_qc.synchrony"})
+    PRODUCES = frozenset({AIND_UNIT_QC_METRICS, AIND_UNIT_QC_WAVEFORM_METRICS, AIND_UNIT_QC_SYNCHRONY})
 
     #: Part 05 §3.4: recipe fields this adapter states. Declared empty rather than omitted, because a
     #: build refuses a source it cannot ask.
@@ -247,12 +248,12 @@ class UnitQCSource:
                     seen[unit] = stream.key
                 if self.nwb is not None:
                     quality = self._fill(stream, quality, kept)
-                built["aind_unit_qc.metrics"] += self._table(quality, METRICS, kept, identity)
-                built["aind_unit_qc.synchrony"] += self._synchrony(quality, kept, identity)
+                built[AIND_UNIT_QC_METRICS] += self._table(quality, METRICS, kept, identity)
+                built[AIND_UNIT_QC_SYNCHRONY] += self._synchrony(quality, kept, identity)
             template = self._frame(stream, TEMPLATE)
             if template is not None:
                 kept, identity = self._rows(stream, template)
-                built["aind_unit_qc.waveform_metrics"] += self._table(template, WAVEFORM_METRICS, kept, identity)
+                built[AIND_UNIT_QC_WAVEFORM_METRICS] += self._table(template, WAVEFORM_METRICS, kept, identity)
         if not seen:
             raise SourceDefect(
                 "no unit in the analyzer's quality metrics matches the packet's sorting", code=AindFault.NO_UNIT_MATCHES

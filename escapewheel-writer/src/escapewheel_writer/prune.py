@@ -16,10 +16,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
 from escapewheel_reader.uri import decode, is_absolute
 
 from .errors import NotCommitted, PromotionRecordUnreadable
-from .writer import MANIFEST, MANIFESTS, STAGING, read_promotion, semver
+from .writer import STAGING, read_promotion, semver
 
 #: Part 05 §15.5. One superseded manifest, and no age limit: a packet is an archival artifact where a
 #: table is an operational one, so age alone never expires one.
@@ -114,7 +115,7 @@ def _files(root: Path) -> Iterator[Path]:
         if not path.is_file():
             continue
         relative = path.relative_to(root)
-        if relative.parts[0] == MANIFESTS or relative.as_posix() == MANIFEST:
+        if relative.parts[0] == MANIFESTS_DIRNAME or relative.as_posix() == MANIFEST_FILENAME:
             continue
         yield path
 
@@ -145,9 +146,9 @@ def prune(
         What would be removed, or was.
     """
     root = Path(root)
-    manifest_path = root / MANIFEST
+    manifest_path = root / MANIFEST_FILENAME
     if not manifest_path.is_file():
-        raise NotCommitted(f"{root} carries no {MANIFEST}, so there is no committed state to clean up")
+        raise NotCommitted(f"{root} carries no {MANIFEST_FILENAME}, so there is no committed state to clean up")
     current = _read(manifest_path)
 
     declared = current.get("retention") or {}
@@ -155,7 +156,7 @@ def prune(
     days = keep_days if keep_days is not None else declared.get("keep_days", KEEP_DAYS)
 
     superseded = sorted(
-        ((path, _read(path)) for path in (root / MANIFESTS).glob("*.json")),
+        ((path, _read(path)) for path in (root / MANIFESTS_DIRNAME).glob("*.json")),
         key=lambda pair: semver(pair[1].get("packet_version", "")),
     )
     # The current version's own retained copy is not superseded, whatever the policy says.

@@ -26,6 +26,19 @@ from typing import Any, ClassVar
 
 import numpy as np
 import pyarrow as pa
+from escapewheel_reader.resource_ids import (
+    CORE_CLOCK_OBSERVATION_INTERVALS,
+    CORE_CLOCKS,
+    CORE_CURATION_VERSIONS,
+    CORE_PROBES,
+    CORE_PROCESSING_RUNS,
+    CORE_SORTING_RUN_CHANNELS,
+    CORE_SORTING_RUNS,
+    CORE_SPIKE_EVENTS,
+    CORE_UNIT_QUALITY_LABELS,
+    CORE_UNITS,
+)
+from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 from numpy.typing import NDArray
 
 from ..clock import Clock
@@ -174,16 +187,16 @@ class SorterSource:
     #: therefore needs the data.
     PRODUCES = frozenset(
         {
-            "core.clock_observation_intervals",
-            "core.clocks",
-            "core.curation_versions",
-            "core.probes",
-            "core.processing_runs",
-            "core.sorting_run_channels",
-            "core.sorting_runs",
-            "core.spike_events",
-            "core.unit_quality_labels",
-            "core.units",
+            CORE_CLOCK_OBSERVATION_INTERVALS,
+            CORE_CLOCKS,
+            CORE_CURATION_VERSIONS,
+            CORE_PROBES,
+            CORE_PROCESSING_RUNS,
+            CORE_SORTING_RUN_CHANNELS,
+            CORE_SORTING_RUNS,
+            CORE_SPIKE_EVENTS,
+            CORE_UNIT_QUALITY_LABELS,
+            CORE_UNITS,
         }
     )
 
@@ -191,8 +204,8 @@ class SorterSource:
     #: without `owns` contributes rather than owns.
     CONTRIBUTES = frozenset(
         {
-            "core.clock_observation_intervals",
-            "core.clocks",
+            CORE_CLOCK_OBSERVATION_INTERVALS,
+            CORE_CLOCKS,
         }
     )
 
@@ -512,7 +525,7 @@ class SorterSource:
                     # R44 §2.1. The probe is what a sorting is *about*, so two sortings of one
                     # probe are alternatives and several probes sorted once each are not. R49 §2.2
                     # names the kind as a resource ID, so a consumer resolves it from the registry.
-                    "scope_kind": "core.probes",
+                    "scope_kind": CORE_PROBES,
                     "scope": self._probe_id(stream),
                     "software_name": log.get("sorter_name") or "unknown",
                     "software_version": log.get("sorter_version"),
@@ -528,7 +541,7 @@ class SorterSource:
                     # The sorting rather than the probe: a curation is of one sorting, so
                     # choosing the sorting already narrows this, and scoping to the probe would
                     # restate that ambiguity instead of composing with it.
-                    "scope_kind": "core.sorting_runs",
+                    "scope_kind": CORE_SORTING_RUNS,
                     "scope": self._sorting_run_id(stream),
                     "software_name": "spikeinterface",
                     "software_version": curation.get("format_version"),
@@ -688,7 +701,7 @@ class SorterSource:
         if analyzer is None:
             return None
         path = analyzer / "extensions" / "spike_amplitudes" / "amplitudes"
-        if not (path / ".zarray").is_file():
+        if not (path / ZARR_METADATA_FILENAMES[2]).is_file():
             self.notes.append(Note(f"{stream.key}: analyzer carries no spike_amplitudes", NoteCode.NO_AMPLITUDES))
             return None
         values = read_array(path)
@@ -967,15 +980,15 @@ class SorterSource:
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records; spikes are not among them."""
         built = {
-            "core.probes": self.probes(),
-            "core.clocks": self.clocks(),
-            "core.sorting_runs": self.sorting_runs(),
-            "core.sorting_run_channels": self.sorting_run_channels(),
-            "core.curation_versions": self.curation_versions(),
-            "core.units": self.units(),
-            "core.unit_quality_labels": self.unit_quality_labels(),
-            "core.clock_observation_intervals": self.observation_intervals(),
-            "core.processing_runs": self.processing_runs(),
+            CORE_PROBES: self.probes(),
+            CORE_CLOCKS: self.clocks(),
+            CORE_SORTING_RUNS: self.sorting_runs(),
+            CORE_SORTING_RUN_CHANNELS: self.sorting_run_channels(),
+            CORE_CURATION_VERSIONS: self.curation_versions(),
+            CORE_UNITS: self.units(),
+            CORE_UNIT_QUALITY_LABELS: self.unit_quality_labels(),
+            CORE_CLOCK_OBSERVATION_INTERVALS: self.observation_intervals(),
+            CORE_PROCESSING_RUNS: self.processing_runs(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 
@@ -992,8 +1005,8 @@ class SorterSource:
         for resource, rows in self.records().items():
             writer.add(resource, rows)
             counted[resource] = len(rows)
-        writer.add_batches("core.spike_events", self.spike_batches(batch_rows=batch_rows))
-        counted["core.spike_events"] = self.spike_count
+        writer.add_batches(CORE_SPIKE_EVENTS, self.spike_batches(batch_rows=batch_rows))
+        counted[CORE_SPIKE_EVENTS] = self.spike_count
         return counted
 
     @property
@@ -1010,7 +1023,7 @@ class SorterSource:
         """Which resources this source supplies from its root, and how many rows (Part 05 §4.1)."""
         return {
             **{resource: len(rows) for resource, rows in self.records().items()},
-            "core.spike_events": self.spike_count,
+            CORE_SPIKE_EVENTS: self.spike_count,
         }
 
 

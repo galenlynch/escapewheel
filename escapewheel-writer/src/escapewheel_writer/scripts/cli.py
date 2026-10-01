@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from escapewheel_reader.errors import EscapewheelError
+from escapewheel_reader.manifest import MANIFEST_FILENAME
 from escapewheel_reader.registries import gunzip_member
 from escapewheel_validator import (
     EvaluationStatus,
@@ -336,7 +337,7 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
 
 def _bound_registries(root: Path) -> dict[str, bytes]:
     """Return the exact bytes of each registry the packet at `root` binds, by registry ID."""
-    manifest = root / "packet.json"
+    manifest = root / MANIFEST_FILENAME
     if not manifest.is_file():
         return {}
     registries = json.loads(manifest.read_text()).get("registries", {})

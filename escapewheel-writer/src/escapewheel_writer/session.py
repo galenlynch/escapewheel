@@ -27,6 +27,22 @@ from typing import Any
 
 import numpy as np
 from escapewheel_reader.clocks import BOUND, align
+from escapewheel_reader.resource_ids import (
+    ANALYSIS_SPIKE_EVENTS,
+    CORE_CLOCK_ANCHORS,
+    CORE_CLOCK_OBSERVATION_INTERVALS,
+    CORE_CLOCKS,
+    CORE_EVENT_STREAM_OBSERVATION_INTERVALS,
+    CORE_EVENT_STREAMS,
+    CORE_PREFERRED_RUNS,
+    CORE_PROCESSING_RUN_INPUTS,
+    CORE_PROCESSING_RUNS,
+    CORE_SESSIONS,
+    CORE_SOURCE_FILES,
+    CORE_SPIKE_EVENTS,
+    CORE_SUBJECTS,
+    CORE_UNITS,
+)
 from escapewheel_validator import CheckedRegistryContext, RegistryRejected, RegistryState, check_registry_context
 from numpy.typing import NDArray
 
@@ -67,7 +83,7 @@ from .writer import PacketWriter
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
 #: staged packet. Part 06 §2 makes these disposable, so a recipe that names none is complete.
-MATERIALIZERS: dict[str, str] = {"analysis.spike_events": "spike_events"}
+MATERIALIZERS: dict[str, str] = {ANALYSIS_SPIKE_EVENTS: "spike_events"}
 
 
 #: Rows per batch when streaming a spike table into staging, and therefore the row-group size:
@@ -398,7 +414,7 @@ REFUSES_ON_DIFFERENCE = frozenset({"subject.subject_id"})
 SOURCE_WINS = frozenset({"session.session_start_time", "session.session_end_time"})
 
 #: The recipe block each resource's fields are declared in, for Part 05 §3.6's comparison type.
-FACT_BLOCKS = {"session": "core.sessions", "subject": "core.subjects"}
+FACT_BLOCKS = {"session": CORE_SESSIONS, "subject": CORE_SUBJECTS}
 
 
 def _fact_types(registry: Mapping[str, Any]) -> dict[str, str]:
@@ -544,11 +560,11 @@ def _compare_held_facts(
 #: is read from the rows a source produced rather than by asking the source, so a source delivered
 #: out of process -- a process that has exited by the time this runs -- is harvested the same way.
 HARVESTED = (
-    "core.units",
-    "core.clocks",
-    "core.event_streams",
-    "core.clock_anchors",
-    "core.clock_observation_intervals",
+    CORE_UNITS,
+    CORE_CLOCKS,
+    CORE_EVENT_STREAMS,
+    CORE_CLOCK_ANCHORS,
+    CORE_CLOCK_OBSERVATION_INTERVALS,
 )
 
 
@@ -582,7 +598,7 @@ def _harvest(
     declared a clock is not what makes it a clock, and a build that dispatched on the kind could
     only harvest from the kinds it was written against.
     """
-    if units := rows("core.units"):
+    if units := rows(CORE_UNITS):
         # The NWB names a quad-base probe's shanks separately and the sorting run ID ends in
         # exactly that name, while probe_id collapses to the physical probe.
         context.units += [
@@ -593,20 +609,20 @@ def _harvest(
             }
             for row in units
         ]
-    for row in rows("core.clocks"):
+    for row in rows(CORE_CLOCKS):
         # Merged rather than replaced: `core.clocks` is shared, so two sources may each state
         # part of one clock -- a rate here, a located tick 0 there -- and the last to run must
         # not erase what the first knew.
         known = context.clocks.setdefault(str(row["clock_id"]), {})
         known.update({column: value for column, value in row.items() if value is not None})
-    context.anchors += rows("core.clock_anchors")
-    context.event_streams += [row["event_stream_id"] for row in rows("core.event_streams")]
+    context.anchors += rows(CORE_CLOCK_ANCHORS)
+    context.event_streams += [row["event_stream_id"] for row in rows(CORE_EVENT_STREAMS)]
     if (reference := context.reference) is not None:
         # The window this source watched the reference clock over, which the build pairs with the
         # streams another source declared. Kept per source: two sources may each declare a window
         # on one clock -- a sync train and an acquisition are both true -- and only the one that
         # comes with the resource being composed says when those streams were watched.
-        for row in rows("core.clock_observation_intervals"):
+        for row in rows(CORE_CLOCK_OBSERVATION_INTERVALS):
             if row["clock_id"] == reference.clock_id:
                 context.windows[spec.kind] = (int(row["start_tick"]), int(row["stop_tick"]))
     _compare_declared_facts(spec, source, context, recipe)
@@ -735,10 +751,10 @@ def _add_batches(
     produced: dict[str, int] = {}
     if hasattr(source, "spike_batches"):
         # Counted from the arrays' headers, so an unclaimed spike table still reports its size.
-        produced["core.spike_events"] = source.spike_count
-        if "core.spike_events" in spec.claims:
-            writer.add_batches("core.spike_events", source.spike_batches(batch_rows=BATCH_ROWS))
-            counts["core.spike_events"] = produced["core.spike_events"]
+        produced[CORE_SPIKE_EVENTS] = source.spike_count
+        if CORE_SPIKE_EVENTS in spec.claims:
+            writer.add_batches(CORE_SPIKE_EVENTS, source.spike_batches(batch_rows=BATCH_ROWS))
+            counts[CORE_SPIKE_EVENTS] = produced[CORE_SPIKE_EVENTS]
     streamed = getattr(source, "batches", None)
     if streamed is None:
         return produced
@@ -766,7 +782,7 @@ def _composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, An
     what decides the composition -- and paired with that source's own window, since two sources
     may each declare one on the reference clock and only one of them is these streams'.
     """
-    resource = "core.event_stream_observation_intervals"
+    resource = CORE_EVENT_STREAM_OBSERVATION_INTERVALS
     window = context.windows.get(spec.kind)
     if resource not in spec.claims or window is None or not context.event_streams:
         return {}
@@ -943,8 +959,8 @@ def build(  # noqa: C901
 
     # Part 05 §3.1: the recipe supplies `core.subjects` only where no source owns it, so a packet
     # whose NWB claims the table gets the row that file states rather than a hand-typed one.
-    if recipe.subject and "core.subjects" not in recipe.owners:
-        writer.add("core.subjects", [dict(recipe.subject)])
+    if recipe.subject and CORE_SUBJECTS not in recipe.owners:
+        writer.add(CORE_SUBJECTS, [dict(recipe.subject)])
 
     counts: dict[str, int] = {}
     applied: list[str] = []
@@ -1008,7 +1024,7 @@ def build(  # noqa: C901
         say(f"  note: {note}")
     if held is None:
         writer.add(
-            "core.sessions",
+            CORE_SESSIONS,
             [
                 {
                     "session_id": session_id,
@@ -1019,14 +1035,14 @@ def build(  # noqa: C901
         )
     run = _import_run(recipe, applied, context)
     run["processing_run_id"] = writer.name_apart("processing_run_id", run["processing_run_id"])
-    writer.add("core.processing_runs", [run])
+    writer.add(CORE_PROCESSING_RUNS, [run])
     if roots := _source_roots(recipe):
         # A root the packet already records keeps its row, and the import still names it (Part 05 §7).
         recorded = {} if held is None else held.source_files(writer.keys)
         if added := [root for root in roots if root not in recorded]:
-            writer.add("core.source_files", [{"source_file_id": root, "uri": root} for root in added])
+            writer.add(CORE_SOURCE_FILES, [{"source_file_id": root, "uri": root} for root in added])
         writer.add(
-            "core.processing_run_inputs",
+            CORE_PROCESSING_RUN_INPUTS,
             [
                 {
                     "session_id": session_id,
@@ -1037,7 +1053,7 @@ def build(  # noqa: C901
             ],
         )
     if recipe.preferred_runs:
-        writer.add("core.preferred_runs", _preferred_runs(recipe, writer, held, session_id))
+        writer.add(CORE_PREFERRED_RUNS, _preferred_runs(recipe, writer, held, session_id))
     for entry in describe(applied):
         say(f"  compensated: {entry['id']}")
 
@@ -1127,7 +1143,7 @@ def _from_packet(context: Context, held: Held, writer: PacketWriter, session_id:
     from .clock import Clock
 
     keys = writer.keys
-    for row in held.named_rows("core.clocks", keys):
+    for row in held.named_rows(CORE_CLOCKS, keys):
         context.clocks[str(row["clock_id"])] = {k: v for k, v in row.items() if v is not None}
     context.units += [
         {
@@ -1135,12 +1151,12 @@ def _from_packet(context: Context, held: Held, writer: PacketWriter, session_id:
             "local_unit_label": row["local_unit_label"],
             "unit_id": row["unit_id"],
         }
-        for row in held.named_rows("core.units", keys)
+        for row in held.named_rows(CORE_UNITS, keys)
     ]
-    context.anchors += held.named_rows("core.clock_anchors", keys)
-    context.event_streams += [row["event_stream_id"] for row in held.named_rows("core.event_streams", keys)]
-    sessions = [r for r in held.named_rows("core.sessions", keys) if str(r["session_id"]) == session_id]
-    subjects = {str(r["subject_id"]): r for r in held.named_rows("core.subjects", keys)}
+    context.anchors += held.named_rows(CORE_CLOCK_ANCHORS, keys)
+    context.event_streams += [row["event_stream_id"] for row in held.named_rows(CORE_EVENT_STREAMS, keys)]
+    sessions = [r for r in held.named_rows(CORE_SESSIONS, keys) if str(r["session_id"]) == session_id]
+    subjects = {str(r["subject_id"]): r for r in held.named_rows(CORE_SUBJECTS, keys)}
     session = sessions[0] if sessions else {}
     subject = subjects.get(str(session.get("subject_id")), {})
     context.held_facts = {
@@ -1170,9 +1186,9 @@ def _preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, ses
         Naming each entry whose run neither the packet holds nor the build records, or whose run's
         activity or scope differs from the entry's.
     """
-    runs = {str(r["processing_run_id"]): r for r in writer._tables.get("core.processing_runs", [])}
+    runs = {str(r["processing_run_id"]): r for r in writer._tables.get(CORE_PROCESSING_RUNS, [])}
     if held is not None:
-        for row in held.named_rows("core.processing_runs", writer.keys):
+        for row in held.named_rows(CORE_PROCESSING_RUNS, writer.keys):
             runs.setdefault(str(row["processing_run_id"]), row)
     rows, problems = [], []
     for entry in recipe.preferred_runs:
@@ -1298,7 +1314,7 @@ def _import_run(
         "session_id": recipe.session.get("session_id"),
         "activity_type": "import",
         # R44 §2.1: an import is session-wide, and a session-wide run names the session.
-        "scope_kind": "core.sessions",
+        "scope_kind": CORE_SESSIONS,
         "scope": recipe.session.get("session_id"),
         "software_name": "escapewheel-writer",
         "software_version": __version__,
@@ -1350,7 +1366,7 @@ def _add_records(
             context.stated.setdefault(resource, {})[spec.kind] = rows
         if resource not in spec.claims or resource in context.payloads:
             continue
-        if resource == "core.clock_observation_intervals":
+        if resource == CORE_CLOCK_OBSERVATION_INTERVALS:
             # R39's origin is a minimum across every clock, and no adapter sees them all.
             context.observed.extend(rows)
         writer.add(resource, rows)
@@ -1494,7 +1510,7 @@ def _declare_withheld(context: Context, writer: Any, say: Callable[[str], None])
             )
         return
     stamped = writer.stamp(
-        "core.clocks",
+        CORE_CLOCKS,
         "clock_id",
         {
             clock: {

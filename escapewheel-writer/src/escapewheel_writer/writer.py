@@ -8,8 +8,7 @@
 - :func:`read_promotion` -- the version and paths of the promotion record at a root.
 - :func:`retained` -- the name of a manifest's retained copy.
 - :func:`semver` -- a sort key for a `packet_version`.
-- :data:`MANIFEST`, :data:`MANIFESTS`, :data:`STAGING`, :data:`PROMOTION` -- where a packet keeps
-  its manifest, its superseded manifests, its staging area and its promotion record.
+- :data:`STAGING`, :data:`PROMOTION` -- where a packet keeps its staging area and its promotion record.
 
 A commit stages and validates everything under ``staging/``, promotes it, and renames the
 manifest to ``packet.json`` last, so a reader finds a whole packet or none.
@@ -34,8 +33,11 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet, check_sources, open_packet
-from escapewheel_reader.profile import parquet_floor
+from escapewheel_reader.location import SOURCES_FILENAME, SOURCES_VERSION
+from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
+from escapewheel_reader.profile import PROFILE_ID, parquet_floor
 from escapewheel_reader.registries import gunzip_member as gzip_member
+from escapewheel_reader.resource_ids import CORE_INTERVALS, CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS, CORE_SESSIONS
 from escapewheel_reader.uri import canonical, encode, is_absolute
 from escapewheel_validator import (
     CheckedRegistryContext,
@@ -45,7 +47,7 @@ from escapewheel_validator import (
     check_registry_context,
     validate,
 )
-from escapewheel_validator.amendment import DERIVED, chain_reaches
+from escapewheel_validator.amendment import DERIVED, PROVENANCE, chain_reaches
 from escapewheel_validator.errors import OrderViolation
 from escapewheel_validator.generate import adjacency_settles_uniqueness
 from escapewheel_validator.shim.ordering import verify_order
@@ -76,17 +78,6 @@ def _version() -> str:
     return __version__
 
 
-#: Where a manifest lives once committed (Part 04).
-MANIFEST = "packet.json"
-
-#: Part 04 §5.5's default source resolution document. Written at the packet root and **not** a packet
-#: resource: under the root so a copy carries it, outside the manifest so Part 03 §8.1's immutability
-#: does not reach it and a moved mirror is fixed by editing it in place.
-SOURCES = "sources.json"
-
-#: The version of that document this writer emits (Part 04 §5.5).
-SOURCES_VERSION = "escapewheel-sources-v0.1"
-
 #: Where the portable profile stores each bound registry, as `<registry_id>/<version>.json.gz`
 #: (Part 03 §3.3).
 REGISTRIES = "registries"
@@ -99,9 +90,6 @@ PROMOTED = ("tables", "arrays", opaque.ROOT, REGISTRIES)
 VALIDATION_PASSED = "passed"
 VALIDATION_FAILED = "failed"
 VALIDATION_NOT_RUN = "not_run"
-
-#: Part 03's portable profile.
-PROFILE = "escapewheel-portable-v0.1"
 
 #: The portable profile's staging area, directly under the packet root (Part 03 §3.4).
 STAGING = "staging"
@@ -334,16 +322,8 @@ def _write_stream(
     return written
 
 
-#: Core tables whose added rows leave every derived resource current (Part 05 §15.2), since a row
-#: records what ran, not what was measured.
-PROVENANCE = ("core.processing_runs", "core.source_files", "core.processing_run_inputs")
-
-#: Where superseded manifests are retained (Part 03 §9).
-MANIFESTS = "manifests"
-
-
 def retained(manifest: Mapping[str, Any]) -> str:
-    """Name a manifest's retained copy under `MANIFESTS` by its version (Part 03 §3.1)."""
+    """Name a manifest's retained copy under `MANIFESTS_DIRNAME` by its version (Part 03 §3.1)."""
     return f"{manifest['packet_version']}.json"
 
 
@@ -406,7 +386,7 @@ def _act_on_promotion(root: Path) -> None:
     if record is None:
         return
     version, paths = record
-    manifest = root / MANIFEST
+    manifest = root / MANIFEST_FILENAME
     if manifest.is_file() and semver(json.loads(manifest.read_text())["packet_version"]) >= semver(version):
         return
     for relative in paths:
@@ -564,11 +544,13 @@ def _refuse_occupied(root: Path) -> None:
     claims: a stray a writer may not remove (Part 05 §15.5), and moving another into it would nest
     the new one inside.
     """
-    if (root / MANIFEST).exists():
-        raise PacketOccupied(f"{root} already holds a committed {MANIFEST}", root=root, occupied=[MANIFEST])
+    if (root / MANIFEST_FILENAME).exists():
+        raise PacketOccupied(
+            f"{root} already holds a committed {MANIFEST_FILENAME}", root=root, occupied=[MANIFEST_FILENAME]
+        )
     if occupied := [name for name in PROMOTED if (root / name).exists()]:
         raise PacketOccupied(
-            f"{root} holds {', '.join(occupied)} but no committed {MANIFEST}, as an interrupted promotion "
+            f"{root} holds {', '.join(occupied)} but no committed {MANIFEST_FILENAME}, as an interrupted promotion "
             "leaves it; remove them or commit elsewhere",
             root=root,
             occupied=occupied,
@@ -896,9 +878,9 @@ class PacketWriter:
         """
         spec = self.spec(resource_id) or {}
         wanted = any(c["name"] == "session_id" and c["presence"] == "required" for c in spec.get("columns", ()))
-        if not wanted or resource_id == "core.sessions":
+        if not wanted or resource_id == CORE_SESSIONS:
             return records
-        declared = {r.get("session_id") for r in self._tables.get("core.sessions", [])}
+        declared = {r.get("session_id") for r in self._tables.get(CORE_SESSIONS, [])}
         declared.discard(None)
         if not declared and self._session is not None:
             declared = {self._session}
@@ -1560,16 +1542,16 @@ class PacketWriter:
         held = self._held
         scopes = {
             (run["session_id"], run["activity_type"], run["scope_kind"], run["scope"])
-            for run in held.named_rows("core.processing_runs", self.keys)
+            for run in held.named_rows(CORE_PROCESSING_RUNS, self.keys)
             if run.get("scope") is not None and run["activity_type"] != "import"
         }
         held_runs = held.held_names.get("processing_run_id", set())
         preferred = {
             (row.get("session_id", self._session), row["activity_type"], row["scope_kind"], row["scope"])
-            for row in self._tables.get("core.preferred_runs", [])
+            for row in self._tables.get(CORE_PREFERRED_RUNS, [])
         }
         adding = []
-        for run in self._tables.get("core.processing_runs", []):
+        for run in self._tables.get(CORE_PROCESSING_RUNS, []):
             name = str(run["processing_run_id"])
             if name in held_runs or run.get("activity_type") == "import":
                 continue
@@ -1587,7 +1569,7 @@ class PacketWriter:
                     }
                 )
         if adding:
-            self.add("core.preferred_runs", adding)
+            self.add(CORE_PREFERRED_RUNS, adding)
 
     def _preassign(self) -> None:
         """Assign a number to every name this packet uses, before any table is built (Part 05 §4.3).
@@ -1624,7 +1606,7 @@ class PacketWriter:
                 self.keys.of(kind, value)
         # Part 02 §12.9 numbers intervals by session, kind, clock and bounds, which only their rows
         # hold, so the rows order the names; a name no interval row carries is an orphan and follows.
-        for row in sorted(self._tables.get("core.intervals", []), key=self._interval_order):
+        for row in sorted(self._tables.get(CORE_INTERVALS, []), key=self._interval_order):
             self.keys.of("interval_id", str(row["interval_id"]))
         for value in sorted(pending.get("interval_id", ())):
             self.keys.of("interval_id", value)
@@ -1689,7 +1671,7 @@ class PacketWriter:
         report: Report | None,
     ) -> dict[str, Any]:
         """Build the manifest for these resources, binding the registries `_store_registries` wrote."""
-        sessions = sorted({r["session_id"] for r in self._tables.get("core.sessions", []) if "session_id" in r})
+        sessions = sorted({r["session_id"] for r in self._tables.get(CORE_SESSIONS, []) if "session_id" in r})
         now = datetime.now(tz=UTC).isoformat().replace("+00:00", "Z")
         validation = {
             "status": VALIDATION_NOT_RUN
@@ -1702,7 +1684,7 @@ class PacketWriter:
         manifest: dict[str, Any] = {
             "packet_id": self._packet_id,
             "packet_version": _first_version(self._packet_id, self._replaces),
-            "profile_id": PROFILE,
+            "profile_id": PROFILE_ID,
             "semantic_standard_version": self._registry["semantic_standard_version"],
             "logical_standard_version": self._registry["logical_standard_version"],
             "registries": {name: dict(descriptor) for name, descriptor in registries.items()},
@@ -1853,7 +1835,7 @@ class PacketWriter:
         # R1 §6 makes the session inventory part of the manifest and the schema requires it
         # non-empty. Refusing here beats letting the staged manifest fail its own schema,
         # which surfaces as an unhelpful error from a directory the caller never named.
-        if not self._tables.get("core.sessions"):
+        if not self._tables.get(CORE_SESSIONS):
             raise UsageError(
                 "a packet declares at least one session; core.sessions is empty (R1 §6)", code=UsageFault.NO_SESSION
             )
@@ -1891,7 +1873,7 @@ class PacketWriter:
         #    doing it after the commit costs a second manifest, a version bump and a
         #    revalidation of resources validated seconds earlier, which is what `amend` is for
         #    and what a build the recipe fully describes should never pay.
-        (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, registries, None), indent=2) + "\n")
+        (staging / MANIFEST_FILENAME).write_text(json.dumps(self._manifest(entries, registries, None), indent=2) + "\n")
         if materialize:
             # Row counts, not just names: a materializer adds its own `core.processing_runs`
             # row (Part 06 §5), and that table was staged in the pass above. Restaging only what is
@@ -1910,7 +1892,9 @@ class PacketWriter:
             restaged = self._stage(staging, only=touched)
             kept = [e for e in entries if e["resource_id"] not in touched]
             entries = self._with_lineage([*kept, *restaged])
-            (staging / MANIFEST).write_text(json.dumps(self._manifest(entries, registries, None), indent=2) + "\n")
+            (staging / MANIFEST_FILENAME).write_text(
+                json.dumps(self._manifest(entries, registries, None), indent=2) + "\n"
+            )
             say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
             clock = time.perf_counter()
         # Scan the order of everything except what `_write_stream` compared on the way in.
@@ -1927,11 +1911,13 @@ class PacketWriter:
         #    document first since it alone can still fail
         sources = self._sources_document()
         promoted = [name for name in PROMOTED if (staging / name).exists()]
-        creates = [*promoted, *([SOURCES] if sources is not None else []), f"{MANIFEST}.candidate"]
+        creates = [*promoted, *([SOURCES_FILENAME] if sources is not None else []), f"{MANIFEST_FILENAME}.candidate"]
         _claim(root, creates)
         _record_promotion(staging, str(self._manifest(entries, registries, None)["packet_version"]), creates)
         if sources is not None:
-            (root / SOURCES).write_text(json.dumps(sources, indent=2) + "\n")
+            # At the root so a copy carries it, and outside the manifest so a moved mirror is fixed by
+            # editing it in place (Part 04 §5.5).
+            (root / SOURCES_FILENAME).write_text(json.dumps(sources, indent=2) + "\n")
         for entry in entries:
             entry["validation_state"] = VALIDATION_PASSED
         for name in promoted:
@@ -1939,9 +1925,9 @@ class PacketWriter:
 
         # 4. rename the manifest last: until this line the root holds no manifest at all,
         #    so a reader finds nothing rather than a partial import claiming to be valid.
-        candidate = root / f"{MANIFEST}.candidate"
+        candidate = root / f"{MANIFEST_FILENAME}.candidate"
         candidate.write_text(json.dumps(self._manifest(entries, registries, report), indent=2) + "\n")
-        os.replace(candidate, root / MANIFEST)
+        os.replace(candidate, root / MANIFEST_FILENAME)
         shutil.rmtree(staging)
         if self._workspace is not None and self._workspace.exists():
             shutil.rmtree(self._workspace)
@@ -2002,8 +1988,8 @@ class PacketWriter:
         """
         root = Path(root)
         _act_on_promotion(root)
-        if not (root / MANIFEST).is_file():
-            raise NotCommitted(f"{root} holds no committed {MANIFEST}; use commit() to create a packet")
+        if not (root / MANIFEST_FILENAME).is_file():
+            raise NotCommitted(f"{root} holds no committed {MANIFEST_FILENAME}; use commit() to create a packet")
         if self._held is None:
             self.amending(Held.open(root))
         held = self._held
@@ -2119,12 +2105,12 @@ class PacketWriter:
 
         moved = [e["uri"] for e in entries if not e.get("external")]
         copies = [
-            f"{MANIFESTS}/{retained(manifest)}"
+            f"{MANIFESTS_DIRNAME}/{retained(manifest)}"
             for manifest in (superseded, amended)
-            if not (root / MANIFESTS / retained(manifest)).exists()
+            if not (root / MANIFESTS_DIRNAME / retained(manifest)).exists()
         ]
         creates = {_created(root, relative) for relative in (*moved, *added_registries, *copies)}
-        creates |= {f"{MANIFEST}.candidate"}
+        creates |= {f"{MANIFEST_FILENAME}.candidate"}
         _claim(root, creates)
         _record_promotion(staging, version, creates)
         for relative in (*moved, *added_registries):
@@ -2148,9 +2134,9 @@ class PacketWriter:
 
         body = (json.dumps(amended, indent=2) + "\n").encode()
         self._retain(root, superseded, amended, body)
-        candidate_path = root / f"{MANIFEST}.candidate"
+        candidate_path = root / f"{MANIFEST_FILENAME}.candidate"
         candidate_path.write_bytes(body)
-        os.replace(candidate_path, root / MANIFEST)
+        os.replace(candidate_path, root / MANIFEST_FILENAME)
         shutil.rmtree(staging)
         if self._workspace is not None and self._workspace.exists():
             shutil.rmtree(self._workspace)
@@ -2198,9 +2184,9 @@ class PacketWriter:
         at a state nothing can reconstruct. Exact, because a replacement names a version by the
         SHA-256 of its manifest (Part 04 §3).
         """
-        versions = root / MANIFESTS
+        versions = root / MANIFESTS_DIRNAME
         versions.mkdir(exist_ok=True)
-        for manifest, body in ((superseded, (root / MANIFEST).read_bytes()), (amended, amended_body)):
+        for manifest, body in ((superseded, (root / MANIFEST_FILENAME).read_bytes()), (amended, amended_body)):
             path = versions / retained(manifest)
             # An existing copy is the one an earlier amendment retained, and retained bytes are
             # not rewritten.
@@ -2234,7 +2220,7 @@ class PacketWriter:
             The root-relative final path of each registry written under `staging`.
         """
         recorded: dict[tuple[str, str], Mapping[str, str]] = {}
-        for manifest_path in [root / MANIFEST, *sorted((root / MANIFESTS).glob("*.json"))]:
+        for manifest_path in [root / MANIFEST_FILENAME, *sorted((root / MANIFESTS_DIRNAME).glob("*.json"))]:
             if manifest_path.is_file():
                 for name, bound in json.loads(manifest_path.read_text()).get("registries", {}).items():
                     recorded.setdefault((name, bound["version"]), bound)
@@ -2274,11 +2260,7 @@ class PacketWriter:
 
 
 __all__ = [
-    "MANIFEST",
-    "MANIFESTS",
-    "PROFILE",
     "PROMOTION",
-    "PROVENANCE",
     "REGISTRIES",
     "STAGING",
     "ExternalMedia",

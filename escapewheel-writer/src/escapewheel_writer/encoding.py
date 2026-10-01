@@ -24,6 +24,16 @@ from typing import Any, NamedTuple
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
+from escapewheel_reader.resource_ids import (
+    CORE_ARRAY_CHANNELS,
+    CORE_ARRAY_LABELS,
+    CORE_CLOCK_OBSERVATION_INTERVALS,
+    CORE_CLOCK_PHASE_STEPS,
+    CORE_ELECTRODE_COORDINATES,
+    CORE_ELECTRODES,
+    CORE_UNIT_ELECTRODES,
+    CORE_UNITS,
+)
 
 from .arrow import sort_key
 
@@ -33,33 +43,33 @@ from .arrow import sort_key
 DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     # A reference climbing through a dozen runs hundreds of rows long, which the run rule gives
     # plain: delta 1.19x to 1.27x over plain.
-    "core.electrodes": ("probe_id",),
+    CORE_ELECTRODES: ("probe_id",),
 }
 
 #: Columns the rules give a dictionary or delta that plain serves better, each measured.
 NO_DICTIONARY: dict[str, tuple[str, ...]] = {
     # Two values alternating electrode by electrode: plain 1.49x to 2.03x over a dictionary. A
     # structure id in runs of about ten: plain 1.38x to 1.43x.
-    "core.electrode_coordinates": ("coordinate_frame", "coordinate_basis", "region_id"),
+    CORE_ELECTRODE_COORDINATES: ("coordinate_frame", "coordinate_basis", "region_id"),
     # A trailing key component, climbing within each unit and resetting: plain 1.59x to 1.85x over
     # delta.
-    "core.unit_electrodes": ("electrode_id",),
+    CORE_UNIT_ELECTRODES: ("electrode_id",),
     # Eight shifts cycling channel by channel: plain 1.34x to 1.35x over a dictionary.
-    "core.array_channels": ("inter_sample_shift",),
+    CORE_ARRAY_CHANNELS: ("inter_sample_shift",),
     # Ticks in tables of 11 to 24 rows: plain 1.15x to 1.30x over delta.
-    "core.clock_phase_steps": ("parent_tick", "t_tick"),
-    "core.clock_observation_intervals": ("stop_tick",),
+    CORE_CLOCK_PHASE_STEPS: ("parent_tick", "t_tick"),
+    CORE_CLOCK_OBSERVATION_INTERVALS: ("stop_tick",),
     # Summaries in unit order rather than time order: plain 1.10x to 1.28x over delta.
-    "core.units": ("first_spike_tick", "last_spike_tick"),
+    CORE_UNITS: ("first_spike_tick", "last_spike_tick"),
     # Identifiers of each unit's contacts in turn: plain 1.04x to 1.20x over delta.
-    "core.array_labels": ("label_id",),
+    CORE_ARRAY_LABELS: ("label_id",),
 }
 
 #: Columns keeping the dictionary the rules would take away, each measured.
 DICTIONARY_COLUMNS: dict[str, tuple[str, ...]] = {
     # Two axes in runs tens of thousands of rows long, which the run rule gives plain: a dictionary
     # 66x to 75x smaller than plain, and delta within 1.13x of it.
-    "core.array_labels": ("axis_index",),
+    CORE_ARRAY_LABELS: ("axis_index",),
 }
 
 #: Rows at which a column of one value repays its dictionary page: a constant is 1.12x smaller

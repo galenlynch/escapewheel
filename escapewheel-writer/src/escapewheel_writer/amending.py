@@ -23,6 +23,8 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet
+from escapewheel_reader.manifest import MANIFEST_FILENAME
+from escapewheel_reader.resource_ids import CORE_CLOCKS, CORE_SESSIONS, CORE_SOURCE_FILES, CORE_SUBJECTS
 from escapewheel_validator.amendment import PREFERENCES, Version, absent, quoted
 
 from .arrow import sort_key
@@ -30,13 +32,10 @@ from .errors import AmendmentFault, AmendmentRefused
 
 #: Tables the packet identifies itself by, whose held rows prevail over every source in an amending
 #: build (Part 05 §3.5).
-PREVAILING = frozenset({"core.sessions", "core.subjects"})
+PREVAILING = frozenset({CORE_SESSIONS, CORE_SUBJECTS})
 
 #: Rows a refusal shows, so a message names the offending rows without printing a table.
 SHOWN = 3
-
-#: Where the packet a build amends keeps its manifest.
-MANIFEST = "packet.json"
 
 
 def owned(spec: Mapping[str, Any]) -> list[tuple[str, str]]:
@@ -113,10 +112,11 @@ class Held:
 
         root = Path(root)
         _act_on_promotion(root)
-        path = root / MANIFEST
+        path = root / MANIFEST_FILENAME
         if not path.is_file():
             raise AmendmentRefused(
-                f"{root} holds no published {MANIFEST}, so there is no packet to amend", code=AmendmentFault.NO_PACKET
+                f"{root} holds no published {MANIFEST_FILENAME}, so there is no packet to amend",
+                code=AmendmentFault.NO_PACKET,
             )
         return cls(root, json.loads(path.read_text()))
 
@@ -149,14 +149,14 @@ class Held:
 
     def clock_names(self) -> list[str]:
         """Return the `clock_name` of every `core.clocks` row the packet holds (Part 05 §3.5)."""
-        if "core.clocks" not in self.entries:
+        if CORE_CLOCKS not in self.entries:
             return []
-        table = pq.read_table(self.packet.path("core.clocks"), columns=["clock_name"])
+        table = pq.read_table(self.packet.path(CORE_CLOCKS), columns=["clock_name"])
         return [str(name) for name in table.column("clock_name").to_pylist() if name is not None]
 
     def source_files(self, keys: Any) -> dict[str, str]:
         """Return each `uri` the packet's `core.source_files` rows record, to that row's name (Part 05 §7)."""
-        return {str(row["uri"]): str(row["source_file_id"]) for row in self.named_rows("core.source_files", keys)}
+        return {str(row["uri"]): str(row["source_file_id"]) for row in self.named_rows(CORE_SOURCE_FILES, keys)}
 
     # -- numbering --------------------------------------------------------------------
 

@@ -46,6 +46,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, NamedTuple
 
+from escapewheel_reader.resource_ids import CORE_PROCESSING_RUNS, CORE_SESSIONS, CORE_SUBJECTS
 from upath import UPath
 
 from .errors import DeclarationUnreadable, RecipeFault, RecipeUnreadable
@@ -57,7 +58,7 @@ SAMPLED = frozenset({"sorter"})
 
 #: Resources a recipe supplies from its own declarations rather than through a source: the
 #: session it names, and the record of the run that read the sources.
-RECIPE_SUPPLIES = ("core.sessions", "core.processing_runs")
+RECIPE_SUPPLIES = (CORE_SESSIONS, CORE_PROCESSING_RUNS)
 
 #: What Part 04 §4.1 admits after a resource ID's dot, which a prefix begins.
 _PREFIX = re.compile(r"[a-z0-9_.-]*")
@@ -83,7 +84,7 @@ TERMS = frozenset(
 #: Resources the recipe supplies only where no source owns them (Part 05 §3.1). A source may state
 #: every column of `core.subjects`, so a `[subject]` block is the fallback for a packet whose
 #: sources name no subject.
-RECIPE_MAY_SUPPLY = ("core.subjects",)
+RECIPE_MAY_SUPPLY = (CORE_SUBJECTS,)
 
 
 def payloads(registry: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()) -> frozenset[str]:

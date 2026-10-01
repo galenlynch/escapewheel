@@ -13,8 +13,7 @@ import json
 from collections.abc import Iterable
 from pathlib import Path
 
-#: A committed packet's manifest, which is the only file that lists every resource it holds.
-MANIFEST = "packet.json"
+from escapewheel_reader.manifest import MANIFEST_FILENAME
 
 
 def resources(packet: str | Path) -> set[str]:
@@ -32,7 +31,7 @@ def resources(packet: str | Path) -> set[str]:
         read -- a first build has nothing to be compared against, which is not a failure.
     """
     path = Path(packet)
-    manifest = path if path.is_file() else path / MANIFEST
+    manifest = path if path.is_file() else path / MANIFEST_FILENAME
     if not manifest.is_file():
         return set()
     try:

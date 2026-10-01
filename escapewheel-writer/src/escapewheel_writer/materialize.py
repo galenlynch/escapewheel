@@ -23,13 +23,22 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader.clocks import anchors, declared_bound, mapped, reference_clock
 from escapewheel_reader.errors import NotAligned
+from escapewheel_reader.resource_ids import (
+    ANALYSIS_SPIKE_EVENTS,
+    CORE_CLOCK_ANCHORS,
+    CORE_CLOCKS,
+    CORE_PROCESSING_RUNS,
+    CORE_SESSIONS,
+    CORE_SPIKE_EVENTS,
+    CORE_UNITS,
+)
 from numpy.typing import NDArray
 
 from .arrow import schema as arrow_schema
 from .errors import Collided
 
 #: The resource these buckets become, so the spill can take the encoding its columns want.
-RESOURCE = "analysis.spike_events"
+RESOURCE = ANALYSIS_SPIKE_EVENTS
 
 
 def _collided(unit_id: int, t_tick: int) -> Collided:
@@ -70,7 +79,7 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
     Prefers the exact rational `tick_rate_num/den` over the float `tick_rate_hz`, since a clock
     may declare either and the rational is the one that is not already rounded.
     """
-    clocks = packet.table("core.clocks")
+    clocks = packet.table(CORE_CLOCKS)
     column = {n: clocks.column(n).to_pylist() for n in clocks.column_names}
     for i, name in enumerate(column["clock_id"]):
         if name != clock_id:
@@ -90,7 +99,7 @@ def _unit_clocks(packet: Any) -> NDArray[np.int64]:
     so the hop is one column of the far smaller `core.units`. An array rather than a mapping
     because R81 §2.1 numbers `unit_id` densely from zero, so the lookup is an index.
     """
-    units = packet.table("core.units")
+    units = packet.table(CORE_UNITS)
     identifiers = units.column("unit_id").to_numpy(zero_copy_only=False)
     clocks = units.column("clock_id").to_numpy(zero_copy_only=False)
     if identifiers.size == 0:
@@ -291,7 +300,7 @@ def spike_events(
     width = bucket_seconds * _tick_rate(packet, reference)
     dropped = {} if dropped is None else dropped
     by_clock = anchors(packet)
-    handle = packet.table_resource("core.spike_events")
+    handle = packet.table_resource(CORE_SPIKE_EVENTS)
     columns = ["session_id", "unit_id", "t_tick"]
     # `t_tick` reaches its clock by a `clock_from` hop to `core.units.clock_id` (R96 §3.3), so a
     # spike's clock is resolved through its unit rather than carried per row. Resolved once into
@@ -301,7 +310,7 @@ def spike_events(
     # Types come from the registry rather than being spelled here. Every identifier is an
     # `int32` (R53), four bytes a row, so nothing here needs to avoid decoding one.
     registry = packet.registry
-    spike_spec = registry["resources"]["analysis.spike_events"]["table"]
+    spike_spec = registry["resources"][ANALYSIS_SPIKE_EVENTS]["table"]
     out = arrow_schema(spike_spec, {*columns, "clock_id", "time_bucket_tick"})
 
     root = Path(scratch) if scratch else Path(tempfile.mkdtemp(prefix=".materialize-", dir=packet.root.parent))
@@ -394,7 +403,7 @@ def into(
     """
     from . import __version__
 
-    resource = "analysis.spike_events"
+    resource = ANALYSIS_SPIKE_EVENTS
     session = packet.sessions[0] if len(packet.sessions) == 1 else None
     bound = declared_bound(packet) if bound is None else bound
     started = datetime.now(tz=UTC)
@@ -407,7 +416,7 @@ def into(
         # multi-session packet rather than naming one of several, because a writer that
         # cannot determine a run's scope records none (Part 01 §2.6). Part 02 §8.3: the pair is set
         # together or not at all.
-        "scope_kind": "core.sessions" if session else None,
+        "scope_kind": CORE_SESSIONS if session else None,
         "scope": session,
         "software_name": "escapewheel_writer",
         "software_version": __version__,
@@ -442,8 +451,8 @@ def into(
     writer.add_batches(resource, streamed())
     # The anchor table is optional, and lineage may name only a resource the packet carries.
     carried = {r.resource_id for r in packet.resources()}
-    writer.derives(resource, [r for r in ("core.spike_events", "core.clock_anchors", "core.clocks") if r in carried])
-    writer.add("core.processing_runs", [run])
+    writer.derives(resource, [r for r in (CORE_SPIKE_EVENTS, CORE_CLOCK_ANCHORS, CORE_CLOCKS) if r in carried])
+    writer.add(CORE_PROCESSING_RUNS, [run])
     return resource
 
 

@@ -4,10 +4,11 @@ import json
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
 
 from escapewheel_writer.errors import NotCommitted
 from escapewheel_writer.prune import KEEP_VERSIONS, prune
-from escapewheel_writer.writer import MANIFEST, MANIFESTS, PROMOTION, STAGING
+from escapewheel_writer.writer import PROMOTION, STAGING
 
 
 def _manifest(version, resources, registry="0.1.0", when="2026-01-01T00:00:00Z"):
@@ -42,14 +43,16 @@ def packet(tmp_path):
     kept = ("core.kept", "tables/core/kept.parquet")
     dropped = ("core.dropped", "tables/core/dropped.parquet")
     # The packet is on registry 0.2.0, and 0.1.0 stays at the path its own manifest names.
-    (root / MANIFEST).write_text(json.dumps(_manifest("0.3.0", [kept], registry="0.2.0")))
-    (root / MANIFESTS).mkdir()
+    (root / MANIFEST_FILENAME).write_text(json.dumps(_manifest("0.3.0", [kept], registry="0.2.0")))
+    (root / MANIFESTS_DIRNAME).mkdir()
     for version, resources, registry in (
         ("0.1.0", [kept, dropped], "0.1.0"),
         ("0.2.0", [kept], "0.2.0"),
         ("0.3.0", [kept], "0.2.0"),
     ):
-        (root / MANIFESTS / f"{version}.json").write_text(json.dumps(_manifest(version, resources, registry=registry)))
+        (root / MANIFESTS_DIRNAME / f"{version}.json").write_text(
+            json.dumps(_manifest(version, resources, registry=registry))
+        )
     return root
 
 
@@ -90,16 +93,16 @@ def test_the_current_versions_own_copy_is_never_expired(packet):
 
 
 def test_a_packet_declares_its_retention(packet):
-    manifest = json.loads((packet / MANIFEST).read_text())
+    manifest = json.loads((packet / MANIFEST_FILENAME).read_text())
     manifest["retention"] = {"keep_versions": 2}
-    (packet / MANIFEST).write_text(json.dumps(manifest))
+    (packet / MANIFEST_FILENAME).write_text(json.dumps(manifest))
     assert not prune(packet).expired
 
 
 def test_an_argument_overrides_what_the_packet_declares(packet):
-    manifest = json.loads((packet / MANIFEST).read_text())
+    manifest = json.loads((packet / MANIFEST_FILENAME).read_text())
     manifest["retention"] = {"keep_versions": 2}
-    (packet / MANIFEST).write_text(json.dumps(manifest))
+    (packet / MANIFEST_FILENAME).write_text(json.dumps(manifest))
     assert [p.name for p in prune(packet, keep_versions=0).expired] == [
         "0.1.0.json",
         "0.2.0.json",
@@ -114,7 +117,7 @@ def test_both_floors_must_permit_an_expiry(packet):
 
 
 def test_a_manifest_with_no_timestamp_is_kept_and_said_so(packet):
-    path = packet / MANIFESTS / "0.1.0.json"
+    path = packet / MANIFESTS_DIRNAME / "0.1.0.json"
     manifest = json.loads(path.read_text())
     del manifest["created_at"], manifest["validation"]
     path.write_text(json.dumps(manifest))
@@ -134,7 +137,7 @@ def test_a_retained_registry_lives_as_long_as_the_manifest_naming_it_survives(pa
 def test_a_manifest_deleted_out_of_band_strands_its_registry(packet):
     """Which is why Part 05 §15.5 puts orphans first: nothing names the file any more, so it is a
     stray, and a stray is never removed."""
-    (packet / MANIFESTS / "0.1.0.json").unlink()
+    (packet / MANIFESTS_DIRNAME / "0.1.0.json").unlink()
     plan = prune(packet)
     assert "0.1.0.json.gz" in [p.name for p in plan.strays]
     assert "0.1.0.json.gz" not in [p.name for p in plan.orphans]
@@ -148,7 +151,7 @@ def test_a_registry_the_current_manifest_binds_is_never_an_orphan(packet):
 
 
 def test_an_external_resource_is_never_touched(packet):
-    manifest = json.loads((packet / MANIFEST).read_text())
+    manifest = json.loads((packet / MANIFEST_FILENAME).read_text())
     manifest["resources"].append(
         {
             "resource_id": "core.lfp",
@@ -157,7 +160,7 @@ def test_an_external_resource_is_never_touched(packet):
             "external": True,
         }
     )
-    (packet / MANIFEST).write_text(json.dumps(manifest))
+    (packet / MANIFEST_FILENAME).write_text(json.dumps(manifest))
     assert not prune(packet).strays
 
 

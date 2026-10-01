@@ -24,6 +24,27 @@ from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
 import numpy as np
+from escapewheel_reader.resource_ids import (
+    CORE_ARRAY_ASSET_INSTANCES,
+    CORE_ARRAY_ASSETS,
+    CORE_ARRAY_DIMENSIONS,
+    CORE_CLOCK_ANCHORS,
+    CORE_CLOCKS,
+    CORE_COORDINATE_FRAME_AXES,
+    CORE_COORDINATE_FRAMES,
+    CORE_DEVICES,
+    CORE_ELECTRODE_COORDINATE_VALUES,
+    CORE_ELECTRODE_COORDINATES,
+    CORE_ELECTRODES,
+    CORE_EVENT_STREAMS,
+    CORE_EVENTS,
+    CORE_INTERVALS,
+    CORE_PROBES,
+    CORE_SESSIONS,
+    CORE_SUBJECTS,
+    CORE_UNIT_COORDINATE_VALUES,
+    CORE_UNIT_COORDINATES,
+)
 from numpy.typing import NDArray
 
 from ..clock import TickGrid, zone_of
@@ -191,22 +212,22 @@ class NWBSource(Compensates):
     #: therefore needs the data.
     PRODUCES = frozenset(
         {
-            "core.array_assets",
-            "core.array_dimensions",
-            "core.clock_anchors",
-            "core.clocks",
-            "core.devices",
-            "core.coordinate_frame_axes",
-            "core.coordinate_frames",
-            "core.electrode_coordinate_values",
-            "core.electrode_coordinates",
-            "core.electrodes",
-            "core.event_streams",
-            "core.events",
-            "core.intervals",
-            "core.probes",
-            "core.sessions",
-            "core.subjects",
+            CORE_ARRAY_ASSETS,
+            CORE_ARRAY_DIMENSIONS,
+            CORE_CLOCK_ANCHORS,
+            CORE_CLOCKS,
+            CORE_DEVICES,
+            CORE_COORDINATE_FRAME_AXES,
+            CORE_COORDINATE_FRAMES,
+            CORE_ELECTRODE_COORDINATE_VALUES,
+            CORE_ELECTRODE_COORDINATES,
+            CORE_ELECTRODES,
+            CORE_EVENT_STREAMS,
+            CORE_EVENTS,
+            CORE_INTERVALS,
+            CORE_PROBES,
+            CORE_SESSIONS,
+            CORE_SUBJECTS,
         }
     )
     # Not `core.unit_coordinates` or its values. Placing a unit needs the sorter's own label for
@@ -256,11 +277,11 @@ class NWBSource(Compensates):
     #: without `owns` contributes rather than owns.
     CONTRIBUTES = frozenset(
         {
-            "core.array_assets",
-            "core.array_dimensions",
-            "core.clock_anchors",
-            "core.clocks",
-            "core.devices",
+            CORE_ARRAY_ASSETS,
+            CORE_ARRAY_DIMENSIONS,
+            CORE_CLOCK_ANCHORS,
+            CORE_CLOCKS,
+            CORE_DEVICES,
         }
     )
 
@@ -934,7 +955,7 @@ class NWBSource(Compensates):
                 StagedArray(
                     values=values,
                     resource_id=f"core.{self.prefix}{name}",
-                    declaration_id="core.array_asset_instances",
+                    declaration_id=CORE_ARRAY_ASSET_INSTANCES,
                     array_asset_id=f"{self.prefix}{name}",
                     chunks=(min(len(values), 1 << 20),),
                     codecs=("numcodecs.delta", "blosc"),
@@ -1153,7 +1174,7 @@ class NWBSource(Compensates):
                 "core.intervals needs an interval_kind naming the resource that specialises these "
                 "intervals (Part 01 §3.10); set it on the nwb source",
                 code=SourceFault.NO_INTERVAL_KIND,
-                where="core.intervals",
+                where=CORE_INTERVALS,
             )
         columns = self._table("intervals/trials")
         if not columns:
@@ -1234,24 +1255,24 @@ class NWBSource(Compensates):
             Resource ID to records. Empty tables are omitted.
         """
         built = {
-            "core.subjects": self.subjects(),
-            "core.sessions": self.sessions(),
-            "core.clocks": ([self.clock_row] if self.emit_clock else []) + self.signal_clocks(),
-            "core.devices": self.devices(),
-            "core.probes": self.probes(),
-            "core.electrodes": self.electrodes(),
-            "core.coordinate_frames": self.coordinate_frames(),
-            "core.coordinate_frame_axes": self.coordinate_frame_axes(),
-            "core.electrode_coordinates": self.electrode_coordinates(),
-            "core.electrode_coordinate_values": self.electrode_coordinate_values(),
-            "core.unit_coordinates": self.unit_coordinates(),
-            "core.unit_coordinate_values": self.unit_coordinate_values(),
-            "core.event_streams": self.event_streams(),
-            "core.events": self.events(),
-            "core.intervals": self.intervals(),
-            "core.clock_anchors": self.signal_anchors(),
-            "core.array_assets": self.array_assets(),
-            "core.array_dimensions": self.array_dimensions(),
+            CORE_SUBJECTS: self.subjects(),
+            CORE_SESSIONS: self.sessions(),
+            CORE_CLOCKS: ([self.clock_row] if self.emit_clock else []) + self.signal_clocks(),
+            CORE_DEVICES: self.devices(),
+            CORE_PROBES: self.probes(),
+            CORE_ELECTRODES: self.electrodes(),
+            CORE_COORDINATE_FRAMES: self.coordinate_frames(),
+            CORE_COORDINATE_FRAME_AXES: self.coordinate_frame_axes(),
+            CORE_ELECTRODE_COORDINATES: self.electrode_coordinates(),
+            CORE_ELECTRODE_COORDINATE_VALUES: self.electrode_coordinate_values(),
+            CORE_UNIT_COORDINATES: self.unit_coordinates(),
+            CORE_UNIT_COORDINATE_VALUES: self.unit_coordinate_values(),
+            CORE_EVENT_STREAMS: self.event_streams(),
+            CORE_EVENTS: self.events(),
+            CORE_INTERVALS: self.intervals(),
+            CORE_CLOCK_ANCHORS: self.signal_anchors(),
+            CORE_ARRAY_ASSETS: self.array_assets(),
+            CORE_ARRAY_DIMENSIONS: self.array_dimensions(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 

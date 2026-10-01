@@ -20,6 +20,15 @@ from pathlib import Path
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
+from escapewheel_reader.resource_ids import (
+    CORE_CALIBRATION_DEVICES,
+    CORE_CALIBRATION_POINTS,
+    CORE_CALIBRATIONS,
+    CORE_CLOCK_OBSERVATION_INTERVALS,
+    CORE_CLOCKS,
+    CORE_EVENT_STREAM_OBSERVATION_INTERVALS,
+    CORE_SUBJECTS,
+)
 from escapewheel_writer.clock import Clock, epoch_from, zone_of
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.errors import SourceDefect
@@ -110,18 +119,18 @@ class SessionSource(Compensates):
     #: therefore needs the data.
     PRODUCES = frozenset(
         {
-            "core.calibration_devices",
-            "core.calibration_points",
-            "core.calibrations",
-            "core.clocks",
+            CORE_CALIBRATION_DEVICES,
+            CORE_CALIBRATION_POINTS,
+            CORE_CALIBRATIONS,
+            CORE_CLOCKS,
             # The window this source watched the reference clock over, which is the fact the
             # rows below are composed from: the streams watched in it are the NWB's, so the
             # build pairs the two (Part 05 §3.4 leaves a row to one source).
-            "core.clock_observation_intervals",
+            CORE_CLOCK_OBSERVATION_INTERVALS,
             # Declared here because this is the source whose presence makes the resource
             # available, which is what ownership is settled from.
-            "core.event_stream_observation_intervals",
-            "core.subjects",
+            CORE_EVENT_STREAM_OBSERVATION_INTERVALS,
+            CORE_SUBJECTS,
         }
     )
 
@@ -129,8 +138,8 @@ class SessionSource(Compensates):
     #: without `owns` contributes rather than owns.
     CONTRIBUTES = frozenset(
         {
-            "core.clock_observation_intervals",
-            "core.clocks",
+            CORE_CLOCK_OBSERVATION_INTERVALS,
+            CORE_CLOCKS,
         }
     )
 
@@ -687,10 +696,10 @@ class SessionSource(Compensates):
     def offers(self) -> dict[str, int]:
         """Part 05 §4.1: how many rows of each resource this root holds."""
         return {
-            "core.subjects": len(self.subjects()),
-            "core.calibrations": len(self.calibrations()),
-            "core.calibration_points": len(self.calibration_points()),
-            "core.calibration_devices": len(self.calibration_devices()),
+            CORE_SUBJECTS: len(self.subjects()),
+            CORE_CALIBRATIONS: len(self.calibrations()),
+            CORE_CALIBRATION_POINTS: len(self.calibration_points()),
+            CORE_CALIBRATION_DEVICES: len(self.calibration_devices()),
         }
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
@@ -706,15 +715,15 @@ class SessionSource(Compensates):
             whole-second stream start this JSON carries.
         """
         calibrations = {
-            "core.calibrations": self.calibrations(),
-            "core.calibration_devices": self.calibration_devices(),
-            "core.calibration_points": self.calibration_points(),
+            CORE_CALIBRATIONS: self.calibrations(),
+            CORE_CALIBRATION_DEVICES: self.calibration_devices(),
+            CORE_CALIBRATION_POINTS: self.calibration_points(),
         }
         return {
-            "core.clocks": [self.clock_row],
-            **({"core.clock_observation_intervals": watched} if (watched := self.watched()) else {}),
+            CORE_CLOCKS: [self.clock_row],
+            **({CORE_CLOCK_OBSERVATION_INTERVALS: watched} if (watched := self.watched()) else {}),
             # Omitted rather than staged empty where the document is absent, as a calibration is.
-            **({"core.subjects": subjects} if (subjects := self.subjects()) else {}),
+            **({CORE_SUBJECTS: subjects} if (subjects := self.subjects()) else {}),
             # An asset carrying no calibration is conforming (R89 §3), so the resources are
             # omitted rather than staged empty -- a manifest entry a packet cannot answer for.
             **{resource: rows for resource, rows in calibrations.items() if rows},

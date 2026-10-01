@@ -17,12 +17,13 @@ from pathlib import Path
 from typing import Any
 
 from escapewheel_reader import Manifest, Packet
+from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
 from escapewheel_validator import CheckEntry, Level, Report, Scope, validate
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.stores import digest, digest_resource, listing
 
 from .errors import NotCommitted, UsageError, UsageFault
-from .writer import MANIFEST, MANIFESTS, VALIDATION_PASSED, _bump, _version, retained, semver
+from .writer import VALIDATION_PASSED, _bump, _version, retained, semver
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
 #: records a prefix's Part 04 §5.4 per-member listing with the entity tag the store handed over,
@@ -110,9 +111,9 @@ def verify(
     if level not in LEVELS:
         raise UsageError(f"level must be one of {', '.join(LEVELS)}, not {level!r}", code=UsageFault.UNKNOWN_LEVEL)
     root = Path(root)
-    if not (root / MANIFEST).is_file():
-        raise NotCommitted(f"{root} holds no committed {MANIFEST}; there is nothing to verify")
-    superseded_body = (root / MANIFEST).read_bytes()
+    if not (root / MANIFEST_FILENAME).is_file():
+        raise NotCommitted(f"{root} holds no committed {MANIFEST_FILENAME}; there is nothing to verify")
+    superseded_body = (root / MANIFEST_FILENAME).read_bytes()
     superseded = json.loads(superseded_body)
     version = packet_version or _bump(superseded["packet_version"])
     before = semver(superseded["packet_version"])
@@ -162,16 +163,16 @@ def verify(
         "validator_name": "escapewheel_validator",
         "validator_version": _version(),
     }
-    versions = root / MANIFESTS
+    versions = root / MANIFESTS_DIRNAME
     versions.mkdir(exist_ok=True)
     body = (json.dumps(candidate, indent=2) + "\n").encode()
     for manifest, exact in ((superseded, superseded_body), (candidate, body)):
         # Retained bytes are exact and never rewritten (Part 05 §15.3).
         if not (path := versions / retained(manifest)).exists():
             path.write_bytes(exact)
-    written = root / f"{MANIFEST}.candidate"
+    written = root / f"{MANIFEST_FILENAME}.candidate"
     written.write_bytes(body)
-    os.replace(written, root / MANIFEST)
+    os.replace(written, root / MANIFEST_FILENAME)
     report.add(VERIFY_RECORDED, f"{reached} external resource(s) verified at {level}")
     return report, candidate
 

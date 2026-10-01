@@ -27,6 +27,7 @@ import weakref
 from pathlib import Path, PurePath
 from typing import Any
 
+from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 from fsspec.implementations.cached import SimpleCacheFileSystem
 from numpy.typing import NDArray
 from upath import UPath
@@ -236,7 +237,7 @@ class SourceStore:
         """Read an array's `.zarray` document, or None where the path is not a v2 array."""
         key = self._key(path)
         if key not in self._json:
-            document = self.path(path) / ".zarray"
+            document = self.path(path) / ZARR_METADATA_FILENAMES[2]
             self._json[key] = json.loads(document.read_text()) if document.is_file() else None
         return self._json[key]
 

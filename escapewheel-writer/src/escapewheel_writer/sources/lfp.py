@@ -15,6 +15,14 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import numpy as np
+from escapewheel_reader.resource_ids import (
+    CORE_ARRAY_ASSET_INSTANCES,
+    CORE_ARRAY_ASSETS,
+    CORE_ARRAY_CHANNELS,
+    CORE_ARRAY_DIMENSIONS,
+    CORE_ARRAY_LABELS,
+    CORE_ELECTRODES,
+)
 
 from ..errors import SourceDefect, SourceFault, UsageError, UsageFault
 from ..notes import Note, NoteCode
@@ -80,10 +88,10 @@ class LFPSource(Compensates):
     #: therefore needs the data.
     PRODUCES = frozenset(
         {
-            "core.array_assets",
-            "core.array_channels",
-            "core.array_dimensions",
-            "core.array_labels",
+            CORE_ARRAY_ASSETS,
+            CORE_ARRAY_CHANNELS,
+            CORE_ARRAY_DIMENSIONS,
+            CORE_ARRAY_LABELS,
         }
     )
 
@@ -91,9 +99,9 @@ class LFPSource(Compensates):
     #: without `owns` contributes rather than owns.
     CONTRIBUTES = frozenset(
         {
-            "core.array_assets",
-            "core.array_dimensions",
-            "core.array_labels",
+            CORE_ARRAY_ASSETS,
+            CORE_ARRAY_DIMENSIONS,
+            CORE_ARRAY_LABELS,
         }
     )
 
@@ -274,7 +282,7 @@ class LFPSource(Compensates):
                 )
             array = ExternalArray(
                 array_asset_id=self.array_asset_id(series),
-                declaration_id="core.array_asset_instances",
+                declaration_id=CORE_ARRAY_ASSET_INSTANCES,
                 uri=self._uri(series),
                 physical_profile="zarr_v2",
                 codecs=self._codecs(meta),
@@ -387,7 +395,7 @@ class LFPSource(Compensates):
                     "array_asset_id": self.array_asset_id(series),
                     "axis_index": 1,
                     "dimension_name": "channel",
-                    "coordinate_resource": "core.electrodes",
+                    "coordinate_resource": CORE_ELECTRODES,
                 }
             )
             if len(meta["shape"]) != 2:
@@ -472,10 +480,10 @@ class LFPSource(Compensates):
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Return every table this source supplies."""
         return {
-            "core.array_assets": self.array_assets(),
-            "core.array_dimensions": self.array_dimensions(),
-            "core.array_labels": self.array_labels(),
-            "core.array_channels": self.array_channels(),
+            CORE_ARRAY_ASSETS: self.array_assets(),
+            CORE_ARRAY_DIMENSIONS: self.array_dimensions(),
+            CORE_ARRAY_LABELS: self.array_labels(),
+            CORE_ARRAY_CHANNELS: self.array_channels(),
         }
 
     def offers(self) -> dict[str, int]:
@@ -486,10 +494,10 @@ class LFPSource(Compensates):
         """
         channels = sum(len(self.store.array(series / "electrodes")) for series in self._series)
         return {
-            "core.array_assets": len(self._series),
-            "core.array_dimensions": 2 * len(self._series),
-            "core.array_labels": channels,
-            "core.array_channels": channels,
+            CORE_ARRAY_ASSETS: len(self._series),
+            CORE_ARRAY_DIMENSIONS: 2 * len(self._series),
+            CORE_ARRAY_LABELS: channels,
+            CORE_ARRAY_CHANNELS: channels,
         }
 
 

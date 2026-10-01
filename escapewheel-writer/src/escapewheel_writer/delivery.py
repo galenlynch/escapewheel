@@ -39,6 +39,7 @@ from typing import Any, cast
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+from escapewheel_reader.resource_ids import CORE_ARRAY_ASSETS, CORE_MEDIA_ASSETS, CORE_SPIKE_EVENTS
 from escapewheel_reader.uri import canonical, is_absolute
 
 from . import opaque
@@ -103,7 +104,7 @@ def offered(source: Any) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
     for resource, rows in source.records().items():
         delivering[resource] = as_table(rows)
     if hasattr(source, "spike_batches"):
-        delivering["core.spike_events"] = source.spike_batches(batch_rows=BATCH_ROWS)
+        delivering[CORE_SPIKE_EVENTS] = source.spike_batches(batch_rows=BATCH_ROWS)
     for resource, batches in (getattr(source, "batches", dict)() or {}).items():
         delivering[resource] = batches
     return delivering
@@ -431,19 +432,19 @@ class Delivered:
         """Every referenced array the delivery described, as the build's own reference object."""
         from .writer import ExternalArray
 
-        return self._referenced(ExternalArray, "array_asset_id", "core.array_assets")
+        return self._referenced(ExternalArray, "array_asset_id", CORE_ARRAY_ASSETS)
 
     def external_media(self) -> dict[str, Any]:
         """Every referenced media asset the delivery described."""
         from .writer import ExternalMedia
 
-        return self._referenced(ExternalMedia, "media_asset_id", "core.media_assets")
+        return self._referenced(ExternalMedia, "media_asset_id", CORE_MEDIA_ASSETS)
 
     def unresolved(self) -> list[str]:
         """Return the referenced entries no delivered catalog row declares, which a build rejects."""
         declared = {
             str(row[identity])
-            for identity, resource in (("array_asset_id", "core.array_assets"), ("media_asset_id", "core.media_assets"))
+            for identity, resource in (("array_asset_id", CORE_ARRAY_ASSETS), ("media_asset_id", CORE_MEDIA_ASSETS))
             for row in self.rows(resource)
             if row.get(identity)
         }

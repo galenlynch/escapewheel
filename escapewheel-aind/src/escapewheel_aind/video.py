@@ -23,6 +23,7 @@ from urllib.parse import quote
 
 import numpy as np
 import pyarrow as pa
+from escapewheel_reader.resource_ids import CORE_MEDIA_ASSET_INSTANCES, CORE_MEDIA_ASSETS, CORE_MEDIA_FRAMES
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.notes import Note
 from escapewheel_writer.sources.compensations import Compensates
@@ -97,7 +98,7 @@ class VideoSource(Compensates):
     PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
-    PRODUCES = frozenset({"core.media_assets", "core.media_frames"})
+    PRODUCES = frozenset({CORE_MEDIA_ASSETS, CORE_MEDIA_FRAMES})
 
     #: Part 05 §3.4: recipe fields this adapter states, to the attribute holding each. Declared
     #: empty rather than omitted, because a build refuses a source it cannot ask.
@@ -174,7 +175,7 @@ class VideoSource(Compensates):
             local = self.uri_base is None
             found[f"core.{name}"] = ExternalMedia(
                 media_asset_id=name,
-                declaration_id="core.media_asset_instances",
+                declaration_id=CORE_MEDIA_ASSET_INSTANCES,
                 uri=self._uri(video),
                 format=SUFFIX.lstrip("."),
                 # Part 04 §5.2: a writer records only what it looked at. A local path can be sized;
@@ -328,13 +329,13 @@ class VideoSource(Compensates):
         """Part 05 §4.1: how many rows of each resource this root holds."""
         videos = self.videos()
         return {
-            "core.media_assets": len(videos),
-            "core.media_frames": sum(self.frame_count(v) for v in videos),
+            CORE_MEDIA_ASSETS: len(videos),
+            CORE_MEDIA_FRAMES: sum(self.frame_count(v) for v in videos),
         }
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records. Frames stream, so they are not here."""
-        built = {"core.media_assets": self.media_assets()}
+        built = {CORE_MEDIA_ASSETS: self.media_assets()}
         return {resource: rows for resource, rows in built.items() if rows}
 
     def batches(self) -> dict[str, Iterator[pa.RecordBatch]]:
@@ -344,7 +345,7 @@ class VideoSource(Compensates):
             for video in self.videos():
                 yield from self._frames(video)
 
-        return {"core.media_frames": every()}
+        return {CORE_MEDIA_FRAMES: every()}
 
 
 def _ffprobe(video: Path, entries: str) -> str:

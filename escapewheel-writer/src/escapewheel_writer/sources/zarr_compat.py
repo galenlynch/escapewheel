@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 from numpy.typing import NDArray
 
 from ..errors import SourceFault, UnsupportedEncoding
@@ -26,7 +27,7 @@ from ..errors import SourceFault, UnsupportedEncoding
 
 def _meta(path: Path) -> dict[str, Any] | None:
     """Read a v2 array's ``.zarray``, or None if the path is not a v2 array."""
-    marker = path / ".zarray"
+    marker = path / ZARR_METADATA_FILENAMES[2]
     if not marker.is_file():
         return None
     parsed: dict[str, Any] = json.loads(marker.read_text())

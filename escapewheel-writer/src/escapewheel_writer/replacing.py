@@ -17,11 +17,11 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
+from escapewheel_reader.manifest import MANIFEST_FILENAME
 from escapewheel_validator.manifest import manifest_schema
 
 from .errors import RecipeFault, ReplacementRefused
 from .recipe import Problem
-from .writer import MANIFEST
 
 
 @dataclass(frozen=True)
@@ -63,7 +63,7 @@ def read_replaced(entries: Iterable[str], base: Path) -> tuple[Replaced, ...]:
     read: list[Replaced] = []
     for entry in entries:
         path = base / entry
-        path = path / MANIFEST if path.is_dir() else path
+        path = path / MANIFEST_FILENAME if path.is_dir() else path
         try:
             body = path.read_bytes()
             manifest = json.loads(body)

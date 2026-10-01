@@ -23,6 +23,12 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 import numpy as np
+from escapewheel_reader.resource_ids import (
+    CORE_CLOCK_ANCHORS,
+    CORE_CLOCK_OBSERVATION_INTERVALS,
+    CORE_CLOCK_PHASE_STEPS,
+    CORE_CLOCKS,
+)
 from numpy.typing import NDArray
 
 from ..clock import HARP_TICK_RATE_HZ, Clock
@@ -296,10 +302,10 @@ class SyncSource:
     #: therefore needs the data.
     PRODUCES = frozenset(
         {
-            "core.clock_anchors",
-            "core.clock_observation_intervals",
-            "core.clock_phase_steps",
-            "core.clocks",
+            CORE_CLOCK_ANCHORS,
+            CORE_CLOCK_OBSERVATION_INTERVALS,
+            CORE_CLOCK_PHASE_STEPS,
+            CORE_CLOCKS,
         }
     )
 
@@ -307,9 +313,9 @@ class SyncSource:
     #: without `owns` contributes rather than owns.
     CONTRIBUTES = frozenset(
         {
-            "core.clock_anchors",
-            "core.clock_observation_intervals",
-            "core.clocks",
+            CORE_CLOCK_ANCHORS,
+            CORE_CLOCK_OBSERVATION_INTERVALS,
+            CORE_CLOCKS,
         }
     )
 
@@ -785,10 +791,10 @@ class SyncSource:
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Every table this adapter builds as records, keyed by resource ID."""
         built = {
-            "core.clocks": [self.clock().record()],
-            "core.clock_anchors": self.anchors(),
-            "core.clock_observation_intervals": self.observation_intervals(),
-            "core.clock_phase_steps": self.phase_steps(),
+            CORE_CLOCKS: [self.clock().record()],
+            CORE_CLOCK_ANCHORS: self.anchors(),
+            CORE_CLOCK_OBSERVATION_INTERVALS: self.observation_intervals(),
+            CORE_CLOCK_PHASE_STEPS: self.phase_steps(),
         }
         return {resource: rows for resource, rows in built.items() if rows}
 

@@ -18,6 +18,8 @@ compensations
     The upstream faults these adapters work around, recorded in the packet.
 errors
     The codes a defect from these adapters carries.
+resource_ids
+    The extension resource IDs these adapters name.
 
 Notes
 -----

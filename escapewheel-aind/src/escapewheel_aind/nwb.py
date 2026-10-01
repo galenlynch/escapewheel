@@ -14,6 +14,7 @@ import re
 from collections.abc import Mapping
 from typing import Any, ClassVar
 
+from escapewheel_reader.resource_ids import CORE_UNIT_COORDINATE_VALUES, CORE_UNIT_COORDINATES
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.notes import Note
 from escapewheel_writer.sources.nwb import NWBSource, _clean
@@ -103,7 +104,7 @@ class AindNWBSource(NWBSource):
     #: deliver` serves every one; the first is what a build reaches it by when a recipe names none.
     PROTOCOLS: ClassVar[tuple[str, ...]] = (STREAM, FILES, FLIGHT)
 
-    PRODUCES = NWBSource.PRODUCES | {"core.unit_coordinates", "core.unit_coordinate_values"}
+    PRODUCES = NWBSource.PRODUCES | {CORE_UNIT_COORDINATES, CORE_UNIT_COORDINATE_VALUES}
 
     #: `units` is what the base reader does not need: this adapter joins an NWB unit row to the
     #: identity the build assigned, so the build must supply it (Part 12 §4).

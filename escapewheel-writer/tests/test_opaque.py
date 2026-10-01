@@ -718,8 +718,9 @@ def test_cleanup_reads_a_payload_s_uri_decoded_and_a_prefix_as_its_files(tmp_pat
 
 
 def test_cleanup_finds_an_orphaned_payload_prefix(tmp_path):
+    from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
+
     from escapewheel_writer.prune import prune
-    from escapewheel_writer.writer import MANIFEST, MANIFESTS
 
     root = tmp_path / "p"
     frames = root / "opaque" / "core.frames" / "frames"
@@ -736,10 +737,10 @@ def test_cleanup_finds_an_orphaned_payload_prefix(tmp_path):
             ],
         }
 
-    (root / MANIFEST).write_text(json.dumps(manifest("0.2.0", [])))
-    (root / MANIFESTS).mkdir()
-    (root / MANIFESTS / "0.1.0.json").write_text(json.dumps(manifest("0.1.0", ["opaque/core.frames/frames"])))
-    (root / MANIFESTS / "0.2.0.json").write_text(json.dumps(manifest("0.2.0", [])))
+    (root / MANIFEST_FILENAME).write_text(json.dumps(manifest("0.2.0", [])))
+    (root / MANIFESTS_DIRNAME).mkdir()
+    (root / MANIFESTS_DIRNAME / "0.1.0.json").write_text(json.dumps(manifest("0.1.0", ["opaque/core.frames/frames"])))
+    (root / MANIFESTS_DIRNAME / "0.2.0.json").write_text(json.dumps(manifest("0.2.0", [])))
     plan = prune(root, keep_versions=0, keep_days=0)
     assert plan.orphans == (frames / "0.png", frames / "1.png")
     assert not plan.strays
