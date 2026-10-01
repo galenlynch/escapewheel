@@ -98,7 +98,7 @@ not hold — the Tier 2 rules' execution in DuckDB, Git history, the frozen v0.1
 
 ```bash
 uv run --project escapewheel-writer python verify.py
-uv run --project escapewheel-writer python verify.py --quick  # skip the test suites
+uv run --project escapewheel-writer python verify.py --quick  # no test suite
 uv run --project escapewheel-writer python verify.py --stage-timeout 60
 ```
 
@@ -111,6 +111,10 @@ Flight. Each healthy probe completes in well under a second; a blocked probe has
 limit. A runner lacking those facilities is unsuitable for the full suite and fails before
 generation or a package test can hang or be mistaken for an implementation defect. CI runs the
 same command and therefore exercises the same preflight.
+
+`--quick` runs every generator and check and skips the preflight, the four package suites and the
+integration tests. It runs no package suite at all, so after changing a package run that package's
+suite, and those of the packages depending on it, beside it.
 
 ## 4.1 Working with large packets
 

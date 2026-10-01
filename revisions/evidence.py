@@ -140,12 +140,14 @@ def verifier_checks() -> dict[str, Path]:
     if spec is None or spec.loader is None:
         raise ValueError("verify.py cannot be loaded")
     module = importlib.util.module_from_spec(spec)
+    # A dataclass resolves its annotations through `sys.modules`, so the module is registered first.
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     checks = {}
-    for name, cwd, argv in module.STAGES:
-        script = next((argument for argument in argv if str(argument).endswith(".py")), None)
+    for stage in module.STAGES:
+        script = next((argument for argument in stage.command if argument.endswith(".py")), None)
         if script is not None:
-            checks[name] = (cwd / script).resolve()
+            checks[stage.name] = (stage.cwd / script).resolve()
     return checks
 
 

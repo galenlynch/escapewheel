@@ -19,7 +19,7 @@ class VerifierRuntimeGateTests(unittest.TestCase):
     def test_full_run_stops_when_the_runtime_gate_fails(self) -> None:
         with (
             mock.patch.object(sys, "argv", ["verify.py"]),
-            mock.patch.object(verify, "STAGES", [("must not run", verify.ROOT, [])]),
+            mock.patch.object(verify, "STAGES", [verify.Stage("must not run", verify.ROOT, verify.ROOT, ())]),
             mock.patch.object(verify, "SUITES", ()),
             mock.patch.object(verify, "GENERATED", ()),
             mock.patch.object(verify, "run", return_value=(False, "blocked")) as run,
@@ -46,7 +46,7 @@ class VerifierRuntimeGateTests(unittest.TestCase):
         run.assert_not_called()
 
     def test_successful_runtime_gate_precedes_repository_stages(self) -> None:
-        stage = ("ordinary stage", verify.ROOT, ["ordinary"])
+        stage = verify.Stage("ordinary stage", verify.ROOT, verify.ROOT, ("ordinary",))
         with (
             mock.patch.object(sys, "argv", ["verify.py"]),
             mock.patch.object(verify, "STAGES", [stage]),
@@ -62,6 +62,21 @@ class VerifierRuntimeGateTests(unittest.TestCase):
             [call.args[0] for call in run.call_args_list],
             ["runtime: full-suite capabilities", "ordinary stage"],
         )
+
+
+class StageTableTests(unittest.TestCase):
+    """Keep the stage table uniform, since other tools read its names and commands."""
+
+    def test_every_stage_names_its_environment_and_runs_python_or_pytest(self) -> None:
+        for stage in [verify.RUNTIME_CAPABILITY_STAGE, *verify.STAGES, *verify.SUITES]:
+            with self.subTest(stage=stage.name):
+                self.assertEqual(stage.argv[:4], ["uv", "run", "--project", str(stage.project)])
+                self.assertIn(stage.command[0], {"python", "pytest"})
+                self.assertTrue((stage.project / "pyproject.toml").is_file())
+
+    def test_stage_names_are_unique(self) -> None:
+        names = [stage.name for stage in [*verify.STAGES, *verify.SUITES]]
+        self.assertEqual(len(names), len(set(names)))
 
 
 class CapabilitySupervisorTests(unittest.TestCase):
