@@ -614,3 +614,35 @@ Found and left as they were:
   the same simplified shape, so each test checks what it checked. A test holds that the fixture
   declares only resources the core registry declares. Individual tests still add declarations
   core lacks; the shared fixture of §8 is the place for those.
+
+### 11.12 Reader citations and the shared helpers' home
+
+- Every reader module and test cites a rule once, at the definition that implements it. Where one
+  section governs a whole module, the module docstring carries the citation and its members do
+  not repeat it. The copied descriptor checker keeps its citations.
+- An exception class cites the rule it refuses under, and the message raising it does not. A
+  message keeps a citation only where it tells its reader what to declare: the three run
+  messages, which cite Part 05 §12.
+- A revision citation became the part that states the rule. Where the revision's clause is
+  rationale only, the sentence states the rule with no citation. `access.events` keeps the one
+  revision citation `revisions/repoint.py` exempts.
+- `registries.declared_tables` is the one definition of the tables a registry document declares.
+  It skips what an unchecked document omits, and `strict=True` raises `KeyError` instead, which
+  is what the copies in the writer, the validator's generator and the fixtures do.
+- A shared helper lives in the lowest package that uses it. `semver`, the provenance resource
+  list and the escaping `quoted` therefore stay in the validator, which the writer imports, and
+  the reader gains none of them. The manifest-entry builder and the adapter lookup are the
+  writer's.
+- The reader's `sql.quote` does not escape an embedded quotation mark and the validator's
+  `quoted` does. Left as two functions, since making one of them changes behaviour this plan
+  does not list.
+- `ordering.overridden` is removed; `stored_order` is the module's one public name.
+- The docstring of every function typed against `PacketLike` names `PacketLike`.
+
+Found and left as they were:
+
+- Part 01 §3.9 does not state the estimator used past a terminal anchor, though the ledger places
+  its clause there. Part 01 §3.9 also has a consumer report ticks it cannot map, and
+  `clocks.on_clock` drops them as `analysis.spike_events` does under Part 06 §4.
+- The reader's contributing guide and design notes still ask for and carry revision citations.
+- The validator's tests patch the reader's private `ordering._overrides`.
