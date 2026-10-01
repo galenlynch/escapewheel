@@ -129,7 +129,7 @@ class OpenEphysSource:
 
     def _probes(self) -> list[dict[str, str]]:
         """Every `NP_PROBE` element's attributes, across every record node."""
-        found = []
+        found: list[dict[str, str]] = []
         for path in self.settings():
             try:
                 root = ET.parse(path).getroot()

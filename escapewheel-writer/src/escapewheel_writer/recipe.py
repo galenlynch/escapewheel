@@ -46,6 +46,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, NamedTuple
 
+from escapewheel_reader.registries import declared_tables
 from escapewheel_reader.resource_ids import CORE_PROCESSING_RUNS, CORE_SESSIONS, CORE_SUBJECTS
 from upath import UPath
 
@@ -899,19 +900,9 @@ class Recipe:
             Empty when the recipe is sound. Errors first, then warnings, each sorted, so two
             runs of the same recipe report identically.
         """
-        tables = {
-            name: declaration["table"]
-            for name, declaration in registry["resources"].items()
-            if declaration["kind"] == "table"
-        }
+        tables = declared_tables(registry, strict=True)
         for document in extensions or ():
-            tables.update(
-                {
-                    name: declaration["table"]
-                    for name, declaration in document["resources"].items()
-                    if declaration["kind"] == "table"
-                }
-            )
+            tables.update(declared_tables(document, strict=True))
         # A source may own an opaque singleton, whose payload it delivers under the declaration's ID
         # (Part 12 §5); catalog instances are bound by the rows of the table it owns instead.
         singletons = payloads(registry, extensions)

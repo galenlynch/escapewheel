@@ -7,7 +7,6 @@
   references rather than owns.
 - :func:`read_promotion` -- the version and paths of the promotion record at a root.
 - :func:`retained` -- the name of a manifest's retained copy.
-- :func:`semver` -- a sort key for a `packet_version`.
 - :data:`STAGING`, :data:`PROMOTION` -- where a packet keeps its staging area and its promotion record.
 
 A commit stages and validates everything under ``staging/``, promotes it, and renames the
@@ -36,6 +35,7 @@ from escapewheel_reader import Manifest, Packet, check_sources, open_packet
 from escapewheel_reader.location import SOURCES_FILENAME, SOURCES_VERSION
 from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
 from escapewheel_reader.profile import PROFILE_ID, parquet_floor
+from escapewheel_reader.registries import declared_tables
 from escapewheel_reader.registries import gunzip_member as gzip_member
 from escapewheel_reader.resource_ids import CORE_INTERVALS, CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS, CORE_SESSIONS
 from escapewheel_reader.uri import canonical, encode, is_absolute
@@ -47,7 +47,7 @@ from escapewheel_validator import (
     check_registry_context,
     validate,
 )
-from escapewheel_validator.amendment import DERIVED, PROVENANCE, chain_reaches
+from escapewheel_validator.amendment import DERIVED, PROVENANCE, chain_reaches, semver
 from escapewheel_validator.errors import OrderViolation
 from escapewheel_validator.generate import adjacency_settles_uniqueness
 from escapewheel_validator.shim.ordering import verify_order
@@ -331,11 +331,6 @@ def _first_version(packet_id: str, replaces: Sequence[Mapping[str, str]]) -> str
     """Return a new packet's version: a major version above every packet it replaces of its id (Part 05 §9.3)."""
     majors = [int(item["packet_version"].split(".", 1)[0]) for item in replaces if item["packet_id"] == packet_id]
     return f"{max(majors) + 1}.0.0" if majors else "0.1.0"
-
-
-def semver(text: str) -> tuple[int, ...]:
-    """Order a packet_version. A part that is not a number sorts before one that is."""
-    return tuple(int(part) if part.isdigit() else -1 for part in str(text).split("."))
 
 
 def _record_promotion(staging: Path, packet_version: str, paths: Iterable[str]) -> None:
@@ -733,7 +728,7 @@ class PacketWriter:
         documents = (self._registry, *self._extensions.values())
         declarations = {rid: decl for document in documents for rid, decl in document["resources"].items()}
         held.bind(
-            {rid: decl["table"] for rid, decl in declarations.items() if decl.get("kind") == "table"},
+            {rid: table for document in documents for rid, table in declared_tables(document, strict=True).items()},
             {rid: str(decl.get("content_class")) for rid, decl in declarations.items()},
         )
         held.prevail = prevail
@@ -1633,10 +1628,8 @@ class PacketWriter:
         """
         found: dict[str, Callable[[Mapping[str, Any]], str | None]] = {}
         documents = [self._registry, *self._extensions.values()]
-        for owner, declaration in ((n, d) for doc in documents for n, d in doc["resources"].items()):
-            if declaration.get("kind") != "table":
-                continue
-            for column in declaration["table"]["columns"]:
+        for owner, table in ((n, t) for doc in documents for n, t in declared_tables(doc, strict=True).items()):
+            for column in table["columns"]:
                 if column.get("role") != "discriminator" or column.get("discriminates") is None:
                     continue
                 via = column.get("discriminates_via")
@@ -2272,5 +2265,4 @@ __all__ = [
     "StagedArray",
     "read_promotion",
     "retained",
-    "semver",
 ]

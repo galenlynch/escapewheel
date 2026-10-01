@@ -25,7 +25,8 @@ import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet
 from escapewheel_reader.manifest import MANIFEST_FILENAME
 from escapewheel_reader.resource_ids import CORE_CLOCKS, CORE_SESSIONS, CORE_SOURCE_FILES, CORE_SUBJECTS
-from escapewheel_validator.amendment import PREFERENCES, Version, absent, quoted
+from escapewheel_reader.sql import quote
+from escapewheel_validator.amendment import PREFERENCES, Version, absent
 
 from .arrow import sort_key
 from .errors import AmendmentFault, AmendmentRefused
@@ -284,17 +285,17 @@ class Held:
         present = set(delivered.schema.names)
         indexed = delivered.append_column("__row", pa.array(np.arange(delivered.num_rows), type=pa.int64()))
         connection.register("delivered_rows", indexed)
-        select = ", ".join(quoted(c["name"]) if c["name"] in present else absent(c) for c in spec["columns"])
+        select = ", ".join(quote(c["name"]) if c["name"] in present else absent(c) for c in spec["columns"])
         connection.execute(f"CREATE OR REPLACE TEMP VIEW delivered AS SELECT __row, {select} FROM delivered_rows")
         held = version.view(resource_id)
         compared = [c for c in columns if c != "metadata"]
-        equal = " AND ".join(f"h.{quoted(c)} IS NOT DISTINCT FROM d.{quoted(c)}" for c in compared)
+        equal = " AND ".join(f"h.{quote(c)} IS NOT DISTINCT FROM d.{quote(c)}" for c in compared)
         key = list(spec.get("primary_key") or ())
         replaces = (
             "EXISTS (SELECT 1 FROM "
             + held
             + " AS h WHERE "
-            + " AND ".join(f"h.{quoted(k)} IS NOT DISTINCT FROM d.{quoted(k)}" for k in key)
+            + " AND ".join(f"h.{quote(k)} IS NOT DISTINCT FROM d.{quote(k)}" for k in key)
             + ")"
             if resource_id == PREFERENCES and key
             else "false"
@@ -383,7 +384,7 @@ class Held:
             return
         spec = self.tables[resource_id]
         connection = self._held_version().connection
-        pending = quoted(f"pending__{resource_id}")
+        pending = quote(f"pending__{resource_id}")
         compared = [c for c in spec["columns"] if c["name"] != "metadata"]
         started = False
         for batch in batches:
@@ -391,7 +392,7 @@ class Held:
             equal, fresh, _ = self._verdicts(resource_id, table)
             if (aside := ~fresh & ~equal).any():
                 rows = table.filter(pa.array(aside))
-                select = ", ".join(quoted(c["name"]) if c["name"] in rows.schema.names else absent(c) for c in compared)
+                select = ", ".join(quote(c["name"]) if c["name"] in rows.schema.names else absent(c) for c in compared)
                 connection.register("aside_rows", rows)
                 connection.execute(
                     f"CREATE TEMP TABLE IF NOT EXISTS {pending} AS SELECT {select} FROM aside_rows WHERE false"
@@ -430,7 +431,7 @@ class Held:
         ).fetchone()[0]
         if not exists:
             return
-        listed = ", ".join(quoted(c) for c in compared)
+        listed = ", ".join(quote(c) for c in compared)
         query = f"SELECT {listed} FROM {pending} EXCEPT SELECT {listed} FROM {self._held_version().view(resource_id)}"
         count = connection.execute(f"SELECT COUNT(*) FROM ({query})").fetchone()[0]
         shown = connection.execute(f"SELECT * FROM ({query}) LIMIT {SHOWN}").fetchall() if count else []

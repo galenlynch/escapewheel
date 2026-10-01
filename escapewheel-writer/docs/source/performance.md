@@ -70,7 +70,7 @@ thousand rows — and compare int32. Per column of 131,072 rows:
 | dictionary handed to `pc.less`/`pc.equal` | 2.369 ms |
 | rank of the dictionary value, as int32 | 0.147 ms |
 
-`_ranked` in `escapewheel_validator.validator` is this, and it makes the ordering scan faster on
+`_ranked` in `escapewheel_validator.shim.ordering` is this, and it makes the ordering scan faster on
 coded columns than on decoded ones.
 
 **`batch_size` becomes a ceiling.** `iter_batches(read_dictionary=...)` cuts a batch wherever

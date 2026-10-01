@@ -494,6 +494,8 @@ def _extension_check(args: argparse.Namespace) -> int:
         for outcome in phase.outcomes:
             print(f"{outcome.state.upper():11s} {phase.phase}: {outcome.id} at {outcome.instance or '<root>'}")
     document = context.document
+    # The document may be invalid, and a table resource stating no `table` still counts here, which
+    # `declared_tables` leaves out.
     tables = (
         sum(1 for declaration in document.get("resources", {}).values() if declaration.get("kind") == "table")
         if isinstance(document, dict)

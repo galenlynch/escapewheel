@@ -18,12 +18,13 @@ from typing import Any
 
 from escapewheel_reader import Manifest, Packet
 from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
-from escapewheel_validator import CheckEntry, Level, Report, Scope, validate
+from escapewheel_validator import CheckEntry, Level, Report, Scope, Verification, validate
+from escapewheel_validator.amendment import semver
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.stores import digest, digest_resource, listing
 
 from .errors import NotCommitted, UsageError, UsageFault
-from .writer import VALIDATION_PASSED, _bump, _version, retained, semver
+from .writer import VALIDATION_PASSED, _bump, _version, retained
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
 #: records a prefix's Part 04 §5.4 per-member listing with the entity tag the store handed over,
@@ -146,9 +147,9 @@ def verify(
     # what it wrote, and here that is nothing. What is worth checking is what just changed.
     report = validate(
         Packet(root, Manifest.from_dict(candidate)),
-        external=True,
-        checksums=level == "sha256",
-        store_digests=level in {"members", "sha256"},
+        verification=Verification(
+            external=True, checksums=level == "sha256", store_digests=level in {"members", "sha256"}
+        ),
         scan=(),
         recheck=(),
     )
