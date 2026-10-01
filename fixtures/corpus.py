@@ -13,10 +13,9 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import get_context
 from pathlib import Path
 
+from corpus_packets import PACKETS
 from escapewheel_reader import open_packet
 from escapewheel_validator import validate
-
-from build import PACKETS
 
 HERE = Path(__file__).resolve().parent
 

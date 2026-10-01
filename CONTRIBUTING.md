@@ -182,9 +182,9 @@ the order matters.
    registry at validation time: not-null from `presence`, uniqueness from `primary_key`,
    anti-joins from `references`, membership from `enum`, and two more from each discriminator.
    Changing what Tier 1 means is a code change in `generate.py`, not a data change.
-5. **`fixtures/build.py`** writes the conformance corpus against the registry;
-   `fixtures/corpus.py` runs each through the real validator and checks it produced the finding
-   it was built to produce.
+5. **`fixtures/build.py`** writes the conformance corpus against the registry, one packet for
+   each record `fixtures/corpus_packets/` declares; `fixtures/corpus.py` runs each through the
+   real validator and checks it produced the finding it was built to produce.
 6. **`integration/example.py`** commits a small packet with the writer, one resource of each
    kind against every repository extension, and fails where Part 08's layout and manifest excerpt
    differ from it, printing the text Part 08 should carry.
@@ -199,7 +199,7 @@ the order matters.
 | add an extension | a directory `extensions/<id>/` holding `registry.toml` and one file per resource | `extensions/registries.py build extensions`; `verify.py` |
 | change the manifest or the meta-schema | the hand-written copy in `spec/artifacts/` | `spec/tools/build.py`, then `tools/copies.py`; `verify.py` |
 | change a checker | `spec/tools/checkers/`, with its tests in `spec/tools/tests/` | `tools/copies.py`; `verify.py` |
-| add a fixture variant | `fixtures/build.py` and `fixtures/corpus.py` | `verify.py` |
+| add a fixture variant | its subject's module in `fixtures/corpus_packets/`, and `EXPECTED` in `fixtures/corpus.py` | `verify.py` |
 | change the packet Part 08 shows | `integration/example.py`, then Part 08's text to match | `verify.py` |
 
 **A schema change starts with a revision.** Not as ceremony: `revisions/registry-targets.toml`

@@ -42,10 +42,20 @@ contributes. Not decoration: R54 §2.4a makes an `interval_kind` naming a resour
 not declare an error, and no core table specialises an interval, so a packet with intervals in it
 carries an extension by construction.
 
-`build.py`'s `PACKETS` is the full list: one record per packet, carrying how it is written and what
-a validator must report of it. `corpus.py`'s `EXPECTED` restates each packet's finding as a literal
-for the tools that read that file without importing it, and `corpus.py` judges nothing while the two
-disagree. The table below names the variants that have a prose description, and is not all of them.
+`corpus_packets/` declares the packets, and its `PACKETS` is the full list: one record per packet,
+carrying how it is written and what a validator must report of it. `build.py` writes each record's
+packet and `corpus.py` judges each against its record. `corpus.py`'s `EXPECTED` restates each
+packet's finding as a literal for the tools that read that file without importing it, and
+`corpus.py` judges nothing while the two disagree. The table below names the variants that have a
+prose description, and is not all of them.
+
+| Module of `corpus_packets/` | Holds |
+|---|---|
+| `record.py` | the record that declares a packet |
+| `registry.py`, `numbering.py`, `writing.py` | what writes a packet: the registries it binds, the numbers its names take, and its files, digests and manifest |
+| `session.py` | the valid session's rows, and the build of a packet from them once edited |
+| `arrays.py` | the Zarr arrays some packets add |
+| every other module | one subject's packets, with the functions that build them |
 
 ## The corpus
 
