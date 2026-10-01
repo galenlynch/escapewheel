@@ -129,6 +129,9 @@ packet, which is worse than having no check.
   reads `../spec/parts/` to hold it: the ID standing alone for a fixed ID, and the template or
   one ID it admits for a family. Where the two disagree the flag is wrong, never the part: the
   specification need not name every check ID, and no part is edited to make the test pass.
+- **A finding or a message names a row by its position, which starts at 1.** An attribute such as
+  `OrderViolation.row` holds the index, and the text shows `row` plus one. A value a column stores,
+  such as an `axis_index`, is printed as stored.
 
 ## An advisory rule is not a compromise
 

@@ -1940,6 +1940,11 @@ def _check_ordering(
     return unsound
 
 
+def _row(index: int) -> str:
+    """Name the row at an index of the table by its position, which starts at 1."""
+    return f"row {index + 1}"
+
+
 def _scan_one_ordering(  # noqa: C901
     resource_id: str, handle: Any, spec: Mapping[str, Any], report: Report
 ) -> bool:
@@ -2029,14 +2034,14 @@ def _scan_one_ordering(  # noqa: C901
         report.add(
             check_table.determined_by(resource_id),
             "a column declared determined_by the key differs between two rows sharing it",
-            [(f"row {i}", col, f"{a} != {b}") for i, col, a, b in broken[:ORDER_REPORT]],
+            [(_row(index), col, f"{a} != {b}") for index, col, a, b in broken[:ORDER_REPORT]],
             registry=report.resource_owner(resource_id),
         )
     if offending:
         report.add(
             check_table.physical_order(resource_id),
             f"rows are not in declared sort order ({', '.join(keys)})",
-            [(f"row {i}", str(prev), str(cur)) for i, prev, cur in offending[:ORDER_REPORT]],
+            [(_row(index), str(prev), str(cur)) for index, prev, cur in offending[:ORDER_REPORT]],
             registry=report.resource_owner(resource_id),
         )
         # Adjacency settles uniqueness only for a file actually in order: a duplicate anywhere but
@@ -2047,7 +2052,7 @@ def _scan_one_ordering(  # noqa: C901
         report.add(
             check_table.primary_key_unique(resource_id),
             "duplicate primary key",
-            [(f"row {i}", str(row)) for i, row in duplicated[:ORDER_REPORT]],
+            [(_row(index), str(row)) for index, row in duplicated[:ORDER_REPORT]],
             registry=report.resource_owner(resource_id),
         )
     return False

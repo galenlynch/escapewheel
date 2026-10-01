@@ -243,7 +243,10 @@ def test_physical_order_is_an_error(packet_root):
     _rewrite(packet_root, "events", events.take([2, 0, 1]))
     report = validate(open_packet(packet_root))
     assert not report.passed
-    assert any(f.check == "core.events.physical_order" and f.level == "error" for f in report.findings)
+    (finding,) = [f for f in report.findings if f.check == "core.events.physical_order"]
+    assert finding.level == "error"
+    # The second row sorts before the first: a finding names a row by its position.
+    assert [row[0] for row in finding.rows] == ["row 2"]
 
 
 def test_registry_version_must_match_its_descriptor(packet_root):
@@ -552,7 +555,8 @@ def test_a_duplicate_beside_its_twin_is_caught_by_the_scan(packet_root):
     _rewrite(packet_root, "trials", trials.take([0, 0, 1]))
     report = validate(open_packet(packet_root))
     assert not report.passed
-    assert any(f.check == "core.trials.primary_key_unique" for f in report.findings)
+    (finding,) = [f for f in report.findings if f.check == "core.trials.primary_key_unique"]
+    assert [row[0] for row in finding.rows] == ["row 2"]  # the second row repeats the first
 
 
 def test_a_duplicate_out_of_order_still_fails(packet_root):
@@ -2326,6 +2330,48 @@ def test_each_unassessed_external_is_its_own_registrys_finding():
     assert [(f.level, f.check, f.registry, f.rows) for f in report.findings] == [
         ("info", "external.physical_unassessed", "core", (("core.lfp",),)),
         ("info", "external.physical_unassessed", "task", (("task.lfp",),)),
+    ]
+
+
+def test_a_row_breaking_a_determined_by_declaration_is_named_by_position(tmp_path):
+    """Part 03 §5.3: the third row shares the second's key and differs in both columns the key determines."""
+    from types import SimpleNamespace
+
+    from escapewheel_validator import Report
+    from escapewheel_validator.validator import _scan_one_ordering
+
+    path = tmp_path / "spike_events.parquet"
+    pq.write_table(
+        pa.table(
+            {
+                "session_id": pa.array([1, 1, 1, 1], type=pa.int32()),
+                "clock_id": pa.array([1, 1, 2, 2], type=pa.int32()),
+                "time_bucket_tick": pa.array([0, 0, 1, 1], type=pa.int64()),
+                "unit_id": pa.array([1, 1, 1, 2], type=pa.int32()),
+                "t_tick": pa.array([5, 6, 6, 9], type=pa.int64()),
+            }
+        ),
+        path,
+    )
+    spec = {
+        "columns": [
+            {"name": "session_id"},
+            {"name": "unit_id"},
+            {"name": "t_tick"},
+            {"name": "clock_id", "determined_by": ["session_id"]},
+            {"name": "time_bucket_tick", "determined_by": ["t_tick"]},
+        ],
+        "primary_key": ["session_id", "unit_id", "t_tick"],
+    }
+    report = Report()
+    handle = SimpleNamespace(path=path, schema=lambda: pq.read_schema(path))
+    _scan_one_ordering("analysis.spike_events", handle, spec, report)
+    assert [(f.check, f.rows) for f in report.findings] == [
+        (
+            "analysis.spike_events.determined_by",
+            (("row 3", "clock_id", "1 != 2"), ("row 3", "time_bucket_tick", "0 != 1")),
+        ),
+        ("analysis.spike_events.primary_key_unique", (("row 3", "(1, 6)"),)),
     ]
 
 
