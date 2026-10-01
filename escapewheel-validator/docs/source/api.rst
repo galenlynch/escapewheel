@@ -132,6 +132,7 @@ Each module's page lists what it holds beyond the names above.
    :toctree: generated
 
    validator
+   report
    manifest
    generate
    amendment

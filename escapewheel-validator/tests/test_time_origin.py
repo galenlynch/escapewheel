@@ -9,7 +9,8 @@ import pytest
 from escapewheel_reader import ResourceNotFoundError
 from escapewheel_reader.protocols import Memo
 
-from escapewheel_validator.validator import Report, check_time_origin
+from escapewheel_validator import Report
+from escapewheel_validator.validator import check_time_origin
 
 #: Probe anchors onto the reference: 30 parent ticks per tick, offset by 500.
 ANCHORS = [(t, 30 * t + 500) for t in range(0, 11_000, 1000)]

@@ -13,7 +13,9 @@ reported under is a :class:`CheckEntry` of :mod:`.check_table`, at a :class:`Sco
 Its modules:
 
 validator
-    The layers over a packet, and the report they fill.
+    The layers over a packet.
+report
+    The findings, evaluations and registry results of a validation, and its verdicts.
 manifest
     Manifest conformance and registry binding (Part 04 §10).
 generate
@@ -62,15 +64,8 @@ from .registry_document import (
     check_registry_context,
     check_registry_context_bytes,
 )
-from .validator import (
-    Evaluation,
-    Finding,
-    RegistryEvaluation,
-    Report,
-    check_packet_manifest,
-    registry_meta_schema,
-    validate,
-)
+from .report import Evaluation, Finding, RegistryEvaluation, Report
+from .validator import check_packet_manifest, registry_meta_schema, validate
 from .vocabulary import EvaluationStatus, Level, RegistryState, Verdict
 
 try:

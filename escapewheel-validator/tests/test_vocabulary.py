@@ -9,7 +9,7 @@ from escapewheel_reader import open_packet
 
 import escapewheel_validator
 from escapewheel_validator import EvaluationStatus, Level, RegistryState, Report, Verdict, validate
-from escapewheel_validator.validator import VERDICTS
+from escapewheel_validator.report import VERDICTS
 
 SRC = Path(escapewheel_validator.__file__).resolve().parent
 #: Copied from the specification's tree, and edited there.

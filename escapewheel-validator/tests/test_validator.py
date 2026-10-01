@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_validator import EvaluationStatus, Report
+from escapewheel_validator import Report
 from escapewheel_validator.validator import _check_column, _offending, _scan_one_ordering, report_unassessed
 
 
@@ -183,19 +183,3 @@ def test_a_table_of_one_repeated_row_keeps_every_key_and_reports_the_duplicate(t
     assert _scanned_spike_events(tmp_path, clock_id=[1, 1], unit_id=[1, 1], t_tick=[5, 5]) == [
         ("analysis.spike_events.primary_key_unique", (("row 2", "(1, 1, 5)"),)),
     ]
-
-
-def test_completing_an_evaluation_records_it_complete():
-    """Part 05 §9.5: a registry passes only once its evaluation is recorded complete."""
-    report = Report(bound=("core",))
-    assert report.verdict("core") == "incomplete"
-    report.complete("core")
-    assert [(e.registry, e.status) for e in report.evaluations] == [("core", "complete")]
-
-
-def test_completing_leaves_an_evaluation_that_ended_otherwise():
-    report = Report(bound=("core", "task"))
-    report.record_evaluation("core", EvaluationStatus.INCOMPLETE, rule="core.rule", detail="unreadable")
-    report.complete("core")
-    report.complete("task")
-    assert [(e.registry, e.status) for e in report.evaluations] == [("core", "incomplete"), ("task", "complete")]
