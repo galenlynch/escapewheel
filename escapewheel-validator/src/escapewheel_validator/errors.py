@@ -22,7 +22,21 @@ class ValidatorError(EscapewheelError):
 
 
 class StoreUnreachable(ValidatorError):
-    """A store could not be reached, which says nothing about whether the packet is valid."""
+    """A store could not be reached, which says nothing about whether the packet is valid.
+
+    Attributes
+    ----------
+    uri : str
+        What was being reached.
+    key : str or None
+        The member being read, relative to `uri`; None where the failure concerns everything
+        under the URI.
+    """
+
+    def __init__(self, message: str, *, uri: str, key: str | None = None) -> None:
+        super().__init__(message)
+        self.uri = uri
+        self.key = key
 
 
 class ResourceMissing(StoreUnreachable):

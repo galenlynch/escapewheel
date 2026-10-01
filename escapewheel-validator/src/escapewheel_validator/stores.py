@@ -82,12 +82,13 @@ def _filesystem(uri: str) -> tuple[Any, str]:
         scheme = urlparse(uri).scheme
         raise StoreUnreachable(
             f"reaching a {scheme}: store needs fsspec (the 'remote' extra) and a backend for "
-            f"that scheme (s3fs for s3://, gcsfs for gs://)"
+            f"that scheme (s3fs for s3://, gcsfs for gs://)",
+            uri=uri,
         ) from exc
     try:
         filesystem, path = fsspec.core.url_to_fs(uri)
     except (ImportError, ValueError) as exc:
-        raise StoreUnreachable(f"{uri}: {exc}") from exc
+        raise StoreUnreachable(f"{uri}: {exc}", uri=uri) from exc
     return filesystem, path
 
 
@@ -266,7 +267,7 @@ def listing(uri: str) -> Listing:
         if root.is_file():
             return Listing((Member("", root.stat().st_size),), root.stat().st_size)
         if not root.is_dir():
-            raise ResourceMissing(f"{uri} does not exist")
+            raise ResourceMissing(f"{uri} does not exist", uri=uri)
         found = [Member(f.relative_to(root).as_posix(), f.stat().st_size) for f in root.rglob("*") if f.is_file()]
     else:
         filesystem, path = _filesystem(uri)
@@ -276,16 +277,16 @@ def listing(uri: str) -> Listing:
                 return Listing((Member("", int(info["size"]), store_digest(info)),), int(info["size"]))
             entries = filesystem.find(path, detail=True)
         except FileNotFoundError as exc:
-            raise ResourceMissing(f"{uri} does not exist") from exc
+            raise ResourceMissing(f"{uri} does not exist", uri=uri) from exc
         except Exception as exc:
-            raise StoreUnreachable(f"{uri}: {exc}") from exc
+            raise StoreUnreachable(f"{uri}: {exc}", uri=uri) from exc
         found = [
             Member(key[len(path) :].lstrip("/"), int(info.get("size") or 0), store_digest(info))
             for key, info in entries.items()
             if info.get("type") == "file"
         ]
     if not found:
-        raise ResourceMissing(f"{uri} holds no object, so it does not exist (Part 04 §4.3)")
+        raise ResourceMissing(f"{uri} holds no object, so it does not exist (Part 04 §4.3)", uri=uri)
     found.sort(key=lambda member: member.key.encode())
     return Listing(tuple(found), sum(member.size_bytes for member in found))
 
@@ -473,10 +474,11 @@ def read_member(uri: str, key: str) -> bytes:
         with filesystem.open(f"{path}/{key}" if key else path, "rb") as handle:
             data: bytes = handle.read()
         return data
-    except StoreUnreachable:
+    except StoreUnreachable as exc:
+        exc.key = key
         raise
     except Exception as exc:
-        raise StoreUnreachable(f"{uri}/{key}: {exc}") from exc
+        raise StoreUnreachable(f"{uri}/{key}: {exc}", uri=uri, key=key) from exc
 
 
 def _member_digest(uri: str, key: str, algorithm: str = "sha256") -> str:

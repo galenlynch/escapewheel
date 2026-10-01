@@ -11,7 +11,7 @@ from escapewheel_reader import open_packet
 from fsspec.implementations.memory import MemoryFileSystem
 
 from escapewheel_validator import validate
-from escapewheel_validator.errors import ResourceMissing
+from escapewheel_validator.errors import ResourceMissing, StoreUnreachable
 from escapewheel_validator.stores import (
     crc32c_python,
     crc64nvme_python,
@@ -20,6 +20,7 @@ from escapewheel_validator.stores import (
     hasher,
     listing,
     listing_digest,
+    read_member,
     store_checksums,
     store_digest,
 )
@@ -90,10 +91,18 @@ def test_a_multipart_entity_tag_is_recorded_verbatim_as_etag():
 
 def test_an_empty_prefix_does_not_exist(tmp_path):
     (tmp_path / "empty.zarr").mkdir()
-    with pytest.raises(ResourceMissing, match="holds no object"):
-        listing(str(tmp_path / "empty.zarr"))
-    with pytest.raises(ResourceMissing, match="does not exist"):
-        listing(str(tmp_path / "absent.zarr"))
+    for uri in (str(tmp_path / "empty.zarr"), str(tmp_path / "absent.zarr")):
+        with pytest.raises(ResourceMissing) as refused:
+            listing(uri)
+        assert (refused.value.uri, refused.value.key) == (uri, None)
+
+
+def test_a_member_that_cannot_be_read_is_named_by_uri_and_key(tmp_path):
+    for uri in (str(tmp_path), "ewabsent://bucket/arr"):
+        with pytest.raises(StoreUnreachable) as refused:
+            read_member(uri, "zarr.json")
+        assert (refused.value.uri, refused.value.key) == (uri, "zarr.json")
+        assert not isinstance(refused.value, ResourceMissing)
 
 
 @pytest.mark.parametrize("algorithm", sorted(CHECK))
