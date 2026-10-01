@@ -42,8 +42,10 @@ contributes. Not decoration: R54 §2.4a makes an `interval_kind` naming a resour
 not declare an error, and no core table specialises an interval, so a packet with intervals in it
 carries an extension by construction.
 
-`corpus.py`'s `EXPECTED` is the full list; the table below names the variants that have a prose
-description, and is not all of them.
+`build.py`'s `PACKETS` is the full list: one record per packet, carrying how it is written and what
+a validator must report of it. `corpus.py`'s `EXPECTED` restates each packet's finding as a literal
+for the tools that read that file without importing it, and `corpus.py` judges nothing while the two
+disagree. The table below names the variants that have a prose description, and is not all of them.
 
 ## The corpus
 

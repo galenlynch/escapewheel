@@ -16,12 +16,17 @@ from pathlib import Path
 from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
+from build import PACKETS
+
 HERE = Path(__file__).resolve().parent
 
 #: Packets validated at once. Each validation is independent and takes a fraction of a second.
 WORKERS = 8
 
-# packet -> (expected level, the check that must fire); None means it must be clean
+#: packet -> (expected level, the check that must fire); None means it must be clean. `PACKETS`
+#: declares each packet, and this restates that much of it as a literal, because
+#: `revisions/evidence.py` and `tools/facts.py` read it from this file's syntax tree. `main` judges
+#: nothing while the two disagree.
 EXPECTED: dict[str, tuple[str, str] | None] = {
     "valid": None,
     "dup_pk": ("error", "core.intervals.primary_key_unique"),
@@ -163,95 +168,61 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "spikes_without_reference_clock": ("error", "analysis.spike_events.on_reference_clock"),
 }
 
-#: Packets whose expected finding is one per resource (Part 05 §5.3), and how many it must fire.
-COUNTS: dict[str, int] = {
-    "outside_array_floor": 1,
-    "unresolved_externals": 2,
-    "opaque_name_portability": 2,
-    "listing_key_spelling": 3,
-}
-
-#: Packets whose expected finding is a warning that leaves them conformant, so they must still pass.
-CONFORMING: set[str] = {"opaque_name_portability", "listing_key_spelling"}
-
-#: Checks a packet must not draw at any level.
-ABSENT: dict[str, set[str]] = {
-    "valid": {"physical.outside_reader_floor", "external.physical_unassessed"},
-    # Its digest is over keys in raw UTF-8, and a reader that escaped or encoded them would disagree.
-    "listing_key_spelling": {"owned.digest", "packet.resource.member_digest"},
-}
-
-#: Packets whose expected finding belongs to an extension (Part 05 §9.5), which must fail that
-#: extension and the packet and leave core passed.
-EXTENSION_FINDINGS: dict[str, str] = {
-    "extension_bad_type": "dynamic_foraging",
-    "orphan_trial": "dynamic_foraging",
-    "trial_names_a_tone": "dynamic_foraging",
-    "tone_names_a_trial": "cue",
-    "device_detail_unkinded": "rig",
-    "device_detail_other_kind": "rig",
-}
-
-#: Packets whose expected finding is advisory (Part 02 §10.2). Advisory rules are off by default --
-#: enabling them must never change whether a packet passed -- so these run with them on, and
-#: the `info` level they carry keeps the verdict unchanged either way.
-#: R82 §2 made both mandatory errors, so nothing here needs the advisory pass any more.
-ADVISORY: set[str] = set()
-
-#: Packets run with checksums, which establishes every packet-owned digest (Part 04 §5.3, level 2).
-CHECKSUMS: set[str] = {
-    "valid",
-    "crc64nvme",
-    "crc32c",
-    "crc32",
-    "crc64nvme_one_byte_off",
-    "crc32c_one_byte_off",
-    "crc32_one_byte_off",
-    "owned_opaque_object",
-    "owned_opaque_prefix",
-    "owned_opaque_singleton",
-    "owned_opaque_encoded_name",
-    "owned_opaque_one_byte_off",
-    "opaque_name_portability",
-    "listing_key_spelling",
-}
+_BY_NAME = {packet.name: packet for packet in PACKETS}
 
 
 def _judge(name: str) -> tuple[bool, str, list[str], int, int]:
     """Validate one packet and return whether it behaved, the verdict, its checks and counts."""
-    expect = EXPECTED[name]
+    packet = _BY_NAME[name]
     report = validate(
         open_packet(HERE / "packets" / name),
-        advisory=name in ADVISORY,
-        checksums=name in CHECKSUMS,
+        # Off for every packet: R82 §2 made mandatory errors of the two rules that needed it.
+        advisory=packet.advisory,
+        checksums=packet.checksums,
     )
-    absent = ABSENT.get(name, set())
-    if expect is None:
+    expected = packet.expected
+    if expected is None:
         ok = report.passed and report.warnings == 0
         verdict = "clean" if ok else "UNEXPECTED FINDINGS"
     else:
-        level, check = expect
-        subject = EXTENSION_FINDINGS.get(name)
         fired = sum(
-            f.check == check and f.level == level and (subject is None or f.registry == subject)
+            f.check == expected.check
+            and f.level == expected.level
+            and (expected.registry is None or f.registry == expected.registry)
             for f in report.findings
         )
-        ok = fired == COUNTS[name] if name in COUNTS else fired > 0
-        if subject is not None:
+        ok = fired > 0 if expected.count is None else fired == expected.count
+        if expected.registry is not None:
             ok = ok and (
-                report.verdict(subject),
+                report.verdict(expected.registry),
                 report.verdict("core"),
                 report.verdict(),
             ) == ("failed", "passed", "failed")
-        if name in CONFORMING:
+        if expected.conforming:
             ok = ok and report.passed
-        verdict = "caught" if ok else f"MISSED {check}"
-    if any(f.check in absent for f in report.findings):
+        verdict = "caught" if ok else f"MISSED {expected.check}"
+    if any(f.check in packet.absent for f in report.findings):
         ok, verdict = False, "DREW AN ABSENT CHECK"
     return ok, verdict, sorted({f.check for f in report.findings}), report.errors, report.warnings
 
 
+def _restated() -> list[str]:
+    """Each packet `EXPECTED` and `PACKETS` state differently, or only one of them names."""
+    declared = {
+        name: None if packet.expected is None else (packet.expected.level, packet.expected.check)
+        for name, packet in _BY_NAME.items()
+    }
+    return sorted(
+        name
+        for name in declared.keys() | EXPECTED.keys()
+        if name not in declared or name not in EXPECTED or declared[name] != EXPECTED[name]
+    )
+
+
 def main() -> int:
+    if differing := _restated():
+        print(f"EXPECTED and the packet records disagree about: {', '.join(differing)}")
+        return 1
     failures = []
     print(f"{'packet':26s} {'expected':9s} {'result':22s} findings")
     print("-" * 80)
