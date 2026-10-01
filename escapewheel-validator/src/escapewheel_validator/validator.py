@@ -439,6 +439,15 @@ class Report:
         """Record a Tier 2 outcome without turning validator inability into a finding."""
         self.evaluations.append(Evaluation(registry, EvaluationStatus(status), rule, detail))
 
+    def complete(self, registry: str) -> None:
+        """Record a registry's evaluation complete, unless an outcome recorded for it says otherwise.
+
+        Called once every check the registry directs has run, since a verdict of ``passed`` needs
+        the evaluation recorded complete (Part 05 §9.5).
+        """
+        if not any(e.registry == registry and e.status != EvaluationStatus.COMPLETE for e in self.evaluations):
+            self.record_evaluation(registry, EvaluationStatus.COMPLETE)
+
     def record_registry(
         self, subject: str, context: CheckedRegistryContext, *, directs_checks: bool = False, core: bool = False
     ) -> None:
@@ -2252,10 +2261,9 @@ def run_rules(
             checks = [*tier1, *tier2]
             if recheck is not None:
                 checks = [check for check in checks if concerns(check, recheck)]
-            _run_checks(connection, checks, report, "core", unreadable, finalize=False)
+            _run_checks(connection, checks, report, "core", unreadable)
             _check_manifest_sessions(packet, report)
-            if not any(e.registry == "core" and e.status != EvaluationStatus.COMPLETE for e in report.evaluations):
-                report.record_evaluation("core", EvaluationStatus.COMPLETE)
+            report.complete("core")
             _check_extensions(
                 packet,
                 connection,
@@ -2377,14 +2385,10 @@ def _run_checks(
     report: Report,
     registry_id: str,
     unreadable: set[str],
-    *,
-    finalize: bool = True,
 ) -> None:
-    """Run generated checks and record what they returned."""
-    tier2_incomplete = False
+    """Run generated checks and record what they returned; the caller completes the evaluation."""
     for check in checks:
         if check.tier == 2 and (missing := sorted(check.dependencies & unreadable)):
-            tier2_incomplete = True
             report.record_evaluation(
                 registry_id,
                 EvaluationStatus.INCOMPLETE,
@@ -2398,7 +2402,6 @@ def _run_checks(
             rows = _offending(connection, check.sql)
         except Exception as exc:  # noqa: BLE001 - converted to the layer-owned outcome below
             if check.tier == 2:
-                tier2_incomplete = True
                 report.record_evaluation(
                     registry_id,
                     EvaluationStatus.INCOMPLETE,
@@ -2414,9 +2417,6 @@ def _run_checks(
             continue
         if rows:
             report.add(check.entry, check.message, rows, registry=registry_id)
-    prior_failure = any(e.registry == registry_id and e.status != EvaluationStatus.COMPLETE for e in report.evaluations)
-    if finalize and not tier2_incomplete and not prior_failure:
-        report.record_evaluation(registry_id, EvaluationStatus.COMPLETE)
 
 
 def _check_manifest_sessions(packet: Packet, report: Report) -> None:
@@ -2619,6 +2619,7 @@ def _check_extensions(
         if recheck is not None:
             checks = [check for check in checks if concerns(check, recheck)]
         _run_checks(connection, checks, report, extension_id, unreadable or set())
+        report.complete(extension_id)
         report.add(
             check_table.EXTENSION_VALIDATED,
             f"{extension_id}: {len(checks)} check(s) over {len(carried)} table(s)",
