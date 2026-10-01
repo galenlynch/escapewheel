@@ -1623,9 +1623,12 @@ def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
 __all__ = [
     "CONTRACT",
     "CONTRACT_SCHEMA",
+    "METADATA_DESCRIPTION",
+    "PHASES",
     "RESULT_SCHEMA",
     "RESULT_SCHEMA_ID",
     "SCHEMA",
+    "UCUM_URI",
     "CheckedRegistryContext",
     "Outcome",
     "PhaseRecord",
@@ -1635,4 +1638,5 @@ __all__ = [
     "check_registry_bytes",
     "check_registry_context",
     "check_registry_context_bytes",
+    "ucum_error",
 ]
