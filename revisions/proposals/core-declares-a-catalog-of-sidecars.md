@@ -4,15 +4,16 @@
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | 2026-10-01 |
-| **Based on** | `2928aa8a895ae7971aceb21364c2744998532471` |
+| **Based on** | `07196d9fc19c0d6eed6a35ba3477b8be71ae5128` |
 | **Decision domain** | specification |
-| **Affects** | Part 02 §2.2's meaning of the `documentation` class; Part 02 §2.6's list of catalog tables; Part 02 §11's resource index and the incorporated registry; Part 03 §3.1's layout and Part 03 §7's placement table; Part 09 §2's tier table |
+| **Affects** | Part 02 §2.2's meaning of the `documentation` class; Part 02 §2.6's list of catalog tables; Part 02 §11's resource index and the incorporated registry; Part 03 §3.1's layout and Part 03 §7's placement table; Part 09 §2's tier table and Part 09 §3's sentence on a field kept in a sidecar |
 
 ## 1. Problem
 
-A packet often has to carry a file that Escapewheel does not interpret: a protocol as a PDF, a
-README, a viewer's saved state, or an image in a format no logical kind models. Part 02 §2.2 calls
-such a file a sidecar and gives it a content class, `documentation`. Part 03 and Part 09 say that a
+A packet often has to index a file that Escapewheel does not interpret and that nothing in the
+packet depends on: a protocol as a PDF, a README, a viewer's saved state such as a Neuroglancer
+JSON document, or a scan of the subject that is held elsewhere. Part 02 §2.2 calls such a file a
+sidecar and gives it a content class, `documentation`. Part 03 and Part 09 say that a
 sidecar belongs in a directory `docs/` under the packet root.
 
 No registry declares a resource of that class, so no manifest can list a sidecar. A file placed in
@@ -29,8 +30,13 @@ Observed in the tracked files at the baseline commit.
 
 Part 02 §2.2 defines the class `documentation` as human-readable sidecars that assert no semantic or
 conformance fact. Part 03 §3.1's recommended layout has a `docs/` directory for human-readable
-sidecars, and Part 03 §7 and Part 09 §2 both place human-readable context in `docs/`. A search of
-`spec/parts/` for `docs/` and for `sidecar` finds no other statement about them.
+sidecars, and Part 03 §7 and Part 09 §2 both place human-readable context in `docs/`.
+
+Two further statements treat a sidecar as a place for values. Part 03 §7 places semi-structured,
+lab-specific values in a `json_string` column or a sidecar, and Part 09 §3 says that a field should
+be in an extension or a sidecar when it is institutional, lab-specific, rarely queried or free-form.
+Neither says what a sidecar is, and a file holding values does not fit a class defined as asserting
+no fact. A search of `spec/parts/` for `docs/` and for `sidecar` finds no other statement.
 
 The core registry holds 48 declarations, 43 of class `core` and 5 of class `analysis`. The extension
 registries in the repository hold 11, all of class `extension`. No declaration has the class
@@ -92,12 +98,37 @@ an analysis, compatibility-projection or documentation resource. It forbids an a
 canonical resource that is not a table or to remove a canonical resource, and makes a correction of
 canonical data a replacement of the packet.
 
+### 2.9 The registry already keeps a canonical resource from depending on a documentation one
+
+Part 02 §2.2 forbids a `core` or `extension` declaration a table reference, a `requires` entry or a
+catalog binding that targets a documentation declaration. Part 02 §2.7 permits no class to take a
+documentation resource as a lineage source, and forbids a documentation resource lineage of its own.
+Both are checked on the registry document and the manifest. A result computed from a sidecar and
+recorded without lineage is the one dependence neither can see.
+
+### 2.10 Core already states a nullable scope as a pair of columns
+
+`core.processing_runs` carries `scope_kind`, a discriminator holding the dotted ID of a table, and
+`scope`, the key or name of a row of that table. Both are nullable, a declared rule requires them
+together or not at all, and `core.preferred_runs` carries the same pair as required columns. An
+assigned identifier's name is unique in its packet (Part 02 §8.2), so the pair names a row of a
+table that has no session, such as `core.subjects`.
+
+### 2.11 An external resource records what was true when it was checked
+
+Part 04 §5.1 expects a large resource to be referenced, and Part 04 §5.2 makes an external entry's
+`digest`, `size_bytes` and `verified_at` a record of what was true when the resource was checked and
+no claim about the present. A packet-owned resource's digest is required and covers its bytes
+(Part 03 §10).
+
 ## 3. Desired outcome and constraints
 
 A packet's author lists a file by naming it and describing it, with no registry and no adapter of
 their own. A consumer finds a packet's sidecars with one query, learns from each row what the file
 is, and resolves its bytes through the manifest, which records a digest for it. A sidecar is
-packet-owned or external, as any opaque resource is. The resolution preserves:
+packet-owned or external, as any opaque resource is, so a packet can point at a scan of its subject
+that another holder keeps, and need not own everything known about that subject. A consumer can ask
+which sidecars are about a given subject, session or resource. The resolution preserves:
 
 - Part 05 §10's rule that every resource a manifest lists resolves a logical declaration;
 - Part 02 §2.2's rule that a canonical resource depends on no non-canonical one;
@@ -111,9 +142,11 @@ packet-owned or external, as any opaque resource is. The resolution preserves:
 | option | effect |
 |---|---|
 | keep the current rules | a sidecar is a stray with no digest, or its author writes a registry and an adapter; `docs/` stays a named place with no contract |
+| retire `docs/`, the tier-4 row and the class, and leave such files ungoverned | removes the contradiction of §2.1 at the least cost; a viewer state or a pointer to a scan stays unlisted, with no digest and no way to find it |
 | let a manifest list a resource with no declaration | removes the effort and contradicts Part 05 §10; the entry would have no content class, lineage policy or instance rule for a validator to apply |
 | core declares an opaque family with no catalog | the lightest declaration; an instance has no description or media type (§2.4); Part 12 §5 binds a payload to a catalog row or a singleton only, so a family payload would need a delivery rule |
 | core declares an opaque catalog of class `core` | a sidecar is canonical, so an extension's table could reference its row and state facts about it; an amendment could add one and could never replace or remove one, so correcting a README would take a replacement packet |
+| core declares a catalog table of class `core` and instances of class `documentation` | Part 02 §2.2 admits the binding in that direction; a row is then canonical and its instance is not, and Part 02 §2.6's one-to-one binding lets an amendment replace a sidecar's bytes and never remove one |
 | core declares an opaque catalog of class `documentation` (preferred direction) | uses the class Part 02 §2.2 defines for a sidecar; an amendment adds, replaces or removes one; no canonical table references one, so a payload whose meaning tables state keeps the extension route |
 
 Under the preferred direction the core registry gains two declarations of class `documentation`: a
@@ -121,28 +154,49 @@ catalog table with one row for each sidecar, and an opaque catalog declaration w
 table's `resource_id` column names. A manifest then lists each sidecar as an instance of the opaque
 declaration, bound one-to-one to its row under Part 02 §2.6.
 
-**The row describes the file and is read by no rule.** It carries the assigned identifier and the
-name Part 02 §8.2 pairs with it, the `resource_id` Part 02 §2.6 requires, a media type, and a
-description. The media type and the description are nullable. A media type is absent where none is
+**The row describes the file.** It carries the assigned identifier and the name Part 02 §8.2 pairs
+with it, the `resource_id` Part 02 §2.6 requires, a media type, a description, and a scope. The
+media type, the description and the scope are nullable. A media type is absent where none is
 registered for the format, which is ordinary for a scientific file format. Part 02 §2.6 keeps
 `format` out of the three existing catalog tables because physical encoding belongs to Part 03; a
 sidecar has no encoding the specification defines, and its media type tells a consumer which program
 opens it.
 
-**The table carries no session.** Part 02 §7.1 admits no optional session column (§2.7), and a
-sidecar may describe the packet, a subject, a session, or one resource. The table is therefore
-scoped to the packet, as `core.source_files` is, and a sidecar's description says what it is about.
+**The table carries no session and states what a sidecar is about.** Part 02 §7.1 admits no
+optional session column (§2.7), and a sidecar may be about the packet, a subject, a session, or one
+resource. The table is therefore scoped to the packet, as `core.source_files` is, and carries the
+nullable pair `scope_kind` and `scope` in the form `core.processing_runs` gives them (§2.10). A null
+pair is a sidecar about the packet. A consumer then finds a subject's sidecars with a query, where a
+description alone would leave it reading prose.
 
-**The class covers a sidecar a program reads.** Part 02 §2.2's meaning of `documentation` loses
-"human-readable": a sidecar asserts no semantic or conformance fact, whether a person or a program
-reads it. A viewer's saved state and an image in a format no kind models are then sidecars. Part 02
-§2.2's sentence about a machine-interpreted control artifact stays, since it excludes a document that
-Escapewheel itself interprets, such as a recipe or a registry.
+**The class means that nothing depends on the file.** Part 02 §2.2's meaning of `documentation`
+loses "human-readable" and gains the test that separates a sidecar from data: no resource of the
+packet depends on a sidecar, and no result the packet holds is derived from one. A person or a
+program may read it. A viewer's saved state passes the test, since it is a view over data the packet
+already holds or names. Part 02 §2.2's sentence about a machine-interpreted control artifact stays,
+since it excludes a document that Escapewheel itself interprets, such as a recipe or a registry.
 
-**A payload that tables describe is not a sidecar.** Part 02 §2.2 forbids a canonical table to
-reference a documentation resource. An image that a coordinate frame is registered to, or a volume
-whose axes a table states, therefore takes a dense-array declaration or an extension's own
-declaration, as it does now.
+**A writer owes the test where the registry cannot check it.** The registry already forbids a
+canonical reference, a `requires` entry, a catalog binding and a lineage edge that targets a
+documentation resource (§2.9). The remaining case binds a writer: it does not place in a sidecar a
+file from which a table, an array or an analysis resource of the packet was computed. No validator
+can decide that case, and the draft states it as unchecked.
+
+**A file that results depend on is not a sidecar.** An image that a coordinate frame is registered
+to, or a volume whose axes a table states, takes a dense-array declaration or an extension's own
+declaration, as it does now. Such a file is also the one that has to stay fixed, which the canonical
+classes guarantee and the documentation class does not.
+
+**A sidecar's permanence is what its entry records.** An amendment may replace or remove a sidecar
+(§2.8), so a packet promises a sidecar's bytes for one version only, and each version's manifest
+records the digest of the bytes it names. A referenced sidecar is kept by whoever holds it, and its
+entry's digest lets a reader detect that it has changed (§2.11). A subject's scan held elsewhere is
+listed this way: the packet says that it exists, where it is, and what it was when checked.
+
+**The two sentences that put values in a sidecar are restated.** Part 03 §7 and Part 09 §3 name an
+extension, or a `json_string` column, as the place for a lab-specific value, and no longer a sidecar
+(§2.1). A value a consumer filters or computes on is a fact, and a sidecar holds none the packet
+relies on.
 
 **Storage and delivery follow the existing opaque rules.** A packet-owned sidecar is a payload under
 Part 03 §11, at `opaque/<resource_id>/<name>` in the recommended layout, and a referenced one is
@@ -159,10 +213,10 @@ family payload no binding rule, which is a separate question.
 | surface | effect |
 |---|---|
 | semantic prose | Unchanged. A sidecar asserts no semantic fact, so Part 01 gains no concept. |
-| logical prose, registry meta-schema, declarations and rules | Part 02 §2.2 restates the meaning of `documentation`. Part 02 §2.6 names a fourth catalog table whose `resource_id` is a string. Part 02 §11 gains the two resources. The registry gains the table and the opaque catalog declaration; the table declares `[]` as its amendment groups, as every non-canonical table does. The meta-schema and the registry contract are unchanged: a core registry may already declare the class. Whether a declared rule checks a media type's form is unknown, and either answer leaves the direction unchanged. |
-| physical profiles | Part 03 §3.1's layout drops `docs/` and Part 03 §7 names the catalog. Part 03 §11 and the descriptor are unchanged. |
+| logical prose, registry meta-schema, declarations and rules | Part 02 §2.2 restates the meaning of `documentation` and binds a writer to the dependence test. The table declares the scope pair and the rule that the pair is set together. Part 02 §2.6 names a fourth catalog table whose `resource_id` is a string. Part 02 §11 gains the two resources. The registry gains the table and the opaque catalog declaration; the table declares `[]` as its amendment groups, as every non-canonical table does. The meta-schema and the registry contract are unchanged: a core registry may already declare the class. Whether a declared rule checks a media type's form is unknown, and either answer leaves the direction unchanged. |
+| physical profiles | Part 03 §3.1's layout drops `docs/`, and Part 03 §7 names the catalog and no longer places a value in a sidecar. Part 03 §11 and the descriptor are unchanged. |
 | packet manifest and other JSON Schemas | Unchanged. A sidecar's entry uses the existing members, and the recipe schema already admits an adapter's options. |
-| validation and import | Unchanged in rule. Part 04 §10's catalog-binding checks and Part 05 §15.2's amendment table already cover a documentation catalog. Part 09 §2's tier table names the catalog in place of `docs/`. |
+| validation and import | Unchanged in rule. Part 04 §10's catalog-binding checks and Part 05 §15.2's amendment table already cover a documentation catalog. Part 09 §2's tier table names the catalog in place of `docs/`, and Part 09 §3 no longer names a sidecar as a place for a field. |
 | extension registries | Unchanged. An extension keeps the right to declare its own opaque or documentation resource. |
 | reader, writer, validator, adapters, code generation | Each package's registry copy regenerates. The reader lists the table and resolves an instance as it does any catalogued resource. The writer ships an adapter that delivers the files a recipe names, each packet-owned or referenced. The validator applies its existing checks. Other adapters are unchanged. |
 | existing packets | Unchanged in conformance. No existing packet carries either resource, and a stray in `docs/` stays a stray. A packet built afterwards binds the changed core registry. |
@@ -172,12 +226,9 @@ family payload no binding rule, which is a separate question.
 
 ## 6. Open questions
 
-1. Whether a sidecar is of class `documentation` or `core`. Section 4 prefers `documentation`. The
-   answer decides whether an amendment can correct a sidecar and whether an extension's table can
-   reference one.
-2. Whether the catalog table is scoped to the packet or to a session. Section 4 prefers the packet.
-   A session-scoped table would let a query join a sidecar to its session, and would oblige a
-   document about the whole packet to name one.
+1. Whether the media type names a registered type only, or any string of that form. A registered
+   type needs a normative reference to the registry of media types, and many scientific formats
+   have none. Either answer leaves the rest of the direction unchanged.
 
 ## 7. Promotion criteria
 
@@ -187,7 +238,7 @@ family payload no binding rule, which is a separate question.
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
-- [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
 - [ ] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
