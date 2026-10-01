@@ -171,7 +171,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 - [ ] Validator: a `Level` enumeration, and constants for verdicts and evaluation statuses. The
       writer compares against them where it now compares against `"valid"`.
 - [ ] Settle `source.absolute_uri` against the three `sources.*` IDs: one prefix.
-- [ ] Reader: the resource-ID module of §2, the packet file names, and the profile ID, each
+- [x] Reader: the resource-ID module of §2, the packet file names, and the profile ID, each
       defined once.
 - [ ] Writer: a `SourceAdapter` protocol and one capability protocol for each optional member
       (streaming, staged arrays, referenced arrays and media, payloads, compensations). The build
@@ -381,3 +381,23 @@ Writing the tool waits on the proposal's promotion and acceptance.
 - A stage declares whether it writes tracked files. The four that do run first, alone and in
   order, and the rest run together, bounded by `--jobs`. This is outside the plan of §9 and was
   asked for to shorten a run.
+
+### 11.5 Reader constants
+
+- The resource-ID module is `escapewheel_reader.resource_ids`. It holds the 43 core-registry IDs
+  that source code in the four packages spells as a literal, and no others. A constant's name is
+  its ID upper-cased with each dot an underscore, which a test enforces.
+- An extension's resource IDs stay with the package that carries the extension.
+- The reader bundles no registry, so the test of the constants reads the registry from the
+  specification's tree and is skipped where that tree is absent. A second test fails where any
+  other reader module spells a named ID as a whole literal.
+- The reader's per-module aliases for resource IDs are deleted. `CHANNELS` and `RUNS` each meant a
+  different table in two modules.
+- The packet's file names stay in the modules that read them: `MANIFEST_FILENAME` in `manifest`,
+  `SOURCES_FILENAME` and `SOURCES_VERSION` in `location`, and `ZARR_METADATA_FILENAMES` in
+  `resources`, which was the private `_ZARR_METADATA`. No layout module is added.
+- `MANIFESTS_DIRNAME` is defined in the reader although only the validator and the writer use it,
+  so that both import one definition from a package below them.
+- `PROFILE_ID` is defined in `profile`, and a test checks it against the bundled descriptor.
+- The validator, the writer and the adapters still spell these literals. Their conversion goes
+  with each package's stage 2.
