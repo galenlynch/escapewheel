@@ -12,6 +12,8 @@ external
     An external resource's size, members and digests, where a mode asks.
 tables
     A table's physical schema, and the values a registry constrains without a rule.
+ordering
+    A table's stored order and the uniqueness that order settles.
 """
 
 __all__: list[str] = []

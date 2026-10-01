@@ -1,15 +1,11 @@
 """The validator module's own helpers, exercised without a packet around them."""
 
 import sys
-from types import SimpleNamespace
 
 import duckdb
-import pyarrow as pa
-import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_validator import Report
-from escapewheel_validator.validator import _offending, _scan_one_ordering
+from escapewheel_validator.validator import _offending
 
 
 def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatch):
@@ -30,115 +26,3 @@ def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatc
         connection.sql(query).fetchall()
     assert _offending(connection, query)[0][0] == "harp"
     assert _offending(connection, "SELECT clock_id, tick_zero_utc FROM core_clocks WHERE FALSE") == []
-
-
-def test_a_row_breaking_a_determined_by_declaration_is_named_by_position(tmp_path):
-    """Part 03 §5.3: the third row shares the second's key and differs in both columns the key determines."""
-    path = tmp_path / "spike_events.parquet"
-    pq.write_table(
-        pa.table(
-            {
-                "session_id": pa.array([1, 1, 1, 1], type=pa.int32()),
-                "clock_id": pa.array([1, 1, 2, 2], type=pa.int32()),
-                "time_bucket_tick": pa.array([0, 0, 1, 1], type=pa.int64()),
-                "unit_id": pa.array([1, 1, 1, 2], type=pa.int32()),
-                "t_tick": pa.array([5, 6, 6, 9], type=pa.int64()),
-            }
-        ),
-        path,
-    )
-    spec = {
-        "columns": [
-            {"name": "session_id"},
-            {"name": "unit_id"},
-            {"name": "t_tick"},
-            {"name": "clock_id", "determined_by": ["session_id"]},
-            {"name": "time_bucket_tick", "determined_by": ["t_tick"]},
-        ],
-        "primary_key": ["session_id", "unit_id", "t_tick"],
-    }
-    report = Report()
-    handle = SimpleNamespace(path=path, schema=lambda: pq.read_schema(path))
-    _scan_one_ordering("analysis.spike_events", handle, spec, report)
-    assert [(f.check, f.rows) for f in report.findings] == [
-        (
-            "analysis.spike_events.determined_by",
-            (("row 3", "clock_id", "1 != 2"), ("row 3", "time_bucket_tick", "0 != 1")),
-        ),
-        ("analysis.spike_events.primary_key_unique", (("row 3", "(1, 6)"),)),
-    ]
-
-
-def test_a_bound_registry_lacking_an_overrides_column_departs_from_its_order():
-    """Part 03 §5.4: without `time_bucket_tick` the table cannot take the descriptor's order."""
-    report = Report()
-    spec = {
-        "columns": [
-            {"name": "session_id"},
-            {"name": "unit_id"},
-            {"name": "t_tick"},
-            {"name": "clock_id", "determined_by": ["session_id"]},
-        ],
-        "primary_key": ["session_id", "unit_id", "t_tick"],
-    }
-    _scan_one_ordering("analysis.spike_events", None, spec, report)
-    (finding,) = report.findings
-    assert (finding.check, finding.level) == ("analysis.spike_events.physical_order", "error")
-    assert "declares no time_bucket_tick" in finding.message
-
-
-#: `analysis.spike_events` as a registry declares it: two sort columns ahead of the key, each
-#: declared a function of it.
-_SPIKE_EVENTS = {
-    "columns": [
-        {"name": "session_id"},
-        {"name": "unit_id"},
-        {"name": "t_tick"},
-        {"name": "clock_id", "determined_by": ["session_id"]},
-        {"name": "time_bucket_tick", "determined_by": ["t_tick"]},
-    ],
-    "primary_key": ["session_id", "unit_id", "t_tick"],
-}
-
-
-def _scanned_spike_events(tmp_path, *, clock_id, unit_id=(1, 1, 2), t_tick=(5, 5, 9)):
-    """The ordering scan's findings over one session's spikes, as (check, rows) pairs."""
-    path = tmp_path / "spike_events.parquet"
-    rows = len(clock_id)
-    pq.write_table(
-        pa.table(
-            {
-                "session_id": pa.array([1] * rows, type=pa.int32()),
-                "clock_id": pa.array(clock_id, type=pa.int32()),
-                "time_bucket_tick": pa.array([0] * rows, type=pa.int64()),
-                "unit_id": pa.array(unit_id, type=pa.int32()),
-                "t_tick": pa.array(t_tick, type=pa.int64()),
-            }
-        ),
-        path,
-    )
-    report = Report()
-    handle = SimpleNamespace(path=path, schema=lambda: pq.read_schema(path))
-    _scan_one_ordering("analysis.spike_events", handle, _SPIKE_EVENTS, report)
-    return [(f.check, f.rows) for f in report.findings]
-
-
-def test_a_repeated_key_under_a_constant_determined_column_is_only_a_duplicate(tmp_path):
-    """Part 03 §5.3: a column the file holds as one value agrees with itself at every repeated key."""
-    assert _scanned_spike_events(tmp_path, clock_id=[1, 1, 1]) == [
-        ("analysis.spike_events.primary_key_unique", (("row 2", "(1, 5)"),)),
-    ]
-
-
-def test_a_repeated_key_under_a_varying_determined_column_is_also_a_false_declaration(tmp_path):
-    assert _scanned_spike_events(tmp_path, clock_id=[1, 2, 2]) == [
-        ("analysis.spike_events.determined_by", (("row 2", "clock_id", "1 != 2"),)),
-        ("analysis.spike_events.primary_key_unique", (("row 2", "(1, 5)"),)),
-    ]
-
-
-def test_a_table_of_one_repeated_row_keeps_every_key_and_reports_the_duplicate(tmp_path):
-    """Every key is constant, so the scan drops none of them and reads the determined columns."""
-    assert _scanned_spike_events(tmp_path, clock_id=[1, 1], unit_id=[1, 1], t_tick=[5, 5]) == [
-        ("analysis.spike_events.primary_key_unique", (("row 2", "(1, 1, 5)"),)),
-    ]

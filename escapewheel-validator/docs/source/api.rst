@@ -93,7 +93,7 @@ that defines it.
 .. autosummary::
    :toctree: generated
 
-   validator.verify_order
+   shim.ordering.verify_order
    generate.adjacency_settles_uniqueness
    amendment.IDENTITY
    amendment.PREFERENCES
@@ -140,4 +140,5 @@ Each module's page lists what it holds beyond the names above.
    errors
    stores
    vocabulary
+   shim.ordering
    scripts.cli
