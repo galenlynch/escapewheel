@@ -6,7 +6,7 @@ import shutil
 import pyarrow as pa
 import pytest
 
-from escapewheel_reader import open_packet
+from escapewheel_reader import access, open_packet
 from escapewheel_reader.errors import AmbiguousRun, NotDeclared
 from escapewheel_reader.runs import ambiguities, check, preferences, preferred_run
 
@@ -177,16 +177,16 @@ def test_units_refuses_an_unresolved_sorting(tmp_path, packet_root):
     runs = [(1, "spike_sorting", "probe_1"), (2, "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "units_refuse", runs)
     with pytest.raises(AmbiguousRun):
-        packet.units()
+        access.units(packet)
 
 
 def test_exact_spike_selection_bypasses_an_unresolved_sorting(tmp_path, packet_root):
     """A packet-unique unit ID selects rows; it does not ask which result is current."""
     runs = [(1, "curation", "sort_1"), (2, "curation", "sort_1")]
     packet = _with_runs(tmp_path, packet_root, "spikes_refuse", runs)
-    assert packet.spike_times(UNITS[0]).num_rows == 3
+    assert access.spike_times(packet, UNITS[0]).num_rows == 3
     explicit = packet.table("core.units", unit_id=UNITS[0])
-    assert packet.spike_times(units=explicit).num_rows == 3
+    assert access.spike_times(packet, units=explicit).num_rows == 3
 
 
 def test_the_raw_table_read_is_the_escape_hatch(tmp_path, packet_root):
@@ -204,6 +204,6 @@ def test_an_unrelated_activity_does_not_block_units(tmp_path, packet_root):
         (3, "pose_estimation", "camera_1"),
     ]
     packet = _with_runs(tmp_path, packet_root, "unrelated", runs)
-    assert packet.units().num_rows == 2
+    assert access.units(packet).num_rows == 2
     with pytest.raises(AmbiguousRun, match="pose_estimation"):
         check(packet)

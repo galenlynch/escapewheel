@@ -12,7 +12,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_reader import NotDeclared, StaleSupport, open_packet
+from escapewheel_reader import NotDeclared, StaleSupport, access, open_packet
 from escapewheel_reader.observation import (
     DECLARED,
     INHERITED,
@@ -337,7 +337,7 @@ def test_the_stream_view_agrees_with_the_function(stream_packet):
 
 def test_a_single_unit_read_carries_its_support(observed_packet):
     """So a rate needs no second lookup on the path where the answer is unambiguous."""
-    spikes = observed_packet.spike_times(UNITS[0])
+    spikes = access.spike_times(observed_packet, UNITS[0])
     carried = support_of(spikes)
     assert carried is not None
     assert carried.to_pylist() == [{"clock_id": CLOCK, "start_tick": 0, "stop_tick": 999}]
@@ -346,14 +346,14 @@ def test_a_single_unit_read_carries_its_support(observed_packet):
 
 def test_a_refined_unit_carries_its_own_window(observed_packet):
     """The attachment follows the resolution, so a refinement reaches the denominator."""
-    carried = support_of(observed_packet.spike_times(UNITS[1]))
+    carried = support_of(access.spike_times(observed_packet, UNITS[1]))
     assert carried.to_pylist() == [{"clock_id": CLOCK, "start_tick": 100, "stop_tick": 599}]
 
 
 def test_filtering_invalidates_the_support_loudly(observed_packet):
     """Arrow keeps metadata through a filter, so without the fingerprint this would silently
     divide by a window the remaining rows no longer span."""
-    spikes = observed_packet.spike_times(UNITS[0])
+    spikes = access.spike_times(observed_packet, UNITS[0])
     fewer = spikes.slice(0, 1)
     with pytest.raises(StaleSupport, match="read it again"):
         support_of(fewer)
@@ -363,14 +363,14 @@ def test_filtering_invalidates_the_support_loudly(observed_packet):
 
 def test_concatenation_is_caught_too(observed_packet):
     """The other direction: more rows over the same window would read as a doubled rate."""
-    spikes = observed_packet.spike_times(UNITS[0])
+    spikes = access.spike_times(observed_packet, UNITS[0])
     with pytest.raises(StaleSupport):
         support_of(pa.concat_tables([spikes, spikes]))
 
 
 def test_reordering_and_projection_stay_valid(observed_packet):
     """Neither changes which rows the support describes, so neither should be refused."""
-    spikes = observed_packet.spike_times(UNITS[0])
+    spikes = access.spike_times(observed_packet, UNITS[0])
     expected = rate_of(observed_packet, spikes)
     assert rate_of(observed_packet, spikes.sort_by("t_tick")) == pytest.approx(expected)
     assert rate_of(observed_packet, spikes.select(["t_tick"])) == pytest.approx(expected)
@@ -378,7 +378,7 @@ def test_reordering_and_projection_stay_valid(observed_packet):
 
 def test_a_range_narrowed_read_carries_no_support(observed_packet):
     """The span is the caller's choice, so the observation window is no denominator for it."""
-    narrowed = observed_packet.spike_times(UNITS[0], t_tick=(0, 100))
+    narrowed = access.spike_times(observed_packet, UNITS[0], t_tick=(0, 100))
     assert support_of(narrowed) is None
     with pytest.raises(NotDeclared, match="no support"):
         rate_of(observed_packet, narrowed)
@@ -386,7 +386,7 @@ def test_a_range_narrowed_read_carries_no_support(observed_packet):
 
 def test_a_many_unit_read_carries_no_support(observed_packet):
     """Two units with different windows have no single denominator, so none is attached."""
-    spikes = observed_packet.spike_times(units=observed_packet.units())
+    spikes = access.spike_times(observed_packet, units=access.units(observed_packet))
     assert support_of(spikes) is None
 
 

@@ -24,8 +24,7 @@ good = units(packet, quality_label="sua")
 spikes = spike_times(packet, units=good)  # a pyarrow.Table, ticks on the reference clock
 ```
 
-`packet.units(...)` and `packet.spike_times(...)` are the same calls. For several packets at once,
-`open_dataset` presents them as one relation.
+For several packets at once, `open_dataset` presents them as one relation.
 
 ## Documentation
 

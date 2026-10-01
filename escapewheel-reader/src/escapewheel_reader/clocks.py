@@ -343,9 +343,8 @@ __all__ = [
 # -- (packet, table) semantics ------------------------------------------------------------
 #
 # These take a packet and a table and return a table. They are free functions rather than
-# methods because our currency is `pa.Table`, which is PyArrow's and has no `.pipe()`, so the
-# method form was never available: `packet.on_clock(table)` was a method on the packet operating
-# on a table, owned by neither. `Packet` keeps one-line delegates for discoverability.
+# methods because our currency is `pa.Table`, which is PyArrow's and has no `.pipe()`: a method
+# for one would sit on the packet and operate on a table, owned by neither.
 
 
 def _present(column: Any) -> list[int]:

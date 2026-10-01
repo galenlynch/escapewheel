@@ -4,7 +4,7 @@ import numpy as np
 import pyarrow as pa
 import pytest
 
-from escapewheel_reader import ResourceNotFoundError, open_packet
+from escapewheel_reader import ResourceNotFoundError
 from escapewheel_reader.clocks import BOUND, align, anchors, declared_bound, extrapolation_error, rate
 from escapewheel_reader.errors import Unanchored
 
@@ -223,41 +223,3 @@ def test_a_packet_without_anchors_has_none():
             raise ResourceNotFoundError(resource_id)
 
     assert anchors(_NoAnchors()) == {}
-
-
-# -- the free function is the implementation; the method is a delegate --------------------
-
-
-def test_on_clock_is_the_same_whether_called_as_a_function_or_a_method(two_clock_packet):
-    """The delegate exists for discoverability and must not acquire behaviour of its own."""
-    from escapewheel_reader.clocks import on_clock
-
-    packet = open_packet(two_clock_packet)
-    spikes = packet.spike_times(units=packet.units(), clock="stored")
-    assert on_clock(packet, spikes).to_pylist() == packet.on_clock(spikes).to_pylist()
-
-
-def test_seconds_is_the_same_whether_called_as_a_function_or_a_method(two_clock_packet):
-    """As above. Two surfaces over one implementation, never two implementations."""
-    from escapewheel_reader.clocks import on_clock, seconds
-
-    packet = open_packet(two_clock_packet)
-    mapped_spikes = on_clock(packet, packet.spike_times(units=packet.units(), clock="stored"))
-    assert seconds(packet, mapped_spikes).to_pylist() == packet.seconds(mapped_spikes).to_pylist()
-
-
-def test_the_packet_carries_no_transformation_of_its_own():
-    """`Packet` is manifest, resolution, IO and registration. Anything that could be a free
-    function is one, so each delegate's body is a docstring and a single return."""
-    import ast
-    import inspect
-    import textwrap
-
-    from escapewheel_reader.packet import Packet
-
-    delegates = ("intervals", "units", "events", "spike_times", "distinct", "reference_clock", "t_zero")
-    for name in (*delegates, "seconds", "on_clock"):
-        function = ast.parse(textwrap.dedent(inspect.getsource(getattr(Packet, name)))).body[0]
-        assert isinstance(function, ast.FunctionDef)
-        body = [statement for statement in function.body if not isinstance(statement, ast.Expr)]
-        assert len(body) == 1 and isinstance(body[0], ast.Return), name

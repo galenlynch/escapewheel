@@ -16,14 +16,19 @@ from escapewheel_reader import (
     assigned_spikes,
     clock_windows,
     electrode_at,
+    events,
+    intervals,
     kept_channels,
     on_clock,
     open_packet,
     origin,
     preferred_run,
+    reference_clock,
     seconds,
+    spike_times,
     stream_windows,
     unit_windows,
+    units,
     windows_disjoint,
 )
 
@@ -37,7 +42,7 @@ def _column_type(registry: dict[str, Any], resource: str, column: str) -> type[A
 def _hints(symbol: Any) -> dict[str, Any]:
     """Resolve postponed annotations, including optional DuckDB annotations."""
     namespace = dict(vars(sys.modules[symbol.__module__]))
-    namespace.update({"duckdb": duckdb, "DuckDBPyConnection": duckdb.DuckDBPyConnection})
+    namespace.update({"duckdb": duckdb, "DuckDBPyConnection": duckdb.DuckDBPyConnection, "Packet": Packet})
     return get_type_hints(symbol, globalns=namespace)
 
 
@@ -49,15 +54,12 @@ def test_public_logical_identifier_annotations_follow_the_registry(packet_root):
     # (symbol, parameter, logical owner, column). A None default admits None; a required
     # parameter does not. The mapping is bounded and reviewed, not inferred from `_id`.
     mapped = [
-        (Packet.intervals, "session_id", "core.sessions", "session_id"),
-        (Packet.units, "session_id", "core.sessions", "session_id"),
-        (Packet.events, "session_id", "core.sessions", "session_id"),
-        (Packet.spike_times, "unit_id", "core.units", "unit_id"),
-        (Packet.spike_times, "session_id", "core.sessions", "session_id"),
-        (Packet.reference_clock, "session_id", "core.sessions", "session_id"),
-        (Packet.t_zero, "session_id", "core.sessions", "session_id"),
-        (Packet.seconds, "session_id", "core.sessions", "session_id"),
-        (Packet.on_clock, "clock", "core.clocks", "clock_id"),
+        (intervals, "session_id", "core.sessions", "session_id"),
+        (units, "session_id", "core.sessions", "session_id"),
+        (events, "session_id", "core.sessions", "session_id"),
+        (spike_times, "unit_id", "core.units", "unit_id"),
+        (spike_times, "session_id", "core.sessions", "session_id"),
+        (reference_clock, "session_id", "core.sessions", "session_id"),
         (aligned_spikes, "session_id", "core.sessions", "session_id"),
         (assigned_spikes, "session_id", "core.sessions", "session_id"),
         (windows_disjoint, "session_id", "core.sessions", "session_id"),
@@ -79,10 +81,10 @@ def test_public_logical_identifier_annotations_follow_the_registry(packet_root):
         assert _hints(symbol)[parameter] == expected, f"{symbol.__qualname__}.{parameter}"
 
     clock_type = _column_type(registry, "core.clocks", "clock_id")
-    assert _hints(Packet.events)["clock"] == clock_type | Literal["stored"] | None
-    assert _hints(Packet.spike_times)["clock"] == clock_type | Literal["stored"] | None
+    assert _hints(events)["clock"] == clock_type | Literal["stored"] | None
+    assert _hints(spike_times)["clock"] == clock_type | Literal["stored"] | None
 
-    assert _hints(Packet.reference_clock)["return"] is clock_type
+    assert _hints(reference_clock)["return"] is clock_type
     assert _hints(preferred_run)["return"] is _column_type(registry, "core.processing_runs", "processing_run_id")
 
 

@@ -19,8 +19,6 @@ from typing import TYPE_CHECKING, Any, Literal
 import pyarrow as pa
 import pyarrow.dataset as pads
 
-from . import access
-from .clocks import on_clock, origin, reference_clock, seconds
 from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError, ResourceUnreadableError
 from .location import SOURCES_FILENAME, Location, Rewrite, Sources, read_sources
 from .manifest import Manifest, Resource
@@ -552,8 +550,6 @@ class Packet:
         """
         return self.duckdb(for_query=query).sql(query).to_arrow_table()
 
-    # -- convenience accessors --------------------------------------------------------
-
     @staticmethod
     def _predicate(where: Mapping[str, Predicate]) -> pads.Expression | None:
         """Build a dataset expression from column constraints.
@@ -580,80 +576,6 @@ class Packet:
                 term = field == value
             expression = term if expression is None else expression & term
         return expression
-
-    def intervals(self, *, session_id: int | None = None, interval_kind: str | None = None) -> pa.Table:
-        """Read ``core.intervals``. Delegates to :func:`escapewheel_reader.access.intervals`."""
-        return access.intervals(self, session_id=session_id, interval_kind=interval_kind)
-
-    def units(self, *, session_id: int | None = None, quality_label: str | None = None) -> pa.Table:
-        """Read ``core.units``, refusing coexisting sortings. Delegates to :func:`escapewheel_reader.access.units`."""
-        return access.units(self, session_id=session_id, quality_label=quality_label)
-
-    def events(
-        self,
-        *,
-        event_type: str | None = None,
-        session_id: int | None = None,
-        t_tick: tuple[int, int] | None = None,
-        clock: int | Literal["stored"] | None = None,
-        seconds: bool = False,
-    ) -> pa.Table:
-        """Read ``core.events`` on one clock. Delegates to :func:`escapewheel_reader.access.events`."""
-        return access.events(
-            self, event_type=event_type, session_id=session_id, t_tick=t_tick, clock=clock, seconds=seconds
-        )
-
-    def spike_times(
-        self,
-        unit_id: int | None = None,
-        *,
-        units: pa.Table | None = None,
-        session_id: int | None = None,
-        t_tick: tuple[int, int] | None = None,
-        clock: int | Literal["stored"] | None = None,
-        seconds: bool = False,
-    ) -> pa.Table:
-        """Read spike times on one clock. Delegates to :func:`escapewheel_reader.access.spike_times`."""
-        return access.spike_times(
-            self, unit_id, units=units, session_id=session_id, t_tick=t_tick, clock=clock, seconds=seconds
-        )
-
-    def reference_clock(self, *, session_id: int | None = None) -> int:
-        """Return the reference clock. Delegates to :func:`escapewheel_reader.clocks.reference_clock`."""
-        return reference_clock(self, session_id=session_id)
-
-    def t_zero(self, *, session_id: int | None = None) -> int:
-        """Return the session's time origin, on the reference clock (Part 01 §2.2).
-
-        The earliest tick at which any of the session's clocks was observing. It is read from
-        `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum across
-        clocks through R13's mapping, which is arithmetic a reader should not have to repeat
-        and would not repeat identically.
-
-        Raises
-        ------
-        NoTimeOrigin
-            If the packet declares none.
-        """
-        return origin(self, session_id)[0]
-
-    def seconds(self, table: pa.Table, *, session_id: int | None = None) -> pa.Table:
-        """Add a `t_second` column to a table whose ticks are on the reference clock.
-
-        Delegates to :func:`escapewheel_reader.clocks.seconds`, where the docstring lives.
-        """
-        return seconds(self, table, session_id=session_id)
-
-    def on_clock(self, table: pa.Table, clock: int | None = None, *, bound: float | None = None) -> pa.Table:
-        """Return `table` with its ticks on one clock.
-
-        Delegates to :func:`escapewheel_reader.clocks.on_clock`, where the docstring lives.
-        """
-        return on_clock(self, table, clock, bound=bound)
-
-    def distinct(self, resource_id: str, column: str) -> pa.ChunkedArray[Any]:
-        """Return a column's distinct values. Delegates to :func:`escapewheel_reader.access.distinct`."""
-        return access.distinct(self, resource_id, column)
 
 
 def _prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:

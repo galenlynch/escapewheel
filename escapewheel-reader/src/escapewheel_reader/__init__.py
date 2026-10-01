@@ -3,7 +3,7 @@
 Open a packet with :func:`open_packet`, or several as one relation with :func:`open_dataset`, then
 pass it to the functions below. An access function takes ``(packet, ...)`` and returns a
 `pyarrow.Table`; a semantics function such as :func:`on_clock` takes ``(packet, table)`` and returns
-a table, so the two compose. The `Packet` methods of the same names are one-line delegates. The
+a table, so the two compose. `Packet` has no method doing what one of them does. The
 documentation's Design page explains why each function exists.
 
 Its modules:

@@ -4,8 +4,7 @@ API Reference
 .. currentmodule:: escapewheel_reader
 
 Every name here is importable from ``escapewheel_reader``. Open a packet, then pass it to the
-functions in the later sections; the :class:`Packet` methods that share their names delegate to
-them.
+functions in the later sections.
 
 Opening packets
 ---------------

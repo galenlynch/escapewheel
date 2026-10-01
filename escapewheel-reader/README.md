@@ -22,9 +22,8 @@ good = units(packet, quality_label="sua")
 spikes = spike_times(packet, units=good)  # pyarrow.Table of t_tick and clock_id
 ```
 
-The `Packet` methods of the same names delegate to these functions, so
-`packet.spike_times(units=good)` is the same call. `Packet` itself only resolves, reads and
-registers:
+`Packet` itself only resolves, reads and registers, and has no method doing what one of those
+functions does:
 
 ```python
 packet.manifest.sessions  # the sessions the manifest declares

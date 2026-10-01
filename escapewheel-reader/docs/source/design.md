@@ -22,8 +22,8 @@ stored))` puts stored ticks on the reference clock and then in seconds, and the 
 Polars, pandas or DuckDB unchanged.
 
 `Packet` resolves resources, reads them, acquires the registries the packet binds and registers
-tables with DuckDB. Its other methods are one-line delegates, so `packet.spike_times(17)` and
-`spike_times(packet, 17)` are the same call.
+tables with DuckDB. It has no method doing what a free function does: `spike_times(packet, 17)` is
+the only spelling of that read.
 
 `open_dataset` is the second entry point, for many packets at once (see
 [Datasets of many packets](#datasets-of-many-packets)).

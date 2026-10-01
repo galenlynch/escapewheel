@@ -46,7 +46,7 @@ revisions.** Almost all of them are about time:
 | hazard | revision | what we own |
 |---|---|---|
 | a tick means nothing beside another clock's | R13, R27, R37 | `clocks.align`, `clocks.on_clock` |
-| seconds need a declared origin, not a guessed one | R39 | `clocks.seconds`, `Packet.t_zero` |
+| seconds need a declared origin, not a guessed one | R39 | `clocks.seconds`, `clocks.origin` |
 | a count needs the span it was observed over | R38 | `observation.unit_windows`, `observation.rate` |
 | several runs may have produced the same thing | R41, R44 | `runs.ambiguities`, `runs.preferred_run` |
 | an ASOF and a range join differ where windows overlap | R43 | `alignment.aligned_spikes` |
@@ -58,7 +58,7 @@ extends a row or it adds one — and adding one means naming the revision that m
 
 ## The shape of the API
 
-**Free functions in three layers, with thin `Packet` delegates.**
+**Free functions in three layers, and a `Packet` that mirrors none of them.**
 
 ```
 kernels      align(ticks, anchor_t, anchor_p, *, bound)       raw arrays, no packet
@@ -69,15 +69,15 @@ access       spike_times(packet, ...), unit_windows(packet)   (packet, ...) -> t
 **Why free rather than methods: we do not own our data type.** polars, pandas and xarray can put
 transformations on the object because they own `DataFrame` and `Dataset`. Our currency is
 `pa.Table`, which is PyArrow's, and `pa.Table` has no `.pipe()`. So `table.on_clock()` and
-`table.pipe(on_clock)` are both unavailable — which is exactly why the older API had
-`packet.on_clock(table)`, a method on the *packet* operating on a *table*, owned by neither.
-Free functions are what is left once that is faced, not a stylistic preference.
+`table.pipe(on_clock)` are both unavailable, and `packet.on_clock(table)` would be a method on
+the *packet* operating on a *table*, owned by neither. Free functions are what is left once that
+is faced, not a stylistic preference.
 
-Write the function first and the delegate second, never the other way round. A delegate is one
-line and carries no behaviour; the docstring lives on the function. The accessors live in
-`access.py`, and `tests/test_clocks.py` checks that every `Packet` delegate is a single return. `Packet` is manifest,
-resolution, IO and DuckDB registration — **nothing may be added to it that would work as a free
-function instead.**
+A function has one spelling. `Packet` is manifest, resolution, IO and DuckDB registration —
+**nothing may be added to it that would work as a free function instead**, and it carries no
+method that delegates to one: a delegate is a second name for the same call, and nothing decides
+which functions get one. `tests/test_surface.py` checks that no `Packet` method shares a name with
+an exported function.
 
 ### Two shapes worth copying
 
