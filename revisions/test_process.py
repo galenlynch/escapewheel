@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 import tempfile
 import unittest
@@ -15,13 +14,6 @@ sys.path.insert(0, str(ROOT / "spec" / "tools"))
 
 import combine
 from revisions import check_citations, impact, ledger, process_rules, stages
-
-_release_spec = importlib.util.spec_from_file_location(
-    "release_bundle_probe", ROOT / "prototype/release-bundle/probe.py"
-)
-assert _release_spec is not None and _release_spec.loader is not None
-release = importlib.util.module_from_spec(_release_spec)
-_release_spec.loader.exec_module(release)
 
 
 def metadata(**values: str) -> str:
@@ -148,28 +140,6 @@ class ProcessSemanticsTests(unittest.TestCase):
         self.assertEqual(live_process, [])
         self.assertTrue(sites)
         self.assertTrue(all(site.startswith("revisions/accepted/") for site in sites))
-
-    def test_release_generator_selects_moved_ledger(self) -> None:
-        self.assertEqual(release.PARTS["provenance"], ("revisions/applied.toml",))
-        self.assertEqual(
-            release.digest(ROOT / release.PARTS["provenance"][0]),
-            release.digest(ROOT / "revisions/applied.toml"),
-        )
-
-    def test_release_probe_is_non_writing(self) -> None:
-        with (
-            mock.patch.object(sys, "argv", ["probe.py"]),
-            mock.patch.object(Path, "write_text") as write_text,
-        ):
-            release.main()
-            write_text.assert_not_called()
-        with (
-            mock.patch.object(sys, "argv", ["probe.py", "--write"]),
-            mock.patch.object(Path, "write_text") as write_text,
-            self.assertRaises(SystemExit),
-        ):
-            release.main()
-        write_text.assert_not_called()
 
 
 if __name__ == "__main__":

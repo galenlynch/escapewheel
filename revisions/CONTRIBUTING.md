@@ -544,9 +544,7 @@ separately appraised specification-domain change.
 The ledger, registry-target map, and checker live under `revisions/`. The ledger proves one-way
 traceability from accepted clause to disposition to an existing current owner. It does not require
 the owner to cite its revision back and does not claim semantic fidelity merely because a target
-exists. `prototype/release-bundle/probe.py` is a non-writing experiment that includes
-`revisions/applied.toml` in one candidate inventory; it is not publication machinery and produces
-no tracked release snapshot.
+exists.
 
 Run the focused checks, then the complete verifier:
 
