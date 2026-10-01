@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 4 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 3 proposals and 3 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -132,13 +132,13 @@ specification tooling work have landed. Two defects of its section 4 stay open, 
 be fixed without a revision:
 
 - a delivered adapter's compensations are dropped, and either way of carrying them changes
-  Part 12, which a proposal of §3a covers; and
+  Part 12, which a draft of §3a covers; and
 - the ledger's two weak checks, which the two ledger proposals of §3a cover.
 
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Two drafts await acceptance and four proposals await promotion
+## 3a. Three drafts await acceptance and three proposals await promotion
 
 The drafts are under `revisions/drafts/` and the proposals under `revisions/proposals/`.
 
@@ -167,15 +167,12 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
 - **The ledger resolves a superseded entry's successor and keeps no ratchet.** A process-domain
   proposal split from the one above: `by` becomes a required, resolved field, R107 §3.5's entry is
   corrected, and the ratchet that rewrites `applied.toml` is removed. Ready to promote.
-- **A delivery carries the compensations its adapter applied.** Opened 2026-10-01 for the defect
-  REFACTOR.md §4 lists. A delivery may carry a table under the reserved resource identifier
-  `compensations`, whose rows describe themselves and cross as any table does in each protocol; a
-  build records them and refuses a table it cannot read. Part 05 §4.3 says what a recorded
-  compensation states. A member of the run report is the alternative, and a report is optional.
-  Appraised 2026-10-01 and ready to promote. Three questions are open and are answered before its
-  draft is appraised: an evidence column, whether an adapter that applied none delivers an empty
-  table, and whether the three protocols keep their names. The writer's serving and reading code
-  wait on it.
+- **A delivery carries the compensations its adapter applied.** A draft, promoted 2026-10-01 and
+  not accepted, for the defect REFACTOR.md §4 lists. A delivery may carry a table under the
+  reserved resource identifier `compensations`, whose rows state an identifier, a defect, an action
+  and optionally the evidence; a build records them and refuses a table it cannot read. An adapter
+  that applied none delivers nothing, and the three protocols keep their names. The writer's
+  serving and reading code wait on it.
 
 ## 3b. A file the packet only indexes has no declaration
 
@@ -287,7 +284,7 @@ natural.
   packets test this validator and not the specification. It matters only if the corpus is to judge
   a second validator.
 - **A delivered adapter's compensations are dropped.** Section 4 of REFACTOR.md lists the defect,
-  and the fourth proposal of §3a covers it.
+  and the third draft of §3a covers it.
 - **An in-process source that omits an empty table escapes a refusal a delivered one draws.**
   `facts.refuse_a_discarded_fact` skips a resource fewer than two source kinds stated.
   REFACTOR.md §11.15 records it; changing it is behaviour the refactor does not list.
