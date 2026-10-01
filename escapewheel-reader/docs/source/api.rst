@@ -131,6 +131,7 @@ Errors
    UnresolvedSource
    ClockMismatch
    UnresolvableAxis
+   AxisFault
    MultiSessionUnresolved
 
 Modules

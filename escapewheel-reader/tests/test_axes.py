@@ -11,7 +11,7 @@ import pytest
 
 from escapewheel_reader import open_packet
 from escapewheel_reader.axes import LabelledAxis, NumericAxis, Scaling, TickAxis, describe
-from escapewheel_reader.errors import UnresolvableAxis
+from escapewheel_reader.errors import AxisFault, UnresolvableAxis
 
 from .conftest import CLOCK_PROBE, SESSION, _col, _resource, install_registry, read_registry
 
@@ -330,8 +330,9 @@ def test_a_missing_label_is_refused(tmp_path, packet_root):
     def drop_padding(rows):
         rows["core.array_labels"] = [r for r in rows["core.array_labels"] if r["label_id"] is not None]
 
-    with pytest.raises(UnresolvableAxis, match="5 label rows for its 6 positions"):
+    with pytest.raises(UnresolvableAxis) as refused:
         describe(_packet(tmp_path, packet_root, drop_padding), "core.waveform_mean")
+    assert refused.value.reason is AxisFault.LABEL_COUNT
 
 
 def test_a_label_naming_no_row_is_refused(tmp_path, packet_root):
@@ -339,8 +340,9 @@ def test_a_label_naming_no_row_is_refused(tmp_path, packet_root):
         (row,) = [r for r in rows["core.array_labels"] if r["array_asset_id"] == WAVE and r["label_id"] == 101]
         row["label_id"] = 999
 
-    with pytest.raises(UnresolvableAxis, match="1 labels name no row of core.electrodes"):
+    with pytest.raises(UnresolvableAxis) as refused:
         describe(_packet(tmp_path, packet_root, unknown_contact), "core.waveform_mean")
+    assert refused.value.reason is AxisFault.LABEL_UNMATCHED
 
 
 def test_a_dependency_on_a_dependent_axis_is_refused(tmp_path, packet_root):
@@ -349,8 +351,9 @@ def test_a_dependency_on_a_dependent_axis_is_refused(tmp_path, packet_root):
     def mutual(rows):
         _axis(rows, "core.array_dimensions", 0)["depends_on_axis_index"] = 1
 
-    with pytest.raises(UnresolvableAxis, match="not on another independent axis"):
+    with pytest.raises(UnresolvableAxis) as refused:
         describe(_packet(tmp_path, packet_root, mutual), "core.waveform_mean")
+    assert refused.value.reason is AxisFault.DEPENDENCY_CHAIN
 
 
 # -- regular axes and forms ----------------------------------------------------------------
@@ -387,16 +390,18 @@ def test_an_axis_declaring_other_than_one_form_is_refused(tmp_path, packet_root,
     def reform(rows):
         _axis(rows, "core.array_dimensions", 2).update(change)
 
-    with pytest.raises(UnresolvableAxis, match=f"declares {forms} coordinate forms"):
+    with pytest.raises(UnresolvableAxis) as refused:
         describe(_packet(tmp_path, packet_root, reform), "core.waveform_mean")
+    assert refused.value.reason is AxisFault.FORM_COUNT
 
 
 def test_a_dependent_axis_without_labels_is_refused(tmp_path, packet_root):
     def sample_depends(rows):
         _axis(rows, "core.array_dimensions", 2)["depends_on_axis_index"] = 0
 
-    with pytest.raises(UnresolvableAxis, match="no labels to vary"):
+    with pytest.raises(UnresolvableAxis) as refused:
         describe(_packet(tmp_path, packet_root, sample_depends), "core.waveform_mean")
+    assert refused.value.reason is AxisFault.DEPENDENCY_UNLABELLED
 
 
 # -- scaling -------------------------------------------------------------------------------
@@ -461,8 +466,9 @@ def test_a_unit_without_a_conversion_is_already_physical(tmp_path, packet_root):
 def test_scaling_at_both_levels_is_refused(tmp_path, packet_root):
     """Two statements of one relation, and nothing says which governs."""
     packet = _packet(tmp_path, packet_root, _per_channel({0: 1.0, 1: 2.0, 2: 3.0}, array_level=True))
-    with pytest.raises(UnresolvableAxis, match="one_scaling_level"):
+    with pytest.raises(UnresolvableAxis) as refused:
         describe(packet, "core.lfp")
+    assert refused.value.reason is AxisFault.SCALING_LEVELS
 
 
 def test_an_array_unit_disagreeing_with_its_channels_is_refused(tmp_path, packet_root):
@@ -474,11 +480,13 @@ def test_an_array_unit_disagreeing_with_its_channels_is_refused(tmp_path, packet
         (asset,) = [r for r in rows["core.array_assets"] if r["array_asset_id"] == LFP]
         asset["unit"] = "mV"
 
-    with pytest.raises(UnresolvableAxis, match="values in mV and its channels in"):
+    with pytest.raises(UnresolvableAxis) as refused:
         describe(_packet(tmp_path, packet_root, in_millivolts), "core.lfp")
+    assert refused.value.reason is AxisFault.SCALING_UNIT_DISAGREES
 
 
 def test_scaling_some_channels_is_refused(tmp_path, packet_root):
     """The middle channel has no conversion, so its values have no physical unit."""
-    with pytest.raises(UnresolvableAxis, match="2 of the 3 channels"):
+    with pytest.raises(UnresolvableAxis) as refused:
         describe(_packet(tmp_path, packet_root, _per_channel({0: 1.0, 2: 3.0})), "core.lfp")
+    assert refused.value.reason is AxisFault.SCALING_COVERAGE

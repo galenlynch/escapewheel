@@ -20,7 +20,7 @@ import pyarrow.compute as pc
 from numpy.typing import NDArray
 
 from .discriminators import Discriminator, _one, _paired_target, registries
-from .errors import UnresolvableAxis
+from .errors import AxisFault, UnresolvableAxis
 
 #: The column whose value declares each coordinate form, as Part 03 §6.3's one-form rule counts them.
 FORMS = ("origin_tick", "origin_value", "coordinate_array_asset_id", "coordinate_resource")
@@ -144,15 +144,19 @@ def _catalog_row(packet: Any, resource_id: str) -> tuple[dict[str, Any], dict[st
     """Return the array's declaration, its catalog row, and the catalog's resource ID."""
     declaration = packet.resource(resource_id).declaration
     if not declaration or declaration.get("kind") != "dense_array":
-        raise UnresolvableAxis(f"{resource_id} is not declared as a dense array")
+        raise UnresolvableAxis(AxisFault.NOT_AN_ARRAY, f"{resource_id} is not declared as a dense array")
     instances = declaration.get("instances", {})
     if instances.get("mode") != "catalog":
-        raise UnresolvableAxis(f"{resource_id}: its declaration has no catalog, so no row names its axes")
+        raise UnresolvableAxis(
+            AxisFault.UNCATALOGUED, f"{resource_id}: its declaration has no catalog, so no row names its axes"
+        )
     catalog_id = instances["catalog_resource"]
     catalog = packet.table(catalog_id)
     rows = catalog.filter(pc.field(instances["resource_id_column"]) == resource_id).to_pylist()
     if len(rows) != 1:
-        raise UnresolvableAxis(f"{resource_id}: {len(rows)} rows of {catalog_id} name it, not one")
+        raise UnresolvableAxis(
+            AxisFault.UNCATALOGUED, f"{resource_id}: {len(rows)} rows of {catalog_id} name it, not one"
+        )
     return dict(declaration), rows[0], catalog_id
 
 
@@ -164,7 +168,9 @@ def _label_rows(packet: Any, axes_id: str, array_asset_id: int) -> tuple[Discrim
     """
     found = _one(packet, axes_id, "coordinate_resource")
     if found.specialised not in _held(packet):
-        raise UnresolvableAxis(f"{axes_id} labels an axis and the packet holds no {found.specialised}")
+        raise UnresolvableAxis(
+            AxisFault.LABELS_ABSENT, f"{axes_id} labels an axis and the packet holds no {found.specialised}"
+        )
     table = packet.table(found.specialised)
     return found, table.filter(pc.field("array_asset_id") == array_asset_id)
 
@@ -186,7 +192,8 @@ def _labelled(
         extent = shape[depends_on]
     else:
         raise UnresolvableAxis(
-            f"axis {name!r} depends on axis {depends_on}, not on another independent axis (Part 03 §6.3)"
+            AxisFault.DEPENDENCY_CHAIN,
+            f"axis {name!r} depends on axis {depends_on}, not on another independent axis (Part 03 §6.3)",
         )
     length = shape[axis]
     order = ["depends_on_position_index", "position_index"]
@@ -196,11 +203,14 @@ def _labelled(
         np.array_equal(ours.column(c).to_numpy(), e) for c, e in zip(order, expected, strict=True)
     ):
         raise UnresolvableAxis(
+            AxisFault.LABEL_COUNT,
             f"axis {name!r} has {ours.num_rows} label rows for its {extent * length} positions, "
-            "not one at each (Part 03 §6.3)"
+            "not one at each (Part 03 §6.3)",
         )
     if kind not in _held(packet):
-        raise UnresolvableAxis(f"axis {name!r} stands for rows of {kind}, which the packet does not hold")
+        raise UnresolvableAxis(
+            AxisFault.LABELS_ABSENT, f"axis {name!r} stands for rows of {kind}, which the packet does not hold"
+        )
     key = _paired_target(packet, kind, found)
     named = packet.table(kind)
     ids = ours.column("label_id")
@@ -208,7 +218,7 @@ def _labelled(
     at = pc.index_in(ids, value_set=named.column(key).combine_chunks())
     unmatched = at.null_count - ids.null_count
     if unmatched:
-        raise UnresolvableAxis(f"axis {name!r}: {unmatched} labels name no row of {kind}")
+        raise UnresolvableAxis(AxisFault.LABEL_UNMATCHED, f"axis {name!r}: {unmatched} labels name no row of {kind}")
     taken = named.select([key, *(c for c in named.column_names if c != key)]).take(at)
     kept = order[1:] if depends_on is None else order
     by_position = pa.Table.from_arrays(
@@ -222,10 +232,15 @@ def _irregular(packet: Any, row: dict[str, Any], length: int, catalog: pa.Table)
     target = row["coordinate_array_asset_id"]
     named = catalog.filter(pc.field("array_asset_id") == target)["resource_id"].to_pylist()
     if len(named) != 1:
-        raise UnresolvableAxis(f"axis {row['dimension_name']!r} names array asset {target}, which no row catalogues")
+        raise UnresolvableAxis(
+            AxisFault.COORDINATE_ARRAY,
+            f"axis {row['dimension_name']!r} names array asset {target}, which no row catalogues",
+        )
     shape = packet.array_resource(named[0]).shape
     if shape != (length,):
-        raise UnresolvableAxis(f"axis {row['dimension_name']!r}: {named[0]} has shape {shape}, not ({length},)")
+        raise UnresolvableAxis(
+            AxisFault.COORDINATE_ARRAY, f"axis {row['dimension_name']!r}: {named[0]} has shape {shape}, not ({length},)"
+        )
     return IrregularAxis(target, str(named[0]))
 
 
@@ -241,16 +256,21 @@ def _coordinates(
     name = row["dimension_name"]
     forms = [form for form in FORMS if row[form] is not None]
     if len(forms) != 1:
-        raise UnresolvableAxis(f"axis {name!r} declares {len(forms)} coordinate forms, not one (Part 03 §6.3)")
+        raise UnresolvableAxis(
+            AxisFault.FORM_COUNT, f"axis {name!r} declares {len(forms)} coordinate forms, not one (Part 03 §6.3)"
+        )
     if forms[0] != "coordinate_resource" and row["depends_on_axis_index"] is not None:
-        raise UnresolvableAxis(f"axis {name!r} depends on another axis and has no labels to vary (Part 03 §6.3)")
+        raise UnresolvableAxis(
+            AxisFault.DEPENDENCY_UNLABELLED,
+            f"axis {name!r} depends on another axis and has no labels to vary (Part 03 §6.3)",
+        )
     if forms[0] == "origin_tick":
         if row["step_tick_num"] is None or row["clock_id"] is None:
-            raise UnresolvableAxis(f"axis {name!r} has an origin tick and no step or clock")
+            raise UnresolvableAxis(AxisFault.FORM_INCOMPLETE, f"axis {name!r} has an origin tick and no step or clock")
         return TickAxis(row["clock_id"], row["origin_tick"], Fraction(row["step_tick_num"], row["step_tick_den"] or 1))
     if forms[0] == "origin_value":
         if row["step_value"] is None or row["coordinate_unit"] is None:
-            raise UnresolvableAxis(f"axis {name!r} has an origin value and no step or unit")
+            raise UnresolvableAxis(AxisFault.FORM_INCOMPLETE, f"axis {name!r} has an origin value and no step or unit")
         return NumericAxis(row["origin_value"], row["step_value"], row["coordinate_unit"])
     if forms[0] == "coordinate_array_asset_id":
         return _irregular(packet, row, shape[row["axis_index"]], catalog)
@@ -279,7 +299,8 @@ def _scaling(
     unit, conversion = asset.get("unit"), asset.get("conversion")
     if conversion is not None and per_channel is not None:
         raise UnresolvableAxis(
-            f"{resource_id} declares scaling on the array and per channel (core.array_assets.one_scaling_level)"
+            AxisFault.SCALING_LEVELS,
+            f"{resource_id} declares scaling on the array and per channel (core.array_assets.one_scaling_level)",
         )
     if per_channel is None:
         if unit is None and conversion is None:
@@ -287,22 +308,27 @@ def _scaling(
         return Scaling(unit, 1.0 if conversion is None else float(conversion), float(asset.get("offset") or 0.0))
     axes = sorted(set(np.asarray(per_channel.column("axis_index").to_numpy()).tolist()))
     if len(axes) != 1 or not 0 <= axes[0] < len(shape):
-        raise UnresolvableAxis(f"{resource_id} scales channels on axes {axes}, not on one of its axes")
+        raise UnresolvableAxis(
+            AxisFault.SCALING_AXIS, f"{resource_id} scales channels on axes {axes}, not on one of its axes"
+        )
     axis = axes[0]
     if per_channel.column("channel_index").to_pylist() != list(range(shape[axis])):
         raise UnresolvableAxis(
+            AxisFault.SCALING_COVERAGE,
             f"{resource_id} scales {per_channel.num_rows} of the {shape[axis]} channels on axis {axis}, "
-            f"so the others have no physical value"
+            f"so the others have no physical value",
         )
     units = per_channel.column("unit").to_pylist()
     if None in units:
         raise UnresolvableAxis(
-            f"{resource_id} converts a channel into no unit (core.array_channels.scaling_pair_complete)"
+            AxisFault.SCALING_UNIT_ABSENT,
+            f"{resource_id} converts a channel into no unit (core.array_channels.scaling_pair_complete)",
         )
     channel_units = tuple(str(u) for u in units)
     if unit is not None and set(channel_units) != {unit}:
         raise UnresolvableAxis(
-            f"{resource_id} declares its values in {unit} and its channels in {sorted(set(channel_units))}"
+            AxisFault.SCALING_UNIT_DISAGREES,
+            f"{resource_id} declares its values in {unit} and its channels in {sorted(set(channel_units))}",
         )
     return Scaling(
         channel_units,
@@ -339,7 +365,9 @@ def describe(packet: Any, resource_id: str) -> ArrayDescription:
     table = packet.table(axes_id)
     rows = table.filter(pc.field("array_asset_id") == array_asset_id).sort_by("axis_index").to_pylist()
     if [row["axis_index"] for row in rows] != list(range(len(shape))):
-        raise UnresolvableAxis(f"{axes_id} does not declare each of {resource_id}'s {len(shape)} axes once")
+        raise UnresolvableAxis(
+            AxisFault.AXES_UNDECLARED, f"{axes_id} does not declare each of {resource_id}'s {len(shape)} axes once"
+        )
     labelled = any(row["coordinate_resource"] is not None for row in rows)
     labels = _label_rows(packet, axes_id, array_asset_id) if labelled else None
     catalog = packet.table(catalog_id)

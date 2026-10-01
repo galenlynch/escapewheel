@@ -128,7 +128,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
       and `Refused` over the errors that decline an operation the packet does not support.
 - [x] Give `RegistryUnavailable.reason` a closed set of values that the validator's check IDs are
       declared from.
-- [ ] Give `UnresolvableAxis` a reason code. It is raised at 20 sites, for causes that tests tell
+- [x] Give `UnresolvableAxis` a reason code. It is raised at 20 sites, for causes that tests tell
       apart by text.
 - [ ] Replace the deliberate `LookupError` and `KeyError` raises with `NotDeclared(PacketError,
       LookupError)`.
@@ -317,5 +317,8 @@ plan left open, as it was made.
   `MISSING`, `UNREADABLE` or `DIGEST`, and the validator maps those three to their check IDs in
   one table. `INVALID` reports acquired bytes that are not a JSON object; the validator never
   receives it, because it checks the bytes itself.
+- `AxisFault` has sixteen members for the twenty raise sites of `UnresolvableAxis`. Sites that
+  report the same fault in two places share a member: a missing catalog row, an absent label
+  table, a bad coordinate array, and an incomplete origin form.
 - `escapewheel_writer.materialize` no longer exports `NotAligned`. The reader's `errors` module
   is its one home, as §2 drops old import paths.

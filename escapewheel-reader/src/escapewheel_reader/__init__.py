@@ -72,6 +72,7 @@ from .discriminators import (
 )
 from .errors import (
     AmbiguousRun,
+    AxisFault,
     ClockMismatch,
     EscapewheelError,
     ManifestError,
@@ -122,6 +123,7 @@ __all__ = [
     "ArrayDescription",
     "ArrayResource",
     "Axis",
+    "AxisFault",
     "ChannelsUndeclared",
     "ClockMismatch",
     "Dataset",

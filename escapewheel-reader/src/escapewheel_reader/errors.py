@@ -170,12 +170,58 @@ class UnresolvableChannelIndex(Refused):
         self.channels_declared = channels_declared
 
 
+class AxisFault(StrEnum):
+    """Why an array's declarations do not determine its axes or its scaling."""
+
+    #: The resource is not declared as a dense array.
+    NOT_AN_ARRAY = "not_an_array"
+    #: The declaration has no catalog, or other than one catalog row names the array.
+    UNCATALOGUED = "uncatalogued"
+    #: The axes table does not declare each of the array's axes once.
+    AXES_UNDECLARED = "axes_undeclared"
+    #: An axis declares other than one coordinate form.
+    FORM_COUNT = "form_count"
+    #: An axis declares an origin without the step, clock or unit that completes it.
+    FORM_INCOMPLETE = "form_incomplete"
+    #: An axis depends on an axis that itself depends on another.
+    DEPENDENCY_CHAIN = "dependency_chain"
+    #: An axis depends on another and has no labels to vary with it.
+    DEPENDENCY_UNLABELLED = "dependency_unlabelled"
+    #: The packet holds no label table, or not the table an axis's labels name rows of.
+    LABELS_ABSENT = "labels_absent"
+    #: An axis has other than one label row at each position.
+    LABEL_COUNT = "label_count"
+    #: A label names no row of the table it stands for.
+    LABEL_UNMATCHED = "label_unmatched"
+    #: An axis's coordinate array is uncatalogued or of the wrong shape.
+    COORDINATE_ARRAY = "coordinate_array"
+    #: Scaling is declared on the array and per channel.
+    SCALING_LEVELS = "scaling_levels"
+    #: Channels are scaled on other than one axis.
+    SCALING_AXIS = "scaling_axis"
+    #: Some channels of the scaled axis have no scaling row.
+    SCALING_COVERAGE = "scaling_coverage"
+    #: A channel is converted into no unit.
+    SCALING_UNIT_ABSENT = "scaling_unit_absent"
+    #: The array's declared unit and its channels' units differ.
+    SCALING_UNIT_DISAGREES = "scaling_unit_disagrees"
+
+
 class UnresolvableAxis(Refused):
     """An array's declared coordinates or scaling do not determine one answer.
 
     Raised rather than falling back to positions, because every fallback is plausible: another
     array's labels, labels in storage order, or a padding position read as a row.
+
+    Attributes
+    ----------
+    reason : AxisFault
+        Which declaration is at fault.
     """
+
+    def __init__(self, reason: AxisFault, message: str) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 class MultiSessionUnresolved(Refused):
