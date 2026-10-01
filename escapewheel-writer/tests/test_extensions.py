@@ -7,7 +7,7 @@ from pathlib import Path
 import pyarrow as pa
 import pytest
 from escapewheel_reader import open_packet
-from escapewheel_validator import RegistryRejected
+from escapewheel_validator import RegistryRejected, RegistryState, Verdict, check_table
 
 from escapewheel_writer import PacketWriter
 from escapewheel_writer.errors import (
@@ -158,8 +158,14 @@ def test_a_failing_extension_refuses_the_commit(tmp_path, registry, minimal):
     with pytest.raises(CommitRefused) as refused:
         _commit(root, registry, minimal, choice="sideways")
     report = refused.value.report
-    assert (report.verdict(), report.verdict("core"), report.verdict("task")) == ("failed", "passed", "failed")
-    assert "task.trials.choice.in_vocabulary" in {f.check for f in report.findings if f.registry == "task"}
+    assert (report.verdict(), report.verdict("core"), report.verdict("task")) == (
+        Verdict.FAILED,
+        Verdict.PASSED,
+        Verdict.FAILED,
+    )
+    assert check_table.in_vocabulary("task.trials", "choice").id in {
+        f.check for f in report.findings if f.registry == "task"
+    }
     assert not (root / "packet.json").exists()
 
 
@@ -179,7 +185,7 @@ def test_an_incomplete_verdict_refuses_the_commit(tmp_path, registry, minimal):
     with pytest.raises(CommitRefused) as refused:
         _commit(root, registry, minimal, extension=overflowing)
     report = refused.value.report
-    assert (report.verdict(), report.verdict("task")) == ("incomplete", "incomplete")
+    assert (report.verdict(), report.verdict("task")) == (Verdict.INCOMPLETE, Verdict.INCOMPLETE)
     assert report.errors == 0
     assert not (root / "packet.json").exists()
 
@@ -188,14 +194,14 @@ def test_a_core_table_cannot_be_redefined(registry):
     stray = {**EXTENSION, "resources": {"core.intervals": EXTENSION["resources"]["task.trials"]}}
     with pytest.raises(RegistryRejected) as caught:
         PacketWriter(registry, packet_id="s001", extensions=[stray])
-    assert caught.value.result.state == "invalid"
+    assert caught.value.result.state == RegistryState.INVALID
 
 
 def test_an_unnamespaced_table_is_refused(registry):
     stray = {**EXTENSION, "resources": {"elsewhere.trials": EXTENSION["resources"]["task.trials"]}}
     with pytest.raises(RegistryRejected) as caught:
         PacketWriter(registry, packet_id="s001", extensions=[stray])
-    assert caught.value.result.state == "invalid"
+    assert caught.value.result.state == RegistryState.INVALID
 
 
 # -- a source adapter may come from another distribution ------------------------------------
@@ -367,7 +373,7 @@ def test_a_finished_draft_with_float_columns_passes_the_registry_check(tmp_path)
         next(c for c in REGISTRY["resources"]["core.units"]["table"]["columns"] if c["name"] == "metadata")
     )
     result = check_registry_context(drafted.document, core=REGISTRY_CONTEXT).result
-    assert result.state == "valid", [(o.id, o.instance) for p in result.phases for o in p.outcomes]
+    assert result.state == RegistryState.VALID, [(o.id, o.instance) for p in result.phases for o in p.outcomes]
 
 
 def test_a_string_column_is_reported_as_needing_a_vocabulary(tmp_path):

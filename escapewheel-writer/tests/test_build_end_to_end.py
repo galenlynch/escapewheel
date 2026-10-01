@@ -22,6 +22,7 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from escapewheel_validator import Level
 
 from tests import sorterfixture, syncfixture
 from tests.conftest import REGISTRY
@@ -141,7 +142,7 @@ def test_a_recipe_builds_and_commits(committed):
     commit, and none of them was visible to a test that writes Parquet directly.
     """
     root, report = committed
-    assert report.errors == 0, [f"{f.check}: {f.message}" for f in report.findings if f.level == "error"]
+    assert report.errors == 0, [f"{f.check}: {f.message}" for f in report.findings if f.level == Level.ERROR]
     assert (root / "packet.json").exists()
 
 

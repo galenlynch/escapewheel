@@ -3,10 +3,11 @@
 import json
 
 import pytest
+from escapewheel_validator import Level, check_table
 
 from escapewheel_writer import PacketWriter
 from escapewheel_writer.errors import NotCommitted, UsageError, UsageFault
-from escapewheel_writer.verify import verify
+from escapewheel_writer.verify import VERIFY_UNREACHABLE, verify
 
 from .conftest import read_registry, rebind_registry
 
@@ -89,7 +90,7 @@ def test_a_single_object_records_no_members(tmp_path, registry, minimal):
     _external(root, video.resolve().as_uri())
 
     report, manifest = verify(root, level="sha256")
-    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    assert report.passed, [f.message for f in report.findings if f.level == Level.ERROR]
     entry = next(r for r in manifest["resources"] if r.get("external"))
     assert entry["size_bytes"] == 100
     assert "members" not in entry
@@ -130,7 +131,7 @@ def test_a_digest_records_each_member_beside_the_resource(tmp_path, registry, mi
     _external(root, store.resolve().as_uri())
 
     report, manifest = verify(root, level="sha256")
-    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    assert report.passed, [f.message for f in report.findings if f.level == Level.ERROR]
     entry = next(r for r in manifest["resources"] if r.get("external"))
     assert {m["key"]: m["digest"] for m in entry["members"]} == {
         key: digest(str(store / key)) for key in (".zarray", "0.0")
@@ -140,7 +141,7 @@ def test_a_digest_records_each_member_beside_the_resource(tmp_path, registry, mi
 
     # A later listing-only pass keeps both, since the schema admits member digests only beside one.
     report, manifest = verify(root)
-    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    assert report.passed, [f.message for f in report.findings if f.level == Level.ERROR]
     again = next(r for r in manifest["resources"] if r.get("external"))
     assert again["digest"] == entry["digest"] and again["members"] == entry["members"]
 
@@ -154,7 +155,7 @@ def test_a_listing_that_gained_an_object_drops_a_digest_it_no_longer_describes(t
     (store / "1.0").write_bytes(b"y" * 10)
 
     report, manifest = verify(root)
-    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    assert report.passed, [f.message for f in report.findings if f.level == Level.ERROR]
     entry = next(r for r in manifest["resources"] if r.get("external"))
     assert "digest" not in entry and all("digest" not in m for m in entry["members"])
 
@@ -180,13 +181,13 @@ def test_a_multipart_entity_tag_is_recorded_as_etag_and_compared(tmp_path, regis
     _external(root, _zarr(tmp_path).resolve().as_uri())
 
     report, manifest = verify(root)
-    assert report.passed, [f.message for f in report.findings if f.level == "error"]
+    assert report.passed, [f.message for f in report.findings if f.level == Level.ERROR]
     entry = next(r for r in manifest["resources"] if r.get("external"))
     assert [m["store_digest"] for m in entry["members"]] == [
         {"algorithm": "etag", "value": '".zarray-3"'},
         {"algorithm": "etag", "value": '"0.0-3"'},
     ]
-    assert "1 store_digest" in next(f for f in report.findings if f.check == "external.verified").message
+    assert "1 store_digest" in next(f for f in report.findings if f.check == check_table.EXTERNAL_VERIFIED.id).message
 
 
 def test_an_unreachable_store_leaves_the_claim_unmade(tmp_path, registry, minimal):
@@ -198,7 +199,7 @@ def test_an_unreachable_store_leaves_the_claim_unmade(tmp_path, registry, minima
     report, manifest = verify(root)
     entry = next(r for r in manifest["resources"] if r.get("external"))
     assert "size_bytes" not in entry and "members" not in entry
-    assert "verify.unreachable" in {f.check for f in report.findings}
+    assert VERIFY_UNREACHABLE.id in {f.check for f in report.findings}
 
 
 def test_a_missing_packet_owned_digest_is_filled_in(tmp_path, registry, minimal):

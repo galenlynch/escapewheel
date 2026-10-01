@@ -20,7 +20,13 @@ from typing import Any
 
 from escapewheel_reader.errors import EscapewheelError
 from escapewheel_reader.registries import gunzip_member
-from escapewheel_validator import RegistryRejected, check_registry_context_bytes
+from escapewheel_validator import (
+    EvaluationStatus,
+    Level,
+    RegistryRejected,
+    RegistryState,
+    check_registry_context_bytes,
+)
 
 from .. import compare
 from ..amending import Held
@@ -221,7 +227,7 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
     )
     if args.registry_result is not None:
         args.registry_result.write_text(json.dumps(core_context.result.to_dict(), indent=2) + "\n")
-    if core_context.result.state != "valid":
+    if core_context.result.state != RegistryState.VALID:
         print(f"error: core registry is {core_context.result.state}", file=sys.stderr)
         return 2
     registry = core_context.document
@@ -236,7 +242,7 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
         for registry_id, body in sorted(bound.items())
         if registry_id != "core" and registry_id not in named_ids
     ]
-    rejected = [context for context in extension_contexts if context.result.state != "valid"]
+    rejected = [context for context in extension_contexts if context.result.state != RegistryState.VALID]
     if rejected:
         print(f"error: extension registry is {rejected[0].result.state}", file=sys.stderr)
         return 2
@@ -363,11 +369,11 @@ def _prune_cache(args: argparse.Namespace) -> int:
 def _say_refusal(exc: CommitRefused) -> None:
     """Name each registry's verdict, so a refusal says whether core or an extension failed (Part 05 §9.5)."""
     report = exc.report
-    for finding in [f for f in report.findings if f.level == "error"][:20]:
+    for finding in [f for f in report.findings if f.level == Level.ERROR][:20]:
         where = f"[{finding.registry}] " if finding.registry else ""
         print(f"  {finding.level:8s} {where}{finding.check}: {finding.message}", file=sys.stderr)
     for evaluation in report.evaluations:
-        if evaluation.status != "complete":
+        if evaluation.status != EvaluationStatus.COMPLETE:
             print(f"  {evaluation.status:8s} [{evaluation.registry}] {evaluation.rule or ''}", file=sys.stderr)
     verdicts = ", ".join(f"{name} {report.verdict(name)}" for name in report.bound)
     print(
@@ -491,7 +497,7 @@ def _extension_check(args: argparse.Namespace) -> int:
         if isinstance(document, dict)
         else 0
     )
-    if context.result.state != "valid":
+    if context.result.state != RegistryState.VALID:
         print(f"\n{args.document}: {context.result.state} over {tables} table(s)", file=sys.stderr)
         return 1
     print(f"\n{args.document}: sound — complete result over {tables} table(s)")

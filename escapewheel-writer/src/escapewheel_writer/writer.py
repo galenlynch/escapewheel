@@ -40,6 +40,7 @@ from escapewheel_reader.uri import canonical, encode, is_absolute
 from escapewheel_validator import (
     CheckedRegistryContext,
     RegistryRejected,
+    RegistryState,
     Report,
     check_registry_context,
     validate,
@@ -93,6 +94,11 @@ REGISTRIES = "registries"
 #: The directories under the packet root a commit promotes from its staging area, which a root holding
 #: any of them without a committed manifest cannot take another commit into.
 PROMOTED = ("tables", "arrays", opaque.ROOT, REGISTRIES)
+
+#: What a manifest's `validation.status` and a resource's `validation_state` may say (Part 04 §4.1, §9).
+VALIDATION_PASSED = "passed"
+VALIDATION_FAILED = "failed"
+VALIDATION_NOT_RUN = "not_run"
 
 #: Part 03's portable profile.
 PROFILE = "escapewheel-portable-v0.1"
@@ -638,7 +644,7 @@ class PacketWriter:
         #: that table last, and reading it back would leave every table added before it unfilled.
         self._session = session
         core_context = registry if isinstance(registry, CheckedRegistryContext) else check_registry_context(registry)
-        if core_context.result.state != "valid":
+        if core_context.result.state != RegistryState.VALID:
             raise RegistryRejected("core", core_context)
         checked_registry = core_context.document
         assert isinstance(checked_registry, Mapping)
@@ -655,7 +661,7 @@ class PacketWriter:
             )
             if extension_context.core is not core_context:
                 extension_context = check_registry_context(extension_context.document, core=core_context)
-            if extension_context.result.state != "valid":
+            if extension_context.result.state != RegistryState.VALID:
                 subject = str(extension_context.document.get("extension_id", "extension"))
                 raise RegistryRejected(subject, extension_context)
             document = extension_context.document
@@ -1371,7 +1377,7 @@ class PacketWriter:
                     "resource_id": resource_id,
                     "declaration_id": declaration_id,
                     "uri": encode(relative.split("/")),
-                    "validation_state": "not_run",
+                    "validation_state": VALIDATION_NOT_RUN,
                     "size_bytes": size,
                     "digest": _digest(path),
                 }
@@ -1405,7 +1411,7 @@ class PacketWriter:
                     "resource_id": payload.resource_id,
                     "declaration_id": declaration_id,
                     "uri": encode((opaque.ROOT, payload.resource_id, payload.path.name)),
-                    "validation_state": "not_run",
+                    "validation_state": VALIDATION_NOT_RUN,
                     "size_bytes": opaque.size(staged),
                     "digest": _digest(staged),
                 }
@@ -1421,7 +1427,7 @@ class PacketWriter:
                 "resource_id": resource_id,
                 "declaration_id": declaration_id,
                 "uri": media.uri,
-                "validation_state": "not_run",
+                "validation_state": VALIDATION_NOT_RUN,
                 "external": True,
             }
             for name in ("source", "digest", "size_bytes", "verified_at"):
@@ -1439,7 +1445,7 @@ class PacketWriter:
                 "resource_id": resource_id,
                 "declaration_id": declaration_id,
                 "uri": array.uri,
-                "validation_state": "not_run",
+                "validation_state": VALIDATION_NOT_RUN,
                 "external": True,
             }
             for name in ("source", "digest", "size_bytes", "verified_at"):
@@ -1528,7 +1534,7 @@ class PacketWriter:
                 "resource_id": resource_id,
                 "declaration_id": resource_id,
                 "uri": encode(relative.split("/")),
-                "validation_state": "not_run",
+                "validation_state": VALIDATION_NOT_RUN,
             }
             entry["digest"] = _digest(path)
             entries.append(entry)
@@ -1686,7 +1692,9 @@ class PacketWriter:
         sessions = sorted({r["session_id"] for r in self._tables.get("core.sessions", []) if "session_id" in r})
         now = datetime.now(tz=UTC).isoformat().replace("+00:00", "Z")
         validation = {
-            "status": "not_run" if report is None else ("passed" if report.passed else "failed"),
+            "status": VALIDATION_NOT_RUN
+            if report is None
+            else (VALIDATION_PASSED if report.passed else VALIDATION_FAILED),
             "validated_at": now,
             "validator_name": "escapewheel_validator",
             "validator_version": _version(),
@@ -1925,7 +1933,7 @@ class PacketWriter:
         if sources is not None:
             (root / SOURCES).write_text(json.dumps(sources, indent=2) + "\n")
         for entry in entries:
-            entry["validation_state"] = "passed"
+            entry["validation_state"] = VALIDATION_PASSED
         for name in promoted:
             shutil.move(str(staging / name), str(root / name))
 
@@ -2125,14 +2133,14 @@ class PacketWriter:
             shutil.move(str(staging / relative), str(destination))
         by_id = {e["resource_id"]: e for e in entries}
         amended["resources"] = [
-            dict(by_id[e["resource_id"]], validation_state="passed") if e["resource_id"] in by_id else e
+            dict(by_id[e["resource_id"]], validation_state=VALIDATION_PASSED) if e["resource_id"] in by_id else e
             for e in amended["resources"]
         ]
         amended["registries"] = {
             name: dict(bound, path=str(bound["path"]).removeprefix(f"{STAGING}/")) for name, bound in registries.items()
         }
         amended["validation"] = {
-            "status": "passed",
+            "status": VALIDATION_PASSED,
             "validated_at": datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
             "validator_name": "escapewheel_validator",
             "validator_version": _version(),

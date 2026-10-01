@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from escapewheel_reader import open_packet
+from escapewheel_validator import Level
 
 from escapewheel_writer.errors import RecipeFault, RecipeUnsound, SourceDefect, SourceFault
 from escapewheel_writer.notes import NoteCode, codes
@@ -58,7 +59,7 @@ def test_an_amending_build_adds_a_curation_and_prefers_it(packet):
     held_units = _rows(out, "core.units")
     recipe = Recipe.load(_amending(root, sorted_root))
     report = build(recipe, REGISTRY).amend(recipe.out)
-    assert report.passed, [f"{f.check}: {f.message}" for f in report.findings if f.level == "error"]
+    assert report.passed, [f"{f.check}: {f.message}" for f in report.findings if f.level == Level.ERROR]
     manifest = json.loads((out / "packet.json").read_text())
     assert manifest["packet_version"] == "0.1.1"
     units = _rows(out, "core.units")

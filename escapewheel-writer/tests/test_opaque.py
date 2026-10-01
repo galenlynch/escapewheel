@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from escapewheel_reader import open_packet
+from escapewheel_validator import Verdict, check_table
 from escapewheel_validator.stores import listing_digest
 
 from escapewheel_writer import declaration, delivery, opaque
@@ -146,7 +147,7 @@ def test_a_name_needing_encoding_is_published_as_it_is_and_read_back(tmp_path, r
     published = root / "opaque" / "core.report" / QC_NAME
     assert published.read_bytes() == PDF
     assert Path(open_packet(root).path("core.report")) == published
-    assert report.verdict() == "passed"
+    assert report.verdict() == Verdict.PASSED
 
 
 def test_every_name_is_kept_and_a_fragile_one_warned_of(tmp_path, registry, minimal):
@@ -156,7 +157,7 @@ def test_every_name_is_kept_and_a_fragile_one_warned_of(tmp_path, registry, mini
     root, report = _commit_one(tmp_path, registry, minimal, "core.frames", {"frames": frames})
     published = root / "opaque" / "core.frames" / "frames"
     assert sorted(os.listdir(published)) == sorted(frames)
-    warned = [f for f in report.findings if f.check == "physical.opaque_name_portability"]
+    warned = [f for f in report.findings if f.check == check_table.PHYSICAL_OPAQUE_NAME_PORTABILITY.id]
     assert len(warned) == 2, [(f.check, f.message) for f in report.findings]
     assert report.passed
 

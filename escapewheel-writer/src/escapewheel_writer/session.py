@@ -27,7 +27,7 @@ from typing import Any
 
 import numpy as np
 from escapewheel_reader.clocks import BOUND, align
-from escapewheel_validator import CheckedRegistryContext, RegistryRejected, check_registry_context
+from escapewheel_validator import CheckedRegistryContext, RegistryRejected, RegistryState, check_registry_context
 from numpy.typing import NDArray
 
 from . import opaque
@@ -877,7 +877,7 @@ def build(  # noqa: C901
         Loaded with every record, ready to commit.
     """
     registry_context = registry if isinstance(registry, CheckedRegistryContext) else check_registry_context(registry)
-    if registry_context.result.state != "valid":
+    if registry_context.result.state != RegistryState.VALID:
         raise RegistryRejected("core", registry_context)
     checked_registry = registry_context.document
     assert isinstance(checked_registry, Mapping)
@@ -886,7 +886,7 @@ def build(  # noqa: C901
             load_extension_context(named, registry_context, base=recipe.path.parent) for named in recipe.extensions
         )
     for extension_context in extension_contexts:
-        if extension_context.result.state != "valid":
+        if extension_context.result.state != RegistryState.VALID:
             document = extension_context.document
             subject = str(document.get("extension_id", "extension")) if isinstance(document, Mapping) else "extension"
             raise RegistryRejected(subject, extension_context)

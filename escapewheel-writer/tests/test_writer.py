@@ -6,7 +6,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader import check_sources, open_packet
-from escapewheel_validator import RegistryRejected, validate
+from escapewheel_validator import Level, RegistryRejected, RegistryState, check_table, validate
 
 from escapewheel_writer import CommitRefused, PacketWriter
 from escapewheel_writer.amending import Held
@@ -38,8 +38,8 @@ def _write(root, registry, tables, **kwargs):
 def test_constructor_rejects_a_nonvalid_registry_with_the_complete_result():
     with pytest.raises(RegistryRejected) as caught:
         PacketWriter({"$schema": "https://example.org/unknown"}, packet_id="s001")
-    assert caught.value.result.state == "unsupported"
-    assert caught.value.result.to_dict()["state"] == "unsupported"
+    assert caught.value.result.state == RegistryState.UNSUPPORTED
+    assert caught.value.result.to_dict()["state"] == RegistryState.UNSUPPORTED
 
 
 def test_stamp_sets_columns_on_rows_already_added(registry, minimal):
@@ -100,7 +100,8 @@ def test_a_failing_packet_is_not_committed(tmp_path, registry, minimal):
         _write(root, registry, broken)
     assert not (root / "packet.json").exists()
     assert (root / "staging").exists()  # left for inspection
-    assert any(f.check == "core.clocks.session_id_resolves" for f in caught.value.report.findings)
+    unresolved = check_table.reference_resolves("core.clocks", ["session_id"]).id
+    assert any(f.check == unresolved for f in caught.value.report.findings)
 
 
 def test_lineage_for_a_resource_the_packet_does_not_carry_is_refused(tmp_path, registry, minimal):
@@ -891,8 +892,10 @@ def test_a_label_naming_no_row_refuses_the_commit(tmp_path, registry, minimal):
     writer = _labelled_writer(registry, minimal, electrodes=("e1", "e2"))
     with pytest.raises(CommitRefused) as caught:
         writer.commit(tmp_path / "s001")
-    failed = {f.check for f in caught.value.report.findings if f.level == "error"}
-    assert failed == {"core.array_dimensions.coordinate_resource.core_electrodes_resolves"}
+    failed = {f.check for f in caught.value.report.findings if f.level == Level.ERROR}
+    assert failed == {
+        check_table.paired_value_resolves("core.array_dimensions", "coordinate_resource", "core.electrodes").id
+    }
 
 
 def test_a_dependent_position_with_no_label_row_refuses_the_commit(tmp_path, registry, minimal):
@@ -900,8 +903,8 @@ def test_a_dependent_position_with_no_label_row_refuses_the_commit(tmp_path, reg
     writer = _labelled_writer(registry, minimal, contacts={0: ("e2", "e3", None), 1: ("e1",)})
     with pytest.raises(CommitRefused) as caught:
         writer.commit(tmp_path / "s001")
-    failed = {f.check for f in caught.value.report.findings if f.level == "error"}
-    assert failed == {"array.label_missing"}
+    failed = {f.check for f in caught.value.report.findings if f.level == Level.ERROR}
+    assert failed == {check_table.ARRAY_LABEL_MISSING.id}
 
 
 def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal):

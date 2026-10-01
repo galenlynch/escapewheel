@@ -11,6 +11,7 @@ from typing import ClassVar
 
 import fsspec
 import pytest
+from escapewheel_validator import Level
 from fsspec.implementations.memory import MemoryFileSystem
 from upath.implementations.memory import MemoryPath
 from upath.registry import register_implementation
@@ -292,7 +293,7 @@ def remote(double, tmp_path):
     def built(out: Path, location: Path | None):
         recipe = Recipe.load(path, out=out)
         report = build(recipe, REGISTRY, source_cache=location).commit(out)
-        assert report.errors == 0, [f"{f.check}: {f.message}" for f in report.findings if f.level == "error"]
+        assert report.errors == 0, [f"{f.check}: {f.message}" for f in report.findings if f.level == Level.ERROR]
         return out
 
     return built

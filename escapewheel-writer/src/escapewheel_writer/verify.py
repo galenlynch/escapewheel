@@ -2,6 +2,7 @@
 
 - :func:`verify` -- record what is true of a packet's external resources, as a new version.
 - :data:`LEVELS` -- how much may be established: `size`, `members` or `sha256`.
+- :data:`VERIFY_UNREACHABLE`, :data:`VERIFY_RECORDED` -- the checks a finding of :func:`verify` is reported under.
 
 Verifying writes no file and adds no resource: it changes only what the manifest says about the
 resources the packet does not own.
@@ -16,18 +17,23 @@ from pathlib import Path
 from typing import Any
 
 from escapewheel_reader import Manifest, Packet
-from escapewheel_validator import Report, validate
+from escapewheel_validator import CheckEntry, Level, Report, Scope, validate
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.stores import digest, digest_resource, listing
 
 from .errors import NotCommitted, UsageError, UsageFault
-from .writer import MANIFEST, MANIFESTS, _bump, _version, retained, semver
+from .writer import MANIFEST, MANIFESTS, VALIDATION_PASSED, _bump, _version, retained, semver
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
 #: records a prefix's Part 04 §5.4 per-member listing with the entity tag the store handed over,
 #: and `sha256` also digests every byte, recording a SHA-256 `digest` and each member's beside it.
 #: `members` is the default because it is the strongest thing available for the price of the listing.
 LEVELS = ("size", "members", "sha256")
+
+#: A resource's store could not be read, so what the manifest says of it is unchanged.
+VERIFY_UNREACHABLE = CheckEntry("verify.unreachable", Level.WARNING, Scope.RESOURCE, named=False)
+#: How many external resources were verified, and at what level.
+VERIFY_RECORDED = CheckEntry("verify.recorded", Level.INFO, Scope.PACKET, named=False)
 
 
 def _member_entry(member: Any, digest: str | None) -> dict[str, Any]:
@@ -146,12 +152,12 @@ def verify(
         recheck=(),
     )
     for note in notes:
-        report.add("warning", "verify.unreachable", note)
+        report.add(VERIFY_UNREACHABLE, note)
     if not report.passed:
         return report, superseded
 
     candidate["validation"] = {
-        "status": "passed",
+        "status": VALIDATION_PASSED,
         "validated_at": datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
         "validator_name": "escapewheel_validator",
         "validator_version": _version(),
@@ -166,8 +172,8 @@ def verify(
     written = root / f"{MANIFEST}.candidate"
     written.write_bytes(body)
     os.replace(written, root / MANIFEST)
-    report.add("info", "verify.recorded", f"{reached} external resource(s) verified at {level}")
+    report.add(VERIFY_RECORDED, f"{reached} external resource(s) verified at {level}")
     return report, candidate
 
 
-__all__ = ["LEVELS", "verify"]
+__all__ = ["LEVELS", "VERIFY_RECORDED", "VERIFY_UNREACHABLE", "verify"]

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from escapewheel_reader import open_packet
-from escapewheel_validator import validate
+from escapewheel_validator import check_table, validate
 
 from escapewheel_writer.errors import RecipeFault, RecipeUnsound, ReplacementRefused, UsageError, UsageFault
 from escapewheel_writer.recipe import Recipe
@@ -43,7 +43,8 @@ def test_a_replacement_of_its_own_packet_records_it_at_the_next_major_version(pa
         {"packet_id": "s1", "packet_version": "0.1.0", "sha256": _sha(root / "packet" / "packet.json")}
     ]
     report = validate(open_packet(recipe.out), replaced=[root / "packet"])
-    assert report.passed and not [f for f in report.findings if f.check.startswith("packet.replaces")]
+    about_replacing = {check_table.PACKET_REPLACES_MAJOR_VERSION.id, check_table.PACKET_REPLACES_MISMATCH.id}
+    assert report.passed and not [f for f in report.findings if f.check in about_replacing]
 
 
 def test_a_recipe_naming_no_packet_records_no_replaces(packet):  # noqa: F811
