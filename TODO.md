@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 2 proposals and 0 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 3 proposals and 0 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -43,6 +43,17 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 3. **Assign final identifiers** (P10.3), once the field test's revisions are incorporated.
 4. **Publish immutably** (P11): the released artifact set, its manifest and the publication
    verifier.
+
+**Order of work before the field test.** The refactor comes first, because each open proposal's
+code lands in a module the refactor moves.
+
+1. Refactor stages 1 to 5, each listed defect fixed in its stage.
+2. Proposals are promoted, drafted and appraised alongside, since they are documents and the
+   refactor changes no part.
+3. An accepted revision is incorporated after the stage 4 splits, so its code lands once.
+4. New adapters follow stage 2, where the adapter contract becomes a declared protocol: the one
+   that delivers the files a recipe names (§3b) and a packet-owned option for video.
+5. The ledger-fidelity proposal and `bench/` (§3c) go with stage 5 and the tooling work.
 
 ---
 
@@ -119,9 +130,9 @@ errors, declared vocabularies, the public surface, module splits, and structural
 begins in the reader. One question from the 2026-09-06 request is not answered by it: which
 problems a dependency already solves that this code solves again.
 
-## 3a. Two proposals await promotion
+## 3a. Three proposals await promotion
 
-Both are committed under `revisions/proposals/` and neither is promoted.
+All three are committed under `revisions/proposals/` and none is promoted.
 
 - **The reader floor bounds an array's byte order.** It supersedes R3 §7.1's little-endian and
   `fill_value` sentences, which the ledger records as applied and no part states, and narrows the
@@ -132,31 +143,32 @@ Both are committed under `revisions/proposals/` and neither is promoted.
   recognizes with a marker the specification names, or refuses the recipe. It also covers a
   credential inside a source root, which is wider than the request that prompted it and may be
   split out. One code site waits on it: the docstring of `recipe._storage_problems`.
+- **Core declares a catalog of sidecars.** §3b describes it. Two questions are open in it: whether
+  a sidecar is of class `documentation` or `core`, and whether its table is scoped to the packet
+  or to a session.
 
-## 3b. A document, a volume or a viewer state has no declared home in a packet
+## 3b. A file the packet only indexes has no declaration
 
-**Under discussion, 2026-10-01.** Part 02 §2.3 defines the `opaque` kind and Part 02 §2.4 three instance
-modes. What exists today:
+**Proposed, 2026-10-01**, as `revisions/proposals/core-declares-a-catalog-of-sidecars.md`. A PDF, a
+README, a viewer's saved state or an image in an unmodelled format has a class in Part 02 §2.2
+(`documentation`) and a directory in Part 03 §3.1 (`docs/`), and no declaration, so a manifest
+cannot list one. Listing one today takes an extension registry and an adapter. The proposal has
+core declare a catalog table and an opaque catalog of that class; Part 12 §5 already delivers an
+opaque catalog, packet-owned or referenced.
 
-- Every opaque resource is a manifest entry, which records an ID, a declaration, a URI, a digest
-  and a size, and no format, media type or description. Only a catalog-mode declaration also gives
-  each resource a table row.
-- Core declares one opaque resource, `core.media_asset_instances`, catalogued by
-  `core.media_assets`, whose columns describe frames on a clock. No extension in this repository
-  declares another.
-- A payload reaches a packet only through an adapter: written under `opaque_location` in a
-  directory named by its resource ID, or returned from `staged_payloads()` in process
-  (Part 12 §5). No shipped adapter delivers a packet-owned payload, and a recipe has no way to
-  attach a file without one. The aind video adapter references external media.
-- Part 12 §5 binds a payload to a catalog row or to a singleton declaration. It names no route for
-  a family-mode declaration, and the writer binds none, so the one mode that would hold many
-  uncatalogued documents under one declaration cannot be delivered.
+Implementation that follows it, none of it a specification change:
 
-So a PDF, a NIfTI volume or a Neuroglancer state needs an extension registry written to declare
-it, and an adapter written to deliver it. Open questions: whether core should declare a catalogued
-document resource with a name, a media type and a description; whether an MRI volume is a dense
-array once it is Zarr and opaque otherwise; whether family mode gets a delivery route or is
-removed; and whether a recipe may attach a file directly.
+- **An adapter that delivers the files a recipe names**, each as a packet-owned payload or as a
+  referenced resource. No shipped adapter delivers a payload today.
+- **A packet-owned option for video.** The specification and the writer already admit a
+  packet-owned media payload; the aind video adapter only references external files.
+
+Left open and outside the proposal:
+
+- Part 12 §5 binds a payload to a catalog row or a singleton and gives a family-mode payload no
+  rule. No declaration uses family mode. Whether it gains a rule or is removed is undecided.
+- An MRI volume that tables describe is a dense array or an extension's resource, not a sidecar.
+  Nothing in core describes a volume's anatomy today.
 
 ## 3c. `bench/` is untracked and holds no script yet
 
