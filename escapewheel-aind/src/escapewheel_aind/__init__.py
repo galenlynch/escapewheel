@@ -8,6 +8,8 @@ Its modules:
 session
     ``session.json`` and ``subject.json``: each stream's observation window, and where tick zero
     sits.
+calibrations
+    The calibration tables, from ``rig.json`` and a session's probe modules.
 video
     A behaviour video's frame times, reconstructed from the camera's own counter.
 nwb
