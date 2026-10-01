@@ -13,7 +13,6 @@
   that asserts `date-time`.
 - :func:`prefix_digest`, :func:`major` -- a member list's digest value, and a `packet_version`'s
   major version.
-- :data:`MANIFEST_FILENAME` -- the manifest's name under a packet root.
 
 The first three phases need only the manifest's bytes, and a finding in any of them stops
 evaluation, so a later phase never indexes into a document an earlier one rejected.
@@ -33,6 +32,7 @@ from typing import Any
 
 import jsonschema
 from escapewheel_reader import Location, RegistryBinding, RegistryFault, RegistryUnavailable
+from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
 from escapewheel_reader.registries import acquire
 from escapewheel_reader.uri import in_one_form
 
@@ -42,8 +42,6 @@ from .errors import FormatCheckUnavailable, ReplacedPacketUnreadable
 from .registry_document import CheckedRegistryContext, check_registry_context_bytes
 from .stores import listing_digest
 from .vocabulary import RegistryState
-
-MANIFEST_FILENAME = "packet.json"
 
 
 @dataclass(frozen=True)
@@ -283,7 +281,10 @@ def _published(path: Path) -> list[tuple[str, Mapping[str, Any]]]:
     A packet root yields its `packet.json` and every manifest it retains, since an item naming a
     version later amended names a retained one (Part 05 §15.3); a file yields itself.
     """
-    paths = [path] if path.is_file() else [path / "packet.json", *sorted((path / "manifests").glob("*.json"))]
+    if path.is_file():
+        paths = [path]
+    else:
+        paths = [path / MANIFEST_FILENAME, *sorted((path / MANIFESTS_DIRNAME).glob("*.json"))]
     found = []
     for manifest in paths:
         if manifest.is_file():
@@ -294,7 +295,7 @@ def _published(path: Path) -> list[tuple[str, Mapping[str, Any]]]:
                 continue
             if isinstance(decoded, dict):
                 found.append((hashlib.sha256(body).hexdigest(), decoded))
-    if not found or not (path.is_file() or (path / "packet.json").is_file()):
+    if not found or not (path.is_file() or (path / MANIFEST_FILENAME).is_file()):
         raise ReplacedPacketUnreadable(f"no published manifest can be read at {path}", path=path)
     return found
 

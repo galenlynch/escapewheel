@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from escapewheel_reader import EscapewheelError, ManifestError, open_packet
+from escapewheel_reader.manifest import MANIFEST_FILENAME
 
 from ..errors import ReplacedPacketUnreadable
 from ..validator import check_packet_manifest, validate
@@ -45,7 +46,7 @@ def _report(args: argparse.Namespace) -> int:
     else:
         packet_id = packet.manifest.packet_id
         # A digest is pointless without resolving, so asking for one asks for the level under it.
-        replaced = [path for path in args.replaced if not (path.is_file() or (path / "packet.json").is_file())]
+        replaced = [path for path in args.replaced if not (path.is_file() or (path / MANIFEST_FILENAME).is_file())]
         if replaced:
             print(f"error: no published manifest at {replaced[0]}")
             return 2

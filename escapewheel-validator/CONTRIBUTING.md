@@ -129,6 +129,11 @@ packet, which is worse than having no check.
   reads `../spec/parts/` to hold it: the ID standing alone for a fixed ID, and the template or
   one ID it admits for a family. Where the two disagree the flag is wrong, never the part: the
   specification need not name every check ID, and no part is edited to make the test pass.
+- **A core resource ID, a packet file name, the sources version and the profile ID are the
+  reader's constants.** Import them from `escapewheel_reader.resource_ids`, `manifest`, `location`,
+  `resources` and `profile`. A literal stays only inside a message, a query or a check ID's
+  template. `tests/test_reader_constants.py` holds the rule, and the copied checkers stand outside
+  it.
 - **A finding or a message names a row by its position, which starts at 1.** An attribute such as
   `OrderViolation.row` holds the index, and the text shows `row` plus one. A value a column stores,
   such as an `axis_index`, is printed as stored.

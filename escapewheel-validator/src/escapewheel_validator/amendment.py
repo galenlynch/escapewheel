@@ -25,16 +25,23 @@ from pathlib import Path
 from typing import Any
 
 import pyarrow.parquet as pq
+from escapewheel_reader.manifest import MANIFESTS_DIRNAME
+from escapewheel_reader.resource_ids import (
+    CORE_PREFERRED_RUNS,
+    CORE_PROCESSING_RUN_INPUTS,
+    CORE_PROCESSING_RUNS,
+    CORE_SOURCE_FILES,
+)
 
 from . import check_table
 from .check_table import CheckEntry
 
 #: Tables whose rows record what ran rather than what was measured, so writing one leaves no derived
 #: resource stale (Part 05 §15.2).
-PROVENANCE = frozenset({"core.processing_runs", "core.source_files", "core.processing_run_inputs"})
+PROVENANCE = frozenset({CORE_PROCESSING_RUNS, CORE_SOURCE_FILES, CORE_PROCESSING_RUN_INPUTS})
 
 #: The one table whose held row an amendment may replace (Part 05 §15.2).
-PREFERENCES = "core.preferred_runs"
+PREFERENCES = CORE_PREFERRED_RUNS
 
 #: Content classes an amendment may remove or replace, and whose lineage can go stale.
 DERIVED = frozenset({"analysis", "compatibility_projection"})
@@ -71,7 +78,7 @@ def predecessor(root: Path, current: Mapping[str, Any]) -> Mapping[str, Any] | N
     OSError or ValueError
         If a retained manifest cannot be read, since it might be the predecessor.
     """
-    folder = root / "manifests"
+    folder = root / MANIFESTS_DIRNAME
     if not folder.is_dir():
         return None
     here = semver(str(current.get("packet_version", "")))

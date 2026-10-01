@@ -37,9 +37,16 @@ import pyarrow.compute as pc
 import pyarrow.parquet as pq
 from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, UnresolvedSource, sql_name
 from escapewheel_reader.location import SOURCES_FILENAME
-from escapewheel_reader.manifest import Manifest
+from escapewheel_reader.manifest import MANIFEST_FILENAME, Manifest
 from escapewheel_reader.ordering import stored_order
 from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_floor_admits
+from escapewheel_reader.resource_ids import (
+    CORE_ARRAY_CHANNELS,
+    CORE_CLOCK_OBSERVATION_INTERVALS,
+    CORE_CLOCKS,
+    CORE_SESSIONS,
+)
+from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 from escapewheel_reader.uri import decode
 
 from . import amendment, check_table
@@ -47,7 +54,6 @@ from .check_table import CheckEntry
 from .errors import OrderFault, OrderViolation, ResourceMissing, StoreUnreachable, _Unmappable
 from .generate import Check, Specialisation, adjacency_settles_uniqueness, concerns, generate
 from .manifest import (
-    MANIFEST_FILENAME,
     Bound,
     Issue,
     bind_registries,
@@ -567,7 +573,7 @@ def registry_meta_schema() -> dict[str, Any]:
 
 def _clock_graph(packet: Packet) -> dict[int, dict[str, Any]]:
     """Each clock's parent and the transform onto it, from `core.clocks`."""
-    clocks = packet.table("core.clocks")
+    clocks = packet.table(CORE_CLOCKS)
     names = clocks.column_names
     columns = {c: clocks.column(c).to_pylist() for c in ("parent_clock_id", "transform_slope", "transform_offset")}
     graph: dict[int, dict[str, Any]] = {}
@@ -653,8 +659,8 @@ def _check_time_origin(packet: Packet, report: Report) -> None:
     from escapewheel_reader.clocks import BOUND, anchors
 
     try:
-        sessions = packet.table("core.sessions")
-        intervals = packet.table("core.clock_observation_intervals")
+        sessions = packet.table(CORE_SESSIONS)
+        intervals = packet.table(CORE_CLOCK_OBSERVATION_INTERVALS)
     except PacketError:
         return
     if "t_zero_tick" not in sessions.column_names or not intervals.num_rows:
@@ -1305,7 +1311,8 @@ def _stored_metadata(uri: str, found: Any) -> Mapping[str, Any] | None:
     Read through the same store the listing came from, so an object store answers it the way a
     filesystem does. One request either way, and both callers share it.
     """
-    for key in (".zarray", "zarr.json"):
+    # A prefix holding both documents is read as version 2.
+    for key in (ZARR_METADATA_FILENAMES[2], ZARR_METADATA_FILENAMES[3]):
         if any(member.key == key for member in found.members):
             try:
                 parsed = json.loads(read_member(uri, key))
@@ -1420,7 +1427,7 @@ def _declared_axes(packet: Packet) -> dict[str, _ArrayAxes]:  # noqa: C901
         )
         for table_id, columns in (
             (labels_id, ["depends_on_position_index", "position_index"]),
-            ("core.array_channels", ["channel_index"]),
+            (CORE_ARRAY_CHANNELS, ["channel_index"]),
         ):
             table = (declarations.get(table_id or "") or {}).get("table")
             reference = next(
@@ -2420,11 +2427,11 @@ def _check_manifest_sessions(packet: Packet, report: Report) -> None:
     )
     declared = {resource.resource_id for resource in packet.resources(kind="table")}
     table_values: list[str] = []
-    if "core.sessions" in declared:
+    if CORE_SESSIONS in declared:
         try:
             table_values = [
                 value
-                for value in packet.table("core.sessions", columns=["session_name"]).column("session_name").to_pylist()
+                for value in packet.table(CORE_SESSIONS, columns=["session_name"]).column("session_name").to_pylist()
                 if value is not None
             ]
         except (PacketError, OSError, pa.ArrowException) as exc:
