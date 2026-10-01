@@ -3,23 +3,16 @@
 import importlib
 import inspect
 import pkgutil
-import tomllib
-from pathlib import Path
 
 from escapewheel_reader import EscapewheelError
 
 import escapewheel_validator
 from escapewheel_validator import errors
 
-PACKAGE = Path(__file__).resolve().parents[1]
-COPIES = tomllib.loads((PACKAGE / "pyproject.toml").read_text())["tool"]["escapewheel"]["copies"]
+from .copies import COPIED_MODULES
 
 #: Modules copied from the specification's tree, whose exception classes are defined at that source.
-COPIED = {
-    Path(copy).relative_to("src").with_suffix("").as_posix().replace("/", ".")
-    for copy in COPIES
-    if copy.endswith(".py")
-}
+COPIED = set(COPIED_MODULES)
 
 
 def _defined():
@@ -33,8 +26,10 @@ def _defined():
                 yield cls
 
 
-def test_the_copied_modules_are_the_two_checkers():
-    assert COPIED == {"escapewheel_validator.registry_document", "escapewheel_validator.rule_language"}
+def test_the_modules_outside_the_taxonomy_are_the_tree_s_checkers():
+    """The copy map says which modules are exempt, and exempts only a checker of the tree."""
+    assert COPIED
+    assert all(source.startswith("tools/checkers/") for source in COPIED_MODULES.values())
 
 
 def test_every_exception_is_defined_in_the_error_module_under_the_package_base():

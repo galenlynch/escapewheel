@@ -9,13 +9,14 @@ import ast
 import importlib
 import inspect
 import pkgutil
-import tomllib
 from pathlib import Path
 
 import escapewheel_reader
 
 import escapewheel_validator
 from escapewheel_validator import errors
+
+from .copies import COPIED_MODULES
 
 PROJECT = Path(__file__).resolve().parents[1]
 API = PROJECT / "docs" / "source" / "api.rst"
@@ -28,12 +29,7 @@ MODULE_PAGES = "Modules"
 
 def _copied():
     """Modules copied from the specification's tree, whose names this package does not choose."""
-    copies = tomllib.loads((PROJECT / "pyproject.toml").read_text())["tool"]["escapewheel"]["copies"]
-    return {
-        Path(path).relative_to("src").with_suffix("").as_posix().replace("/", ".").removeprefix(f"{PACKAGE}.")
-        for path in copies
-        if path.endswith(".py")
-    }
+    return {name.removeprefix(f"{PACKAGE}.") for name in COPIED_MODULES}
 
 
 def _modules():

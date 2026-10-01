@@ -1,7 +1,6 @@
 """A core resource ID or a packet file name is the reader's constant, spelled in no module here."""
 
 import ast
-import tomllib
 from pathlib import Path
 
 from escapewheel_reader import resource_ids
@@ -12,12 +11,9 @@ from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 
 import escapewheel_validator
 
-PACKAGE = Path(__file__).resolve().parents[1]
+from .copies import COPIED_FILES as COPIED
+
 SOURCE = Path(escapewheel_validator.__file__).resolve().parent
-#: Copied from the specification's tree, and edited there.
-COPIED = {
-    PACKAGE / copy for copy in tomllib.loads((PACKAGE / "pyproject.toml").read_text())["tool"]["escapewheel"]["copies"]
-}
 
 RESOURCE_IDS = {getattr(resource_ids, name) for name in resource_ids.__all__}
 NAMES = {
@@ -44,7 +40,7 @@ def _spelled(values):
 def test_the_scan_reads_the_package_and_skips_the_copies():
     scanned = {path.name for path in SOURCE.rglob("*.py") if path not in COPIED}
     assert {"validator.py", "amendment.py", "manifest.py"} <= scanned
-    assert not {"registry_document.py", "rule_language.py"} & scanned
+    assert not {path.name for path in COPIED} & scanned
 
 
 def test_no_module_spells_a_named_resource_id():

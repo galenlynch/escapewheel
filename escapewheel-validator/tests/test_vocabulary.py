@@ -11,9 +11,9 @@ import escapewheel_validator
 from escapewheel_validator import EvaluationStatus, Level, RegistryState, Report, Verdict, validate
 from escapewheel_validator.report import VERDICTS
 
+from .copies import COPIED_FILES
+
 SRC = Path(escapewheel_validator.__file__).resolve().parent
-#: Copied from the specification's tree, and edited there.
-COPIED = {"registry_document.py", "rule_language.py"}
 #: A phase of a registry result is `passed`, which is a state of the copied checker and no verdict.
 PHASE_STATES = {("manifest.py", "passed")}
 
@@ -63,7 +63,7 @@ def test_no_module_writes_a_vocabulary_string():
     words = {str(member) for vocabulary in (Level, Verdict, EvaluationStatus, RegistryState) for member in vocabulary}
     found = set()
     for path in sorted(SRC.rglob("*.py")):
-        if path.name in COPIED or path.name == "vocabulary.py":
+        if path in COPIED_FILES or path.name == "vocabulary.py":
             continue
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value in words:

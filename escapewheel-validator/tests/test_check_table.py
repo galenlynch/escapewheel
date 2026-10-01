@@ -12,9 +12,9 @@ import escapewheel_validator
 from escapewheel_validator import CheckEntry, Level, Report, Scope, check_table, validate
 from escapewheel_validator.check_table import TABLE
 
+from .copies import COPIED_FILES
+
 SRC = Path(escapewheel_validator.__file__).resolve().parent
-#: Copied from the specification's tree, and edited there.
-COPIED = {"registry_document.py", "rule_language.py"}
 FIXED = [entry for entry in TABLE if not entry.templated]
 FAMILIES = [entry for entry in TABLE if entry.templated]
 #: The constructors of an entry for an ID a registry or the registry contract declares.
@@ -131,7 +131,7 @@ def test_no_module_writes_a_check_id():
     takes_an_entry = {"add", "Check", "Issue", "Finding"}
     found = set()
     for path in sorted(SRC.rglob("*.py")):
-        if path.name in COPIED or path.name == "check_table.py":
+        if path in COPIED_FILES or path.name == "check_table.py":
             continue
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.Constant) and node.value in fixed:
@@ -167,7 +167,7 @@ def test_a_finding_under_a_resource_or_column_check_names_its_subject():
     positional = {"add_about", "Check"}
     missing, seen = set(), 0
     for path in sorted(SRC.rglob("*.py")):
-        if path.name in COPIED or path.name == "check_table.py":
+        if path in COPIED_FILES or path.name == "check_table.py":
             continue
         for node in ast.walk(ast.parse(path.read_text())):
             if not isinstance(node, ast.Call):

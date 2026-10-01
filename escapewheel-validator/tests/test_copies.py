@@ -1,13 +1,10 @@
 """This package's copies agree with the specification's tree they come from."""
 
-import tomllib
-from pathlib import Path
-
 import pytest
 
-PACKAGE = Path(__file__).resolve().parents[1]
+from .copies import COPIES, PACKAGE
+
 TREE = PACKAGE.parent / "spec"
-COPIES = tomllib.loads((PACKAGE / "pyproject.toml").read_text())["tool"]["escapewheel"]["copies"]
 
 
 @pytest.mark.skipif(not TREE.is_dir(), reason="the specification's tree is not beside this package")
