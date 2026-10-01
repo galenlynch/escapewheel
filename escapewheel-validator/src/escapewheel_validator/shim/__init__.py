@@ -2,6 +2,10 @@
 
 time_origin
     A session's declared origin against its earliest mapped start.
+floors
+    A resource's encoding against the reader floor, and what was not assessed.
+owned
+    A packet-owned resource's payload names and recorded digest.
 """
 
 __all__: list[str] = []

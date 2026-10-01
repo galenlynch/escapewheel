@@ -32,13 +32,11 @@ import pyarrow.parquet as pq
 from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, UnresolvedSource
 from escapewheel_reader.manifest import MANIFEST_FILENAME, Manifest
 from escapewheel_reader.ordering import stored_order
-from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_floor_admits
 from escapewheel_reader.resource_ids import (
     CORE_ARRAY_CHANNELS,
     CORE_SESSIONS,
 )
 from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
-from escapewheel_reader.uri import decode
 
 from . import amendment, check_table, stores
 from .check_table import CheckEntry
@@ -53,7 +51,6 @@ from .manifest import (
     confirm_replaced,
     named_registries,
 )
-from .opaque import describe, findings
 from .registry_document import (
     UCUM_URI,
     CheckedRegistryContext,
@@ -67,6 +64,8 @@ from .registry_types import (
 )
 from .report import Report
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
+from .shim.floors import check_parquet_floor, check_zarr_floor, report_page_types_unassessed, report_unassessed
+from .shim.owned import check_owned_digests, check_packet_owned_opaque, owned_uri, route_summary
 from .shim.time_origin import check_time_origin
 from .vocabulary import EvaluationStatus, Level, RegistryState
 
@@ -83,65 +82,6 @@ def _codec_names(pipeline: Iterable[Any]) -> set[str]:
         for member in ("codecs", "index_codecs"):
             names |= _codec_names(configuration.get(member) or ())
     return names
-
-
-def _floor_level(resource: Any) -> Level:
-    """`warning` only where a packet-owned resource exceeds a floor its writer is also held to (Part 05 §5.3)."""
-    role = physical_profile()["interfaces"][resource.interface]["floor_role"]
-    return Level.WARNING if role == "reader_and_packet_writer" and not resource.is_external else Level.INFO
-
-
-def check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report) -> None:
-    """Report an array whose own metadata matches no entry of its variant's reader floor (Part 03 §6.4).
-
-    An unrecognized codec is valid metadata outside the floor, so it draws this finding and nothing else;
-    metadata too malformed to compare is upstream invalidity, not a floor observation.
-    """
-    variants = physical_profile()["interfaces"]["zarr"]["variants"]
-    zarr_format = metadata.get("zarr_format")
-    selected = next(((name, v) for name, v in variants.items() if v["format_version"] == zarr_format), None)
-    if selected is None:
-        return
-    variant, entry = selected
-    try:
-        if zarr_floor_admits(metadata, entry["reader_floor"]):
-            return
-    except (AttributeError, KeyError, TypeError):
-        return
-    members = ("codecs",) if zarr_format == 3 else ("filters", "compressor")
-    observed = [(member, json.dumps(metadata.get(member), separators=(",", ":"))) for member in members]
-    report.add(
-        check_table.PHYSICAL_OUTSIDE_READER_FLOOR.at(_floor_level(resource)),
-        f"{resource.resource_id}: zarr {variant} "
-        + "; ".join(f"{member} {value}" for member, value in observed)
-        + " is outside the reader floor of Part 03 §6.4",
-        observed,
-        registry=report.resource_owner(resource.resource_id),
-    )
-
-
-def check_parquet_floor(resource: Any, metadata: Any, report: Report) -> None:
-    """Compare a table's footer-reported compressions and encodings with the Parquet floor (Part 03 §5.5)."""
-    floor = parquet_floor()
-    compressions: set[str] = set()
-    encodings: set[str] = set()
-    for index in range(metadata.num_row_groups):
-        group = metadata.row_group(index)
-        for column in range(group.num_columns):
-            chunk = group.column(column)
-            compressions.add(str(chunk.compression).upper())
-            encodings.update(str(value).upper() for value in chunk.encodings)
-    observed = [("compression", value) for value in sorted(compressions - set(floor["compressions"]))]
-    observed += [("encoding", value) for value in sorted(encodings - set(floor["encodings"]))]
-    if observed:
-        report.add(
-            check_table.PHYSICAL_OUTSIDE_READER_FLOOR.at(_floor_level(resource)),
-            f"{resource.resource_id}: parquet "
-            + ", ".join(f"{member} {value}" for member, value in observed)
-            + " is outside the reader floor of Part 03 §5.5",
-            observed,
-            registry=report.resource_owner(resource.resource_id),
-        )
 
 
 def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, ArrayAxes], report: Report) -> None:
@@ -248,126 +188,6 @@ def check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         except StoreUnreachable:
             pass  # `_check_one_array` reports what it cannot read
         _check_one_array(resource, packet.array_resource(resource.resource_id), declared, report)
-
-
-def check_packet_owned_opaque(packet: Packet, report: Report) -> None:
-    """Every packet-owned opaque payload is present, and its names survive a copy (Part 05 §5.3).
-
-    A payload is one file or a directory of them (Part 03 §11), so its listing is all either check
-    reads. Its names draw `physical.opaque_name_portability` at `warning` and never fail the packet.
-    """
-    for resource in packet.resources(kind="opaque"):
-        if resource.is_external or resource.source is not None:
-            continue
-        try:
-            found = stores.listing(owned_uri(packet, resource.entry))
-        except ResourceMissing as exc:
-            report.add(
-                check_table.RESOURCE_MISSING,
-                f"{resource.resource_id}: {exc}",
-                registry=report.resource_owner(resource.resource_id),
-            )
-            continue
-        except StoreUnreachable:
-            continue  # a remote packet this validator cannot reach; its digest check reports that
-        keys = () if found.is_single_object else [member.key for member in found.members]
-        for directory, names, reason in findings(decode(resource.uri), keys):
-            report.add(
-                check_table.PHYSICAL_OPAQUE_NAME_PORTABILITY,
-                describe(resource.resource_id, directory, names, reason),
-                [(resource.resource_id, directory, *names)],
-                registry=report.resource_owner(resource.resource_id),
-            )
-
-
-def report_unassessed(packet: Packet, assessed: Collection[str], report: Report) -> None:
-    """One `info` finding per external resource with a reader floor whose own metadata was not read (Part 05 §5.3)."""
-    for resource in packet.resources():
-        if resource.is_external and resource.interface is not None and resource.resource_id not in assessed:
-            report.add(
-                check_table.EXTERNAL_PHYSICAL_UNASSESSED,
-                f"{resource.resource_id}: its {resource.interface} metadata was not read, so its physical "
-                "version, codecs, compression and encodings are unassessed",
-                [(resource.resource_id,)],
-                registry=report.resource_owner(resource.resource_id),
-            )
-
-
-def report_page_types_unassessed(tables: int, report: Report) -> None:
-    """Part 03 §5.5: a validator comparing only footers states that it did not assess data-page types."""
-    if tables:
-        report.add(
-            check_table.PHYSICAL_PAGE_TYPES_UNASSESSED,
-            f"{tables} Parquet footer(s) compared with the floor's compressions and encodings; data-page "
-            "types were not assessed, since they are recorded in page headers",
-        )
-
-
-def check_owned_digests(packet: Packet, report: Report, store_checksums: bool = True) -> None:
-    """Part 04 §5.3, level 2: every packet-owned resource's recorded digest holds.
-
-    A disagreement is an **error**, where the external equivalent is one too but means something
-    weaker. An external resource that changed is the world moving under a packet that never
-    promised otherwise (Part 03 §8); a packet-owned file that changed is the packet being wrong
-    about itself, and it is the premise Part 05 §15.4 spends to bound revalidation.
-
-    An entry recording no digest is `packet.resource.digest_missing`, which the `entries` phase
-    reports and which withholds this one. `owned.verified` names each digest's route.
-    """
-    checked, matched, routes = 0, 0, []
-    for resource in packet.resources():
-        if resource.is_external:
-            continue
-        entry = resource.entry
-        if not isinstance(claimed := entry.get("digest"), Mapping):
-            continue
-        try:
-            found = stores.digest_resource(
-                owned_uri(packet, entry), str(claimed["algorithm"]), store_checksums=store_checksums
-            )
-        except StoreUnreachable as exc:
-            report.add(
-                check_table.RESOURCE_MISSING,
-                f"{resource.resource_id}: {exc}",
-                registry=report.resource_owner(resource.resource_id),
-            )
-            continue
-        checked += 1
-        routes.append((resource.resource_id, found.algorithm, found.route))
-        if found.value == claimed["value"]:
-            matched += 1
-        else:
-            report.add(
-                check_table.OWNED_DIGEST,
-                f"{resource.resource_id}: {found.algorithm} gives {found.value[:16]}…, manifest records "
-                f"{str(claimed['value'])[:16]}… — a packet-owned resource is immutable (Part 03 §8.1) and "
-                "Part 05 §15.4 bounds revalidation on that",
-                registry=report.resource_owner(resource.resource_id),
-            )
-    if checked:
-        report.add(
-            check_table.OWNED_VERIFIED,
-            f"{matched} of {checked} packet-owned resource(s) hold their recorded digest; {route_summary(routes)}",
-            routes,
-        )
-
-
-def owned_uri(packet: Packet, entry: Mapping[str, Any]) -> str:
-    """Where a packet-owned entry's bytes are, under the packet's own location."""
-    return packet.location.resolve(str(entry.get("uri", ""))).uri
-
-
-def route_summary(routes: Sequence[tuple[str, str, str]]) -> str:
-    """Name how each digest was established (Part 04 §5.3), by resource where the routes differ.
-
-    A finding keeps five rows, so the message carries the route of every digest.
-    """
-    taken = [route for route in stores.ROUTES if any(row[2] == route for row in routes)]
-    if len(taken) == 1:
-        return f"route: {taken[0]} for all {len(routes)}"
-    return "route: " + "; ".join(
-        f"{route} for {', '.join(name for name, _, used in routes if used == route)}" for route in taken
-    )
 
 
 def resolve_external(
