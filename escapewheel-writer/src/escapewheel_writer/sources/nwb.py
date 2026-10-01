@@ -187,12 +187,10 @@ class NWBSource(Compensates):
         sessions into one packet needs the IDs disambiguated.
     source_cache : str, optional
         The build's source-cache location, which a store root is read through (Part 12 §10).
-    trial_metadata : bool, default False
-        Carry every unmapped trial column into `core.intervals.metadata` as JSON. **Off**, per
-        Part 02 §6: a writer SHOULD NOT fill that column routinely, because doing so puts a task's
-        varying parameters back into a JSON string that no rule can see and every row must parse
-        — which is what an R17 extension's typed columns exist to replace. Turn it on only for a
-        session whose task has no extension, and then as a stopgap.
+    trial_metadata : bool, default True
+        Carry each unmapped trial column that varies across trials into `core.intervals.metadata`
+        (Part 02 §8.6). A column `TRIAL_MAPPED` names is never carried. Turn it off where an
+        extension holds the same columns, which `metadata` must not repeat.
 
     Attributes
     ----------
@@ -344,7 +342,7 @@ class NWBSource(Compensates):
         zone: str | ZoneInfo,
         session_id: str | None = None,
         prefix: str = "",
-        trial_metadata: bool = False,
+        trial_metadata: bool = True,
         units: Sequence[Mapping[str, Any]] = (),
         signals: Sequence[str] = (),
         interval_kind: str | None = None,
@@ -1192,8 +1190,8 @@ class NWBSource(Compensates):
                 "stop_tick": int(stop[index]),
                 "clock_id": self.clock.clock_id,
             }
-            # Part 02 §6: off unless a recipe asks. The keys that vary are the ones an extension
-            # declares as typed columns, so filling this duplicates them as unqueryable JSON.
+            # Part 02 §8.6: only what no column holds. A recipe turns this off where an extension
+            # declares the varying keys as typed columns.
             if self.trial_metadata and varying:
                 row["metadata"] = {name: columns[name][index] for name in varying}
             rows.append(row)

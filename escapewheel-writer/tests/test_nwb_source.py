@@ -37,8 +37,14 @@ def source(nwb, harp):
 
 @pytest.fixture
 def carrying(nwb, harp):
-    """A source asked to carry unmapped trial columns, which Part 02 §6 makes an opt-in."""
+    """A source that carries unmapped trial columns, as Part 02 §8.6 permits and the default does."""
     return NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND, trial_metadata=True)
+
+
+@pytest.fixture
+def bare(nwb, harp):
+    """A source told to leave unmapped trial columns out, as a recipe with a task extension does."""
+    return NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND, trial_metadata=False)
 
 
 def only(rows, **match):
@@ -412,10 +418,10 @@ def test_unmapped_trial_columns_travel_as_metadata(carrying):
     assert "start_time" not in carried  # mapped columns are not duplicated
 
 
-def test_trial_metadata_is_off_unless_asked(source, carrying):
-    """Part 02 §6: filling it routinely puts the extension's typed columns back into JSON."""
-    assert "metadata" not in source.records()["core.intervals"][0]
-    assert "metadata" in carrying.records()["core.intervals"][0]
+def test_trial_metadata_is_carried_unless_turned_off(source, bare):
+    """Part 02 §8.6 lets a writer fill it on every row; an extension holding the columns turns it off."""
+    assert "metadata" in source.records()["core.intervals"][0]
+    assert "metadata" not in bare.records()["core.intervals"][0]
 
 
 def test_a_trial_without_an_interval_is_a_defect_not_a_dropped_row(tmp_path, harp):
@@ -483,7 +489,7 @@ TASK_EXTENSION = {
 
 def test_the_records_commit_as_a_valid_packet(carrying, registry, tmp_path):
     # Carrying, because the assertions below are about how metadata survives the round trip --
-    # verbatim, with NumPy's scalars coerced to JSON's. Part 02 §6 makes that an opt-in.
+    # verbatim, with NumPy's scalars coerced to JSON's.
     source = carrying
     writer = PacketWriter(registry, packet_id=SESSION, extensions=[TASK_EXTENSION])
     counted = source.into(writer)
