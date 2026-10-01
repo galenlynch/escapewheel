@@ -10,6 +10,8 @@ arrays
     A packet-owned array's metadata, and an array's shape against the tables describing it.
 external
     An external resource's size, members and digests, where a mode asks.
+tables
+    A table's physical schema, and the values a registry constrains without a rule.
 """
 
 __all__: list[str] = []

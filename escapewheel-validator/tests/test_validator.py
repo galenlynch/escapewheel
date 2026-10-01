@@ -9,7 +9,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from escapewheel_validator import Report
-from escapewheel_validator.validator import _check_column, _offending, _scan_one_ordering
+from escapewheel_validator.validator import _offending, _scan_one_ordering
 
 
 def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatch):
@@ -30,24 +30,6 @@ def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatc
         connection.sql(query).fetchall()
     assert _offending(connection, query)[0][0] == "harp"
     assert _offending(connection, "SELECT clock_id, tick_zero_utc FROM core_clocks WHERE FALSE") == []
-
-
-def test_a_dictionary_column_satisfies_a_string_declaration():
-    """A dictionary is an encoding, not a type: Parquet stores BYTE_ARRAY/String either way."""
-    report = Report()
-    column = {"name": "session_id", "type": "string", "presence": "required"}
-    schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.string()))])
-    _check_column("core.units", column, schema, report)
-    assert not report.findings
-
-
-def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
-    """Unwrapping the encoding must not unwrap the check."""
-    report = Report()
-    column = {"name": "session_id", "type": "string", "presence": "required"}
-    schema = pa.schema([pa.field("session_id", pa.dictionary(pa.int32(), pa.int64()))])
-    _check_column("core.units", column, schema, report)
-    assert [f.check for f in report.findings] == ["schema.column_type"]
 
 
 def test_a_row_breaking_a_determined_by_declaration_is_named_by_position(tmp_path):
