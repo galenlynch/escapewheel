@@ -264,7 +264,7 @@ Known obstacles:
 
 ## 9. Specification tooling
 
-- [ ] `spec/tools/checkers/registry_document.py` (1,863 lines) is copied into the validator.
+- [x] `spec/tools/checkers/registry_document.py` (1,863 lines) is copied into the validator.
       Delete its uncalled legacy interface, register each invariant with its ID, its dependence on
       core and its universe, then split it into a result model, the invariants, the rule and unit
       phases and the entry points. Each new file needs a line in the copy map.
@@ -753,3 +753,30 @@ Found and left as they were:
 - Found and left as behaviour §4 does not list: `session.refuse_a_discarded_fact` skips a
   resource fewer than two source kinds stated, so a preferred in-process source that omits an
   empty table is not refused where the same source delivered out of process is.
+
+### 11.16 The registry split, the shared fixture and the validator's follow-ups
+
+- The registry checker is four modules under `spec/tools/checkers/`: `registry_result`,
+  `registry_invariants`, `registry_phases` and `registry_document`, which still re-exports the
+  result model for the validator's modules, the probe and `extensions/registries.py`. The
+  checker's recorded results were identical before and after the split.
+- The validator's tests read the copied modules from the copy map, so adding a copy changes no
+  test.
+- `Report.add` takes a `CheckEntry` only.
+- `registry_types.table_contracts` is deleted. The validator calls the reader's
+  `declared_tables`, lenient where it reads an unchecked document and strict in the generator,
+  and the corpus numbering calls it strict.
+- `amendment.semver` is support tier; `quoted` and `literal` stay outside `__all__`.
+- The packet fixture the reader's and validator's suites share is
+  `fixtures/shared/packet_fixture.py`, reached through pytest's `pythonpath`, so neither
+  package's tests import the other's. Both suites therefore run from a monorepo checkout and not
+  from the package alone.
+- The fixture's registry is the core registry cut down to the columns each suite's conftest
+  names. Every kept column, key, reference, amendment group and rule is core's own, under the
+  fixture's own `registry_version`. This supersedes §11.11's sentence about a hand-written test
+  registry.
+- A test that needs a table core lacks, or a declaration differing from core's, declares it
+  itself, and those hand-written declarations stay.
+- The reader keeps 44 `match=` assertions and the validator one. Each matches a built-in or
+  third-party exception, a warning, or an error class with no attribute for the cause the test
+  tells apart; two were converted to `UnsupportedCodecError.outside_floor`.
