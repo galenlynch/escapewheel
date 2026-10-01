@@ -1,6 +1,8 @@
 """Build a packet from a recipe (Part 05 §2).
 
 - :func:`build` -- run every source and return a writer holding the packet, uncommitted.
+- :func:`import_packet` -- build the packet a recipe describes and commit it.
+- :func:`commit_arguments` -- the limits and materializers a recipe passes a commit.
 - :func:`order` -- the recipe's sources, each after the sources it consumes.
 - :func:`materializers` -- the recipe's `[[materialize]]` entries as callables `commit` runs.
 - :class:`Context` -- what earlier sources produced, for the sources that consume it.
@@ -58,7 +60,13 @@ from escapewheel_reader.resource_ids import (
     CORE_SUBJECTS,
     CORE_UNITS,
 )
-from escapewheel_validator import CheckedRegistryContext, RegistryRejected, RegistryState, check_registry_context
+from escapewheel_validator import (
+    CheckedRegistryContext,
+    RegistryRejected,
+    RegistryState,
+    Report,
+    check_registry_context,
+)
 from numpy.typing import NDArray
 
 from . import opaque
@@ -1087,6 +1095,58 @@ def build(  # noqa: C901
     return writer
 
 
+def commit_arguments(recipe: Recipe, memory_budget: int | str = 0) -> dict[str, Any]:
+    """Return what a recipe passes a commit: its limits and its materializers, under one budget.
+
+    A budget given here wins over the recipe's, since the recipe travels with the data and the
+    machine building it does not.
+    """
+    budget = memory_budget or recipe.memory_budget
+    limits = {name: value for name, value in recipe.limits.items() if name != "memory_budget"}
+    if budget and "memory_limit" not in limits:
+        limits["memory_limit"] = budget
+    return {"limits": limits or None, "materialize": materializers(recipe, memory_budget=budget)}
+
+
+def import_packet(
+    recipe: Recipe,
+    registry: Mapping[str, Any] | CheckedRegistryContext,
+    *,
+    extension_contexts: Collection[CheckedRegistryContext] | None = None,
+    say: Callable[[str], None] = lambda _: None,
+    strict: bool = False,
+    source_cache: str | Path | None = None,
+    replaced: Sequence[Replaced] | None = None,
+    memory_budget: int | str = 0,
+) -> Report:
+    """Build the packet a recipe describes and commit it at `recipe.out` (Part 05 §2).
+
+    The packet is amended where the recipe amends one (Part 05 §15). `memory_budget` is
+    :func:`commit_arguments`'s, and every other parameter is :func:`build`'s.
+
+    Returns
+    -------
+    Report
+        The validation the commit passed.
+
+    Raises
+    ------
+    CommitRefused
+        If the staged packet fails validation, in which case nothing is published.
+    """
+    writer = build(
+        recipe,
+        registry,
+        extension_contexts=extension_contexts,
+        say=say,
+        strict=strict,
+        source_cache=source_cache,
+        replaced=replaced,
+    )
+    publish = writer.amend if recipe.amends is not None else writer.commit
+    return publish(recipe.out, say=say, **commit_arguments(recipe, memory_budget))
+
+
 def _held(recipe: Recipe, registry: Mapping[str, Any], extensions: Collection[Mapping[str, Any]]) -> Held:
     """Open the packet an amending recipe amends, refusing what §3.5 refuses before any source opens."""
     try:
@@ -1587,6 +1647,7 @@ __all__ = [
     "bound_for",
     "build",
     "build_source",
+    "commit_arguments",
     "compare_declared_facts",
     "compare_held_facts",
     "composed",
@@ -1594,6 +1655,7 @@ __all__ = [
     "filled_terms",
     "grouped_encoding_exceptions",
     "harvest",
+    "import_packet",
     "materializers",
     "note_unclaimed",
     "order",

@@ -87,7 +87,7 @@ from .errors import (
 )
 from .notes import Note, NoteCode
 from .recipe import Recipe
-from .session import build
+from .session import build, import_packet
 from .writer import PacketWriter
 
 try:
@@ -144,5 +144,6 @@ __all__ = [
     "WriterError",
     "__version__",
     "build",
+    "import_packet",
     "verify",
 ]

@@ -37,7 +37,7 @@ from ..extensions import load_checked as load_extension_context
 from ..protocols import SourceAdapter
 from ..recipe import RECIPE_SUPPLIES, Recipe, contributes, produces
 from ..replacing import read_replaced
-from ..session import build, materializers
+from ..session import build, commit_arguments
 
 
 def declaration_protocols() -> tuple[str, ...]:
@@ -304,10 +304,7 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
     except RegistryRejected as exc:
         print(json.dumps(exc.result.to_dict(), indent=2), file=sys.stderr)
         return 2
-    derive = materializers(recipe, memory_budget=budget)
-    limits = {k: v for k, v in recipe.limits.items() if k != "memory_budget"}
-    if budget and "memory_limit" not in limits:
-        limits["memory_limit"] = budget
+    committing = commit_arguments(recipe, budget)
     out = recipe.out
     # Read before the commit writes over it: after `commit` there is nothing left to compare
     # against. A packet the recipe names is each its own reference (Part 05 §9.3).
@@ -318,9 +315,9 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
         references = [(named.entry, named.resources) for named in replaced]
     try:
         if recipe.amends is not None:
-            report = writer.amend(out, limits=limits or None, say=say, materialize=derive)
+            report = writer.amend(out, say=say, **committing)
         else:
-            report = writer.commit(out, limits=limits or None, say=say, materialize=derive)
+            report = writer.commit(out, say=say, **committing)
     except CommitRefused as exc:
         _say_refusal(exc)
         return 1

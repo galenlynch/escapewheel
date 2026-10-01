@@ -22,18 +22,20 @@ escapewheel import session.toml --check  # report every problem, before any I/O
 escapewheel import session.toml          # stage, validate, commit
 ```
 
-The same two steps in Python:
+The same build in Python:
 
 ```python
 import json
 
-from escapewheel_writer import Recipe, build
+from escapewheel_writer import Recipe, import_packet
 
 recipe = Recipe.load("session.toml")
 registry = json.loads(recipe.registry.read_text())
-writer = build(recipe, registry)
-report = writer.commit(recipe.out)
+report = import_packet(recipe, registry)
 ```
+
+`import_packet` is `build`, which returns a `PacketWriter` holding the staged packet, followed by
+that writer's `commit`. Call the two yourself to add records between them.
 
 ## Documentation
 

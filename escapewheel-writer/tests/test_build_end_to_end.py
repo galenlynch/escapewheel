@@ -117,15 +117,12 @@ def committed(tmp_path_factory):
     Module-scoped because every assertion below reads the same committed bytes, and building it
     once is what keeps an end-to-end test cheap enough to keep.
     """
-    from escapewheel_writer.recipe import Recipe
-    from escapewheel_writer.session import build
+    from escapewheel_writer import Recipe, import_packet
 
     root = tmp_path_factory.mktemp("e2e")
     sorted_root, raw = _sources(root)
     recipe = Recipe.load(_recipe(root, sorted_root, raw))
-    writer = build(recipe, REGISTRY)
-    report = writer.commit(recipe.out)
-    return recipe.out, report
+    return recipe.out, import_packet(recipe, REGISTRY)
 
 
 def _table(root: Path, resource_id: str) -> pa.Table:
