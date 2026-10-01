@@ -35,6 +35,7 @@ from escapewheel_reader.resource_ids import (
 
 from . import check_table
 from .check_table import CheckEntry
+from .registry_types import DDL
 
 #: Tables whose rows record what ran rather than what was measured, so writing one leaves no derived
 #: resource stale (Part 05 §15.2).
@@ -93,8 +94,6 @@ def predecessor(root: Path, current: Mapping[str, Any]) -> Mapping[str, Any] | N
 
 def absent(column: Mapping[str, Any]) -> str:
     """Return SQL selecting a column a file omits, as a null of its declared type (Part 05 §15.6)."""
-    from .validator import DDL
-
     return f"CAST(NULL AS {DDL.get(str(column.get('type')), 'VARCHAR')}) AS {quoted(column['name'])}"
 
 

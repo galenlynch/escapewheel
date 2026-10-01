@@ -6,8 +6,8 @@ from pathlib import Path
 import duckdb
 import pytest
 
+from escapewheel_validator.registry_types import DDL
 from escapewheel_validator.rule_language import check_rule
-from escapewheel_validator.validator import DDL
 
 ROOT = Path(__file__).resolve().parents[2]
 CORE = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())

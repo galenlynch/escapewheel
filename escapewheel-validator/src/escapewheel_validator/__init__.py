@@ -16,6 +16,8 @@ validator
     The layers over a packet.
 report
     The findings, evaluations and registry results of a validation, and its verdicts.
+registry_types
+    What a registry document's column types and declarations mean to the layers reading them.
 manifest
     Manifest conformance and registry binding (Part 04 §10).
 generate
@@ -64,8 +66,9 @@ from .registry_document import (
     check_registry_context,
     check_registry_context_bytes,
 )
+from .registry_types import registry_meta_schema
 from .report import Evaluation, Finding, RegistryEvaluation, Report
-from .validator import check_packet_manifest, registry_meta_schema, validate
+from .validator import check_packet_manifest, validate
 from .vocabulary import EvaluationStatus, Level, RegistryState, Verdict
 
 try:

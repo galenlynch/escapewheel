@@ -5,7 +5,6 @@
   manifest's bytes.
 - :func:`verify_order` -- pass batches through, raising :exc:`.OrderViolation` where they leave
   their declared order or repeat a key.
-- :func:`registry_meta_schema` -- Part 02 §9.2's meta-schema, as this distribution copies it.
 - :data:`LIMITS` -- the DuckDB settings :func:`validate` bounds itself by.
 
 The layers run in order: the manifest's shape, the registries the packet binds, each resource's
@@ -24,7 +23,6 @@ from collections import Counter
 from collections.abc import Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from importlib import resources as importlib_resources
 from pathlib import Path
 from typing import Any
 
@@ -64,41 +62,16 @@ from .registry_document import (
     CheckedRegistryContext,
     ucum_error,
 )
+from .registry_types import (
+    ARROW_TYPES,
+    DDL,
+    registry_meta_schema,  # noqa: F401 - `escapewheel_writer.scaffold` imports it from here
+    table_contracts,
+    visible_declarations,
+)
 from .report import Report
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
 from .vocabulary import EvaluationStatus, Level, RegistryState
-
-#: Registry column type -> the Arrow type a conforming writer must emit (Part 03 §5.5).
-ARROW_TYPES = {
-    "string": "string",
-    "int32": "int32",
-    "int64": "int64",
-    "float32": "float",
-    "float64": "double",
-    "bool": "bool",
-    "date": "date32[day]",
-    "timestamp": "timestamp[us, tz=UTC]",
-    "json_string": "string",
-}
-
-
-def table_contracts(registry: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
-    """Project the table contracts from registry resource declarations."""
-    return {
-        str(name): declaration["table"]
-        for name, declaration in registry.get("resources", {}).items()
-        if declaration.get("kind") == "table" and "table" in declaration
-    }
-
-
-def visible_declarations(
-    core: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
-) -> dict[str, Mapping[str, Any]]:
-    """Combine the visible declarations without creating another serialized authority."""
-    visible = dict(core.get("resources", {}))
-    for document in extensions:
-        visible.update(document.get("resources", {}))
-    return visible
 
 
 def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact validation phase
@@ -287,18 +260,6 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
         if cyclic(node, frozenset()):
             report.add(check_table.PACKET_RESOURCE_LINEAGE_CYCLE, f"lineage cycle reaches {node}")
             break
-
-
-def registry_meta_schema() -> dict[str, Any]:
-    """Part 02 §9.2's published meta-schema, as this distribution copies it.
-
-    Public because Part 02 §9.2 makes its `$id` something a writer has to state: a document declares
-    which meta-schema governs it, and the writer that emits the declaration must not keep its own
-    copy of the URI.
-    """
-    text = importlib_resources.files("escapewheel_validator").joinpath("schemas/registry.schema.json").read_text()
-    parsed: dict[str, Any] = json.loads(text)
-    return parsed
 
 
 def _clock_graph(packet: Packet) -> dict[int, dict[str, Any]]:
@@ -1868,20 +1829,6 @@ def _tail_key(tail: tuple[Any, ...], keys: Sequence[str], unique: Sequence[str])
     return tuple(tail[index[name]] for name in unique)
 
 
-#: Registry column type -> the DuckDB type used for the empty stand-in tables below.
-DDL = {
-    "string": "VARCHAR",
-    "int32": "INTEGER",
-    "int64": "BIGINT",
-    "float32": "FLOAT",
-    "float64": "DOUBLE",
-    "bool": "BOOLEAN",
-    "date": "DATE",
-    "timestamp": "TIMESTAMPTZ",
-    "json_string": "VARCHAR",
-}
-
-
 #: What a validating DuckDB connection is allowed to take. Left to itself it claims 80% of
 #: system memory and every core, which on a spike table means hundreds of millions of rows
 #: grouped on a five-column key with most of the machine as its budget -- enough to take a
@@ -2617,7 +2564,6 @@ def check_packet_manifest(
 
 __all__ = [
     "check_packet_manifest",
-    "registry_meta_schema",
     "validate",
     "verify_order",
 ]

@@ -133,6 +133,7 @@ Each module's page lists what it holds beyond the names above.
 
    validator
    report
+   registry_types
    manifest
    generate
    amendment
