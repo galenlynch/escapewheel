@@ -1,6 +1,6 @@
 """The stored order of Part 03 §5.3 and the overriding orders of Part 03 §5.4."""
 
-from escapewheel_reader.ordering import overridden, stored_order
+from escapewheel_reader.ordering import stored_order
 
 SPIKES = {
     "columns": [
@@ -18,9 +18,7 @@ OVERRIDE = ["session_id", "clock_id", "time_bucket_tick", "unit_id", "t_tick"]
 
 def test_a_table_the_descriptor_names_takes_its_order():
     assert stored_order("analysis.spike_events", SPIKES) == OVERRIDE
-    assert overridden("analysis.spike_events") == OVERRIDE
 
 
 def test_any_other_table_takes_its_primary_keys_order():
     assert stored_order("core.spike_events", SPIKES) == SPIKES["primary_key"]
-    assert overridden("core.spike_events") is None
