@@ -38,7 +38,6 @@ in the shard's own pipeline, so the fault cannot be reintroduced by omission.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -138,35 +137,6 @@ def shard_for(
     else:
         per_shard = max(1, round(exact))
     return (min(per_shard, along) * chunks[0], *chunks[1:])
-
-
-def written_codecs(path: Path) -> tuple[str, ...]:
-    """Return the codec names an array on disk uses, outermost first.
-
-    The same list `declared_codecs` derives from a layout, read back from the array instead --
-    which is what a build does for an array an adapter wrote. Descends through a shard, because a
-    shard's compressor sits inside its configuration and naming only the shard would say a reader
-    needs less than it does.
-    """
-    meta = json.loads((path / "zarr.json").read_text())
-
-    def names(codecs: Any) -> list[str]:
-        found: list[str] = []
-        for codec in codecs:
-            if codec["name"] == "bytes":
-                continue
-            found.append(str(codec["name"]))
-            if codec["name"] == "sharding_indexed":
-                found += names(codec["configuration"]["codecs"])
-        return found
-
-    return tuple(names(meta.get("codecs", [])))
-
-
-def written_profile(path: Path) -> str:
-    """Return the physical profile an array on disk declares, from its own format version."""
-    meta = json.loads((path / "zarr.json").read_text())
-    return f"zarr_v{meta['zarr_format']}"
 
 
 def declared_codecs(spec: StagedArray) -> tuple[str, ...]:

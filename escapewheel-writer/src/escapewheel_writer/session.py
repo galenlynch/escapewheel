@@ -586,16 +586,6 @@ def _harvest(
     _compare_declared_facts(spec, source, context, recipe)
 
 
-def _declared_start(recipe: Recipe) -> datetime | None:
-    """Return the recipe's own `session_start_time`, parsed, or None where it declares none."""
-    raw = recipe.session.get("session_start_time")
-    if raw is None:
-        return None
-    if isinstance(raw, datetime):
-        return raw if raw.tzinfo else raw.replace(tzinfo=UTC)
-    return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
-
-
 def _anchors(context: Context) -> dict[str, tuple[NDArray[np.int64], NDArray[np.int64]]]:
     """Return every anchor a source produced as arrays per clock, in the shape `align` wants."""
     collected: dict[str, tuple[list[int], list[int]]] = {}

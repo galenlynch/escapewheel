@@ -60,16 +60,6 @@ from .encoding import encodings, inefficient
 from .keys import Keys
 
 
-def _standard_version(registry: Mapping[str, Any]) -> str:
-    """Return the logical standard version a schema ID carries, e.g. `0.1` in `core.trials.v0.1`.
-
-    From `logical_standard_version`, not `registry_version`: a schema ID names the standard the
-    table conforms to, and the registry may be revised -- a column added, an order overridden --
-    without the logical standard moving.
-    """
-    return str(registry["logical_standard_version"]).rsplit("-v", 1)[-1]
-
-
 def _version() -> str:
     """Read this package's version without importing it at module scope."""
     from . import __version__
@@ -795,13 +785,6 @@ class PacketWriter:
             return None
         spec: Mapping[str, Any] = declaration["table"]
         return spec
-
-    def extension_of(self, resource_id: str) -> str | None:
-        """Return which extension defines this resource, or None where core does."""
-        for extension_id, document in self._extensions.items():
-            if resource_id in document["resources"]:
-                return extension_id
-        return None
 
     def _family_declaration(self, declaration_id: str, resource_id: str, kind: str) -> Mapping[str, Any]:
         """Resolve an explicit family declaration and check that it admits this instance."""

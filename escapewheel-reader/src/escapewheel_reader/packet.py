@@ -250,16 +250,6 @@ class Packet:
         """
         return self.array_resource(resource_id).open()
 
-    def array_resources(self) -> tuple[ArrayResource, ...]:
-        """Every dense array the packet declares, in manifest order.
-
-        Returns
-        -------
-        tuple of ArrayResource
-            One handle per `dense_array_asset` resource.
-        """
-        return tuple(ArrayResource(resource, self._root) for resource in self.resources(kind="dense_array"))
-
     # -- the registry the packet carries --------------------------------------------
 
     def registry_bytes(self, registry_id: str) -> bytes:

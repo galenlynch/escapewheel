@@ -6,7 +6,7 @@ from typing import ClassVar
 
 import pytest
 
-from escapewheel_writer.session import Context, _declared_start, _harvest
+from escapewheel_writer.session import Context, _harvest
 from escapewheel_writer.sources import SourceDefect
 
 BEGAN = datetime(2025, 4, 10, 0, 25, 12, tzinfo=UTC)
@@ -97,21 +97,6 @@ def test_a_recipe_that_disagrees_is_reported_and_overridden():
     _harvest(Spec(), source, context, recipe_with(session_start_time="2025-04-10T00:30:00Z"), _no_rows)
     assert context.session_extra["session_start_time"] == BEGAN
     assert len(source.notes) == 1 and "the source's value is used" in source.notes[0]
-
-
-@pytest.mark.parametrize("raw", ["2025-04-10T00:25:12Z", "2025-04-10T00:25:12+00:00", "aware"])
-def test_a_declared_start_is_read_however_it_is_written(raw):
-    """TOML gives a datetime or a string, and either locates the same instant."""
-    assert _declared_start(recipe_with(session_start_time=BEGAN if raw == "aware" else raw)) == BEGAN
-
-
-def test_a_naive_declared_start_is_read_as_utc():
-    """The recipe is the packet's own record, and the packet's times are UTC."""
-    assert _declared_start(recipe_with(session_start_time=BEGAN.replace(tzinfo=None))) == BEGAN
-
-
-def test_no_declared_start_is_not_a_disagreement():
-    assert _declared_start(recipe_with()) is None
 
 
 # -- the subject the recipe declares ------------------------------------------------------
