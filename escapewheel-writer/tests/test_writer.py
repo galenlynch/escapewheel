@@ -51,7 +51,7 @@ def test_stamp_sets_columns_on_rows_already_added(registry, minimal):
         "core.clocks", "clock_id", {"harp_s001": {"withheld_first_anchor": True, "withheld_last_anchor": False}}
     )
     assert changed == 1
-    (clock,) = writer._tables["core.clocks"]
+    (clock,) = writer.rows("core.clocks")
     assert clock["withheld_first_anchor"] is True and clock["withheld_last_anchor"] is False
     assert clock["origin"] == "harp_epoch"  # the row it was, not a row standing in for it
 

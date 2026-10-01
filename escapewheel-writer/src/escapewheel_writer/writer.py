@@ -266,6 +266,13 @@ class PacketWriter:
         spec: Mapping[str, Any] = declaration["table"]
         return spec
 
+    def rows(self, resource_id: str) -> Sequence[Mapping[str, Any]]:
+        """Return the records added for one table so far, in the order added.
+
+        Empty for a table with none, and for one added as batches, whose rows no one holds.
+        """
+        return self._tables.get(resource_id, [])
+
     def _family_declaration(self, declaration_id: str, resource_id: str, kind: str) -> Mapping[str, Any]:
         """Resolve an explicit family declaration and check that it admits this instance."""
         declaration = self.declaration(declaration_id)

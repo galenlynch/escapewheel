@@ -1260,7 +1260,7 @@ def _preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, ses
         Naming each entry whose run neither the packet holds nor the build records, or whose run's
         activity or scope differs from the entry's.
     """
-    runs = {str(r["processing_run_id"]): r for r in writer._tables.get(CORE_PROCESSING_RUNS, [])}
+    runs = {str(r["processing_run_id"]): r for r in writer.rows(CORE_PROCESSING_RUNS)}
     if held is not None:
         for row in held.named_rows(CORE_PROCESSING_RUNS, writer.keys):
             runs.setdefault(str(row["processing_run_id"]), row)
