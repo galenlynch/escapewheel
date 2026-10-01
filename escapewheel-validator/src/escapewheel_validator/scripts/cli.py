@@ -11,15 +11,30 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-from escapewheel_reader import ManifestError, open_packet
+from escapewheel_reader import EscapewheelError, ManifestError, open_packet
 
+from ..errors import ReplacedPacketUnreadable
 from ..validator import check_packet_manifest, validate
 
 
 def _validate(args: argparse.Namespace) -> int:
-    """Validate a packet against the registries it binds."""
+    """Validate a packet, printing a refusal where validation could not run.
+
+    Status 0 is a passing verdict and 1 any other verdict or a refusal. A `--replaced` path with
+    no readable manifest is a bad argument, status 2.
+    """
+    try:
+        return _report(args)
+    except EscapewheelError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2 if isinstance(exc, ReplacedPacketUnreadable) else 1
+
+
+def _report(args: argparse.Namespace) -> int:
+    """Validate a packet against the registries it binds and print its report."""
     try:
         packet = open_packet(args.packet)
     except ManifestError:

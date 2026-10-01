@@ -10,6 +10,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader.scripts.cli import main
 
+from escapewheel_validator.errors import StoreUnreachable
+from escapewheel_validator.scripts import cli
+
+from .test_replaces import _item, _replacing
 from .test_validation import _extension
 
 
@@ -52,3 +56,24 @@ def test_validate_exits_on_the_packet_verdict(packet_root, capsys):
     out = capsys.readouterr().out
     assert "[task] task.trials.choice.in_vocabulary" in out
     assert "core: passed" in out and "task: failed" in out
+
+
+def test_validate_prints_a_refusal_in_place_of_a_traceback(packet_root, monkeypatch, capsys):
+    def refuse(*args, **kwargs):
+        raise StoreUnreachable("s3://bucket/arr: no credentials", uri="s3://bucket/arr")
+
+    monkeypatch.setattr(cli, "validate", refuse)
+    assert main(["validate", str(packet_root)]) == 1
+    assert capsys.readouterr().err == "error: s3://bucket/arr: no credentials\n"
+
+
+def test_validate_treats_an_unreadable_replaced_manifest_as_a_bad_argument(packet_root, tmp_path, capsys):
+    """An absent path and an unparsable manifest are one refusal, so they exit alike."""
+    _replacing(packet_root, "1.0.0", _item())
+    unparsable = tmp_path / "unparsable"
+    unparsable.mkdir()
+    (unparsable / "packet.json").write_text("not json")
+    for supplied in (tmp_path / "absent", unparsable):
+        assert main(["validate", str(packet_root), "--replaced", str(supplied)]) == 2
+        streams = capsys.readouterr()
+        assert "no published manifest" in streams.out + streams.err
