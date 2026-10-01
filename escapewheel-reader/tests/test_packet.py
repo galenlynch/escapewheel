@@ -113,8 +113,9 @@ def test_embedded_registry_is_exposed(packet_root):
 def test_a_missing_core_registry_fails_the_access_that_needs_it(packet_root):
     manifest = json.loads((packet_root / "packet.json").read_text())
     (packet_root / manifest["registries"]["core"]["path"]).unlink()
-    with pytest.raises(RegistryUnavailable, match="'core'"):
+    with pytest.raises(RegistryUnavailable) as refused:
         _ = open_packet(packet_root).registry
+    assert refused.value.registry_id == "core"
 
 
 def test_sessions_and_repr(packet_root):

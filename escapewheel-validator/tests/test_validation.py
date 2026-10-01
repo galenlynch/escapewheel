@@ -4,7 +4,7 @@ import json
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-from escapewheel_reader import RegistryUnavailable, open_packet
+from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet
 
 from escapewheel_validator import validate
 from escapewheel_validator.generate import Check, concerns
@@ -1893,8 +1893,9 @@ def test_an_unparseable_extension_fails_only_what_needs_it(packet_root):
     """Part 04 §10: a reader fails the operation that needs the registry, naming it."""
     packet = open_packet(_unparseable_extension(_extension(packet_root)))
     assert packet.table("core.trials").num_rows == 2
-    with pytest.raises(RegistryUnavailable, match="'task'"):
+    with pytest.raises(RegistryUnavailable) as refused:
         packet.extensions()
+    assert (refused.value.registry_id, refused.value.reason) == ("task", RegistryFault.INVALID)
 
 
 def test_validator_preserves_an_available_unparseable_extension_result(packet_root):

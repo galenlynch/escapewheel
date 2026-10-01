@@ -15,7 +15,7 @@ import json
 import zlib
 from typing import Any
 
-from .errors import RegistryUnavailable
+from .errors import RegistryFault, RegistryUnavailable
 from .location import Location
 from .manifest import RegistryBinding
 
@@ -81,23 +81,29 @@ def acquire(root: Location, binding: RegistryBinding) -> bytes:
     Raises
     ------
     RegistryUnavailable
-        With reason ``missing``, ``unreadable``, or ``digest``.
+        With reason `MISSING`, `UNREADABLE`, or `DIGEST`.
     """
     if not _contained(binding.path):
-        raise RegistryUnavailable(binding.registry_id, "unreadable", f"{binding.path!r} is not under the packet root")
+        raise RegistryUnavailable(
+            binding.registry_id, RegistryFault.UNREADABLE, f"{binding.path!r} is not under the packet root"
+        )
     location = root.join(binding.path)
     try:
         stored = location.read_bytes()
     except FileNotFoundError:
-        raise RegistryUnavailable(binding.registry_id, "missing", f"nothing at {location}") from None
+        raise RegistryUnavailable(binding.registry_id, RegistryFault.MISSING, f"nothing at {location}") from None
     except Exception as exc:
-        raise RegistryUnavailable(binding.registry_id, "unreadable", f"cannot read {location}: {exc}") from exc
+        raise RegistryUnavailable(
+            binding.registry_id, RegistryFault.UNREADABLE, f"cannot read {location}: {exc}"
+        ) from exc
     try:
         document = gunzip_member(stored)
     except ValueError as exc:
-        raise RegistryUnavailable(binding.registry_id, "unreadable", f"{location}: {exc}") from exc
+        raise RegistryUnavailable(binding.registry_id, RegistryFault.UNREADABLE, f"{location}: {exc}") from exc
     if hashlib.sha256(document).hexdigest() != binding.sha256:
-        raise RegistryUnavailable(binding.registry_id, "digest", f"{location} does not match its recorded sha256")
+        raise RegistryUnavailable(
+            binding.registry_id, RegistryFault.DIGEST, f"{location} does not match its recorded sha256"
+        )
     return document
 
 
@@ -119,14 +125,14 @@ def parse(binding: RegistryBinding, document: bytes) -> dict[str, Any]:
     Raises
     ------
     RegistryUnavailable
-        With reason ``invalid`` where the bytes are not a JSON object.
+        With reason `INVALID` where the bytes are not a JSON object.
     """
     try:
         parsed = json.loads(document)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise RegistryUnavailable(binding.registry_id, "invalid", f"not JSON: {exc}") from exc
+        raise RegistryUnavailable(binding.registry_id, RegistryFault.INVALID, f"not JSON: {exc}") from exc
     if not isinstance(parsed, dict):
-        raise RegistryUnavailable(binding.registry_id, "invalid", "not a JSON object")
+        raise RegistryUnavailable(binding.registry_id, RegistryFault.INVALID, "not a JSON object")
     return parsed
 
 

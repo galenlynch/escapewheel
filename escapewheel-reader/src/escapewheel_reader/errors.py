@@ -3,7 +3,8 @@
 - :class:`EscapewheelError` -- the base the validator's and the writer's errors share.
 - :class:`ManifestError`, :class:`SourcesError` -- the manifest, or a source resolution document,
   is absent, unparsable, or of the wrong shape.
-- :class:`RegistryUnavailable` -- a bound registry cannot be acquired or fails its digest.
+- :class:`RegistryUnavailable` -- a bound registry cannot be acquired or fails its digest, for
+  one :class:`RegistryFault`.
 - :class:`ResourceError` -- one resource cannot be read, and the rest of the packet can:
   :class:`ResourceNotFoundError`, :class:`ResourceUnreadableError`,
   :class:`UnsupportedCodecError`, :class:`UnresolvedSource`.
@@ -15,6 +16,8 @@
 """
 
 from __future__ import annotations
+
+from enum import StrEnum
 
 
 class EscapewheelError(Exception):
@@ -33,6 +36,23 @@ class SourcesError(ManifestError):
     """A source resolution document is unparsable, of an unknown version, or fails its schema."""
 
 
+class RegistryFault(StrEnum):
+    """Why a bound registry cannot be used.
+
+    Acquiring a registry fails as `MISSING`, `UNREADABLE` or `DIGEST`, the three outcomes
+    Part 04 §10 names; parsing the acquired bytes fails as `INVALID`.
+    """
+
+    #: Nothing is stored at the descriptor's path, or the manifest binds no such registry.
+    MISSING = "missing"
+    #: The stored copy cannot be read or does not decode as the physical profile requires.
+    UNREADABLE = "unreadable"
+    #: The decoded bytes do not match the descriptor's `sha256`.
+    DIGEST = "digest"
+    #: The verified bytes are not a JSON object.
+    INVALID = "invalid"
+
+
 class RegistryUnavailable(PacketError):
     """A bound registry cannot be used to resolve a declaration (Part 04 §10).
 
@@ -43,12 +63,11 @@ class RegistryUnavailable(PacketError):
     ----------
     registry_id : str
         The descriptor's name in the manifest's `registries` map.
-    reason : str
-        ``missing``, ``unreadable``, or ``digest``, as Part 04 §10 names them, or ``invalid``
-        where the verified bytes are not a JSON object.
+    reason : RegistryFault
+        Which of the closed set of causes applies.
     """
 
-    def __init__(self, registry_id: str, reason: str, message: str) -> None:
+    def __init__(self, registry_id: str, reason: RegistryFault, message: str) -> None:
         super().__init__(f"registry {registry_id!r}: {message}")
         self.registry_id = registry_id
         self.reason = reason

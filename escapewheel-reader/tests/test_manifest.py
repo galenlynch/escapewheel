@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from escapewheel_reader import Manifest, ManifestError, RegistryUnavailable, open_packet
+from escapewheel_reader import Manifest, ManifestError, RegistryFault, RegistryUnavailable, open_packet
 
 from .conftest import SESSION_NAME, install_registry, read_registry
 
@@ -93,9 +93,9 @@ def test_listing_resources_acquires_no_registry(packet_root):
     (packet_root / read_registry_path(packet_root)).unlink()
     packet = open_packet(packet_root)
     assert len(packet.resources()) == 6
-    with pytest.raises(RegistryUnavailable, match="'core'") as raised:
+    with pytest.raises(RegistryUnavailable) as raised:
         _ = packet.resource("core.intervals").kind
-    assert raised.value.reason == "missing"
+    assert (raised.value.registry_id, raised.value.reason) == ("core", RegistryFault.MISSING)
 
 
 def test_a_registry_failing_its_digest_fails_the_operation_that_needed_it(packet_root):
@@ -106,7 +106,7 @@ def test_a_registry_failing_its_digest_fails_the_operation_that_needed_it(packet
     packet = open_packet(packet_root)
     with pytest.raises(RegistryUnavailable) as raised:
         _ = packet.registry
-    assert (raised.value.registry_id, raised.value.reason) == ("core", "digest")
+    assert (raised.value.registry_id, raised.value.reason) == ("core", RegistryFault.DIGEST)
 
 
 def test_a_second_gzip_member_makes_a_registry_unreadable(packet_root):
@@ -114,7 +114,7 @@ def test_a_second_gzip_member_makes_a_registry_unreadable(packet_root):
     path.write_bytes(path.read_bytes() * 2)
     with pytest.raises(RegistryUnavailable) as raised:
         _ = open_packet(packet_root).registry
-    assert raised.value.reason == "unreadable"
+    assert raised.value.reason is RegistryFault.UNREADABLE
 
 
 def test_gzip_header_fields_do_not_change_what_a_descriptor_matches(packet_root):

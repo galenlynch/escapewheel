@@ -103,7 +103,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
       Stage 1.
 - [ ] `UnsupportedEncoding` is not a `SourceDefect`, and only the NWB adapter and aind's unit-QC
       adapter catch it, so the sorter, waveform and LFP adapters fail with a traceback. Stage 1.
-- [ ] The validator builds the check ID `packet.registry.<reason>` from the free-text `reason` of
+- [x] The validator builds the check ID `packet.registry.<reason>` from the free-text `reason` of
       the reader's `RegistryUnavailable`. Stage 1.
 - [ ] An adapter served out of process loses its compensations. The build reads `compensations`
       from the source object, and the delivery module never carries the attribute across.
@@ -119,14 +119,14 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 
 ### 5.1 Reader
 
-- [ ] Add `EscapewheelError` and make `PacketError` derive from it.
-- [ ] Move every exception class into `errors.py` and under `PacketError`: `NotAligned`,
+- [x] Add `EscapewheelError` and make `PacketError` derive from it.
+- [x] Move every exception class into `errors.py` and under `PacketError`: `NotAligned`,
       `Unanchored`, `StaleSupport`, `ClockMismatch` and `PhysicalProfileError` keep `ValueError`
       as a second base.
-- [ ] Group them: `ManifestError` (with a `SourcesError` beneath it), `RegistryUnavailable`,
+- [x] Group them: `ManifestError` (with a `SourcesError` beneath it), `RegistryUnavailable`,
       `ResourceError` over the four resource errors with `resource_id` and `source` attributes,
       and `Refused` over the errors that decline an operation the packet does not support.
-- [ ] Give `RegistryUnavailable.reason` a closed set of values that the validator's check IDs are
+- [x] Give `RegistryUnavailable.reason` a closed set of values that the validator's check IDs are
       declared from.
 - [ ] Give `UnresolvableAxis` a reason code. It is raised at 20 sites, for causes that tests tell
       apart by text.
@@ -297,3 +297,25 @@ Known obstacles:
 
 The citation rule of §3.3 is applied to a module when that module is moved or rewritten, and in
 one closing pass over whatever was not touched.
+
+## 11. Choices made during the work
+
+Section 2 settles the decisions taken before the work began. This section records each choice the
+plan left open, as it was made.
+
+### 11.1 Reader errors
+
+- `Refused` groups nine classes: `NoTimeOrigin`, `AmbiguousRun`, `UnresolvableChannelIndex`,
+  `UnresolvableAxis`, `MultiSessionUnresolved`, `NotAligned`, `Unanchored`, `ClockMismatch` and
+  `StaleSupport`. Each declines a question the packet's readable data cannot answer one way.
+  `PhysicalProfileError` stays directly under `PacketError`, since it reports a fault in the
+  bundled descriptor and none in a packet.
+- `ResourceError.resource_id` and `ResourceError.source` are optional. A source that cannot be
+  resolved is raised below the point where the resource is known, and the resource reader fills
+  in `resource_id` before the error leaves it.
+- `RegistryFault` is a string enumeration of four members. Acquiring a registry fails as
+  `MISSING`, `UNREADABLE` or `DIGEST`, and the validator maps those three to their check IDs in
+  one table. `INVALID` reports acquired bytes that are not a JSON object; the validator never
+  receives it, because it checks the bytes itself.
+- `escapewheel_writer.materialize` no longer exports `NotAligned`. The reader's `errors` module
+  is its one home, as §2 drops old import paths.

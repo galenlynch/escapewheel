@@ -21,7 +21,7 @@ import pyarrow.dataset as pads
 
 from . import access
 from .clocks import on_clock, origin, reference_clock, seconds
-from .errors import RegistryUnavailable, ResourceNotFoundError, ResourceUnreadableError
+from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError, ResourceUnreadableError
 from .location import SOURCES_FILENAME, Location, Rewrite, Sources, read_sources
 from .manifest import Manifest, Resource
 from .observation import VIEWS, register_views
@@ -269,7 +269,7 @@ class Packet:
         if registry_id not in self._acquired:
             binding = self._manifest.registries.get(registry_id)
             if binding is None:
-                raise RegistryUnavailable(registry_id, "missing", "the manifest binds no such registry")
+                raise RegistryUnavailable(registry_id, RegistryFault.MISSING, "the manifest binds no such registry")
             self._acquired[registry_id] = acquire(self._root, binding)
         return self._acquired[registry_id]
 
@@ -307,7 +307,7 @@ class Packet:
         """
         core = self._manifest.core
         if core is None:
-            raise RegistryUnavailable("core", "missing", "the manifest binds no core registry")
+            raise RegistryUnavailable("core", RegistryFault.MISSING, "the manifest binds no core registry")
         return self.registry_document(core.registry_id)
 
     def extensions(self) -> dict[str, dict[str, Any]]:

@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Any
 
 import jsonschema
-from escapewheel_reader import Location, RegistryBinding, RegistryUnavailable
+from escapewheel_reader import Location, RegistryBinding, RegistryFault, RegistryUnavailable
 from escapewheel_reader.registries import acquire
 from escapewheel_reader.uri import in_one_form
 
@@ -385,6 +385,14 @@ def _shape_valid(context: CheckedRegistryContext) -> bool:
     return any(phase.phase == "shape" and phase.state == "passed" for phase in context.result.phases)
 
 
+#: The check Part 04 §10 names for each way acquiring a bound registry fails.
+_ACQUISITION_CHECK = {
+    RegistryFault.MISSING: "packet.registry.missing",
+    RegistryFault.UNREADABLE: "packet.registry.unreadable",
+    RegistryFault.DIGEST: "packet.registry.digest",
+}
+
+
 def bind_registries(root: Location, document: Mapping[str, Any], issues: list[Issue]) -> Bound:
     """Run the `registry_binding` phase: acquire, digest, check, and compare every bound registry.
 
@@ -401,7 +409,7 @@ def bind_registries(root: Location, document: Mapping[str, Any], issues: list[Is
         try:
             acquired[name] = acquire(root, binding)
         except RegistryUnavailable as exc:
-            issues.append(Issue(f"packet.registry.{exc.reason}", str(exc), ((name, binding.path),), name))
+            issues.append(Issue(_ACQUISITION_CHECK[exc.reason], str(exc), ((name, binding.path),), name))
     bound.core_id = next((name for name, binding in bindings.items() if binding.role == "core"), None)
     core_context = None
     if bound.core_id is not None and bound.core_id in acquired:

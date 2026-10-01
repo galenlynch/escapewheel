@@ -116,6 +116,7 @@ Errors
    ManifestError
    SourcesError
    RegistryUnavailable
+   RegistryFault
    ResourceError
    ResourceNotFoundError
    ResourceUnreadableError
