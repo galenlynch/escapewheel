@@ -69,7 +69,9 @@ def _schema_errors(schema: dict, instance, format_checker=None) -> list[str]:
 def identity_checks(check: Checks, registry_bytes: bytes, registry: dict) -> None:
     """Check the registry's complete contract result and the identifiers it records."""
     # Part 02 §9.4 defines one complete result for a registry document, which this consumes rather
-    # than maintaining another invariant subset.
+    # than maintaining another invariant subset. The schema its portable form is held to is
+    # itself checked as a schema.
+    jsonschema.Draft202012Validator.check_schema(_json(ARTIFACTS / "registry_result.schema.json"))
     result = check_registry_context_bytes(registry_bytes).result
     check(
         "core registry document is valid",
@@ -108,6 +110,7 @@ def profile_checks(check: Checks, registry: dict, core: dict) -> None:
     # this generic checker owns cross-member, cross-artifact, and anchor invariants without
     # embedding the current descriptor's assignments.
     profile_schema = _json(ARTIFACTS / "physical_profile.schema.json")
+    jsonschema.Draft202012Validator.check_schema(profile_schema)
     profile = _json(ARTIFACTS / "physical_profiles/escapewheel-portable-v0.1.json")
     registry_schema = _json(ARTIFACTS / "registry.schema.json")
     check(
