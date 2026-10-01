@@ -425,112 +425,113 @@ An assigned identifier's `*_name` MUST be unique within its packet. A name colum
 
 A `discriminator` column MUST be a `string` holding a dotted resource identifier — a namespace and
 a table name, each lowercase snake_case — naming a table in the packet's registry or in one of its
-extensions.
+extensions. Its value states the kind of the rows it specialises, its **specialised rows**, which
+lie in its **specialised table**.
 
-**Which column carries it.** A discriminator MAY be declared on the table whose rows it
-specialises, or on a table those rows reach through one declared reference. Where it is not on the
-specialised table it MUST declare `discriminates_via`, holding the referencing column as a dotted
-`resource.column`. That named column MUST belong to a resource declaring exactly one reference in
-which the column is a source member and the discriminator's table is the target. This is a reverse
-one-hop declaration from the specialised rows to the discriminator.
+**A discriminator may lie one reference away.** A discriminator MAY be declared on its specialised
+table, or on a table the specialised rows reach through one declared reference. In the second case
+it MUST declare `discriminates_via`, naming the specialised table's referencing column as a dotted
+`resource.column`, and the specialised table MUST declare exactly one reference in which that column
+is a source member and the discriminator's table is the target.
 
-Where a column carries a discriminator's value as part of a shared key, it is **not** a discriminator and
-MUST NOT declare the role: it resolves nothing a consumer of that row does not already know. Such a
-column is `data`, and a reference relating it to the discriminator it copies is the one role
-mismatch a reference may carry.
+A column copying a discriminator's value into a shared key is `data` and MUST NOT declare the
+`discriminator` role, since it resolves nothing a consumer of its row does not already know. A
+reference relating it to the discriminator it copies is the one role mismatch a reference may
+carry.
 
-**Whether it must resolve.** A discriminator MUST declare `resolves`, required and with no default:
+**A discriminator declares whether it must resolve.** A discriminator MUST declare `resolves`, which
+has no default:
 
 | `resolves` | an unresolvable value is |
 |---|---|
 | `required` | a defect: the row is uninterpretable |
 | `optional` | a fact: the packet does not hold that resource |
 
-A paired value (below) on the discriminator's own table has the discriminator's `required` or
-`nullable` presence; neither may be optional. Their values MUST agree on presence — a row declares
-both or neither. A row declaring neither is **undeterminable**, which a
-consumer MUST report apart from a row whose value resolves to nothing: the fix for one is to record
-the missing half, and for the other to correct what it names. A paired value on the specialised
-table is `required` or `nullable`. Its kind comes from the discriminator's row, so a null value
-there is not undeterminable: the specialised row names no row of that kind. A packet MUST NOT hold
-a specialised row whose discriminator is null, since that row would pair a value with no kind.
+**A discriminator resolves through a shared key or a paired value.** Resolution reads a row's kind,
+takes that resource's key from the registry, and joins; Part 05 §13.4 has a reader offer it. The
+join takes one of two shapes, and a discriminator MUST NOT declare `positions_in`:
 
-**How it resolves.** Resolution reads the kind, takes that resource's key from the registry, and
-joins; Part 05 §13.4 has a reader offer it. Two shapes exist, and a discriminator MUST NOT declare
-`positions_in`:
+- in a **shared key**, the specialised row and a row of the named resource share a key; and
+- in a **paired value**, a column of the specialised table holds the key of a row of the named
+  resource.
 
-- **Shared key.** The discriminated row and the named resource share a key, so the join is on that
-  key. A reference declaring `specialises`, a dotted `resource.column` naming a discriminator, is a
-  **specialising reference**; its table is a **detail table** of that discriminator, a row of it is
-  a **detail row**, and the row a detail row's reference resolves to is its **specialised row**.
-  `specialises` MUST resolve, under the visibility and direction rules of a reference target, to a
-  discriminator column that declares no `discriminates`. The reference's target MUST be the table
-  that discriminator specialises: the table `discriminates_via` names where the discriminator
-  declares it, and the discriminator's own table otherwise. The detail table's primary key MUST
-  begin with the reference's `columns`, in their order, and a table MUST NOT declare `specialises`
-  on more than one reference. A resource a shared-key discriminator may name MUST be a detail table
-  of that discriminator. Where the discriminator resolves `optional`, no checker verifies this;
-  where it resolves `required`, the reverse check below reports every row naming a resource that is
-  not one. Resolution joins the discriminated row to the named resource through that resource's
-  specialising reference naming the discriminator. A detail table carries the discriminator's value as a constant column only where the
-  discriminator is a member of that key, restating in every row what its own identity implies; a
-  column holding one value costs almost nothing once encoded, and what it buys is a reference that
-  identifies a row. `core.intervals.interval_kind` is no member of its table's key, so a table
-  specialising an interval references `core.intervals.interval_id` alone and carries no
-  `interval_kind`. The reference runs extension → core, so a discriminator names downward while the
-  integrity constraint points upward.
-- **Paired value.** A column holds the named row's key, and the discriminator MUST declare
-  `discriminates` naming that column. Where the discriminator declares `discriminates_via`, the
-  column belongs to the table `discriminates_via` names, whose rows the discriminator specialises;
-  otherwise it belongs to the discriminator's own table. A paired value holds one key, so the named
-  resource's primary key MUST be one column, and the paired value MUST take one of two forms:
-  - a `string` `data` column, whose value matches the named key where that key is `carried` and
-    its `*_name` where the key is `assigned`; or
-  - an `identifier` column whose type and identity equal the named key's, holding that key's value.
-    A writer MUST fill it with the identifier it assigned the named row, as it fills any reference
-    to that resource ([Part 05 §4.3](05_validation_and_import.md#ew-import-normalization)).
+**A shared key relates a detail row to its specialised row.** A reference declaring `specialises`,
+a dotted `resource.column` naming a discriminator, is a **specialising reference**. Its table is a
+**detail table** of that discriminator, a row of it is a **detail row**, and the row a detail row's
+reference resolves to is its specialised row. Resolution joins a specialised row to the named
+resource through that resource's specialising reference. A specialising reference MUST meet four
+conditions:
 
-**What is generated.** A packet MUST NOT hold a detail row whose specialised row's discriminator
-value is null or names a resource other than the detail table. The value is read on the specialised
-row where the discriminator is on that row's table, and otherwise on the row of the discriminator's
-table that the specialised row's `discriminates_via` column references. Every specialising
-reference generates a check at **error** on its detail table, whatever the discriminator declares
-for `resolves`, returning every detail row whose reference resolves and whose specialised row's
-value is null or is not the detail table's resource ID. A detail row whose reference resolves to
-nothing is left to the reference's anti-join.
+- `specialises` resolves, under the visibility and direction rules of a reference target, to a
+  discriminator column that declares no `discriminates`;
+- the reference targets that discriminator's specialised table;
+- the detail table's primary key begins with the reference's `columns`, in their order; and
+- no other reference of the detail table declares `specialises`.
 
-Where `resolves` is `required`, every discriminator also gets a forward anti-join against the
-resources the manifest declares, and each shape adds its own checks. All are at **error**, and each
-per-kind check is generated over the kinds a packet's rows actually name:
+Every resource a shared-key discriminator names MUST be one of its detail tables. Where the
+discriminator resolves `required`, the reverse check below reports a row naming any other resource;
+where it resolves `optional`, no checker verifies this.
 
-- a shared-key discriminator gets a reverse check per named kind, returning every row of the
-  discriminating table whose key has no counterpart in the resource its discriminator names. The
-  counterpart is the row of the named resource whose specialising reference naming this
-  discriminator resolves to it, so a named resource declaring no such reference holds none and the
-  check returns every row naming it;
-- a paired-value discriminator gets a check reporting a named resource whose primary key is not one
-  column of the paired value's form, built from the registry's key declarations as literals; an
-  anti-join per named kind, returning every row whose paired value is not null and matches no row
-  of the named resource; and, where the paired value is on the specialised table, a check returning
-  every specialised row whose discriminator is null.
+A packet MUST NOT hold a detail row whose specialised row's discriminator value is null or names a
+resource other than the detail table. That value lies on the specialised row, or with
+`discriminates_via` on the discriminator's row that the specialised row references.
 
-Where `resolves` is `optional`, the forward anti-join, the reverse check and the paired-value
-checks are not generated, and an unresolvable value is reported as `info`.
+A detail table carries the discriminator's value only where the discriminator is a member of the
+shared key. `core.intervals.interval_kind` is not, so a table specialising an interval references
+`core.intervals.interval_id` alone and carries no `interval_kind`.
+
+A row's kind-specific facts live in a detail table. `core.devices` names such a table through
+`device_kind`, and core MUST NOT declare a detail table of it, since Part 01 §3.17 makes this
+standard name no instruments: a camera's target or a thermistor's range belongs to an extension. A
+fact no detail table models stays in `metadata`, and a rule or a query that has to read it is what
+justifies promoting it.
+
+**A paired value holds the named row's key.** A paired-value discriminator MUST declare
+`discriminates`, naming the column of the specialised table that holds the key, its **paired
+value**. A paired value holds one key, so the named resource's primary key MUST be one column, and
+the paired value MUST take one of two forms:
+
+- a `string` `data` column, whose value matches the named key where that key is `carried` and its
+  `*_name` where the key is `assigned`; or
+- an `identifier` column whose type and identity equal the named key's, holding that key's value.
+  A writer MUST fill it with the identifier it assigned the named row, as it fills any reference
+  to that resource ([Part 05 §4.3](05_validation_and_import.md#ew-import-normalization)).
+
+Without `discriminates_via`, the paired value and the discriminator share a table and one presence,
+`required` or `nullable`, and a row MUST hold both values or neither. A row holding neither is
+**undeterminable**, and a consumer MUST report it apart from a row whose value resolves to nothing:
+the fix for one is to record the missing half, and for the other to correct what it names.
+
+With `discriminates_via`, the paired value is `required` or `nullable`, and its row takes its kind
+from the discriminator's row, so a null paired value is not undeterminable: the specialised row
+names no row of that kind. A packet MUST NOT hold a specialised row whose discriminator value is
+null, since that row would pair a value with no kind.
+
+**Discriminators generate checks.** Each check below is at **error**, and a per-kind check is
+generated for each kind a packet's rows name:
+
+| check | generated for | returns |
+|---|---|---|
+| specialisation | each specialising reference, whatever its discriminator declares for `resolves` | each detail row whose reference resolves and whose specialised row's discriminator value is null or is not the detail table's resource ID |
+| forward | each discriminator resolving `required` | each row whose value names no resource the manifest declares |
+| reverse | each shared-key discriminator resolving `required`, per kind | each row of the discriminator's table whose key has no counterpart in the named resource |
+| key form | each paired-value discriminator resolving `required` | each named resource whose primary key is not one column of the paired value's form, built from the registry's key declarations as literals |
+| paired value | each paired-value discriminator resolving `required`, per kind | each row whose paired value is not null and matches no row of the named resource |
+| kind | each paired-value discriminator resolving `required` and declaring `discriminates_via` | each specialised row whose discriminator value is null |
+
+A detail row whose reference resolves to nothing is left to that reference's anti-join. A reverse
+check's counterpart is the row of the named resource whose specialising reference naming this
+discriminator resolves to the discriminator's row, so a named resource declaring no such reference
+holds none and the check returns every row naming it. Where a discriminator resolves `optional`,
+none of the last five checks is generated, and an unresolvable value is reported as `info`.
 
 Every generated check MUST be built over **every resource the packet declares, extensions
-included**. Building them over core alone lets an extension kind match no branch and pass in
+included**. A check built over core alone lets an extension kind match no branch and pass in
 silence, which is the one case the mechanism exists to cover.
 
-Core MAY name an extension's resource through a discriminator. It MUST NOT reference one: naming
-does not create a dependency, so core stays checkable alone, an absent target is a reportable fact,
-and no integrity constraint couples the versions.
-
-A row's kind-specific facts live in a detail table sharing that row's key, whose primary key begins
-with its specialising reference's `columns`. `core.devices` names such a table through `device_kind`, and
-core MUST NOT declare one — Part 01 §3.17 makes this standard name no instruments, so a camera's
-target or a thermistor's range belongs to an extension. A fact no detail table
-models stays in `metadata`, and what justifies promoting one out of it is a rule or a
-query that has to read it.
+Core MAY name an extension's resource through a discriminator and MUST NOT reference one. Naming
+creates no dependency, so core stays checkable alone, an absent target is a reportable fact, and no
+integrity constraint couples the versions.
 
 <a id="ew-unit-and-clock-context" data-spec-anchor="canonical"></a>
 ### 8.4 Unit and clock
