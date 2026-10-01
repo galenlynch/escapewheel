@@ -27,7 +27,7 @@ from escapewheel_reader.resource_ids import (
 from .. import check_table, stores
 from ..check_table import CheckEntry
 from ..errors import ResourceMissing, StoreUnreachable
-from ..report import Report
+from ..report import ROW_CAP, Report
 from .floors import check_zarr_floor
 from .owned import owned_uri
 
@@ -281,10 +281,6 @@ def declared_axes(packet: Packet) -> dict[str, ArrayAxes]:  # noqa: C901
     return found
 
 
-#: Examples a finding carries per axis, so a wholly unlabelled axis does not list every position.
-_EXAMPLES = 20
-
-
 class _AxisFault(Enum):
     """One way an array's label and channel rows disagree with its shape (Part 03 §6.3)."""
 
@@ -322,7 +318,8 @@ def _axis_findings(shape: Sequence[int], axes: ArrayAxes) -> dict[_AxisFault, li
         if not (missing := outer_positions * length[axis] - len(seen)):
             continue
         pairs = itertools.product(range(outer_positions), range(length[axis]))
-        for depends_on, position in itertools.islice((p for p in pairs if p not in seen), _EXAMPLES):
+        # Capped per axis, so a wholly unlabelled axis does not list every position.
+        for depends_on, position in itertools.islice((p for p in pairs if p not in seen), ROW_CAP):
             where = f"position_index {position}"
             if outer_length is not None:
                 where = f"depends_on_position_index {depends_on}, {where}"

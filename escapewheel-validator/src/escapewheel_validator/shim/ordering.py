@@ -25,13 +25,14 @@ from ..errors import OrderFault, OrderViolation
 from ..generate import adjacency_settles_uniqueness
 from ..report import Report
 
-#: Rows per batch when checking physical order, and how many breaks are worth reporting.
+#: Rows per batch when checking physical order.
 #: Read whole, a spike table's sort columns are a Python object per row and column, which at
 #: hundreds of millions of rows will take a workstation down. Batched, peak memory is this many
 #: rows however large the table, and a reader only needs to see that the order broke and where
 #: it first did.
 ORDER_BATCH = 1 << 20
-ORDER_REPORT = 20
+#: Breaks of each kind after which the scan stops reading a table.
+_SCAN_STOP = 20
 
 
 def _row_at(batch: Any, keys: Sequence[str], offset: int) -> tuple[Any, ...]:
@@ -281,7 +282,7 @@ def _scan_one_ordering(  # noqa: C901
                         broken.append((start + offset, name, was, now))
         tail = _row_at(batch, keys, batch.num_rows - 1)
         start += batch.num_rows
-        if len(offending) >= ORDER_REPORT and len(duplicated) >= ORDER_REPORT:
+        if len(offending) >= _SCAN_STOP and len(duplicated) >= _SCAN_STOP:
             break
     if damaged is not None:
         # The order cannot be established, so nothing partial is reported for it: what the scan
@@ -294,14 +295,14 @@ def _scan_one_ordering(  # noqa: C901
         report.add(
             check_table.determined_by(resource_id),
             "a column declared determined_by the key differs between two rows sharing it",
-            [(_row(index), col, f"{a} != {b}") for index, col, a, b in broken[:ORDER_REPORT]],
+            [(_row(index), col, f"{a} != {b}") for index, col, a, b in broken],
             registry=report.resource_owner(resource_id),
         )
     if offending:
         report.add(
             check_table.physical_order(resource_id),
             f"rows are not in declared sort order ({', '.join(keys)})",
-            [(_row(index), str(prev), str(cur)) for index, prev, cur in offending[:ORDER_REPORT]],
+            [(_row(index), str(prev), str(cur)) for index, prev, cur in offending],
             registry=report.resource_owner(resource_id),
         )
         # Adjacency settles uniqueness only for a file actually in order: a duplicate anywhere but
@@ -312,7 +313,7 @@ def _scan_one_ordering(  # noqa: C901
         report.add(
             check_table.primary_key_unique(resource_id),
             "duplicate primary key",
-            [(_row(index), str(row)) for index, row in duplicated[:ORDER_REPORT]],
+            [(_row(index), str(row)) for index, row in duplicated],
             registry=report.resource_owner(resource_id),
         )
     return False

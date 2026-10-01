@@ -25,7 +25,7 @@ from ..registry_document import (
     ucum_error,
 )
 from ..registry_types import ARROW_TYPES
-from ..report import Report
+from ..report import ROW_CAP, Report
 from ..vocabulary import EvaluationStatus
 from .floors import check_parquet_floor
 
@@ -195,7 +195,7 @@ def check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any],
                 report.add(
                     check_table.outside_reserved_set(resource_id, name),
                     f"{len(outside)} value(s) outside the reserved set: "
-                    f"{', '.join(repr(v) for v in outside[:5])}" + (" ..." if len(outside) > 5 else ""),
+                    f"{', '.join(repr(v) for v in outside[:ROW_CAP])}" + (" ..." if len(outside) > ROW_CAP else ""),
                     registry=report.resource_owner(resource_id),
                 )
 
@@ -224,8 +224,8 @@ def check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], repo
             if invalid:
                 report.add(
                     check,
-                    f"{len(invalid)} value(s) are not UCUM codes: {', '.join(repr(v) for v in invalid[:5])}"
-                    + (" ..." if len(invalid) > 5 else ""),
+                    f"{len(invalid)} value(s) are not UCUM codes: {', '.join(repr(v) for v in invalid[:ROW_CAP])}"
+                    + (" ..." if len(invalid) > ROW_CAP else ""),
                     [(value,) for value in invalid],
                     registry=registry,
                 )

@@ -36,6 +36,7 @@ from escapewheel_reader.resource_ids import (
 from . import check_table
 from .check_table import CheckEntry
 from .registry_types import DDL
+from .report import ROW_CAP
 
 #: Tables whose rows record what ran rather than what was measured, so writing one leaves no derived
 #: resource stale (Part 05 §15.2).
@@ -49,9 +50,6 @@ DERIVED = frozenset({"analysis", "compatibility_projection"})
 
 #: The packet-level fields no amendment changes (Part 05 §15.2).
 IDENTITY = ("packet_id", "profile_id", "semantic_standard_version", "logical_standard_version")
-
-#: Rows kept per finding, as `Report.add` keeps.
-SHOWN = 5
 
 
 def semver(text: str) -> tuple[int, ...]:
@@ -214,7 +212,7 @@ def _key_match(spec: Mapping[str, Any], left: str, right: str) -> str:
 def _rows(connection: Any, query: str) -> tuple[int, list[tuple[Any, ...]]]:
     """Return how many rows a query yields and the first few."""
     count = connection.execute(f"SELECT COUNT(*) FROM ({query})").fetchone()[0]
-    shown = connection.execute(f"SELECT * FROM ({query}) LIMIT {SHOWN}").fetchall() if count else []
+    shown = connection.execute(f"SELECT * FROM ({query}) LIMIT {ROW_CAP}").fetchall() if count else []
     return int(count), shown
 
 
@@ -374,7 +372,7 @@ def _compare_table(
         grouped = f"SELECT {listed}, COUNT(*) AS n_rows FROM ({added}) GROUP BY ALL"
         query = f"SELECT a.* FROM ({grouped}) AS a WHERE {old.grows(resource, 'a')}"
         total = connection.execute(f"SELECT COALESCE(SUM(n_rows), 0) FROM ({query})").fetchone()[0]
-        shown = connection.execute(f"SELECT * FROM ({query}) LIMIT {SHOWN}").fetchall() if total else []
+        shown = connection.execute(f"SELECT * FROM ({query}) LIMIT {ROW_CAP}").fetchall() if total else []
     else:
         total, shown = _rows(connection, added)
     if total:

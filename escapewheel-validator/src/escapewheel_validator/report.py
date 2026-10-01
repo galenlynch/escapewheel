@@ -11,6 +11,7 @@ A check adds its findings through :meth:`Report.add`, under an entry of :mod:`.c
 
 from __future__ import annotations
 
+import itertools
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, overload
@@ -25,6 +26,9 @@ from .vocabulary import EvaluationStatus, Level, RegistryState, Verdict
 
 #: Verdicts in increasing severity.
 VERDICTS = tuple(Verdict)
+
+#: Rows a finding keeps, and values a message lists, of however many a check found.
+ROW_CAP = 5
 
 
 def _worst(verdicts: Iterable[Verdict]) -> Verdict:
@@ -192,7 +196,7 @@ class Report:
 
     @overload
     def add(
-        self, check: CheckEntry, message: str, /, rows: Sequence[Sequence[Any]] = (), registry: str | None = None
+        self, check: CheckEntry, message: str, /, rows: Iterable[Sequence[Any]] = (), registry: str | None = None
     ) -> None: ...
 
     @overload
@@ -202,7 +206,7 @@ class Report:
         check: str,
         message: str,
         /,
-        rows: Sequence[Sequence[Any]] = (),
+        rows: Iterable[Sequence[Any]] = (),
         registry: str | None = None,
     ) -> None: ...
 
@@ -218,8 +222,8 @@ class Report:
             The check, from :mod:`.check_table`; `CheckEntry.at` gives it at another level.
         message : str
             What went wrong.
-        rows : sequence, optional
-            Offending rows; only the first five are kept.
+        rows : iterable, optional
+            Offending rows; only the first `ROW_CAP` are kept.
         registry : str, optional
             The bound registry the finding belongs to; None for the packet.
         """
@@ -233,13 +237,12 @@ class Report:
         level: Level,
         check: str,
         message: str,
-        rows: Sequence[Sequence[Any]] = (),
+        rows: Iterable[Sequence[Any]] = (),
         registry: str | None = None,
     ) -> None:
-        """Append one finding, keeping its first five rows as strings."""
-        self.findings.append(
-            Finding(level, check, message, tuple(tuple(str(v) for v in row) for row in list(rows)[:5]), registry)
-        )
+        """Append one finding, keeping its first `ROW_CAP` rows as strings."""
+        kept = tuple(tuple(str(v) for v in row) for row in itertools.islice(rows, ROW_CAP))
+        self.findings.append(Finding(level, check, message, kept, registry))
 
     def to_dict(self, packet_id: str) -> dict[str, Any]:
         """Render the report as the JSON structure Part 05 describes.

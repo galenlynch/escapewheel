@@ -197,7 +197,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
         report.add(
             check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: {len(missing)} declared member(s) the store does not hold",
-            [(key,) for key in missing[:20]],
+            ((key,) for key in missing),
             registry=report.resource_owner(resource.resource_id),
         )
     if extra := sorted(held.keys() - claimed.keys()):
@@ -205,7 +205,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: the store holds {len(extra)} member(s) the manifest does not "
             "declare, so a digest over the declared listing would not describe it",
-            [(key,) for key in extra[:20]],
+            ((key,) for key in extra),
             registry=report.resource_owner(resource.resource_id),
         )
     if sized := sorted(
@@ -216,7 +216,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
         report.add(
             check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: {len(sized)} member(s) differ in size from the manifest",
-            [(key, claimed[key]["size_bytes"], held[key].size_bytes) for key in sized[:20]],
+            ((key, claimed[key]["size_bytes"], held[key].size_bytes) for key in sized),
             registry=report.resource_owner(resource.resource_id),
         )
     if not store_digests:
@@ -234,7 +234,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
         report.add(
             check_table.EXTERNAL_STORE_DIGEST,
             f"{resource.resource_id}: {len(changed)} member(s) changed in place since recording",
-            [(key,) for key in changed[:20]],
+            ((key,) for key in changed),
             registry=report.resource_owner(resource.resource_id),
         )
     if skipped:
@@ -242,7 +242,7 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
             check_table.EXTERNAL_NO_STORE_DIGEST,
             f"{resource.resource_id}: {len(skipped)} of {len(claimed)} member(s) not checked -- the "
             "manifest recorded no store digest, or the store offers none (Part 04 §5.4)",
-            [(key,) for key in skipped[:20]],
+            ((key,) for key in skipped),
             registry=report.resource_owner(resource.resource_id),
         )
     if compared:

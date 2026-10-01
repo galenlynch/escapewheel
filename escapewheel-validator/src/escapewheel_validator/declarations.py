@@ -261,7 +261,7 @@ def check_sources(packet: Packet, report: Report) -> None:
         report.add(
             check_table.SOURCES_UNRESOLVED,
             f"{len(unresolved)} source(s) no available resolution document locates (Part 04 §5.5)",
-            [(name, ", ".join(named[name][:3])) for name in unresolved[:20]],
+            ((name, ", ".join(named[name][:3])) for name in unresolved),
         )
 
 
