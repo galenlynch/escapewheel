@@ -239,10 +239,17 @@ Physical sort order is checked between 3 and 4, by reading each file in written 
 **It is not a SQL rule and cannot be**: a query has no access to physical row order. That
 was found here, building this fixture, and corrects R2 §7.1 and R5 §7 — see R12.
 
-## The suites' packet fixture
+## The suites' shared fixtures
 
 `shared/packet_fixture.py` is not part of the corpus. It writes the small packet the reader's and
 the validator's unit suites each build in a temporary directory, and it lives here so that
 neither package's tests import the other's. `core_registry` cuts the core registry down to the
 resources and columns a suite names, keeping each as core declares it, and `write_packet` writes
 the rows for them. A suite states its columns in its own `tests/conftest.py`.
+
+`shared/nwbfixture.py` writes the miniature NWB-Zarr file the writer's and aind's suites read, and
+the helpers that write a Zarr v2 group or array. It holds what core NWB declares; aind's
+`tests/nwbfixture.py` adds its producer's columns over that file with the same helpers.
+
+Each of the four suites reaches `shared/` through `pythonpath` in its pytest configuration, so a
+suite runs from a checkout of the monorepo and not from its package alone.

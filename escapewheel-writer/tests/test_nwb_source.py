@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 import numpy as np
+import nwbfixture
 import pytest
 from escapewheel_reader import open_packet
 
@@ -16,7 +17,6 @@ from escapewheel_writer.notes import NoteCode, coded, codes
 from escapewheel_writer.sources.nwb.names import ucum_code
 from escapewheel_writer.sources.nwb.source import NWBSource
 from escapewheel_writer.sources.values import sex
-from tests import nwbfixture
 
 KIND = "task.trials"
 PACIFIC = ZoneInfo("America/Los_Angeles")

@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import sys
 
+import nwbfixture
 import pytest
 
 from escapewheel_writer.errors import SourceDefect, SourceFault, UnsupportedEncoding
 from escapewheel_writer.sources import ADAPTERS
-from tests import nwbfixture, sorterfixture
+from tests import sorterfixture
 from tests.test_adapter_columns import BUILDERS, emitted
 from tests.test_waveforms import STREAM
 

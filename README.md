@@ -51,7 +51,7 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 | `escapewheel-validator/` | The reference validator. SQL rules generated from the registry, plus the shim for what SQL cannot see. |
 | `escapewheel-writer/` | The writer, the source adapters, and the session recipe that drives them. |
 | `escapewheel-aind/` | AIND's source adapters and its two extension registries, `aind_opto` and `aind_unit_qc`, in `extensions/`. |
-| `fixtures/` | The conformance corpus: one valid packet and its variants, each with its expected finding recorded as data. `shared/` holds the packet fixture the reader's and validator's suites build. |
+| `fixtures/` | The conformance corpus: one valid packet and its variants, each with its expected finding recorded as data. `shared/` holds the packet fixture the reader's and validator's suites build and the NWB fixture the writer's and aind's read. |
 | `integration/` | The writer, reader, and validator run against one another, and the generator of Part 08's example packet. |
 | `conformance/` | Mechanical probes producing the measured evidence revisions cite, and the registry checks needing more than the tree holds. |
 | `inventory/` | Source inventories from discovery (Part 05 §4.1), and the upstream defects found while writing adapters. |

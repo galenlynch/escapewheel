@@ -1,11 +1,11 @@
 """Zarr v2 arrays decode from their chunk bytes, including the ones zarr-python refuses."""
 
 import numpy as np
+import nwbfixture
 import pytest
 
 from escapewheel_writer.errors import SourceFault, UnsupportedEncoding
 from escapewheel_writer.sources.zarr_compat import DenseV2, attrs, members, read_array
-from tests import nwbfixture
 
 
 def test_a_numeric_array_reads(tmp_path):

@@ -1,14 +1,16 @@
 """Build a miniature NWB-Zarr on disk, including the parts zarr-python cannot open.
 
-The real file this adapter was written against is 8.49 GB and not in any repository, so the
+The real file the NWB adapter was written against is 8.49 GB and not in any repository, so the
 tests build their own. It reproduces both faults measured in
 `inventory/nwb-zarr-776259-2025-04-09.md` §1 -- vlen-bytes scalars with a numeric fill value,
 and a pickled object-reference column -- because those are what the adapter exists to survive.
 
-What it writes is what core NWB 2.9.0 declares, plus `channel_name`, which the schema does not
-and SpikeInterface reads out of files it did not write. A producer's own columns belong in the
-fixture of whichever adapter reads them: `escapewheel-aind` builds on this shape and adds the
-atlas triple, the packed device description and the task's trial columns.
+What `build` writes is what core NWB 2.9.0 declares, plus `channel_name`, which the schema does
+not and SpikeInterface reads out of files it did not write. A producer's own columns belong in the
+fixture of whichever adapter reads them, written over this shape with the same helpers.
+
+The writer's and aind's suites each put this directory on their import path (`pythonpath` in
+their pytest configuration), so neither package's tests import the other's.
 """
 
 import json

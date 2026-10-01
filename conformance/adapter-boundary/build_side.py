@@ -22,8 +22,8 @@ import pyarrow.flight as fl
 import pyarrow.parquet as pq
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer"))
-sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
+# The NWB fixture the writer's and aind's suites share.
+sys.path.insert(0, str(HERE.parent.parent / "fixtures/shared"))
 
 import nwbfixture
 from escapewheel_writer.adapter import NWBSource, build_table

@@ -1,11 +1,11 @@
 """One source root, read once and shared."""
 
 import numpy as np
+import nwbfixture
 import pytest
 
 from escapewheel_writer.errors import UnsupportedEncoding
 from escapewheel_writer.sources.store import SourceStore, store_for
-from tests import nwbfixture
 
 #: One clock's `core.clocks` row, which is the shape the `clocks` term takes.
 PROBE_CLOCK = {"clock_id": "probe.45883-1.samples", "tick_rate_num": 30000, "tick_rate_den": 1}

@@ -11,6 +11,7 @@ import json
 import sys
 from dataclasses import replace
 
+import nwbfixture
 import pytest
 
 from escapewheel_writer import declaration, reading, serving
@@ -21,7 +22,6 @@ from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS
 from escapewheel_writer.sources import ADAPTERS
 from escapewheel_writer.sources.nwb.source import NWBSource
-from tests import nwbfixture
 
 SESSION = "mini_2025-04-09"
 ZONE = "America/Los_Angeles"

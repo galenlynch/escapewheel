@@ -15,6 +15,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import numpy as np
+import nwbfixture
 import pytest
 
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
@@ -26,7 +27,7 @@ from escapewheel_writer.sources.openephys import OpenEphysSource
 from escapewheel_writer.sources.sorter import SorterSource
 from escapewheel_writer.sources.sync import SyncSource
 from escapewheel_writer.sources.waveforms import WaveformSource
-from tests import nwbfixture, sorterfixture, syncfixture
+from tests import sorterfixture, syncfixture
 from tests.conftest import REGISTRY
 from tests.test_harp_source import SCHEMA as HARP_SCHEMA
 from tests.test_lfp import CLOCK_ROW, _contacts, _series

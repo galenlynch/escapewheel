@@ -15,10 +15,8 @@ build their own. What it reproduces deliberately:
 import json
 from pathlib import Path
 
-import numcodecs
 import numpy as np
-
-from tests.nwbfixture import BLOSC
+from nwbfixture import array
 
 #: Ids 0..5 with 3 and 4 missing, so offset 3 is unit 5. A fixture without a gap would not
 #: distinguish an adapter that resolves `unit_index` from one that stores it.
@@ -32,28 +30,6 @@ LABELS = {
     "decoder_label": ["sua", "noise", "mua", "mua", "sua", "noise"],
     "unitrefine_label": ["sua", "noise", "sua", "mua", "sua", "noise"],
 }
-
-
-def zarr_array(path: Path, values) -> Path:
-    """Write a one-dimensional Zarr v2 array in one chunk, as the analyzer does."""
-    path.mkdir(parents=True, exist_ok=True)
-    data = np.asarray(values)
-    (path / "0").write_bytes(numcodecs.get_codec(BLOSC).encode(data.tobytes()))
-    (path / ".zarray").write_text(
-        json.dumps(
-            {
-                "zarr_format": 2,
-                "shape": [data.size],
-                "chunks": [data.size],
-                "dtype": data.dtype.str,
-                "compressor": BLOSC,
-                "filters": None,
-                "fill_value": 0,
-                "order": "C",
-            }
-        )
-    )
-    return path
 
 
 #: How long the recording behind a stream ran, in its own samples. Comfortably past the last
@@ -146,7 +122,7 @@ def stream(
         if channel_ids is not None:
             recording["recording_attributes"]["channel_ids"] = list(channel_ids)
         (zarr / ".zmetadata").write_text(json.dumps({"metadata": {"recording_info/.zattrs": recording}}))
-        zarr_array(
+        array(
             zarr / "extensions" / "spike_amplitudes" / "amplitudes",
             np.arange(len(spikes), dtype=np.float32) * -1.0,
         )

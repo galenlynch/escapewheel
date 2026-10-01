@@ -266,10 +266,14 @@ Before taking a name out of a tier, search the other packages for it.
 
 ## Testing
 
-Tests build their own inputs rather than depending on real data or on `../fixtures/`. Size a
-fixture so the expected numbers can be read off by hand and say in the docstring what makes them
-what they are; a test whose expectation you cannot derive on paper is one that will be *adjusted*
-when it fails.
+Tests build their own inputs rather than depending on real data or on the corpus under
+`../fixtures/`. Size a fixture so the expected numbers can be read off by hand and say in the
+docstring what makes them what they are; a test whose expectation you cannot derive on paper is
+one that will be *adjusted* when it fails.
+
+`../fixtures/shared/nwbfixture.py` builds the miniature NWB file this suite and aind's read, and
+pytest's `pythonpath` setting in `pyproject.toml` puts it on the import path, so the suite runs
+from a checkout of the monorepo and not from the package alone.
 
 Prefer a test that would have caught the bug over one that covers the line. Several here exist
 because a measurement contradicted an assumption — they assert the surprising half.

@@ -80,7 +80,7 @@ def _contacts(root, probe="45883-1", names=("CH0", "CH4")):
     `channel_name` alone repeats across probes, so a contact's name is the pair -- which is why
     both columns have to be here for a channel row to name an electrode at all.
     """
-    from tests.nwbfixture import array, group
+    from nwbfixture import array, group
 
     contacts = group(root / "general/extracellular_ephys/electrodes")
     array(contacts / "group_name", [probe] * len(names), filter_id="vlen-utf8")
@@ -249,7 +249,7 @@ def test_a_contact_the_source_cannot_name_is_refused(tmp_path):
     """
     root = tmp_path / "unnamed.nwb"
     _series(root)
-    from tests.nwbfixture import array, group
+    from nwbfixture import array, group
 
     contacts = group(root / "general/extracellular_ephys/electrodes")
     array(contacts / "channel_name", ["CH0", "CH4"], filter_id="vlen-utf8")

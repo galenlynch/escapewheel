@@ -20,8 +20,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer"))
-sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
+# The NWB fixture the writer's and aind's suites share.
+sys.path.insert(0, str(HERE.parent.parent / "fixtures/shared"))
 
 import build_side
 import nwbfixture

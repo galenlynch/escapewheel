@@ -1,6 +1,7 @@
 """The sorter adapter carries the ticks, and must not confuse an offset for an identifier."""
 
 import numpy as np
+import nwbfixture
 import pytest
 
 from escapewheel_writer.errors import SourceDefect, SourceFault
@@ -284,7 +285,7 @@ def test_without_an_analyzer_there_are_no_amplitudes_and_no_unit(tmp_path):
 def test_amplitudes_that_do_not_align_are_a_defect(tmp_path):
     sorterfixture.stream(tmp_path, sorterfixture.NAMES[0], spikes=sorterfixture.SPIKES)
     zarr = tmp_path / "postprocessed" / f"{sorterfixture.NAMES[0]}.zarr"
-    sorterfixture.zarr_array(zarr / "extensions" / "spike_amplitudes" / "amplitudes", np.zeros(3, dtype=np.float32))
+    nwbfixture.array(zarr / "extensions" / "spike_amplitudes" / "amplitudes", np.zeros(3, dtype=np.float32))
     source = SorterSource(tmp_path, session_id=SESSION)
     with pytest.raises(SourceDefect) as refused:
         list(source.spike_batches())
