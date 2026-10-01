@@ -9,7 +9,7 @@ from escapewheel_reader.manifest import MANIFEST_FILENAME
 from escapewheel_validator import validate
 
 import escapewheel_writer.writer as module
-from escapewheel_writer import CommitRefused, PacketWriter
+from escapewheel_writer import CommitRefused, PacketWriter, publication
 from escapewheel_writer.errors import PacketOccupied, PromotionRecordUnreadable
 from escapewheel_writer.layout import PROMOTION, STAGING
 from escapewheel_writer.promotion import read_promotion
@@ -127,13 +127,13 @@ def test_an_interrupted_amendment_is_undone_and_published_on_retry(tmp_path, reg
     """Stopped after the superseded manifest is retained, so the record's retained path exists too."""
     root = tmp_path / "s001"
     commit_tables(root, registry, minimal)
-    real = module.retain
+    real = publication.retain
 
     def retain(*args):
         real(*args)
         raise Interrupted
 
-    monkeypatch.setattr(module, "retain", retain)
+    monkeypatch.setattr(publication, "retain", retain)
     with pytest.raises(Interrupted):
         _newer(registry, import_runs()).amend(root)
     version, paths = read_promotion(root)

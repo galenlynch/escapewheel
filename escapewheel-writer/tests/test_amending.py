@@ -37,7 +37,7 @@ def test_an_amendment_adds_a_resource(tmp_path, registry, minimal):
 
 def test_an_amendment_re_runs_only_the_rules_its_resources_implicate(tmp_path, registry, minimal):
     """Part 05 §15.4. What it writes is what it must re-check; everything else is immutable."""
-    import escapewheel_writer.writer as module
+    import escapewheel_writer.publication as module
 
     root = tmp_path / "s001"
     commit_tables(root, registry, minimal)

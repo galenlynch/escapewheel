@@ -9,27 +9,22 @@ manifest to ``packet.json`` last, so a reader finds a whole packet or none.
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import time
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-from escapewheel_reader import Manifest, Packet, open_packet
-from escapewheel_reader.location import SOURCES_FILENAME
-from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
+from escapewheel_reader.manifest import MANIFEST_FILENAME
 from escapewheel_reader.registries import declared_tables
 from escapewheel_reader.resource_ids import CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS, CORE_SESSIONS
 from escapewheel_reader.uri import encode
 from escapewheel_validator import (
     CheckedRegistryContext,
     Report,
-    validate,
 )
 from escapewheel_validator.amendment import semver
 from escapewheel_validator.errors import OrderViolation
@@ -41,15 +36,11 @@ from .attachments import Attachments
 from .bindings import ExternalArray, ExternalMedia, StagedArray
 from .documents import (
     VALIDATION_NOT_RUN,
-    VALIDATION_PASSED,
     bump,
     manifest,
-    retain,
     sha256_of,
     sources_document,
-    store_registries,
     with_lineage,
-    writer_version,
 )
 from .encoding import inefficient
 from .errors import (
@@ -60,9 +51,10 @@ from .errors import (
     UsageFault,
 )
 from .keys import Keys
-from .layout import PROMOTED, STAGING, retained
+from .layout import STAGING
 from .numbering import paired_kinds, preassign
-from .promotion import act_on_promotion, claim, created, record_promotion, refuse_occupied
+from .promotion import act_on_promotion, claim, record_promotion, refuse_occupied
+from .publication import CANDIDATE, Amendment, NewPacket
 from .registries import Declarations
 from .staging import check_parquet_floor, parquet_options, write_stream
 
@@ -149,9 +141,6 @@ class PacketWriter:
         #: The packet version this writer amends, whose numbers seed `keys` and against whose rows
         #: every table settles, or None for a new packet.
         self._held: Held | None = None
-        #: For an amendment, the packet root and the new version, which name a file that would
-        #: otherwise overwrite one the packet holds (Part 03 §9).
-        self._amending: tuple[Path, str] | None = None
 
     def amending(self, held: Held, *, prevail: bool = False) -> None:
         """Amend `held` rather than build a new packet (Part 05 §15).
@@ -513,8 +502,13 @@ class PacketWriter:
         """Resource IDs with at least one record, in insertion order."""
         return [*self._tables, *self._batches]
 
-    def _stage(self, staging: Path, only: Collection[str] | None = None) -> list[dict[str, Any]]:
+    def _stage(
+        self, staging: Path, place: Callable[[str, str, str], str], only: Collection[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Write every table under `staging` and return its manifest entries.
+
+        `place` returns where a resource is written under the packet root, given its folder,
+        its resource ID and its suffix; `only` limits the pass to those resources.
 
         Records in `_ordered` the resources whose physical order `write_stream` established as
         it wrote them, so the commit that follows need not read them back to learn it.
@@ -530,7 +524,7 @@ class PacketWriter:
                 continue
             spec = self.spec(resource_id)
             assert spec is not None
-            relative = self._relative("tables", resource_id, "parquet")
+            relative = place("tables", resource_id, "parquet")
             path = staging / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             if resource_id in self._batches:
@@ -603,24 +597,15 @@ class PacketWriter:
             entries.append(entry)
         return entries
 
-    def _relative(self, folder: str, resource_id: str, suffix: str) -> str:
-        """Return where a resource is written, apart from any file the amended packet holds (Part 03 §9)."""
-        namespace, name = resource_id.split(".", 1)
-        relative = f"{folder}/{namespace}/{name}.{suffix}"
-        if self._amending is not None and (self._amending[0] / relative).exists():
-            relative = f"{folder}/{namespace}/{name}.{self._amending[1]}.{suffix}"
-        return relative
-
-    def _prefer_added_runs(self) -> None:
-        """Prefer each run an amendment adds to the scope of a run the packet holds (Part 05 §12).
+    def _prefer_added_runs(self, held: Held | None) -> None:
+        """Prefer each run an amendment adds to the scope of a run `held` holds (Part 05 §12).
 
         A run of an activity other than `import` sharing its session, activity, `scope_kind` and
         `scope` with a held run is an alternative to it, and the one added is preferred unless a
         preference of that key is already delivered, as a recipe declares one (Part 05 §3.1).
         """
-        if self._held is None:
+        if held is None:
             return
-        held = self._held
         scopes = {
             (run["session_id"], run["activity_type"], run["scope_kind"], run["scope"])
             for run in held.named_rows(CORE_PROCESSING_RUNS, self.keys)
@@ -776,100 +761,9 @@ class PacketWriter:
                 "a packet declares at least one session; core.sessions is empty", code=UsageFault.NO_SESSION
             )
 
-        # Before anything is written, since binding needs only the rows and refuses outright.
-        payloads = self._attachments.bind_payloads()
-        staging = self._staging(root)
-
-        # 1. staged resources, plus the registry they were written against
-        clock = time.perf_counter()
-        entries = with_lineage(
-            [
-                *self._stage(staging),
-                *self._attachments.stage_arrays(staging, self._relative),
-                *self._attachments.stage_payloads(staging, payloads),
-                *self._attachments.array_entries(),
-                *self._attachments.media_entries(),
-            ],
-            self._derived,
+        return self._publish(
+            NewPacket(root, manifest=self._manifest, sources=self._sources_document), limits, say, materialize
         )
-        say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
-        # Part 03 §5.5's rules are good guesses, and a column one guesses wrong
-        # about is said aloud rather than silently paid for. A report, not a refusal: every
-        # encoding is permitted, so the packet is conforming whichever it got.
-        for note in sorted(set(self._encoding_notes)):
-            say(f"  encoding: {note}")
-        for report in self._after_stage:
-            report(say)
-        clock = time.perf_counter()
-        registries, _ = store_registries(self._declarations.documents, staging)
-
-        # 2. derive whatever the caller asked for from the staged packet, before anything is
-        #    validated or promoted. Part 05 §8 puts materialization inside the import
-        #    pipeline, and a staged packet is already openable -- it needs a manifest, which is
-        #    written here anyway. Doing it now costs one validation over the finished packet;
-        #    doing it after the commit costs a second manifest, a version bump and a
-        #    revalidation of resources validated seconds earlier, which is what `amend` is for
-        #    and what a build the recipe fully describes should never pay.
-        (staging / MANIFEST_FILENAME).write_text(json.dumps(self._manifest(entries, registries, None), indent=2) + "\n")
-        if materialize:
-            # Row counts, not just names: a materializer adds its own `core.processing_runs`
-            # row (Part 06 §5), and that table was staged in the pass above. Restaging only what is
-            # new would leave the run record in memory and the resource pointing at a run the
-            # packet does not contain -- which is exactly what the validator then says.
-            def counts() -> dict[str, int]:
-                return {r: len(self._tables.get(r, ())) for r in self.resources}
-
-            before = counts()
-            for derive in materialize:
-                derive(open_packet(staging), self)
-                say(f"derived {', '.join(sorted(set(self.resources) - set(before)))}")
-                before = {**before, **{r: n for r, n in counts().items() if r not in before}}
-            touched = {r for r, n in counts().items() if n != before.get(r, -1) or r not in before}
-            touched |= set(self.resources) - {e["resource_id"] for e in entries}
-            restaged = self._stage(staging, only=touched)
-            kept = [e for e in entries if e["resource_id"] not in touched]
-            entries = with_lineage([*kept, *restaged], self._derived)
-            (staging / MANIFEST_FILENAME).write_text(
-                json.dumps(self._manifest(entries, registries, None), indent=2) + "\n"
-            )
-            say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
-            clock = time.perf_counter()
-        # Scan the order of everything except what `write_stream` compared on the way in.
-        # Not a shortcut around the check: the same comparison ran, over the same rows, from
-        # the same code, one step earlier.
-        staged = {e["resource_id"] for e in entries}
-        report = validate(open_packet(staging), limits=limits, scan=staged - self._ordered)
-        say(f"validated in {time.perf_counter() - clock:.1f} s")
-        clock = time.perf_counter()
-        if not report.passed:
-            raise CommitRefused(report, staging)
-
-        # 3. record every path promotion creates, then move into final paths, the resolution
-        #    document first since it alone can still fail
-        sources = sources_document(self._packet_id, self._sources, self._attachments.referenced)
-        promoted = [name for name in PROMOTED if (staging / name).exists()]
-        creates = [*promoted, *([SOURCES_FILENAME] if sources is not None else []), f"{MANIFEST_FILENAME}.candidate"]
-        claim(root, creates)
-        record_promotion(staging, str(self._manifest(entries, registries, None)["packet_version"]), creates)
-        if sources is not None:
-            # At the root so a copy carries it, and outside the manifest so a moved mirror is fixed by
-            # editing it in place (Part 04 §5.5).
-            (root / SOURCES_FILENAME).write_text(json.dumps(sources, indent=2) + "\n")
-        for entry in entries:
-            entry["validation_state"] = VALIDATION_PASSED
-        for name in promoted:
-            shutil.move(str(staging / name), str(root / name))
-
-        # 4. rename the manifest last: until this line the root holds no manifest at all,
-        #    so a reader finds nothing rather than a partial import claiming to be valid.
-        candidate = root / f"{MANIFEST_FILENAME}.candidate"
-        candidate.write_text(json.dumps(self._manifest(entries, registries, report), indent=2) + "\n")
-        os.replace(candidate, root / MANIFEST_FILENAME)
-        shutil.rmtree(staging)
-        if self._workspace is not None and self._workspace.exists():
-            shutil.rmtree(self._workspace)
-        say(f"promoted in {time.perf_counter() - clock:.1f} s")
-        return report
 
     def amend(
         self,
@@ -944,40 +838,36 @@ class PacketWriter:
                 "a greater major version is a replacement, not an amendment (Part 05 §15.1)",
                 code=UsageFault.VERSION_MAJOR_CHANGED,
             )
-        self._amending = (root, version)
         try:
-            return self._amend(root, held, superseded, version, limits, say, materialize)
+            target = Amendment(root, held, superseded, version, description=self._description)
+            return self._publish(target, limits, say, materialize)
         finally:
             held.close()
-            self._amending = None
 
-    def _amend(
+    def _sources_document(self) -> dict[str, Any] | None:
+        """Return the resolution document for the sources this packet's references name, or None."""
+        return sources_document(self._packet_id, self._sources, self._attachments.referenced)
+
+    def _publish(
         self,
-        root: Path,
-        held: Held,
-        superseded: Mapping[str, Any],
-        version: str,
+        target: NewPacket | Amendment,
         limits: Mapping[str, Any] | None,
         say: Callable[[str], None],
         materialize: Sequence[Callable[[Any, PacketWriter], None]],
     ) -> Report:
-        """Stage, derive, validate and promote an amendment; `amend` without its preparation."""
-        payloads = [
-            (payload, declaration)
-            for payload, declaration in self._attachments.bind_payloads()
-            if not held.holds(payload.resource_id, declaration)
-        ]
-        for instances in (self._attachments.staged, self._attachments.arrays, self._attachments.media):
-            for resource_id in [r for r, i in instances.items() if held.holds(r, i.declaration_id)]:
-                del instances[resource_id]
+        """Stage, derive, validate and promote what this writer holds, as a new packet or an amendment."""
+        root = target.root
+        # Before anything is written, since binding needs only the rows and refuses outright.
+        payloads = target.delivered(self._attachments)
         staging = self._staging(root)
 
+        # 1. staged resources, plus the registries they were written against
         clock = time.perf_counter()
-        self._prefer_added_runs()
+        self._prefer_added_runs(target.held)
         entries = with_lineage(
             [
-                *self._stage(staging),
-                *self._attachments.stage_arrays(staging, self._relative),
+                *self._stage(staging, target.place),
+                *self._attachments.stage_arrays(staging, target.place),
                 *self._attachments.stage_payloads(staging, payloads),
                 *self._attachments.array_entries(),
                 *self._attachments.media_entries(),
@@ -985,97 +875,63 @@ class PacketWriter:
             self._derived,
         )
         say(f"staged {len(entries)} resources in {time.perf_counter() - clock:.1f} s")
+        # Part 03 §5.5's rules are good guesses, and a column one guesses wrong
+        # about is said aloud rather than silently paid for. A report, not a refusal: every
+        # encoding is permitted, so the packet is conforming whichever it got.
         for note in sorted(set(self._encoding_notes)):
             say(f"  encoding: {note}")
-        for report in self._after_stage:
-            report(say)
+        for report_staged in self._after_stage:
+            report_staged(say)
         clock = time.perf_counter()
-        # Before validation, since the validator acquires each registry through the candidate's
-        # descriptor (Part 04 §10); one the packet does not yet store is bound under staging/.
-        registries, added_registries = store_registries(self._declarations.documents, root, staging=staging)
+        registries = target.bind_registries(self._declarations.documents)
 
-        def candidate(staged: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-            """Return the amended manifest with every written resource still under staging/."""
-            written = {e["resource_id"] for e in staged}
-            amended = dict(superseded)
-            amended["packet_version"] = version
-            amended["registries"] = registries
-            amended["resources"] = [
-                *(e for e in superseded["resources"] if e["resource_id"] not in written),
-                *(e if e.get("external") else dict(e, uri=f"{STAGING}/{e['uri']}") for e in staged),
-            ]
-            if self._description is not None:
-                amended["description"] = self._description
-            return amended
-
+        # 2. derive whatever the caller asked for from the staged packet, before anything is
+        #    validated or promoted. Part 05 §8 puts materialization inside the import
+        #    pipeline. Doing it now costs one validation over the finished packet;
+        #    doing it after the commit costs a second manifest, a version bump and a
+        #    revalidation of resources validated seconds earlier, which is what `amend` is for
+        #    and what a build the recipe fully describes should never pay.
+        target.describe(entries, registries)
         if materialize:
-
+            # Row counts, not just names: a materializer adds its own `core.processing_runs`
+            # row (Part 06 §5), and that table was staged in the pass above. Restaging only what is
+            # new would leave the run record in memory and the resource pointing at a run the
+            # packet does not contain -- which is exactly what the validator then says.
             def counts() -> dict[str, int]:
                 return {r: len(self._tables.get(r, ())) for r in self.resources}
 
             before = counts()
             for derive in materialize:
-                derive(Packet(root, Manifest.from_dict(candidate(entries))), self)
-                self._prefer_added_runs()
+                derive(target.staged(), self)
+                self._prefer_added_runs(target.held)
                 say(f"derived {', '.join(sorted(set(self.resources) - set(before)))}")
                 before = {**before, **{r: n for r, n in counts().items() if r not in before}}
             touched = {r for r, n in counts().items() if n != before.get(r, -1) or r not in before}
             touched |= set(self.resources) - {e["resource_id"] for e in entries}
-            restaged = self._stage(staging, only=touched)
+            restaged = self._stage(staging, target.place, only=touched)
             kept = [e for e in entries if e["resource_id"] not in touched]
             entries = with_lineage([*kept, *restaged], self._derived)
+            target.describe(entries, registries)
             say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
             clock = time.perf_counter()
-
-        amended = candidate(entries)
-        amended["resources"] = held.without_stale(amended["resources"], entries)
+        # Scan the order of everything except what `write_stream` compared on the way in.
+        # Not a shortcut around the check: the same comparison ran, over the same rows, from
+        # the same code, one step earlier.
         written = {e["resource_id"] for e in entries}
-        report = validate(
-            Packet(root, Manifest.from_dict(amended)),
-            limits=limits,
-            scan=written - self._ordered,
-            recheck=written,
-            superseded=superseded,
-        )
+        report = target.validate(limits=limits, scan=written - self._ordered)
         say(f"validated in {time.perf_counter() - clock:.1f} s")
         clock = time.perf_counter()
         if not report.passed:
             raise CommitRefused(report, staging)
 
-        moved = [e["uri"] for e in entries if not e.get("external")]
-        copies = [
-            f"{MANIFESTS_DIRNAME}/{retained(manifest)}"
-            for manifest in (superseded, amended)
-            if not (root / MANIFESTS_DIRNAME / retained(manifest)).exists()
-        ]
-        creates = {created(root, relative) for relative in (*moved, *added_registries, *copies)}
-        creates |= {f"{MANIFEST_FILENAME}.candidate"}
+        # 3. record every path promotion creates, then move into final paths
+        creates = target.creates()
         claim(root, creates)
-        record_promotion(staging, version, creates)
-        for relative in (*moved, *added_registries):
-            destination = root / relative
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(staging / relative), str(destination))
-        by_id = {e["resource_id"]: e for e in entries}
-        amended["resources"] = [
-            dict(by_id[e["resource_id"]], validation_state=VALIDATION_PASSED) if e["resource_id"] in by_id else e
-            for e in amended["resources"]
-        ]
-        amended["registries"] = {
-            name: dict(bound, path=str(bound["path"]).removeprefix(f"{STAGING}/")) for name, bound in registries.items()
-        }
-        amended["validation"] = {
-            "status": VALIDATION_PASSED,
-            "validated_at": datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
-            "validator_name": "escapewheel_validator",
-            "validator_version": writer_version(),
-        }
+        record_promotion(staging, target.version, creates)
+        target.promote(report)
 
-        body = (json.dumps(amended, indent=2) + "\n").encode()
-        retain(root, superseded, amended, body)
-        candidate_path = root / f"{MANIFEST_FILENAME}.candidate"
-        candidate_path.write_bytes(body)
-        os.replace(candidate_path, root / MANIFEST_FILENAME)
+        # 4. rename the manifest last, so a reader sees the packet as it was or as it now is
+        os.replace(root / CANDIDATE, root / MANIFEST_FILENAME)
         shutil.rmtree(staging)
         if self._workspace is not None and self._workspace.exists():
             shutil.rmtree(self._workspace)
