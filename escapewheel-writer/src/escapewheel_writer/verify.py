@@ -17,7 +17,8 @@ from typing import Any
 
 from escapewheel_reader import Manifest, Packet
 from escapewheel_validator import Report, validate
-from escapewheel_validator.stores import StoreUnreachable, digest, digest_resource, listing
+from escapewheel_validator.errors import StoreUnreachable
+from escapewheel_validator.stores import digest, digest_resource, listing
 
 from .writer import MANIFEST, MANIFESTS, NotCommitted, _bump, _version, retained, semver
 

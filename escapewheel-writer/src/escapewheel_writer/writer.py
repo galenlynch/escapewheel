@@ -50,8 +50,8 @@ from escapewheel_validator import (
     verify_order,
 )
 from escapewheel_validator.amendment import DERIVED, chain_reaches
+from escapewheel_validator.errors import OrderViolation
 from escapewheel_validator.generate import adjacency_settles_uniqueness
-from escapewheel_validator.validator import OrderViolation
 
 from . import opaque
 from .amending import Held

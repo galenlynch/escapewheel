@@ -57,5 +57,6 @@ Each module's page lists what it holds beyond the names above.
    registry_document
    rule_language
    amendment
+   errors
    stores
    opaque

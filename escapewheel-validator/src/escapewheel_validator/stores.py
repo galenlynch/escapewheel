@@ -25,8 +25,8 @@ Digests (Part 04 §4.3):
 
 Failures:
 
-- :exc:`StoreUnreachable`, :exc:`ResourceMissing` -- the store could not be reached, or was reached
-  and holds nothing under the URI.
+- :exc:`.StoreUnreachable`, :exc:`.ResourceMissing` -- the store could not be reached, or was
+  reached and holds nothing under the URI.
 
 No function here runs unless the caller asks for a mode, and each result states what was true when
 the function looked. A local path needs no library. Any other scheme needs fsspec, which the
@@ -47,17 +47,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from .errors import ResourceMissing, StoreUnreachable
+
 #: Bytes per read when digesting. Large enough that a remote store is not asked a thousand
 #: times for a chunk it would have streamed, small enough to bound memory whatever an array's size.
 BLOCK = 1 << 22
-
-
-class StoreUnreachable(Exception):
-    """A store could not be reached, which says nothing about whether the packet is valid."""
-
-
-class ResourceMissing(StoreUnreachable):
-    """The store was reached and holds nothing under the URI."""
 
 
 def is_local(uri: str) -> bool:
@@ -509,9 +503,7 @@ __all__ = [
     "Digested",
     "Listing",
     "Member",
-    "ResourceMissing",
     "StoreDigest",
-    "StoreUnreachable",
     "digest",
     "digest_resource",
     "hasher",

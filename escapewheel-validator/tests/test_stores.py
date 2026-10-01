@@ -11,8 +11,8 @@ from escapewheel_reader import open_packet
 from fsspec.implementations.memory import MemoryFileSystem
 
 from escapewheel_validator import validate
+from escapewheel_validator.errors import ResourceMissing
 from escapewheel_validator.stores import (
-    ResourceMissing,
     crc32c_python,
     crc64nvme_python,
     digest,

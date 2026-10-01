@@ -6,7 +6,7 @@
 - :class:`Report` -- the findings, evaluations and registry results, and the verdicts they compose.
 - :class:`Finding`, :class:`Evaluation`, :class:`RegistryEvaluation` -- one finding, one Tier 2
   evaluation outcome, and one registry document's result.
-- :func:`verify_order` -- pass batches through, raising :exc:`OrderViolation` where they leave
+- :func:`verify_order` -- pass batches through, raising :exc:`.OrderViolation` where they leave
   their declared order or repeat a key.
 - :func:`registry_meta_schema` -- Part 02 §9.2's meta-schema, as this distribution copies it.
 - :data:`LIMITS` -- the DuckDB settings :func:`validate` bounds itself by.
@@ -42,6 +42,7 @@ from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_flo
 from escapewheel_reader.uri import decode
 
 from . import amendment
+from .errors import OrderViolation, ResourceMissing, StoreUnreachable, _Unmappable
 from .generate import Check, Specialisation, adjacency_settles_uniqueness, concerns, generate
 from .manifest import (
     MANIFEST_FILENAME,
@@ -60,7 +61,7 @@ from .registry_document import (
     ucum_error,
 )
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
-from .stores import ROUTES, ResourceMissing, StoreUnreachable, digest_resource, listing, read_member
+from .stores import ROUTES, digest_resource, listing, read_member
 
 #: Registry column type -> the Arrow type a conforming writer must emit (Part 03 §5.5).
 ARROW_TYPES = {
@@ -547,10 +548,6 @@ def registry_meta_schema() -> dict[str, Any]:
     text = importlib_resources.files("escapewheel_validator").joinpath("schemas/registry.schema.json").read_text()
     parsed: dict[str, Any] = json.loads(text)
     return parsed
-
-
-class _Unmappable(ValueError):
-    """A tick has no defined value on the clock it is being carried to."""
 
 
 def _clock_graph(packet: Packet) -> dict[int, dict[str, Any]]:
@@ -2063,10 +2060,6 @@ def _scan_one_ordering(  # noqa: C901
             registry=report.resource_owner(resource_id),
         )
     return False
-
-
-class OrderViolation(Exception):
-    """A stream of batches is not in the order it declares, or repeats a key."""
 
 
 def verify_order(batches: Iterable[Any], keys: Sequence[str], unique: Sequence[str] | None = None) -> Iterator[Any]:

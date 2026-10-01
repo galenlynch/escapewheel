@@ -17,6 +17,8 @@ registry_document, rule_language
     A registry document's own conformance, and the static check of its Tier 2 SQL.
 amendment
     An amendment compared with the version it supersedes.
+errors
+    Every exception the package raises on purpose.
 stores
     Listings and digests of external resources, run only where a mode asks.
 opaque
@@ -28,6 +30,7 @@ not.
 
 from importlib.metadata import PackageNotFoundError, version
 
+from .errors import OrderViolation
 from .generate import Check, generate
 from .manifest import manifest_schema
 from .registry_document import (
@@ -40,7 +43,6 @@ from .registry_document import (
 from .validator import (
     Evaluation,
     Finding,
-    OrderViolation,
     RegistryEvaluation,
     Report,
     check_packet_manifest,
