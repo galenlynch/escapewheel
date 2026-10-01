@@ -7,8 +7,8 @@
   it holds a row's group.
 - :func:`group_lists`, :func:`chain_reaches` -- a table's group lists, and the first of some
   resources a `derived_from` chain reaches.
-- :func:`semver`, :func:`quoted`, :func:`literal`, :func:`absent` -- a `packet_version` as a sort
-  key, and the SQL for an identifier, a string, and a column a file omits.
+- :func:`semver`, :func:`literal`, :func:`absent` -- a `packet_version` as a sort key, and the
+  SQL for a string and for a column a file omits.
 - :data:`PREFERENCES`, :data:`DERIVED` -- the one table whose held row an amendment may replace,
   and the content classes whose lineage can go stale.
 - :data:`PROVENANCE`, :data:`IDENTITY` -- the tables recording what ran, and the packet-level
@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 import pyarrow.parquet as pq
+from escapewheel_reader import quote
 from escapewheel_reader.manifest import MANIFESTS_DIRNAME
 from escapewheel_reader.resource_ids import (
     CORE_PREFERRED_RUNS,
@@ -59,11 +60,6 @@ def semver(text: str) -> tuple[int, ...]:
     return tuple(int(part) if part.isdigit() else -1 for part in str(text).split("."))
 
 
-def quoted(name: str) -> str:
-    """Quote an SQL identifier."""
-    return '"' + name.replace('"', '""') + '"'
-
-
 def literal(text: str) -> str:
     """Quote an SQL string literal."""
     return "'" + text.replace("'", "''") + "'"
@@ -94,7 +90,7 @@ def predecessor(root: Path, current: Mapping[str, Any]) -> Mapping[str, Any] | N
 
 def absent(column: Mapping[str, Any]) -> str:
     """Return SQL selecting a column a file omits, as a null of its declared type (Part 05 §15.6)."""
-    return f"CAST(NULL AS {DDL.get(str(column.get('type')), 'VARCHAR')}) AS {quoted(column['name'])}"
+    return f"CAST(NULL AS {DDL.get(str(column.get('type')), 'VARCHAR')}) AS {quote(column['name'])}"
 
 
 def group_lists(spec: Mapping[str, Any]) -> list[list[str]]:
@@ -144,7 +140,7 @@ class Version:
         """
         if resource_id in self._views:
             return self._views[resource_id]
-        view = quoted(f"{self.name}__{resource_id}")
+        view = quote(f"{self.name}__{resource_id}")
         columns = self.tables[resource_id]["columns"]
         path = self.path_of(resource_id)
         if path is None:
@@ -152,7 +148,7 @@ class Version:
             body = f"SELECT {select} WHERE false"
         else:
             present = set(pq.read_schema(path).names)
-            select = ", ".join(quoted(c["name"]) if c["name"] in present else absent(c) for c in columns)
+            select = ", ".join(quote(c["name"]) if c["name"] in present else absent(c) for c in columns)
             body = f"SELECT {select} FROM read_parquet({literal(str(path))})"
         self.connection.execute(f"CREATE OR REPLACE TEMP VIEW {view} AS {body}")
         self._views[resource_id] = view
@@ -162,8 +158,8 @@ class Version:
         """Return a table of the distinct values this version's rows hold under `members`."""
         key = (resource_id, tuple(members))
         if key not in self._groups:
-            table = quoted(f"{self.name}__{resource_id}__{len(self._groups)}")
-            listed = ", ".join(quoted(m) for m in members)
+            table = quote(f"{self.name}__{resource_id}__{len(self._groups)}")
+            listed = ", ".join(quote(m) for m in members)
             self.connection.execute(
                 f"CREATE OR REPLACE TEMP TABLE {table} AS SELECT DISTINCT {listed} FROM {self.view(resource_id)}"
             )
@@ -177,7 +173,7 @@ class Version:
         list carries a reference to a table not declaring `[]` and every such reference resolves,
         on the group's values, to a row the version holds.
         """
-        match = " AND ".join(f"g.{quoted(m)} IS NOT DISTINCT FROM {alias}.{quoted(m)}" for m in members)
+        match = " AND ".join(f"g.{quote(m)} IS NOT DISTINCT FROM {alias}.{quote(m)}" for m in members)
         clauses = [f"EXISTS (SELECT 1 FROM {self._distinct(resource_id, members)} AS g WHERE {match})"]
         carried = []
         for reference in self.tables[resource_id].get("references", ()):
@@ -188,9 +184,9 @@ class Version:
             if not set(others) <= {c["name"] for c in target["columns"]}:
                 continue
             on = [
-                f"r.{quoted(theirs)} = {alias}.{quoted(ours)}"
+                f"r.{quote(theirs)} = {alias}.{quote(ours)}"
                 for ours, theirs in zip(reference["columns"], reference["resource_columns"], strict=True)
-            ] + [f"r.{quoted(m)} IS NOT DISTINCT FROM {alias}.{quoted(m)}" for m in others]
+            ] + [f"r.{quote(m)} IS NOT DISTINCT FROM {alias}.{quote(m)}" for m in others]
             carried.append(f"EXISTS (SELECT 1 FROM {self.view(reference['resource'])} AS r WHERE {' AND '.join(on)})")
         if carried:
             clauses.append("(" + " AND ".join(carried) + ")")
@@ -207,7 +203,7 @@ class Version:
 def _key_match(spec: Mapping[str, Any], left: str, right: str) -> str:
     """Return SQL matching two aliases' rows on the table's primary key."""
     return " AND ".join(
-        f"{left}.{quoted(k)} IS NOT DISTINCT FROM {right}.{quoted(k)}" for k in spec.get("primary_key") or ()
+        f"{left}.{quote(k)} IS NOT DISTINCT FROM {right}.{quote(k)}" for k in spec.get("primary_key") or ()
     )
 
 
@@ -347,7 +343,7 @@ def _compare_table(
 ) -> list[Finding]:
     """Report one written table's changed rows and grown groups."""
     found = []
-    columns = ", ".join(quoted(c) for c in new.columns(resource))
+    columns = ", ".join(quote(c) for c in new.columns(resource))
     before, after = old.view(resource), new.view(resource)
     if resource == PREFERENCES:
         # A preference replaced by one of the same key changes no row a run produced.
@@ -372,7 +368,7 @@ def _compare_table(
             )
     added = f"{fresh} EXCEPT ALL SELECT {columns} FROM {before}"
     members = list(dict.fromkeys(m for group in group_lists(spec) for m in group))
-    listed = ", ".join(quoted(m) for m in members)
+    listed = ", ".join(quote(m) for m in members)
     if members:
         grouped = f"SELECT {listed}, COUNT(*) AS n_rows FROM ({added}) GROUP BY ALL"
         query = f"SELECT a.* FROM ({grouped}) AS a WHERE {old.grows(resource, 'a')}"
