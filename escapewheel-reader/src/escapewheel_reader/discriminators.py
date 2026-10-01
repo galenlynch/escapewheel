@@ -19,6 +19,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from .errors import NotDeclared
+from .protocols import PacketLike
 
 #: The field a discriminator declares beyond its role to take the paired-value shape.
 SHAPES = {"discriminates": "paired value"}
@@ -91,7 +92,7 @@ def _tables(document: Mapping[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def registries(packet: Any) -> dict[str, Any]:
+def registries(packet: PacketLike) -> dict[str, Any]:
     """Every table the packet's own registries declare, core and extensions together.
 
     Built over every registry a packet carries, which Part 02 §8.3 requires of anything reading a
@@ -104,7 +105,7 @@ def registries(packet: Any) -> dict[str, Any]:
     return tables
 
 
-def declared(packet: Any) -> list[Discriminator]:
+def declared(packet: PacketLike) -> list[Discriminator]:
     """Every discriminator the packet's registries declare."""
     found = []
     for resource, table in registries(packet).items():
@@ -123,7 +124,7 @@ def declared(packet: Any) -> list[Discriminator]:
     return found
 
 
-def _one(packet: Any, resource_id: str, column: str | None) -> Discriminator:
+def _one(packet: PacketLike, resource_id: str, column: str | None) -> Discriminator:
     """Find the discriminator on a resource, or the named one where a table declares several."""
     on = [d for d in declared(packet) if d.resource == resource_id and (column is None or d.column == column)]
     if not on:
@@ -136,7 +137,7 @@ def _one(packet: Any, resource_id: str, column: str | None) -> Discriminator:
     return on[0]
 
 
-def kinds(packet: Any, resource_id: str, column: str | None = None) -> dict[str | None, int]:
+def kinds(packet: PacketLike, resource_id: str, column: str | None = None) -> dict[str | None, int]:
     """Each value the rows name, and how many name it.
 
     `None` counts the rows declaring no kind, which Part 02 §8.3 makes undeterminable rather than
@@ -150,7 +151,7 @@ def kinds(packet: Any, resource_id: str, column: str | None = None) -> dict[str 
     return counted
 
 
-def unresolved(packet: Any) -> list[Unresolved]:
+def unresolved(packet: PacketLike) -> list[Unresolved]:
     """Every kind a packet names and does not hold, and every row naming none.
 
     Reports rather than raises. Part 02 §8.3 makes an unresolvable value a defect only where
@@ -169,7 +170,7 @@ def unresolved(packet: Any) -> list[Unresolved]:
     return out
 
 
-def _reference_back(packet: Any, source: str, target: str) -> tuple[list[str], list[str]]:
+def _reference_back(packet: PacketLike, source: str, target: str) -> tuple[list[str], list[str]]:
     """Find the specialised table's one reference to the discriminator's, as (its columns, the key's).
 
     Part 02 §8.3 requires the table `discriminates_via` names to declare exactly one.
@@ -180,7 +181,7 @@ def _reference_back(packet: Any, source: str, target: str) -> tuple[list[str], l
     raise NotDeclared(f"{source} declares no reference to {target}, which discriminates_via requires (Part 02 §8.3)")
 
 
-def _specialising_reference(packet: Any, kind: str, found: Discriminator) -> tuple[list[str], list[str]]:
+def _specialising_reference(packet: PacketLike, kind: str, found: Discriminator) -> tuple[list[str], list[str]]:
     """Find the named resource's specialising reference naming the discriminator, as (its columns, the key's).
 
     Part 02 §8.3 has shared-key resolution join through that reference; a named resource declaring
@@ -193,12 +194,12 @@ def _specialising_reference(packet: Any, kind: str, found: Discriminator) -> tup
     raise NotDeclared(f"{kind} declares no specialising reference naming {named} (Part 02 §8.3)")
 
 
-def _key(packet: Any, resource: str) -> list[str]:
+def _key(packet: PacketLike, resource: str) -> list[str]:
     """Read a resource's primary key, as the packet's own registry declares it."""
     return list(registries(packet).get(resource, {}).get("primary_key") or [])
 
 
-def _paired_target(packet: Any, kind: str, found: Discriminator) -> str:
+def _paired_target(packet: PacketLike, kind: str, found: Discriminator) -> str:
     """Find the column a paired value joins to (Part 02 §8.3).
 
     An identifier value holds the named key's own value, so it joins the key. A string value joins
@@ -221,7 +222,7 @@ def _paired_target(packet: Any, kind: str, found: Discriminator) -> str:
     return named
 
 
-def resolved(packet: Any, resource_id: str, kind: str, *, column: str | None = None) -> pa.Table:
+def resolved(packet: PacketLike, resource_id: str, kind: str, *, column: str | None = None) -> pa.Table:
     """Join the rows of one kind to the resource its discriminator names.
 
     Parameters
@@ -276,7 +277,7 @@ def resolved(packet: Any, resource_id: str, kind: str, *, column: str | None = N
     return rows.join(named, keys=ours, right_keys=theirs, join_type="inner")
 
 
-def specialised(packet: Any, resource_id: str, *, column: str | None = None) -> dict[str, pa.Table]:
+def specialised(packet: PacketLike, resource_id: str, *, column: str | None = None) -> dict[str, pa.Table]:
     """Every kind the rows name, resolved, keyed by the kind.
 
     A table whose rows name two kinds has no single resolution: the two carry different columns,

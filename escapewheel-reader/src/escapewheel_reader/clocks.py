@@ -30,6 +30,7 @@ from numpy.typing import NDArray
 
 from .dictionaries import values, where
 from .errors import NotAligned, NoTimeOrigin, ResourceNotFoundError, Unanchored
+from .protocols import PacketLike
 from .resource_ids import CORE_CLOCK_ANCHORS, CORE_CLOCKS, CORE_SESSIONS
 
 #: How far from an anchor the mapping stays defined, as a multiple of the median anchor
@@ -171,7 +172,7 @@ def extrapolation_error(
     }
 
 
-def anchors(packet: Any) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]]:
+def anchors(packet: PacketLike) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]]:
     """Read `core.clock_anchors` into arrays per clock, memoised on the packet.
 
     The packet owns the cache because the answer is a property of its bytes. Memoised because an
@@ -186,7 +187,7 @@ def anchors(packet: Any) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]
     except ResourceNotFoundError:
         empty = pa.array([], pa.int64())
         table = pa.table({"clock_id": pa.array([], pa.int32()), "t_tick": empty, "parent_tick": empty})
-    clock = table.column("clock_id").to_pylist()
+    clock = cast("list[int]", table.column("clock_id").to_pylist())
     tick = np.asarray(table.column("t_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
     parent = np.asarray(table.column("parent_tick").to_numpy(zero_copy_only=False), dtype=np.int64)
     out: dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]] = {}
@@ -199,7 +200,7 @@ def anchors(packet: Any) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]
     return out
 
 
-def declared_bound(packet: Any) -> float:
+def declared_bound(packet: PacketLike) -> float:
     """Return the alignment bound the packet's writer established, or `BOUND`.
 
     Part 01 §3.9 lets a writer map further than one median anchor interval once it has *measured*
@@ -229,7 +230,7 @@ def declared_bound(packet: Any) -> float:
     return widest
 
 
-def reference_clock(packet: Any, *, session_id: int | None = None) -> int:
+def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int:
     """Return the clock a packet reports its times on (R27 §2).
 
     Parameters
@@ -351,7 +352,7 @@ def _flat(column: Any) -> pa.Array[Any]:
     return cast("pa.Array[Any]", combined)
 
 
-def default_clock(packet: Any, present: list[int]) -> int:
+def default_clock(packet: PacketLike, present: list[int]) -> int:
     """Return the clock to map onto when the caller named none.
 
     The declared reference, or -- where a packet declares none -- the one clock the rows are
@@ -367,7 +368,7 @@ def default_clock(packet: Any, present: list[int]) -> int:
         raise
 
 
-def tick_rate(packet: Any, clock_id: int) -> tuple[int, int]:
+def tick_rate(packet: PacketLike, clock_id: int) -> tuple[int, int]:
     """Return a clock's rational tick rate, which Part 01 §3.9 prefers to `tick_rate_hz`."""
     clocks = packet.table(CORE_CLOCKS)
     names = clocks.column("clock_id").to_pylist()
@@ -381,7 +382,7 @@ def tick_rate(packet: Any, clock_id: int) -> tuple[int, int]:
     return int(num), int(den or 1)
 
 
-def origin(packet: Any, session_id: int | None = None) -> tuple[int, int, int]:
+def origin(packet: PacketLike, session_id: int | None = None) -> tuple[int, int, int]:
     """Return the session's time origin and the reference clock's rational rate (Part 01 §§2.2 and 3.9).
 
     Read from `core.sessions.t_zero_tick` rather than recomputed: the writer took the minimum
@@ -436,7 +437,7 @@ def origin(packet: Any, session_id: int | None = None) -> tuple[int, int, int]:
     return (found_tick, num, den)
 
 
-def on_clock(packet: Any, table: pa.Table, clock: int | None = None, *, bound: float | None = None) -> pa.Table:
+def on_clock(packet: PacketLike, table: pa.Table, clock: int | None = None, *, bound: float | None = None) -> pa.Table:
     """Return `table` with its ticks on one clock.
 
     A row whose tick the anchors cannot place is **dropped**, which is what Part 01 §3.9 leaves
@@ -488,7 +489,7 @@ def on_clock(packet: Any, table: pa.Table, clock: int | None = None, *, bound: f
     return out.filter(pa.array(keep))
 
 
-def seconds(packet: Any, table: pa.Table, *, session_id: int | None = None) -> pa.Table:
+def seconds(packet: PacketLike, table: pa.Table, *, session_id: int | None = None) -> pa.Table:
     """Add a `t_second` column to a table whose ticks are on the reference clock.
 
     Part 01 §2.2: `(t_tick - t_zero_tick) / reference_tick_rate`, taking the rate as the declared

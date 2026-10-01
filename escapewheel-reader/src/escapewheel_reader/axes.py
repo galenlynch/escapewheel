@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pyarrow as pa
@@ -21,6 +21,7 @@ from numpy.typing import NDArray
 
 from .discriminators import Discriminator, _one, _paired_target, registries
 from .errors import AxisFault, UnresolvableAxis
+from .protocols import PacketLike
 from .resource_ids import CORE_ARRAY_CHANNELS
 
 #: The column whose value declares each coordinate form, as Part 03 §6.3's one-form rule counts them.
@@ -134,11 +135,11 @@ class ArrayDescription:
     scaling: Scaling | None
 
 
-def _held(packet: Any) -> set[str]:
+def _held(packet: PacketLike) -> set[str]:
     return {r.resource_id for r in packet.resources()}
 
 
-def _catalog_row(packet: Any, resource_id: str) -> tuple[dict[str, Any], dict[str, Any], str]:
+def _catalog_row(packet: PacketLike, resource_id: str) -> tuple[dict[str, Any], dict[str, Any], str]:
     """Return the array's declaration, its catalog row, and the catalog's resource ID."""
     declaration = packet.resource(resource_id).declaration
     if not declaration or declaration.get("kind") != "dense_array":
@@ -158,7 +159,7 @@ def _catalog_row(packet: Any, resource_id: str) -> tuple[dict[str, Any], dict[st
     return dict(declaration), rows[0], catalog_id
 
 
-def _label_rows(packet: Any, axes_id: str, array_asset_id: int) -> tuple[Discriminator, pa.Table]:
+def _label_rows(packet: PacketLike, axes_id: str, array_asset_id: int) -> tuple[Discriminator, pa.Table]:
     """Return how the axes table's labels resolve, and this array's rows of its label table.
 
     The label table is the one `coordinate_resource`'s `discriminates_via` names, as a validator
@@ -174,7 +175,7 @@ def _label_rows(packet: Any, axes_id: str, array_asset_id: int) -> tuple[Discrim
 
 
 def _labelled(
-    packet: Any,
+    packet: PacketLike,
     row: dict[str, Any],
     rows: list[dict[str, Any]],
     shape: tuple[int, ...],
@@ -225,10 +226,10 @@ def _labelled(
     return LabelledAxis(kind, key, depends_on, (length,) if depends_on is None else (extent, length), by_position)
 
 
-def _irregular(packet: Any, row: dict[str, Any], length: int, catalog: pa.Table) -> IrregularAxis:
+def _irregular(packet: PacketLike, row: dict[str, Any], length: int, catalog: pa.Table) -> IrregularAxis:
     """Find the 1-D array holding an irregular axis's values, and check it has one per position."""
     target = row["coordinate_array_asset_id"]
-    named = catalog.filter(pc.field("array_asset_id") == target)["resource_id"].to_pylist()
+    named = cast("list[str]", catalog.filter(pc.field("array_asset_id") == target)["resource_id"].to_pylist())
     if len(named) != 1:
         raise UnresolvableAxis(
             AxisFault.COORDINATE_ARRAY,
@@ -243,7 +244,7 @@ def _irregular(packet: Any, row: dict[str, Any], length: int, catalog: pa.Table)
 
 
 def _coordinates(
-    packet: Any,
+    packet: PacketLike,
     row: dict[str, Any],
     rows: list[dict[str, Any]],
     shape: tuple[int, ...],
@@ -276,7 +277,7 @@ def _coordinates(
     return _labelled(packet, row, rows, shape, *labels)
 
 
-def _channel_scaling(packet: Any, array_asset_id: int, axes_id: str) -> pa.Table | None:
+def _channel_scaling(packet: PacketLike, array_asset_id: int, axes_id: str) -> pa.Table | None:
     """Return this array's channel rows declaring a conversion, or None where its channels have no table.
 
     A channel table belongs to the arrays of the axes table it references: an analysis array is
@@ -336,7 +337,7 @@ def _scaling(
     )
 
 
-def describe(packet: Any, resource_id: str) -> ArrayDescription:
+def describe(packet: PacketLike, resource_id: str) -> ArrayDescription:
     """Describe a catalogued dense array's axes and scaling, reading no values.
 
     Parameters

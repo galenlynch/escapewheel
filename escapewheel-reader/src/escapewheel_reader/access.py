@@ -14,7 +14,7 @@ from two clocks are not comparable.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -22,11 +22,9 @@ import pyarrow.compute as pc
 from . import clocks
 from .errors import NotAligned, NotDeclared
 from .observation import attach_support, unit_windows
+from .protocols import PacketLike
 from .resource_ids import CORE_EVENT_STREAMS, CORE_EVENTS, CORE_INTERVALS, CORE_SPIKE_EVENTS, CORE_UNITS
 from .runs import check as _check_runs
-
-if TYPE_CHECKING:  # pragma: no cover
-    from .packet import Packet
 
 #: Ask for ticks exactly as the file stores them. Spikes are counted on the probe that
 #: recorded them, so stored ticks from two probes are not comparable and neither is a stored
@@ -40,7 +38,7 @@ STORED = "stored"
 SORTING_ACTIVITIES = ("spike_sorting", "curation")
 
 
-def intervals(packet: Packet, *, session_id: int | None = None, interval_kind: str | None = None) -> pa.Table:
+def intervals(packet: PacketLike, *, session_id: int | None = None, interval_kind: str | None = None) -> pa.Table:
     """Read ``core.intervals``, optionally filtered (Part 01 §3.10).
 
     Filtering by kind prunes rather than scans: Part 02 §12.9 numbers each session's intervals
@@ -63,7 +61,7 @@ def intervals(packet: Packet, *, session_id: int | None = None, interval_kind: s
     return packet.table(CORE_INTERVALS, session_id=session_id, interval_kind=interval_kind)
 
 
-def units(packet: Packet, *, session_id: int | None = None, quality_label: str | None = None) -> pa.Table:
+def units(packet: PacketLike, *, session_id: int | None = None, quality_label: str | None = None) -> pa.Table:
     """Read ``core.units``, optionally filtered.
 
     Parameters
@@ -93,7 +91,7 @@ def units(packet: Packet, *, session_id: int | None = None, quality_label: str |
 
 
 def events(
-    packet: Packet,
+    packet: PacketLike,
     *,
     event_type: str | None = None,
     session_id: int | None = None,
@@ -168,7 +166,7 @@ def events(
 
 
 def spike_times(
-    packet: Packet,
+    packet: PacketLike,
     unit_id: int | None = None,
     *,
     units: pa.Table | None = None,
@@ -290,7 +288,7 @@ def spike_times(
     return _finish(packet, found.select(["t_tick", "clock_id"]), t_tick, clock, seconds, session_id)
 
 
-def distinct(packet: Packet, resource_id: str, column: str) -> pa.ChunkedArray[Any]:
+def distinct(packet: PacketLike, resource_id: str, column: str) -> pa.ChunkedArray[Any]:
     """Return the distinct values of a column, from whichever table owns them.
 
     A foreign key means the parent table holds every value the child may carry, and it is
@@ -322,14 +320,14 @@ def distinct(packet: Packet, resource_id: str, column: str) -> pa.ChunkedArray[A
     return packet.table(resource_id, columns=[column]).column(0).unique()
 
 
-def _references(packet: Packet, resource_id: str) -> list[dict[str, Any]]:
+def _references(packet: PacketLike, resource_id: str) -> list[dict[str, Any]]:
     """Return the references a table resource declares in the bound core registry."""
     declaration = (packet.registry or {}).get("resources", {}).get(resource_id, {})
     table = declaration.get("table", {}) if declaration.get("kind") == "table" else {}
     return list(table.get("references", []))
 
 
-def _reference_columns(packet: Packet, resource_id: str, parent: str) -> list[str]:
+def _reference_columns(packet: PacketLike, resource_id: str, parent: str) -> list[str]:
     """Return the columns by which one resource references another, per the registry.
 
     Taking this from the registry keeps the accessor synchronized with the incorporated
@@ -341,7 +339,7 @@ def _reference_columns(packet: Packet, resource_id: str, parent: str) -> list[st
     raise NotDeclared(f"the registry declares no reference from {resource_id} to {parent}")
 
 
-def _unit_clocks(packet: Packet, keys: Sequence[str], **narrow: Any) -> dict[tuple[Any, ...], Any]:
+def _unit_clocks(packet: PacketLike, keys: Sequence[str], **narrow: Any) -> dict[tuple[Any, ...], Any]:
     """Map a unit's key to the clock its ticks are counted on (R96 §3.2).
 
     The clock is the unit's fact, reached by a spike through the reference it already declares,
@@ -351,7 +349,7 @@ def _unit_clocks(packet: Packet, keys: Sequence[str], **narrow: Any) -> dict[tup
     return {tuple(r[k] for k in keys): r["clock_id"] for r in rows}
 
 
-def _unit_support(packet: Packet, unit_id: int, session_id: int | None) -> pa.Table:
+def _unit_support(packet: PacketLike, unit_id: int, session_id: int | None) -> pa.Table:
     """Return one unit's observation windows, from the packet's resolved set (R38).
 
     The resolution is read once per packet and filtered here, because it reads three tables
@@ -360,7 +358,7 @@ def _unit_support(packet: Packet, unit_id: int, session_id: int | None) -> pa.Ta
     windows = getattr(packet, "_support_cache", None)
     if windows is None:
         windows = unit_windows(packet)
-        packet._support_cache = windows
+        packet._support_cache = windows  # type: ignore[attr-defined]
     if not windows.num_rows:
         return windows
     unit_column = windows.column("unit_id")
@@ -372,7 +370,7 @@ def _unit_support(packet: Packet, unit_id: int, session_id: int | None) -> pa.Ta
 
 
 def _span(
-    packet: Packet, span: tuple[int, int] | None, clock: int | Literal["stored"] | None
+    packet: PacketLike, span: tuple[int, int] | None, clock: int | Literal["stored"] | None
 ) -> tuple[int, int] | None:
     """Widen a range stated on the result's clock into one the file can be pruned by."""
     if span is None or clock == STORED:
@@ -385,7 +383,7 @@ def _span(
 
 
 def _finish(
-    packet: Packet,
+    packet: PacketLike,
     table: pa.Table,
     span: tuple[int, int] | None,
     clock: int | Literal["stored"] | None,

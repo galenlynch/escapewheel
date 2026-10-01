@@ -14,6 +14,7 @@ from pathlib import Path
 
 import escapewheel_reader
 from escapewheel_reader import Packet, errors
+from escapewheel_reader.protocols import PacketLike
 
 PROJECT = Path(__file__).resolve().parents[1]
 API = PROJECT / "docs" / "source" / "api.rst"
@@ -149,6 +150,17 @@ def test_every_exception_class_is_in_the_user_tier():
     }
     assert defined <= _user()
     assert defined <= set(errors.__all__)
+
+
+def test_a_function_taking_a_packet_is_typed_against_the_protocol():
+    """So each accepts whatever resolves and reads as a packet does, not only `Packet`."""
+    for module_name, module in _own().items():
+        for name, function in inspect.getmembers(module, inspect.isfunction):
+            if function.__module__ != module.__name__:
+                continue
+            parameter = inspect.signature(function).parameters.get("packet")
+            if parameter is not None:
+                assert parameter.annotation == PacketLike.__name__, f"{module_name}.{name}"
 
 
 def test_no_packet_method_mirrors_an_exported_function():

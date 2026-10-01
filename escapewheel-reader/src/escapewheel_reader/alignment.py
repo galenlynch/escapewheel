@@ -10,9 +10,10 @@ Everything here runs on DuckDB, the optional `sql` extra.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from .errors import ClockMismatch, NotDeclared
+from .protocols import PacketLike
 from .resource_ids import ANALYSIS_SPIKE_EVENTS, CORE_EVENT_STREAMS, CORE_EVENTS
 from .sql import sql_name
 
@@ -23,7 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover
 ASSIGNMENTS = ("preceding", "nearest")
 
 
-def _connect(packet: Any, connection: duckdb.DuckDBPyConnection | None) -> duckdb.DuckDBPyConnection:
+def _connect(packet: PacketLike, connection: duckdb.DuckDBPyConnection | None) -> duckdb.DuckDBPyConnection:
     """Return a connection with the two tables every alignment reads registered.
 
     Named rather than left to the default, which registers nothing: over an object store each
@@ -35,7 +36,7 @@ def _connect(packet: Any, connection: duckdb.DuckDBPyConnection | None) -> duckd
     return con
 
 
-def _clock(packet: Any, event_type: str, session_id: int | None) -> int:
+def _clock(packet: PacketLike, event_type: str, session_id: int | None) -> int:
     """Return the clock both sides are on, refusing if they differ.
 
     Checked rather than assumed. A packet may carry several streams on several clocks, and is
@@ -101,7 +102,7 @@ def _spikes(session_id: int | None) -> str:
     return table if session_id is None else f"(SELECT * FROM {table} WHERE session_id = {session_id})"
 
 
-def windows_disjoint(packet: Any, event_type: str, half_window: int, *, session_id: int | None = None) -> bool:
+def windows_disjoint(packet: PacketLike, event_type: str, half_window: int, *, session_id: int | None = None) -> bool:
     """Whether every pair of windows is disjoint, so one spike falls in at most one.
 
     Costs about 1.3 ms over a few thousand events, against seconds for the query it decides --
@@ -136,7 +137,7 @@ def windows_disjoint(packet: Any, event_type: str, half_window: int, *, session_
 
 
 def aligned_spikes(
-    packet: Any,
+    packet: PacketLike,
     event_type: str,
     half_window: int,
     *,
@@ -207,7 +208,7 @@ def aligned_spikes(
 
 
 def assigned_spikes(
-    packet: Any,
+    packet: PacketLike,
     event_type: str,
     *,
     to: str = "preceding",

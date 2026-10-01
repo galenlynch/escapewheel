@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .errors import AmbiguousRun, NotDeclared
+from .protocols import PacketLike
 from .resource_ids import CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS
 
 #: The activity whose runs are never alternatives to one another (Part 05 §12).
@@ -57,7 +58,7 @@ class Ambiguity:
         return f"{self.activity_type} for {about}: {len(self.run_ids)} runs ({shown})"
 
 
-def _rows(packet: Any, resource_id: str, columns: list[str]) -> list[dict[str, Any]]:
+def _rows(packet: PacketLike, resource_id: str, columns: list[str]) -> list[dict[str, Any]]:
     """Read named columns from a resource, or nothing when the packet lacks it or them.
 
     Every column here arrived in a revision and all of them are optional, so absence is the
@@ -73,7 +74,7 @@ def _rows(packet: Any, resource_id: str, columns: list[str]) -> list[dict[str, A
     return [{c: row.get(c) for c in columns} for row in rows]
 
 
-def preferences(packet: Any) -> dict[tuple[int | None, str, str, str], int]:
+def preferences(packet: PacketLike) -> dict[tuple[int | None, str, str, str], int]:
     """Return the declared preferences, keyed by purpose (Part 01 §2.6).
 
     Parameters
@@ -97,7 +98,7 @@ def preferences(packet: Any) -> dict[tuple[int | None, str, str, str], int]:
     }
 
 
-def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
+def ambiguities(packet: PacketLike) -> tuple[Ambiguity, ...]:
     """Return the purposes this packet has more than one run for and does not choose between.
 
     Runs are grouped by ``(session_id, activity_type, scope)``, which is the key
@@ -164,7 +165,7 @@ def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
 
 
 def preferred_run(
-    packet: Any,
+    packet: PacketLike,
     activity_type: str,
     scope_kind: str,
     scope: str,
@@ -228,7 +229,7 @@ def preferred_run(
     )
 
 
-def check(packet: Any, activities: Iterable[str] | None = None) -> None:
+def check(packet: PacketLike, activities: Iterable[str] | None = None) -> None:
     """Raise if the packet leaves a purpose unresolved, warn if it cannot tell.
 
     Called by the accessors that would otherwise concatenate alternatives. Reports every

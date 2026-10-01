@@ -18,6 +18,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .errors import PacketError, UnresolvableChannelIndex
+from .protocols import PacketLike
 from .resource_ids import CORE_SORTING_RUN_CHANNELS, CORE_SORTING_RUNS
 
 
@@ -37,7 +38,7 @@ class ChannelsUndeclared:
         )
 
 
-def _rows(packet: Any, resource_id: str, columns: list[str], *, required: bool = False) -> list[dict[str, Any]]:
+def _rows(packet: PacketLike, resource_id: str, columns: list[str], *, required: bool = False) -> list[dict[str, Any]]:
     """Read named columns from a resource, or nothing where the packet holds it not at all.
 
     `core.sorting_run_channels` arrived in R83, so a packet built before it carries no such
@@ -56,7 +57,7 @@ def _rows(packet: Any, resource_id: str, columns: list[str], *, required: bool =
     return [{c: row.get(c) for c in columns} for row in packet.table(resource_id, columns=present).to_pylist()]
 
 
-def kept_channels(packet: Any, *, sorting_run_id: int | None = None) -> dict[int, tuple[int, ...]]:
+def kept_channels(packet: PacketLike, *, sorting_run_id: int | None = None) -> dict[int, tuple[int, ...]]:
     """Return each run's kept electrodes, in the order the run counted them.
 
     Parameters
@@ -103,7 +104,7 @@ def kept_channels(packet: Any, *, sorting_run_id: int | None = None) -> dict[int
 
 
 def electrode_at(
-    packet: Any,
+    packet: PacketLike,
     sorting_run_id: int,
     channel_index: int | NDArray[np.integer[Any]] | list[int],
 ) -> int | NDArray[np.int32]:
@@ -153,7 +154,7 @@ def electrode_at(
     return int(found[0]) if np.ndim(channel_index) == 0 else found
 
 
-def runs_without_channels(packet: Any) -> tuple[ChannelsUndeclared, ...]:
+def runs_without_channels(packet: PacketLike) -> tuple[ChannelsUndeclared, ...]:
     """Return every sorting run the packet records no channel list for.
 
     Reports rather than raises: a packet whose runs declare no channels is conforming, so the

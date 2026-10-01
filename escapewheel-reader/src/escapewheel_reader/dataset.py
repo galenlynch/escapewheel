@@ -24,6 +24,7 @@ from . import duck
 from .errors import MultiSessionUnresolved, ResourceNotFoundError
 from .location import Location
 from .packet import Packet, open_packet
+from .protocols import PacketLike
 from .resource_ids import CORE_SESSIONS
 from .resources import TableResource
 from .sql import sql_name
@@ -373,7 +374,7 @@ def _literal(value: str | None) -> str:
     return "NULL" if value is None else "'" + value.replace("'", "''") + "'"
 
 
-def _column_names(packet: Packet, resource_id: str) -> list[str]:
+def _column_names(packet: PacketLike, resource_id: str) -> list[str]:
     """Return the columns a resource holds, from the packet's registry or its Parquet schema."""
     registry = packet.registry
     declaration = registry.get("resources", {}).get(resource_id, {})

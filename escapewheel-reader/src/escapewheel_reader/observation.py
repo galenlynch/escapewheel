@@ -11,12 +11,12 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from .errors import NotDeclared, StaleSupport
+from .protocols import PacketLike
 from .resource_ids import (
     CORE_CLOCK_OBSERVATION_INTERVALS,
     CORE_CLOCKS,
@@ -36,7 +36,7 @@ INHERITED = "inherited"
 _UNIT_KEY = ("session_id", "unit_id")
 
 
-def _has(packet: Any, resource_id: str) -> bool:
+def _has(packet: PacketLike, resource_id: str) -> bool:
     """Whether the packet declares a resource. Every observation table is optional."""
     return resource_id in {r.resource_id for r in packet.resources()}
 
@@ -58,7 +58,7 @@ def _empty(names: tuple[str, ...]) -> pa.Table:
     return pa.table({f.name: pa.array([], type=f.type) for f in fields})
 
 
-def clock_windows(packet: Any, *, session_id: int | None = None, clock_id: int | None = None) -> pa.Table:
+def clock_windows(packet: PacketLike, *, session_id: int | None = None, clock_id: int | None = None) -> pa.Table:
     """Return the intervals over which each clock was observing, in that clock's own ticks.
 
     Parameters
@@ -104,7 +104,7 @@ def _resolve(own: pa.Table, inherited: pa.Table, key: tuple[str, ...]) -> pa.Tab
     return pa.concat_tables([own, inherited.take(pa.array(keep, type=pa.int64()))])
 
 
-def unit_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
+def unit_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.Table:
     """Return each unit's observation windows, its own where declared and its clock's otherwise.
 
     A unit declares the clock on which its ticks are counted. Observation support belongs to
@@ -165,7 +165,7 @@ def unit_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
     return _resolve(own, inherited, _UNIT_KEY)
 
 
-def stream_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
+def stream_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.Table:
     """Return each event stream's observation windows, declared or inherited from its clock.
 
     Parameters
@@ -253,7 +253,7 @@ def observed_ticks(windows: pa.Table) -> int:
     return int(pc.sum(spans).as_py())
 
 
-def observed_seconds(packet: Any, windows: pa.Table) -> float:
+def observed_seconds(packet: PacketLike, windows: pa.Table) -> float:
     """Return the seconds the windows cover, using each clock's declared rate.
 
     Parameters
@@ -369,7 +369,7 @@ def support_of(table: pa.Table) -> pa.Table | None:
     )
 
 
-def rate_of(packet: Any, table: pa.Table) -> float:
+def rate_of(packet: PacketLike, table: pa.Table) -> float:
     """Return the rate of a table's rows over the support attached to it.
 
     Parameters
