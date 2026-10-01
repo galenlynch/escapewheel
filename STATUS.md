@@ -24,7 +24,7 @@ Phases are Part 07's plan of record.
 
 | Phase | State | Notes |
 |---|---|---|
-| — Specification | **in reconciliation** | The generated v0.2 material is the authoritative specification candidate under [Part 00](spec/parts/00_architecture.md#ew-specification-authority). The roadmap in `revisions/proposals/ROADMAP.md` must close before immutable publication; its current step is P10.2, the release-candidate field test. |
+| — Specification | **in reconciliation** | The generated v0.2 material is the authoritative specification candidate under [Part 00](spec/parts/00_architecture.md#ew-specification-authority). The roadmap in `revisions/ROADMAP.md` must close before immutable publication; its current step is P10.2, the release-candidate field test. |
 | — Registry content | **complete** | The counts are in the block above, and the versions are in `spec/artifacts/logical_schemas.json`. Every shipped registry selects `escapewheel-rule-sql-v0.2`, and extension versions are independent. |
 | 0 Spec fixtures | **complete** | Single-session packet plus the variant corpus carrying one extension; `fixtures/`. |
 | 1 Manifest and table reader | **complete** | `escapewheel-reader`. Ticks come back on the packet's reference clock by default, and `seconds=True` derives seconds from the declared origin or refuses. |

@@ -17,7 +17,3 @@ into a draft based on `../templates/draft.md` and delete the proposal in the pro
 parent commit then retains the exact superseded discussion. If the proposal is abandoned, first
 commit any untracked findings worth preserving, then delete it with a commit message that records
 why.
-
-`ROADMAP.md` is the non-authoritative coordination record for the v0.2 reconciliation sequence.
-It tracks dependencies among anticipated proposals but is not itself a proposal or revision-stage
-artifact.

@@ -26,6 +26,9 @@ Acceptance requires explicit authorization. Acceptance and incorporation into th
 current owner occur as one reviewable change; the accepted record is then stored under
 [`accepted/`](accepted/), with clause evidence under [`evidence/`](evidence/).
 
+[`ROADMAP.md`](ROADMAP.md) coordinates the v0.2 reconciliation: the anticipated proposals and their
+dependencies. It is not a proposal and has no authority.
+
 Whole-project reviews that fed the roadmap are kept in [`reviews/`](reviews/), named by review
 date. [`baseline-v0.1/`](baseline-v0.1/) holds the frozen v0.1 specification the current one was
 compiled from, which the earliest accepted records cite. Like accepted records, both are history and

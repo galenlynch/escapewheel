@@ -145,7 +145,7 @@ def facts() -> dict[str, str]:
         (accepted if "**Accepted**" in head else withdrawn if "withdrawn" in head.lower() else proposed).add(number)
     # Proposals and drafts carry no number; the numbered space reads in application order.
     # `revisions/drafts/README.md` holds the order of drafts awaiting acceptance.
-    proposals = [p for p in (ROOT / "revisions/proposals").glob("*.md") if p.name not in {"README.md", "ROADMAP.md"}]
+    proposals = [p for p in (ROOT / "revisions/proposals").glob("*.md") if p.name != "README.md"]
     drafts = [p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"]
 
     extensions = sorted(p.stem for directory in EXTENSIONS for p in directory.glob("*.json"))

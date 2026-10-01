@@ -28,7 +28,7 @@ BCP14 = re.compile(r"\b(?:MUST|MUST NOT|SHOULD|SHOULD NOT|MAY|REQUIRED|SHALL|OPT
 SHA = re.compile(r"[0-9a-f]{40}")
 ACCEPTED_STATUS = re.compile(r"\*\*Accepted\*\* \d{4}-\d{2}-\d{2}")
 PROCESS_AMENDS = re.compile(r"([^#;]+\.md)#([a-z0-9]+(?:-[a-z0-9]+)*)")
-NON_STAGE_DOCUMENTS = {"README.md", "ROADMAP.md"}
+NON_STAGE_DOCUMENTS = {"README.md"}
 
 PROPOSAL_HEADINGS = {
     "1": "Problem",

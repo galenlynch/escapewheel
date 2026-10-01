@@ -12,7 +12,7 @@ the resulting work. It exists so that narrowing or replacing an individual
 proposal does not discard research needed by later proposals.
 
 This is not a proposal, a revision draft, or an authority for packet behavior. It cannot settle a
-normative question or bypass the lifecycle in the [specification change guide](../CONTRIBUTING.md).
+normative question or bypass the lifecycle in the [specification change guide](CONTRIBUTING.md).
 Each contract change below still needs its own reproduced problem, appraisal, promotion decision,
 draft, acceptance authorization, incorporation evidence, and verification. The current generated
 v0.2 material remains authoritative while this roadmap is being worked.
@@ -22,16 +22,16 @@ are not section numbers in a proposal or draft, and they are not the permanent `
 assigned to accepted revisions.
 
 The principal inputs are the
-[project sanity check](../reviews/2026-09-17-project-sanity-check.md), the
-[change-process audit](../reviews/2026-09-17-change-process-audit.md), the root
-[TODO](../../TODO.md), and the research carried into the current
-[R122 authority revision](../accepted/R122-define-specification-artifacts-and-normative-ownership.md). The project review
+[project sanity check](reviews/2026-09-17-project-sanity-check.md), the
+[change-process audit](reviews/2026-09-17-change-process-audit.md), the root
+[TODO](../TODO.md), and the research carried into the current
+[R122 authority revision](accepted/R122-define-specification-artifacts-and-normative-ownership.md). The project review
 was performed at commit `32f9e06884b483818c7156f80ea81f7e3a6ce002`. Subsequent commits through
 the review baseline changed documentation, revision workflow, lint findings, and formatting rather
 than resolving the packet-contract findings mapped below.
 
 This roadmap tracks dependency and disposition at the work-item level. The separate
-[placement-defect inventory](../reviews/2026-09-29-placement-defects.md) tracks individual statements that appear to
+[placement-defect inventory](reviews/2026-09-29-placement-defects.md) tracks individual statements that appear to
 occupy the wrong owner or duplicate another rule; those details do not belong in this sequencing
 document.
 
@@ -228,25 +228,25 @@ P1 authority framework
 
 | ID | Work item | Depends on | Accepted record or target |
 |---|---|---|---|
-| P0 | Revision-process foundation | — | [Change-process guide](../CONTRIBUTING.md) and process audit |
-| P0.1 | Controlled reorganization of specification parts | P0 | [R120](../accepted/R120-allow-controlled-specification-reorganization.md) |
-| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | P0.1 | [R121](../accepted/R121-remove-historical-and-misplaced-maintenance-material.md) |
-| P1 | Specification authority, abstraction levels, and normative ownership | P0.1, P0.2 | [R122](../accepted/R122-define-specification-artifacts-and-normative-ownership.md) |
-| P2 | Placement cleanup and unit-identity reconciliation | P1 | [R123](../accepted/R123-a-unit-is-identified-by-its-packet-assigned-unit-id.md) |
-| P2.1 | Locate normative references with their subject owners | P1; executed after P2 | [R124](../accepted/R124-normative-references-reside-with-their-subject-owners.md) |
-| P3 | Executable declarative-rule language | P2.1 | [R125](../accepted/R125-tier-2-rules-use-a-versioned-escapewheel-sql-profile.md) |
-| P4.1 | Registry-document conformance contract | P3 | [R126](../accepted/R126-a-registry-document-has-one-complete-conformance-contract.md) |
-| P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](../accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
-| P5.1 | Logical resource declarations and resource classification | P4.2 | [R128](../accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md) |
-| P5.2 | Portable-profile interfaces and reader floor | P5.1 | [R129](../accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md) |
-| P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | [R130](../accepted/R130-a-packet-binds-the-exact-registries-that-declare-its-resources.md) |
-| P7 | Core, extension, and packet validity composition | P4.2, P6 | [R131](../accepted/R131-a-validator-checks-every-unit-value-against-ucum.md); [R132](../accepted/R132-a-packet-passes-only-when-its-manifest-core-and-every-bound-extension-pass.md) |
-| P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | [R133](../accepted/R133-a-build-decides-ownership-only-from-the-recipe-and-adapter-declarations.md); [R134](../accepted/R134-an-adapter-declares-its-whole-contract-and-delivers-only-where-a-build-points-it.md) |
-| P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | [R135](../accepted/R135-a-build-owns-its-staging-area-and-validates-everything-it-stages-before-publishing.md); [R136](../accepted/R136-every-packet-owned-resource-records-a-named-whole-object-digest.md); [R137](../accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md); [R138](../accepted/R138-a-recipe-names-each-extension-registry-once.md); [R139](../accepted/R139-a-float-column-declares-whether-it-admits-non-finite-values.md); [R140](../accepted/R140-a-nomenclature-that-governs-an-open-core-column-has-a-reference-entry.md); [R141](../accepted/R141-the-core-vocabulary-targets-extracellular-electrophysiology.md); [R142](../accepted/R142-a-build-supplies-an-adapter-a-persistent-source-cache.md); [R143](../accepted/R143-a-packet-owned-opaque-resource-crosses-as-its-bytes-in-a-directory-named-by-its-resource-id.md); [R144](../accepted/R144-the-adapter-interface-is-its-own-part-at-the-physical-level.md) |
+| P0 | Revision-process foundation | — | [Change-process guide](CONTRIBUTING.md) and process audit |
+| P0.1 | Controlled reorganization of specification parts | P0 | [R120](accepted/R120-allow-controlled-specification-reorganization.md) |
+| P0.2 | Remove historical and misplaced maintenance material from authoritative artifacts | P0.1 | [R121](accepted/R121-remove-historical-and-misplaced-maintenance-material.md) |
+| P1 | Specification authority, abstraction levels, and normative ownership | P0.1, P0.2 | [R122](accepted/R122-define-specification-artifacts-and-normative-ownership.md) |
+| P2 | Placement cleanup and unit-identity reconciliation | P1 | [R123](accepted/R123-a-unit-is-identified-by-its-packet-assigned-unit-id.md) |
+| P2.1 | Locate normative references with their subject owners | P1; executed after P2 | [R124](accepted/R124-normative-references-reside-with-their-subject-owners.md) |
+| P3 | Executable declarative-rule language | P2.1 | [R125](accepted/R125-tier-2-rules-use-a-versioned-escapewheel-sql-profile.md) |
+| P4.1 | Registry-document conformance contract | P3 | [R126](accepted/R126-a-registry-document-has-one-complete-conformance-contract.md) |
+| P4.2 | Uniform registry-validation boundaries | P4.1 | [R127](accepted/R127-registry-documents-are-checked-at-conformance-boundaries.md) |
+| P5.1 | Logical resource declarations and resource classification | P4.2 | [R128](accepted/R128-every-packet-resource-instantiates-a-logical-declaration.md) |
+| P5.2 | Portable-profile interfaces and reader floor | P5.1 | [R129](accepted/R129-a-portable-profile-declares-its-interfaces-and-reader-floor.md) |
+| P6 | Packet manifest, requiredness, and registry binding | P5.1, P5.2 | [R130](accepted/R130-a-packet-binds-the-exact-registries-that-declare-its-resources.md) |
+| P7 | Core, extension, and packet validity composition | P4.2, P6 | [R131](accepted/R131-a-validator-checks-every-unit-value-against-ucum.md); [R132](accepted/R132-a-packet-passes-only-when-its-manifest-core-and-every-bound-extension-pass.md) |
+| P8 | Recipe arbitration and adapter contract | P5.1, P5.2, P6 | [R133](accepted/R133-a-build-decides-ownership-only-from-the-recipe-and-adapter-declarations.md); [R134](accepted/R134-an-adapter-declares-its-whole-contract-and-delivers-only-where-a-build-points-it.md) |
+| P9 | Remaining lifecycle, integrity, portability, and scope reconciliations | P5.1–P8 as applicable | [R135](accepted/R135-a-build-owns-its-staging-area-and-validates-everything-it-stages-before-publishing.md); [R136](accepted/R136-every-packet-owned-resource-records-a-named-whole-object-digest.md); [R137](accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md); [R138](accepted/R138-a-recipe-names-each-extension-registry-once.md); [R139](accepted/R139-a-float-column-declares-whether-it-admits-non-finite-values.md); [R140](accepted/R140-a-nomenclature-that-governs-an-open-core-column-has-a-reference-entry.md); [R141](accepted/R141-the-core-vocabulary-targets-extracellular-electrophysiology.md); [R142](accepted/R142-a-build-supplies-an-adapter-a-persistent-source-cache.md); [R143](accepted/R143-a-packet-owned-opaque-resource-crosses-as-its-bytes-in-a-directory-named-by-its-resource-id.md); [R144](accepted/R144-the-adapter-interface-is-its-own-part-at-the-physical-level.md) |
 | P10.1 | Direct registry source and release integration matrix | P2, P2.1, and P3–P9 | Ordinary maintenance unless the contract changes |
-| P10.2 | Release-candidate field test | P10.1 | [R147](../accepted/R147-every-array-axis-declares-what-each-position-is.md); revisions for what the field finds; the user ends the test |
-| P10.2a | Summaries in Parts 00, 01 and 06 agree with the parts owning their rules | P10.1; runs beside P10.2 | [R145](../accepted/R145-each-rule-is-stated-by-its-owner-and-a-canonical-resource-depends-only-on-canonical-resources.md) |
-| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2a; runs beside P10.2 | [R146](../accepted/R146-each-statement-sits-in-the-part-that-owns-its-subject.md); structural revision, verbatim duplicates as maintenance |
+| P10.2 | Release-candidate field test | P10.1 | [R147](accepted/R147-every-array-axis-declares-what-each-position-is.md); revisions for what the field finds; the user ends the test |
+| P10.2a | Summaries in Parts 00, 01 and 06 agree with the parts owning their rules | P10.1; runs beside P10.2 | [R145](accepted/R145-each-rule-is-stated-by-its-owner-and-a-canonical-resource-depends-only-on-canonical-resources.md) |
+| P10.2b | Placement cleanup from the re-appraised placement-defect inventory | P10.2a; runs beside P10.2 | [R146](accepted/R146-each-statement-sits-in-the-part-that-owns-its-subject.md); structural revision, verbatim duplicates as maintenance |
 | P10.3 | Final identifiers and registry binding | P10.2, P10.2a, P10.2b | Proposal |
 | P11 | Immutable v0.2 specification publication | P1–P10 | Proposal to be scoped |
 
