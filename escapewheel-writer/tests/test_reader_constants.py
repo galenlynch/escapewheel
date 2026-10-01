@@ -36,7 +36,7 @@ def _spelled(values):
 
 def test_the_scan_reads_the_package():
     scanned = {path.relative_to(SOURCE).as_posix() for path in SOURCE.rglob("*.py")}
-    assert {"writer.py", "session.py", "sources/nwb.py", "scripts/cli.py"} <= scanned
+    assert {"writer.py", "session.py", "sources/nwb/source.py", "scripts/cli.py"} <= scanned
 
 
 def test_no_module_spells_a_named_resource_id():

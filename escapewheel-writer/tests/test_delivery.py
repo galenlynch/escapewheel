@@ -20,7 +20,7 @@ from escapewheel_writer.errors import DeliveryFailed, RecipeFault, SourceDefect,
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS
 from escapewheel_writer.sources import ADAPTERS
-from escapewheel_writer.sources.nwb import NWBSource
+from escapewheel_writer.sources.nwb.source import NWBSource
 from tests import nwbfixture
 
 SESSION = "mini_2025-04-09"

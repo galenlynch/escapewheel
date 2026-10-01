@@ -9,7 +9,7 @@ record each measurement and the session it was taken on.
 
 An AIND pipeline writes an NWB that follows the NWB schema at every path a base reader visits:
 `general/subject`, `general/devices`, `general/extracellular_ephys/electrodes`, `intervals/trials`
-and `acquisition`. `escapewheel_writer.sources.nwb.NWBSource` reads all of them. The pipeline adds
+and `acquisition`. `escapewheel_writer.adapter.NWBSource` reads all of them. The pipeline adds
 seventeen columns that NWB does not define (`../inventory/nwb-adapter-base-and-dialect.md`):
 
 | NWB table | columns the pipeline adds |

@@ -1,6 +1,6 @@
 """What the AIND dialect reads that base NWB does not declare.
 
-Each test here failed against `escapewheel_writer.sources.nwb.NWBSource` once the dialect left it,
+Each test here failed against `escapewheel_writer.adapter.NWBSource` once the dialect left it,
 which is the point: the base reader ignores a column the schema does not declare, and this adapter
 is where knowing what those columns mean lives.
 """

@@ -18,7 +18,7 @@ PACKAGE = Path(escapewheel_writer.__file__).parent
 
 #: The modules whose notes reach a build's report: every adapter, the build and the reading of a delivery.
 NOTING = [
-    *sorted((PACKAGE / "sources").glob("*.py")),
+    *sorted((PACKAGE / "sources").rglob("*.py")),
     *(PACKAGE / f"{name}.py" for name in ("session", "sourcing", "facts", "alignment", "reading")),
 ]
 

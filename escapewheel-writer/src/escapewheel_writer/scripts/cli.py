@@ -71,7 +71,7 @@ GUESSED = "  # GUESS: nothing inspected says this; check it"
 
 def open_for_inspection(kind: str, root: Path, session_id: str) -> SourceAdapter:
     """Construct a source for inspection, with the least configuration that will open it."""
-    from ..sources.nwb import NWBSource
+    from ..sources.nwb.source import NWBSource
     from ..sources.sorter import SorterSource
     from ..sources.sync import SyncSource
 

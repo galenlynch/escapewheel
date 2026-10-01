@@ -13,7 +13,8 @@ from escapewheel_writer import OffGrid, PacketWriter
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
 from escapewheel_writer.errors import FixedOffsetZone, SourceDefect, SourceFault, UsageError, UsageFault
 from escapewheel_writer.notes import NoteCode, coded, codes
-from escapewheel_writer.sources.nwb import NWBSource, ucum_code
+from escapewheel_writer.sources.nwb.names import ucum_code
+from escapewheel_writer.sources.nwb.source import NWBSource
 from escapewheel_writer.sources.values import sex
 from tests import nwbfixture
 

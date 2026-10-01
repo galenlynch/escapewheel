@@ -27,7 +27,7 @@ from escapewheel_reader.resource_ids import (
 from ..errors import SourceDefect, SourceFault, UsageError, UsageFault
 from ..notes import Note, NoteCode
 from .compensations import Compensates
-from .nwb import contact_columns, contact_ids, ucum_code
+from .nwb.names import contact_columns, contact_ids, ucum_code
 from .store import SourceStore, source_root
 
 #: Where an NWB keeps its LFP series.

@@ -62,7 +62,7 @@ def test_the_nwb_source_declares_an_offset_it_kept(tmp_path):
     from zoneinfo import ZoneInfo
 
     from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
-    from escapewheel_writer.sources.nwb import NWBSource
+    from escapewheel_writer.sources.nwb.source import NWBSource
     from tests import nwbfixture
 
     root = nwbfixture.build(tmp_path)

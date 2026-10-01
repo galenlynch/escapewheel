@@ -21,7 +21,7 @@ from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
 from escapewheel_writer.sources import ADAPTERS
 from escapewheel_writer.sources.harp import HarpSource
 from escapewheel_writer.sources.lfp import LFPSource
-from escapewheel_writer.sources.nwb import NWBSource
+from escapewheel_writer.sources.nwb.source import NWBSource
 from escapewheel_writer.sources.openephys import OpenEphysSource
 from escapewheel_writer.sources.sorter import SorterSource
 from escapewheel_writer.sources.sync import SyncSource

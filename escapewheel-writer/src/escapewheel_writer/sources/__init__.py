@@ -16,7 +16,7 @@ from typing import Any
 from ..protocols import SourceAdapter
 from .harp import HarpSource
 from .lfp import LFPSource
-from .nwb import NWBSource
+from .nwb.source import NWBSource
 from .openephys import OpenEphysSource
 from .sorter import SorterSource
 from .sync import SyncSource
