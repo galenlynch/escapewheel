@@ -146,9 +146,10 @@ def _discriminator(
     """Build the checks one discriminator column implies (Part 02 §8.3).
 
     Three, and they fail for different reasons: the value is not a resource ID at all, it names a
-    resource the packet does not declare, or it names one that exists and holds no such row. Only
-    the second is what `resolves` governs -- R49's scope may legitimately name a rig the packet
-    does not hold, where R54's interval kind naming nothing leaves the row uninterpretable.
+    resource the packet does not declare, or it names one that exists and holds no such row.
+    `resolves` sets the second's severity and whether the third is generated: R49's scope may
+    legitimately name a rig the packet does not hold, where R54's interval kind naming nothing
+    leaves the row uninterpretable.
     """
     col = quote(column["name"])
     checks = [
@@ -264,11 +265,15 @@ def _paired_value(
 ) -> list[Check]:
     """Build a paired value's checks: its named keys' shape, one anti-join per kind, and its kind.
 
+    None is generated unless the discriminator resolves `required`.
+
     The value sits on the discriminator's own table, or on the specialised table that
     `discriminates_via` names, which reaches the discriminator's row through its one reference
     (Part 02 §8.3). A `string` value matches the named key, or its `*_name` where the key is
     assigned; an `identifier` value holds the key's own value, so both sides share a type.
     """
+    if column.get("resolves") != "required":
+        return []
     col = quote(column["name"])
     via = column.get("discriminates_via")
     holder = resource if via is None else str(via).rsplit(".", 1)[0]
@@ -293,8 +298,7 @@ def _paired_value(
             misfits.append(kind)
 
     checks: list[Check] = []
-    required = column.get("resolves") == "required"
-    if required and misfits:
+    if misfits:
         checks.append(
             Check(
                 f"{resource}.{column['name']}.key_fits_paired_value",
@@ -346,7 +350,7 @@ def _paired_value(
                 dependencies=frozenset({resource, holder, kind}),
             )
         )
-    if required and via is not None:
+    if via is not None:
         checks.append(
             Check(
                 f"{resource}.{column['name']}.specialised_row_has_kind",

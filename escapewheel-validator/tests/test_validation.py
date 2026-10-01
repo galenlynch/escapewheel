@@ -2046,7 +2046,7 @@ def test_a_shared_key_discriminator_generates_no_value_resolution():
 def test_a_string_paired_value_is_cast_on_both_sides():
     """A carried key may be a number where the string value is not one; uncast, DuckDB raises on it."""
     checks = generate(
-        _discriminated(resolves="optional", discriminates="k"),
+        _discriminated(resolves="required", discriminates="k"),
         only={"core.runs"},
         kinds={"core.runs": "run_id"},
     )
@@ -2057,7 +2057,7 @@ def test_a_string_paired_value_is_cast_on_both_sides():
 def test_each_named_kind_gets_its_own_anti_join():
     """Per kind, so a value resolves only in the kind its own row names (Part 02 §8.3)."""
     checks = generate(
-        _discriminated(resolves="optional", discriminates="k"),
+        _discriminated(resolves="required", discriminates="k"),
         only={"core.runs", "core.sessions"},
         kinds={"core.runs": "run_id", "core.sessions": "session_name", "ext.absent": "absent_id"},
     )
@@ -2066,6 +2066,17 @@ def test_each_named_kind_gets_its_own_anti_join():
     assert not [i for i in ids if "ext_absent" in i], "a kind the packet does not carry is the declared-kind check's"
     declared = next(c.sql for c in checks if c.id == "core.runs.k_kind.kind_declared")
     assert "'ext.absent'" in declared
+
+
+def test_an_optional_paired_value_generates_no_resolution():
+    """Part 02 §8.3: a value an optional discriminator pairs may name nothing the packet holds."""
+    checks = generate(
+        _discriminated(resolves="optional", discriminates="k"),
+        only={"core.runs"},
+        kinds={"core.runs": "run_id"},
+    )
+    ids = {c.id for c in checks if c.id.startswith("core.runs.k_kind.")}
+    assert ids == {"core.runs.k_kind.is_a_resource_id", "core.runs.k_kind.kind_declared"}
 
 
 def _identifier_paired(resolves="required"):
