@@ -112,7 +112,7 @@ def windows_disjoint(packet: PacketLike, event_type: str, half_window: int, *, s
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     event_type : str
         The event type the windows are centred on.
@@ -157,7 +157,7 @@ def aligned_spikes(
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     event_type : str
         Which events to align to, from `core.events.event_type`.
@@ -227,7 +227,7 @@ def assigned_spikes(
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     event_type : str
         Which events to assign to.

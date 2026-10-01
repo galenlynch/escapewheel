@@ -46,7 +46,7 @@ def intervals(packet: PacketLike, *, session_id: int | None = None, interval_kin
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     session_id : int, optional
         Keep only this session.
@@ -66,7 +66,7 @@ def units(packet: PacketLike, *, session_id: int | None = None, quality_label: s
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     session_id : int, optional
         Keep only this session.
@@ -103,7 +103,7 @@ def events(
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     event_type : str, optional
         Keep only events of this type. The type is the stream's (Part 01 §3.11), so this
@@ -198,7 +198,7 @@ def spike_times(
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     unit_id : int, optional
         One unit. Mutually exclusive with `units`.
@@ -299,7 +299,7 @@ def distinct(packet: PacketLike, resource_id: str, column: str) -> pa.ChunkedArr
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     resource_id : str
         Dotted resource ID.

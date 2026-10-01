@@ -63,7 +63,7 @@ def clock_windows(packet: PacketLike, *, session_id: int | None = None, clock_id
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     session_id, clock_id : int, optional
         Restrict to one session or one clock.
@@ -112,7 +112,7 @@ def unit_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.Tab
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     session_id : int, optional
         Restrict to one session.
@@ -166,7 +166,7 @@ def stream_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.T
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     session_id : int, optional
         Restrict to one session.
@@ -254,7 +254,7 @@ def observed_seconds(packet: PacketLike, windows: pa.Table) -> float:
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet the windows came from.
     windows : pyarrow.Table
         Rows carrying ``clock_id``, ``start_tick`` and ``stop_tick``.
@@ -370,7 +370,7 @@ def rate_of(packet: PacketLike, table: pa.Table) -> float:
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet the table came from, for its clocks' rates.
     table : pyarrow.Table
         Rows from an accessor that attaches support.

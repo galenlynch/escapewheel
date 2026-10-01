@@ -339,7 +339,7 @@ def describe(packet: PacketLike, resource_id: str) -> ArrayDescription:
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet declaring the array.
     resource_id : str
         The array's dotted resource ID.

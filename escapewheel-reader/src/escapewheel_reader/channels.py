@@ -62,7 +62,7 @@ def kept_channels(packet: PacketLike, *, sorting_run_id: int | None = None) -> d
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     sorting_run_id : int, optional
         One run. Every run the table records is the default.
@@ -112,7 +112,7 @@ def electrode_at(
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     sorting_run_id : int
         The run the index counts within. An index means nothing without it, because two runs on
@@ -161,7 +161,7 @@ def runs_without_channels(packet: PacketLike) -> tuple[ChannelsUndeclared, ...]:
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
 
     Returns

@@ -232,7 +232,7 @@ def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     session_id : int, optional
         Which session's reference to return. Only needed where a multi-session packet's
@@ -387,7 +387,7 @@ def origin(packet: PacketLike, session_id: int | None = None) -> tuple[int, int,
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     session_id : int, optional
         Which session's origin. Only needed where a multi-session packet's sessions disagree.
@@ -444,7 +444,7 @@ def on_clock(packet: PacketLike, table: pa.Table, clock: int | None = None, *, b
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet the table came from, for its anchors and its declared bound.
     table : pyarrow.Table
         Any table carrying `t_tick` and `clock_id`.
@@ -498,7 +498,7 @@ def seconds(packet: PacketLike, table: pa.Table, *, session_id: int | None = Non
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet the table came from, for its origin and reference rate.
     table : pyarrow.Table
         A table carrying `t_tick` and `clock_id`.

@@ -225,7 +225,7 @@ def resolved(packet: PacketLike, resource_id: str, kind: str, *, column: str | N
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         An open packet.
     resource_id : str
         The table carrying the discriminator.

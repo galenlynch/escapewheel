@@ -78,7 +78,7 @@ def preferences(packet: PacketLike) -> dict[tuple[int | None, str, str, str], in
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
 
     Returns
@@ -111,7 +111,7 @@ def ambiguities(packet: PacketLike) -> tuple[Ambiguity, ...]:
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
 
     Returns
@@ -173,7 +173,7 @@ def preferred_run(
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to read.
     activity_type : str
         Which kind of output, e.g. ``spike_sorting``. An open vocabulary.
@@ -241,7 +241,7 @@ def check(packet: PacketLike, activities: Iterable[str] | None = None) -> None:
 
     Parameters
     ----------
-    packet : Packet
+    packet : PacketLike
         The packet to check.
     activities : iterable of str, optional
         Restrict to these activity types. An accessor passes the activities that produce what
