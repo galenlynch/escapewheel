@@ -193,24 +193,6 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         [*TREE_RUN, "combine.py", "--check"],
     ),
     (
-        "prototype: write packets",
-        ROOT / "prototype/registry-codegen",
-        ["uv", "run", "--project", str(TOOLS), "python", "fixture.py"],
-    ),
-    (
-        "prototype: conforming packet is clean",
-        ROOT / "prototype/registry-codegen",
-        [
-            "uv",
-            "run",
-            "--project",
-            str(TOOLS),
-            "python",
-            "validate.py",
-            "packets/valid",
-        ],
-    ),
-    (
         "corpus: write every packet",
         ROOT / "fixtures",
         ["uv", "run", "--project", str(TOOLS), "python", "build.py"],

@@ -45,7 +45,6 @@ One repository since 2026-09-04; the `Repo` column is gone with the split that n
 | `nwb_lake_poc_docs/` | Frozen starting point. Not edited. |
 | `revisions/` | Specification-change lifecycle and records; start at `revisions/README.md`. |
 | `conformance/` | Probe suites producing the evidence revisions cite. |
-| `prototype/registry-codegen/` | R2's chain working end to end, 3 tables. |
 | `fixtures/` | Phase 0 packets and the conformance corpus. |
 | `escapewheel-reader/` | Phase 1: the reader. Owns the `escapewheel` console script. |
 | `escapewheel-validator/` | Phase 2: the validator. Adds `escapewheel validate`. |
@@ -123,8 +122,6 @@ Two other things pass:
   `conformance/registries/check.py` executes every shipped rule against empty typed tables.
   Empty tables prove a rule binds, not that it can report; typed semantic vectors and the corpus
   cover result behavior.
-- `prototype/registry-codegen/` — `packets/valid` exits 0; `packets/broken` reports three
-  defects and exits 1.
 
 The core registry carries 91 Tier 2 rules; the four extension examples bring the candidate total
 to 139. `facts.py` prints the current core counts.

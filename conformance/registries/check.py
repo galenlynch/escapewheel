@@ -1,8 +1,7 @@
 """Check the registries against what lies outside the specification's tree.
 
 The tree's `check.py` decides everything the tree alone can. These need something it does not
-hold: the frozen v0.1 Part 02, the registry-codegen prototype, and an engine to execute the Tier 2
-rules of the core registry and every extension in the repository.
+hold: the frozen v0.1 Part 02 and an engine to execute the Tier 2 rules of the core registry and every extension in the repository.
 """
 
 import json
@@ -55,20 +54,6 @@ ledger = subprocess.run(
 ).stdout
 expected = {line.strip() for line in ledger.splitlines() if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", line.strip())}
 check("the core table set matches the Part 02 ledger", expected ^ set(tables(CORE)))
-
-# The prototype argues that the format drives the tooling, which is worth nothing if its own input
-# is a document the format rejects.
-meta = json.loads((ARTIFACTS / "registry.schema.json").read_text())
-prototype = ROOT / "prototype/registry-codegen/registry.json"
-check(
-    "the registry-codegen prototype's document validates against the meta-schema",
-    [
-        f"{list(error.path)[:4]} {error.message[:60]}"
-        for error in jsonschema.Draft202012Validator(meta, format_checker=jsonschema.FormatChecker()).iter_errors(
-            json.loads(prototype.read_text())
-        )
-    ],
-)
 
 # Every rule is valid SQL naming real columns: empty tables built from the registries check syntax
 # and identifiers without a packet.
