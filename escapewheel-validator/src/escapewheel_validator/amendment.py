@@ -11,6 +11,8 @@
   key, and the SQL for an identifier, a string, and a column a file omits.
 - :data:`PREFERENCES`, :data:`DERIVED` -- the one table whose held row an amendment may replace,
   and the content classes whose lineage can go stale.
+- :data:`PROVENANCE`, :data:`IDENTITY` -- the tables recording what ran, and the packet-level
+  fields no amendment changes.
 
 A writer settling delivered rows against the packet it amends uses :class:`Version`'s group test
 too (Part 02 §2.8), so the two cannot disagree about which groups a version holds.
@@ -405,4 +407,5 @@ __all__ = [
     "Version",
     "absent",
     "chain_reaches",
+    "semver",
 ]

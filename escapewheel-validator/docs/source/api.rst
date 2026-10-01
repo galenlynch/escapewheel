@@ -103,6 +103,7 @@ that defines it.
    amendment.Version
    amendment.absent
    amendment.chain_reaches
+   amendment.semver
    manifest.format_checker
    stores.listing
    stores.Listing
