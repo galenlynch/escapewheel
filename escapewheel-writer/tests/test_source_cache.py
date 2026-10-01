@@ -162,7 +162,7 @@ def test_a_location_inside_the_packet_or_a_delivery_is_supplied_to_no_adapter(tm
 
 
 def test_a_delivered_adapter_is_handed_the_location_only_where_it_accepts_it(tmp_path):
-    from escapewheel_writer.delivery import construct
+    from escapewheel_writer.serving import construct
 
     sorted_root, _ = _sources(tmp_path)
     source = construct(

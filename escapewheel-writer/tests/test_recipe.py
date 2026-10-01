@@ -792,7 +792,7 @@ def test_a_delivered_source_carries_how_a_build_reaches_it(tmp_path):
 
 def test_a_recipe_naming_no_protocol_reaches_the_adapter_by_one_it_declares(tmp_path):
     """Part 12 §3: the adapter's first declared, and only that protocol's terms are supplied."""
-    from escapewheel_writer.delivery import protocol_supplies
+    from escapewheel_writer.reading import protocol_supplies
     from escapewheel_writer.recipe import reached_by
 
     named = declaration_for(tmp_path, protocols=["flight-v0.1", "files-v0.1"])

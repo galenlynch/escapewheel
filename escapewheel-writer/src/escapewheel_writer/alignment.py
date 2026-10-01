@@ -19,9 +19,9 @@ from escapewheel_reader.clocks import BOUND, align
 from escapewheel_reader.resource_ids import CORE_CLOCKS
 from numpy.typing import NDArray
 
-from .delivery import Delivered
 from .notes import Note, NoteCode
 from .protocols import WithholdsAnchors
+from .reading import Delivered
 
 if TYPE_CHECKING:
     from .session import Context

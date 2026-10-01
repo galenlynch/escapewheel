@@ -28,11 +28,11 @@ from escapewheel_reader.resource_ids import (
 
 from . import opaque
 from .declaration import SOURCE_CACHE
-from .delivery import Delivered
 from .errors import RecipeFault, RecipeUnsound, SourcesNotOrdered, TermUnfilled, UnknownSourceKind
 from .facts import as_stored, compare_declared_facts
 from .notes import Note, NoteCode
 from .protocols import SourceAdapter
+from .reading import Delivered
 from .recipe import TERMS, Problem, Recipe, SourceSpec, declared, reached_by
 from .sources import ADAPTERS
 
@@ -184,7 +184,7 @@ def build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAd
     """
     import inspect
 
-    from . import delivery
+    from . import reading
     from .sources import discovered
     from .sources.store import store_for
 
@@ -197,7 +197,7 @@ def build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAd
         crossing = {**supplied, "root": spec.uri or str(spec.root)}
         if spec.storage_options:
             options = {**options, "storage_options": dict(spec.storage_options)}
-        return delivery.fetch(
+        return reading.fetch(
             spec.kind,
             spec.delivery.command,
             {**crossing, "options": options},

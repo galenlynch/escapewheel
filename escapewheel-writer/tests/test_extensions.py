@@ -701,7 +701,7 @@ def test_a_file_delivered_source_needs_no_python_of_ours(tmp_path, registry, min
     """The whole point: a registry document and a script writing Parquet, nothing of ours imported."""
     import sys
 
-    from escapewheel_writer import delivery
+    from escapewheel_writer import reading
 
     script = tmp_path / "export.py"
     script.write_text(
@@ -712,7 +712,7 @@ def test_a_file_delivered_source_needs_no_python_of_ours(tmp_path, registry, min
         " 'site_id': pa.array([0, 1], type=pa.int32()), 'odor': pa.array(['a', 'b'])}),"
         " f\"{terms['delivery_root']}/vrf.sites.parquet\")\n"
     )
-    source = delivery.fetch(
+    source = reading.fetch(
         "vrf_sites",
         [sys.executable, str(script)],
         {"root": str(tmp_path), "session_id": "s001"},

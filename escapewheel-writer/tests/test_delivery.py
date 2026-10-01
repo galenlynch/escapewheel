@@ -13,7 +13,7 @@ from dataclasses import replace
 
 import pytest
 
-from escapewheel_writer import declaration, delivery
+from escapewheel_writer import declaration, reading, serving
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
 from escapewheel_writer.encoding import STREAMED_BATCH_ROWS
 from escapewheel_writer.errors import DeliveryFailed, RecipeFault, SourceDefect, SourceFault, UsageError, UsageFault
@@ -200,7 +200,7 @@ def test_the_rows_are_the_rows_the_adapter_produced(protocol, supplied, nwb, har
         pytest.importorskip("pyarrow.flight")
     here = NWBSource(nwb, reference_clock=harp.record(), zone=ZONE, interval_kind=KIND, units=[]).records()
     wanted = sorted(NWBSource.PRODUCES)
-    got = delivery.fetch(
+    got = reading.fetch(
         "nwb",
         [*ESCAPEWHEEL, "deliver", "nwb"],
         supplied,
@@ -210,7 +210,7 @@ def test_the_rows_are_the_rows_the_adapter_produced(protocol, supplied, nwb, har
     )
     assert sorted(got.tables) == wanted, "a resource with no rows arrives empty rather than not arriving"
     for resource in wanted:
-        assert got.rows(resource) == delivery.as_table(here.get(resource, [])).to_pylist(), resource
+        assert got.rows(resource) == serving.as_table(here.get(resource, [])).to_pylist(), resource
 
 
 def test_a_workspace_path_longer_than_a_socket_address_still_delivers(supplied, tmp_path):
@@ -218,7 +218,7 @@ def test_a_workspace_path_longer_than_a_socket_address_still_delivers(supplied, 
     pytest.importorskip("pyarrow.flight")
     workspace = tmp_path / ("d" * 60) / ("e" * 60) / "work"
     wanted = ["core.electrodes", "core.probes"]
-    got = delivery.fetch(
+    got = reading.fetch(
         "nwb",
         [*ESCAPEWHEEL, "deliver", "nwb"],
         {**supplied, "wanted": wanted},
@@ -230,7 +230,7 @@ def test_a_workspace_path_longer_than_a_socket_address_still_delivers(supplied, 
 
 
 def test_stage_one_agrees_with_what_arrived(supplied, tmp_path):
-    got = delivery.fetch(
+    got = reading.fetch(
         "nwb",
         [*ESCAPEWHEEL, "deliver", "nwb"],
         supplied,
@@ -245,7 +245,7 @@ def test_stage_one_agrees_with_what_arrived(supplied, tmp_path):
 def test_a_build_asks_for_only_what_the_recipe_leaves_it_owning(supplied, tmp_path):
     """`wanted` is a term a build supplies and an adapter may act on (Part 12 §4)."""
     wanted = ["core.electrodes", "core.probes"]
-    got = delivery.fetch(
+    got = reading.fetch(
         "nwb",
         [*ESCAPEWHEEL, "deliver", "nwb"],
         {**supplied, "wanted": wanted},
@@ -262,7 +262,7 @@ def test_a_build_asks_for_only_what_the_recipe_leaves_it_owning(supplied, tmp_pa
 def test_the_values_behind_states_come_back_in_the_report(supplied, tmp_path):
     """No static document can carry them, because each needs the source read (Part 12 §9)."""
     report = tmp_path / "report.json"
-    got = delivery.fetch(
+    got = reading.fetch(
         "nwb",
         [*ESCAPEWHEEL, "deliver", "nwb"],
         supplied,
@@ -281,7 +281,7 @@ def test_a_stale_report_is_not_read_as_this_runs(supplied, tmp_path):
     """A file at a path the recipe names outlives the run that wrote it (Part 12 §9)."""
     report = tmp_path / "report.json"
     report.write_text(json.dumps({"problems": [{"level": "error", "message": "last week"}]}))
-    got = delivery.fetch(
+    got = reading.fetch(
         "nwb",
         [*ESCAPEWHEEL, "deliver", "nwb"],
         supplied,
@@ -295,7 +295,7 @@ def test_a_stale_report_is_not_read_as_this_runs(supplied, tmp_path):
 
 def test_what_the_report_says_is_reported(supplied, tmp_path):
     report = tmp_path / "report.json"
-    got = delivery.fetch(
+    got = reading.fetch(
         "nwb",
         [*ESCAPEWHEEL, "deliver", "nwb"],
         supplied,
@@ -310,7 +310,7 @@ def test_what_the_report_says_is_reported(supplied, tmp_path):
 
 def test_a_report_is_not_required(supplied, tmp_path):
     """A build must not require one, and must read a field absent from it as unstated."""
-    got = delivery.fetch(
+    got = reading.fetch(
         "nwb",
         [*ESCAPEWHEEL, "deliver", "nwb"],
         supplied,
@@ -329,7 +329,7 @@ def test_a_report_is_not_required(supplied, tmp_path):
 def test_a_resource_that_never_arrived_is_a_failure(supplied, tmp_path):
     """Part 05 §4.4: an absent resource is the run having failed, never nothing to say."""
     with pytest.raises(DeliveryFailed) as refused:
-        delivery.fetch(
+        reading.fetch(
             "nwb",
             [*ESCAPEWHEEL, "deliver", "nwb"],
             {**supplied, "wanted": ["core.electrodes"]},
@@ -344,7 +344,7 @@ def test_a_resource_that_never_arrived_is_a_failure(supplied, tmp_path):
 def test_a_non_zero_exit_is_a_failure_whatever_arrived(supplied, tmp_path):
     """An adapter saying it failed is not overruled by its own output (Part 05 §4.4)."""
     with pytest.raises(DeliveryFailed) as refused:
-        delivery.fetch(
+        reading.fetch(
             "nwb",
             [*ESCAPEWHEEL, "deliver", "nosuchkind"],
             supplied,
@@ -372,7 +372,7 @@ def test_an_adapter_still_ending_the_sentinel_is_not_cut_off(tmp_path):
         "    time.sleep(0.5)\n"
         "out.flush()\n"
     )
-    got = delivery.fetch(
+    got = reading.fetch(
         "slow",
         [sys.executable, str(script)],
         {"root": str(tmp_path)},
@@ -395,7 +395,7 @@ def test_a_delivery_cut_short_is_named_by_where_it_stopped(tmp_path):
         "sys.stdout.buffer.flush()\n"
     )
     with pytest.raises(DeliveryFailed) as refused:
-        delivery.fetch(
+        reading.fetch(
             "half",
             [sys.executable, str(script)],
             {"root": str(tmp_path)},
@@ -411,7 +411,7 @@ def test_what_the_adapter_said_is_reported(tmp_path):
     script = tmp_path / "loud.py"
     script.write_text("import sys\nprint('the source is half written', file=sys.stderr)\nraise SystemExit(3)\n")
     with pytest.raises(DeliveryFailed) as refused:
-        delivery.fetch(
+        reading.fetch(
             "loud",
             [sys.executable, str(script)],
             {"root": str(tmp_path)},
@@ -426,7 +426,7 @@ def test_what_the_adapter_said_is_reported(tmp_path):
 def test_a_command_that_is_a_string_is_refused(tmp_path):
     """A parse is a quoting convention no recipe declared (Part 05 §3.7)."""
     with pytest.raises(SourceDefect) as refused:
-        delivery.fetch(
+        reading.fetch(
             "nwb",
             "escapewheel deliver nwb",
             {"root": str(tmp_path)},
@@ -448,7 +448,7 @@ def test_an_array_with_nowhere_to_go_is_refused_rather_than_half_delivered(tmp_p
             return [object()]
 
     with pytest.raises(SourceDefect) as refused:
-        delivery.serve(Stages(), {}, "stream-v0.1")
+        serving.serve(Stages(), {}, "stream-v0.1")
     assert refused.value.code is SourceFault.NO_ARRAY_LOCATION
 
 
@@ -475,11 +475,11 @@ def test_an_array_crosses_as_the_bytes_the_adapter_wrote(tmp_path):
 
     location = tmp_path / "arrays"
     written = io.BytesIO()
-    delivery.serve(Stages(), {"array_location": str(location)}, "stream-v0.1", out=written)
+    serving.serve(Stages(), {"array_location": str(location)}, "stream-v0.1", out=written)
     assert (location / "core.waveform_mean.zarr/zarr.json").is_file()
     assert sorted(p.name for p in location.iterdir()) == ["core.waveform_mean.zarr"]
 
-    got = delivery.Delivered("waveforms", {}, arrays=location)
+    got = reading.Delivered("waveforms", {}, arrays=location)
     (staged,) = got.staged_arrays()
     assert (staged.resource_id, staged.declaration_id) == ("core.waveform_mean", "")
     assert staged.values is None and staged.written == location / "core.waveform_mean.zarr"
@@ -606,7 +606,7 @@ def test_a_delivered_array_no_catalog_row_names_is_refused(registry, tmp_path):
 
 def test_an_unknown_kind_names_what_this_build_ships():
     with pytest.raises(SourceDefect) as refused:
-        delivery.construct("tasklog", {"root": "."})
+        serving.construct("tasklog", {"root": "."})
     assert refused.value.code is SourceFault.UNKNOWN_KIND
     assert refused.value.where == "tasklog"
 
@@ -617,7 +617,7 @@ def test_a_table_too_large_to_hold_arrives_as_the_stream_it_was_sent_as():
 
     small = pa.table({"unit_id": ["1", "2"]})
     big = pa.table({"t_tick": list(range(STREAMED_BATCH_ROWS + 1))})
-    got = delivery.Delivered("sorter", {"core.units": small, "core.spike_events": big})
+    got = reading.Delivered("sorter", {"core.units": small, "core.spike_events": big})
     assert got.held("core.units") and not got.held("core.spike_events")
     assert sorted(got.records()) == ["core.units"]
     assert sorted(got.batches()) == ["core.spike_events"]
@@ -628,16 +628,16 @@ def test_a_shared_resource_is_held_however_large_it_is():
     import pyarrow as pa
 
     big = pa.table({"clock_id": ["harp"] * (STREAMED_BATCH_ROWS + 1)})
-    got = delivery.Delivered("sync", {"core.clocks": big}, merged=("core.clocks",))
+    got = reading.Delivered("sync", {"core.clocks": big}, merged=("core.clocks",))
     assert got.held("core.clocks")
     assert got.batches() == {}
 
 
 def test_the_protocol_is_read_from_the_term_that_asked_for_it():
     """A build supplies whichever terms its adapter's protocol requires (Part 12 §4)."""
-    assert delivery.infers({"socket": "/tmp/a.sock"}) == "flight-v0.1"
-    assert delivery.infers({"delivery_root": "/tmp/d"}) == "files-v0.1"
-    assert delivery.infers({"root": "/data"}) == "stream-v0.1"
+    assert serving.infers({"socket": "/tmp/a.sock"}) == "flight-v0.1"
+    assert serving.infers({"delivery_root": "/tmp/d"}) == "files-v0.1"
+    assert serving.infers({"root": "/data"}) == "stream-v0.1"
 
 
 # -- what a build does with one --------------------------------------------------------------
@@ -671,7 +671,7 @@ def test_a_build_reaches_a_delivered_source_through_the_same_construction(tmp_pa
 
     context = _context(reference=harp, workspace=tmp_path / "work")
     built = build_source(_spec(tmp_path, nwb), None, context)
-    assert isinstance(built, delivery.Delivered)
+    assert isinstance(built, reading.Delivered)
     assert sorted(built.offers()) == sorted(NWBSource.PRODUCES)
     assert built.offers()["core.electrodes"] == 2
     # Held rather than streamed: a table this size is one the writer sorts, and the streaming
@@ -688,7 +688,7 @@ def test_a_shipped_adapter_whose_entry_names_no_protocol_is_served_over_one(tmp_
     said = []
     context = _context(reference=harp, workspace=tmp_path / "work", say=said.append)
     built = build_source(_spec(tmp_path, nwb, protocol=""), None, context)
-    assert isinstance(built, delivery.Delivered)
+    assert isinstance(built, reading.Delivered)
     assert any("over stream-v0.1" in line for line in said), said
 
 
@@ -700,7 +700,7 @@ def test_a_rerun_reads_nothing_an_earlier_run_left(tmp_path, supplied):
     leftover = tmp_path / "work" / "delivery"
     leftover.mkdir(parents=True)
     pq.write_table(pa.table({"trial_id": [1]}), leftover / "core.trials.parquet")
-    got = delivery.fetch(
+    got = reading.fetch(
         "quiet",
         [sys.executable, "-c", "import sys; sys.stdin.read()"],
         supplied,
@@ -719,7 +719,7 @@ def test_a_file_written_outside_the_delivery_root_is_not_a_delivery(tmp_path, su
         f"pq.write_table(pa.table({{'trial_id': [1]}}), {str(tmp_path / 'core.trials.parquet')!r})\n"
     )
     with pytest.raises(DeliveryFailed) as refused:
-        delivery.fetch(
+        reading.fetch(
             "astray",
             [sys.executable, str(script)],
             supplied,
@@ -804,7 +804,7 @@ def test_what_a_build_supplies_crosses_on_standard_input(tmp_path, supplied):
     )
     seen = tmp_path / "seen.json"
     with pytest.raises(DeliveryFailed) as refused:
-        delivery.fetch(
+        reading.fetch(
             "echo",
             [sys.executable, str(script), str(seen)],
             supplied,
@@ -830,7 +830,7 @@ def test_a_term_larger_than_an_argument_crosses(tmp_path, supplied):
         "import json, sys\nopen(sys.argv[1], 'w').write(str(len(json.loads(sys.stdin.buffer.read())['units'])))\n"
     )
     counted = tmp_path / "counted"
-    got = delivery.fetch(
+    got = reading.fetch(
         "count",
         [sys.executable, str(script), str(counted)],
         {**supplied, "units": units},
@@ -890,12 +890,12 @@ def test_what_a_source_references_crosses_with_its_rows(protocol, tmp_path):
     script = tmp_path / "serve.py"
     script.write_text(
         "import json, sys\n"
-        "from escapewheel_writer import delivery\n"
+        "from escapewheel_writer import serving\n"
         f"{inspect.getsource(Referencing)}\n"
-        "delivery.serve(Referencing(), json.loads(sys.stdin.buffer.read()), "
+        "serving.serve(Referencing(), json.loads(sys.stdin.buffer.read()), "
         f"{protocol!r})\n"
     )
-    got = delivery.fetch(
+    got = reading.fetch(
         "lfp",
         [sys.executable, str(script)],
         {"root": str(tmp_path), "session_id": "s1"},
@@ -903,7 +903,7 @@ def test_what_a_source_references_crosses_with_its_rows(protocol, tmp_path):
         wanted=["core.array_assets", "core.media_assets"],
         workspace=tmp_path / "work",
     )
-    assert delivery.RESOURCES not in got.tables, "the document is not one of the resources asked for"
+    assert serving.RESOURCES not in got.tables, "the document is not one of the resources asked for"
     (array,) = got.external_arrays().values()
     assert array.uri == "s3://bucket/ElectricalSeries46101-LFP/data"
     (media,) = got.external_media().values()
@@ -916,16 +916,16 @@ def test_a_malformed_resource_document_is_refused(tmp_path, supplied):
     script.write_text(
         "import json, sys\n"
         "import pyarrow as pa\n"
-        "from escapewheel_writer import delivery\n"
+        "from escapewheel_writer import serving\n"
         "json.loads(sys.stdin.buffer.read())\n"
         "out = sys.stdout.buffer\n"
         "doc = json.dumps({'resources': [{'uri': 'file:///x'}]})\n"
-        "delivery._write(out, delivery.RESOURCES, delivery.as_table([{'document': doc}]))\n"
-        "delivery._write(out, delivery.SENTINEL, pa.table({}))\n"
+        "serving._write(out, serving.RESOURCES, serving.as_table([{'document': doc}]))\n"
+        "serving._write(out, serving.SENTINEL, pa.table({}))\n"
         "out.flush()\n"
     )
     with pytest.raises(DeliveryFailed) as refused:
-        delivery.fetch(
+        reading.fetch(
             "bad",
             [sys.executable, str(script)],
             supplied,
@@ -942,18 +942,18 @@ def test_a_referenced_resource_no_row_declares_is_refused(tmp_path, supplied):
     script.write_text(
         "import json, sys\n"
         "import pyarrow as pa\n"
-        "from escapewheel_writer import delivery\n"
+        "from escapewheel_writer import serving\n"
         "json.loads(sys.stdin.buffer.read())\n"
         "out = sys.stdout.buffer\n"
         "entry = {'resource_id': 'core.nowhere', 'declaration_id': 'core.media_asset_instances',\n"
         "         'uri': 's3://bucket/nowhere.mp4', 'external': True}\n"
         "doc = json.dumps({'resources': [entry]})\n"
-        "delivery._write(out, delivery.RESOURCES, delivery.as_table([{'document': doc}]))\n"
-        "delivery._write(out, delivery.SENTINEL, pa.table({}))\n"
+        "serving._write(out, serving.RESOURCES, serving.as_table([{'document': doc}]))\n"
+        "serving._write(out, serving.SENTINEL, pa.table({}))\n"
         "out.flush()\n"
     )
     with pytest.raises(SourceDefect) as refused:
-        delivery.fetch(
+        reading.fetch(
             "stray",
             [sys.executable, str(script)],
             supplied,
@@ -982,5 +982,5 @@ def test_a_delivered_entry_carries_no_build_supplied_member(extra):
         "uri": "s3://bucket/lfp.zarr",
         "external": True,
     }
-    assert delivery._refuses({"resources": [entry]}) is None
-    assert delivery._refuses({"resources": [{**entry, **extra}]}) is not None
+    assert reading._refuses({"resources": [entry]}) is None
+    assert reading._refuses({"resources": [{**entry, **extra}]}) is not None

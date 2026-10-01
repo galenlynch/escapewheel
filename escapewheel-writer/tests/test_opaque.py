@@ -13,7 +13,7 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import Verdict, check_table
 from escapewheel_validator.stores import listing_digest
 
-from escapewheel_writer import declaration, delivery, opaque
+from escapewheel_writer import declaration, opaque, reading, serving
 from escapewheel_writer.bindings import ExternalMedia
 from escapewheel_writer.errors import DeliveryFailed, PacketOccupied, PayloadFault, PayloadRefused, SourceFault
 from escapewheel_writer.opaque import Payload
@@ -402,7 +402,7 @@ def test_a_hand_over_with_nowhere_to_go_is_refused_over_a_protocol(tmp_path):
             return [Payload("core.clip", "clip.mp4", data=b"x")]
 
     with pytest.raises(PayloadRefused) as refused:
-        delivery.serve(Handing(), {}, "stream-v0.1", out=io.BytesIO())
+        serving.serve(Handing(), {}, "stream-v0.1", out=io.BytesIO())
     assert refused.value.source == "Handing"
     assert [p.code for p in refused.value.problems] == [PayloadFault.NO_LOCATION]
 
@@ -468,11 +468,11 @@ origin = "harp_epoch"
 #: How a delivered `Clips` runs: its own process, handed what a build supplies on standard input.
 SERVE = """import json, sys
 sys.path.insert(0, {here!r})
-from escapewheel_writer import delivery
+from escapewheel_writer import serving
 from tests.opaquefixture import Clips
 supplied = json.loads(sys.stdin.buffer.read())
 source = Clips(supplied["root"], session_id=supplied["session_id"], opaque_location=supplied["opaque_location"])
-delivery.serve(source, supplied, sys.argv[1])
+serving.serve(source, supplied, sys.argv[1])
 """
 
 
@@ -615,16 +615,16 @@ def _document_delivery(tmp_path, entries, rows=()):
     script.write_text(
         "import json, sys\n"
         "import pyarrow as pa\n"
-        "from escapewheel_writer import delivery\n"
+        "from escapewheel_writer import serving\n"
         "json.loads(sys.stdin.buffer.read())\n"
         "out = sys.stdout.buffer\n"
-        f"delivery._write(out, 'core.media_assets', delivery.as_table({list(rows)!r}))\n"
+        f"serving._write(out, 'core.media_assets', serving.as_table({list(rows)!r}))\n"
         f"doc = json.dumps({{'resources': {entries!r}}})\n"
-        "delivery._write(out, delivery.RESOURCES, delivery.as_table([{'document': doc}]))\n"
-        "delivery._write(out, delivery.SENTINEL, pa.table({}))\n"
+        "serving._write(out, serving.RESOURCES, serving.as_table([{'document': doc}]))\n"
+        "serving._write(out, serving.SENTINEL, pa.table({}))\n"
         "out.flush()\n"
     )
-    return delivery.fetch(
+    return reading.fetch(
         "cams",
         [sys.executable, str(script)],
         {"root": str(tmp_path), "session_id": "s001"},

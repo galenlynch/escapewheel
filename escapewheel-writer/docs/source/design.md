@@ -223,8 +223,9 @@ as a JSON document. `declaration` generates the document from the class, since e
 off the class with no judgement. The document says nothing about the machine: the command, the
 root and the options stay in the recipe.
 
-`delivery` implements the three protocols Part 12 §3 names, and holds the encoder and decoder of
-each wire format together so that they cannot drift apart. The protocols differ under load.
+`serving` and `reading` implement the three protocols Part 12 §3 names: `serving` encodes each wire
+format in the adapter's process, and `reading` decodes it in the build's. The protocols differ under
+load.
 `files-v0.1` delivers Parquet on disk, which a build streams one batch at a time, so it suits a
 large source. `stream-v0.1` and `flight-v0.1` hold each resource as it arrives, because a build
 consumes resources in its own order and cannot rewind a pipe.

@@ -539,7 +539,7 @@ def _declare(args: argparse.Namespace) -> int:
 
 def _deliver(args: argparse.Namespace) -> int:
     """Run one adapter and deliver its rows over the protocol the build reached it by."""
-    from .. import delivery
+    from .. import serving
 
     # Read to end of file before anything is written, which is what a build supplies and all it
     # supplies on this stream (Part 12 §4).
@@ -548,10 +548,10 @@ def _deliver(args: argparse.Namespace) -> int:
     except json.JSONDecodeError as exc:
         print(f"standard input must carry one JSON object of supplied terms: {exc}", file=sys.stderr)
         return 2
-    protocol = args.protocol or delivery.infers(supplied)
+    protocol = args.protocol or serving.infers(supplied)
     try:
-        source = delivery.construct(args.kind, supplied)
-        delivery.serve(source, supplied, protocol)
+        source = serving.construct(args.kind, supplied)
+        serving.serve(source, supplied, protocol)
     except SourceDefect as exc:
         # Standard error is what `files-v0.1` and `stream-v0.1` carry a failure on, and rows have
         # taken standard output (Part 05 §4.4).

@@ -53,7 +53,6 @@ from .arrow import build_table
 from .bindings import ExternalArray, ExternalMedia, StagedArray
 from .clock import HARP_TICK_RATE_HZ, TICK_MAX, TICK_MIN, Clock, epoch_from, zone_of
 from .declaration import FILES, FLIGHT, PROTOCOLS, STREAM, document_of, shape_problems
-from .delivery import serve
 from .errors import SourceDefect, SourceFault, UnsupportedEncoding
 from .notes import Note, NoteCode, coded, codes
 from .opaque import Payload
@@ -69,6 +68,7 @@ from .protocols import (
     WithholdsAnchors,
 )
 from .recipe import TERMS
+from .serving import serve
 from .sources import ADAPTERS, SOURCE_GROUP, discovered
 from .sources.compensations import COMPENSATION_GROUP, Compensates, Compensation
 from .sources.nwb import ABSENT, NWBSource, clean

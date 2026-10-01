@@ -2,8 +2,8 @@
 
 import pytest
 
-from escapewheel_writer.delivery import Delivered
 from escapewheel_writer.protocols import ReferencesArrays, ReferencesMedia, StagesArrays, Streams
+from escapewheel_writer.reading import Delivered
 from escapewheel_writer.sources import ADAPTERS
 
 CAPABLE = {
