@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from escapewheel_reader.errors import EscapewheelError
 from escapewheel_reader.registries import gunzip_member
 from escapewheel_validator import RegistryRejected, check_registry_context_bytes
 
@@ -190,8 +191,21 @@ HINTS = {
 }
 
 
-def _import(args: argparse.Namespace) -> int:  # noqa: C901
-    """Build and commit a packet from a recipe (Part 05 §2, delivery through publication)."""
+def _import(args: argparse.Namespace) -> int:
+    """Build and commit a packet from a recipe (Part 05 §2, delivery through publication).
+
+    A refusal is printed, never raised. The status is 2 where the recipe, a registry, a source or
+    the build refuses before the commit begins, and 1 where the commit is refused.
+    """
+    try:
+        return _build_and_commit(args)
+    except EscapewheelError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+
+def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
+    """Run an import, raising what refuses it before the commit and returning 1 for a refused commit."""
     # The override goes into the load rather than onto the result: a build derives where a
     # delivery lands from where the packet is going.
     recipe = Recipe.load(args.recipe, out=args.out)
@@ -300,6 +314,9 @@ def _import(args: argparse.Namespace) -> int:  # noqa: C901
             report = writer.commit(out, limits=limits or None, say=say, materialize=derive)
     except CommitRefused as exc:
         _say_refusal(exc)
+        return 1
+    except EscapewheelError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 1
     built = compare.resources(out)
     for where, reference in references:

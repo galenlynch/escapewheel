@@ -1,5 +1,6 @@
 import pytest
 
+from escapewheel_reader.errors import EscapewheelError
 from escapewheel_reader.scripts.cli import main
 
 
@@ -24,6 +25,25 @@ def test_sql_runs_a_query(packet_root, capsys):
 def test_packet_errors_exit_nonzero(tmp_path, capsys):
     assert main(["ls", str(tmp_path)]) == 1
     assert "error:" in capsys.readouterr().err
+
+
+def test_a_refusal_from_another_package_exits_nonzero(monkeypatch, capsys):
+    """A registered subcommand raises its own package's errors, which share only the root class."""
+
+    class Refused(EscapewheelError):
+        pass
+
+    def refuse(args):
+        raise Refused("nothing to import")
+
+    def register(subcommands):
+        subcommands.add_parser("import").set_defaults(func=refuse)
+
+    entry = type("Entry", (), {"name": "import", "load": lambda self: register})()
+    monkeypatch.setattr("escapewheel_reader.scripts.cli.entry_points", lambda group: [entry])
+
+    assert main(["import"]) == 1
+    assert capsys.readouterr().err == "error: nothing to import\n"
 
 
 def test_missing_subcommand_is_a_usage_error(capsys):

@@ -14,7 +14,7 @@ from collections.abc import Callable, Sequence
 from importlib.metadata import entry_points
 from pathlib import Path
 
-from ..errors import PacketError
+from ..errors import EscapewheelError, PacketError
 from ..packet import open_packet
 
 #: Entry-point group later packages register their subcommands under.
@@ -167,6 +167,9 @@ def _absent(name: str, distribution: str) -> Callable[[argparse.Namespace], int]
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the command line interface.
 
+    A refusal a package raises on purpose is printed as one line, whichever package's subcommand
+    raised it.
+
     Parameters
     ----------
     argv : sequence of str, optional
@@ -175,12 +178,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     Returns
     -------
     int
-        Process exit status.
+        Process exit status: the subcommand's own, or 1 where it raised a refusal.
     """
     args = build_parser().parse_args(argv)
     try:
         status: int = args.func(args)
-    except PacketError as exc:
+    except EscapewheelError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     return status
