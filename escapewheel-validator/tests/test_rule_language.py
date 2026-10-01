@@ -4,10 +4,9 @@ from pathlib import Path
 
 import pytest
 from escapewheel_reader import open_packet
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import validate
-
-from .conftest import install_registry, read_registry
 
 ROOT = Path(__file__).resolve().parents[2]
 

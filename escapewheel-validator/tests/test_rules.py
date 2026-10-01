@@ -8,12 +8,12 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader import open_packet
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import validate
 from escapewheel_validator.rules import _offending
 
-from .builders import add_extension, rewrite_table, verdicts_of
-from .conftest import install_registry, read_registry
+from .builders import add_extension, read_table, rewrite_table, verdicts_of, with_column
 
 
 def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatch):
@@ -53,18 +53,16 @@ def test_unresolved_foreign_key(packet_root):
 
 
 def test_closed_vocabulary(packet_root):
-    units = pq.read_table(packet_root / "tables" / "core" / "units.parquet")
-    broken = units.set_column(4, "quality_label", pa.array(["good", "mua"]))
-    rewrite_table(packet_root, "units", broken)
+    units = read_table(packet_root, "units")
+    rewrite_table(packet_root, "units", with_column(units, "quality_label", pa.array(["good", "mua"])))
     report = validate(open_packet(packet_root))
     finding = next(f for f in report.findings if f.check == "core.units.quality_label.in_vocabulary")
     assert finding.rows == (("good",),)
 
 
 def test_open_vocabulary_accepts_anything(packet_root):
-    events = pq.read_table(packet_root / "tables" / "core" / "events.parquet")
-    renamed = events.set_column(2, "event_type", pa.array(["whatever", "reward", "lick"]))
-    rewrite_table(packet_root, "events", renamed)
+    streams = read_table(packet_root, "event_streams")
+    rewrite_table(packet_root, "event_streams", with_column(streams, "event_type", pa.array(["whatever", "lick"])))
     assert validate(open_packet(packet_root)).passed
 
 
@@ -145,11 +143,7 @@ INTERVAL_ID = {
 }
 
 
-IN_INTERVAL = {
-    "columns": ["session_id", "interval_id"],
-    "resource": "core.intervals",
-    "resource_columns": ["session_id", "interval_id"],
-}
+IN_INTERVAL = {"columns": ["interval_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]}
 
 
 def test_an_absent_optional_closed_vocabulary_column_reports_nothing(packet_root):
@@ -172,13 +166,13 @@ def test_an_absent_optional_foreign_key_column_reports_nothing(packet_root):
 def test_a_present_optional_foreign_key_column_is_checked(packet_root):
     """An optional column may be null where present (Part 02 §6), so only the 9 fails to resolve."""
     report = _validate_optional_event_column(packet_root, INTERVAL_ID, IN_INTERVAL, pa.array([1, None, 9], pa.int32()))
-    finding = next(f for f in report.findings if f.check == "core.events.session_id_interval_id_resolves")
-    assert finding.rows == (("1", "9"),)
+    finding = next(f for f in report.findings if f.check == "core.events.interval_id_resolves")
+    assert finding.rows == (("9",),)
 
 
 def test_tier_two_rule(packet_root):
-    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
-    broken = intervals.set_column(3, "stop_tick", pa.array([0, 10000], type=pa.int64()))
+    intervals = read_table(packet_root, "intervals")
+    broken = with_column(intervals, "stop_tick", pa.array([0, 10000], type=pa.int64()))
     rewrite_table(packet_root, "intervals", broken)
     report = validate(open_packet(packet_root))
     assert any(f.check == "core.intervals.interval_valid" for f in report.findings)

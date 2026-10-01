@@ -6,12 +6,12 @@ import json
 import jsonschema
 import pytest
 from escapewheel_reader import open_packet
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import FormatCheckUnavailable, check_packet_manifest, validate
 from escapewheel_validator.manifest import format_checker, prefix_digest
 
 from .builders import add_family_declaration, declare_analysis
-from .conftest import install_registry, read_registry
 
 
 def _edit(root, change):

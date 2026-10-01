@@ -5,11 +5,12 @@ import json
 import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader import open_packet
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import Verification, validate
 
 from .builders import add_array, checks_under, zarr_v3_metadata
-from .conftest import install_registry, owned_digest, read_registry
+from .conftest import owned_digest
 
 
 def test_an_array_declaring_its_codecs_correctly_is_clean(packet_root):

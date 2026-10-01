@@ -4,13 +4,24 @@ import json
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+from packet_fixture import install_registry, read_registry
 
-from .conftest import install_registry, owned_digest, read_registry
+from .conftest import owned_digest
+
+
+def read_table(root, name):
+    """Read a core table's file."""
+    return pq.read_table(root / "tables" / "core" / f"{name}.parquet")
 
 
 def rewrite_table(root, name, table):
     """Replace a core table's file with `table`."""
     pq.write_table(table, root / "tables" / "core" / f"{name}.parquet", compression="zstd")
+
+
+def with_column(table, name, values):
+    """Return `table` with the column `name` holding `values`."""
+    return table.set_column(table.schema.get_field_index(name), name, values)
 
 
 def add_family_declaration(root, declaration_id, *, content_class="core"):
@@ -347,11 +358,8 @@ def add_extension(root, *, tables=None, mutate=None):
                     "primary_key": ["session_id", "interval_id"],
                     "amendment_groups": [["session_id", "interval_id"]],
                     "references": [
-                        {
-                            "columns": ["session_id", "interval_id"],
-                            "resource": "core.intervals",
-                            "resource_columns": ["session_id", "interval_id"],
-                        }
+                        {"columns": ["session_id"], "resource": "core.sessions", "resource_columns": ["session_id"]},
+                        {"columns": ["interval_id"], "resource": "core.intervals", "resource_columns": ["interval_id"]},
                     ],
                     "rules": [],
                 },

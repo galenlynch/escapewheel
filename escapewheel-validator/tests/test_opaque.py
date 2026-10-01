@@ -5,11 +5,10 @@ import json
 
 import pytest
 from escapewheel_reader import open_packet
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import Verification, validate
 from escapewheel_validator.opaque import colliding, findings, payload_directories, unportable_to_windows
-
-from .conftest import install_registry, read_registry
 
 PORTABILITY = "physical.opaque_name_portability"
 
@@ -85,7 +84,7 @@ def test_an_owned_opaque_file_is_present_and_its_digest_holds(packet_root):
     report = _validate(packet_root, checksums=True)
     assert report.passed and report.warnings == 0
     verified = next(f for f in report.findings if f.check == "owned.verified")
-    assert verified.message.startswith("7 of 7")
+    assert verified.counts == {"checked": 8, "matched": 8}
 
 
 def test_an_owned_opaque_directory_is_digested_as_a_prefix(packet_root):
@@ -130,7 +129,7 @@ def test_a_payload_whose_name_needs_encoding_is_found_by_its_decoded_name(packet
     )
     report = _validate(packet_root, checksums=True)
     assert report.passed and report.warnings == 0
-    assert next(f for f in report.findings if f.check == "owned.verified").message.startswith("7 of 7")
+    assert next(f for f in report.findings if f.check == "owned.verified").counts == {"checked": 8, "matched": 8}
 
 
 # -- names that would not survive a copy (Part 05 §5.3) ---------------------------------------------

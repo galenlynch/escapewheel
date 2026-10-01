@@ -7,12 +7,13 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from escapewheel_reader import RegistryFault, RegistryUnavailable, open_packet
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import Verification, validate
 from escapewheel_validator.validator import check_packet_manifest
 
 from .builders import add_array, add_extension, external_array, rewrite_table, verdicts_of, zarr_v3_metadata
-from .conftest import install_registry, owned_digest, read_registry
+from .conftest import owned_digest
 
 
 def _checks(report):

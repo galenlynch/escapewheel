@@ -1,13 +1,12 @@
 """The checks a registry's structure implies, and which of them an amendment re-runs (Part 02 §10.1)."""
 
 from escapewheel_reader import open_packet
+from packet_fixture import read_registry
 
 from escapewheel_validator import check_table, validate
 from escapewheel_validator import generate as generating
 from escapewheel_validator.generate import Check, adjacency_settles_uniqueness, concerns
 from escapewheel_validator.generate import _generate as generate
-
-from .conftest import read_registry
 
 
 def test_generator_emits_nothing_for_an_empty_registry():

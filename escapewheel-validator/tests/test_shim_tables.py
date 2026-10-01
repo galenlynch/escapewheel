@@ -3,12 +3,12 @@
 import pyarrow as pa
 import pyarrow.parquet as pq
 from escapewheel_reader import open_packet
+from packet_fixture import install_registry, read_registry
 
 from escapewheel_validator import Report, validate
 from escapewheel_validator.shim.tables import _check_column
 
-from .builders import add_extension, rewrite_table, verdicts_of
-from .conftest import install_registry, read_registry
+from .builders import add_extension, read_table, rewrite_table, verdicts_of, with_column
 
 
 def test_a_dictionary_column_satisfies_a_string_declaration():
@@ -30,18 +30,19 @@ def test_a_dictionary_over_the_wrong_value_type_is_still_refused():
 
 
 def test_equal_varying_columns_are_reported_at_info_only(packet_root):
-    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
-    index = intervals.schema.get_field_index("clock_id")
-    rewrite_table(packet_root, "intervals", intervals.set_column(index, "clock_id", pa.array([1, 2], type=pa.int32())))
+    intervals = read_table(packet_root, "intervals")
+    rewrite_table(packet_root, "intervals", with_column(intervals, "stop_tick", intervals["start_tick"]))
     report = validate(open_packet(packet_root))
     duplicated = [f for f in report.findings if f.check == "core.intervals.columns_duplicated"]
     assert [f.level for f in duplicated] == ["info"]
-    assert "interval_id" in duplicated[0].message and "clock_id" in duplicated[0].message
+    assert "start_tick" in duplicated[0].message and "stop_tick" in duplicated[0].message
     assert report.passed
 
 
 def test_equal_constant_columns_are_not_reported(packet_root):
-    """The fixture's `session_id` and `clock_id` both hold 1 in every interval."""
+    """Both units then hold one value in `sorting_run_id` and the same value in `curation_id`."""
+    units = read_table(packet_root, "units")
+    rewrite_table(packet_root, "units", with_column(units, "curation_id", units["sorting_run_id"]))
     report = validate(open_packet(packet_root))
     assert not any(f.check.endswith(".columns_duplicated") for f in report.findings)
 
@@ -87,8 +88,8 @@ def test_a_unit_that_is_not_a_ucum_code_fails_once_per_value(packet_root):
 
 
 def test_wrong_column_type_is_caught_before_any_query(packet_root):
-    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
-    narrowed = intervals.set_column(2, "start_tick", intervals.column("start_tick").cast(pa.int32()))
+    intervals = read_table(packet_root, "intervals")
+    narrowed = with_column(intervals, "start_tick", intervals.column("start_tick").cast(pa.int32()))
     rewrite_table(packet_root, "intervals", narrowed)
     report = validate(open_packet(packet_root))
     assert any(f.check == "schema.column_type" for f in report.findings)

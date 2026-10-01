@@ -3,11 +3,11 @@
 import json
 
 from escapewheel_reader import open_packet
+from packet_fixture import UNREAD_DIGEST
 
 from escapewheel_validator import validate
 
 from .builders import add_array, add_family_declaration, declare_analysis
-from .conftest import UNREAD_DIGEST
 
 
 def test_a_populated_foreign_key_requires_its_target_resource(packet_root):

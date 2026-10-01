@@ -32,7 +32,7 @@ def test_packet_owned_digests_are_checked(packet_root, algorithm):
     )
     assert report.passed
     verified = next(f for f in report.findings if f.check == "owned.verified")
-    assert verified.message.startswith("6 of 6") and verified.message.endswith("route: computed for all 6")
+    assert verified.counts == {"checked": 7, "matched": 7}
     assert {row[1:] for row in verified.rows} == {(algorithm, "computed")}, "each digest names its route"
 
 
@@ -81,7 +81,8 @@ def test_a_crc_prefix_digest_is_the_sha256_of_its_listing(packet_root):
     report = validate(open_packet(root), verification=Verification(checksums=True, external=False))
     assert "owned.digest" not in {f.check for f in report.findings}
     verified = next(f for f in report.findings if f.check == "owned.verified")
-    assert verified.message.startswith("9 of 9") and verified.message.endswith("route: computed for all 9")
+    assert verified.counts == {"checked": 10, "matched": 10}
+    assert {row[2] for row in verified.rows} == {"computed"}
 
 
 def test_an_empty_packet_owned_prefix_is_missing(packet_root):

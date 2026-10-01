@@ -171,14 +171,16 @@ Use it when the requirement binds the **consumer** rather than the packet. R41 Â
 
 ## Testing
 
-Tests build their own minimal packet in `tmp_path` (`tests/conftest.py`) rather than depending on
-`../fixtures/`, whose built packets are gitignored. That conftest is a
-near-copy of the reader's â€” **deliberate duplication, so both suites run standalone.** Keep it
-that way.
+Tests build a small packet in `tmp_path` rather than depending on the conformance corpus's built
+packets under `../fixtures/packets/`, which are gitignored. `../fixtures/shared/packet_fixture.py`
+writes that packet for this suite and the reader's, and pytest's `pythonpath` setting in
+`pyproject.toml` puts it on the import path, so the suite runs from a checkout of the monorepo and
+not from the package alone.
 
-The fixture's registry stands in for core: it declares only resources the core registry declares,
-each with fewer columns. A test that needs another resource adds the declaration itself.
-`tests/test_fixture_registry.py` holds the first half.
+The fixture's registry is the core registry cut down to the columns `tests/conftest.py` names:
+each kept column, key, reference and amendment group is core's own, and `core.intervals` keeps no
+`interval_kind`, since a kind names a resource only an extension declares. A test that needs a
+table core lacks, or a declaration that differs from core's, declares it itself.
 
 `tests/test_cli.py` goes through `escapewheel_reader.scripts.cli.main`, so a pass proves the
 entry-point wiring rather than just the handler.
