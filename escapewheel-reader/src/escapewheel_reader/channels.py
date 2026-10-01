@@ -1,20 +1,12 @@
-"""Resolve a channel index through the list its sorting run kept (Part 02 §12.2).
+"""The electrode a sorter's channel index names (Part 02 §12.2).
 
-A sorting drops bad channels before it runs, so a channel index it emits afterwards counts the
-channels it kept and not the probe's contacts. Read as a position in `core.electrodes`, such an
-index named the wrong electrode for 5,071 of 6,781 units on one real session, and 4,462 of those
-pointed at a plausible contact rather than at nothing (R83 §1) -- which is why the convention
-survived until something compared the two lists.
+- :func:`electrode_at` -- the electrode one index names, counting the channels its run kept.
+- :func:`kept_channels` -- each run's kept channels, in the order the run counted them.
+- :func:`runs_without_channels` -- the runs whose indices cannot be resolved.
+- :class:`ChannelsUndeclared` -- a run whose kept channels the packet does not record.
 
-`core.sorting_run_channels` is that list, in the run's own order, so an index resolves by counting
-rather than by guessing. :func:`kept_channels` reads it, :func:`electrode_at` performs the lookup,
-and :func:`runs_without_channels` names the runs no index can be resolved for. A packet whose runs
-declare no channels is conforming, and a writer that could not read the list was right to record
-nothing, so that gap is a fact about what the packet carries and never a reason to fail it
-(Part 02 §12.2).
-
-A unit's own peak contact needs none of this: `core.unit_electrodes.is_primary` carries it
-already, and resolving an index to arrive at the same electrode repeats work the writer did.
+An index counts the channels a sorter kept, not the probe's contacts, so reading it as a position
+in `core.electrodes` names the wrong electrode.
 """
 
 from __future__ import annotations

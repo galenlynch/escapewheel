@@ -1,8 +1,9 @@
-"""Parsing of ``packet.json``.
+"""Parse ``packet.json``, checking only what reading needs (Part 04 §10).
 
-The manifest is the packet's entry point: it declares which resources exist, where they
-live, which registries declare them, and which sessions the packet covers. A reader checks only
-what reading needs (Part 04 §10); the incorporated schema is the validator's.
+- :class:`Manifest` -- the parsed manifest: resources, sessions and registry bindings.
+- :class:`Resource` -- one resource entry, resolving its declaration on demand.
+- :class:`RegistryBinding` -- one entry of the manifest's `registries` map (Part 04 §8).
+- :func:`decode_json` -- UTF-8 JSON, refusing a repeated object member.
 """
 
 from __future__ import annotations

@@ -1,19 +1,12 @@
-"""Describe a dense array's axes and scaling from the packet's tables (Part 03 §6.3).
+"""What a dense array's axes and values mean, read from the packet's tables (Part 03 §6.3).
 
-Each axis declares its coordinates in one form in the table its declaration's `axes_resource`
-names: ticks on a clock, a numeric origin and step, a 1-D array of values, or labels naming rows
-of a resource. Reading them by hand has a plausible wrong answer at every step. A label table holds
-the labels of every array, and a core and an analysis array may share an `array_asset_id`, so an
-unscoped read labels one array's channels with another's; its rows are in storage order, not
-position order; a dependent axis stands for different rows at each position of the axis it depends
-on, so a waveform's third channel is a different contact for each unit; a null label is padding,
-which a fill or a cast turns into a row that exists; a rational step accumulates rounding if summed
-in floats; and scaling may be declared on the array or per channel but never both, so applying one
-without looking for the other double-scales or misses.
+- :func:`describe` -- an array's :class:`ArrayDescription`, reading no values.
+- :class:`ArrayDescription` -- one :class:`Axis` per dimension, and any :class:`Scaling`.
+- :class:`TickAxis`, :class:`NumericAxis`, :class:`IrregularAxis`, :class:`LabelledAxis` -- the
+  four forms an axis's coordinates take.
+- :class:`UnresolvableAxis` -- the declarations do not determine one answer.
 
-:func:`describe` resolves all of that once and returns plain numbers and Arrow tables. It needs
-neither Zarr nor any array library, so an xarray, SpikeInterface or DimensionalData adapter builds
-on it without re-reading the axis tables, and the choice between them stays downstream.
+Nothing here needs Zarr or an array library, so an adapter to one can build on it.
 """
 
 from __future__ import annotations

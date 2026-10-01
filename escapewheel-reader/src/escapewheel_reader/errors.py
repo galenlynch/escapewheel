@@ -1,4 +1,15 @@
-"""Exceptions raised when reading a packet."""
+"""Exceptions raised when reading a packet; each derives from :class:`PacketError`.
+
+- :class:`ManifestError` -- the manifest is absent, unparsable, or of the wrong shape.
+- :class:`RegistryUnavailable` -- a bound registry cannot be acquired or fails its digest.
+- :class:`ResourceNotFoundError`, :class:`ResourceUnreadableError` -- a resource is undeclared,
+  or does not resolve to readable bytes.
+- :class:`UnsupportedCodecError` -- an array uses a codec the installed Zarr cannot decode.
+- :class:`NoTimeOrigin` -- seconds were asked for and the packet declares no origin.
+- :class:`AmbiguousRun` -- several runs produced the same thing and none is preferred.
+- :class:`UnresolvableChannelIndex` -- a channel index names no electrode of its run.
+- :class:`UnresolvedSource` -- no resolution document locates a named source.
+"""
 
 from __future__ import annotations
 
@@ -75,7 +86,7 @@ class NoTimeOrigin(PacketError):
 class AmbiguousRun(PacketError):
     """Several runs produced the same thing and the packet does not say which to read.
 
-    Part 01 §2.4. Reading them all concatenated is the failure this prevents: two sortings of one
+    Part 01 §2.6. Reading them all concatenated is the failure this prevents: two sortings of one
     probe are two complete sets of units, so every count taken over both is wrong and nothing
     about the result says so. Picking the newest, or the first, produces numbers that cannot be
     compared with another consumer's.

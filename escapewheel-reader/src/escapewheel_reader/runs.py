@@ -1,25 +1,12 @@
-"""Which of several coexisting derived runs to read (R41).
+"""Which of several coexisting sortings, curations or models to read (Part 01 §2.6).
 
-A project re-sorts, re-curates and re-runs models over the same session, and the format lets
-the alternatives coexist: each unit records the sorting and curation that produced it, while
-its packet-assigned `unit_id` remains unique. Coexisting is the point and it is also the hazard
-— reading `core.units` without saying which result is current returns every alternative, and
-every count derived from it is wrong by however many units the other sorting found.
+- :func:`ambiguities` -- the purposes with several runs and no preference, or no recorded scope.
+- :func:`preferred_run` -- the run to read for one purpose.
+- :func:`preferences` -- the preferences the packet declares.
+- :func:`check` -- raise where a purpose is unresolved, and warn where it cannot be judged.
+- :class:`Ambiguity` -- one unresolved purpose.
 
-Part 01 §2.4 forbids resolving that silently. This is where the packet is asked, and it answers in
-three states rather than two:
-
-- **one run** for a purpose — the preference by construction, nothing to declare;
-- **several, with a preference** — `core.preferred_runs` says which;
-- **several, no preference** — refuse, and say which purpose is unresolved.
-
-The purpose is `(session_id, activity_type, scope)`. Scope is what a run is *about* — a probe,
-an array asset, a camera — and it is what separates twelve probes sorted once each from one
-probe sorted twice. A packet that does not record it gets a fourth answer, `undeterminable`,
-which Part 01 §2.4 requires be reported apart from the third: see :func:`ambiguities`.
-
-Imports are never alternatives: two imports into one packet supply disjoint groups of rows (Part 05
-§12), so an `import` run is in no purpose.
+A purpose is `(session_id, activity_type, scope)`; an `import` run is in none.
 """
 
 from __future__ import annotations
@@ -31,7 +18,7 @@ from typing import Any
 
 from .errors import AmbiguousRun
 
-#: Where the run log lives, and where a preference over it lives (R9 §2, Part 01 §2.4).
+#: Where the run log lives, and where a preference over it lives (R9 §2, Part 01 §2.6).
 RUNS = "core.processing_runs"
 
 #: The activity whose runs are never alternatives to one another (Part 05 §12).
@@ -90,7 +77,7 @@ def _rows(packet: Any, resource_id: str, columns: list[str]) -> list[dict[str, A
 
 
 def preferences(packet: Any) -> dict[tuple[int | None, str, str, str], int]:
-    """Return the declared preferences, keyed by purpose (Part 01 §2.4).
+    """Return the declared preferences, keyed by purpose (Part 01 §2.6).
 
     Parameters
     ----------
@@ -122,7 +109,7 @@ def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
     grouping that ignores scope reports twelve alternatives where there are none.
 
     A run whose `scope` is null is grouped alone and reported as undeterminable if its activity
-    has other runs, rather than assumed unique (Part 01 §2.4). An `import` run is skipped, since
+    has other runs, rather than assumed unique (Part 01 §2.6). An `import` run is skipped, since
     imports are not alternatives to one another (Part 05 §12).
 
     Parameters
@@ -210,7 +197,7 @@ def preferred_run(
     Raises
     ------
     AmbiguousRun
-        If several runs share the purpose and none is preferred (Part 01 §2.4).
+        If several runs share the purpose and none is preferred (Part 01 §2.6).
     KeyError
         If no run matches the purpose at all.
     """
@@ -232,11 +219,11 @@ def preferred_run(
         if declared is not None:
             return int(declared)
     if len(matching) == 1:
-        # Part 01 §2.4: exactly one run is the preference by construction.
+        # Part 01 §2.6: exactly one run is the preference by construction.
         return int(matching[0]["processing_run_id"])
     raise AmbiguousRun(
         f"{len(matching)} runs produced {activity_type!r} for {scope!r} and none is preferred; "
-        f"declare one in {PREFERENCES} (Part 01 §2.4)"
+        f"declare one in {PREFERENCES} (Part 01 §2.6)"
     )
 
 
@@ -248,8 +235,8 @@ def check(packet: Any, activities: Iterable[str] | None = None) -> None:
     probe and fixing them one error at a time is twelve round trips.
 
     **The two states are treated differently on purpose.** A packet that records scopes and
-    still has two runs for one of them is unresolved, and Part 01 §2.4 forbids choosing, so it
-    raises. A packet that records no scopes cannot be judged either way, and Part 01 §2.4 asks for
+    still has two runs for one of them is unresolved, and Part 01 §2.6 forbids choosing, so it
+    raises. A packet that records no scopes cannot be judged either way, and Part 01 §2.6 asks for
     that to be *reported* distinctly rather than refused -- the two call for different fixes,
     declare a preference against record the scopes, and an exception for both would send a
     writer to the wrong one.
@@ -293,7 +280,7 @@ def check(packet: Any, activities: Iterable[str] | None = None) -> None:
         lines = "\n  ".join(str(a) for a in unresolved)
         raise AmbiguousRun(
             f"the packet does not say which run to read:\n  {lines}\n"
-            f"declare a preference in {PREFERENCES} (Part 01 §2.4)"
+            f"declare a preference in {PREFERENCES} (Part 01 §2.6)"
         )
 
 

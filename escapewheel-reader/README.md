@@ -6,57 +6,102 @@
 
 Read Escapewheel packets: Parquet tables, Zarr v3 arrays, and the JSON manifest binding them.
 
-A packet is a directory. This package opens one, resolves its resources by dotted ID rather
-than by path, and hands back Arrow tables and Zarr arrays. It does not write packets and does
-not validate them — that is [escapewheel-validator](../escapewheel-validator). It checks only what
-reading needs (Part 04 §10): the manifest decodes, repeats no member or resource ID, and has the
-members it reads at their JSON types; and a bound registry, acquired only when a declaration is
-needed, matches its descriptor's digest.
+A packet is a directory or an object-store prefix. This package opens one, resolves its resources
+by dotted ID rather than by path, and returns Arrow tables and Zarr arrays. Writing a packet is
+`escapewheel-writer`'s job and validating one is [escapewheel-validator](../escapewheel-validator)'s.
 
-A relative `uri` is percent-decoded and its names appended to the packet root, or to its source's
-location, in any spelling RFC 3986 admits (Part 03 §4). One that is neither absolute nor a relative
-reference leaves the packet open and that resource unreadable, the error naming its ID.
+## Reading a packet
 
-Reading is deliberately not a validation boundary. Opening a packet, resolving references and
-discriminators, correlating sessions, and extension-aware analysis require neither a validation
-receipt nor the validator package. These operations interpret declarations without claiming that
-the registry or packet conforms; applications invoke validation separately when they need that
-claim.
+`open_packet` opens one packet. Functions taking the packet as their first argument then read it:
 
 ```python
-from escapewheel_reader import open_packet
+from escapewheel_reader import open_packet, spike_times, units
 
-packet = open_packet("session_packet/")
-packet.manifest.sessions  # external session names from packet.json
-trials = packet.intervals(session_id=1, interval_kind="task.trials")  # a pyarrow.Table
-spikes = packet.spike_times(unit_id=17)  # packet-assigned integer ID; pushed down, not scanned
-good_spikes = packet.spike_times(units=packet.units(quality_label="sua"))
-
-array = packet.array_resource("core.waveform_mean")
-array.shape, array.dtype, array.chunks, array.codecs  # no Zarr needed for any of this
-array.read((slice(0, 1),))  # this needs Zarr
+packet = open_packet("session_packet/")  # or "s3://bucket/prefix"
+good = units(packet, quality_label="sua")
+spikes = spike_times(packet, units=good)  # pyarrow.Table of t_tick and clock_id
 ```
 
-## What it costs to install
+The `Packet` methods of the same names delegate to these functions, so
+`packet.spike_times(units=good)` is the same call. `Packet` itself only resolves, reads and
+registers:
 
-The mandatory dependency closure is **jsonschema and pyarrow**, and that is the point rather
-than an accident. A complete read path exists without a SQL engine, which is what keeps a
-native reader viable in a language that has no embedded one — the reason Part 03 bans nested
-Parquet types. Everything heavier is an extra:
+```python
+packet.manifest.sessions  # the sessions the manifest declares
+packet.table("core.events", stream_id=1)  # any table, constraints pushed into the Parquet reader
+packet.sql("SELECT count(*) FROM core_units")  # DuckDB over the tables the query names
+packet.array_resource("core.waveform_mean").shape  # no Zarr needed to describe an array
+```
 
-| Extra | Brings | Needed for |
+The functions fall into three layers, by what they take:
+
+| layer | shape | examples |
 |---|---|---|
-| `sql` | DuckDB | `Packet.sql()`, `Packet.duckdb()`, and all validation |
-| `arrays` | Zarr | `ArrayResource.read()` only — shape, dtype, chunking and codecs are read from the store's own JSON |
-| `polars` | Polars | `TableResource.scan_polars()` |
+| kernels | arrays → arrays | `align(ticks, anchor_t, anchor_p, *, bound)` |
+| semantics | `(packet, table) → table` | `on_clock(packet, table)`, `seconds(packet, table)` |
+| access | `(packet, ...) → table` | `spike_times(packet, ...)`, `unit_windows(packet)`, `aligned_spikes(packet, ...)` |
 
-## Two handles
+Every table is a `pyarrow.Table`, so an access function's result feeds a semantics function, and
+either feeds Polars, pandas or DuckDB unchanged. These three lines are what
+`spike_times(packet, units=good, seconds=True)` does in one:
 
-`Resource` records what the manifest *says*. `TableResource` and `ArrayResource` read it.
-`Packet.table()` and `Packet.duckdb()` delegate to the first, `Packet.array_resource()` to the
-second; neither touches the filesystem itself. Both split their dependencies the same way: a
-table needs PyArrow to read and DuckDB only to query, an array needs nothing to describe and
-Zarr only to read.
+```python
+from escapewheel_reader import STORED, on_clock, seconds
+
+stored = spike_times(packet, units=good, clock=STORED)  # ticks as recorded, each with its clock_id
+aligned = on_clock(packet, stored)  # the same rows on the packet's reference clock
+timed = seconds(packet, aligned)  # with t_second from the session's time origin
+```
+
+The functions are free rather than methods because the table belongs to PyArrow and cannot carry
+methods of ours. `rate_of(packet, table)` is the one that returns a number: the rows' rate over
+the span they were observed for.
+
+Each exists because doing it by hand from the schema gives a plausible wrong answer: ticks from two
+clocks compared directly, a rate divided by the wrong span, or two sortings of one probe counted as
+one. The [design notes](docs/source/design.md) explain each.
+
+## Reading many packets
+
+`open_dataset` opens several packets and presents each table as one relation over all of them.
+An identifier is assigned within its packet, so every row of a session-scoped table carries a
+`session_key` saying which session it came from:
+
+```python
+from escapewheel_reader import open_dataset
+
+dataset = open_dataset(["packet_a/", "packet_b/"])
+every_unit = dataset.table("core.units")  # rows of both, with session_key and session_name
+dataset.duckdb(tables=["core.units"]).sql("SELECT session_key, count(*) FROM core_units GROUP BY 1")
+```
+
+## Reading checks only what reading needs
+
+Opening a packet checks that the manifest decodes, repeats no member or resource ID, and has the
+members the reader uses at their JSON types (Part 04 §10). A registry the packet binds is read
+only when a declaration is needed, and refused unless it matches its descriptor's digest. A
+resource whose `uri` is malformed stays unreadable while the rest of the packet opens, and the
+error names its ID.
+
+Nothing else is checked, so reading needs neither a validation receipt nor the validator. Run
+`escapewheel-validator` where you need the claim that a packet conforms.
+
+## Extras
+
+Without extras the package reads every table and describes every array, so a packet is fully
+readable with no SQL engine. Each extra adds a capability:
+
+| extra | provides |
+|---|---|
+| `sql` | SQL over a packet or dataset (`Packet.sql`, `Packet.duckdb`, `Dataset.duckdb`), and spike-to-event alignment |
+| `arrays` | an array's values; its shape, dtype, chunking and codecs need no extra |
+| `polars` | a table as a lazy Polars frame (`TableResource.scan_polars`) |
+
+## Resources and their handles
+
+`Resource` records what the manifest says about one resource. `TableResource` and `ArrayResource`
+read it: `Packet.table` and `Packet.duckdb` go through the first, and `Packet.array_resource`
+returns the second.
 
 ## Installation
 
@@ -74,11 +119,11 @@ packet.
 
 ## Development
 
-**Changing this package?** Read [CONTRIBUTING.md](CONTRIBUTING.md) first — it carries the two
-rules that decide what belongs here and what shape it takes, and the process for a specification
-defect found while implementing.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing this package. It gives the two rules that
+decide what belongs here and what shape it takes, and the process for a specification defect found
+while implementing.
 
-Please test your changes using the full linting and testing suite:
+Run the full linting and testing suite:
 
 ```bash
 ./scripts/run_linters_and_checks.sh -c

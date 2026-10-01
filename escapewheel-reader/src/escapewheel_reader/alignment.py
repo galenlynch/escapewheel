@@ -1,29 +1,12 @@
-"""Spikes against events: per-event windows, or one event per spike.
+"""Spikes against events, per event or per spike.
 
-Aligning spikes to an event is the most common question a spike table is asked, and R43
-withdrew the materialized table that would have answered one instance of it -- which puts the
-weight on the query being spellable. This is that spelling.
+- :func:`aligned_spikes` -- one row per (spike, event) pair, as a PSTH needs.
+- :func:`assigned_spikes` -- at most one row per spike, labelled with its preceding or nearest
+  event.
+- :func:`windows_disjoint` -- whether no spike falls in two windows, where the two agree.
+- :class:`ClockMismatch` -- spikes and events are counted on different clocks.
 
-Three operations, not one
--------------------------
-
-They are different questions and they return different rows. Naming them apart is the point;
-a flag would let the wrong one be selected by omission.
-
-- :func:`aligned_spikes` gives one row per **(spike, event) pair**. A spike inside two events'
-  windows appears twice, which is what a PSTH needs -- each event contributes its own window,
-  and a spike between two close licks belongs to both.
-- :func:`assigned_spikes` gives at most one row per **spike**, labelled with the event it
-  belongs to: ``preceding`` for the last event underway, ``nearest`` for the closest in either
-  direction. Measured on real licks at ±1 s, those two disagree about half the time.
-
-They coincide exactly when the windows are pairwise disjoint. That is why `aligned_spikes` can
-use an ASOF join without changing its answer, and why doing so unconditionally would be wrong:
-on 2,641 licks at ±1 s an ASOF join returns 58 M rows where the question has 224 M.
-
-Everything here runs on DuckDB, which is the optional `sql` extra. The equivalent PyArrow path
-is two `searchsorted` calls per unit against sorted trains, which implements the duplicating
-semantics by construction.
+Everything here runs on DuckDB, the optional `sql` extra.
 """
 
 from __future__ import annotations

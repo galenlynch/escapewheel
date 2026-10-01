@@ -47,6 +47,7 @@ templates_path = ["_templates"]
 exclude_patterns = []
 
 # -- MyST configuration -----------------------------------------------------
+myst_heading_anchors = 2
 myst_enable_extensions = [
     "colon_fence",  # ::: code blocks
     "deflist",  # Definition lists
@@ -72,6 +73,9 @@ napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 napoleon_include_init_with_doc = False
 napoleon_include_private_with_doc = False
+# A dataclass documents its fields in an Attributes section and autodoc documents them again as
+# members; fields render once as instance variables.
+napoleon_use_ivar = True
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

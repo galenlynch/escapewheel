@@ -1,19 +1,11 @@
-"""Working with columns that may be dictionary-encoded.
+"""Columns that may be dictionary-encoded, handled without branching.
 
-Parquet stores a low-cardinality string column as codes into a dictionary held once per row
-group, so a reader meets one wherever such a column is read without decoding -- which the
-validator's ordering scan does deliberately, since `core.events`, `core.trial_tags` and
-`core.session_experimenters` all sort on a string. These helpers take the dictionary where
-there is one and the column itself where there is not, so a caller does not branch.
+- :func:`values` -- a column's distinct values, from its dictionary where it has one.
+- :func:`where` -- offsets where a column equals a value, comparing codes where it is a dictionary.
+- :func:`constant` -- one repeated value as codes into a one-entry dictionary.
 
-Two operations remain unimplemented for a dictionary column whatever is done to it: Arrow
-cannot sort one, and `group_by` raises `Unifying differing dictionaries` across row groups
-until `Table.unify_dictionaries` reconciles them. Both fail loudly. Comparison, `is_in`,
-`unique` and filtering all work.
-
-The helpers are small; the reason they are shared is that the reader, the writer and the
-validator all meet the same edges, and a second implementation of any of them would differ
-silently.
+Arrow cannot sort a dictionary column, and `group_by` fails across row groups until
+`Table.unify_dictionaries` reconciles them.
 """
 
 from __future__ import annotations

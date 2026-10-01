@@ -1,13 +1,11 @@
-"""Where bytes are: a local directory or a prefix in an object store.
+"""Where bytes are: a local directory or a prefix in an object store (Part 00 §3.3).
 
-A packet's own resources travel because each is a **name** resolved against a root the reader
-supplies when it opens the packet, and Part 00 §3.3 names three forms that root may take -- a local
-directory, an object-store prefix, or a release manifest pointing at distributed assets.
-Resolving it as a filesystem path admits only the first, which is what this exists to fix.
+- :class:`Location` -- one place bytes can be read from, with any caller-supplied rewrite.
+- :func:`read_sources`, :func:`check_sources`, :func:`sources_schema` -- read and check a source
+  resolution document (Part 04 §5.5).
 
-Two things are kept apart here that the manifest's `uri` field runs together. A **location** is
-somewhere bytes can be fetched from. A declared URI is what the packet says, which is a location
-only once a root and any caller-supplied substitution have been applied to it.
+A declared `uri` is what the packet says; it becomes a location only once a root and any rewrite
+are applied to it.
 """
 
 from __future__ import annotations

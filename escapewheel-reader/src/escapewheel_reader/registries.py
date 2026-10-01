@@ -1,7 +1,11 @@
-"""Acquisition of the registry documents a packet binds (Part 04 §8, Part 03 §3.3).
+"""Acquire the registry documents a packet binds (Part 04 §8, Part 03 §3.3).
 
-A bound registry is read only from its descriptor's path and only after its digest matches:
-no bundled, caller-supplied, or remote copy may stand in for it.
+- :func:`acquire` -- one bound registry's bytes, verified against its descriptor's digest.
+- :func:`parse` -- verified bytes decoded for declaration lookup.
+- :func:`gunzip_member` -- exactly one gzip member, decompressed.
+
+A registry is read only from its descriptor's path and only after its digest matches; no other copy
+stands in for it.
 """
 
 from __future__ import annotations

@@ -1,16 +1,12 @@
-"""Resolve a discriminator: read the kind, take that resource's key, join.
+"""The rows a discriminator's kind names (Part 02 §8.3, Part 05 §13.4).
 
-Part 05 §13.4 asks a reader to offer this, and gives the reason: a discriminator nothing reads is a
-free-form name with extra steps, which is what became of the mechanism it replaces. Without an
-offer here every consumer of `core.intervals.interval_kind` writes the join again, and the join is
-not obvious -- it takes two shapes, and a paired value resolves in the kind of its own row.
-
-`declared` reports what a packet's own registries declare, core and extensions together, because a
-kind naming an extension table is the case the mechanism exists for. `kinds` says which values a
-table's rows actually name. `resolved` performs the join for one of them, and `unresolved` reports
-what a packet names and does not hold, at the level Part 02 §8.3 assigns: a defect where `resolves`
-is `required`, a fact where it is `optional`, and separately from a row that declares no kind at
-all, since recording the missing half and correcting what a value names are different repairs.
+- :func:`resolved` -- the rows of one kind joined to the resource it names.
+- :func:`specialised` -- :func:`resolved` for every kind the rows name.
+- :func:`kinds` -- each value the rows name, and how many name it.
+- :func:`declared` -- every discriminator the packet's registries declare, extensions included.
+- :func:`unresolved` -- what a packet names and does not hold, at its declared level.
+- :func:`registries` -- every table the packet's registries declare.
+- :class:`Discriminator`, :class:`Unresolved` -- what the functions return.
 """
 
 from __future__ import annotations

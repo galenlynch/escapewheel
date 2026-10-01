@@ -1,7 +1,9 @@
-"""Helpers for mapping packet identifiers onto SQL identifiers.
+"""Map packet identifiers onto SQL identifiers.
 
-Public because the validator emits SQL against the names this package registers, and the
-two must agree exactly. One implementation, so they cannot drift apart.
+- :func:`sql_name` -- the view name a dotted resource ID is registered under.
+- :func:`quote` -- a column name quoted for SQL.
+
+The validator emits SQL against the names this package registers, so both use these.
 """
 
 from __future__ import annotations

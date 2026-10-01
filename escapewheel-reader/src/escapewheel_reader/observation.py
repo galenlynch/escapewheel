@@ -1,52 +1,13 @@
-"""When something was observing, which is what a rate is divided by (R38).
+"""When something was observing, and rates over that span (Part 01 §2.3).
 
-A point process is not a set of times. It is a set of times *and* the region over which
-someone was looking, and without the second the first cannot be interpreted: a silent unit and
-an unrecorded one produce the same rows, and two units observed for different spans produce
-counts that must not be compared. R38 puts that region on the clock -- 13 rows for a session
-where a per-unit table wanted 6,781 -- and lets a unit or a stream refine it where something
-measured drift.
-
-Resolving the inheritance is the work here. A unit's window is its own where it declares one
-and its sorting run's clock's otherwise, and the two live in different tables, so a caller who
-reads only one gets an answer that is wrong for whichever units the other covers.
-
-Support is passed, not assumed
-------------------------------
-
-Nothing in this module defaults a denominator. :func:`rate` takes a count and a duration and
-neither has a default, because the error this exists to prevent is arithmetic rather than
-access: dividing by the wrong span, not failing to look one up. A packet that declares no
-windows gets an empty table and no invented extent, as Part 01 §2.2 requires of an absent origin.
-
-An accessor returning a single point process also *attaches* its support, so :func:`rate_of`
-can be called on the result without looking anything up. That convenience needs a guard rather
-than trust, because Arrow's schema metadata survives exactly the wrong operations:
-
-===============  ==============  ==================================
-operation        metadata kept   support still describes the rows
-===============  ==============  ==================================
-``filter``       yes             **no**
-``slice``        yes             **no**
-``concat``       yes             **no**
-``sort_by``      yes             yes
-``select``       yes             yes
-``group_by``     no              no
-===============  ==============  ==================================
-
-The three that keep it are the three that invalidate it, so an attached window would otherwise
-be silently wrong for a filtered table -- too long a denominator, and a rate too low. The
-attachment therefore carries the row count it was computed for, and :func:`support_of` refuses
-a table whose count has changed. Row count separates the cases exactly: it catches all three
-hazards and passes both harmless ones.
-
-Ticks are inclusive
--------------------
-
-`start_tick` and `stop_tick` are both observed (R18 §2, R38 §2.2), so a window covers
-``stop - start + 1`` ticks. Part 01 §2.2 and §4 describe a probe clock's `stop_tick` as "the
-recording's length", which reads as exclusive and disagrees with its own column definition by
-one tick; the writer follows the column definition.
+- :func:`unit_windows`, :func:`stream_windows`, :func:`clock_windows` -- when each unit, event
+  stream or clock was observing, with inheritance resolved.
+- :func:`observed_ticks`, :func:`observed_seconds` -- the total a set of windows covers.
+- :func:`rate` -- a count divided by a duration, neither defaulted.
+- :func:`rate_of` -- a table's rows divided by the support attached to it.
+- :func:`attach_support`, :func:`support_of` -- set and read that support.
+- :class:`StaleSupport` -- a table's rows changed after its support was attached.
+- :func:`register_views` -- `unit_observation` and `stream_observation` as DuckDB views.
 """
 
 from __future__ import annotations
@@ -111,7 +72,7 @@ def clock_windows(packet: Any, *, session_id: int | None = None, clock_id: int |
     -------
     pyarrow.Table
         Columns ``session_id``, ``clock_id``, ``start_tick`` and ``stop_tick``. Empty when the
-        packet declares none, which is conforming: Part 01 §2.4 makes this optional.
+        packet declares none, which Part 02 §12.5 forbids; no extent is invented for it.
     """
     if not _has(packet, CLOCK_INTERVALS):
         return pa.table(

@@ -1,6 +1,6 @@
 # Escapewheel Reader
 
-Tools to read escapewheel packets
+Read Escapewheel packets: Parquet tables, Zarr arrays, and the JSON manifest binding them.
 
 ## Installation
 
@@ -12,14 +12,20 @@ cd escapewheel/escapewheel-reader
 uv sync
 ```
 
-## Quick Start
+## Quick start
+
+Open a packet, then pass it to the functions that read it:
 
 ```python
-from escapewheel_reader import open_packet
+from escapewheel_reader import open_packet, spike_times, units
 
 packet = open_packet("session_packet/")
-trials = packet.intervals(session_id=1, interval_kind="task.trials")  # a pyarrow.Table
+good = units(packet, quality_label="sua")
+spikes = spike_times(packet, units=good)  # a pyarrow.Table, ticks on the reference clock
 ```
+
+`packet.units(...)` and `packet.spike_times(...)` are the same calls. For several packets at once,
+`open_dataset` presents them as one relation.
 
 ## Documentation
 
@@ -28,6 +34,7 @@ trials = packet.intervals(session_id=1, interval_kind="task.trials")  # a pyarro
 :caption: Contents
 
 api
+design
 ```
 
 ## Indices and tables

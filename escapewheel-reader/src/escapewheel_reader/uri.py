@@ -1,8 +1,12 @@
 """A manifest `uri`'s two forms, and the one spelling of a relative reference (Part 03 §4).
 
-A relative reference is resolved by appending its decoded names to a root, never by RFC 3986,
-Section 5, whose merge would drop a source location's last segment wherever it lacks a trailing
-`/`. Names are kept byte-exact, so a name in NFC and one in NFD stay distinct spellings here.
+- :func:`decode`, :func:`encode` -- a relative reference as the names it appends, and back.
+- :func:`canonical`, :func:`in_one_form` -- rewrite a reference in the one form, or check it is.
+- :func:`is_absolute` -- whether a `uri` has a scheme.
+- :func:`representable` -- whether a packet can hold a file under a name (Part 03 §11).
+
+A relative reference appends its decoded names to a root, never by RFC 3986's merge, and names are
+kept byte-exact.
 """
 
 from __future__ import annotations
@@ -11,7 +15,7 @@ import re
 from collections.abc import Iterable
 from urllib.parse import quote, unquote_to_bytes
 
-#: RFC 3986, Section 3.1's scheme, followed by `://`: what the manifest schemas treat as absolute.
+#: RFC 3986, Section 3.1's scheme, followed by ``://``, which is what the manifest schemas treat as absolute.
 ABSOLUTE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 
 #: One RFC 3986, Section 3.3 segment of at least one pchar, in any spelling RFC 3986 admits.

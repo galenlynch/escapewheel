@@ -1,15 +1,14 @@
 """Many packets presented as one relation (R86).
 
-`open_packet` gives one packet's own tables under their own names, which is what a consumer of
-one session wants and what Part 05 §4.3 makes unsafe to concatenate: an assigned identifier is
-unique within its packet and means nothing outside it, so two packets both hold `unit_id` 0 and
-neither value names the other's unit.
+- :func:`open_dataset` -- open several packets as a :class:`Dataset`.
+- :class:`Dataset` -- each session-scoped table as the union of every packet's rows, by
+  :meth:`~Dataset.table` or as DuckDB views from :meth:`~Dataset.duckdb`.
+- :class:`Session` -- one packet's session, and the ``session_key`` the dataset gave it.
+- :func:`session_scoped` -- the tables a registry scopes to a session.
+- :class:`MultiSessionUnresolved` -- a scoped table cannot say which session a row is from.
 
-A dataset is the second entry point. It opens any number of packets, gives every session in them
-a **discriminator** drawn from provenance rather than from a label, and registers each
-session-scoped table as the union of what the packets hold with that discriminator projected
-alongside. The shape does not depend on how many packets are open, so an analysis written
-against one session and later pointed at twenty meets the same relation.
+An identifier is assigned within its packet, so rows from two packets are told apart by
+``session_key``, never by their identifiers.
 """
 
 from __future__ import annotations

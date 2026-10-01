@@ -147,3 +147,4 @@ scratch/
 # Claude
 .claude/
 
+docs/source/generated/

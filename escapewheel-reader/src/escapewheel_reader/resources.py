@@ -1,12 +1,9 @@
-"""Readable handles for the resources a manifest declares.
+"""Handles that read a resource the manifest declares.
 
-A :class:`~escapewheel_reader.manifest.Resource` records what the manifest says. The classes
-here bind one to a packet root and read it.
-
-:class:`TableResource` needs PyArrow. :class:`ArrayResource` needs nothing at all to answer
-what an array is -- a Zarr array declares its shape, chunking and codecs in a JSON document
-beside the chunks -- and Zarr only to read values. The array path costs what it uses, the way
-DuckDB does behind the `sql` extra.
+- :class:`TableResource` -- read a table into Arrow, scan it lazily in Arrow or Polars, or register
+  it with DuckDB.
+- :class:`ArrayResource` -- an array's shape, chunking and codecs without Zarr, and its values with
+  Zarr.
 """
 
 from __future__ import annotations

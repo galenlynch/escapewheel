@@ -1,4 +1,12 @@
-"""Checked access to the incorporated physical-profile descriptor."""
+"""The physical-profile descriptor this package carries, checked once on first use.
+
+- :func:`physical_profile` -- the checked descriptor.
+- :func:`interface_for` -- the physical interface for one logical kind.
+- :func:`variant_for_zarr_format` -- the descriptor variant a Zarr format version selects.
+- :func:`parquet_floor`, :func:`zarr_floor_admits` -- the reader floors (Part 03 §6.4).
+- :func:`physical_profile_schema` -- the schema the descriptor is checked against.
+- :class:`PhysicalProfileError` -- the descriptor is malformed or inconsistent.
+"""
 
 from __future__ import annotations
 

@@ -1,8 +1,10 @@
-"""The order a table is stored in, which the physical-profile descriptor declares.
+"""The order a table is stored in, as the physical-profile descriptor declares it (Part 03 §5.4).
 
-A table is stored in its primary key's order unless the descriptor's table interface names it in
-`overriding_orders` (Part 03 §5.4). A writer emits the order and a validator establishes it (Part 03
-§5.3), and both read it here, from the descriptor this package copies.
+- :func:`stored_order` -- the columns a resource is stored by.
+- :func:`overridden` -- the descriptor's overriding order for a resource, or None.
+
+A table is stored in its primary key's order unless the descriptor overrides it. The writer emits
+that order and the validator checks it, both through this module.
 """
 
 from __future__ import annotations
