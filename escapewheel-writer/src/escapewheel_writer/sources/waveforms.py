@@ -28,7 +28,7 @@ from numpy.typing import NDArray
 
 from ..errors import SourceDefect, SourceFault
 from ..notes import Note, NoteCode
-from .sorter import STREAM, SortedStream
+from .sorter import STREAM_FOLDER, SortedStream
 from .store import SourceStore, source_root
 from .zarr_compat import DenseV2, attrs, attrs_at
 
@@ -202,7 +202,7 @@ class WaveformSource:
         for child in sorted(self.root.iterdir()):
             if not child.is_dir() or child.suffix != ".zarr":
                 continue
-            if matched := STREAM.match(child.stem):
+            if matched := STREAM_FOLDER.match(child.stem):
                 found.append(SortedStream(path=child, **matched.groupdict()))
         if self.experiment is not None:
             found = [s for s in found if s.experiment == self.experiment]

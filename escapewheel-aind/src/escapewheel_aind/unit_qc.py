@@ -22,9 +22,8 @@ import numpy as np
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.errors import SourceDefect, UnsupportedEncoding
 from escapewheel_writer.notes import Note
-from escapewheel_writer.sources.nwb import _clean
-from escapewheel_writer.sources.sorter import STREAM as STREAM_NAME
-from escapewheel_writer.sources.sorter import SortedStream
+from escapewheel_writer.sources.nwb import clean
+from escapewheel_writer.sources.sorter import STREAM_FOLDER, SortedStream
 from escapewheel_writer.sources.store import SourceStore, source_root
 from escapewheel_writer.sources.waveforms import ANALYZERS
 from numpy.typing import NDArray
@@ -174,7 +173,7 @@ class UnitQCSource:
         for child in sorted(self.root.iterdir()):
             if not child.is_dir() or child.suffix != ".zarr":
                 continue
-            if matched := STREAM_NAME.match(child.stem):
+            if matched := STREAM_FOLDER.match(child.stem):
                 found.append(SortedStream(path=child, **matched.groupdict()))
         if self.experiment is not None:
             found = [s for s in found if s.experiment == self.experiment]
@@ -299,7 +298,7 @@ class UnitQCSource:
             labels = self.nwb.array("units/ks_unit_id")
             rows: dict[tuple[str, str], int] = {}
             for row, (device, label) in enumerate(zip(devices, labels, strict=True)):
-                key = (str(_clean(device)), _label(label))
+                key = (str(clean(device)), _label(label))
                 if key in rows:
                     raise SourceDefect(
                         f"{self.nwb.root}/units holds unit {key[1]} of {key[0]} twice",

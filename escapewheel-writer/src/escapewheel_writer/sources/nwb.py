@@ -6,6 +6,7 @@
   contact, shared by every adapter reading the file.
 - :func:`ucum_code` -- the UCUM code for an NWB `unit` attribute.
 - :data:`ABSENT` -- the spellings an NWB writes where a value is absent.
+- :func:`clean` -- a source value as a typed column takes it, absence as null.
 
 The adapter emits no units or spikes: an NWB stores spike times as float seconds and ticks are not
 fitted from them, so units and spikes come from the sorter. Times on a clock other than the one
@@ -72,7 +73,7 @@ def _one(values: NDArray[Any]) -> str | None:
     return None if text in ABSENT else text
 
 
-def _clean(value: Any) -> Any:
+def clean(value: Any) -> Any:
     """Map a source value into a typed core column, turning absence into null."""
     if isinstance(value, bytes):
         value = value.decode()
@@ -81,7 +82,7 @@ def _clean(value: Any) -> Any:
     if isinstance(value, float):
         return None if math.isnan(value) else value
     if isinstance(value, np.generic):
-        return _clean(value.item())
+        return clean(value.item())
     return value
 
 
@@ -233,7 +234,7 @@ class NWBSource(Compensates):
     # Not `core.unit_coordinates` or its values. Placing a unit needs the sorter's own label for
     # it, and no column base NWB defines carries one -- `units/id` is the DynamicTable row number,
     # which is not the sorter's label. A dialect that writes the label declares those two
-    # resources and supplies `_unit_identity`.
+    # resources and supplies `unit_identity`.
 
     #: Part 01 §3.24: the unit every coordinate this adapter writes is in. No NWB states one; what
     #: makes this the packet's answer is that this adapter passed the values through unconverted,
@@ -408,11 +409,11 @@ class NWBSource(Compensates):
             return np.empty(0)
         return self.store.array(path)
 
-    def _attrs(self, path: str = "") -> dict[str, Any]:
+    def attrs(self, path: str = "") -> dict[str, Any]:
         """Read one node's attributes."""
         return self.store.attrs(path)
 
-    def _table(self, path: str) -> dict[str, NDArray[Any]]:
+    def table(self, path: str) -> dict[str, NDArray[Any]]:
         """Read an hdmf table's row-aligned columns, skipping any this package will not decode.
 
         **A column an `<name>_index` declares ragged is not read.** Its rows are runs rather
@@ -532,7 +533,7 @@ class NWBSource(Compensates):
         reference = _one(self._array("timestamps_reference_time"))
         metadata = {
             "nwb_identifier": _one(self._array("identifier")),
-            "nwb_version": self._attrs().get("nwb_version"),
+            "nwb_version": self.attrs().get("nwb_version"),
             "lab": _one(self._array("general/lab")),
             "protocol": _one(self._array("general/protocol")),
             "timestamps_reference_time": reference,
@@ -574,15 +575,15 @@ class NWBSource(Compensates):
         found: dict[str, dict[str, Any]] = {}
         attached = self._attachment()
         for name in self.store.members("general/devices"):
-            described = self._attrs(f"general/devices/{name}")
-            identity = self._device_identity(described)
+            described = self.attrs(f"general/devices/{name}")
+            identity = self.device_identity(described)
             serial = identity["serial_number"]
             attachment = attached.get(name) or {}
             row = {
                 "device_id": self.prefix + name,
                 "session_id": self.session_id,
                 "device_name": self.prefix + name,
-                "manufacturer": _clean(described.get("manufacturer")),
+                "manufacturer": clean(described.get("manufacturer")),
                 "model": identity["model"],
                 "serial_number": serial,
                 "parent_device_id": attachment.get("parent_device_id"),
@@ -617,16 +618,16 @@ class NWBSource(Compensates):
         """`core.devices`, computed once: it reads the store and the attachment file."""
         return self._devices
 
-    def _device_identity(self, described: Mapping[str, Any]) -> dict[str, Any]:
+    def device_identity(self, described: Mapping[str, Any]) -> dict[str, Any]:
         """Return what a `Device` states about the object it names: model, serial, and the rest.
 
         Core 2.9.0 declares all three as attributes, so that is where they are read. A producer
         that leaves them unset and packs the same facts into `description` needs a dialect.
         """
-        description = _clean(described.get("description"))
+        description = clean(described.get("description"))
         return {
-            "model": _clean(described.get("model_number")) or _clean(described.get("model_name")),
-            "serial_number": _clean(described.get("serial_number")),
+            "model": clean(described.get("model_number")) or clean(described.get("model_name")),
+            "serial_number": clean(described.get("serial_number")),
             "metadata": {"description": description} if description else None,
         }
 
@@ -634,8 +635,8 @@ class NWBSource(Compensates):
         """Every NWB Device name mapped to the `core.devices` row that covers it."""
         by_name = {}
         for name in self.store.members("general/devices"):
-            described = self._attrs(f"general/devices/{name}")
-            by_name[name] = self._device_identity(described)["serial_number"]
+            described = self.attrs(f"general/devices/{name}")
+            by_name[name] = self.device_identity(described)["serial_number"]
         rows = {row["serial_number"]: row for row in self.devices() if row["serial_number"]}
         named = {row["device_name"]: row for row in self.devices()}
         return {name: rows.get(serial) or named.get(self.prefix + name) for name, serial in by_name.items()}
@@ -652,7 +653,7 @@ class NWBSource(Compensates):
         for name in self.store.members("general/extracellular_ephys"):
             if name == "electrodes":
                 continue
-            described = self._attrs(f"general/extracellular_ephys/{name}")
+            described = self.attrs(f"general/extracellular_ephys/{name}")
             linked = [
                 link["path"].rsplit("/", 1)[-1]
                 for link in described.get("zarr_link", [])
@@ -668,7 +669,7 @@ class NWBSource(Compensates):
                     "probe_type": device["model"] if device else None,
                     "manufacturer": device["manufacturer"] if device else None,
                     "serial_number": device["serial_number"] if device else None,
-                    "target_region": _clean(described.get("location")),
+                    "target_region": clean(described.get("location")),
                     "metadata": {"description": described["description"]} if described.get("description") else None,
                 }
             )
@@ -683,7 +684,7 @@ class NWBSource(Compensates):
 
     def electrodes(self) -> list[dict[str, Any]]:
         """`core.electrodes`, one row per recorded contact."""
-        columns = self._table("general/extracellular_ephys/electrodes")
+        columns = self.table("general/extracellular_ephys/electrodes")
         if not columns:
             return []
         carried = self.CARRIED_ELECTRODE
@@ -697,27 +698,25 @@ class NWBSource(Compensates):
             )
         rows = []
         for index, electrode_id in enumerate(self._electrode_ids(columns)):
-            metadata = {name: _clean(columns[name][index]) for name in carried if name in columns}
+            metadata = {name: clean(columns[name][index]) for name in carried if name in columns}
             rows.append(
                 {
                     "electrode_id": electrode_id,
                     "session_id": self.session_id,
                     "probe_id": self.prefix + str(columns["group_name"][index]),
-                    "local_electrode_label": self._local_electrode_label(columns, index),
-                    "local_channel_label": _clean(columns["channel_name"][index])
-                    if "channel_name" in columns
-                    else None,
-                    "impedance_ohm": _clean(columns["imp"][index]) if "imp" in columns else None,
+                    "local_electrode_label": self.local_electrode_label(columns, index),
+                    "local_channel_label": clean(columns["channel_name"][index]) if "channel_name" in columns else None,
+                    "impedance_ohm": clean(columns["imp"][index]) if "imp" in columns else None,
                     "metadata": {k: v for k, v in metadata.items() if v is not None} or None,
                 }
             )
         return rows
 
-    def _local_electrode_label(self, columns: Mapping[str, NDArray[Any]], index: int) -> str | None:
+    def local_electrode_label(self, columns: Mapping[str, NDArray[Any]], index: int) -> str | None:
         """Return a contact's own label; None, because base NWB names only its group."""
         return None
 
-    def _signal_device_id(self, name: str) -> str | None:
+    def signal_device_id(self, name: str) -> str | None:
         """Return the instrument that made a stream; None, since base NWB links it to no Device."""
         return None
 
@@ -735,13 +734,13 @@ class NWBSource(Compensates):
         the same position split in two: the parent carries the annotation and the child one row
         per axis.
         """
-        columns = self._table("general/extracellular_ephys/electrodes")
+        columns = self.table("general/extracellular_ephys/electrodes")
         if not columns:
             return []
         found = []
         for index, electrode_id in enumerate(self._electrode_ids(columns)):
             for frame, axes in self.FRAME_AXES.items():
-                values = tuple(_clean(columns[axis][index]) if axis in columns else None for axis in axes)
+                values = tuple(clean(columns[axis][index]) if axis in columns else None for axis in axes)
                 if all(value is None for value in values):
                     continue
                 found.append(
@@ -750,7 +749,7 @@ class NWBSource(Compensates):
                             "electrode_id": electrode_id,
                             "coordinate_frame": frame,
                             "coordinate_basis": self.FRAME_BASIS[frame],
-                            **self._annotation(columns, index, frame),
+                            **self.annotation(columns, index, frame),
                         },
                         values,
                     )
@@ -789,8 +788,8 @@ class NWBSource(Compensates):
     def _populated_frames(self) -> list[str]:
         """Return the frames this file states a coordinate in, in `FRAME_AXES` order."""
         named = {
-            *self._table("general/extracellular_ephys/electrodes"),
-            *self._table("units"),
+            *self.table("general/extracellular_ephys/electrodes"),
+            *self.table("units"),
         }
         return [frame for frame, axes in self.FRAME_AXES.items() if any(axis in named for axis in axes)]
 
@@ -831,13 +830,13 @@ class NWBSource(Compensates):
             for index, axis in enumerate(self.FRAME_AXES[frame])
         ]
 
-    def _annotation(self, columns: Mapping[str, Any], index: int, frame: str) -> dict[str, Any]:
+    def annotation(self, columns: Mapping[str, Any], index: int, frame: str) -> dict[str, Any]:
         """Return a coordinate's atlas annotation; empty, since base NWB declares no atlas frame."""
         return {}
 
     # -- units, which this file describes but does not date -----------------------------
 
-    def _unit_identity(self) -> list[tuple[int, dict[str, Any]]]:
+    def unit_identity(self) -> list[tuple[int, dict[str, Any]]]:
         """Return NWB unit rows paired with the build's unit identity, in row order.
 
         Empty: no column base NWB declares carries the sorter's label, and `units/id` is the row
@@ -847,15 +846,15 @@ class NWBSource(Compensates):
 
     def _unit_positions(self) -> list[tuple[dict[str, Any], tuple[float | None, ...]]]:
         """Each unit coordinate paired with its CCF values, as `_electrode_positions` does."""
-        paired = self._unit_identity()
+        paired = self.unit_identity()
         if not paired or not self.UNIT_AXES:
             return []
-        columns = self._table("units")
+        columns = self.table("units")
         if not any(axis in columns for axis in self.UNIT_AXES):
             return []
         found = []
         for index, identity in paired:
-            values = tuple(_clean(columns[axis][index]) if axis in columns else None for axis in self.UNIT_AXES)
+            values = tuple(clean(columns[axis][index]) if axis in columns else None for axis in self.UNIT_AXES)
             if all(value is None for value in values):
                 continue
             found.append(
@@ -865,7 +864,7 @@ class NWBSource(Compensates):
                         **identity,
                         "coordinate_frame": self.UNIT_FRAME,
                         "coordinate_basis": self.UNIT_BASIS,
-                        **self._annotation(columns, index, self.UNIT_FRAME),
+                        **self.annotation(columns, index, self.UNIT_FRAME),
                     },
                     values,
                 )
@@ -875,7 +874,7 @@ class NWBSource(Compensates):
     def unit_coordinates(self) -> list[dict[str, Any]]:
         """`core.unit_coordinates`, a unit's position per populated frame (R28).
 
-        Empty without `_unit_identity` and `UNIT_AXES`. Where a subclass supplies both, a unit
+        Empty without `unit_identity` and `UNIT_AXES`. Where a subclass supplies both, a unit
         whose coordinates are all absent still gets no row.
         """
         return [row for row, _values in self._unit_positions()]
@@ -979,7 +978,7 @@ class NWBSource(Compensates):
                     "resource_id": f"core.{self.prefix}{name}",
                     # Part 01 §3.17: which instrument made this array. Read from the same description
                     # `_signal_devices` declares the device from, so the two cannot disagree.
-                    "device_id": self._signal_device_id(name),
+                    "device_id": self.signal_device_id(name),
                     # No `array_asset_name`: Part 02 §8.2's rule for a clock holds for an asset
                     # too -- the name is what the identifier stands for, and the numbering fills
                     # it from exactly that where a row leaves it unset (R53 §2.5). A source's own
@@ -989,7 +988,7 @@ class NWBSource(Compensates):
                     # device row is built from.
                     "clock_id": self._dispatch_clock_id(name),
                     "sample_rate_hz": round(rate, 6) if rate else None,
-                    "unit": ucum_code(str(self._attrs(f"acquisition/{name}/data").get("unit") or "") or None),
+                    "unit": ucum_code(str(self.attrs(f"acquisition/{name}/data").get("unit") or "") or None),
                 }
             )
         return rows
@@ -1093,7 +1092,7 @@ class NWBSource(Compensates):
                     "event_stream_name": self.prefix + name,
                     "event_type": name.removesuffix("_time"),
                     "clock_id": self.clock.clock_id,
-                    "metadata": {"description": self._attrs(f"acquisition/{name}").get("description")},
+                    "metadata": {"description": self.attrs(f"acquisition/{name}").get("description")},
                 }
             )
         for column, kind in self._trial_event_columns():
@@ -1111,7 +1110,7 @@ class NWBSource(Compensates):
 
     def _trial_event_columns(self) -> list[tuple[str, str]]:
         """Trial columns that carry a moment, in the order `TRIAL_EVENTS` names them."""
-        columns = self._table("intervals/trials")
+        columns = self.table("intervals/trials")
         return [(name, kind) for name, kind in self.TRIAL_EVENTS.items() if name in columns]
 
     def events(self) -> list[dict[str, Any]]:
@@ -1135,7 +1134,7 @@ class NWBSource(Compensates):
                     "t_tick": int(tick),
                 }
                 if varies and payloads is not None:
-                    row["payload"] = {"value": _clean(payloads[position])}
+                    row["payload"] = {"value": clean(payloads[position])}
                 rows.append(row)
         rows.extend(self._trial_events())
         return rows
@@ -1147,7 +1146,7 @@ class NWBSource(Compensates):
         there, and no event happened, so no row is emitted. That is why these cannot simply be
         columns on `core.trials`: absence is a fact about the trial, not a null to carry.
         """
-        columns = self._table("intervals/trials")
+        columns = self.table("intervals/trials")
         if not columns:
             return []
         rows = []
@@ -1176,7 +1175,7 @@ class NWBSource(Compensates):
                 code=SourceFault.NO_INTERVAL_KIND,
                 where=CORE_INTERVALS,
             )
-        columns = self._table("intervals/trials")
+        columns = self.table("intervals/trials")
         if not columns:
             return []
         for required in ("start_time", "stop_time"):
@@ -1295,4 +1294,4 @@ def _resolve(root: Path) -> Path:
     )
 
 
-__all__ = ["ABSENT", "NWBSource"]
+__all__ = ["ABSENT", "NWBSource", "clean"]

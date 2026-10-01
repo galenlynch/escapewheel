@@ -37,13 +37,13 @@ Four of the subclass's choices rest on measurements.
 - `DEVICE_DESCRIPTION` bounds the serial number explicitly. A lazy `.+?` running to `$` swallowed
   the description after it, and put "20403319544 - Description: duplicate of PRB2_1_2_0640_0" into
   the serial-number column for every probe.
-- `_device_identity` parses the description because the pipeline sets none of the three `Device`
+- `device_identity` parses the description because the pipeline sets none of the three `Device`
   attributes that NWB core 2.9.0 declares for a model and a serial number. On the ten-probe session,
   0 of 10 devices set one.
-- `_local_electrode_label` treats `electrode_name` as a label and not an identifier. The column
+- `local_electrode_label` treats `electrode_name` as a label and not an identifier. The column
   held 1,920 distinct values over 4,608 rows, because the shanks of a quad-base probe reuse the
   numbering.
-- `_unit_identity` joins on `(device_name, ks_unit_id)` because a sorter's label alone does not
+- `unit_identity` joins on `(device_name, ks_unit_id)` because a sorter's label alone does not
   identify a unit. The twelve-probe session has 810 distinct labels across 6,781 units, sorted one
   probe per run.
 

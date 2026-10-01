@@ -86,7 +86,7 @@ def test_the_index_beside_a_ragged_column_is_still_read(nwb, harp):
     """It is one value per row, which is what makes the column beside it ragged."""
     _units(nwb, refuses=False)
     source = NWBSource(nwb, reference_clock=harp.record(), zone=PACIFIC, interval_kind=KIND)
-    columns = source._table("units")
+    columns = source.table("units")
     assert "spike_times" not in columns
     assert columns["spike_times_index"].tolist() == [3]
 

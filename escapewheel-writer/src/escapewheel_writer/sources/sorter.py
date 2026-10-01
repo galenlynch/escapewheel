@@ -2,7 +2,7 @@
 
 - :class:`SorterSource` -- a `curated/` tree as records, and its spikes as Arrow batches.
 - :class:`SortedStream` -- one curated stream folder, with its name parsed.
-- :data:`STREAM` -- the pattern a stream folder's name follows.
+- :data:`STREAM_FOLDER` -- the pattern a stream folder's name follows.
 - :data:`PROJECTION` -- a mapping from a source's quality label to the closed set that
   `core.units.quality_label` takes, or to null where no member fits.
 - :data:`LABEL_SOURCES` -- a mapping from each per-unit label file to the `source` of its labels.
@@ -50,7 +50,7 @@ from .zarr_compat import attrs, attrs_at, read_array
 
 #: ``experiment1_Record Node 109#Neuropix-PXI-100.50720-1_recording1``. The probe token holds
 #: no underscore, which is what lets the recording suffix be split off unambiguously.
-STREAM = re.compile(
+STREAM_FOLDER = re.compile(
     r"^(?P<experiment>experiment\d+)_Record Node (?P<node>\d+)#(?P<probe>[^_]+)_(?P<recording>recording\d+)$"
 )
 
@@ -143,7 +143,7 @@ class SortedStream:
 
 def _parse(path: Path) -> SortedStream:
     """Parse a curated folder name, or refuse it."""
-    found = STREAM.match(path.name)
+    found = STREAM_FOLDER.match(path.name)
     if not found:
         raise SourceDefect(
             f"{path.name} is not a curated stream folder name", code=SourceFault.STREAM_NAME, where=path.name
@@ -1016,4 +1016,12 @@ class SorterSource:
         return {**{resource: len(rows) for resource, rows in self.records().items()}, **self.stream_rows()}
 
 
-__all__ = ["DESIGNATED", "LABEL_SOURCES", "PROJECTION", "STREAM_WORKERS", "SortedStream", "SorterSource"]
+__all__ = [
+    "DESIGNATED",
+    "LABEL_SOURCES",
+    "PROJECTION",
+    "STREAM_FOLDER",
+    "STREAM_WORKERS",
+    "SortedStream",
+    "SorterSource",
+]

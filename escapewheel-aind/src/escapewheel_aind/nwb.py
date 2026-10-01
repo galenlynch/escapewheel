@@ -17,7 +17,7 @@ from typing import Any, ClassVar
 from escapewheel_reader.resource_ids import CORE_UNIT_COORDINATE_VALUES, CORE_UNIT_COORDINATES
 from escapewheel_writer.declaration import FILES, FLIGHT, STREAM
 from escapewheel_writer.notes import Note
-from escapewheel_writer.sources.nwb import NWBSource, _clean
+from escapewheel_writer.sources.nwb import NWBSource, clean
 
 from .notes import AindNote
 
@@ -110,7 +110,7 @@ class AindNWBSource(NWBSource):
     #: identity the build assigned, so the build must supply it (Part 12 §4).
     NEEDS: ClassVar[tuple[str, ...]] = (*NWBSource.NEEDS, "units")
 
-    def _device_identity(self, described: Mapping[str, Any]) -> dict[str, Any]:
+    def device_identity(self, described: Mapping[str, Any]) -> dict[str, Any]:
         """Return the model and serial this pipeline packs into a Device's description.
 
         It sets none of the three attributes core 2.9.0 declares for them, so the sentence is
@@ -127,7 +127,7 @@ class AindNWBSource(NWBSource):
             "metadata": {"description": parsed["description"]} if parsed["description"] else None,
         }
 
-    def _local_electrode_label(self, columns: Mapping[str, Any], index: int) -> str | None:
+    def local_electrode_label(self, columns: Mapping[str, Any], index: int) -> str | None:
         """Return this pipeline's own name for a contact, which repeats and so cannot identify one.
 
         The shanks of a quad-base probe reuse the numbering, so it is a label and not an
@@ -135,10 +135,10 @@ class AindNWBSource(NWBSource):
         """
         if "electrode_name" not in columns:
             return None
-        value = _clean(columns["electrode_name"][index])
+        value = clean(columns["electrode_name"][index])
         return None if value is None else str(value)
 
-    def _signal_device_id(self, name: str) -> str | None:
+    def signal_device_id(self, name: str) -> str | None:
         """Return the instrument a signal's description names, or None where it names none.
 
         Part 01 §3.17 asks a writer to record which instrument made an array, and this file says so
@@ -146,10 +146,10 @@ class AindNWBSource(NWBSource):
         place its version is stated; this is the join.
         """
         self.compensate("nwb.signal_device_declared")
-        matched = SIGNAL_DEVICE.search(str(self._attrs(f"acquisition/{name}").get("description", "")))
+        matched = SIGNAL_DEVICE.search(str(self.attrs(f"acquisition/{name}").get("description", "")))
         return self.prefix + matched["device"] if matched else None
 
-    def _annotation(self, columns: Mapping[str, Any], index: int, frame: str) -> dict[str, Any]:
+    def annotation(self, columns: Mapping[str, Any], index: int, frame: str) -> dict[str, Any]:
         """Return the atlas annotation for one coordinate row (R59 §2.1).
 
         Only an atlas frame carries one, the frame being the space the structure id is numbered in
@@ -159,16 +159,16 @@ class AindNWBSource(NWBSource):
             return {}
         found: dict[str, Any] = {}
         for name in self.REGION_ID:
-            if name in columns and (value := _clean(columns[name][index])) is not None:
+            if name in columns and (value := clean(columns[name][index])) is not None:
                 found["region_id"] = int(value)
                 break
         for name in self.REGION_LABEL:
-            if name in columns and (value := _clean(columns[name][index])) is not None:
+            if name in columns and (value := clean(columns[name][index])) is not None:
                 found["region_label"] = str(value)
                 break
         return found
 
-    def _unit_identity(self) -> list[tuple[int, dict[str, Any]]]:
+    def unit_identity(self) -> list[tuple[int, dict[str, Any]]]:
         """Return NWB unit rows paired with the identity the build assigned them, in row order.
 
         The join is `(device_name, ks_unit_id)`: the probe plus the sorter's own label, which this
@@ -182,7 +182,7 @@ class AindNWBSource(NWBSource):
         """
         if not self.units:
             return []
-        columns = self._table("units")
+        columns = self.table("units")
         if not columns or "ks_unit_id" not in columns or "device_name" not in columns:
             self.notes.append(
                 Note("units: no ks_unit_id/device_name, so no unit coordinate is emitted", AindNote.NO_UNIT_NAMES)
@@ -191,7 +191,7 @@ class AindNWBSource(NWBSource):
         paired: list[tuple[int, dict[str, Any]]] = []
         missed = 0
         for index in range(len(columns["ks_unit_id"])):
-            device = str(_clean(columns["device_name"][index]))
+            device = str(clean(columns["device_name"][index]))
             label = str(int(columns["ks_unit_id"][index]))
             unit_id = self.units.get((device, label))
             if unit_id is None:
