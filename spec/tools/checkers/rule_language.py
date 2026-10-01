@@ -382,8 +382,11 @@ def check_rule(
     _check_identifiers(expression)
     resources = _base_tables(expression, visible)
     tables = core_tables | own_tables
-    qualified = _check_binding(expression, tables)
-    _check_character_length(qualified, tables)
+    # No relation the query does not name can resolve one of its columns, and normalizing every
+    # declared table for each rule would dominate the check.
+    named = {resource: tables[resource] for resource in resources if resource in tables}
+    qualified = _check_binding(expression, named)
+    _check_character_length(qualified, named)
     _check_window_keys(expression, resources, tables)
     _check_exact_overflow(expression)
     _check_recursion(expression, sql)
