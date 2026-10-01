@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -239,6 +239,8 @@ class Finding:
     resource: str | None
     message: str
     rows: Sequence[Sequence[Any]] = ()
+    #: What the finding counted, by name, where `rows` holds only the first.
+    counts: Mapping[str, int] = field(default_factory=dict)
 
 
 def compare(
@@ -363,6 +365,7 @@ def _compare_table(
                     f"{resource}: {count:,} superseded row(s) the amendment does not hold unchanged; an amendment "
                     "changes and removes no canonical row (Part 05 §15.2)",
                     shown,
+                    {"rows": count},
                 )
             )
     added = f"{fresh} EXCEPT ALL SELECT {columns} FROM {before}"
@@ -388,6 +391,7 @@ def _compare_table(
                 f"{resource}: {int(total):,} added row(s) join groups the superseded version holds: {why} "
                 "(Part 05 §15.2)",
                 shown,
+                {"rows": int(total)},
             )
         )
     return found

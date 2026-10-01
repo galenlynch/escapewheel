@@ -26,7 +26,10 @@ belongs to the packet or to one bound registry, and the report gives the packet,
 bound extension a verdict of `passed`, `failed`, or `incomplete` (Part 05 §9.5). The packet's
 verdict is the worst of them, so a failing extension fails the packet and leaves core `passed`.
 The JSON report's `status` is the packet verdict, `verdicts` maps each registry ID to its own, and
-each finding's `registry` names its subject, `null` for the packet.
+each finding's `registry` names its subject, `null` for the packet. A finding's `resource` and
+`column` name the resource and the one column it concerns, `null` where it concerns none or several,
+and its `counts` gives by name what its message counted. Its `rows` holds the first five rows
+found, where a count is of them all.
 
 Rules are **data, not code**. `spec/artifacts/logical_schemas.json` carries every table's structure
 and its Tier 2 rules, and the checks are generated from it rather than written per table. The

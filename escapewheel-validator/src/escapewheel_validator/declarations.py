@@ -46,6 +46,7 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
             report.add(
                 check_table.PACKET_RESOURCE_DECLARATION_UNKNOWN,
                 f"{entry.resource_id}: declaration {entry.declaration_id!r} is not visible",
+                resource=entry.resource_id,
             )
             continue
         instances = declaration["instances"]
@@ -55,12 +56,14 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                 check_table.PACKET_RESOURCE_SINGLETON_IDENTITY,
                 f"{entry.resource_id}: singleton identity must equal {entry.declaration_id}",
                 registry=report.owner(entry.declaration_id),
+                resource=entry.resource_id,
             )
         if mode == "family" and entry.resource_id.split(".", 1)[0] != entry.declaration_id.split(".", 1)[0]:
             report.add(
                 check_table.PACKET_RESOURCE_FAMILY_NAMESPACE,
                 f"{entry.resource_id}: family identity is outside {entry.declaration_id}'s namespace",
                 registry=report.owner(entry.declaration_id),
+                resource=entry.resource_id,
             )
         for dependency in declaration["requires"]:
             if dependency not in by_id:
@@ -68,6 +71,7 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                     check_table.PACKET_RESOURCE_DEPENDENCY_MISSING,
                     f"{entry.resource_id}: required singleton {dependency} is absent",
                     registry=report.owner(entry.declaration_id),
+                    resource=entry.resource_id,
                 )
         if declaration["kind"] == "dense_array":
             axes = declaration["array"]["axes_resource"]
@@ -76,6 +80,7 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                     check_table.PACKET_RESOURCE_ARRAY_AXES_MISSING,
                     f"{entry.resource_id}: declaration-selected axes resource {axes} is absent",
                     registry=report.owner(entry.declaration_id),
+                    resource=entry.resource_id,
                 )
 
         present = "derived_from" in entry.entry
@@ -84,12 +89,14 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                 check_table.PACKET_RESOURCE_DERIVED_FROM_REQUIRED,
                 f"{entry.resource_id}: derived_from is required by {entry.declaration_id}",
                 registry=report.owner(entry.declaration_id),
+                resource=entry.resource_id,
             )
         elif declaration["lineage"] == "forbidden" and present:
             report.add(
                 check_table.PACKET_RESOURCE_DERIVED_FROM_FORBIDDEN,
                 f"{entry.resource_id}: derived_from is forbidden by {entry.declaration_id}",
                 registry=report.owner(entry.declaration_id),
+                resource=entry.resource_id,
             )
 
     active_extension_ids = set(extensions)
@@ -106,6 +113,7 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                 check_table.PACKET_RESOURCE_REQUIRED_MISSING,
                 f"required singleton {declaration_id} is absent",
                 registry=report.owner(declaration_id),
+                resource=declaration_id,
             )
 
     for declaration_id, declaration in visible.items():
@@ -129,6 +137,8 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                     check_table.PACKET_RESOURCE_REFERENCE_TARGET_MISSING,
                     f"{declaration_id}: populated foreign key {columns} requires {target}",
                     registry=report.owner(declaration_id),
+                    resource=declaration_id,
+                    column=columns[0] if len(columns) == 1 else None,
                 )
 
     catalog_families = {
@@ -149,6 +159,8 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                 check_table.PACKET_RESOURCE_CATALOG_TABLE_UNREADABLE,
                 f"{catalog_id}.{column}: {exc}",
                 registry=report.owner(catalog_id),
+                resource=catalog_id,
+                column=column,
             )
             continue
         normalized = [str(value) for value in values if value is not None]
@@ -162,6 +174,8 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                     check_table.PACKET_RESOURCE_CATALOG_ROW_BINDING,
                     f"{catalog_id}.{column}={value!r} does not bind one {declaration_id} resource",
                     registry=report.owner(declaration_id),
+                    resource=catalog_id,
+                    column=column,
                 )
         catalog_values = set(normalized)
         for entry in entries:
@@ -170,6 +184,7 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                     check_table.PACKET_RESOURCE_CATALOG_ROW_BINDING,
                     f"{entry.resource_id}: no row in {catalog_id}.{column}",
                     registry=report.owner(declaration_id),
+                    resource=entry.resource_id,
                 )
 
     permitted = {
@@ -194,6 +209,7 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                     check_table.PACKET_RESOURCE_LINEAGE_UNRESOLVED,
                     f"{entry.resource_id}: lineage source {source!r} is absent or undeclared",
                     registry=report.owner(entry.declaration_id),
+                    resource=entry.resource_id,
                 )
             elif source_declaration["content_class"] not in permitted[declaration["content_class"]]:
                 report.add(
@@ -201,6 +217,7 @@ def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact vali
                     f"{entry.resource_id}: {declaration['content_class']} may not derive from "
                     f"{source_declaration['content_class']}",
                     registry=report.owner(entry.declaration_id),
+                    resource=entry.resource_id,
                 )
 
     def cyclic(node: str, path: frozenset[str]) -> bool:
@@ -231,20 +248,20 @@ def check_sources(packet: Packet, report: Report) -> None:
         source = resource.source
         if source is None:
             if Path(str(resource.entry.get("uri", ""))).name == SOURCES_FILENAME:
-                report.add(
+                report.add_about(
+                    resource.resource_id,
                     check_table.SOURCES_DECLARED,
                     f"{resource.resource_id} declares {SOURCES_FILENAME} as a resource; Part 04 §5.5 keeps it "
                     "outside the manifest so Part 03 §8.1's immutability does not reach it",
-                    registry=report.resource_owner(resource.resource_id),
                 )
             continue
         named.setdefault(source, []).append(resource.resource_id)
         if "://" in resource.uri:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.SOURCES_ABSOLUTE_URI,
                 f"{resource.resource_id} names source {source!r} and an absolute uri {resource.uri!r}; "
                 "where a source is named the uri is a path under it (Part 04 §5.5)",
-                registry=report.resource_owner(resource.resource_id),
             )
     if not named:
         return
@@ -254,6 +271,11 @@ def check_sources(packet: Packet, report: Report) -> None:
         check_table.SOURCES_DECLARED_COUNT,
         f"{len(named)} source(s) named by {sum(len(v) for v in named.values())} resource(s); "
         f"{len(named) - len(unresolved)} located by a resolution document",
+        counts={
+            "sources": len(named),
+            "resources": sum(len(v) for v in named.values()),
+            "located": len(named) - len(unresolved),
+        },
     )
     if unresolved:
         # A fact, not a defect: the packet is conforming and this reader cannot reach
@@ -262,6 +284,7 @@ def check_sources(packet: Packet, report: Report) -> None:
             check_table.SOURCES_UNRESOLVED,
             f"{len(unresolved)} source(s) no available resolution document locates (Part 04 §5.5)",
             ((name, ", ".join(named[name][:3])) for name in unresolved),
+            counts={"unresolved": len(unresolved)},
         )
 
 

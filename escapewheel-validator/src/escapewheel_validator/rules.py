@@ -287,10 +287,14 @@ def _run_checks(
                     check.entry.at(Level.ERROR),
                     f"check could not run: {str(exc).splitlines()[0][:90]}",
                     registry=registry_id,
+                    resource=check.resource,
+                    column=check.column,
                 )
             continue
         if rows:
-            report.add(check.entry, check.message, rows, registry=registry_id)
+            report.add(
+                check.entry, check.message, rows, registry=registry_id, resource=check.resource, column=check.column
+            )
 
 
 def _check_manifest_sessions(packet: Packet, report: Report) -> None:
@@ -318,7 +322,7 @@ def _check_manifest_sessions(packet: Packet, report: Report) -> None:
     rows = [(value,) for value in table_values if value not in listed_set]
     rows.extend((value,) for value in listed if value not in table_set)
     if rows:
-        report.add(check, message, rows, registry="core")
+        report.add(check, message, rows, registry="core", resource=CORE_SESSIONS)
 
 
 def _resolve_column(spec: Mapping[str, Any]) -> str | None:
@@ -476,6 +480,7 @@ def _check_extensions(
                 f"{extension_id}: declares {len(absent)} table(s) this packet does not carry",
                 [(name,) for name in absent],
                 registry=extension_id,
+                counts={"absent": len(absent)},
             )
         tier1 = generate(
             extension_context,
@@ -498,6 +503,7 @@ def _check_extensions(
             check_table.EXTENSION_VALIDATED,
             f"{extension_id}: {len(checks)} check(s) over {len(carried)} table(s)",
             registry=extension_id,
+            counts={"checks": len(checks), "tables": len(carried)},
         )
 
 

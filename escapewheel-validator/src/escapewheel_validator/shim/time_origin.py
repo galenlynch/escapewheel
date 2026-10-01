@@ -152,6 +152,8 @@ def check_time_origin(packet: Packet, report: Report) -> None:
                 f"session {session} declares t_zero_tick but no reference clock to state it on",
                 [(str(session),)],
                 registry="core",
+                resource=CORE_SESSIONS,
+                column="t_zero_tick",
             )
             continue
         mapped = []
@@ -165,6 +167,8 @@ def check_time_origin(packet: Packet, report: Report) -> None:
                     f"so no origin is defined ({refused})",
                     [(str(session), str(clock), str(start))],
                     registry="core",
+                    resource=CORE_SESSIONS,
+                    column="t_zero_tick",
                 )
                 break
         else:
@@ -178,6 +182,8 @@ def check_time_origin(packet: Packet, report: Report) -> None:
                     f"on {reference} is {expected}",
                     [(str(session), str(stated), str(expected))],
                     registry="core",
+                    resource=CORE_SESSIONS,
+                    column="t_zero_tick",
                 )
 
 

@@ -41,7 +41,7 @@ def check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> 
         try:
             schema = handle.schema()
         except PacketError as exc:
-            report.add(check_table.RESOURCE_MISSING, str(exc), registry=report.resource_owner(resource_id))
+            report.add_about(resource_id, check_table.RESOURCE_MISSING, str(exc))
             continue
         present[resource_id] = handle
         for column in spec["columns"]:
@@ -59,10 +59,11 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
     """Check one column's presence and type against the registry."""
     if column["name"] not in schema.names:
         if column["presence"] != "optional":
-            report.add(
+            report.add_about(
+                resource_id,
                 check_table.SCHEMA_COLUMN_ABSENT,
                 f"{resource_id}.{column['name']} absent (presence={column['presence']})",
-                registry=report.resource_owner(resource_id),
+                column=column["name"],
             )
         return
     actual = schema.field(column["name"]).type
@@ -73,10 +74,11 @@ def _check_column(resource_id: str, column: Mapping[str, Any], schema: Any, repo
     if pa.types.is_dictionary(actual):
         actual = actual.value_type
     if str(actual) != ARROW_TYPES[column["type"]]:
-        report.add(
+        report.add_about(
+            resource_id,
             check_table.SCHEMA_COLUMN_TYPE,
             f"{resource_id}.{column['name']} is {actual}, registry declares {column['type']}",
-            registry=report.resource_owner(resource_id),
+            column=column["name"],
         )
 
 
@@ -126,10 +128,10 @@ def check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], rep
         except (OSError, pa.ArrowException):
             continue
         for a, b in pairs:
-            report.add(
+            report.add_about(
+                resource_id,
                 check_table.columns_duplicated(resource_id),
                 f"{a} and {b} hold equal values in every row",
-                registry=report.resource_owner(resource_id),
             )
 
 
@@ -152,10 +154,10 @@ def check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any
         except (OSError, pa.ArrowException):
             continue
         if index is None:
-            report.add(
+            report.add_about(
+                resource_id,
                 check_table.metadata_unfilled(resource_id),
                 "metadata is declared and the file omits it",
-                registry=report.resource_owner(resource_id),
             )
             continue
         nulls = 0
@@ -166,10 +168,10 @@ def check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any
             nulls += stats.null_count
         else:
             if meta.num_rows and nulls == meta.num_rows:
-                report.add(
+                report.add_about(
+                    resource_id,
                     check_table.metadata_unfilled(resource_id),
                     "metadata is null in every row",
-                    registry=report.resource_owner(resource_id),
                 )
 
 
@@ -192,11 +194,13 @@ def check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any],
                 continue
             outside = sorted({v for v in table.column(name).to_pylist() if v is not None and v not in set(reserved)})
             if outside:
-                report.add(
+                report.add_about(
+                    resource_id,
                     check_table.outside_reserved_set(resource_id, name),
                     f"{len(outside)} value(s) outside the reserved set: "
                     f"{', '.join(repr(v) for v in outside[:ROW_CAP])}" + (" ..." if len(outside) > ROW_CAP else ""),
-                    registry=report.resource_owner(resource_id),
+                    column=name,
+                    counts={"values": len(outside)},
                 )
 
 
@@ -228,6 +232,9 @@ def check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], repo
                     + (" ..." if len(invalid) > ROW_CAP else ""),
                     [(value,) for value in invalid],
                     registry=registry,
+                    resource=resource_id,
+                    column=name,
+                    counts={"values": len(invalid)},
                 )
 
 

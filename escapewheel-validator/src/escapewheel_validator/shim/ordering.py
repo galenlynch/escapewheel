@@ -215,11 +215,11 @@ def _scan_one_ordering(  # noqa: C901
     declared = {c["name"] for c in spec.get("columns", ())}
     if missing := [k for k in keys if k not in declared]:
         # The bound registry cannot hold the required order, so the table departs.
-        report.add(
+        report.add_about(
+            resource_id,
             check_table.physical_order(resource_id),
             f"the bound registry declares no {', '.join(missing)}, so the table cannot be in its "
             f"required order ({', '.join(keys)})",
-            registry=report.resource_owner(resource_id),
         )
         return bool(unique)
     # The declarations this table's adjacency argument leans on.
@@ -240,9 +240,7 @@ def _scan_one_ordering(  # noqa: C901
     try:
         keys, unique, batches = _ordering_scan(handle, keys, unique)
     except (OSError, pa.ArrowException) as exc:
-        report.add(
-            check_table.RESOURCE_UNREADABLE, f"{resource_id}: {exc}", registry=report.resource_owner(resource_id)
-        )
+        report.add_about(resource_id, check_table.RESOURCE_UNREADABLE, f"{resource_id}: {exc}")
         return False
     # A column the scan dropped holds one value, so it agrees with itself at every repeated key.
     determined = [name for name in determined if name in keys]
@@ -287,34 +285,32 @@ def _scan_one_ordering(  # noqa: C901
     if damaged is not None:
         # The order cannot be established, so nothing partial is reported for it: what the scan
         # saw before the damage says nothing about the file as a whole.
-        report.add(
-            check_table.RESOURCE_UNREADABLE, f"{resource_id}: {damaged}", registry=report.resource_owner(resource_id)
-        )
+        report.add_about(resource_id, check_table.RESOURCE_UNREADABLE, f"{resource_id}: {damaged}")
         return False
     if broken:
-        report.add(
+        report.add_about(
+            resource_id,
             check_table.determined_by(resource_id),
             "a column declared determined_by the key differs between two rows sharing it",
             [(_row(index), col, f"{a} != {b}") for index, col, a, b in broken],
-            registry=report.resource_owner(resource_id),
         )
     if offending:
-        report.add(
+        report.add_about(
+            resource_id,
             check_table.physical_order(resource_id),
             f"rows are not in declared sort order ({', '.join(keys)})",
             [(_row(index), str(prev), str(cur)) for index, prev, cur in offending],
-            registry=report.resource_owner(resource_id),
         )
         # Adjacency settles uniqueness only for a file actually in order: a duplicate anywhere but
         # beside its twin is invisible to a scan of neighbours. The departure is an
         # error, and uniqueness still falls back to the aggregate rather than being skipped.
         return bool(unique)
     if duplicated:
-        report.add(
+        report.add_about(
+            resource_id,
             check_table.primary_key_unique(resource_id),
             "duplicate primary key",
             [(_row(index), str(row)) for index, row in duplicated],
-            registry=report.resource_owner(resource_id),
         )
     return False
 

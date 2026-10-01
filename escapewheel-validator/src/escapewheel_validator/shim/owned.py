@@ -33,21 +33,21 @@ def check_packet_owned_opaque(packet: Packet, report: Report) -> None:
         try:
             found = stores.listing(owned_uri(packet, resource.entry))
         except ResourceMissing as exc:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.RESOURCE_MISSING,
                 f"{resource.resource_id}: {exc}",
-                registry=report.resource_owner(resource.resource_id),
             )
             continue
         except StoreUnreachable:
             continue  # a remote packet this validator cannot reach; its digest check reports that
         keys = () if found.is_single_object else [member.key for member in found.members]
         for directory, names, reason in findings(decode(resource.uri), keys):
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.PHYSICAL_OPAQUE_NAME_PORTABILITY,
                 describe(resource.resource_id, directory, names, reason),
                 [(resource.resource_id, directory, *names)],
-                registry=report.resource_owner(resource.resource_id),
             )
 
 
@@ -74,10 +74,10 @@ def check_owned_digests(packet: Packet, report: Report, store_checksums: bool = 
                 owned_uri(packet, entry), str(claimed["algorithm"]), store_checksums=store_checksums
             )
         except StoreUnreachable as exc:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.RESOURCE_MISSING,
                 f"{resource.resource_id}: {exc}",
-                registry=report.resource_owner(resource.resource_id),
             )
             continue
         checked += 1
@@ -85,18 +85,19 @@ def check_owned_digests(packet: Packet, report: Report, store_checksums: bool = 
         if found.value == claimed["value"]:
             matched += 1
         else:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.OWNED_DIGEST,
                 f"{resource.resource_id}: {found.algorithm} gives {found.value[:16]}…, manifest records "
                 f"{str(claimed['value'])[:16]}… — a packet-owned resource is immutable (Part 03 §8.1) and "
                 "Part 05 §15.4 bounds revalidation on that",
-                registry=report.resource_owner(resource.resource_id),
             )
     if checked:
         report.add(
             check_table.OWNED_VERIFIED,
             f"{matched} of {checked} packet-owned resource(s) hold their recorded digest; {route_summary(routes)}",
             routes,
+            counts={"checked": checked, "matched": matched},
         )
 
 

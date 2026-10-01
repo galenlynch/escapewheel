@@ -14,7 +14,7 @@ rules pass through unchanged.
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -41,6 +41,9 @@ class Check:
         A query returning offending rows.
     resource : str
         The resource the check is declared on. Not necessarily the only one its query reads.
+    column : str or None
+        The one column of `resource` the check is declared on, or None where it is declared on none
+        or several.
     optional_columns : frozenset of str
         The `optional` columns the query reads. A table omitting one leaves nothing to check, so the
         runner skips the check rather than reporting a query that cannot bind (Part 02 §§6, 10.1).
@@ -53,6 +56,7 @@ class Check:
     tier: int = 1
     dependencies: frozenset[str] = frozenset()
     optional_columns: frozenset[str] = frozenset()
+    column: str | None = None
 
     def __post_init__(self) -> None:
         """Default a generated check's inputs to its attached resource."""
@@ -68,6 +72,11 @@ class Check:
     def level(self) -> Level:
         """The level of a finding of this check."""
         return self.entry.level
+
+
+def _only(columns: Sequence[str]) -> str | None:
+    """Return the one column of a list, or None where it holds several."""
+    return columns[0] if len(columns) == 1 else None
 
 
 @dataclass(frozen=True)
@@ -173,6 +182,7 @@ def _discriminator(
             f"{column['name']} holds a value that is not a dotted resource ID",
             f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND NOT regexp_matches({col}, '{RESOURCE_ID}')",
             resource,
+            column=column["name"],
         )
     ]
     if not kinds:
@@ -190,6 +200,7 @@ def _discriminator(
             f"{column['name']} names a resource this packet does not declare",
             f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({declared})",
             resource,
+            column=column["name"],
         )
     )
 
@@ -228,6 +239,7 @@ def _discriminator(
                     sql,
                     resource,
                     dependencies=frozenset({resource, kind}),
+                    column=column["name"],
                 )
             )
         return checks
@@ -258,6 +270,7 @@ def _kind_matches(found: Specialisation, reachable: Collection[str]) -> list[Che
             f"SELECT {detail} FROM {found.detail} t {joins} WHERE {value} IS NULL OR {value} <> '{found.detail}'",
             found.detail,
             dependencies=frozenset({found.detail, found.target, found.holder}),
+            column=_only([c for c, _ in found.on]),
         )
     ]
 
@@ -325,6 +338,7 @@ def _paired_value(
                 "(Part 02 §8.3)",
                 f"SELECT DISTINCT {col} FROM {name} WHERE {col} IN ({', '.join(repr(k) for k in misfits)})",
                 resource,
+                column=column["name"],
             )
         )
     if via is None:
@@ -365,6 +379,7 @@ def _paired_value(
                 f"AND NOT EXISTS (SELECT 1 FROM {kind} t WHERE {match})",
                 resource,
                 dependencies=frozenset({resource, holder, kind}),
+                column=column["name"],
             )
         )
     if via is not None:
@@ -375,6 +390,7 @@ def _paired_value(
                 f"SELECT {selected} FROM {rows}{join} WHERE {kind_of} IS NULL",
                 resource,
                 dependencies=frozenset({resource, holder}),
+                column=column["name"],
             )
         )
     return checks
@@ -452,6 +468,7 @@ def _generate(  # noqa: C901
                         f"required column {column['name']} contains nulls",
                         f"SELECT * FROM {name} WHERE {quote(column['name'])} IS NULL",
                         resource,
+                        column=column["name"],
                     )
                 )
             if column.get("finite") is True:
@@ -463,6 +480,7 @@ def _generate(  # noqa: C901
                         f"SELECT * FROM {name} WHERE NOT isfinite({quote(column['name'])})",
                         resource,
                         optional_columns=frozenset({column["name"]}) & optional,
+                        column=column["name"],
                     )
                 )
             if values := column.get("enum"):
@@ -475,6 +493,7 @@ def _generate(  # noqa: C901
                         f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({allowed})",
                         resource,
                         optional_columns=frozenset({column["name"]}) & optional,
+                        column=column["name"],
                     )
                 )
 
@@ -520,6 +539,7 @@ def _generate(  # noqa: C901
                     resource,
                     dependencies=frozenset({resource, ref["resource"]}),
                     optional_columns=frozenset(ref["columns"]) & optional,
+                    column=_only(ref["columns"]),
                 )
             )
 

@@ -254,7 +254,14 @@ def _check_amendment(
             connection.close()
     for finding in found:
         owner = None if finding.resource is None else report.resource_owner(finding.resource)
-        report.add(finding.check, finding.message, finding.rows, registry=owner)
+        report.add(
+            finding.check,
+            finding.message,
+            finding.rows,
+            registry=owner,
+            resource=finding.resource,
+            counts=finding.counts,
+        )
 
 
 def check_packet_manifest(
@@ -293,7 +300,7 @@ def check_packet_manifest(
     document = check_manifest(raw, issues)
     bound = None if document is None else bind_registries(location, document, issues)
     for issue in issues:
-        report.add(issue.check, issue.message, issue.rows, registry=issue.registry)
+        report.add(issue.check, issue.message, issue.rows, registry=issue.registry, resource=issue.resource)
     if bound is not None:
         for name, context in bound.contexts.items():
             report.record_registry(name, context, directs_checks=bound.directs(name), core=name == bound.core_id)

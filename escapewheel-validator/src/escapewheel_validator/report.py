@@ -2,11 +2,13 @@
 
 - :class:`Report` -- the findings, evaluations and registry results of one validation, each bound
   registry's verdict and the packet's, and the JSON a report is written as.
-- :class:`Finding` -- one finding: its level, check ID, message and first offending rows.
+- :class:`Finding` -- one finding: its level, check ID, message and first offending rows, and
+  the resource, column and counts it concerns.
 - :class:`Evaluation` -- one Tier 2 evaluation outcome of a bound registry.
 - :class:`RegistryEvaluation` -- one registry document's conformance result.
 
-A check adds its findings through :meth:`Report.add`, under an entry of :mod:`.check_table`.
+A check adds its findings through :meth:`Report.add`, under an entry of :mod:`.check_table`;
+:meth:`Report.add_about` adds one about a resource, for the registry declaring it.
 """
 
 from __future__ import annotations
@@ -53,6 +55,14 @@ class Finding:
         The bound registry this finding belongs to, or None where it belongs to the packet
         (Part 05 §9.5). An extension's findings never count against core's verdict, nor core's
         against an extension's.
+    resource : str or None
+        The resource the finding concerns, or None where it concerns the packet, a registry or
+        several resources.
+    column : str or None
+        The one column of `resource` the finding concerns, or None where it concerns none or several.
+    counts : Mapping of str to int
+        What the finding counted, by name, where its message states a count. A count is of everything
+        the check found, where `rows` holds only the first.
     """
 
     level: Level
@@ -60,6 +70,9 @@ class Finding:
     message: str
     rows: tuple[tuple[str, ...], ...] = ()
     registry: str | None = None
+    resource: str | None = None
+    column: str | None = None
+    counts: Mapping[str, int] = field(default_factory=dict, hash=False)
 
 
 @dataclass(frozen=True)
@@ -196,7 +209,16 @@ class Report:
 
     @overload
     def add(
-        self, check: CheckEntry, message: str, /, rows: Iterable[Sequence[Any]] = (), registry: str | None = None
+        self,
+        check: CheckEntry,
+        message: str,
+        /,
+        rows: Iterable[Sequence[Any]] = (),
+        registry: str | None = None,
+        *,
+        resource: str | None = None,
+        column: str | None = None,
+        counts: Mapping[str, int] | None = None,
     ) -> None: ...
 
     @overload
@@ -208,6 +230,10 @@ class Report:
         /,
         rows: Iterable[Sequence[Any]] = (),
         registry: str | None = None,
+        *,
+        resource: str | None = None,
+        column: str | None = None,
+        counts: Mapping[str, int] | None = None,
     ) -> None: ...
 
     def add(self, check: CheckEntry | str, *given: Any, **named: Any) -> None:
@@ -226,6 +252,10 @@ class Report:
             Offending rows; only the first `ROW_CAP` are kept.
         registry : str, optional
             The bound registry the finding belongs to; None for the packet.
+        resource, column : str, optional
+            The resource, and the one column of it, the finding concerns.
+        counts : Mapping of str to int, optional
+            What the finding counted, by name.
         """
         if isinstance(check, CheckEntry):
             self._record(check.level, check.id, *given, **named)
@@ -239,16 +269,50 @@ class Report:
         message: str,
         rows: Iterable[Sequence[Any]] = (),
         registry: str | None = None,
+        *,
+        resource: str | None = None,
+        column: str | None = None,
+        counts: Mapping[str, int] | None = None,
     ) -> None:
         """Append one finding, keeping its first `ROW_CAP` rows as strings."""
         kept = tuple(tuple(str(v) for v in row) for row in itertools.islice(rows, ROW_CAP))
-        self.findings.append(Finding(level, check, message, kept, registry))
+        self.findings.append(Finding(level, check, message, kept, registry, resource, column, dict(counts or {})))
+
+    def add_about(
+        self,
+        resource_id: str,
+        check: CheckEntry,
+        message: str,
+        rows: Iterable[Sequence[Any]] = (),
+        *,
+        column: str | None = None,
+        counts: Mapping[str, int] | None = None,
+    ) -> None:
+        """Record a finding about one resource, for the registry declaring it.
+
+        Parameters
+        ----------
+        resource_id : str
+            The resource the finding concerns.
+        check, message, rows, column, counts
+            As :meth:`add` takes them.
+        """
+        self.add(
+            check,
+            message,
+            rows,
+            self.resource_owner(resource_id),
+            resource=resource_id,
+            column=column,
+            counts=counts,
+        )
 
     def to_dict(self, packet_id: str) -> dict[str, Any]:
         """Render the report as the JSON structure Part 05 describes.
 
         ``status`` is the packet's verdict and ``verdicts`` each bound registry's. A finding whose
-        ``registry`` is null belongs to the packet.
+        ``registry`` is null belongs to the packet. A finding's ``resource`` and ``column`` are null,
+        and its ``counts`` empty, where it names none.
 
         Parameters
         ----------
@@ -274,6 +338,9 @@ class Report:
                     "message": f.message,
                     "rows": [list(r) for r in f.rows],
                     "registry": f.registry,
+                    "resource": f.resource,
+                    "column": f.column,
+                    "counts": dict(f.counts),
                 }
                 for f in self.findings
             ],

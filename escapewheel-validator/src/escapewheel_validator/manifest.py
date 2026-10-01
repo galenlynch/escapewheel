@@ -53,6 +53,8 @@ class Issue:
     rows: tuple[tuple[Any, ...], ...] = ()
     #: The registry a binding finding concerns, or None for a packet finding (Part 05 §9.5).
     registry: str | None = None
+    #: The resource whose entry the finding concerns, or None.
+    resource: str | None = None
 
 
 @dataclass
@@ -192,7 +194,11 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
     counts = Counter(entry["resource_id"] for entry in resources)
     for resource_id in sorted(name for name, count in counts.items() if count > 1):
         issues.append(
-            Issue(check_table.PACKET_RESOURCE_ID_UNIQUE, f"{resource_id}: {counts[resource_id]} entries share this ID")
+            Issue(
+                check_table.PACKET_RESOURCE_ID_UNIQUE,
+                f"{resource_id}: {counts[resource_id]} entries share this ID",
+                resource=resource_id,
+            )
         )
     for entry in resources:
         if entry.get("external") is not True and "digest" not in entry:
@@ -200,6 +206,7 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
                 Issue(
                     check_table.PACKET_RESOURCE_DIGEST_MISSING,
                     f"{entry['resource_id']}: the packet owns this resource and records no digest (Part 04 §4.3)",
+                    resource=entry["resource_id"],
                 )
             )
         if not in_one_form(entry["uri"]):
@@ -209,6 +216,7 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
                     f"{entry['resource_id']}: uri {entry['uri']!r} is neither absolute nor a relative reference "
                     "in Part 03 §4's one form",
                     ((entry["resource_id"], entry["uri"]),),
+                    resource=entry["resource_id"],
                 )
             )
         members = entry.get("members")
@@ -218,7 +226,9 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
         for key in sorted(name for name, count in keys.items() if count > 1):
             issues.append(
                 Issue(
-                    check_table.PACKET_RESOURCE_MEMBER_UNIQUE, f"{entry['resource_id']}: member {key!r} is listed twice"
+                    check_table.PACKET_RESOURCE_MEMBER_UNIQUE,
+                    f"{entry['resource_id']}: member {key!r} is listed twice",
+                    resource=entry["resource_id"],
                 )
             )
         total = sum(member["size_bytes"] for member in members)
@@ -227,6 +237,7 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
                 Issue(
                     check_table.PACKET_RESOURCE_MEMBER_SIZE,
                     f"{entry['resource_id']}: size_bytes {entry['size_bytes']} differs from its members' {total}",
+                    resource=entry["resource_id"],
                 )
             )
         # The schema requires every member's digest where the entry records one.
@@ -235,6 +246,7 @@ def check_entries(document: Mapping[str, Any], issues: list[Issue]) -> bool:
                 Issue(
                     check_table.PACKET_RESOURCE_MEMBER_DIGEST,
                     f"{entry['resource_id']}: digest is not the Part 04 §4.3 value of its member list",
+                    resource=entry["resource_id"],
                 )
             )
     registries: Mapping[str, Mapping[str, Any]] = document["registries"]

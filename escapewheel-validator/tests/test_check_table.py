@@ -145,6 +145,47 @@ def test_no_module_writes_a_check_id():
     assert not found
 
 
+def _entry_scope(node: ast.expr) -> Scope | None:
+    """The scope of the entry an expression names in the table, or None where it names none there."""
+    while isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "at":
+        node = node.func.value
+    if isinstance(node, ast.Call):
+        node = node.func
+    if not (isinstance(node, ast.Attribute) and ast.unparse(node.value) == "check_table"):
+        return None
+    named = getattr(check_table, node.attr)
+    if isinstance(named, CheckEntry):
+        return named.scope
+    parameters = inspect.signature(named).parameters
+    return named(*(["c"] if part == "columns" else "error" if part == "level" else part for part in parameters)).scope
+
+
+def test_a_finding_under_a_resource_or_column_check_names_its_subject():
+    """Where a call names its entry in the table, the entry's scope says what the finding must name."""
+    takes = {"add": 0, "add_about": 1, "Issue": 0, "Check": 0}
+    #: Each names its resource by position.
+    positional = {"add_about", "Check"}
+    missing, seen = set(), 0
+    for path in sorted(SRC.rglob("*.py")):
+        if path.name in COPIED or path.name == "check_table.py":
+            continue
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.Call):
+                continue
+            called = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", None)
+            if called not in takes or len(node.args) <= takes[called]:
+                continue
+            scope = _entry_scope(node.args[takes[called]])
+            given = {keyword.arg for keyword in node.keywords}
+            seen += scope is not None
+            if scope in {Scope.RESOURCE, Scope.COLUMN} and called not in positional and "resource" not in given:
+                missing.add((path.name, node.lineno, "resource"))
+            if scope is Scope.COLUMN and "column" not in given:
+                missing.add((path.name, node.lineno, "column"))
+    assert seen > 60
+    assert not missing
+
+
 def _written(check_id: str) -> re.Pattern[str]:
     """Compile the text that names an ID in a part.
 

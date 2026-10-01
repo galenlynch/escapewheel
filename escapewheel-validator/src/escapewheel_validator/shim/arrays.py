@@ -53,64 +53,64 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, ArrayAxe
         actual = _codec_names(metadata.get("codecs") or handle.codecs)
         rank = len(handle.shape)
     except (ResourceUnreadableError, OSError, ValueError, KeyError) as exc:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.ARRAY_UNREADABLE,
             f"{resource.resource_id}: {exc}",
-            registry=report.resource_owner(resource.resource_id),
         )
         return
 
     if handle.zarr_format != 3:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.ARRAY_NOT_ZARR_V3,
             f"{resource.resource_id} is packet-owned but stored as Zarr v{handle.zarr_format}; "
             "Part 03 §6.1 allows v2 only for an array the packet references",
-            registry=report.resource_owner(resource.resource_id),
         )
 
     if "transpose" in actual:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.ARRAY_TRANSPOSE_CODEC,
             f"{resource.resource_id} uses the transpose codec, which Part 03 §6.2 forbids: axes are stored in the "
             "order the packet declares them",
-            registry=report.resource_owner(resource.resource_id),
         )
 
     check_zarr_floor(resource, metadata, report)
 
     if (grid := metadata.get("chunk_grid", {}).get("name")) != "regular":
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.ARRAY_IRREGULAR_CHUNK_GRID,
             f"{resource.resource_id} declares a {grid!r} chunk grid; Part 03 §6.1 requires a regular one",
-            registry=report.resource_owner(resource.resource_id),
         )
 
     if "fill_value" not in metadata:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.ARRAY_NO_FILL_VALUE,
             f"{resource.resource_id} declares no fill_value, which Part 03 §6.1 requires",
-            registry=report.resource_owner(resource.resource_id),
         )
 
     if (axes := declared.get(resource.resource_id)) is None:
         return
     shape = [int(n) for n in handle.shape]
     if set(axes.names) != set(range(rank)):
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.ARRAY_RANK_DISAGREES_WITH_DIMENSIONS,
             f"{resource.resource_id} has rank {rank} but its declaration-selected axes resource "
             f"gives axis_index {sorted(axes.names) or 'none'}; Part 03 §6.3 requires one row per stored axis",
-            registry=report.resource_owner(resource.resource_id),
         )
         return
     _report_axes(resource, shape, axes, _OWNED_AXIS_CHECKS, report)
     names = [axes.names[axis] for axis in range(rank)]
     if metadata.get("dimension_names") != names:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.ARRAY_DIMENSION_NAMES,
             f"{resource.resource_id} stores dimension_names {metadata.get('dimension_names')!r} where its axes "
             f"resource names {names!r}; Part 03 §6.5 requires a packet-owned array to carry them",
-            registry=report.resource_owner(resource.resource_id),
         )
 
 
@@ -136,15 +136,16 @@ def check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         report.add(
             check_table.ARRAY_NO_ARRAY_DIMENSIONS_TABLE,
             f"{len(owned)} packet-owned array(s) but no declaration-selected axes rows were resolved",
+            counts={"arrays": len(owned)},
         )
     for resource in owned:
         try:
             stores.listing(owned_uri(packet, resource.entry))
         except ResourceMissing as exc:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.RESOURCE_MISSING,
                 f"{resource.resource_id}: {exc}",
-                registry=report.resource_owner(resource.resource_id),
             )
             continue
         except StoreUnreachable:
@@ -366,11 +367,11 @@ def _report_axes(
     """Report each way an array's label and channel rows disagree with its shape, under its entry of `entries`."""
     for fault, rows in _axis_findings(shape, axes).items():
         if rows:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 entries[fault],
                 f"{resource.resource_id}: {_AXIS_MESSAGES[fault]}",
                 rows,
-                registry=report.resource_owner(resource.resource_id),
             )
 
 
@@ -391,11 +392,11 @@ def compare_shape(
     if not isinstance(shape := metadata.get("shape"), list):
         return []
     if set(axes.names) != set(range(len(shape))):
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.EXTERNAL_ARRAY_RANK,
             f"{resource.resource_id} is stored with rank {len(shape)} but its declaration-selected "
             f"axes resource gives axis_index {sorted(axes.names)}; Part 03 §6.3 requires one row per stored axis",
-            registry=report.resource_owner(resource.resource_id),
         )
         return ["rank"]
     _report_axes(resource, [int(n) for n in shape], axes, _EXTERNAL_AXIS_CHECKS, report)

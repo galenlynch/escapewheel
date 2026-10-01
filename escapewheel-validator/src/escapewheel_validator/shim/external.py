@@ -79,10 +79,10 @@ def resolve_external(
             uri = packet.location.resolve(resource.uri, resource.source).uri
         except UnresolvedSource as exc:
             # Which sources resolve is the reader's situation (Part 04 §5.5): unreachable, not wrong.
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.EXTERNAL_UNREACHABLE,
                 f"{resource.resource_id}: {exc}",
-                registry=report.resource_owner(resource.resource_id),
             )
             continue
         fields = _compare_external(
@@ -100,6 +100,7 @@ def resolve_external(
             f"{len(unchecksummed)} of {checked} resolved resource(s) record no digest, so a digest "
             "was asked for and nothing was compared against (Part 04 §5.2)",
             [(name,) for name in unchecksummed],
+            counts={"resolved": checked, "no_digest": len(unchecksummed)},
         )
     if checked:
         did = ", ".join(f"{count} {field}" for field, count in sorted(compared.items())) or "nothing"
@@ -108,6 +109,7 @@ def resolve_external(
             check_table.EXTERNAL_VERIFIED,
             f"{checked} external resource(s) resolved; compared {did}{established}",
             routes,
+            counts={"resolved": checked, **compared},
         )
     return assessed
 
@@ -134,10 +136,10 @@ def _compare_external(
     try:
         found = stores.listing(uri)
     except StoreUnreachable as exc:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.EXTERNAL_UNREACHABLE,
             f"{resource.resource_id}: {exc}",
-            registry=report.resource_owner(resource.resource_id),
         )
         return None
     fields = []
@@ -146,11 +148,11 @@ def _compare_external(
     if (claimed := entry.get("size_bytes")) is not None:
         fields.append("size_bytes")
         if found.size_bytes != claimed:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.EXTERNAL_SIZE_BYTES,
                 f"{resource.resource_id}: {found.size_bytes:,} bytes over {len(found.members)} object(s), "
                 f"manifest claims {claimed:,}",
-                registry=report.resource_owner(resource.resource_id),
             )
     if resource.kind == "dense_array" and (metadata := _stored_metadata(uri, found)) is not None:
         check_zarr_floor(resource, metadata, report)
@@ -162,21 +164,21 @@ def _compare_external(
         try:
             found_digest = stores.digest_resource(uri, str(claimed["algorithm"]), store_checksums=store_checksums)
         except StoreUnreachable as exc:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.EXTERNAL_UNREACHABLE,
                 f"{resource.resource_id}: {exc}",
-                registry=report.resource_owner(resource.resource_id),
             )
             return None
         fields.append("digest")
         if routes is not None:
             routes.append((resource.resource_id, found_digest.algorithm, found_digest.route))
         if found_digest.value != claimed["value"]:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.EXTERNAL_DIGEST,
                 f"{resource.resource_id}: {found_digest.algorithm} gives {found_digest.value[:16]}…, "
                 f"manifest records {str(claimed['value'])[:16]}…",
-                registry=report.resource_owner(resource.resource_id),
             )
     return fields
 
@@ -194,30 +196,33 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
     held = {member.key: member for member in found.members}
     claimed = {str(entry.get("key", "")): entry for entry in declared}
     if missing := sorted(claimed.keys() - held.keys()):
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: {len(missing)} declared member(s) the store does not hold",
             ((key,) for key in missing),
-            registry=report.resource_owner(resource.resource_id),
+            counts={"missing": len(missing)},
         )
     if extra := sorted(held.keys() - claimed.keys()):
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: the store holds {len(extra)} member(s) the manifest does not "
             "declare, so a digest over the declared listing would not describe it",
             ((key,) for key in extra),
-            registry=report.resource_owner(resource.resource_id),
+            counts={"undeclared": len(extra)},
         )
     if sized := sorted(
         key
         for key in claimed.keys() & held.keys()
         if claimed[key].get("size_bytes") is not None and claimed[key]["size_bytes"] != held[key].size_bytes
     ):
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.EXTERNAL_MEMBERS,
             f"{resource.resource_id}: {len(sized)} member(s) differ in size from the manifest",
             ((key, claimed[key]["size_bytes"], held[key].size_bytes) for key in sized),
-            registry=report.resource_owner(resource.resource_id),
+            counts={"size_differs": len(sized)},
         )
     if not store_digests:
         return fields
@@ -231,19 +236,21 @@ def _compare_members(resource: Any, declared: Any, found: Any, report: Report, s
         if str(recorded.get("algorithm")) != offered.algorithm or str(recorded.get("value")) != offered.value:
             changed.append(key)
     if changed:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.EXTERNAL_STORE_DIGEST,
             f"{resource.resource_id}: {len(changed)} member(s) changed in place since recording",
             ((key,) for key in changed),
-            registry=report.resource_owner(resource.resource_id),
+            counts={"changed": len(changed)},
         )
     if skipped:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.EXTERNAL_NO_STORE_DIGEST,
             f"{resource.resource_id}: {len(skipped)} of {len(claimed)} member(s) not checked -- the "
             "manifest recorded no store digest, or the store offers none (Part 04 §5.4)",
             ((key,) for key in skipped),
-            registry=report.resource_owner(resource.resource_id),
+            counts={"unchecked": len(skipped), "declared": len(claimed)},
         )
     if compared:
         fields.append("store_digest")

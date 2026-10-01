@@ -50,13 +50,13 @@ def check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report)
         return
     members = ("codecs",) if zarr_format == 3 else ("filters", "compressor")
     observed = [(member, json.dumps(metadata.get(member), separators=(",", ":"))) for member in members]
-    report.add(
+    report.add_about(
+        resource.resource_id,
         check_table.PHYSICAL_OUTSIDE_READER_FLOOR.at(_floor_level(resource)),
         f"{resource.resource_id}: zarr {variant} "
         + "; ".join(f"{member} {value}" for member, value in observed)
         + " is outside the reader floor of Part 03 §6.4",
         observed,
-        registry=report.resource_owner(resource.resource_id),
     )
 
 
@@ -74,13 +74,13 @@ def check_parquet_floor(resource: Any, metadata: Any, report: Report) -> None:
     observed = [("compression", value) for value in sorted(compressions - set(floor["compressions"]))]
     observed += [("encoding", value) for value in sorted(encodings - set(floor["encodings"]))]
     if observed:
-        report.add(
+        report.add_about(
+            resource.resource_id,
             check_table.PHYSICAL_OUTSIDE_READER_FLOOR.at(_floor_level(resource)),
             f"{resource.resource_id}: parquet "
             + ", ".join(f"{member} {value}" for member, value in observed)
             + " is outside the reader floor of Part 03 §5.5",
             observed,
-            registry=report.resource_owner(resource.resource_id),
         )
 
 
@@ -88,12 +88,12 @@ def report_unassessed(packet: Packet, assessed: Collection[str], report: Report)
     """One `info` finding per external resource with a reader floor whose own metadata was not read (Part 05 §5.3)."""
     for resource in packet.resources():
         if resource.is_external and resource.interface is not None and resource.resource_id not in assessed:
-            report.add(
+            report.add_about(
+                resource.resource_id,
                 check_table.EXTERNAL_PHYSICAL_UNASSESSED,
                 f"{resource.resource_id}: its {resource.interface} metadata was not read, so its physical "
                 "version, codecs, compression and encodings are unassessed",
                 [(resource.resource_id,)],
-                registry=report.resource_owner(resource.resource_id),
             )
 
 
@@ -104,6 +104,7 @@ def report_page_types_unassessed(tables: int, report: Report) -> None:
             check_table.PHYSICAL_PAGE_TYPES_UNASSESSED,
             f"{tables} Parquet footer(s) compared with the floor's compressions and encodings; data-page "
             "types were not assessed, since they are recorded in page headers",
+            counts={"tables": tables},
         )
 
 
