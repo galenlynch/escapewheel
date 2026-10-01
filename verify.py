@@ -133,7 +133,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         [sys.executable, "probe.py"],
     ),
     (
-        "citations: every one resolves, and no part number repeats",
+        "citations: every live one resolves, and no part number repeats",
         ROOT / "revisions",
         [sys.executable, "check_citations.py", "--quiet"],
     ),

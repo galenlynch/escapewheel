@@ -1,55 +1,25 @@
-"""Every citation resolves to a section that exists, and every part is numbered so one can.
-
-A citation is the load-bearing part of a revision: an implementer follows it to the rule. Nothing
-checked them, and a wrong one is invisible to every other tool -- `ledger.py` sees that a clause
-has a disposition, and a grep for the revision sees a document that exists. Four were found by hand
-in one session: Part 02 §10.3 cited twice for a waiver that is §10.1's, R30 §3.2 credited with a
-five-column layout it states in seven, Part 07 cited for an Iceberg deferral that is Part 00 §7.3's, and
-six references to a draft's §5 left pointing at Consequence after it was restructured.
+"""Every citation in a live document resolves to a section that exists, and every part is numbered so one can.
 
 Three forms are resolved:
 
     R92 §2.2        against revisions/accepted/R92-*.md
-    Part 03 §5.4       against spec/parts/03_*.md
+    Part 03 §5.4    against spec/parts/03_*.md
     §3.1            against the citing document itself
 
-What fails the build is a revision-to-revision citation that does not resolve, anywhere, and a
-part citation that does not resolve in an active **proposal or draft**. Those are the live inputs to
-the next specification change, so a broken citation there can become a broken clause in the spec;
-an accepted revision is history, and the early ones cite the frozen v0.1 numbering, which exists as
-headings in neither compiled spec. Those are counted and shown, not failed.
+A live document is an open proposal or draft, a numbered part, or any other tracked Markdown or
+Python file. An accepted revision, a project review and the frozen v0.1 specification are history:
+they are read against the baseline they were written on, never gated on the current tree
+(`revisions/CONTRIBUTING.md#ew-citation-context`), so none of them is read here. An accepted
+revision is still a citation target.
 
-An unprefixed `§N` that matches no local heading is reported and does not fail: it is usually a
-reference whose antecedent is the previous clause ("R86 ... its §1.1"), which reads correctly and
-resolves to nothing mechanically. Worth seeing, since the same shape is how a reference to another
-document's §7.3 gets read as this document's §7.
+A revision or part citation that does not resolve fails. An unprefixed
+`§N` matching no local heading is reported and does not fail, since it usually continues a
+reference to another document from the previous clause.
 
-Every other working-tree document and source file is checked too, not only the revisions. The parts are
-among them: they carry **428 citations** of each other and of the revisions that set their rules,
-which were read for numbering alone until this included them, and one named a section of a
-revision that has never had one. A broken part citation there is an error, as in a draft, because
-the parts are the statement of record.
-
-Every working-tree Python file is checked too, not only the revisions. The current citation rule
-sends a comment to the owner that states its rule, so a citation in source is load-bearing -- and until
-this scanned them, five were broken: four naming section 56 of Part 00 and section 92 of Part 01,
-both v0.1 *line* numbers carried into section form, and one naming a section R70 never had. None
-resolved and nothing reported them. A part citation that does not resolve in a tracked file is an
-error, as in a draft: the source is live.
-
-Those are spelled out in prose rather than written as citations, because this file is one of the
-files it reads.
-
-A part named by its number alone is an error in a part, a revision or a draft, as
-`revisions/CONTRIBUTING.md#ew-citation-context` requires and no other check can see: both
-spellings resolve to the same section. A source file is read for whether its citations resolve and
-never for how they are spelled, since a specification does not impose a comment style on code it
-does not own.
-
-The parts are also checked for ascending, unique numbering. `headings` returns a set, which is
-what hid Part 05 carrying two sections numbered 11 through five accepted revisions -- a duplicate
-vanishes into a set and the citation still resolves. Two sections with one number fail the build and
-sections that do not ascend are reported.
+A part named by its number alone fails in a Markdown document, as the citation-context rule
+requires; source is read only for whether its citations resolve. The parts are also checked for
+unique numbering, which fails the build, and for ascending numbering, which is reported: a
+duplicate number makes a citation ambiguous rather than unresolvable.
 
     python check_citations.py            # report
     python check_citations.py --quiet    # errors only
@@ -75,8 +45,6 @@ PARTS = SPEC / "parts"
 
 #: `## 3.` and `### 3.1 ` alike; the trailing dot is optional and the numbering may nest.
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
-#: A revision's own number, from its filename.
-NUMBER = re.compile(r"^R(\d+)-")
 #: `R92 §2.2`, `R92 §2`. The section may end a sentence, so the trailing dot is trimmed.
 REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
 #: `Part 03 §5.4` and the bare `03` §5.4 it replaced, both resolved. Two digits, not `0` and a
@@ -92,33 +60,6 @@ NUMBERED = re.compile(r"`(\d\d)`")
 MARKDOWN_ANCHOR = re.compile(r"\[[^\]]+\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
 SOURCE_ANCHOR = re.compile(r"`([^`#]+\.md)#(ew-[a-z0-9-]+)`")
 LINKED_PART = re.compile(r"\[Part (\d\d) §(\d+(?:\.\d+)*)\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
-
-#: Sites where a backticked two-digit number is not a part, or is a specimen of the spelling
-#: the former bare-part spelling replaced, each with why. Matched as a substring of the line, and checked to still
-#: match something, so an entry cannot outlive the text it excuses.
-NOT_A_PART: tuple[tuple[str, str, str], ...] = (
-    (
-        "R113",
-        "at 340**",
-        "the revision that chose the spelling, quoting the one it replaced",
-    ),
-    (
-        "R113",
-        "in two, both accepted on",
-        "the same, showing which of two revisions wrote which",
-    ),
-    (
-        "R113",
-        "one sentence, two backticked tokens",
-        "the exhibit: a registry field and a part under one markup",
-    ),
-    ("R113", "becomes", "the possessive form the sweep had to rewrite by hand"),
-    (
-        "R113",
-        "name a part and a stage rather than a section",
-        "a shape that takes more than inserting the word",
-    ),
-)
 
 
 def headings(text: str) -> set[str]:
@@ -152,24 +93,13 @@ def part(number: str) -> Path | None:
     return found[0] if found else None
 
 
-def numbered(path: Path, text: str) -> tuple[list[str], set[str]]:
-    """Each part this document names by its number alone, and which exemptions that used.
-
-    The current citation rule binds a part and a revision and nothing else, so source is read
-    for whether its citations resolve and never for how they are spelled.
-    """
-    found, used = [], set()
-    for number, line in ((m, text[: m.start()].count("\n") + 1) for m in NUMBERED.finditer(text)):
-        whole = text.splitlines()[line - 1]
-        excuse = next(
-            (reason for site, marker, reason in NOT_A_PART if path.name.startswith(site) and marker in whole),
-            None,
-        )
-        if excuse is not None:
-            used.add(excuse)
-            continue
-        found.append(f"`{number.group(1)}` on line {line} — a part is named as Part {number.group(1)}")
-    return found, used
+def numbered(text: str) -> list[str]:
+    """Each part this document names by its number alone."""
+    lines = (text[: match.start()].count("\n") + 1 for match in NUMBERED.finditer(text))
+    return [
+        f"`{match.group(1)}` on line {line} — a part is named as Part {match.group(1)}"
+        for match, line in zip(NUMBERED.finditer(text), lines, strict=True)
+    ]
 
 
 def anchor_heading(text: str, anchor: str) -> str | None:
@@ -257,16 +187,12 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
             continue
         if match.group(1) not in own:
             loose.append(f"§{match.group(1)} — unprefixed, and this document has no such section")
-    # An accepted record is immutable history. Its current-owner links are interpreted from its
-    # baseline rather than made a gate on the working tree.
-    if path.parent != ACCEPTED:
-        errors += anchored(path, text)
+    errors += anchored(path, text)
     return errors, parts, sorted(set(loose))
 
 
-#: Read for citations but not for spelling or numbering: the frozen v0.1 specification, which is
-#: never edited, and the rendering generated from the v0.2 parts.
-SKIPPED = ("nwb_lake_poc_docs/",)
+#: History, read against the baseline it was written on, and the rendering generated from the parts.
+HISTORICAL = ("nwb_lake_poc_docs/", "revisions/accepted/", "revisions/reviews/")
 
 CURRENT_CONTRACT = (
     SPEC / "README.md",
@@ -299,14 +225,7 @@ def current_contract_history_refs() -> list[str]:
 
 
 def elsewhere() -> list[Path]:
-    """Every other working-tree document and source file a citation has to resolve in.
-
-    A citation is load-bearing wherever it is written. Reading the revisions and the Python alone
-    left the developer documentation unchecked, and seven citations in it resolved to nothing --
-    two naming line numbers of the frozen v0.1 as though they were sections, and one naming a
-    section of Part 09 that part has never carried. Spelled in prose rather than as citations,
-    since this file is one of the files it reads.
-    """
+    """Every live working-tree document and source file other than the proposals and drafts."""
     listed = subprocess.run(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
         cwd=HERE.parent,
@@ -317,24 +236,23 @@ def elsewhere() -> list[Path]:
     found = []
     for name in listed:
         path = HERE.parent / name
-        if name.startswith(SKIPPED) or "Implementation_Spec" in name:
+        if name.startswith(HISTORICAL) or "Implementation_Spec" in name:
             continue
         if path.suffix not in {".py", ".md"} or not path.is_file():
             continue
-        # The revisions and the drafts are read in their own pass.
-        if name.startswith(("revisions/accepted/", "revisions/drafts/", "revisions/proposals/")):
+        # The proposals and drafts are read in their own pass.
+        if name.startswith(("revisions/drafts/", "revisions/proposals/")):
             continue
         found.append(path)
     return found
 
 
-def main() -> int:  # noqa: C901
+def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--quiet", action="store_true", help="errors only")
     args = ap.parse_args()
 
-    paths = sorted(ACCEPTED.glob("R[0-9]*.md"), key=lambda p: int(NUMBER.match(p.name).group(1)))
-    paths += sorted((HERE / "proposals").glob("[!.]*.md"))
+    paths = sorted((HERE / "proposals").glob("[!.]*.md"))
     paths += sorted((HERE / "drafts").glob("[!.]*.md"))
     # An editor's lock file is a symlink to a target that never existed -- Emacs writes
     # `.#name.md -> user@host:pid`. Following one raises, so a full `verify.py` would fail for as
@@ -342,8 +260,7 @@ def main() -> int:  # noqa: C901
     # a real one, so this skips the lock and nothing else.
     paths = [p for p in paths if p.is_file()]
     code = elsewhere()
-    broken, historical = 0, 0
-    excused: set[str] = set()
+    broken = 0
 
     history_defects = current_contract_history_refs()
     history_label = "current contract artifacts contain no revision references"
@@ -367,42 +284,19 @@ def main() -> int:  # noqa: C901
                     print(f"  order   {target.name}: §{after} follows §{before}")
 
     for path in paths + code:
-        # Proposals and drafts feed the next change and a part is the statement of record, so a
-        # broken part citation in any of them is an error rather than history. The 428 citations
-        # the parts carry were read for numbering alone until this included them, and one named a
-        # section of R55 that revision has never had.
-        live = path.parent.name in {"proposals", "drafts"} or path.suffix == ".py" or path.parent == PARTS
         errors, parts, loose = check(path)
+        errors += parts
         # The current citation rule binds prose spelling; a source file is read only for resolution.
         if path.suffix == ".md":
-            spelled, fired = numbered(path, path.read_text())
-            errors += spelled
-            excused |= fired
-        if live:
-            errors += parts
-        else:
-            historical += len(parts)
+            errors += numbered(path.read_text())
         broken += len(errors)
         shown = path.relative_to(HERE.parent) if path.suffix == ".py" else path.name
         for line in errors:
             print(f"  BROKEN  {shown}: {line}")
         if not args.quiet:
-            for line in parts if not live else []:
-                print(f"  v0.1    {shown}: {line}")
             for line in loose:
                 print(f"  loose   {shown}: {line}")
-    # An exemption that matches nothing is as wrong as a missing one: it excuses text that has
-    # gone, and the next reader takes it for a live case.
-    for site, _, reason in NOT_A_PART:
-        if reason not in excused:
-            print(f"  STALE   {site}'s exemption for {reason!r} matches nothing")
-            broken += 1
-
-    tail = f", {historical} citing the frozen v0.1 numbering" if historical else ""
-    print(
-        f"{len(paths)} revision documents and {len(code)} other working-tree files, "
-        f"{broken} unresolved citation(s){tail}"
-    )
+    print(f"{len(paths)} proposals and drafts and {len(code)} other live files, {broken} unresolved citation(s)")
     return 1 if broken else 0
 
 
