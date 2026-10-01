@@ -2723,6 +2723,11 @@ def validate(
     -------
     Report
         Every finding, in the order the layers ran.
+
+    Raises
+    ------
+    ReplacedPacketUnreadable
+        If no published manifest can be read at a path in `replaced`.
     """
     # The manifest the packet carries, which for an amendment's candidate is not the file on disk. A
     # reader already refused bytes the `json` phase would, so re-encoding what it decoded loses no finding.

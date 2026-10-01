@@ -36,6 +36,7 @@ from escapewheel_reader import Location, RegistryBinding, RegistryFault, Registr
 from escapewheel_reader.registries import acquire
 from escapewheel_reader.uri import in_one_form
 
+from .errors import FormatCheckUnavailable, ReplacedPacketUnreadable
 from .registry_document import CheckedRegistryContext, check_registry_context_bytes
 from .stores import listing_digest
 
@@ -100,7 +101,7 @@ def format_checker() -> jsonschema.FormatChecker:
     """
     checker = jsonschema.FormatChecker()
     if "date-time" not in checker.checkers:
-        raise RuntimeError("jsonschema cannot assert date-time; install rfc3339-validator")
+        raise FormatCheckUnavailable("jsonschema cannot assert date-time; install rfc3339-validator")
     return checker
 
 
@@ -287,7 +288,7 @@ def _published(path: Path) -> list[tuple[str, Mapping[str, Any]]]:
             if isinstance(decoded, dict):
                 found.append((hashlib.sha256(body).hexdigest(), decoded))
     if not found or not (path.is_file() or (path / "packet.json").is_file()):
-        raise FileNotFoundError(f"no published manifest can be read at {path}")
+        raise ReplacedPacketUnreadable(f"no published manifest can be read at {path}", path=path)
     return found
 
 
@@ -303,7 +304,7 @@ def confirm_replaced(
 
     Raises
     ------
-    FileNotFoundError
+    ReplacedPacketUnreadable
         If no published manifest can be read where a supplied path points.
     """
     items = list(document.get("replaces", ()))

@@ -27,6 +27,7 @@ Failures:
 
 - :exc:`.StoreUnreachable`, :exc:`.ResourceMissing` -- the store could not be reached, or was
   reached and holds nothing under the URI.
+- :exc:`.UnknownAlgorithm` -- a digest was asked for in an algorithm outside :data:`ALGORITHMS`.
 
 No function here runs unless the caller asks for a mode, and each result states what was true when
 the function looked. A local path needs no library. Any other scheme needs fsspec, which the
@@ -47,7 +48,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from .errors import ResourceMissing, StoreUnreachable
+from .errors import ResourceMissing, StoreUnreachable, UnknownAlgorithm
 
 #: Bytes per read when digesting. Large enough that a remote store is not asked a thousand
 #: times for a chunk it would have streamed, small enough to bound memory whatever an array's size.
@@ -162,7 +163,7 @@ def hasher(algorithm: str) -> Any:
 
     Raises
     ------
-    ValueError
+    UnknownAlgorithm
         If the algorithm is not one Part 04 §4.3 admits.
     """
     if algorithm == "sha256":
@@ -173,7 +174,10 @@ def hasher(algorithm: str) -> Any:
         return _Crc(_crc32c(), 8)
     if algorithm == "crc32":
         return _Crc(lambda previous, block: zlib.crc32(block, previous), 8)
-    raise ValueError(f"{algorithm!r} is not an admitted digest algorithm; expected one of {', '.join(ALGORITHMS)}")
+    raise UnknownAlgorithm(
+        f"{algorithm!r} is not an admitted digest algorithm; expected one of {', '.join(ALGORITHMS)}",
+        algorithm=algorithm,
+    )
 
 
 def listing_digest(rows: Iterable[tuple[str, int, str]]) -> str:
@@ -419,7 +423,7 @@ def digest_resource(
         If the URI names nothing, or an empty prefix.
     StoreUnreachable
         If the store cannot be reached.
-    ValueError
+    UnknownAlgorithm
         If `algorithm` is not admitted.
     """
     hasher(algorithm)

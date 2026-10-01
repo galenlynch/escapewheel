@@ -3,10 +3,11 @@
 import gzip
 import json
 
+import jsonschema
 import pytest
 
-from escapewheel_validator import check_packet_manifest
-from escapewheel_validator.manifest import prefix_digest
+from escapewheel_validator import FormatCheckUnavailable, check_packet_manifest
+from escapewheel_validator.manifest import format_checker, prefix_digest
 
 from .conftest import install_registry, read_registry
 
@@ -397,3 +398,11 @@ def extension_document():
             }
         },
     }
+
+
+def test_an_installation_that_cannot_assert_date_time_is_refused(monkeypatch):
+    """Part 04 §10: a shape check that annotates `date-time` without asserting it is no shape check."""
+    known = {name: check for name, check in jsonschema.FormatChecker.checkers.items() if name != "date-time"}
+    monkeypatch.setattr(jsonschema.FormatChecker, "checkers", known)
+    with pytest.raises(FormatCheckUnavailable):
+        format_checker()

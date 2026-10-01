@@ -31,7 +31,16 @@ not.
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .errors import OrderFault, OrderViolation, ResourceMissing, StoreUnreachable, ValidatorError
+from .errors import (
+    FormatCheckUnavailable,
+    OrderFault,
+    OrderViolation,
+    ReplacedPacketUnreadable,
+    ResourceMissing,
+    StoreUnreachable,
+    UnknownAlgorithm,
+    ValidatorError,
+)
 from .generate import Check, generate
 from .manifest import manifest_schema
 from .registry_document import (
@@ -61,14 +70,17 @@ __all__ = [
     "CheckedRegistryContext",
     "Evaluation",
     "Finding",
+    "FormatCheckUnavailable",
     "OrderFault",
     "OrderViolation",
     "RegistryEvaluation",
     "RegistryRejected",
     "RegistryResult",
+    "ReplacedPacketUnreadable",
     "Report",
     "ResourceMissing",
     "StoreUnreachable",
+    "UnknownAlgorithm",
     "ValidatorError",
     "__version__",
     "check_packet_manifest",

@@ -11,7 +11,7 @@ from escapewheel_reader import open_packet
 from fsspec.implementations.memory import MemoryFileSystem
 
 from escapewheel_validator import validate
-from escapewheel_validator.errors import ResourceMissing, StoreUnreachable
+from escapewheel_validator.errors import ResourceMissing, StoreUnreachable, UnknownAlgorithm
 from escapewheel_validator.stores import (
     crc32c_python,
     crc64nvme_python,
@@ -55,8 +55,9 @@ def test_an_empty_object_has_a_zero_crc_of_full_width(algorithm, width):
 
 
 def test_an_unadmitted_algorithm_is_refused():
-    with pytest.raises(ValueError, match="md5"):
+    with pytest.raises(UnknownAlgorithm) as refused:
         hasher("md5")
+    assert refused.value.algorithm == "md5"
 
 
 def test_a_store_value_converts_from_base64_to_hexadecimal():

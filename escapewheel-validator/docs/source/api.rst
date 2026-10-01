@@ -51,6 +51,9 @@ Errors
    ValidatorError
    StoreUnreachable
    ResourceMissing
+   UnknownAlgorithm
+   ReplacedPacketUnreadable
+   FormatCheckUnavailable
    OrderViolation
    OrderFault
 

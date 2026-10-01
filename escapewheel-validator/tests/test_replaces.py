@@ -7,7 +7,7 @@ import shutil
 import pytest
 from escapewheel_reader import open_packet
 
-from escapewheel_validator import check_packet_manifest, validate
+from escapewheel_validator import ReplacedPacketUnreadable, check_packet_manifest, validate
 
 OTHER_SHA = "0" * 64
 
@@ -111,10 +111,16 @@ def test_an_item_naming_a_version_later_amended_is_confirmed_from_the_retained_m
     assert _mismatches(report) == []
 
 
-def test_a_supplied_path_holding_no_manifest_is_refused(tmp_path, packet_root):
+@pytest.mark.parametrize("body", [None, "not json"], ids=["absent", "unparsable"])
+def test_a_supplied_path_holding_no_readable_manifest_is_refused(tmp_path, packet_root, body):
     _replacing(packet_root, "1.0.0", _item())
-    with pytest.raises(FileNotFoundError):
-        validate(open_packet(packet_root), replaced=[tmp_path / "nothing"])
+    supplied = tmp_path / "supplied"
+    if body is not None:
+        supplied.mkdir()
+        (supplied / "packet.json").write_text(body)
+    with pytest.raises(ReplacedPacketUnreadable) as refused:
+        validate(open_packet(packet_root), replaced=[supplied])
+    assert refused.value.path == supplied
 
 
 def _amended_replacement(root, change):

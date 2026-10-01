@@ -47,6 +47,12 @@ def test_every_exception_is_defined_in_the_error_module_under_the_package_base()
     assert issubclass(errors.ValidatorError, EscapewheelError)
 
 
+def test_an_error_a_caller_catches_as_a_built_in_stays_one():
+    """Each replaced a built-in that a caller of the function raising it may catch."""
+    assert issubclass(errors.UnknownAlgorithm, ValueError)
+    assert issubclass(errors.ReplacedPacketUnreadable, FileNotFoundError)
+
+
 def test_every_exception_is_documented_in_the_module_docstring():
     """The module docstring is the taxonomy a reader of the page sees."""
     for name, cls in inspect.getmembers(errors, inspect.isclass):

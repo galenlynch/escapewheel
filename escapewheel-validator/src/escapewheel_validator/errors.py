@@ -3,6 +3,11 @@
 - :class:`ValidatorError` -- the base, under the reader's `EscapewheelError`.
 - :class:`StoreUnreachable`, :class:`ResourceMissing` -- a store could not be reached, or was
   reached and holds nothing under the URI.
+- :class:`UnknownAlgorithm` -- a digest was asked for in an algorithm that is not admitted.
+- :class:`ReplacedPacketUnreadable` -- a path given as a replaced packet holds no published
+  manifest that can be read.
+- :class:`FormatCheckUnavailable` -- the installation cannot assert a format the manifest schema
+  requires.
 - :class:`OrderViolation` -- a stream of batches leaves its declared order or repeats a key, as
   one :class:`OrderFault`.
 - :class:`_Unmappable` -- a tick reaches no value on another clock; raised and caught inside the
@@ -16,6 +21,7 @@ from the specification's tree, outside this taxonomy.
 from __future__ import annotations
 
 from enum import StrEnum
+from pathlib import Path
 
 from escapewheel_reader import EscapewheelError
 
@@ -44,6 +50,42 @@ class StoreUnreachable(ValidatorError):
 
 class ResourceMissing(StoreUnreachable):
     """The store was reached and holds nothing under the URI."""
+
+
+class UnknownAlgorithm(ValidatorError, ValueError):
+    """A digest was asked for in an algorithm that is not admitted.
+
+    Attributes
+    ----------
+    algorithm : str
+        The name given.
+    """
+
+    def __init__(self, message: str, *, algorithm: str) -> None:
+        super().__init__(message)
+        self.algorithm = algorithm
+
+
+class ReplacedPacketUnreadable(ValidatorError, FileNotFoundError):
+    """A path given as a replaced packet holds no published manifest that can be read.
+
+    Attributes
+    ----------
+    path : pathlib.Path
+        The path given.
+    """
+
+    def __init__(self, message: str, *, path: Path) -> None:
+        super().__init__(message)
+        self.path = path
+
+
+class FormatCheckUnavailable(ValidatorError):
+    """The installation cannot assert a format the manifest schema requires.
+
+    A fault in the environment and none in a packet: a format no checker is registered for
+    passes every value.
+    """
 
 
 class OrderFault(StrEnum):
