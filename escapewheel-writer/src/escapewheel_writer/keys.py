@@ -1,23 +1,10 @@
 """Assign an integer to each thing a packet names (Part 05 §4.3).
 
-An identifier is `int32` and, where R53 §2.3 calls it **assigned**, this is what chooses the
-number. Shared across adapters on purpose: the recipe exists because four sources can each
-produce `core.probes`, and two of them numbering the same probe differently would be a defect no
-foreign key could see -- both values resolve, to different rows.
+- :class:`Keys` -- the numbers one packet assigns, per kind, and the name each stands for.
 
-A **carried** identifier does not come through here at all: `region_id` is the atlas's own
-structure number, so the writer passes it through rather than choosing. A source's number for a
-unit or an interval is a label and not a carried identifier, since a sorter numbers from zero within
-each run and a source numbers each kind of interval separately, so only the packet can say which
-row a number names.
-
-Numbers are assigned in first-seen order and start at 0. Part 05 §4.3 requires only that a key not
-move once committed, and a deterministic order makes two builds of the same sources produce the
-same packet, which is what lets a rebuild be compared to what it replaced. Where Part 02 orders a
-kind's numbers -- units in §12.1, intervals in §12.9 -- the caller asks in that order.
-
-An amending build first `hold`s every number the packet it amends assigned, so a held name keeps its
-number and every new one is numbered from one past the largest held (Part 05 §4.3).
+Numbers start at 0 in first-seen order, and every adapter of a build shares one `Keys`. An
+amending build first holds every number the packet assigned, so a held name keeps its number and
+a new name takes the number after the largest held.
 """
 
 from __future__ import annotations

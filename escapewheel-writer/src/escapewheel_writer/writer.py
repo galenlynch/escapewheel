@@ -1,22 +1,22 @@
-"""Stage, validate, and commit a packet.
+"""Stage, validate, and commit a packet (Part 05 §2).
 
-Part 05's core principle is that **validation is importation**: copying or converting bytes is
-only staging, and a resource is not imported until it has passed the checks for its schema.
-This module is the writer and committer halves of that pipeline. It knows nothing about NWB,
-SpikeInterface, or any other source -- adapters hand it records, and it turns them into a
-packet or refuses to.
+- :class:`PacketWriter` -- collect records, arrays, references and payloads, then commit them as a
+  validated packet or amend one.
+- :class:`StagedArray` -- a dense array to write into the packet, with the layout it takes.
+- :class:`ExternalArray`, :class:`ExternalMedia` -- an array, and an image or video, the packet
+  references rather than owns.
+- :exc:`CommitRefused` -- validation's verdict was not ``passed``, so nothing was committed.
+- :exc:`NotCommitted` -- there is no committed packet at a root to amend.
+- :exc:`PromotionRecordUnreadable` -- a staging area holds a promotion record this writer cannot
+  read.
+- :func:`read_promotion` -- the version and paths of the promotion record at a root.
+- :func:`retained` -- the name of a manifest's retained copy.
+- :func:`semver` -- a sort key for a `packet_version`.
+- :data:`MANIFEST`, :data:`MANIFESTS`, :data:`STAGING`, :data:`PROMOTION` -- where a packet keeps
+  its manifest, its superseded manifests, its staging area and its promotion record.
 
-A build follows Part 05 §2's order, and the part of it this module performs is its guarantee:
-
-1. write the normalized resources and the import's provenance under ``staging/`` (Part 03 §3.4);
-2. derive the analysis resources the caller asked for from the staged packet (Part 05 §8);
-3. validate the whole staged packet there;
-4. record every path promotion will create, then promote into the final paths (Part 05 §6);
-5. rename the manifest to ``packet.json`` **last**.
-
-Until step 5 the packet root holds no manifest, so a reader finds nothing rather than finding a
-partial import that claims to be valid, and the promotion record makes whatever an interrupted
-step 4 left the next build's to remove.
+A commit stages and validates everything under ``staging/``, promotes it, and renames the
+manifest to ``packet.json`` last, so a reader finds a whole packet or none.
 """
 
 from __future__ import annotations
@@ -96,17 +96,6 @@ STAGING = "staging"
 PROMOTION = "promotion.json"
 
 
-#: Columns whose resource must not dictionary-encode them, by resource ID. Deliberately not in
-#: the registry: R30 §3.3 leaves encoding and row-group size non-normative, because the right
-#: values follow from session length and unit count rather than from the schema.
-#:
-#: `analysis.spike_events` is 98.8% `t_tick`, and a dictionary over near-unique int64 ticks is
-#: the worst option measured at every row-group size -- the writer builds a dictionary nearly as
-#: large as the column, overflows the page limit, abandons it mid-column, and emits both.
-#: Measured in `conformance/parquet-probe/real.py`.
-#: Columns that store better as deltas than as anything pyarrow chooses by itself, beyond the
-#: `_tick` rule below, because measurement says so and their names do not. `anchor_index`
-#: ascends over thousands of anchors per clock; `n_spikes` is a large count with no repeats.
 def _options(
     resource_id: str,
     spec: Mapping[str, Any],
@@ -121,10 +110,10 @@ def _options(
     nothing obliges a reader to read one, and neither DuckDB nor pyarrow does. DuckDB says so
     outright (duckdb#2755, closed as "not supported… mostly improves point queries which is not
     what DuckDB is focused on") and measures identically with it and without; pyarrow prunes at
-    row-group granularity too. arrow-rs, DataFusion and Spark would use it, and it costs only
-    0.9 MB on a 682 MB table — but a packet rebuilds from its recipe in 90 seconds, so carrying
-    an unexercised feature buys less than turning it on when a reader needs it. pyarrow defaults
-    it off, which is where this leaves it. See `session.BATCH_ROWS` for the row-group half.
+    row-group granularity too. arrow-rs, DataFusion and Spark would use it, and it costs little
+    -- but a packet rebuilds from its recipe, so carrying an unexercised feature buys less than
+    turning it on when a reader needs it. pyarrow defaults it off, which is where this leaves
+    it. See `session.BATCH_ROWS` for the row-group half.
 
     `sorting_columns` is written for every table that declares an order. It costs nothing, and
     it is what lets a file state which of several possible orderings it is in rather than
@@ -175,12 +164,9 @@ def _check_parquet_floor(path: Path) -> None:
 
 
 #: Batches held ahead of the Parquet writer. Building a batch and encoding one cost about the
-#: same — 2.5 s and 2.6 s for a 23 M-spike stream — so serially a stream pays both and one
-#: worker ahead overlaps them. The depth is a memory budget, not a throughput knob, and one is
-#: where the two part company. Measured staging 287 M spikes: serial 62.0 s at 2,365 MiB,
-#: depth 1 50.1 s at 2,682 MiB, depth 2 49.1 s at 2,845 MiB, depth 3 47.9 s at 3,042 MiB.
-#: Double-buffering takes 84% of the available time for half the memory of the alternatives;
-#: output is byte-identical at every depth.
+#: same, so serially a stream pays both and one worker ahead overlaps them. The depth is a
+#: memory budget, not a throughput knob: one takes most of the available time, each further
+#: batch held buys little for the memory it costs, and output is byte-identical at every depth.
 PREFETCH = 1
 
 
@@ -263,17 +249,16 @@ def _write_stream(
     try:
         # Verified on the way in, not read back afterwards. The rows pass through here
         # already sorted by the source, so comparing them costs the comparison alone, where
-        # establishing the same fact from the written file costs re-reading its sort columns --
-        # 467 MB on a quarter of a billion spikes. It runs inside the producer thread, so the
-        # comparison overlaps the Parquet encoding rather than adding to it. `commit` tells the
-        # validator which resources this settled; a validator handed an unknown packet still
-        # reads every one.
+        # establishing the same fact from the written file costs re-reading its sort columns.
+        # It runs inside the producer thread, so the comparison overlaps the Parquet encoding
+        # rather than adding to it. `commit` tells the validator which resources this settled; a
+        # validator handed an unknown packet still reads every one.
         keys = sort_key(resource_id, spec) or []
         unique = spec["primary_key"] if keys and adjacency_settles_uniqueness(resource_id, spec) else None
-        # Three stages, not two: building a batch, comparing it and encoding it cost 2.5 s,
-        # 2.2 s and 2.6 s on a 23 M-spike stream, so folding the comparison into the producer
-        # made it the bottleneck and gave back exactly what skipping the re-read saved. A queue
-        # either side of it lets all three run at once, and the slowest one sets the pace.
+        # Three stages, not two: building a batch, comparing it and encoding it cost about the
+        # same, so folding the comparison into the producer would make it the bottleneck and
+        # give back what skipping the re-read saves. A queue either side of it lets all three
+        # run at once, and the slowest one sets the pace.
         for batch in _prefetch(_prefetch(verify_order(batches, keys, unique)) if keys else batches):
             first = out is None
             if out is None:
@@ -433,8 +418,8 @@ def _bump(version: str) -> str:
     """Return the next packet version.
 
     Patch level, so a packet under development stays inside one minor series while the
-    structure moves. Part 05 §15.1 requires only that the new version keep the major version and sort
-    strictly after the superseded one, and Part 03 §8 leaves what it *means* open, so nothing here rests on the choice.
+    structure moves. Part 05 §15.1 requires only that the new version keep the major version and
+    sort strictly after the superseded one, so nothing here rests on the choice.
     """
     major, minor, patch, *_ = (*version.split("."), "0", "0", "0")
     return f"{int(major)}.{int(minor)}.{int(patch) + 1}"
@@ -448,10 +433,9 @@ class NotCommitted(Exception):
 class StagedArray:
     """A dense array to write into the packet, with the layout it should take.
 
-    Measured on 6,781 unit waveforms (`conformance/zarr-probe/waveforms.py`): the chunk should
-    be the unit of the question, the shard keeps that from becoming one file per chunk, and
-    the compressor belongs *inside* the shard -- wrapping a shard in an outer codec disables
-    the partial read it exists for, at a cost of 324x.
+    The chunk should be the unit of the question, the shard keeps that from becoming one file
+    per chunk, and the compressor belongs *inside* the shard -- wrapping a shard in an outer
+    codec disables the partial read it exists for (`conformance/zarr-probe/waveforms.py`).
     """
 
     values: Any
@@ -478,8 +462,7 @@ class ExternalArray:
 
     Referencing is the expected form for a large one. Copying duplicates the bulk of a dataset
     for no gain, and transcoding to the portable floor throws away the acquisition's own
-    compression -- 5.8 GB of LFP across twelve probes, against three integers per series once
-    R20 replaces its timestamps.
+    compression.
 
     `digest`, `size_bytes`, `members` and `verified_at` record what was true when someone
     looked, not a promise about now: immutability covers packet-owned bytes only (Part 03 §8),
@@ -511,9 +494,9 @@ class ExternalArray:
 class ExternalMedia:
     """An image or video the packet references rather than owns (Part 04 §5.1).
 
-    The same bargain `ExternalArray` makes, for the same reason: three behaviour cameras of one
-    session are 10 GB as MP4 and 80 GB as the AVI they were encoded from, so a packet that copied
-    them would be mostly video. What the packet owns instead is the timing -- one row per frame
+    The same bargain `ExternalArray` makes, for the same reason: a session's behaviour video is
+    larger than everything else it holds, so a packet that copied it would be mostly video.
+    What the packet owns instead is the timing -- one row per frame
     in `core.media_frames`, on a declared clock -- which is what makes the video addressable and
     is the part no player can supply.
 
@@ -649,8 +632,7 @@ class PacketWriter:
         self._encoding_notes: list[str] = []
         #: The session every session-scoped table's rows belong to, which `_with_session` fills
         #: from (Part 02 §7.1). Given rather than read back out of `core.sessions`, because a build adds
-        #: that table last: reading it back left every table added before it unfilled, and only the
-        #: adapters that happened to emit the column themselves were saved by it.
+        #: that table last, and reading it back would leave every table added before it unfilled.
         self._session = session
         core_context = registry if isinstance(registry, CheckedRegistryContext) else check_registry_context(registry)
         if core_context.result.state != "valid":
@@ -658,7 +640,7 @@ class PacketWriter:
         checked_registry = core_context.document
         assert isinstance(checked_registry, Mapping)
         self._registry = checked_registry
-        #: Extension registries this packet carries (Part 09 §2), by `extension_id`. An extension is a
+        #: Extension registries this packet carries (Part 09 §5.3), by `extension_id`. An extension is a
         #: registry document in R2's format, so everything below resolves a resource against core
         #: and then these -- there is no second code path for an extension's tables.
         self._extensions: dict[str, Mapping[str, Any]] = {}
@@ -685,7 +667,7 @@ class PacketWriter:
             for resource_id in document["resources"]:
                 if not resource_id.startswith(f"{extension_id}."):
                     raise ValueError(
-                        f"{resource_id} is not namespaced by {extension_id!r}; Part 09 §2 requires it, "
+                        f"{resource_id} is not namespaced by {extension_id!r}; Part 09 §5.2 requires it, "
                         "and an extension MUST NOT define a table in core or analysis"
                     )
                 if resource_id in checked_registry["resources"]:
@@ -742,7 +724,7 @@ class PacketWriter:
             The packet version amended.
         prevail : bool, default False
             Keep the packet's session and subject rows whatever a source delivers, as an amending
-            build does (Part 05 §3.5), rather than settling them like any other row.
+            build does (Part 05 §3.6), rather than settling them like any other row.
 
         Raises
         ------
@@ -840,9 +822,8 @@ class PacketWriter:
         KeyError
             If the registry does not define this resource.
         ValueError
-            If a record carries a key no column declares. `add_batches` has always refused
-            one, and this path ignored it, so the same adapter defect was a build failure
-            through one entry point and a dropped column through the other.
+            If a record carries a key no column declares, as `add_batches` refuses one, so the
+            same adapter defect fails a build through either entry point.
         """
         spec = self.spec(resource_id)
         if spec is None:
@@ -887,10 +868,9 @@ class PacketWriter:
     def _session_batch(self, spec: Mapping[str, Any], batch: pa.RecordBatch) -> pa.RecordBatch:
         """Fill `session_id` on a streamed batch, as `_with_session` does for records (Part 02 §7.1).
 
-        The records path filled it and this one did not, so a table large enough to stream reached
-        validation with nulls in a required column: `core.media_frames` at 7,570,450 rows, on the
-        one packet that carries video. Filled as the session's *name*, so `number_batch` assigns it
-        the same integer every other table's reference to `core.sessions` gets.
+        A table large enough to stream would otherwise reach validation with nulls in a required
+        column. Filled as the session's *name*, so `number_batch` assigns it the same integer
+        every other table's reference to `core.sessions` gets.
         """
         if self._session is None or "session_id" in batch.schema.names:
             return batch
@@ -1440,8 +1420,7 @@ class PacketWriter:
                 # Sizing a row group for the fetch band is a mistake on both paths. See
                 # `session.BATCH_ROWS` for the streaming case; here the trap is that estimating
                 # from `Table.nbytes` is 320x out on a string-heavy table, because Arrow
-                # materialises strings that Parquet stores as dictionary codes. It once split a
-                # 101 KB table three ways.
+                # materialises strings that Parquet stores as dictionary codes.
                 options = _options(resource_id, spec, table.schema, self._encoding_exceptions, table)
                 pq.write_table(table, path, **options)
                 delta = list(options.get("column_encoding", {}))

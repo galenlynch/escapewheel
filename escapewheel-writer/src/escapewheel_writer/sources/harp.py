@@ -1,17 +1,11 @@
 """Harp devices, read from the schema each one writes beside its own data.
 
-A Harp acquisition directory carries `device.yml`, the device schema the Harp protocol defines:
-the device's name, its `whoAmI` type code, its firmware version, and the registers it emits.
-That is a complete instrument declaration, and it sits in the data directory rather than in any
-metadata document -- measured on `ecephys_786867`, no rig JSON, session JSON or processing JSON
-mentions the sensor at all, while its own schema names it, versions it, and documents the
-register whose value sets its sampling rate.
+- :class:`HarpSource` -- `core.devices`, one row per Harp device found under a root.
+- :data:`SCHEMA` -- the name of the schema file.
+- :data:`FIELDS` -- the fields this adapter reads from a device schema.
 
-**Only `device.yml` is read here.** The register streams beside it are Harp's binary message
-format, and decoding those is a job for a Harp library -- `contraqctor` and `harp-python` both
-do it. Nothing in this packet needs them: the signal itself reaches us through the NWB, already
-aligned, so what was missing was never the samples but the sentence saying what produced them.
-Adding a dependency to read four YAML scalars would buy nothing and cost a dependency.
+Only `device.yml` is read: the register streams beside it are Harp's binary message format, which
+a Harp library decodes and no table here needs.
 """
 
 from __future__ import annotations

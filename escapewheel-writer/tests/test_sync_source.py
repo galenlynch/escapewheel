@@ -403,7 +403,7 @@ def test_the_limit_is_a_duration(source):
     assert phase_discontinuities(ticks, parents, HARP_TICK_RATE_HZ, limit=1e-4)
 
 
-# -- where tick zero falls (Part 02 §8.4) -----------------------------------------------
+# -- where tick zero falls (Part 01 §3.9) -----------------------------------------------
 
 
 def test_the_clock_carries_the_instant_the_nodes_stamped(tmp_path):

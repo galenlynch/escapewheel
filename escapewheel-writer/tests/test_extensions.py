@@ -704,7 +704,7 @@ def test_a_file_delivered_source_needs_no_python_of_ours(tmp_path, registry, min
     root = tmp_path / "p"
     assert writer.commit(root).passed
 
-    # The file carried a name; the packet holds the number the writer assigned (Part 05 §8).
+    # The file carried a name; the packet holds the number the writer assigned (Part 05 §4.3).
     table = open_packet(root).table("vrf.sites")
     assert table.schema.field("session_id").type == pa.int32()
     assert table.column("site_id").to_pylist() == [0, 1]

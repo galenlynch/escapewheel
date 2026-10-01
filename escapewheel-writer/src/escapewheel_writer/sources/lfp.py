@@ -1,32 +1,11 @@
-"""Reference an NWB's LFP series as external array assets, and describe their axes.
+"""Reference an NWB's LFP series as external array assets, and describe their axes (Part 04 §5.1).
 
-Five things about this data decide the shape of what follows, each measured against the twelve
-series of `ecephys_776259_2025-04-09`.
+- :class:`LFPSource` -- the series as `ExternalArray` references, and the tables for their axes.
+- :data:`GROUP` -- where an NWB keeps its LFP series.
 
-**It is referenced, not copied.** 5.8 GB of compressed int16 across twelve probes. Part 04 §5.1
-makes referencing the expected form for a resource this size: copying duplicates the bulk of a
-dataset, and transcoding to the portable floor would discard the acquisition's own compression
-for nothing. The bytes stay where they are and the packet says where that is.
-
-**It is Zarr v2, which only an external resource may be** (Part 03 §6.1). A packet-owned array
-must be v3. Its own `.zarray` metadata states the version; the packet does not repeat it.
-
-**Its timestamps are unusable and unnecessary.** Every series stores 7,983,750 float64
-timestamps -- 767 MB across twelve -- on a regenerated nominal grid, with the sign of `t0`
-flipped so the array reads as 268 days before the spikes. None of it is needed: LFP sample 0
-lands on AP tick -6.0 to -6.2 on every probe measured, so each series begins at its own
-probe's sample 0 and advances exactly 24 AP ticks a sample. R20's regular-tick axis states
-that in three integers, on the clock the spikes are already on, and both defects disappear
-rather than being carried forward.
-
-**The channel axis is a labelled one.** LFP keeps every fourth contact -- 96 of 384 -- so the
-axis cannot be described by a range. The axis names `core.electrodes`, and its labels name the
-electrode behind each position.
-
-**`inter_sample_shift` is the per-channel quantity R19 was for.** It takes eight distinct
-values within a series, because a Neuropixels ADC samples its channels in turn rather than at
-once. `conversion` is *not*: it is one value per series here, so it stays on
-`core.array_assets` rather than being repeated down 96 rows, which Part 02 §6 forbids.
+The adapter does not read a series' stored timestamps as its axis. It declares the axis regular on
+the probe's own sample clock, and records that choice as the `lfp.timestamps_distrusted`
+compensation.
 """
 
 from __future__ import annotations
@@ -45,7 +24,7 @@ from .store import SourceStore, source_root
 #: Where an NWB keeps its LFP series.
 GROUP = "processing/ecephys/LFP"
 
-#: The array within a series that holds the samples. Part 03 §6.1's URI names the array, not the
+#: The array within a series that holds the samples. The asset's URI names the array, not the
 #: group around it, because a dense array asset is one array.
 DATA = "data"
 
@@ -87,13 +66,12 @@ class LFPSource(Compensates):
         A remote base needs `escapewheel-validator[remote]` and a backend for its scheme;
         unreachable leaves the claim unmade rather than guessed.
 
-        The default is `size` on cost and on manifest size. Listing a session's twelve LFP
-        prefixes is 0.33 s and digesting the 6.83 GB behind them is 75 s from local disk and
-        88 s from S3, against a whole-packet build of 1 min 51 s -- so a digest is a
-        publication-time cost that a build should not pay by default. `members` costs no
-        requests but 2,496 entries of manifest, which is why it is not the default either. A
-        packet recording neither is not silently treated as verified: `validate --checksums`
-        and `--store-digests` each report what they had nothing to compare against.
+        The default is `size` on cost and on manifest size. A listing is a request per prefix
+        where a digest reads every referenced byte, so a digest is a publication-time cost that
+        a build should not pay by default. `members` costs no further requests but a manifest
+        entry per member, which is why it is not the default either. A packet recording neither
+        is not silently treated as verified: `validate --checksums` and `--store-digests` each
+        report what they had nothing to compare against.
     """
 
     #: Part 05 §3.4: what this adapter can supply, whatever a given root happens to hold.
@@ -185,8 +163,7 @@ class LFPSource(Compensates):
 
         Derived rather than parsed out of the series name, which NWB does not constrain at all: an
         `ElectricalSeries` declares an electrode region, and the contacts in one belong to a single
-        `ElectrodeGroup`. Measured on ten real series, the derivation and the parse agree exactly,
-        so no committed packet's `array_asset_id` moves.
+        `ElectrodeGroup`.
         """
         if series.name not in self._probe:
             columns = contact_columns(self.store, self.root / "general/extracellular_ephys/electrodes")
@@ -300,8 +277,8 @@ class LFPSource(Compensates):
         if self.verify == "none":
             return array
         try:
-            # A prefix's digest reads every byte -- 3.9 s an array here -- which is why it is asked
-            # for separately. Its members' values are kept, so a consumer can check one chunk.
+            # A prefix's digest reads every byte, which is why it is asked for separately. Its
+            # members' values are kept, so a consumer can check one chunk.
             digested = digest_resource(array.uri) if self.verify == "sha256" else None
             found = listing(array.uri) if digested is None else digested.found
         except StoreUnreachable as exc:
@@ -339,17 +316,16 @@ class LFPSource(Compensates):
                     "session_id": self.session_id,
                     # No `array_asset_name`: Part 02 §8.2's rule for a clock holds for an asset
                     # too -- the name is what the identifier stands for, and the numbering fills
-                    # it from exactly that where a row leaves it unset (R53 §2.5). Writing a
-                    # source's own label here left the packet with no record of what the
-                    # identifier was minted from, and nothing to join a row to its manifest
-                    # entry by.
+                    # it from exactly that where a row leaves it unset (R53 §2.5). A source's own
+                    # label here would leave the packet with no record of what the identifier
+                    # was minted from, and nothing to join a row to its manifest entry by.
                     # The series name reaches the manifest entry's `uri` through `external_arrays`.
                     "band": "lfp",
                     "clock_id": self._clock(series),
                     # No sample_rate_hz: core.array_dimensions declares the step in ticks on a
                     # clock whose rate is declared, so a rate here would be a second, rounded
                     # statement of the same fact (Part 02 §6) -- and the rounded one is the one
-                    # this file gets wrong.
+                    # a source gets wrong.
                     "unit": ucum_code(attrs.get("unit")),
                     "conversion": attrs.get("conversion"),
                     "offset": attrs.get("offset"),
@@ -371,9 +347,8 @@ class LFPSource(Compensates):
                     "axis_index": 0,
                     "dimension_name": "time",
                     "clock_id": clock_id,
-                    # Measured across four probes: LFP sample 0 lands within 0.2 ms of the
-                    # probe's own sample 0, while the series' stored t0 values differ by
-                    # 0.130 s -- that spread is the probes starting at different moments, not
+                    # LFP sample 0 is taken as the probe's own sample 0. Stored t0 values that
+                    # differ between series are the probes starting at different moments, not
                     # the LFP starting late on any of them.
                     "origin_tick": 0,
                     "step_tick_num": step,

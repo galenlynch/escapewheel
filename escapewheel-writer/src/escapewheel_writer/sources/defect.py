@@ -1,10 +1,8 @@
-"""What a source cannot proceed past.
+"""The exception for a source defect that stops a build.
 
-Here rather than in any one adapter because it is raised by all of them and by the build: a source
-kind nothing can import, a root nothing supplied, a command that is not an argument list, a declared
-Parquet file that is absent, an NWB holding no units group. It lived in `nwb.py` while six adapters
-and two build modules imported it from there, which read as though a failure to open a Harp stream
-were an NWB's.
+- :exc:`SourceDefect` -- a source cannot supply what it was asked for, which stops the build.
+
+Every adapter and the build raise it, so it has a module of its own.
 """
 
 from __future__ import annotations

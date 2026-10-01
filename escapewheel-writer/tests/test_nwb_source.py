@@ -223,7 +223,7 @@ def test_a_subjects_sex_lands_inside_the_closed_vocabulary(source):
         "hermaphrodite",
         "other",
     ]
-    # `U` is unknown, and Part 02 §9.3 makes that a null rather than `other`: recording it as `other`
+    # `U` is unknown, and Part 03 §5.6 makes that a null rather than `other`: recording it as `other`
     # asserts a sex the source never claimed, where a null says the source did not say.
     assert [_sex(v) for v in ("U", "unknown", "", None)] == [None, None, None, None]
 
@@ -544,7 +544,7 @@ def test_a_condition_is_named_where_the_task_varies_one(source):
     assert {t.get("condition_id") for t in source.intervals()} == {None}, "one trial cannot vary"
 
 
-# -- Part 02 §6: a parameter constant across every trial is recorded once ----------------------
+# -- Part 02 §5.2: a parameter constant across every trial is recorded once ----------------------
 
 
 def _split(source, columns, n):

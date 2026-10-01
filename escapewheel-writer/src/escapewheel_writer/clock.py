@@ -1,21 +1,15 @@
 """A declared clock, and the only sanctioned way to turn seconds into ticks.
 
-Time in a packet is integer ticks on a declared clock (Part 03); float seconds are derived.
-An importer therefore has to get from its source's seconds to ticks, and there are exactly
-two ways to do that:
+- :class:`Clock` -- a clock a packet declares, and the `core.clocks` row it renders as.
+- :class:`TickGrid` -- a clock's identifier and rational rate, and the seconds-to-ticks conversion.
+- :func:`epoch_from` -- the UTC instant of tick 0, from one tick whose instant is known.
+- :func:`zone_of` -- a recipe's declared time zone, as an IANA zone.
+- :exc:`OffGrid`, :exc:`NonFinite` -- seconds that land on no tick, and NaN or infinite seconds.
+- :data:`HARP_TICK_RATE_HZ` -- HARP's tick rate.
 
-**Quantization** -- the source's values already lie on the clock's grid, so
-``round(t * rate)`` is lossless and provable. :meth:`Clock.ticks` does this and *checks*,
-refusing anything off-grid.
-
-**Fitting** -- the source's values do not lie on any grid, so recovering ticks means
-estimating a rate and an offset. That is a guess, and this module does not offer it.
-
-The distinction is not academic. In `inventory/nwb-zarr-776259-2025-04-09.md` the same file
-contains both cases: every behaviour and trial timestamp is exactly on a 31,250 Hz grid
-(§3.3.1), while spike times have a per-probe alignment baked in and lie on no grid at all
-(§3.3). One converts; the other cannot, and gets an :class:`OffGrid` rather than plausible
-numbers.
+Conversion only quantizes: seconds are checked against the clock's grid, those on it convert
+exactly, and those off it raise :exc:`OffGrid`. Recovering their ticks would mean fitting a rate
+and an offset, and this module offers no such estimate.
 """
 
 from __future__ import annotations
@@ -57,9 +51,9 @@ class OffGrid(ValueError):
 class NonFinite(ValueError):
     """A source timestamp was NaN or infinite.
 
-    Placeholder streams do occur -- three of the six behaviour streams in
-    `inventory/nwb-zarr-776259-2025-04-09.md` carry a single NaN -- so a caller that expects
-    them filters first and says so, rather than letting a NaN become an arbitrary integer.
+    Placeholder streams do occur -- an NWB may carry a behaviour stream holding a single NaN --
+    so a caller that expects them filters first and says so, rather than letting a NaN become
+    an arbitrary integer.
     """
 
 
@@ -270,14 +264,14 @@ class Clock:
         -------
         dict
             The row. One rate form, never both (Part 02 §12.4): the rational where there is one,
-            and `tick_rate_hz` only for a source that states no exact rate. Writing both made
-            the float a copy of `tick_rate_num`, since `tick_rate_den` is 1 on every clock
-            either packet holds, and left two columns free to disagree with nothing to see it.
+            and `tick_rate_hz` only for a source that states no exact rate. Both would make the
+            float a copy of the rational and leave two columns free to disagree with nothing
+            to see it.
         """
         # No `clock_name`. Part 02 §8.2 makes it what `clock_id` stands for -- the identifier a source
         # used, `harp` -- and the numbering fills it from exactly that when the row leaves it
-        # unset. Writing `name` here put a human label in it, `HARP`, so nothing could resolve a
-        # recipe's spelling back to a clock and `analysis.spike_events` could not be materialized.
+        # unset. A human label there, `HARP`, would leave nothing able to resolve a recipe's
+        # spelling back to a clock.
         row: dict[str, Any] = {
             "clock_id": self.clock_id,
             "session_id": self.session_id,
@@ -321,8 +315,8 @@ def epoch_from(instant: datetime, t_tick: int, tick_rate_num: int, tick_rate_den
     The arithmetic is done in UTC, and that is the whole reason this function exists.
     Python's aware-datetime subtraction is **wall-clock** arithmetic: it subtracts from the
     naive local time and then re-resolves the offset, so stepping back across a DST boundary
-    loses or gains an hour silently. A HARP epoch 134 days before a Pacific session in April
-    lands in November, on the far side of the transition, and gets it wrong by an hour.
+    loses or gains an hour silently. A free-running clock's epoch may lie months before the
+    session, on the far side of a transition, and would be wrong by an hour.
 
     Parameters
     ----------
@@ -349,8 +343,8 @@ def epoch_from(instant: datetime, t_tick: int, tick_rate_num: int, tick_rate_den
     return instant.astimezone(UTC) - elapsed
 
 
-#: HARP's native fractional resolution: 32 µs, measured exact for every behaviour and trial
-#: timestamp in `inventory/nwb-zarr-776259-2025-04-09.md` §3.3.1.
+#: HARP's native fractional resolution, 32 µs, which its behaviour and trial timestamps lie on
+#: exactly.
 HARP_TICK_RATE_HZ = 31250
 
 

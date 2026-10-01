@@ -1,44 +1,16 @@
 """Read an Open Ephys events tree into clock anchors.
 
-The sorter gives every probe an exact tick and no way to compare two of them. This is the
-other half: the shared sync pulse each stream records, paired with the HARP time
-`aind-ephys-rig-qc` wrote onto it, which is what `core.clock_anchors` is.
+- :class:`SyncSource` -- an `ecephys_clipped` tree as the reference clock and its anchors.
+- :class:`SyncStream` -- one stream's TTL events, and whether its timestamps were aligned.
+- :class:`RecordingStart`, :func:`read_sync_messages` -- when a record node began, and each
+  stream's counter at that moment.
+- :func:`suspect_terminals` -- R37 §3.2's test of a clock's first and last anchor.
+- :func:`phase_discontinuities` -- the places where the parent clock advances by more or less
+  than a clock's own rate predicts.
+- :data:`ARCHIVE` -- the file whose presence marks a stream as aligned.
 
-Which streams have anchors
---------------------------
-
-A record node's directory lists every stream it saw, but only the ones it *owns* were
-aligned. The unowned entries are stubs carrying acquisition-local seconds with nothing
-marking them as unaligned -- no `original_timestamps.npy` beside them, which is the archive
-rig-qc writes when it replaces a timestamp array. On one real session each of two nodes owned
-six streams and carried seven local-only stubs of the other's, and the owned set matched the
-sorter's output exactly.
-
-So ownership is detected, not assumed: a stream with the archive has HARP time, and one
-without is skipped and reported. Taking a stub at face value would put a probe's sync pulses
-17.7 million seconds from where they belong.
-
-Which sample counter
---------------------
-
-Three arrays in one TTL directory count time, and only one of them is the sorter's.
-
-```text
-sample_numbers.npy        raw hardware counter, absolute across the acquisition
-local_timestamps.npy      recording-relative seconds, already drift-corrected
-original_timestamps.npy   acquisition-relative seconds, before HARP alignment
-timestamps.npy            HARP seconds, after it
-```
-
-`spikes.npy`'s `sample_index` indexes the preprocessed recording, which is built from raw
-samples with no correction, so it corresponds to **`sample_numbers`** and to neither of the
-seconds arrays. Measured: `sample_numbers - local_timestamps * rate` takes 895 distinct
-values across one stream's pulses, because the drift correction is in the seconds and not in
-the counter. Using a timestamp array here would bake that correction in twice.
-
-What remains is the recording's first raw sample, which lives in
-`continuous/<stream>/sample_numbers.npy` and is read from element 0 -- memory-mapped, so the
-1.3 GB the file weighs is never touched.
+An anchor pairs a stream's raw `sample_numbers`, made recording-relative, with HARP time. Only a
+stream carrying :data:`ARCHIVE` has HARP time, so the adapter skips and reports a stream without it.
 """
 
 from __future__ import annotations
@@ -123,11 +95,10 @@ NEIGHBOURS, INTERIOR = 30, 600
 
 #: A phase discontinuity in the reference alignment larger than this is reported, in seconds.
 #:
-#: Measured on `ecephys_776259_2025-04-09`: an anchor interval's parent advance departs from the
-#: clock's own median ratio by at most 160 µs across 76,622 intervals, while two known upstream
-#: discontinuities cost 672-832 µs each. 400 µs sits between them with about twice the margin
-#: either way. It is well below R40's 3 ms alignment tolerance, so a packet can carry a reported
-#: discontinuity and still align within bound -- reporting is not refusing.
+#: 400 µs sits between how far an undisturbed anchor interval's parent advance departs from the
+#: clock's own median ratio and what a known upstream discontinuity costs, with about twice the
+#: margin either way. It is well below R40's 3 ms alignment tolerance, so a packet can carry a
+#: reported discontinuity and still align within bound -- reporting is not refusing.
 DISCONTINUITY = 4e-4
 
 #: Which percentile of a clock's own interior residuals a terminal anchor must stay inside.
@@ -456,10 +427,9 @@ class SyncSource:
         emitting both would put two clocks on one device and leave a reader to pick.
 
         **Sameness is agreement on the samples both saw, not identical arrays.** Two nodes
-        rarely start on the same event: measured on a real rig, one node's NI-DAQ carries
-        81,818 TTL events and the other 81,817, differing only in a line-5 edge the second node
-        began too late to see. Every shared sample number agrees on state, and the two
-        alignments differ by 292 us. Requiring equal arrays would call that two devices.
+        rarely start on the same event, so one records an edge the other began too late to see
+        while every shared sample number agrees on state. Requiring equal arrays would call
+        that two devices.
 
         The stream that saw the most is kept, so no anchor is discarded, with the lowest node
         breaking a tie. What differed is reported rather than dropped: it measures how well the
@@ -522,7 +492,7 @@ class SyncSource:
 
         Three sources, in the order of how directly each says it. A supplied value wins because
         a caller that states one has a reason. Then the record node's own `sync_messages.txt`,
-        which is where a supplied value comes from anyway. Only then the 1.3 GB counter array
+        which is where a supplied value comes from anyway. Only then the counter array
         beside the data, read at element 0 through a memory map -- correct, but it requires the
         continuous data to be present, and a packet built from events and a sorting has no
         reason to hold it.
@@ -587,8 +557,7 @@ class SyncSource:
 
         Derived here rather than by a build because the stamps are this tree's, and at the
         default bound because tick 0 sits **inside** a median anchor interval of the terminal
-        anchor: this session's anchors are 1.5 s apart and its first is 0.6 s after tick 0, so
-        no wider allowance changes the answer.
+        anchor, so no wider allowance changes the answer.
 
         Returns
         -------

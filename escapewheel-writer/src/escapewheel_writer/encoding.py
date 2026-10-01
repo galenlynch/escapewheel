@@ -1,18 +1,19 @@
-"""How a column is encoded in Parquet, and what an extension may say about its own.
+"""How a column is encoded in Parquet, and what an extension may say about its own (Part 03 §5.5).
 
-The rules are Part 03 §5.5's, and they reach any table the writer stages -- an extension's as much
-as core's, because Part 09 §5.6 lets a writer require no code of an extension. What core does **not**
-do is name an extension's tables: the exception tables below carry `core.*` and `analysis.*` alone,
-and an extension supplying its own passes them to :class:`~escapewheel_writer.writer.PacketWriter`.
+- :func:`encodings` -- the columns of a table that take delta, and those that take no dictionary.
+- :func:`choose` -- the encoding one column takes under Part 03 §5.5's four rules.
+- :func:`count`, :class:`Counts` -- the counts the rules read from a column's values.
+- :func:`declared_order` -- whether a column's declarations mark it as an integer likely to climb.
+- :func:`leading_identifier` -- the key column whose values ascend across the whole table.
+- :func:`inefficient` -- each column that costs more than :data:`TOLERANCE` times its smallest
+  encoding.
+- :data:`DELTA_COLUMNS`, :data:`NO_DICTIONARY`, :data:`DICTIONARY_COLUMNS` -- the measured
+  exceptions to the rules.
+- :data:`ONE_VALUE_ROWS` -- the row count at which a column of one value repays its dictionary page.
 
-That division follows from where the decision has weight. An extension hands the writer Arrow with
-its identifiers as **names**, and Part 05 §4.3 has the writer mint the integers packet-wide, so the
-columns where an encoding is worth 37x to 79x do not exist in their final form until the writer
-makes them. What an extension owns is its own measurements, which the rules cover without naming
-anything.
-
-`inefficient` closes the loop for what neither reaches: a rule is a good guess, and a column it
-guesses wrong about is reported rather than silently paid for.
+The exception tables name only `core.*` and `analysis.*` tables. An extension supplies its own
+exceptions to :class:`~escapewheel_writer.writer.PacketWriter`, and the rules apply to its tables
+without naming them.
 """
 
 from __future__ import annotations
@@ -66,8 +67,7 @@ DICTIONARY_COLUMNS: dict[str, tuple[str, ...]] = {
 ONE_VALUE_ROWS = 50_000
 
 #: Rows a value covers on average -- per run for an ordered integer, per distinct value otherwise
-#: -- from which repetition decides. Over both packaged sessions the exceptions stay at 19 from 32
-#: to 50 rows a value and from 50 to 200 a run.
+#: -- from which repetition decides.
 REPEATS = 50
 
 
@@ -141,9 +141,7 @@ def choose(field: pa.Field[Any], column: Mapping[str, Any], leading: str | None,
     """Return the encoding one column takes: `"delta"`, `"plain"`, or None for a dictionary.
 
     Part 03 §5.5's four rules, over what the writer holds when it chooses, the first that applies
-    deciding. Measured
-    over both packaged sessions' columns they leave 19 more than 1.15x off their best encoding,
-    and each of those is an exception above or in a recipe.
+    deciding. A column they leave well off its best encoding is an exception above or in a recipe.
 
     **No value is plain**: a dictionary page costs 27 bytes before it indexes anything.
 

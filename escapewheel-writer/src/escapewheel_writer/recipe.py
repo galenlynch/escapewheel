@@ -1,21 +1,37 @@
 """The session recipe: what a packet is built from, declared as a file rather than a script.
 
-Part 05 §4.3 requires normalization to be deterministic in declared parameters, and
-`core.processing_runs` records the run that used them. A build script satisfies neither. Its
-parameters are wherever its statements happen to put them, nothing can hash it, and the
-`processing_run_id` a packet carries then names a run whose inputs are unrecoverable. A recipe
-is that parameter set as one file, so the run record can carry the parameters themselves
-(`core.processing_runs.parameters`) and a reader can see what produced the packet.
+The recipe (Part 05 §3):
 
-Nothing here opens a source or writes anything. Parsing and checking are separate from
-building for the reason Part 05 gives -- *"do not combine source parsing, normalization,
-validation, and writing into one opaque step"* -- and because a recipe that is wrong should
-say so before a four-minute build, not after.
+- :class:`Recipe` -- a parsed recipe; `Recipe.load` reads one and `Recipe.check` reports
+  everything wrong with it that is knowable without reading a source.
+- :class:`SourceSpec`, :class:`DeliverySpec` -- one source, and how a build reaches it out of
+  process.
+- :class:`ClockSpec`, :class:`MaterializeSpec` -- a declared clock, and a resource to derive.
+- :class:`Problem` -- one thing wrong with a recipe.
+- :func:`schema`, :func:`shape_problems` -- the bundled recipe schema, and where a decoded
+  recipe fails it.
+- :func:`normalized_chosen_at` -- a `preferred_run` entry's `chosen_at` as a UTC timestamp.
+- :func:`redacted`, :func:`carries_a_secret` -- a recipe document with every credential
+  replaced, and whether one storage option is a credential.
+- :data:`RECIPE_SUPPLIES`, :data:`TERMS` -- the resources a recipe supplies itself, and the names
+  a build fills.
 
-The checks worth having come from the registry. A source declares which resources it `owns`,
-and the registry declares which resources reference which, so an owned table whose required
-foreign key points at a table no source produces is a packet that cannot validate -- knowable
-from two documents, with no data in hand.
+What an adapter of a kind declares:
+
+- :func:`adapter_for` -- the class a kind names.
+- :func:`declared` -- one source's declarations, from its document or its class.
+- :func:`produces`, :func:`contributes`, :func:`consumes` -- the resources it can supply, those
+  it supplies only part of, and the kinds whose output it reads.
+- :func:`needs`, :func:`accepts` -- the names a build must supply it, and the options it can run
+  without.
+- :func:`states`, :func:`declares_states`, :func:`state_accessors` -- the recipe fields it can
+  state, whether it declares any, and the declared fields whose attribute the class lacks.
+- :func:`protocols`, :func:`reached_by` -- the protocols it declares, and the one a build reaches
+  a source by.
+- :func:`payloads` -- the loaded registries' opaque singleton declarations.
+
+Nothing here opens a source or writes anything, so a wrong recipe is refused before a build
+spends anything on it.
 """
 
 from __future__ import annotations
@@ -34,12 +50,12 @@ from upath import UPath
 
 from .sources.store import source_root
 
-#: Resources a recipe supplies from its own declarations rather than through a source: the
-#: session and subject it names, and the record of the run that read the sources.
 #: Source kinds that accept a `sample` cap, for the development flag that makes a round trip
 #: seconds instead of minutes. Only the sorter: the spike table is 99.9% of a packet's rows.
 SAMPLED = frozenset({"sorter"})
 
+#: Resources a recipe supplies from its own declarations rather than through a source: the
+#: session it names, and the record of the run that read the sources.
 RECIPE_SUPPLIES = ("core.sessions", "core.processing_runs")
 
 #: What Part 04 §4.1 admits after a resource ID's dot, which a prefix begins.
@@ -63,9 +79,9 @@ TERMS = frozenset(
     }
 )
 
-#: Resources the recipe supplies only where no source owns them (Part 05 §3.1). `core.subjects` left
-#: RECIPE_SUPPLIES because the NWB states every column of it and the row was built and discarded;
-#: a `[subject]` block is now the fallback for a packet whose sources name no subject.
+#: Resources the recipe supplies only where no source owns them (Part 05 §3.1). A source may state
+#: every column of `core.subjects`, so a `[subject]` block is the fallback for a packet whose
+#: sources name no subject.
 RECIPE_MAY_SUPPLY = ("core.subjects",)
 
 
@@ -502,7 +518,7 @@ def _resolve_ownership(sources: tuple[SourceSpec, ...], preferred: Mapping[str, 
     `contributes` it contributes and does not own.
 
     Where two defaulted entries are left owning one resource, both keep it and `check` refuses the
-    recipe naming both -- a silent winner is what `owns` was introduced to prevent.
+    recipe naming both -- a silent winner is what `owns` exists to prevent.
     """
     narrowed = {resource for spec in sources if spec.narrowed for resource in spec.owns}
     supplies = frozenset(RECIPE_SUPPLIES)
@@ -587,7 +603,7 @@ class Recipe:
     digest : str
         ``sha256`` of the file, so a run record can name exactly these parameters.
     extensions : tuple of str
-        Extension registries this packet carries (Part 09 §2), each named either by a **path** to a
+        Extension registries this packet carries (Part 09 §5.3), each named either by a **path** to a
         document beside the recipe, or by the **id** an installed distribution registers under
         `escapewheel.extensions`. Kept as written rather than resolved here, because which one a
         value is cannot be decided without looking at the filesystem and the installed
@@ -678,9 +694,9 @@ class Recipe:
         def resolve_root(value: str, storage: Mapping[str, Any]) -> Any:
             """Resolve a source root, which Part 05 §3.1 leaves free to name a store.
 
-            An AIND session's sorted asset is a prefix on `aind-open-data`, and a build reads
-            about 12% of one, so naming the prefix is both shorter and better provenance than
-            naming a staged copy (Part 05 §3.2).
+            A sorted asset may be a prefix on an object store, of which a build reads a small
+            part, so naming the prefix is both shorter and better provenance than naming a
+            staged copy (Part 05 §3.2).
 
             **A store root is read anonymously unless the recipe says otherwise.** The data
             these packets are built from is public, and signing it is what fails: a stale
@@ -852,7 +868,7 @@ class Recipe:
             A parsed registry document, supplying the table names and their references.
         extensions : sequence of Mapping
             Extension registries, whose tables a source may also own. An extension's references
-            resolve against core; core's never resolve against an extension, which Part 09 §2
+            resolve against core; core's never resolve against an extension, which Part 09 §6.1
             requires by forbidding core to reference one at all. Given in the order of the
             `[packet].extensions` entries they resolve from, so a refusal can name the entries.
         held_tables, held_clocks : collection of str
@@ -1047,7 +1063,7 @@ class Recipe:
         return found
 
     def _declared_fact_problems(self) -> tuple[list[str], list[str], list[str]]:
-        """Errors, warnings and notes about declared facts and their overrides (Part 05 §3.5, §2.5).
+        """Errors, warnings and notes about declared facts and their overrides (Part 05 §3.6).
 
         An empty override reason never loads (Part 05 §3.1). A field a source states is a warning because
         agreement is the likely case and only the build can tell, and a stale override costs a
@@ -1110,7 +1126,7 @@ class Recipe:
 
         A warning and not an error: narrowing is legitimate, and only the recipe's author knows
         whether this one was meant. It is the first of the three ways a recipe loses a resource,
-        moved from the middle of a build to before a byte is read.
+        reported before a byte is read.
         """
         claimed = {resource for spec in self.sources for resource in spec.claims}
         claimed.update(RECIPE_SUPPLIES)

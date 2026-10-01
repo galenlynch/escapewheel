@@ -1,26 +1,13 @@
-"""Build analysis resources from a packet's core ones.
+"""Build analysis resources from a packet's core ones (Part 06).
 
-Part 06 splits transformations two ways: a view where the work is cheap, a materialized table
-where it is expensive or frequently reused. Clock alignment alone sits on the cheap side --
-29 M spikes a second, so a query touching a few units pays single-digit milliseconds. What
-justifies materializing is not the arithmetic but the **layout**: a common clock is what makes
-ordering by time meaningful at all, and core, whose ticks are on twelve different probe clocks,
-cannot express such an order (R30 §6).
+- :func:`spike_events` -- `analysis.spike_events` as batches: core spikes on the reference clock,
+  bucketed by time.
+- :func:`into` -- add that table to a writer, with its lineage and a run row.
+- :exc:`Collided` -- two spikes of one unit convert to the same reference tick.
+- :data:`RUN_ID` -- the `processing_run_id` of the run row a materialization records.
 
-What the analysis layer costs
------------------------------
-
-An analysis resource MUST declare lineage to core (Part 06), which is the manifest's
-`derived_from`, and it is disposable: nothing here is canonical, and a packet without it is
-complete.
-
-What it deliberately loses
---------------------------
-
-The exact probe tick. `core.spike_events` keeps that and this does not, which is the whole
-point of the layering -- the derived value is convenient and the measured one is the record.
-A spike this cannot place is dropped rather than guessed, so the analysis table is not
-row-aligned with core and does not pretend to be.
+The table keeps the reference tick and not the probe tick, and drops any spike that no anchor
+places, so it is not row-aligned with `core.spike_events`.
 """
 
 from __future__ import annotations
@@ -40,9 +27,6 @@ from numpy.typing import NDArray
 
 from .arrow import schema as arrow_schema
 
-#: Rows per batch, and therefore per row group and per unit of writer memory. Measured: 128 K
-#: costs 0.6% in bytes over 1 M once `t_tick` is not dictionary-encoded, and is what makes the
-#: unit filter prune within a bucket (R30 §6).
 #: The resource these buckets become, so the spill can take the encoding its columns want.
 RESOURCE = "analysis.spike_events"
 
@@ -74,15 +58,15 @@ def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) 
         raise Collided(f"unit {int(units[0])} has two spikes on reference tick {int(ticks[0])}")
 
 
+#: Rows per batch, and therefore per row group and per unit of writer memory. Measured: 128 K
+#: costs 0.6% in bytes over 1 M once `t_tick` is not dictionary-encoded, and is what makes the
+#: unit filter prune within a bucket (R30 §6).
 BATCH_ROWS = 1 << 17
 
 #: Bucket width in seconds of the reference clock. The dial trades scattered-unit access
 #: against time-window access, through how many row groups fit in one bucket; 300 s was the
-#: best of 10/60/300 on a 5,364 s session with 7,291 units. Not normative (R30 §3.3).
+#: best of 10, 60 and 300 measured. Not normative (R30 §3.3).
 BUCKET_SECONDS = 300
-
-#: How a string column is held in flight. A dictionary is an encoding, not a type -- Parquet writes
-#: BYTE_ARRAY/String either way -- so this changes what the pipeline carries, not what it emits.
 
 
 def _tick_rate(packet: Any, clock_id: str) -> int:
@@ -107,9 +91,9 @@ def _tick_rate(packet: Any, clock_id: str) -> int:
 def _unit_clocks(packet: Any) -> NDArray[np.int64]:
     """Each unit's `clock_id`, indexed by `unit_id` (R96 §3.3).
 
-    A spike's tick is on its unit's clock, and the hop is one column of a 6,781-row table against
-    287 M rows that no longer carry a copy of it (R96 §3.4). An array rather than a mapping because
-    R81 §2.1 numbers `unit_id` densely from zero, so the lookup is an index.
+    A spike's tick is on its unit's clock, which `core.spike_events` carries no copy of (R96 §3.4),
+    so the hop is one column of the far smaller `core.units`. An array rather than a mapping
+    because R81 §2.1 numbers `unit_id` densely from zero, so the lookup is an index.
     """
     units = packet.table("core.units")
     identifiers = units.column("unit_id").to_numpy(zero_copy_only=False)
@@ -136,8 +120,8 @@ def _coalesced(batches: Iterable[pa.RecordBatch], out: pa.Schema) -> Iterator[pa
     """Merge small batches up to `BATCH_ROWS`, so held rows yield the row groups spilled ones do.
 
     A core batch spans many buckets, so splitting it leaves each bucket a handful of rows. Held
-    and yielded as they arrive those become row groups of a couple of thousand rows: measured,
-    140,315 groups against 2,197, and a table half again as large for the per-group overhead.
+    and yielded as they arrive those become row groups of a couple of thousand rows: tens of
+    times as many groups, and a table half again as large for the per-group overhead.
     """
     held: list[pa.RecordBatch] = []
     rows = 0
@@ -163,15 +147,14 @@ class _Buckets:
 
     Parquet, although a spill is written once, read once and deleted, and its encoding
     therefore has no reader to benefit. The encoding is not for a reader here, it is for the
-    disk: dictionary-encoding a column that repeats a handful of values puts
-    a million rows in 2.7 MB where Arrow IPC needs 195 MB. Writing a batch costs 0.100 s
-    against IPC's 0.053 s, and over a full session that trade is worth taking on anything but
-    the fastest storage -- uncompressed IPC spills 56 GB and takes 321.8 s where this takes
-    76.6 s.
+    disk: dictionary-encoding a column that repeats a handful of values makes a spill tens of
+    times smaller than Arrow IPC's. Writing a batch costs about twice what IPC's does, and over
+    a full session that trade is worth taking on anything but the fastest storage, since the
+    bytes not written are what the spill waits on.
 
     Bucketing by time and sorting by unit inside each bucket needs no global sort, because
-    `core.spike_events` is already ordered by `(session_id, unit_id, t_tick)` (Part 03 §5.4)
-    (Part 03 §5.3, Part 03). Visiting it in that order and appending each row to its bucket's file
+    `core.spike_events` is already ordered by `(session_id, unit_id, t_tick)` (Part 03 §5.3).
+    Visiting it in that order and appending each row to its bucket's file
     leaves every file in exactly the intra-bucket order Part 03 §5.4 declares. What remains is to
     concatenate the files in bucket order, which is a second pass and no comparisons.
     """
@@ -183,8 +166,8 @@ class _Buckets:
         self._out = out
         # The spill gets the encoding the finished table gets. Its own bytes have no reader,
         # but a tick column left to pyarrow's default overflows the dictionary page and falls
-        # back to PLAIN mid-column, paying for both: 1,195 MB and 77.4 s against 500 MB and
-        # 60.9 s, at no cost in memory.
+        # back to PLAIN mid-column, paying for both: over twice the bytes and more time, at no
+        # saving in memory.
         # No sample: the spill is opened before its first batch exists, so the naming convention
         # stands in. Its bytes have no reader, and the finished table is measured properly.
         delta, plain = encodings(RESOURCE, spec or {}, out)
@@ -288,16 +271,14 @@ def spike_events(
         Bytes the partition may occupy before it spills, as a number or a string such as
         `"10GB"`. Bucketing is a transpose -- every unit spans every bucket, so no streaming
         pass can emit in order -- and the partition either fits in memory or goes to disk.
+        Zero, the default, holds no more than one batch per bucket, because whether holding a
+        whole session is reasonable or ruinous is a property of the machine packaging the data
+        rather than of the data. Holding it buys little time, so spilling is the default for
+        being the cheaper resource, not the faster path.
     dropped : dict of int to int, optional
         Unmappable spikes counted by the `clock_id` they were on, accumulated here since a
         generator cannot return them. Every clock a spike is on gets an entry, zero included,
         because Part 06 §4 requires the producing run to record each.
-        Held with identifiers as dictionary codes it is 36 bytes a row, so a session of 287 M
-        spikes wants 10.4 GB; the same rows spill to 0.5 GB of Parquet instead. Zero, the
-        default, holds no more than one batch per bucket, because whether ten gigabytes is
-        reasonable or ruinous is a property of the machine packaging the data rather than of
-        the data. It buys about 8% on a session of this size, so spilling is the default for
-        being the cheaper resource, not the faster path.
 
     Yields
     ------
@@ -317,16 +298,13 @@ def spike_events(
     by_clock = anchors(packet)
     handle = packet.table_resource("core.spike_events")
     columns = ["session_id", "unit_id", "t_tick"]
-    # R96 §3.4 struck `core.spike_events.clock_id` and §3.3 gave `t_tick` a `clock_from` hop to
-    # `core.units.clock_id`, so a spike's clock is resolved through its unit rather than carried
-    # per row. Resolved once into an array indexed by `unit_id`, which R81 §2.1 numbers densely
-    # from zero: a dict lookup per spike would materialise a Python object for each of 287 M rows,
-    # which is the cost R53's note below says the int32 column exists to avoid.
+    # `t_tick` reaches its clock by a `clock_from` hop to `core.units.clock_id` (R96 §3.3), so a
+    # spike's clock is resolved through its unit rather than carried per row. Resolved once into
+    # an array indexed by `unit_id`, which R81 §2.1 numbers densely from zero: a dict lookup per
+    # spike would materialise a Python object for every row.
     on_clock = _unit_clocks(packet)
-    # Types come from the registry rather than being spelled here. They were dictionary-coded
-    # strings until R53 made every identifier an `int32`, and the machinery that avoided
-    # decoding them -- 9.13 GB of Arrow per 40 row groups -- has nothing left to avoid: four
-    # bytes a row is what the code alone used to cost.
+    # Types come from the registry rather than being spelled here. Every identifier is an
+    # `int32` (R53), four bytes a row, so nothing here needs to avoid decoding one.
     registry = packet.registry
     spike_spec = registry["resources"]["analysis.spike_events"]["table"]
     out = arrow_schema(spike_spec, {*columns, "clock_id", "time_bucket_tick"})
@@ -432,7 +410,7 @@ def into(
         "activity_type": "materialization",
         # R44 §2.1: session-wide, so the session is the scope. Both stay null on a
         # multi-session packet rather than naming one of several, because a writer that
-        # cannot determine a fact records nothing (Part 04 §5.2). Part 02 §8.3: the pair is set
+        # cannot determine a run's scope records none (Part 01 §2.6). Part 02 §8.3: the pair is set
         # together or not at all.
         "scope_kind": "core.sessions" if session else None,
         "scope": session,

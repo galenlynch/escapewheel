@@ -1,31 +1,10 @@
-"""Read a unit's mean waveform from the analyzer that computed it.
+"""Read each unit's mean waveform from the analyzer that computed it.
 
-A template is read from the `SortingAnalyzer` beside the curated sorting rather than from the NWB
-the pipeline exports afterwards. The two hold the same array -- measured at `(4559, 210, 384)`
-float64 in both on one session -- and the copy loses three things the source states outright:
+- :class:`WaveformSource` -- an analyzer's templates as a sparse int16 array, and its tables.
+- :data:`ANALYZERS` -- the directory SpikeInterface writes analyzers under.
 
-**Which contacts a unit sits on.** SpikeInterface computes a template on the contacts near the
-unit and records the set in `sparsity_mask`, a `(units, channels)` boolean. The export densifies
-to every channel and pads the rest with zeros, so `units/electrodes` became a constant `[0 … 383]`
-for every unit -- 384 wide on all 4,559 -- and the support could only be recovered by scanning the
-padded rectangle for non-zeros. The mask keeps **6.7%** of it, 14 to 26 contacts a unit.
-
-**Which unit each row is.** The analyzer names its units in `sorting/unit_ids`, identical to the
-curated sorting's own ids on 10 of 10 streams, and those are the labels `core.units` carries as
-`local_unit_label`. The export renumbers rows by `DynamicTable` position, so recovering identity
-there needs a column the pipeline adds and the NWB schema does not define.
-
-**What the values are in.** The analyzer declares `settings.return_in_uV`. The export writes
-`unit: "volts"` with no conversion attribute on values reaching ±1654, which read as declared are
-kilovolt-scale extracellular spikes.
-
-What the packet stores still differs from the source in the three ways
-`conformance/zarr-probe/waveforms.py` measured -- sparse rather than padded, int16 rather than
-float64, and `(unit, channel, sample)` rather than `(unit, sample, channel)`. Those are storage
-decisions this adapter makes; the three above were losses it used to work around.
-
-`waveform_sd` is the same array of a different quantity, cut on the mean's support rather than its
-own, so its label rows repeat the mean's.
+The adapter reads the analyzer rather than the NWB exported from it: the analyzer states each
+unit's contacts, its label and the unit of measure of its values, and the export loses all three.
 """
 
 from __future__ import annotations
@@ -263,10 +242,9 @@ class WaveformSource:
         order would not do: analyzers and sorting runs are named differently and sort differently.
 
         The block is the source's own chunk along the unit axis, so every chunk is read once and
-        none twice. What survives is the slabs, two orders smaller than the block that produced
-        them: 0.38 GB dense a stream against 0.025 GB on the mask. They stay float64, because the
-        arithmetic that follows is a division and a round, and in float32 fourteen values in
-        twenty-six million land on the other side of a tie.
+        none twice. What survives is the slabs, far smaller than the block that produced them.
+        They stay float64, because the arithmetic that follows is a division and a round, and in
+        float32 some values land on the other side of a tie.
         """
         if self._built is not None:
             return self._built
@@ -456,7 +434,7 @@ class WaveformSource:
         window is not positioned on any session clock: position *k* is *k - origin* samples from
         the spike, and each unit's spike sits on the clock of the probe that recorded it. Its
         origin is the analyzer's own `ms_before` rather than half the window, which is what an
-        importer reading the export had to assume.
+        importer reading the export has to assume.
         """
         axes = self._axes(self.array_asset_id, clock_id, origin)
         if self.sd:
@@ -511,8 +489,7 @@ class WaveformSource:
         never computed from one whose template happens to be flat.
 
         `is_primary` is the template's own negative peak. Reading `extremum_channel_index` instead
-        names the wrong electrode whenever the sorting dropped a channel below it -- 5,071 of 6,781
-        units on the measured session, 609 of them marked on no contact at all.
+        names the wrong electrode whenever the sorting dropped a channel below it.
 
         R28 `amplitude` is left null. The source measures one amplitude per unit, not per
         electrode, and no reduction of the template reproduces it.
@@ -585,11 +562,10 @@ def _quantise(
 ) -> tuple[NDArray[np.int16], float]:
     """Scale float64 slabs onto int16, the peak landing on the last code.
 
-    The quantisation this leaves is well under the standard error of the means themselves --
-    measured at 0.052 uV for the best-resolved tenth, against a step of peak/32767. The deviation
-    is non-negative and still stored signed, spending a bit it never uses: unsigned would buy one
-    bit of resolution on a quantity whose own sampling error is far larger, at the cost of a
-    second convention for reading these arrays.
+    The quantisation this leaves, a step of peak/32767, is well under the standard error of the
+    means themselves. The deviation is non-negative and still stored signed, spending a bit it
+    never uses: unsigned would buy one bit of resolution on a quantity whose own sampling error
+    is far larger, at the cost of a second convention for reading these arrays.
     """
     scale = peak / 32767.0
     values = np.zeros((len(slabs), width, samples), dtype=np.int16)

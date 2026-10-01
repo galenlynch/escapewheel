@@ -6,34 +6,10 @@ explicit `fill_value`, and no `transpose` codec -- axes are stored in the order 
 declares them, and a column-major binding enumerates them in reverse rather than the format
 rearranging itself.
 
-Layout, measured
-----------------
-
-`conformance/zarr-probe/waveforms.py` ran the combinations against 6,781 real unit waveforms.
-Three results shaped what this module does and what it refuses to do:
-
-**The chunk is the unit of the question.** One unit's template reads in 0.6 ms from a
-one-unit chunk and 3.9 ms from a 512-unit one. Chunking for the file rather than for the read
-costs six times.
-
-**The shard keeps that from meaning one file per chunk.** Sharding turned 6,782 files into 15
-for 0.4% more bytes and no loss of speed, which matters most where R14 expects large resources
-to live: 6,782 files is 6,782 requests against object storage.
-
-**Object size follows AWS's own guidance, checked against a measurement.** Amazon's S3
-performance guidance recommends byte-range fetches of *8-16 MB* for parallel reads, warns that
-objects under *128 KB* are billed as 128 KB in Standard-IA, One Zone-IA and Glacier Instant
-Retrieval, sets *5 MB* as the smallest multipart part, and suggests multipart above *100 MB*.
-Those four numbers bracket the shard: 128 KB is a floor, 100 MB a ceiling, and 8-16 MB the
-band to aim at. `target_object_bytes` derives the same band from latency and bandwidth rather
-than hardcoding it, because 8-16 MB is that arithmetic evaluated at ordinary off-region
-figures and the answer is several times smaller from inside the region.
-
-**The compressor goes inside the shard.** zarr-python applies a default compressor when none
-is named, and an outer codec over a shard disables the partial read that sharding exists for
--- the whole shard must be inflated to reach one chunk. Measured at 188 ms against 0.6 ms,
-announced only by a warning. `write_zarr` always passes `compressors=None` and puts the codec
-in the shard's own pipeline, so the fault cannot be reintroduced by omission.
+- :func:`write_zarr` -- write one staged array and return its size on disk in bytes.
+- :func:`declared_codecs` -- the codec names an array will be written with, outermost first.
+- :func:`shard_for` -- a shard shape whose objects are large enough that a fetch is mostly transfer.
+- :func:`target_object_bytes` -- the object size at which a given share of a fetch is transfer.
 """
 
 from __future__ import annotations
@@ -50,12 +26,11 @@ if TYPE_CHECKING:  # pragma: no cover
 FILTERS = {"numcodecs.delta"}
 
 
-#: Round-trip latency and single-stream bandwidth of the store a packet will be read from.
-#: Measured against `aind-open-data` from outside AWS: fixed latency is 86% of a 128 KB fetch,
-#: 73% of 1 MB, 18% of 4 MB, 15% of 8 MB, which puts the round trip at ~34 ms and the stream at
-#: ~40 MB/s. In-region on EC2 both improve by roughly an order and a factor, which is why these
-#: are parameters rather than a constant -- the object size that follows is three times smaller
-#: there, and a number baked in here would be wrong in exactly the place the data will live.
+#: Round-trip latency and single-stream bandwidth of the store a packet will be read from. The
+#: defaults are an object store read from outside its region. In-region both improve, which is
+#: why these are parameters rather than a constant -- the object size that follows is three
+#: times smaller there, and a number baked in here would be wrong in exactly the place the data
+#: will live.
 DEFAULT_LATENCY_S = 0.034
 DEFAULT_BANDWIDTH_BPS = 40e6
 
@@ -235,7 +210,8 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
         ]
         if misfit:
             raise ValueError(f"shard is not a whole number of chunks on axes {[a for a, _, _ in misfit]}")
-        # `compressors=None` is load-bearing; see the module docstring.
+        # `compressors=None` is load-bearing: zarr applies a default compressor when none is named,
+        # and an outer codec over a shard means inflating the whole shard to reach one chunk.
         serializer, grid, compressors = ShardingCodec(chunk_shape=spec.chunks, codecs=pipeline), spec.shard, None
 
     array = zarr.create_array(

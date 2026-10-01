@@ -1,9 +1,11 @@
 """Values a source states, rendered the way a packet records them.
 
-Neither of these belongs to a format. `sex` maps onto a closed core vocabulary and `utc_offset`
-renders an offset for a compensation note, and both are read by the NWB adapter and by the one
-reading AIND's session metadata -- which is why they are here rather than in either, where the
-second had to import a private name from the first.
+- :func:`sex` -- a source's spelling as one of Part 02 §9.3's four values, or None.
+- :func:`utc_offset` -- a UTC offset the way a timestamp writes it.
+- :data:`SEX` -- the spellings :func:`sex` maps.
+
+A sex and a UTC offset belong to no one format: more than one adapter reads each, so their
+functions live outside every adapter's module.
 """
 
 from __future__ import annotations

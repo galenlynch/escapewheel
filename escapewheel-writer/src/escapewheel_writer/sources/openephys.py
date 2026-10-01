@@ -1,19 +1,13 @@
-"""The acquisition chain Open Ephys records, and the versions each element reports.
+"""The acquisition chain Open Ephys records, and the versions each element reports (Part 01 §3.5).
 
-`settings.xml` describes every probe as a chain: a PXI **basestation** in a slot, a **connect
-board** on that basestation, a **headstage** on a port, and the probe itself. Three of those four
-report their own firmware or hardware version, and the versions differ within one session -- so a
-packet recording only the probe cannot say that two probes ran different acquisition hardware.
+- :class:`OpenEphysSource` -- `core.devices`, one row per chain element that reports a version.
+- :data:`SETTINGS` -- the file a record node writes beside a recording.
+- :data:`CHAIN` -- each element: how its identity is formed, which attributes describe it, and
+  its parent.
+- :data:`PROBE_PORT` -- the attribute naming the dock a probe sat in.
 
-Part 01 §3.5 makes each element that reports its own versions a device in its own right. This adapter
-emits those three and **not the probe**, whose device row comes from the NWB: two sources writing
-one row would collide on its key, and the NWB knows the probe's own part number and serial.
-
-Identity comes from physical position, because the serial numbers do not supply it. Every
-`bs_serial_number`, `bsc_serial_number` and `headstage_serial_number` in the measured session is
-`0`. A slot identifies a basestation and its connect board; a slot and port identify a headstage,
-which is what makes seven headstages out of ten probe streams: a quad-base probe presents four
-streams from one part number, one serial, and one headstage.
+The adapter emits no row for the probe itself, whose device row comes from the NWB. It identifies
+an element by its slot and port, because the settings file may report every serial number as `0`.
 """
 
 from __future__ import annotations
@@ -205,8 +199,8 @@ class OpenEphysSource:
 def _identity(element: tuple[str, tuple[str, ...]], probe: Mapping[str, str]) -> str:
     """Name one chain element from its kind and the positions that identify it.
 
-    Physical position, because the serial numbers do not supply identity: every `bs_`, `bsc_`
-    and `headstage_serial_number` in the measured session is `0`.
+    Physical position, because the serial numbers do not supply identity: a file may report
+    every `bs_`, `bsc_` and `headstage_serial_number` as `0`.
     """
     kind, key = element
     return ".".join([kind, *(f"{k}{probe[k]}" for k in key)])

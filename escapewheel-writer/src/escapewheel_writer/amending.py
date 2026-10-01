@@ -1,11 +1,14 @@
 """The packet version an amendment amends, and how delivered rows settle against it (Part 05 §15).
 
-An amendment adds groups of rows a packet lacks and changes no row it holds (Part 05 §15.2), so the
-writer reads the packet before staging anything: its numbers seed the build's, so a held name keeps
-its identifier and an added one is numbered after every held one (Part 05 §4.3), and each table's
-delivered rows are compared with the held rows before the table is written. The group test is the
-validator's (`escapewheel_validator.amendment`), so a writer never builds what a validator given
-the amended packet would report.
+- :class:`Held` -- a committed packet version: its rows, the numbers it assigned, and the
+  settlement of each delivered table against them.
+- :func:`owned` -- the assigned identifiers a table's rows own, each with its `*_name` column.
+- :exc:`AmendmentRefused` -- the amendment would change a held row, or the packet cannot be amended.
+- :data:`PREVAILING` -- the tables whose held rows prevail over every source.
+
+The writer uses the validator's test of whether a delivered row joins a held group
+(`escapewheel_validator.amendment`), so it never builds an amended packet that a validator would
+report.
 """
 
 from __future__ import annotations

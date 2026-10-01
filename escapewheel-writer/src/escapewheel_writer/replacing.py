@@ -1,8 +1,11 @@
 """The packets a build replaces, read from its recipe's `[packet].replaces` (Part 05 §§3.5 and 9.3).
 
-An entry is a packet root, whose `packet.json` is the manifest it published, or a manifest file,
-such as one a packet retains under `manifests/`. Relative entries resolve against the recipe, as an
-extension path does. Every refusal happens here, before any source opens.
+- :func:`read_replaced` -- the manifest at each entry, as a :class:`Replaced`.
+- :class:`Replaced` -- one packet a build replaces, as described by the manifest at its entry.
+- :exc:`ReplacementRefused` -- an entry names something a build cannot replace.
+
+An entry is a packet root or a manifest file, and a relative entry resolves against the recipe.
+Every refusal happens here, before any source opens.
 """
 
 from __future__ import annotations

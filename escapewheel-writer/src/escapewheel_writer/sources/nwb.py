@@ -1,41 +1,15 @@
-"""Read an NWB file into records, without writing anything.
+"""Read an NWB-Zarr file into records, against a clock and a zone the caller declares.
 
-An adapter returns records; the writer turns records into a packet. That split is forced by
-the data rather than chosen for tidiness: no single source carries a whole session. In
-`inventory/nwb-zarr-776259-2025-04-09.md` §6 the NWB is the only source for trials and
-behaviour and the only one with CCF registration, while the integer tick that
-`core.spike_events` needs survives only in the sorter's output. A first packet therefore
-merges sources, and an adapter that wrote packets could not be merged.
+- :class:`NWBSource` -- the file's subject, session, devices, probes, electrodes, events, trials
+  and signals.
+- :func:`electrode_name`, :func:`contact_ids`, :func:`contact_columns` -- the one rule naming a
+  contact, shared by every adapter reading the file.
+- :func:`ucum_code` -- the UCUM code for an NWB `unit` attribute.
+- :data:`ABSENT` -- the spellings an NWB writes where a value is absent.
 
-What this adapter emits, and what it does not
----------------------------------------------
-
-It emits what the NWB is the authority for: identity, devices and probes, electrodes and
-their two coordinate frames, the behaviour event streams, and trials.
-
-It does **not** emit `core.units` or `core.spike_events`. Not because the NWB lacks units --
-it has 6781 of them with three quality-label sources -- but because §3.3 measured that spike
-times in this file have a per-probe alignment baked into float seconds and lie on no tick
-grid. Recovering ticks would mean fitting a rate and an offset, and :class:`~escapewheel_writer.clock.Clock`
-refuses that by design. Units come from the sorter, which still has its sample indices.
-
-The clock is a parameter, not a discovery
------------------------------------------
-
-Nothing in an NWB declares a time base: `timestamps` are seconds, and NWB's contract says
-they are relative to `session_start_time`. In this file they are not -- they are on the HARP
-epoch, 134 days earlier (§3.1). So the caller passes the :class:`~escapewheel_writer.clock.Clock`
-these times are on, and every conversion is checked against its grid. A wrong clock does not
-produce wrong ticks; it produces :class:`~escapewheel_writer.clock.OffGrid`.
-
-The zone is a parameter for the same reason
--------------------------------------------
-
-`America/Los_Angeles` cannot be read out of the file, and the offsets that are in the file
-are not reliable: this one carries `-07:53` on the subject's date of birth, the Local Mean
-Time of the Pacific coast and the signature of localizing a date without a real timezone
-database. The adapter cross-checks every stored offset against the declared zone and reports
-the ones that disagree instead of trusting either blindly.
+The adapter emits no units or spikes: an NWB stores spike times as float seconds and ticks are not
+fitted from them, so units and spikes come from the sorter. Times on a clock other than the one
+declared raise :exc:`~escapewheel_writer.clock.OffGrid` rather than convert to plausible ticks.
 """
 
 from __future__ import annotations
@@ -94,7 +68,7 @@ def _alike(a: Any, b: Any) -> bool:
     """Whether two trial-column values are the same, with NaN equal to NaN.
 
     A float column of all-NaN is constant, not varying: `nan != nan` would otherwise make every
-    absent parameter look like per-trial data and keep it on all 708 rows.
+    absent parameter look like per-trial data and keep it on every row.
     """
     try:
         if isinstance(a, float) and isinstance(b, float) and np.isnan(a) and np.isnan(b):
@@ -107,8 +81,8 @@ def _alike(a: Any, b: Any) -> bool:
 def electrode_name(group: Any, channel: Any, prefix: str = "") -> str:
     """Compose a contact's packet-wide name, which no NWB column carries on its own.
 
-    `electrode_name` repeats across the shanks of a quad-base probe -- 1,920 distinct values over
-    4,608 rows -- and `channel_name` is per-probe, so the pair is what identifies a contact.
+    `electrode_name` repeats across the shanks of a quad-base probe and `channel_name` is
+    per-probe, so the pair is what identifies a contact.
 
     Module-level because every adapter reading one NWB composes it: a writer numbers a name
     (Part 05 §4.3), so a second spelling of one contact mints a second electrode, and the packet then
@@ -201,7 +175,7 @@ class NWBSource(Compensates):
 
     Examples
     --------
-    >>> source = NWBSource(path, clock=harp, zone=ZoneInfo("America/Los_Angeles"))  # doctest: +SKIP
+    >>> source = NWBSource(path, reference_clock=harp, zone=ZoneInfo("America/Los_Angeles"))  # doctest: +SKIP
     >>> source.into(writer)  # doctest: +SKIP
     """
 
@@ -230,8 +204,8 @@ class NWBSource(Compensates):
     )
     # Not `core.unit_coordinates` or its values. Placing a unit needs the sorter's own label for
     # it, and no column base NWB defines carries one -- `units/id` is the DynamicTable row number,
-    # which differs from the sorter's label in 6,775 of 6,781 rows on a measured session. A dialect
-    # that writes the label declares those two resources and supplies `_unit_identity`.
+    # which is not the sorter's label. A dialect that writes the label declares those two
+    # resources and supplies `_unit_identity`.
 
     #: Part 01 §3.24: the unit every coordinate this adapter writes is in. No NWB states one; what
     #: makes this the packet's answer is that this adapter passed the values through unconverted,
@@ -283,8 +257,7 @@ class NWBSource(Compensates):
         }
     )
 
-    #: Part 05 §3.4: every column of `core.subjects` this file states. The recipe declares four of
-    #: them by hand, and until R87 §2.8 the row built from these was discarded unread.
+    #: Part 05 §3.4: every column of `core.subjects` this file states.
     STATES: ClassVar[dict[str, str]] = {
         "subject.subject_id": "stated_subject_id",
         "subject.species": "stated_species",
@@ -304,8 +277,8 @@ class NWBSource(Compensates):
     NEEDS: ClassVar[tuple[str, ...]] = ("root", "session_id", "reference_clock", "zone")
 
     #: Part 05 §3.4: options this adapter reads and can run without, which a recipe may leave
-    #: unset (Part 12 §4). `interval_kind` is the one no declaration could carry until there
-    #: was a list for it: it defaults to no intervals, which is right for a session holding none.
+    #: unset (Part 12 §4). `interval_kind` defaults to no intervals, which is right for a session
+    #: holding none.
     ACCEPTS: ClassVar[tuple[str, ...]] = (
         "prefix",
         "trial_metadata",
@@ -330,9 +303,9 @@ class NWBSource(Compensates):
     #: `extremum_channel_index` indexes the channels the **sorting kept**, while
     #: `general/extracellular_ephys/electrodes` lists every contact of the probe and nothing
     #: records which were dropped, so the index cannot be resolved here -- read as a contact
-    #: position it named the wrong electrode for 5,071 of 6,781 units on the measured session,
-    #: eleven of twelve probes having dropped between 1 and 18 channels. The adapter that owns the
-    #: table reads the sorting analyzer, where the kept channels and the support are both stated.
+    #: position it names the wrong electrode wherever the sorting dropped a channel below it. The
+    #: adapter that owns the table reads the sorting analyzer, where the kept channels and the
+    #: support are both stated.
 
     def __init__(
         self,
@@ -355,8 +328,7 @@ class NWBSource(Compensates):
         self.root = _resolve(source_root(root, cache=source_cache))
         # Part 01 §3.10: an interval declares the resource that says what it was, and this adapter
         # cannot know it -- an exported trials table is the task's, and which task it is is a
-        # fact about the session rather than about the file. The recipe names it, which is the
-        # precondition R54 §4 required before the revision could be implemented at all.
+        # fact about the session rather than about the file, so the recipe names it.
         self.interval_kind = interval_kind
         self.store = store if store is not None else SourceStore(self.root)
         # The row is kept to emit as `core.clocks` where the recipe asks; the grid is what
@@ -374,10 +346,9 @@ class NWBSource(Compensates):
         self.attachments = Path(attachments) if attachments else None
         #: Acquisition streams that are signals rather than events, named by the recipe. A
         #: continuously sampled quantity is an array with a time axis, not one row per sample
-        #: carrying its value in JSON -- which Part 03 §5.5 confines to optional columns and which
-        #: costs 5.9 M rows for one 400 Hz thermistor. Declared rather than inferred: whether a
-        #: stream is a signal is a fact about the instrument, not about how many distinct
-        #: values one session happened to record.
+        #: carrying its value in JSON, which Part 02 §6 confines to optional columns. Declared
+        #: rather than inferred: whether a stream is a signal is a fact about the instrument, not
+        #: about how many distinct values one session happened to record.
         self.signals = tuple(signals)
         self._signals: dict[str, tuple[NDArray[np.int64], NDArray[Any]]] = {}
         #: Whether to emit the reference clock. False where the sync source declares it,
@@ -417,9 +388,9 @@ class NWBSource(Compensates):
         **A column an `<name>_index` declares ragged is not read.** Its rows are runs rather
         than values, so indexing it by a table row -- which is what every caller here does --
         is wrong for all but the first row; a caller that wants one reads it alongside its index.
-        It is also where the bytes are: `units/spike_times` is 287 M values against the
-        table's 6,781 rows, and decoding it accounts for most of the time this adapter
-        spends reading.
+        It is also where the bytes are: `units/spike_times` holds every spike of the session
+        against the table's one row per unit, and decoding it would be most of what this
+        adapter reads.
 
         Cached: a table is consulted by more than one builder, and re-reading it would
         repeat every note it produced.
@@ -447,12 +418,11 @@ class NWBSource(Compensates):
     def _instant(self, raw: str | None, label: str) -> datetime | None:
         """Parse a stored wall-clock value, checking its offset against the declared zone.
 
-        The check is worth making because both failure modes are real and silent. The
-        `session.json` beside this file stamps `+00:00` on a Pacific wall clock, a seven-hour
-        error; the NWB stamps `-07:53` on the date of birth, which is the Local Mean Time of
-        the Pacific coast and the signature of a timezone conversion done without a database.
-        The stored value is kept either way -- overriding it would be a second guess on top
-        of the first -- but it is reported.
+        The check is worth making because both failure modes are real and silent: a source may
+        stamp `+00:00` on a local wall clock, and one converting a date without a timezone
+        database stamps a Local Mean Time offset such as `-07:53`. The stored value is kept
+        either way -- overriding it would be a second guess on top of the first -- but it is
+        reported.
         """
         if raw is None:
             return None
@@ -554,9 +524,9 @@ class NWBSource(Compensates):
 
         One row per *object*, not per NWB Device: a quad-base probe presents four Devices with
         one serial number, and recording four rows asserts four probes where the session had
-        one. Identity is the serial the file states; the four remain four `core.probes` rows,
-        which is what a probe is (§2.2). The surviving row takes the common prefix of the names
-        it covers where there is one -- naming only, since the serial is what decided identity.
+        one. Identity is the serial the file states; the four remain four `core.probes` rows.
+        The surviving row takes the common prefix of the names it covers where there is one --
+        naming only, since the serial is what decided identity.
         """
         found: dict[str, dict[str, Any]] = {}
         attached = self._attachment()
@@ -628,8 +598,8 @@ class NWBSource(Compensates):
         """`core.probes`, one row per NWB ElectrodeGroup.
 
         An ElectrodeGroup is what actually recorded, which is why it -- and not the Device --
-        is the probe. This file has 15 Devices and 12 groups: four of the shanks of one
-        quad-base probe each get a group, and three Devices recorded nothing.
+        is the probe: each shank of a quad-base probe gets a group of its own, and a Device may
+        have recorded nothing.
         """
         devices = self._device_of()
         rows = []
@@ -741,10 +711,9 @@ class NWBSource(Compensates):
     def electrode_coordinates(self) -> list[dict[str, Any]]:
         """`core.electrode_coordinates`, one row per electrode per populated frame.
 
-        R19 §3 replaced one NaN-padded coordinate triple with rows per frame, and this file
-        is why: `x`/`y`/`z`, the columns NWB actually specifies, are NaN for all 4608
-        electrodes, while probe-relative and CCF coordinates are both populated and differ in
-        coverage.
+        Rows per frame rather than one NaN-padded triple (R19 §3): a file may leave `x`/`y`/`z`,
+        the columns NWB specifies, NaN for every electrode while it populates other frames whose
+        coverage differs.
         """
         return [row for row, _values in self._electrode_positions()]
 
@@ -779,10 +748,8 @@ class NWBSource(Compensates):
     def coordinate_frames(self) -> list[dict[str, Any]]:
         """`core.coordinate_frames`, one row per frame this file populates (Part 01 §3.24).
 
-        `atlas` and `atlas_version` are null. No artifact of these sessions names either --
-        `ccf_coordinate_transform` is null in the rig, session and processing documents alike --
-        and Part 01 §3.24 forbids reading one out of the frame's name, `ccf` being a label rather
-        than a version.
+        `atlas` and `atlas_version` are null. Base NWB names neither, and Part 01 §3.24 forbids
+        reading one out of the frame's name, `ccf` being a label rather than a version.
         """
         return [
             {
@@ -825,7 +792,7 @@ class NWBSource(Compensates):
         """Return NWB unit rows paired with the build's unit identity, in row order.
 
         Empty: no column base NWB declares carries the sorter's label, and `units/id` is the row
-        number, which differs from it in 6,775 of 6,781 rows on a measured session.
+        number, which is not that label.
         """
         return []
 
@@ -860,7 +827,7 @@ class NWBSource(Compensates):
         """`core.unit_coordinates`, a unit's position per populated frame (R28).
 
         Empty without `_unit_identity` and `UNIT_AXES`. Where a subclass supplies both, a unit
-        whose coordinates are all absent still gets no row -- 241 of 6,781 on a measured session.
+        whose coordinates are all absent still gets no row.
         """
         return [row for row, _values in self._unit_positions()]
 
@@ -898,13 +865,13 @@ class NWBSource(Compensates):
         """Return one signal's ticks and values, non-finite timestamps dropped as events are.
 
         Memoized: four callers need it -- the array, its asset row, its clock and its anchors --
-        and on a 400 Hz thermistor each read is 5.9 M elements twice over.
+        and each read decodes the whole series twice over, its timestamps and its values.
         """
         if name not in self._signals:
             # A recipe declares its signals, because whether a stream is one is a fact about
             # the instrument. Saying so about a stream the file lacks is a contradiction Part 05 §3.5
-            # refuses in a recipe, and it surfaced here as a Zarr encoding error naming a path
-            # rather than the declaration that asked for it.
+            # refuses in a recipe, so the refusal here names the declaration that asked for it
+            # rather than surfacing as a Zarr encoding error naming a path.
             if not self.store.is_array(f"acquisition/{name}/timestamps"):
                 held = ", ".join(self.store.members("acquisition")) or "nothing"
                 raise SourceDefect(
@@ -918,12 +885,10 @@ class NWBSource(Compensates):
         return self._signals[name]
 
     def staged_arrays(self) -> list[Any]:
-        """Return the signal arrays and their coordinate arrays, for `add_array`.
+        """Return each signal's values, for `add_array`.
 
-        Two per signal. The values are the measurement; the ticks are its axis, which R20 §2.3
-        requires as an array because the axis is not regular -- a HARP device dispatching at
-        400 Hz on a 31,250 Hz counter lands on 78 or 79 ticks depending on the phase, so no
-        step describes it and R33's rational form would cost 30 ms over a session.
+        One array per signal. Its time axis is not an array: the samples are regular on the
+        device's dispatch clock, so `array_dimensions` declares the axis in regular form.
         """
         from ..writer import StagedArray
 
@@ -931,10 +896,10 @@ class NWBSource(Compensates):
         for name in self.signals:
             ticks, values = self._signal(name)
             del ticks  # the axis is a clock and its anchors, not an array (R20 §2.1)
-            # Measured on this thermistor's 5,881,692 samples: delta takes the signal from
-            # 11.8 MB to 3.47, because it is smooth at 400 Hz. Part 03 §6.4 permits any codec, but
-            # delta is outside the v3 reader floor: Zarr.jl, TensorStore, and zarrs cannot read it
-            # (Part 10 §5), and a validator reports the array at `info`.
+            # Delta, because a densely sampled signal is smooth and its differences compress far
+            # better than its values. Part 03 §6.4 permits any codec, but delta is outside the v3
+            # reader floor: Zarr.jl, TensorStore, and zarrs cannot read it (Part 10 §5), and a
+            # validator reports the array at `info`.
             staged.append(
                 StagedArray(
                     values=values,
@@ -948,7 +913,7 @@ class NWBSource(Compensates):
         return staged
 
     def array_assets(self) -> list[dict[str, Any]]:
-        """`core.array_assets`, two rows per signal: the values and their tick coordinates."""
+        """`core.array_assets`, one row per signal."""
         rows = []
         for name in self.signals:
             ticks, _ = self._signal(name)
@@ -966,10 +931,9 @@ class NWBSource(Compensates):
                     "device_id": self._signal_device_id(name),
                     # No `array_asset_name`: Part 02 §8.2's rule for a clock holds for an asset
                     # too -- the name is what the identifier stands for, and the numbering fills
-                    # it from exactly that where a row leaves it unset (R53 §2.5). Writing a
-                    # source's own label here left the packet with no record of what the
-                    # identifier was minted from, and nothing to join a row to its manifest
-                    # entry by.
+                    # it from exactly that where a row leaves it unset (R53 §2.5). A source's own
+                    # label here would leave the packet with no record of what the identifier
+                    # was minted from, and nothing to join a row to its manifest entry by.
                     # The description stays where it is read from, and is what the
                     # device row is built from.
                     "clock_id": self._dispatch_clock_id(name),
@@ -989,9 +953,9 @@ class NWBSource(Compensates):
         Tick `k` is sample `k`. That is not an approximation: a HARP device schedules its
         dispatch on its own microsecond timer, accumulating rather than re-basing, so the
         samples are evenly spaced on that counter. What is *not* even is the HARP timestamp
-        each message carries, because the timer and the timestamp count different oscillators
-        -- 2 ppm apart here, which over a session reaches 924 ticks. R20 §2.1 puts exactly
-        that difference in `core.clock_anchors` rather than in the axis.
+        each message carries, because the timer and the timestamp count different oscillators,
+        parts per million apart, which over a session reaches hundreds of ticks. R20 §2.1 puts
+        exactly that difference in `core.clock_anchors` rather than in the axis.
         """
         return [
             {
@@ -1017,10 +981,10 @@ class NWBSource(Compensates):
                     "clock_id": self._dispatch_clock_id(name),
                     "session_id": self.session_id,
                     # The float alone (Part 02 §12.4). This rate is measured from the dispatch
-                    # spacing rather than declared, so `round(rate)` invented a rational the
-                    # source never stated -- the rounding Part 02 §12.4 says this format does not
-                    # do on a source's behalf. R95 §4 keeps the float expressible for exactly
-                    # this: a rate someone measured is recorded as measured.
+                    # spacing rather than declared, so a rational would be one the source never
+                    # stated -- the rounding Part 02 §12.4 says this format does not do on a
+                    # source's behalf. R95 §4 keeps the float expressible for exactly this: a
+                    # rate someone measured is recorded as measured.
                     "tick_rate_hz": round(rate, 6) if rate else None,
                     "origin": "the device's first dispatched sample; tick k is sample k",
                     # `clock_name` is left for the numbering to fill from `clock_id` (Part 02 §8.2);
@@ -1036,8 +1000,9 @@ class NWBSource(Compensates):
 
         Every sample carries its own HARP timestamp, so every anchor here is measured and none
         is fitted. They are subsampled because they need only bound the interpolation error
-        Part 01 §3.9 governs: at the 2 ppm separating the two oscillators, anchors 25 s apart leave
-        far less than one tick between them, where the tolerance is 3 ms.
+        Part 01 §3.9 governs: at the parts per million separating the two oscillators, anchors
+        tens of seconds apart leave far less than one tick between them, where the tolerance is
+        3 ms.
         """
         rows = []
         for name in self.signals:
@@ -1062,8 +1027,7 @@ class NWBSource(Compensates):
         """`core.event_streams`, one row per acquisition TimeSeries.
 
         `processing_run_id` is null, which R23 §4 defines as *came off the device as
-        recorded*. That is the truth for these streams: lick detection is capacitance
-        thresholding done online in the rig, and reward delivery is logged by the valve.
+        recorded*: an acquisition TimeSeries is what the rig detected and logged online.
 
         `event_type` is the stream's, not the event's (R91 §3.1), and it is the source's field
         name normalised -- `left_lick_time` becomes `left_lick`. Nothing derives it at read time:
@@ -1110,8 +1074,8 @@ class NWBSource(Compensates):
         for name, seconds, data in self._series():
             ticks, finite = self._ticks(seconds, f"acquisition/{name}")
             payloads = data[finite] if data.size == seconds.size else None
-            # `data` is a constant marker on every stream here; carrying 3184 copies of 1.0
-            # would be noise, so it travels only when it varies.
+            # `data` is commonly a constant marker, and a copy of it per event would be noise,
+            # so it travels only when it varies.
             varies = payloads is not None and payloads.size > 0 and len(np.unique(payloads)) > 1
             for position, tick in enumerate(ticks):
                 row: dict[str, Any] = {
@@ -1144,12 +1108,10 @@ class NWBSource(Compensates):
                         "session_id": self.session_id,
                         "stream_id": self.prefix + kind,
                         "t_tick": int(tick),
-                        # No payload naming the interval. R11 §5 struck `core.events.trial_id`,
-                        # and carrying the same reference as JSON keeps the letter of that while
-                        # defeating it: untyped, unjoinable, and invisible to every check. R54 §3
-                        # settles what replaces it -- an event belongs to whatever intervals
-                        # contain it, which may be none or several, and containment is a query
-                        # against `core.intervals` rather than a column.
+                        # No payload naming the interval: as JSON the reference would be untyped,
+                        # unjoinable, and invisible to every check. An event belongs to whatever
+                        # intervals contain it, which may be none or several, and containment is
+                        # a query against `core.intervals` rather than a column (R11 §5, R54 §3).
                     }
                 )
         return rows
@@ -1201,9 +1163,8 @@ class NWBSource(Compensates):
         """Split unmapped trial columns into what varies per trial and what does not.
 
         A task parameter that never changes across a session is not trial data; recording it on
-        every trial restates one fact `n` times, which Part 02 §6 forbids for the same reason a
-        repeated value becomes a child table. Measured on a real session: 49 of 59 keys are
-        constant, so 34,692 of the 41,772 values stored were copies.
+        every trial restates one fact `n` times, which Part 02 §5.2 forbids for the same reason a
+        repeated value becomes a child table.
 
         The constant ones are held for `sessions` to carry, and the varying names returned. This
         is a split, not a judgement about which matter: a constant may be the most important

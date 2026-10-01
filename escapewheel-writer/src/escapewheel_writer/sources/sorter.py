@@ -1,37 +1,17 @@
-"""Read a SpikeInterface curated sorting into records.
+"""Read a SpikeInterface curated sorting into records, its spikes on the integer ticks it stores.
 
-This is where the integer ticks are. `spikes.npy` carries `sample_index`, a count of samples
-since the recording began, so `core.spike_events.t_tick` needs no conversion and no fitting --
-which is the reason the plan of record makes the sorter the tick source and the NWB only the
-behaviour source.
+- :class:`SorterSource` -- a `curated/` tree as records, and its spikes as Arrow batches.
+- :class:`SortedStream` -- one curated stream folder, with its name parsed.
+- :data:`STREAM` -- the pattern a stream folder's name follows.
+- :data:`PROJECTION` -- a mapping from a source's quality label to the closed set that
+  `core.units.quality_label` takes, or to null where no member fits.
+- :data:`LABEL_SOURCES` -- a mapping from each per-unit label file to the `source` of its labels.
+- :data:`DESIGNATED` -- the label source that fills `core.units.quality_label`.
+- :data:`STREAM_WORKERS` -- how many streams are read at once.
 
-Identity, which is where this goes wrong quietly
-------------------------------------------------
-
-Four identifier spaces meet here and none of them agree.
-
-``spikes.npy`` carries **`unit_index`**, a dense 0-based offset into `unit_ids`. It is not an
-identifier. On a real stream `unit_ids` spans 0..841 for 836 units -- Kilosort leaves gaps
-where clusters merged -- so the offset and the id agree for the first few hundred units and
-diverge silently after the first gap. Every unit here is resolved through
-``unit_ids[unit_index]`` and the offset is never stored, which is R5 §5 and R8 §2's rule that
-a `local_*_label` is a string and MUST NOT be used as an offset.
-
-The Kilosort cluster id is unique within a stream and **not** across them, so `unit_id` is
-composed from the stream and zero-padded. The padding is not cosmetic: `core.spike_events`
-sorts by `unit_id`, which is a string, and without it `u10` sorts between `u1` and `u2` while
-the source is in numeric order.
-
-The NWB's own `units` table is a fifth space -- a dense row id across every probe, plus a
-`unit_name` UUID. Joining the two sides needs `(device_name, original_cluster_id)`, never the
-cluster id alone.
-
-What it does not emit
----------------------
-
-`core.clock_anchors`. A curated sorting carries no sync data at all: no `t_start`, no time
-vector, nothing relating one stream's samples to another's. The alignment lives in the raw
-asset's TTL events, so a multi-probe packet needs that source before it can satisfy R27 §2.
+`unit_index` in `spikes.npy` is an offset into `unit_ids`, never an identifier: every unit is
+resolved through `unit_ids[unit_index]`. The adapter names a unit by its run, its curation and
+its zero-padded label, and the writer numbers those names in order (Part 02 §12.1).
 """
 
 from __future__ import annotations
@@ -97,9 +77,8 @@ DESIGNATED = "decoder"
 
 #: Streams read at once when summarising spikes. Bounded, because the win and the cost pull
 #: apart sharply: a spike file is a struct of three int64 fields, so reading one field pages the
-#: whole 24 bytes per spike, and each concurrent stream is another file resident. Measured over
-#: twelve probe streams — 1 worker 20.5 s at 1.5 GiB, 4 workers 7.0 s at 4.7 GiB, 12 workers
-#: 5.3 s at 11.5 GiB. Past four, half a second costs five gigabytes.
+#: whole 24 bytes per spike, and each concurrent stream is another file resident. Past four, a
+#: further worker saves little time and holds another stream's spikes in memory.
 STREAM_WORKERS = 4
 
 
@@ -131,7 +110,7 @@ class SortedStream:
     def device(self) -> str:
         """The probe as the surrounding ecosystem names it, shank suffix and all.
 
-        A quad-base probe reaches Open Ephys as four streams (`...45883-1` through `-4`), and
+        A quad-base probe reaches Open Ephys as four streams (`...-1` through `...-4`), and
         everything downstream keeps them apart: SpikeInterface sorts each separately, giving
         four unit-id spaces that each start at 0, and an NWB writes four electrode groups.
         Part 01 §3.5 admits exactly this: where a source presents several recording entities from
@@ -370,8 +349,8 @@ class SorterSource:
         """Compose the name the writer numbers, ordered as Part 02 §12.1 requires.
 
         `unit_id` is assigned, so the sorter's label cannot be it: a sorter numbers from zero
-        within each run and a run is one probe, which put 810 distinct labels across 6,781 units
-        on the measured session. The number must follow ascending
+        within each run and a run is one probe, so a label repeats across a session's units. The
+        number must follow ascending
         `(sorting_run_id, curation_id, local_unit_label)` so a rebuild reproduces it (Part 05 §4.3),
         and `PacketWriter._preassign` assigns in sorted-name order -- so the name is those three,
         with the label zero-padded to `width` to make its text order its numeric one. Run and
@@ -489,7 +468,7 @@ class SorterSource:
         `curation_versions` already report -- so this restates nothing the packet must derive.
 
         `supersedes` stays null. A first import supersedes nothing, and a writer that does not
-        know what a run replaced must not guess (Part 01 §3.20). `scope` is set, because a run whose
+        know what a run replaced does not guess. `scope` is set, because a run whose
         subject is unrecorded is undeterminable rather than unique (Part 01 §2.6).
         """
         rows = []
@@ -503,7 +482,7 @@ class SorterSource:
                     "session_id": self.session_id,
                     "activity_type": "spike_sorting",
                     # R44 §2.1. The probe is what a sorting is *about*, so two sortings of one
-                    # probe are alternatives and twelve probes sorted once each are not. R49 §2.2
+                    # probe are alternatives and several probes sorted once each are not. R49 §2.2
                     # names the kind as a resource ID, so a consumer resolves it from the registry.
                     "scope_kind": "core.probes",
                     "scope": self._probe_id(stream),
@@ -597,9 +576,9 @@ class SorterSource:
         """`core.sorting_run_channels`, the channels each run used in its own order (R83 §2.1).
 
         A sorting drops bad channels before it runs, so a channel index it emits afterwards
-        counts what it kept -- `extremum_channel_index` named the wrong electrode for 5,071 of
-        6,781 units read as a contact position. The analyzer holds that list and the NWB does
-        not, which is why this adapter owns the table and the NWB one cannot.
+        counts what it kept, and `extremum_channel_index` read as a contact position names the
+        wrong electrode. The analyzer holds that list and the NWB does not, which is why this
+        adapter owns the table and the NWB one cannot.
 
         The electrode is named rather than numbered, so the writer resolves it against the same
         `Keys` the NWB source's `core.electrodes` numbered: `<group>.<channel>` is what
@@ -629,15 +608,11 @@ class SorterSource:
     def observation_intervals(self) -> list[dict[str, Any]]:
         """`core.clock_observation_intervals`, one window per stream's sample clock.
 
-        Part 01 §2.2: a sample clock's window is the extent of the recording it counts, which for
+        Part 01 §2.3: a sample clock's window is the extent of the recording it counts, which for
         a clock whose origin is sample 0 is `[0, length - 1]`. It is deliberately not derived
         from the spikes -- a denominator taken from the numerator makes every rate identical --
         and it is the fact that makes the window independent of what the sorting found: a unit
         that fires nothing was still observed.
-
-        Measured on `ecephys_776259_2025-04-09`, the last spike on each of the twelve probe
-        clocks falls 4 to 14 samples inside its clock's window, which is one waveform's
-        half-width and is what a sorter that cannot centre a template at the very end leaves.
         """
         rows = []
         for stream in self.streams():
@@ -749,8 +724,8 @@ class SorterSource:
     def _spikes(self, stream: SortedStream) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
         """Read a stream's `(unit_index, sample_index)` from disk.
 
-        `unit_index` is an offset into `unit_ids`, never an identifier — see the module
-        docstring. It is resolved before anything is written.
+        `unit_index` is an offset into `unit_ids`, never an identifier: the two diverge at the
+        first gap a merge leaves in `unit_ids`. It is resolved before anything is written.
 
         `sample` truncates every stream to its first spikes, and is applied *here* rather than
         at either caller because both of them read through this one method. A cap applied to
@@ -771,7 +746,7 @@ class SorterSource:
         """Lowest and highest tick per unit, as `-1` where a unit has no spikes.
 
         Grouped with `reduceat` over a stable sort rather than `ufunc.at`, which is
-        unbuffered and two orders of magnitude slower at seventeen million spikes. The source
+        unbuffered and two orders of magnitude slower over a stream's spikes. The source
         is in time order, but nothing here relies on that.
         """
         order = np.argsort(index, kind="stable")
@@ -829,14 +804,14 @@ class SorterSource:
         """`core.unit_quality_labels` rows from a curation's own manual labels.
 
         The four automated sources live in `properties/`; these live in `curation.json` and
-        are the only record of what a person decided. Leaving them out is what made a
-        packet's 249 removed units indistinguishable from its kept ones.
+        are the only record of what a person decided. Without them a packet's removed units
+        are indistinguishable from its kept ones.
 
         Removal is checked here rather than emitted. `curation.json` lists `removed` units
-        separately, and on every stream measured that list is exactly the manually labelled
-        set -- so the label makes removal queryable. That coincidence is a property of this
-        pipeline and not a rule, so a stream where it breaks is reported: the packet would
-        then be hiding a removal no label records, and Part 02 has no column to put one in.
+        separately, and where that list is exactly the manually labelled set the label makes
+        removal queryable. That coincidence is a property of a pipeline and not a rule, so a
+        stream where it breaks is reported: the packet would then be hiding a removal no label
+        records, and Part 02 has no column to put one in.
         """
         curation = self._json(stream, "curation.json")
         ids = self._unit_ids(stream)
@@ -907,20 +882,16 @@ class SorterSource:
             if tick.size and int(tick.max()) >= 1 << 32:
                 raise SourceDefect(f"{stream.key}: sample index {int(tick.max())} does not fit the packed sort key")
             order = np.argsort((index.astype(np.int64) << 32) | tick, kind="stable")
-            # An Arrow array taken from, not a numpy array indexed and converted. `.tolist()`
-            # on a million-row slice builds a million Python strings per batch; `take` stays
-            # in C++ and is 18x faster, which over a quarter of a billion spikes is the
-            # difference between 15 seconds and one.
-            # int32 since R53 §2.1: unit_id is carried, so this is the sorter's own label. The
-            # Dictionary-encoded, so `number_batch` maps a few hundred names rather than a
-            # million strings a batch: the indices are already what `index` holds.
+            # Dictionary-encoded against names built once a stream, so no batch builds a Python
+            # string per row and `number_batch` maps a few hundred names rather than a million
+            # strings a batch: the indices are already what `index` holds.
             unit_names = pa.array([self._unit_id(stream, int(label), width) for label in ids], type=pa.string())
             for start in range(0, order.size, batch_rows):
                 selected = order[start : start + batch_rows]
                 rows = selected.size
                 # `pa.repeat` for `session_id`, which is constant within a stream: a
-                # million-element Python list would cost more than the spikes. R96 §3.4 struck
-                # `clock_id` here, the tick reaching its clock through the unit instead.
+                # million-element Python list would cost more than the spikes. No `clock_id`:
+                # the tick reaches its clock through the unit (R96 §3.4).
                 columns = {
                     "session_id": pa.repeat(pa.scalar(self.session_id, pa.string()), rows),
                     "unit_id": pa.DictionaryArray.from_arrays(pa.array(index[selected], type=pa.int32()), unit_names),

@@ -1,7 +1,18 @@
 """Turn records into Arrow tables with exactly the schema the registry declares.
 
-A writer does not invent a schema. Every column's type and presence comes from
-``logical_schemas.json``, so a packet cannot disagree with the registry it embeds.
+- :func:`build` -- a sorted Arrow table for one resource.
+- :func:`schema`, :func:`sort_key` -- a table's Arrow schema, and the columns it is sorted by.
+- :func:`number`, :func:`number_batch` -- identifier values numbered as their declarations
+  require, over records and over a streamed batch.
+- :func:`localize` -- a naive wall-clock value with a declared IANA zone attached.
+- :func:`canonical_json` -- a mapping or sequence as canonical JSON.
+- :exc:`NaiveTimestamp` -- a wall-clock value carried no UTC offset.
+- :exc:`CarriedNotAnInteger` -- a carried identifier arrived as something other than a number.
+- :data:`ARROW`, :data:`COERCE` -- mappings from a registry column type to its Arrow type, and to
+  the coercion applied before Arrow sees a value.
+
+Every column's type and presence comes from the registry, so a packet cannot disagree with the
+registry it embeds.
 """
 
 from __future__ import annotations
@@ -22,10 +33,9 @@ class NaiveTimestamp(ValueError):
 
     Part 03 requires wall-clock columns to be ``TIMESTAMP(MICROS, UTC)``, so a value without an
     offset is not merely inconvenient -- it is unlocatable, and assuming UTC would be a guess.
-    Real source metadata gets this wrong: an aind-data-schema `session.json` in
-    `inventory/nwb-zarr-776259-2025-04-09.md` §6.4 stamps `+00:00` on a Pacific wall clock, a
-    seven-hour error. Refusing naive values does not catch a wrong offset, but it does stop a
-    writer inventing one.
+    Real source metadata gets this wrong: an aind-data-schema `session.json` may stamp `+00:00`
+    on a local wall clock. Refusing naive values does not catch a wrong offset, but it does stop
+    a writer inventing one.
     """
 
 
@@ -36,9 +46,9 @@ def localize(value: datetime | str, zone: ZoneInfo) -> datetime:
     (see :class:`NaiveTimestamp`). The zone must be an IANA zone, **not** a fixed offset,
     because a fixed offset is wrong for half the year and the error is silent.
 
-    The dataset in `inventory/nwb-zarr-776259-2025-04-09.md` shows why: its session is PDT
-    (−07:00) and the HARP epoch its ticks count from is PST (−08:00), so a rig constant of
-    −07:00 misplaces anything before the March transition by an hour.
+    A session may fall in daylight time while the epoch its free-running clock counts from fell
+    in standard time, so a rig constant of either offset misplaces whatever lies on the other
+    side of the transition by an hour.
 
     Parameters
     ----------
@@ -86,9 +96,9 @@ def _plain(value: Any) -> Any:
     """Reduce a value to something :func:`json.dumps` can encode.
 
     NumPy scalars and arrays become their Python equivalents, and a non-finite float becomes
-    null. JSON has no NaN, and source data is full of it -- 384 of this file's 4608
-    electrodes carry NaN CCF coordinates -- so the choice is between dropping it and emitting
-    a document no conforming JSON parser accepts.
+    null. JSON has no NaN, and source data is full of it -- an electrode table may carry NaN
+    CCF coordinates -- so the choice is between dropping it and emitting a document no
+    conforming JSON parser accepts.
     """
     if isinstance(value, float):
         return value if math.isfinite(value) else None
@@ -266,8 +276,8 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paire
     declared = {c["name"]: c for c in spec["columns"]}
     # A foreign key is numbered in the map of the column it points at, not its own. Otherwise
     # `parent_clock_id` and `clock_id` -- both clocks -- get separate numbering and the parent
-    # chain names a clock that does not exist, which Part 01 §3.9 requires to be well-founded. Same for
-    # `default_electrode_id` into electrodes and `supersedes_run_id` into runs.
+    # chain names a clock that does not exist, which `core.clocks.parent_chain_well_founded`
+    # reports. Same for `default_electrode_id` into electrodes and `supersedes_run_id` into runs.
     target = {
         column: referenced
         for ref in spec.get("references", [])
@@ -349,7 +359,7 @@ def _number_dictionary(values: pa.Array, column: Mapping[str, Any], kind: str, k
 def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> pa.RecordBatch:
     """Return a streamed batch with its identifier columns numbered, as `number` does for records.
 
-    The streaming path exists so a 287 M-row table never becomes Python objects, so this maps
+    The streaming path exists so a table of 10^8 rows never becomes Python objects, so this maps
     through the batch's *distinct* values rather than per row. A dictionary-encoded column is
     mapped through its dictionary and re-indexed, which is what keeps `core.spike_events`
     affordable: its `unit_id` names one unit per row and holds a few hundred distinct names, so

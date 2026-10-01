@@ -1,6 +1,6 @@
 # Escapewheel Writer
 
-Tools to write escapewheel packets
+Build Escapewheel packets from a recipe.
 
 ## Installation
 
@@ -12,11 +12,27 @@ cd escapewheel/escapewheel-writer
 uv sync
 ```
 
-## Quick Start
+## Quick start
+
+A recipe names a session's sources and the resources each one owns. The command line checks it,
+then builds, validates and commits the packet:
 
 ```bash
-escapewheel import session.toml --check  # everything wrong, before any I/O
+escapewheel import session.toml --check  # report every problem, before any I/O
 escapewheel import session.toml          # stage, validate, commit
+```
+
+The same two steps in Python:
+
+```python
+import json
+
+from escapewheel_writer import Recipe, build
+
+recipe = Recipe.load("session.toml")
+registry = json.loads(recipe.registry.read_text())
+writer = build(recipe, registry)
+report = writer.commit(recipe.out)
 ```
 
 ## Documentation
@@ -26,6 +42,7 @@ escapewheel import session.toml          # stage, validate, commit
 :caption: Contents
 
 api
+design
 performance
 ```
 

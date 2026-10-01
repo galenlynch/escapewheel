@@ -1,17 +1,26 @@
-"""How rows cross a process boundary: the serving half and the reading half of one protocol.
+"""How rows cross a process boundary: the serving and reading halves of Part 12 §3's protocols.
 
-Part 12 §3 names three protocols for `escapewheel-portable-v0.1`, and a build supports all of
-them because there is one build and there will be many adapters. Both halves live here so the
-encoder and the decoder of one wire format cannot drift apart.
+Serving, in the adapter's process:
 
-Which to use is the recipe's choice, and they are not equivalent under load. `files-v0.1` is the one
-to reach for where a source is large: the delivery is Parquet on disk, so a build streams it a batch
-at a time the way it streams any other file. `stream-v0.1` and `flight-v0.1` hold each resource as
-it arrives, because a build consumes resources in its own order and a pipe cannot be rewound.
+- :func:`construct` -- an adapter built from the JSON object a build passed.
+- :func:`infers` -- the protocol a build reached the adapter by, from the term that build supplied.
+- :func:`serve` -- one adapter's rows delivered over that protocol.
+- :func:`offered` -- everything one adapter has to deliver, per resource.
+- :func:`written_arrays` -- the arrays a source stages, written into the location supplied.
+- :func:`referenced` -- the resource document for the resources a source references rather than
+  writes.
+- :func:`report_of` -- an adapter's report on its run.
+- :func:`as_table` -- records as a table with every column that any row carries.
 
-An adapter's arrays and opaque payloads do not cross here. Part 12 §5 has each cross as bytes
-in a location a build supplies, which is a different act from delivering rows; a source that stages
-one is refused with what it would take, rather than delivering half of itself.
+Reading, in the build's process:
+
+- :func:`fetch` -- run one adapter as a command and read what it delivered.
+- :class:`Delivered` -- what a build received, shaped like an adapter.
+- :data:`SENTINEL`, :data:`RESOURCES` -- the two reserved `resource_id` values of a delivery.
+
+A build reads `files-v0.1` from disk a batch at a time, but holds each `stream-v0.1` or
+`flight-v0.1` resource in memory as it arrives, so a large source should use `files-v0.1`. Arrays
+and opaque payloads cross as bytes in a location a build supplies (Part 12 §5), not as rows.
 """
 
 from __future__ import annotations
@@ -64,8 +73,8 @@ def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
     statement under Part 12 §5, so losing one says something untrue. Types are the build's to
     settle against the registry, so nothing here declares one.
 
-    A mapping is the exception, and it is not a type decision: the profile stores one as JSON text
-    in an optional column and forbids a nested type outright (Part 03 §5.5), so a value that
+    A mapping is the exception, and it is not a type decision: the standard stores one as JSON text
+    in an optional column and forbids a nested type outright (Part 02 §5.2), so a value that
     arrived as a struct could not be cast to what the packet stores. Encoded here in the form the
     writer would have written, which is what makes the two routes produce one byte string.
     """
@@ -552,7 +561,7 @@ def fetch(
             leftover.unlink(missing_ok=True)
     supplied = {**supplied, **locations}
     # On standard input, not in the argument list: an argument has a size no profile can raise,
-    # and one term carrying a record per unit passed it on a real session (Part 12 §4).
+    # and one term carrying a record per unit can exceed it (Part 12 §4).
     crossing = json.dumps(supplied, default=str).encode()
     argv = list(command)
     started = time.perf_counter()

@@ -1,14 +1,15 @@
-"""Source adapters.
+"""Source adapters, each reading one source into records for a build to assemble (Part 05 §2).
 
-An adapter reads one source and returns records, writing only where a build points it (Part 05
-§2): the packet is assembled by :class:`~escapewheel_writer.writer.PacketWriter`, which validates
-before it commits. That split exists because no single source carries a whole session -- see
-`inventory/nwb-zarr-776259-2025-04-09.md` §6.
+- :class:`HarpSource`, :class:`OpenEphysSource`, :class:`SorterSource`, :class:`SyncSource`,
+  :class:`NWBSource`, :class:`WaveformSource`, :class:`LFPSource` -- the built-in adapters.
+- :class:`SortedStream`, :class:`SyncStream` -- one stream of a sorting, and of a sync tree.
+- :exc:`SourceDefect` -- a source cannot supply what a build asked of it.
+- :func:`discovered` -- the source kinds that installed distributions register, keyed by name.
+- :data:`ADAPTERS` -- a mapping from each built-in kind a recipe may name to its class.
+- :data:`SOURCE_GROUP` -- the entry-point group a distribution registers an adapter under.
 
-What is here reads a **standard** -- SpikeInterface, Open Ephys, Harp, NWB -- because many
-institutions write them. An adapter serving one institution is registered rather than built in,
-and `escapewheel-aind` is where this repository's own are: `session` and `video` moved there,
-and are reached through `SOURCE_GROUP` exactly as any other distribution's would be.
+Each built-in adapter reads a standard that many institutions write. An adapter serving one
+institution is registered under :data:`SOURCE_GROUP`, and is reached exactly as a built-in kind is.
 """
 
 import warnings

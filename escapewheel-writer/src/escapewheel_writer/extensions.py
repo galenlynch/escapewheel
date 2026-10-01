@@ -1,18 +1,14 @@
 """Find the extension registries a recipe names.
 
-Part 09 §2 makes an extension a registry document, and Part 09 §6 has the packet carry it. Between the
-two sits a mechanical question this module answers: **where does a build get the document from?**
+- :func:`load` -- the registry an entry names, by a path beside the recipe or an installed id.
+- :func:`load_checked` -- the same registry checked against core, from a file's exact bytes.
+- :func:`installed` -- the registries that installed distributions register, keyed by the name each
+  claims.
+- :exc:`ExtensionNotFound` -- an entry names neither a file nor an installed distribution.
+- :data:`EXTENSION_GROUP` -- the entry-point group a distribution registers a registry under.
 
-Two answers, because there are two situations. A document being drafted is a file beside the
-recipe, named by its path. A document someone else maintains arrives in an installed
-distribution, which has no path a recipe could name -- so it registers under an entry-point
-group, the same way Part 07's single CLI is assembled from three packages and a source adapter is
-found (`escapewheel_writer.sources.SOURCE_GROUP`).
-
-Note what a distribution is **for**. It carries the registry document and, where the raw source
-needs parsing, a source adapter -- both of which matter only while a packet is being *built*.
-Once built, the packet embeds the document, and reading it needs nothing installed. That is the
-whole difference from an `ndx-` extension, which must be installed to read a file at all.
+A distribution is needed only while a packet is built: the packet embeds the registry document
+(Part 09 §5.3), so reading the packet needs nothing installed.
 """
 
 from __future__ import annotations

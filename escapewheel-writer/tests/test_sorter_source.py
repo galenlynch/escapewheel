@@ -347,7 +347,7 @@ def test_two_labels_in_one_category_are_kept_unprojected(tmp_path):
     assert any("2 labels in category" in note for note in source.notes)
 
 
-# -- observation windows (Part 01 §2.2) ----------------------------------------------------
+# -- observation windows (Part 01 §2.3) ----------------------------------------------------
 
 
 def test_a_sample_clock_declares_the_recording_it_counts(source):
@@ -431,7 +431,7 @@ def test_a_curation_is_scoped_to_its_sorting_not_its_probe(source):
 
 
 def test_supersedes_is_left_unset(source):
-    """Part 01 §3.20: a first import supersedes nothing, and a writer must not guess."""
+    """A first import supersedes nothing, and the adapter does not guess what a run replaced."""
     assert all(r.get("supersedes") is None for r in rows_of(source, "core.processing_runs"))
 
 

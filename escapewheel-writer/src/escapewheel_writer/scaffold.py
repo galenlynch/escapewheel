@@ -1,19 +1,10 @@
-"""Draft an extension registry document from tables that already exist.
+"""Draft an extension registry document from tables that already exist (Part 09 §5.1).
 
-**This invents no format.** Part 09 §2 makes an extension a registry document in R2's format, so
-there is nothing here to design — only typing to avoid. The relationship is `escapewheel init`'s to a
-recipe: draft what can be read off the data, name what cannot, and let a human finish it.
+- :func:`draft` -- a draft covering the given tables, each read from a Parquet file.
+- :class:`Draft` -- the drafted document, and the decisions a human still has to make.
 
-What can be read off a Parquet file: column names, their Arrow types mapped to R2 §4's vocabulary,
-and whether a column is ever null. What cannot: everything that decides meaning. R48 §3 measured
-that a column's `role` is not derivable from its name (`step_ticks` was a duration), its type (all
-110 identifiers are strings, and so are many non-identifiers) or its key membership. R53 §2.3 adds
-that `identity` is not derivable either -- a source may supply an integer the writer replaces.
-
-So a draft is **incomplete on purpose**. It carries a guess for what a guess is cheap for, and the
-report says which. R48 §2.2's reason applies to a scaffolder more than to anything else: a default
-makes a forgotten classification look deliberate, and a generated file is exactly where a
-forgotten one hides.
+A draft is incomplete on purpose: it carries what can be read off the data and no column role, so
+it fails the meta-schema until a human supplies each role.
 """
 
 from __future__ import annotations
@@ -29,7 +20,7 @@ import pyarrow.parquet as pq
 from escapewheel_validator.validator import registry_meta_schema
 
 #: R2 §4's vocabulary, keyed by what pyarrow reports. A type outside this is a defect in the
-#: source rather than a gap here: Part 03 §5.5 bans nested types so a native reader stays viable.
+#: source rather than a gap here: Part 02 §5.2 bans nested types so a native reader stays viable.
 ARROW_TO_REGISTRY = {
     "string": "string",
     "large_string": "string",
@@ -46,9 +37,8 @@ ARROW_TO_REGISTRY = {
     "date32[day]": "date",
 }
 
-#: What a name suggests, which R48 §3 established is a hint and not an answer. Every application
-#: of this is reported, because the whole point of R48 is that this guess is wrong often enough
-#: to have needed three renames (R50).
+#: What a name suggests, which is a hint and not an answer (R48 §3), so every application of it
+#: is reported.
 NAME_HINTS = (("_tick", "coordinate"), ("_index", "structural_index"), ("_id", "identifier"))
 
 #: Up to how many distinct values a string column's report lists, as candidates for a closed enum.
@@ -139,7 +129,7 @@ def draft(
     Parameters
     ----------
     extension_id : str
-        Namespace for every table, which Part 09 §2 requires each to be prefixed by.
+        Namespace for every table, which Part 09 §5.2 requires each to be prefixed by.
     tables : dict
         Bare table name to the Parquet file whose schema it takes.
     """
@@ -153,7 +143,7 @@ def draft(
             # R7: every table declares a key or explicitly null with a reason. Neither is
             # guessable -- a column unique in one session need not be unique in the next.
             "primary_key": None,
-            # Part 09 §2 lets an extension reference core, and Part 02 §8.3 needs it to where a
+            # Part 09 §6.1 lets an extension reference core, and Part 02 §8.3 needs it to where a
             # discriminator names this table. Nothing here can know which.
             "references": [],
             "rules": [],
@@ -162,7 +152,7 @@ def draft(
             "amendment_groups": [],
         }
         decisions.append(f"{resource}: primary_key is null; declare it or say why not (R7)")
-        decisions.append(f"{resource}: no references; an extension may reference core (Part 09 §2)")
+        decisions.append(f"{resource}: no references; an extension may reference core (Part 09 §6.1)")
         decisions.append(
             f"{resource}: amendment_groups is empty; declare the groups an amendment may add (Part 02 §2.8)"
         )

@@ -1,22 +1,12 @@
-"""The ``escapewheel import``, ``inspect``, ``init``, ``declare`` and ``deliver`` subcommands.
+"""The writer's ``escapewheel`` subcommands, found through the ``escapewheel.commands`` group.
 
-`escapewheel_reader` owns the ``escapewheel`` entry point and discovers this through the
-``escapewheel.commands`` group, so installing this package makes the subcommands appear rather
-than competing for the command name.
+- :func:`register` -- add ``inspect``, ``init``, ``import``, ``extension``, ``verify``, ``prune``,
+  ``prune-cache``, ``declare`` and ``deliver`` to ``escapewheel``.
+- :func:`declaration_protocols` -- Part 12 §3's protocol group, imported only when called.
+- :data:`KINDS` -- the source kinds ``init`` and ``inspect`` can open with nothing but a root.
 
-The three follow Part 05 §2's order. ``inspect`` is discovery (Part 05 §4.1) -- what a source
-offers, before anything is staged. ``init`` turns several inspections into a recipe draft, so the
-ownership decisions a build depends on are made from what the sources actually hold rather than
-from memory.
-``import`` is every later step, delivery through publication.
-
-``declare`` and ``deliver`` are the two halves of Part 12's boundary. ``declare`` writes an
-adapter's declarations as the document a build reads where it cannot import one, generated from the
-class rather than maintained. ``deliver`` runs one adapter and hands its rows over a protocol, which
-is how an adapter this package ships becomes reachable out of process without declaring anything --
-and is the command a recipe names to have a source delivered rather than imported. It takes what a
-build supplies on standard input and no arguments of its own beyond the kind, so running one by
-hand is `escapewheel deliver nwb < supplied.json`.
+``deliver`` reads the terms a build supplies from standard input and takes no argument beyond the
+kind, so running it by hand is `escapewheel deliver nwb < supplied.json`.
 """
 
 from __future__ import annotations
@@ -50,12 +40,11 @@ def declaration_protocols() -> tuple[str, ...]:
 #: What the recipe declares rather than reading from a source, spelled for a draft's comment.
 SUPPLIES_NOTE = "the recipe supplies core.sessions, core.subjects and core.processing_runs"
 
-#: Source kinds ``init`` can inspect, and the adapter each names.
 #: Kinds `_open` can construct with nothing but a root, which is what `init` and `inspect`
 #: need. Narrower than the kinds a build accepts: `video` needs a clock, `session` a zone,
 #: and `waveforms` the sorting it describes, so none can be opened on its own.
 #: `test_arbitration.py` refuses a kind here that `_open` would turn away, and one that
-#: `session._KINDS` does not know.
+#: `sources.ADAPTERS` does not know.
 KINDS = ("lfp", "nwb", "sorter", "sync")
 
 #: Options an adapter requires that no inspection can supply, drafted so the recipe builds.
@@ -417,7 +406,7 @@ def _prune(args: argparse.Namespace) -> int:
 
 
 def _extension(args: argparse.Namespace) -> int:
-    """Draft an extension registry from tables that already exist (Part 09 §2)."""
+    """Draft an extension registry from tables that already exist (Part 09 §5.1)."""
     from ..scaffold import draft
 
     tables = {}
@@ -447,9 +436,9 @@ def _extension(args: argparse.Namespace) -> int:
 def _extension_check(args: argparse.Namespace) -> int:
     """Check an extension's registry document against the invariants any registry is held to.
 
-    The half of extension authoring that never shipped: `draft` writes a document and nothing told
-    an author whether it was sound, so the answer arrived when a build refused it, or did not
-    arrive. Core is checked by exactly this function, which is what keeps the two from drifting.
+    `draft` writes a document and this says whether it is sound, so an author learns before a
+    build refuses it. Core is checked by exactly this function, which is what keeps the two from
+    drifting.
     """
     if not args.document.is_file():
         print(f"error: {args.document} does not exist", file=sys.stderr)
@@ -570,7 +559,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     authoring = extension.add_subparsers(dest="verb", required=True, metavar="{draft,check}")
 
     drafting = authoring.add_parser("draft", help="draft a registry document from tables that already exist")
-    drafting.add_argument("extension_id", help="namespace every table is prefixed by (Part 09 §2)")
+    drafting.add_argument("extension_id", help="namespace every table is prefixed by (Part 09 §5.2)")
     drafting.add_argument(
         "--table",
         action="append",
@@ -581,7 +570,7 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     drafting.add_argument("--out", type=Path, default=None, help="where to write (default: <id>.json)")
     drafting.set_defaults(func=_extension)
 
-    checking = authoring.add_parser("check", help="check a registry document against Part 09 §2's invariants")
+    checking = authoring.add_parser("check", help="check a registry document against Part 02 §9.4's invariants")
     checking.add_argument("document", type=Path, help="the extension's registry document")
     source = checking.add_mutually_exclusive_group(required=True)
     source.add_argument("--registry", type=Path, help="the core registry it extends, as logical_schemas.json")

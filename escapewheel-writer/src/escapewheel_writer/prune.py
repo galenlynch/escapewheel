@@ -1,17 +1,10 @@
 """Cleanup over a committed packet (Part 05 §15.5).
 
-Two removals, in one order. **Orphans first**: a manifest identifies the orphans of its own
-version, so expiring it before they are removed makes an orphan and a stray indistinguishable and
-does so permanently. Superseded manifests go second, and only as far as the retention policy
-allows.
+- :func:`prune` -- plan cleanup over a committed packet, and carry it out where asked.
+- :class:`Plan` -- what cleanup would remove, or did.
 
-A stray -- a file no manifest has ever named, outside the staging area and every path an
-unpublished promotion record claims -- is reported and never removed. A packet may carry files this
-specification does not govern, and cleanup that deletes the ungoverned is a data-loss operation
-wearing a maintenance name. Files a build or amendment owns are reported apart, and left to it.
-
-Nothing is removed unless a caller asks. Part 05 §15.5 makes reporting the default because the
-alternative is a delete whose blast radius is a listing the caller has not read.
+Cleanup removes orphans before the superseded manifests that identify them, and removes nothing
+unless a caller asks. A stray, a file no manifest has named, is reported and never removed.
 """
 
 from __future__ import annotations

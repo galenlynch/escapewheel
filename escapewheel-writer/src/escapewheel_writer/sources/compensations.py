@@ -1,22 +1,17 @@
-"""What this importer does about faults in its sources, recorded rather than assumed.
+"""Declare what an adapter does about a known fault in its source, so the packet records it.
 
-Every adapter here works around something known to be wrong upstream — `inventory/`
-carries eight such defects, measured. A correction is silent by construction: a packet built
-from a corrected source looks exactly like one built from a source that was never broken.
+- :class:`Compensation` -- one fault, what an adapter does about it, and where it is measured.
+- :class:`Compensates` -- the mixin through which an adapter declares a compensation it applied.
+- :func:`registered` -- every compensation an adapter may declare, built in or registered by a
+  distribution.
+- :func:`describe` -- applied compensations rendered for `core.processing_runs.parameters`.
+- :data:`COMPENSATIONS` -- the compensations this package declares.
+- :data:`COMPENSATION_GROUP` -- the entry-point group under which a distribution registers its
+  own compensations.
 
-That is fine until the fault is fixed. An importer that keeps compensating for a defect its
-source no longer has does not fail; it produces a packet that is wrong in the opposite
-direction, and nothing in the packet says so. Negating an LFP `t0` that has already been
-negated is the concrete case.
-
-So a compensation is declared, and every one an import applied lands in
-`core.processing_runs.parameters`. A packet then answers "what did the importer assume about
-its sources?", and when a defect is fixed upstream you can find the packets that assumed
-otherwise. This is deliberately *not* a source version: some of our sources declare none, and
-what matters for the audit is what we did rather than what we read.
-
-A knowing pass-through is registered too. Choosing not to correct is as much an assumption as
-choosing to.
+A packet shows no trace of a correction, so one still applied after its fault is fixed upstream
+goes wrong unseen. Passing a fault through on purpose is an assumption too, and is registered the
+same way.
 """
 
 from __future__ import annotations

@@ -20,7 +20,7 @@ class Spec:
 class Stub:
     """A session source stating both ends of its session, as the real one does.
 
-    Part 05 §3.4: a build reads a stated fact off the source, and off the report where the source
+    Part 05 §3.6: a build reads a stated fact off the source, and off the report where the source
     delivered from another process -- so a stub declaring `STATES` and the attributes behind it is
     the shape of either.
     """

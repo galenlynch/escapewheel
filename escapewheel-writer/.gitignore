@@ -147,3 +147,6 @@ scratch/
 # Claude
 .claude/
 
+
+# Sphinx autosummary output
+docs/source/generated/

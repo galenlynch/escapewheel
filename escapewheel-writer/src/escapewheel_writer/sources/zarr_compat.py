@@ -1,39 +1,14 @@
-"""Read one-dimensional Zarr v2 arrays out of an NWB-Zarr directory.
+"""Read Zarr v2 arrays from their chunk bytes, with `numcodecs` and nothing else.
 
-AIND writes approximately all of its NWB output as NWB-Zarr (`zarr_format: 2`), and
-everything an importer needs from one -- table columns, timestamps, scalar metadata -- is a
-one-dimensional array. Decoding those from their chunk bytes with the codecs they declare
-takes `numcodecs` and nothing else, so this package depends on neither `zarr`, `hdmf-zarr`,
-nor `pynwb`. Part 07 permits PyNWB at the import boundary; not needing it is better, and it
-also sidesteps two faults that make zarr-python 3.3 refuse these files outright. Both are
-measured in `inventory/nwb-zarr-776259-2025-04-09.md` §1; neither is exotic, and any reader
-of these files meets them:
+- :func:`read_array` -- a one-dimensional array's values, or its first few.
+- :class:`DenseV2` -- a multi-dimensional array, read a slab of rows at a time.
+- :func:`members` -- a group's children by name.
+- :func:`attrs`, :func:`attrs_at` -- a node's attributes, from its `.zattrs` or the `.zmetadata`.
+- :exc:`UnsupportedEncoding` -- an array uses an encoding this module will not decode.
 
-**vlen-bytes with a numeric fill value.** Four arrays -- ``session_start_time``,
-``timestamps_reference_time``, ``file_create_date`` and ``general/subject/date_of_birth`` --
-are ``|O`` with ``fill_value: 0`` and a ``vlen-bytes`` filter, and the v2 parser rejects the
-fill value:
-
-.. code-block:: text
-
-    TypeError: Invalid type: 0. Expected a string.
-
-The same fault is why the file cannot be opened through its consolidated metadata at all;
-these arrays appear in ``.zmetadata``. Decoding from chunk bytes never consults the fill
-value, so the fault does not arise here.
-
-**Pickled object references.** ``electrodes/group`` is ``|O`` with an ``object_codec_id`` of
-``pickle``, holding `hdmf-zarr` object references. It raises
-:class:`UnsupportedEncoding`, which is the right outcome: the pickle holds a reference this
-package has no business unpickling, and the same information is in the plain
-``group_name`` column beside it.
-
-LFP is a dense array asset, which R14 says a packet references rather than copies, so nothing
-here reads one. Templates are the exception and :class:`DenseV2` is why: a packet owns
-`core.waveform_mean`, so those bytes have to be read, cut to each unit's own contacts and
-requantised. Reading them the same way -- chunk bytes and the codecs they declare -- is what lets
-a sorted asset on a store be read exactly as a local one is, and what keeps a `#` in a stream's
-folder name a path segment rather than a URL fragment.
+:func:`read_array` never consults a fill value, so it reads a vlen-bytes array with a numeric one,
+which zarr-python refuses. A pickled array raises :exc:`UnsupportedEncoding`, and its values are in
+the plain column beside it.
 """
 
 from __future__ import annotations
@@ -123,9 +98,8 @@ def read_array(path: Path, limit: int | None = None) -> NDArray[Any]:
 
     Chunks are decoded with the codecs the array declares, so a numeric ``fill_value`` on a
     vlen-string array -- which zarr-python rejects before it gets that far -- is simply never
-    consulted. Every array this package reads from an NWB is one-dimensional; the
-    multi-dimensional ones (waveforms, LFP) are dense arrays, and Phase 5 references them
-    rather than reading them.
+    consulted. Every array this package reads from an NWB is one-dimensional; a
+    multi-dimensional one is a dense array, which :class:`DenseV2` reads or a packet references.
 
     Parameters
     ----------
@@ -133,8 +107,8 @@ def read_array(path: Path, limit: int | None = None) -> NDArray[Any]:
         The array directory.
     limit : int, optional
         Stop after this many values. Only the chunks holding them are decoded, which matters
-        where an array is large and the caller wants its head: an LFP series stores 7,983,750
-        timestamps and the sampling interval is the first two.
+        where an array is large and the caller wants its head: an LFP series stores a timestamp
+        per sample and the sampling interval is the first two.
 
     Returns
     -------

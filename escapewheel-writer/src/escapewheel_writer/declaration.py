@@ -1,15 +1,18 @@
-"""What an adapter declares, as a document a build reads instead of importing it.
+"""An adapter's declarations as a document a build reads without importing the adapter (Part 12 §7).
 
-A build reads `protocols`, `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`
-before it opens any source, and for a class it reads them by importing the adapter -- which Part 12
-§7 forbids requiring. So an adapter a build cannot import publishes the same facts as JSON, and
-the two forms are one declaration: a build checks a class as the document it would generate, and
-prefers neither.
+- :func:`of` -- the document for one adapter class, generated from what the class declares.
+- :func:`load` -- a declaration document read from a file, with its shape checked.
+- :func:`shape_problems` -- where a declaration fails the published schema.
+- :func:`refusals` -- the reasons a build refuses a declaration, given the registry and the recipe.
+- :func:`schema` -- the bundled JSON Schema for a declaration document.
+- :data:`PROTOCOLS`, :data:`FILES`, :data:`STREAM`, :data:`FLIGHT` -- Part 12 §3's protocol group
+  and its members.
+- :data:`PROTOCOL_TERMS`, :data:`REPORT_AS_FILE` -- the terms each protocol requires, and the
+  protocols whose report travels as a file.
+- :data:`SOURCE_CACHE` -- the one term a declaration names in `accepts`.
 
-The document is **generated** here rather than maintained, because every field is read off the class
-with no judgement in it. What it does not carry is anything about the machine -- the command, the
-root and the options stay in the recipe, since which interpreter is installed where is the recipe
-author's fact and the resources an adapter can supply is not.
+A class and a document declaring the same facts are one declaration: a build checks a class as
+the document the class would generate, and prefers neither.
 """
 
 from __future__ import annotations

@@ -1,14 +1,10 @@
 """Verify a committed packet where its bytes now live, and record what was found (Part 04 §5.2).
 
-Part 05's commit records only what the build could reach, and a packet built where its data will
-not live records nothing about that data -- correctly, since Part 04 §5.2 requires a writer that
-cannot reach a URI to record nothing rather than guess. This is the step that closes it: once
-the bytes have landed, reach them, and write down what was true.
+- :func:`verify` -- record what is true of a packet's external resources, as a new version.
+- :data:`LEVELS` -- how much may be established: `size`, `members` or `sha256`.
 
-It is the smallest thing R32 calls a new version. No file is written, no resource is added, and
-no recorded fact about a packet-owned file changes except one that was missing. What changes is
-what the manifest says about resources the packet does **not** own, which is exactly the class
-Part 03 §8 dates rather than promises.
+Verifying writes no file and adds no resource: it changes only what the manifest says about the
+resources the packet does not own.
 """
 
 from __future__ import annotations
@@ -84,9 +80,9 @@ def verify(
     root : str or Path
         A packet root holding a committed manifest.
     level : {"size", "members", "sha256"}, default "members"
-        How much to establish. `sha256` reads every byte -- 88 s for a session's LFP against
-        S3 -- which is the cost Part 04 §5.2 puts here rather than in a build, and records each
-        prefix member's digest beside the resource's (Part 04 §5.4).
+        How much to establish. `sha256` reads every byte, which is the cost Part 04 §5.2 puts
+        here rather than in a build, and records each prefix member's digest beside the
+        resource's (Part 04 §5.4).
     packet_version : str, optional
         The new version. Defaults to bumping the patch component, as an amendment does.
 

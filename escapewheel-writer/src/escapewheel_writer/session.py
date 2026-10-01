@@ -1,22 +1,16 @@
-"""Build a packet from a recipe.
+"""Build a packet from a recipe (Part 05 §2).
 
-This is Part 05 §2's build, delivery through publication, with the parameters supplied rather
-than written into the code. The recipe says which sources exist and which resources each is
-responsible for; this module orders them, runs them, keeps what each one owns, and commits.
+- :func:`build` -- run every source and return a writer holding the packet, uncommitted.
+- :func:`order` -- the recipe's sources, each after the sources it consumes.
+- :func:`materializers` -- the recipe's `[[materialize]]` entries as callables `commit` runs.
+- :class:`Context` -- what earlier sources produced, for the sources that consume it.
+- :exc:`RecipeError` -- a recipe that cannot be built.
+- :data:`MATERIALIZERS` -- the analysis resources a recipe may ask for by name.
+- :data:`BATCH_ROWS`, :data:`TOLERANCE` -- rows per streamed batch, and the most error a clock
+  mapping may carry, in seconds.
 
-**Ordering comes from the adapters, not from the registry.** A foreign key constrains
-validity, not write order -- Parquet files are independent and `core.spike_events` can be
-written before `core.units` with nothing the worse. What actually sequences a build is
-data-flow between adapters: `NWBSource` needs the sorter's units to attach a unit to an
-electrode, and no reference in the registry says so, because the dependency is between
-adapters rather than between tables. So each adapter declares `CONSUMES` (Part 05 §3.4), and the
-declarations are short because there is little of it.
-
-**Ownership is what stops two sources fighting.** Four adapters can each produce
-`core.probes`, and without a rule the last one to run wins silently -- which is how a
-`probe_id` collapse matched 0 of 6,781 units, and how two sources emitting
-`core.unit_electrodes` collided on its primary key. A source's records are filtered to what
-the recipe says it owns, so the resolution is declared in one place a reader can see.
+A build orders sources by what each adapter declares it consumes, not by the registry's
+references, and filters a source's rows to the resources the recipe leaves it owning.
 """
 
 from __future__ import annotations
@@ -65,33 +59,17 @@ MATERIALIZERS: dict[str, str] = {"analysis.spike_events": "spike_events"}
 #: Rows per batch when streaming a spike table into staging, and therefore the row-group size:
 #: `_write_stream` makes one row group per batch, so the caller owns the boundaries.
 #:
-#: **Sized for pruning, not for the fetch band, and that is a measured choice.** Four million
-#: rows would put a row group at 9.6 MB, inside the 8-16 MB band `writer.row_group_rows`
-#: derives for object storage — but no reader we have prunes below a row group, so quadrupling
-#: it quadruples what a predicate must read. A one-second window over 287 M spikes, cold:
-#:
-#: ..  1M rows, no page index   293 groups   681.6 MB   pyarrow 1.93 s   duckdb 0.35 s
-#: ..  1M rows + page index     291 groups   682.4 MB   pyarrow 2.13 s
-#: ..  4M rows + page index      77 groups   691.7 MB   pyarrow 4.42 s   duckdb 0.34 s
-#:
-#: The page index is written anyway, but on someone else's behalf: neither reader here consults
-#: it. DuckDB says so outright (duckdb#2755, closed as "not supported… mostly improves point
-#: queries which is not what DuckDB is focused on") and measures identically with it and without;
-#: pyarrow's `filters=` prunes at row-group granularity too. arrow-rs and DataFusion do use it.
-#: So the row group is both the fetch unit and the prune unit for us, and pruning is what costs.
+#: Sized for pruning, not for an object store's fetch band: neither pyarrow nor DuckDB prunes
+#: below a row group, so the row group is both the fetch unit and the prune unit, and a larger
+#: one multiplies what a predicate must read.
 BATCH_ROWS = 1_000_000
 
 #: The most error a mapping may carry before Part 01 §3.9 calls it undefined, in **seconds**.
 #:
 #: A duration rather than a tick count, because it is a claim about time and not about one
-#: clock's granularity. Three milliseconds is R40's default: above every measured p95 by a
-#: factor of four or more -- the estimator costs 117 µs at the two anchor intervals this
-#: session needs, and 805 µs at a hundred and twenty -- while staying far below anything that
-#: moves an analysis, the finest PSTH bin measured against this format being 30 ms.
-#:
-#: R37 §3.3's original default of one parent tick is 32 µs, which is *below* the estimator's
-#: own median at every distance, so it gated on measurement noise: this session passed it by
-#: 4%, and failing would have stranded the first 1.7 s of every stream.
+#: clock's granularity. Three milliseconds is R40's default: several times the estimator's own
+#: error at any anchor distance, and far below anything that moves an analysis. One parent
+#: tick would sit below the estimator's median error and gate on measurement noise.
 TOLERANCE = 3e-3
 
 
@@ -426,9 +404,9 @@ def _stored(value: Any, declared_type: str | None) -> Any:
 def _normalized(value: Any, declared_type: str | None) -> Any:
     """Reduce a value to the type the packet stores it as, so two spellings compare equal.
 
-    `session.json` states a subject as the number 776259 where a recipe declares the string
-    `"776259"`, and an NWB states a date of birth as a timestamp where R4 §3.3 makes the column a
-    calendar date. Comparing what was written would refuse both. A wall clock is the same problem
+    A `session.json` may state a subject as a number where a recipe declares it as a string, and
+    an NWB states a date of birth as a timestamp where R4 §3.3 makes the column a calendar date.
+    Comparing what was written would refuse both. A wall clock is the same problem
     with more spellings -- `Z` against `+00:00`, and a `T` against the space `str` puts there -- so
     it is compared as the instant it names rather than as the text either side wrote.
     """
@@ -695,10 +673,10 @@ def _add_batches(
 ) -> dict[str, int]:
     """Stream whatever a source streams, rather than holding it as Python mappings.
 
-    `core.spike_events` is the case that forced the streaming path -- 10^8 rows, and a dict per
+    `core.spike_events` is the case the streaming path exists for -- 10^8 rows, and a dict per
     row is two orders of magnitude more memory than the Parquet file it becomes. Any source may
     use it for any resource it claims, because an extension's table may be as large as a core
-    one and nothing about the reason was ever specific to spikes.
+    one and nothing about the reason is specific to spikes.
 
     Returns
     -------
@@ -735,7 +713,7 @@ def _composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, An
 
     `core.event_stream_observation_intervals` is the case: one source declares the window it
     watched the reference clock over and another declares the streams watched in it, and
-    Part 05 §3.3 leaves a row to a single source, so pairing them is the build's act. Keyed on
+    Part 05 §3.4 leaves a row to a single source, so pairing them is the build's act. Keyed on
     what the spec claims rather than on its kind, since which source declared the window is not
     what decides the composition -- and paired with that source's own window, since two sources
     may each declare one on the reference clock and only one of them is these streams'.
@@ -747,9 +725,9 @@ def _composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, An
     start, stop = window
     if stop < start:
         raise SourceDefect(f"{resource}: the acquisition window ends at {stop} and starts at {start}")
-    # One window for every stream, because they come from a single acquisition: a stream with
-    # 46 rewards was watched exactly as long as one with 2,641 licks, and giving each the extent
-    # of its own events would make a rare event look frequent.
+    # One window for every stream, because they come from a single acquisition: a stream of
+    # rare events was watched exactly as long as one of frequent ones, and giving each the
+    # extent of its own events would make a rare event look frequent.
     return {
         resource: [
             {"event_stream_id": event_stream_id, "start_tick": start, "stop_tick": stop}
@@ -886,12 +864,12 @@ def build(  # noqa: C901
         registry_context,
         packet_id=recipe.packet_id,
         description=recipe.description,
-        # Part 09 §2: the recipe names them, so a source may own an extension's table exactly as it
+        # Part 05 §3.1: the recipe names them, so a source may own an extension's table exactly as it
         # owns a core one. Which is what keeps declaring an extension from being harder than
         # adding a column to core -- the gradient that leaves NWB's own mechanism unused.
         extensions=tuple(extension_contexts),
         # Part 02 §7.1's fill needs the session before any source runs, and `core.sessions` is staged
-        # last: three tables reached validation with a null `session_id` because of the order.
+        # last, so it is given here rather than read back.
         session=session_id,
         # An extension reaches the writer across a file or a subprocess, so what it says about its
         # own columns arrives as recipe data rather than as a Python object it hands over.
@@ -1439,7 +1417,7 @@ def _alignment_parameters(context: Context | None) -> dict[str, Any]:
 
     Part 02 §12.6 draws the line: the three facts a consumer needs to place a tick are columns, and
     what justified them stays here. So this holds the error distribution and the distance it was
-    measured at, and no longer the bound, the withheld anchors or the phase steps.
+    measured at, and not the bound, the withheld anchors or the phase steps.
     """
     if context is None or not context.measured_bound:
         return {}

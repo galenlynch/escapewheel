@@ -1,15 +1,10 @@
-"""What a build no longer carries, measured against a packet it replaces.
+"""The resources a build no longer carries, measured against a packet it replaces.
 
-A recipe can lose a resource three ways and report none of them. `owns` is exclusive and
-discards what it does not name in silence; a source the recipe never lists produces nothing to
-notice; and a `[[materialize]]` that is simply absent leaves no trace at all. `Recipe.check`
-sees none of these, because each is an omission rather than a contradiction -- there is nothing
-in the document for it to disagree with.
+- :func:`lost` -- resource IDs the replaced packet carries and this build does not, sorted.
+- :func:`resources` -- resource IDs a committed packet declares.
 
-Comparing the finished packet against the one it replaces catches all three, because it asks
-what came out rather than what was declared. It is a warning and never an error: narrowing a
-packet is legitimate, and only the person who wrote the recipe knows whether this one was
-meant.
+A loss is a warning and never an error: narrowing a packet is legitimate, and only the recipe's
+author knows whether this narrowing was meant.
 """
 
 from __future__ import annotations

@@ -65,11 +65,6 @@ REASONING: tuple[tuple[str, str, str], ...] = (
         "the measurement that a scalar projection beats a join, not the rule it justified",
     ),
     (
-        "escapewheel-writer/src/escapewheel_writer/sources/nwb.py",
-        "R87 §2.8",
-        "what the adapter did before the clause landed",
-    ),
-    (
         "escapewheel-writer/src/escapewheel_writer/sources/sync.py",
         "R37 §3.1",
         "the neighbour count a local rate was measured over",

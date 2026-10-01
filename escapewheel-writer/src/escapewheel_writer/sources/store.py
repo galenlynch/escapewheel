@@ -1,18 +1,16 @@
 """One source root, read once and shared by every adapter that reads it.
 
-Two adapters in a real recipe open the same `.nwb` directory -- `NWBSource` for the tables it is
-the authority for and `LFPSource` for the series -- and both read
-`general/extracellular_ephys/electrodes`. None of that is expensive enough to matter on its own;
-what matters is that two readers of the same bytes can disagree, and a cache shared by both makes
-that impossible rather than unlikely.
+- :class:`SourceStore` -- a source directory or store prefix, with every parsed read memoized.
+- :func:`store_for` -- the store for a root, reused where the caller keeps shared stores.
+- :func:`source_root` -- a root as a path: a local root resolved, a store root opened.
+- :class:`KeptObjects` -- whole objects kept across builds, each confirmed by its store before
+  use (Part 12 §10).
+- :func:`prune_kept` -- the kept files unused for a number of days, removed where asked.
+- :data:`STORAGE_FORMAT` -- the subdirectory in which this writer keeps data, under a
+  source-cache location.
 
-A memo retains what it reads, for the whole build. That is free for the columns an adapter
-keeps anyway and expensive for one it samples: reading an array whole to look at its head
-costs its full size held, so :meth:`SourceStore.head` decodes only the chunks it needs.
-
-Only reads that are *pure* live here. `NWBSource._table` stays where it is because it produces
-notes, and a note about a skipped column belongs to the adapter that asked, not to whichever
-one happened to ask first.
+Only pure reads are memoized: a read that produces notes stays with the adapter that asked, since
+a note belongs to its asker and not to whichever adapter asked first.
 """
 
 from __future__ import annotations
@@ -160,13 +158,12 @@ class SourceStore:
         The source directory, local or a store URI. Resolved, so two recipes naming the same
         tree by different paths share one store.
 
-        A `UPath` because an AIND session's assets are prefixes on `aind-open-data`, and a
-        build reads about 12% of a sorted asset -- the spikes, the analyzer's `recording_info`
-        and its spike amplitudes, and none of the templates, PCA or provenance pickles. Which
-        12% is a fact about what the adapters read, so fetching it first means writing that
-        list down somewhere the adapters cannot check it. Reading in place has no list: it
-        costs 6.6 s against 0.07 s for a stream's 344 MB `spikes.npy`, roughly 66 s on a
-        121 s build, and saves the 3.8 GB copy.
+        A `UPath` because a source may be a prefix on an object store, and a build reads a
+        small part of a sorted asset -- the spikes, the analyzer's `recording_info` and its
+        spike amplitudes, and none of the templates, PCA or provenance pickles. Which part is
+        a fact about what the adapters read, so fetching it first means writing that list down
+        somewhere the adapters cannot check it. Reading in place has no list, at the cost of
+        reading each object over the network, and saves copying the asset.
     """
 
     def __init__(self, root: str | Path, *, cache: str | PurePath | None = None) -> None:
@@ -210,9 +207,9 @@ class SourceStore:
     def head(self, path: str | Path, count: int) -> NDArray[Any]:
         """Read the first `count` values of an array, memoized.
 
-        Decodes only the chunks holding them, and keeps only those: an LFP series stores
-        7,983,750 timestamps and `_decimation` wants two, so reading it whole and slicing
-        costs 64 MB retained per series for 16 bytes used.
+        Decodes only the chunks holding them, and keeps only those: an LFP series stores a
+        timestamp per sample and `_decimation` wants two, so reading it whole and slicing
+        would retain the whole array for 16 bytes used.
         """
         key = self._key(path)
         if key in self._arrays:
@@ -279,12 +276,11 @@ def source_root(root: str | PurePath, *, cache: str | PurePath | None = None, **
     **`cache` is the `source_cache` a build supplied** (Part 12 §10), and a store root is then
     read through :class:`KeptObjects` under it, because an adapter reads some objects more than
     once and some builds more than once: `spikes.npy` is read for a stream's unit summary and
-    again to stream its spikes, and over a network that second read costs another 344 MB.
-    Bandwidth is not the lever -- parallel ranges within one object win 1.1x and concurrency
-    across objects 1.2x against a link that saturates near 99 MB/s -- so what pays is not
-    fetching twice, which the cache turns from 4.0 s into 0.1 s. What lands in it is exactly what
-    the adapters read, which is the list a hand-written prefetch would have to keep in step with
-    them. Each call opens a new run, so the store confirms each object again.
+    again to stream its spikes, and over a network that second read fetches the whole object
+    again. Parallel ranges and concurrent objects gain little against a saturated link, so what
+    pays is not fetching twice. What lands in the cache is exactly what the adapters read, which
+    is the list a hand-written prefetch would have to keep in step with them. Each call opens a
+    new run, so the store confirms each object again.
     """
     if not storage and not isinstance(root, str):
         # Idempotent: a root reaches an adapter already resolved by the recipe, and `str()` on

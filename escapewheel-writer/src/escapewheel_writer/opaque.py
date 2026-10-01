@@ -1,11 +1,17 @@
 """A packet-owned opaque resource: a payload in a directory named by its resource ID (Part 12 §5).
 
-An adapter places each payload, a regular file or a directory of them under its own name, alone in a
-resource directory directly in the `opaque_location` a build supplied it. The directory's name is
-the whole binding, so nothing about the payload's name, suffix, or contents is read, and the payload
-is published under the name it arrived with. This module reads one source's location and refuses
-what a packet cannot own; binding to a catalog row or singleton declaration needs every source's
-rows, so the writer does it at commit.
+- :func:`read` -- every payload one source placed in its `opaque_location`.
+- :func:`write` -- payloads handed over as bytes, written as a protocol adapter would place them.
+- :func:`size` -- the bytes a payload holds.
+- :func:`shown` -- a path rendered for a report.
+- :class:`Payload` -- a payload an in-process adapter hands the build as bytes.
+- :class:`StagedPayload` -- one payload a source delivered, not yet bound.
+- :exc:`PayloadRefused` -- a delivery holds something a packet cannot own.
+- :data:`DELIVERIES`, :data:`ROOT` -- where payloads lie under the staging area, and under the
+  packet root.
+
+This module binds a payload to nothing but its resource directory's name. Binding it to a catalog
+row or a singleton declaration needs every source's rows, so the writer does that at commit.
 """
 
 from __future__ import annotations
