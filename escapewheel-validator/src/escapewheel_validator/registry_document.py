@@ -108,13 +108,14 @@ class RegistryResult:
         }
 
 
-def _freeze(value: Any) -> Any:
+def freeze(value: Any) -> Any:
+    """Return `value` with each mapping read-only and each list a tuple."""
     if isinstance(value, Mapping):
         from types import MappingProxyType
 
-        return MappingProxyType({key: _freeze(child) for key, child in value.items()})
+        return MappingProxyType({key: freeze(child) for key, child in value.items()})
     if isinstance(value, list):
-        return tuple(_freeze(child) for child in value)
+        return tuple(freeze(child) for child in value)
     return value
 
 
@@ -187,7 +188,8 @@ class _Object(dict[str, Any]):
         self.duplicates = tuple(sorted(name for name, count in counts.items() if count > 1))
 
 
-def _pointer(parts: Iterable[Any]) -> str:
+def json_pointer(parts: Iterable[Any]) -> str:
+    """Return the JSON Pointer of `parts`, a `tables` path naming its resource's table payload."""
     parts = tuple(parts)
     if len(parts) >= 2 and parts[0] == "tables":
         parts = ("resources", parts[1], "table", *parts[2:])
@@ -201,7 +203,7 @@ def _owner(pointer: str) -> str | None:
     return None
 
 
-def _tables(document: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+def declared_tables(document: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     """Project table-kind payloads from the sole serialized resource authority."""
     return {
         str(resource_id): declaration["table"]
@@ -237,7 +239,7 @@ def _duplicates(value: Any, path: tuple[Any, ...] = ()) -> list[Outcome]:
             Outcome(
                 "invalid",
                 "registry.json.duplicate_member",
-                _pointer(path),
+                json_pointer(path),
                 detail=f"duplicate member {name!r}",
             )
             for name in value.duplicates
@@ -281,9 +283,7 @@ def check_registry_context_bytes(
             ],
             None,
         )
-        return CheckedRegistryContext(
-            "bytes", bytes(data), None, result, descriptor_identity, _external_domains(), core
-        )
+        return CheckedRegistryContext("bytes", bytes(data), None, result, descriptor_identity, external_domains(), core)
     try:
         document = json.loads(text, object_pairs_hook=_Object)
     except json.JSONDecodeError as exc:
@@ -295,9 +295,7 @@ def check_registry_context_bytes(
             ],
             None,
         )
-        return CheckedRegistryContext(
-            "bytes", bytes(data), None, result, descriptor_identity, _external_domains(), core
-        )
+        return CheckedRegistryContext("bytes", bytes(data), None, result, descriptor_identity, external_domains(), core)
     duplicate_outcomes = _duplicates(document)
     if duplicate_outcomes:
         result = _complete(
@@ -308,7 +306,7 @@ def check_registry_context_bytes(
             None,
         )
         return CheckedRegistryContext(
-            "bytes", bytes(data), _freeze(document), result, descriptor_identity, _external_domains(), core
+            "bytes", bytes(data), freeze(document), result, descriptor_identity, external_domains(), core
         )
     result = _check_mapping(
         document,
@@ -317,8 +315,8 @@ def check_registry_context_bytes(
         descriptor_values,
         core.result if core is not None else None,
     )
-    domains = _external_domains()
-    return CheckedRegistryContext("bytes", bytes(data), _freeze(document), result, descriptor_identity, domains, core)
+    domains = external_domains()
+    return CheckedRegistryContext("bytes", bytes(data), freeze(document), result, descriptor_identity, domains, core)
 
 
 def check_registry(
@@ -349,8 +347,8 @@ def check_registry_context(
         core.result if core is not None else None,
     )
     descriptor_identity = tuple(json.dumps(item, sort_keys=True, separators=(",", ":")) for item in descriptor_values)
-    domains = _external_domains()
-    frozen = _freeze(copied)
+    domains = external_domains()
+    frozen = freeze(copied)
     return CheckedRegistryContext("mapping", frozen, frozen, result, descriptor_identity, domains, core)
 
 
@@ -405,9 +403,9 @@ def _check_mapping(
         Outcome(
             "invalid",
             str(schema["$id"]),
-            _pointer(error.absolute_path),
-            _owner(_pointer(error.absolute_path)),
-            schema_location=_pointer(error.absolute_schema_path),
+            json_pointer(error.absolute_path),
+            _owner(json_pointer(error.absolute_path)),
+            schema_location=json_pointer(error.absolute_schema_path),
             detail=error.message,
         )
         for error in validator.iter_errors(document)
@@ -463,13 +461,13 @@ def _check_mapping(
         phases.extend(_skipped(name, "registry.phase.prerequisite_unsupported") for name in PHASES[4:])
         return _complete(phases, None)
 
-    tables = dict(_tables(document))
+    tables = dict(declared_tables(document))
     declarations = dict(document["resources"])
     if class_name == "extension" and core_usable and core is not None:
-        tables = dict(_tables(core)) | tables
+        tables = dict(declared_tables(core)) | tables
         declarations = dict(core["resources"]) | declarations
     assert descriptor is not None
-    semantic = _semantic_outcomes(
+    semantic = semantic_outcomes(
         document,
         class_name,
         core_usable,
@@ -477,13 +475,14 @@ def _check_mapping(
         {Universe.TABLES: tables, Universe.DECLARATIONS: declarations},
     )
     phases.append(_phase("semantic", semantic))
-    rules = _rule_outcomes(document, core if core_usable and class_name == "extension" else None)
+    rules = rule_outcomes(document, core if core_usable and class_name == "extension" else None)
     phases.append(_phase("rule_static", rules))
-    phases.append(_phase("external_domain", _unit_outcomes(document)))
+    phases.append(_phase("external_domain", unit_outcomes(document)))
     return _complete(phases, descriptor_id)
 
 
-def _invalid(invariant: str, pointer: str, owner: str | None, detail: str) -> Outcome:
+def invalid(invariant: str, pointer: str, owner: str | None, detail: str) -> Outcome:
+    """Return an invalid outcome of `invariant` at `pointer`."""
     return Outcome("invalid", invariant, pointer, owner, detail=detail)
 
 
@@ -521,17 +520,18 @@ def _columns(table: Mapping[str, Any]) -> dict[str, list[tuple[int, Mapping[str,
     return result
 
 
-def _one_column(table: Mapping[str, Any], name: str) -> Mapping[str, Any] | None:
+def one_column(table: Mapping[str, Any], name: str) -> Mapping[str, Any] | None:
+    """Return the column `name` where the table declares it exactly once."""
     found = _columns(table).get(name, [])
     return found[0][1] if len(found) == 1 else None
 
 
 def _required_column(table: Mapping[str, Any], name: str) -> bool:
-    column = _one_column(table, name)
+    column = one_column(table, name)
     return column is not None and column["presence"] == "required"
 
 
-def _semantic_outcomes(
+def semantic_outcomes(
     document: Mapping[str, Any],
     class_name: str,
     core_usable: bool,
@@ -546,7 +546,7 @@ def _semantic_outcomes(
         if entry["phase"] != "semantic" or class_name not in entry["classes"]:
             continue
         invariant = invariants[str(entry["id"])]
-        outcomes.extend(_invalid(invariant.id, *defect) for defect in invariant.check(scopes[invariant.universe]))
+        outcomes.extend(invalid(invariant.id, *defect) for defect in invariant.check(scopes[invariant.universe]))
         if class_name == "extension" and not core_usable and invariant.needs_core:
             outcomes.append(
                 Outcome(
@@ -571,7 +571,7 @@ def _resource_classification(scope: Scope) -> list[Defect]:
         if content_class not in permitted:
             defects.append(
                 Defect(
-                    _pointer(("resources", resource, "content_class")),
+                    json_pointer(("resources", resource, "content_class")),
                     resource,
                     f"content class {content_class!r} is not permitted in a {scope.class_name} registry",
                 )
@@ -590,7 +590,7 @@ def _resource_instance(scope: Scope) -> list[Defect]:
         ):
             defects.append(
                 Defect(
-                    _pointer(("resources", resource, "instances", "presence")),
+                    json_pointer(("resources", resource, "instances", "presence")),
                     resource,
                     f"{declaration['content_class']} declarations must be optional",
                 )
@@ -601,7 +601,7 @@ def _resource_instance(scope: Scope) -> list[Defect]:
         ):
             defects.append(
                 Defect(
-                    _pointer(("resources", resource, "lineage")),
+                    json_pointer(("resources", resource, "lineage")),
                     resource,
                     f"{declaration['content_class']} declarations require lineage",
                 )
@@ -609,7 +609,7 @@ def _resource_instance(scope: Scope) -> list[Defect]:
         if declaration["content_class"] == "documentation" and declaration["lineage"] != "forbidden":
             defects.append(
                 Defect(
-                    _pointer(("resources", resource, "lineage")),
+                    json_pointer(("resources", resource, "lineage")),
                     resource,
                     "documentation declarations forbid lineage",
                 )
@@ -640,7 +640,7 @@ def _resource_catalog(scope: Scope) -> list[Defect]:
         unavailable_core = scope.withheld(target_name)
         eligible = target is not None and target["kind"] == "table"
         eligible = eligible and target["instances"]["mode"] == "singleton" if target else False
-        column = None if not eligible else _one_column(target["table"], column_name)
+        column = None if not eligible else one_column(target["table"], column_name)
         eligible = eligible and column is not None
         if column is not None:
             eligible = eligible and all(
@@ -656,7 +656,7 @@ def _resource_catalog(scope: Scope) -> list[Defect]:
         if not eligible and not unavailable_core:
             defects.append(
                 Defect(
-                    _pointer(("resources", resource, "instances")),
+                    json_pointer(("resources", resource, "instances")),
                     resource,
                     f"catalog binding {target_name}.{column_name} is not one eligible visible singleton table column",
                 )
@@ -665,7 +665,7 @@ def _resource_catalog(scope: Scope) -> list[Defect]:
         if pair in pairs:
             defects.append(
                 Defect(
-                    _pointer(("resources", resource, "instances")),
+                    json_pointer(("resources", resource, "instances")),
                     resource,
                     f"catalog pair {target_name}.{column_name} is already owned by {pairs[pair]}",
                 )
@@ -700,7 +700,7 @@ def _resource_array_axes(scope: Scope) -> list[Defect]:
                 and table["primary_key"] is not None
                 and table["primary_key"][: len(reference["columns"])] == reference["columns"]
                 and len(table["primary_key"]) == len(reference["columns"]) + 1
-                and (index_column := _one_column(table, table["primary_key"][-1])) is not None
+                and (index_column := one_column(table, table["primary_key"][-1])) is not None
                 and index_column["presence"] == "required"
                 and index_column["role"] == "structural_index"
             ]
@@ -709,7 +709,7 @@ def _resource_array_axes(scope: Scope) -> list[Defect]:
         if not eligible and not unavailable_core:
             defects.append(
                 Defect(
-                    _pointer(("resources", resource, "array", "axes_resource")),
+                    json_pointer(("resources", resource, "array", "axes_resource")),
                     resource,
                     f"axes resource {axes_name!r} does not provide exactly one eligible catalog binding",
                 )
@@ -728,7 +728,7 @@ def _resource_dependency(scope: Scope) -> list[Defect]:
             if not eligible and not unavailable_core:
                 defects.append(
                     Defect(
-                        _pointer(("resources", resource, "requires", index)),
+                        json_pointer(("resources", resource, "requires", index)),
                         resource,
                         f"dependency {target_name!r} is not one visible singleton declaration",
                     )
@@ -772,7 +772,7 @@ def _resource_canonical_targets(scope: Scope) -> list[Defect]:
                 continue
             defects.append(
                 Defect(
-                    _pointer(parts),
+                    json_pointer(parts),
                     resource,
                     f"canonical declaration depends on {target['content_class']} declaration {target_name!r}",
                 )
@@ -784,14 +784,14 @@ def _amendment_groups(scope: Scope) -> list[Defect]:
     """Part 02 §2.8: a group list names present columns once, and only a canonical table has one."""
     defects: list[Defect] = []
     for resource, declaration in scope.document["resources"].items():
-        table = _tables(scope.document).get(resource)
+        table = declared_tables(scope.document).get(resource)
         if table is None:
             continue
         groups = table["amendment_groups"]
         if groups and declaration["content_class"] not in CANONICAL_CLASSES:
             defects.append(
                 Defect(
-                    _pointer(("tables", resource, "amendment_groups")),
+                    json_pointer(("tables", resource, "amendment_groups")),
                     resource,
                     f"a {declaration['content_class']} table declares amendment groups",
                 )
@@ -805,7 +805,7 @@ def _amendment_groups(scope: Scope) -> list[Defect]:
                 if len(found) != 1 or found[0][1]["presence"] == "optional":
                     defects.append(
                         Defect(
-                            _pointer(("tables", resource, "amendment_groups", index, position)),
+                            json_pointer(("tables", resource, "amendment_groups", index, position)),
                             resource,
                             f"group-list member {name!r} names "
                             + ("an optional column" if found else "no column of the table"),
@@ -815,7 +815,7 @@ def _amendment_groups(scope: Scope) -> list[Defect]:
             if members in seen:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "amendment_groups", index)),
+                        json_pointer(("tables", resource, "amendment_groups", index)),
                         resource,
                         "another group list names the same columns",
                     )
@@ -827,10 +827,10 @@ def _amendment_groups(scope: Scope) -> list[Defect]:
 def _specialisations(scope: Scope) -> list[Defect]:
     """Part 02 §8.3: a specialising reference names a shared-key discriminator of the table it targets."""
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         declared = [(index, r) for index, r in enumerate(table["references"]) if "specialises" in r]
         for position, (r_index, reference) in enumerate(declared):
-            pointer = _pointer(("tables", resource, "references", r_index, "specialises"))
+            pointer = json_pointer(("tables", resource, "references", r_index, "specialises"))
             if position > 0:
                 defects.append(Defect(pointer, resource, "the table declares specialises on another reference"))
                 continue
@@ -838,7 +838,7 @@ def _specialisations(scope: Scope) -> list[Defect]:
             holder = scope.universe.get(holder_name)
             if holder is None and scope.withheld(holder_name):
                 continue  # reported incomplete as core-dependent
-            column = None if holder is None else _one_column(holder, column_name)
+            column = None if holder is None else one_column(holder, column_name)
             if column is None or column["role"] != "discriminator" or "discriminates" in column:
                 problem = (
                     "names no visible column"
@@ -865,7 +865,7 @@ def _namespace_owned(scope: Scope) -> list[Defect]:
     allowed = {"core", "analysis"} if scope.class_name == "core" else {str(scope.document["extension_id"])}
     return [
         Defect(
-            _pointer(("tables", resource)),
+            json_pointer(("tables", resource)),
             resource,
             f"namespace {resource.split('.', 1)[0]!r} is not owned by this {scope.class_name} registry",
         )
@@ -875,10 +875,10 @@ def _namespace_owned(scope: Scope) -> list[Defect]:
 
 
 def _reference_direction(scope: Scope) -> list[Defect]:
-    own = set(_tables(scope.document))
+    own = set(declared_tables(scope.document))
     extension_id = scope.document.get("extension_id")
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         for index, reference in enumerate(table["references"]):
             target = str(reference["resource"])
             namespace = target.split(".", 1)[0]
@@ -886,7 +886,7 @@ def _reference_direction(scope: Scope) -> list[Defect]:
             if not permitted:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "references", index, "resource")),
+                        json_pointer(("tables", resource, "references", index, "resource")),
                         resource,
                         f"reference target {target!r} is outside the permitted direction",
                     )
@@ -896,14 +896,14 @@ def _reference_direction(scope: Scope) -> list[Defect]:
 
 def _column_names(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         seen: set[str] = set()
         for index, column in enumerate(table["columns"]):
             name = str(column["name"])
             if name in seen:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "columns", index, "name")),
+                        json_pointer(("tables", resource, "columns", index, "name")),
                         resource,
                         f"column name {name!r} occurs more than once",
                     )
@@ -914,14 +914,14 @@ def _column_names(scope: Scope) -> list[Defect]:
 
 def _primary_keys(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         columns = _columns(table)
         for index, name in enumerate(table["primary_key"] or []):
             resolved = columns.get(name, [])
             if len(resolved) != 1:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "primary_key", index)),
+                        json_pointer(("tables", resource, "primary_key", index)),
                         resource,
                         f"primary-key member {name!r} resolves {len(resolved)} times",
                     )
@@ -929,7 +929,7 @@ def _primary_keys(scope: Scope) -> list[Defect]:
             elif resolved[0][1]["presence"] != "required":
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "primary_key", index)),
+                        json_pointer(("tables", resource, "primary_key", index)),
                         resource,
                         f"primary-key member {name!r} is not required",
                     )
@@ -939,7 +939,7 @@ def _primary_keys(scope: Scope) -> list[Defect]:
 
 def _references_resolve(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         source_columns = _columns(table)
         for r_index, reference in enumerate(table["references"]):
             base = ("tables", resource, "references", r_index)
@@ -949,7 +949,7 @@ def _references_resolve(scope: Scope) -> list[Defect]:
                 if not scope.withheld(target_name):
                     defects.append(
                         Defect(
-                            _pointer((*base, "resource")),
+                            json_pointer((*base, "resource")),
                             resource,
                             f"target resource {target_name!r} does not resolve",
                         )
@@ -959,7 +959,7 @@ def _references_resolve(scope: Scope) -> list[Defect]:
             if len(reference["columns"]) != len(reference["resource_columns"]):
                 defects.append(
                     Defect(
-                        _pointer(base),
+                        json_pointer(base),
                         resource,
                         "reference source and target arity differ",
                     )
@@ -972,7 +972,7 @@ def _references_resolve(scope: Scope) -> list[Defect]:
                     if len(available.get(name, [])) != 1:
                         defects.append(
                             Defect(
-                                _pointer((*base, side, c_index)),
+                                json_pointer((*base, side, c_index)),
                                 resource,
                                 f"reference member {name!r} resolves {len(available.get(name, []))} times",
                             )
@@ -982,7 +982,7 @@ def _references_resolve(scope: Scope) -> list[Defect]:
 
 def _reference_targets_key(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         for index, reference in enumerate(table["references"]):
             target = scope.universe.get(reference["resource"])
             if target is not None and (
@@ -990,7 +990,7 @@ def _reference_targets_key(scope: Scope) -> list[Defect]:
             ):
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "references", index, "resource_columns")),
+                        json_pointer(("tables", resource, "references", index, "resource_columns")),
                         resource,
                         f"target side is not the complete ordered key of {reference['resource']}",
                     )
@@ -1000,7 +1000,7 @@ def _reference_targets_key(scope: Scope) -> list[Defect]:
 
 def _references_compatible(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         sources = _columns(table)
         for r_index, reference in enumerate(table["references"]):
             target = scope.universe.get(reference["resource"])
@@ -1024,7 +1024,7 @@ def _references_compatible(scope: Scope) -> list[Defect]:
                 if not compatible:
                     defects.append(
                         Defect(
-                            _pointer(("tables", resource, "references", r_index, "columns", c_index)),
+                            json_pointer(("tables", resource, "references", r_index, "columns", c_index)),
                             resource,
                             f"{source_name!r} is incompatible with {reference['resource']}.{target_name}",
                         )
@@ -1077,7 +1077,7 @@ def _session_scope(scope: Scope) -> list[Defect]:
                 scoped.add(resource)
                 changed = True
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         matches = _columns(table).get("session_id", [])
         correct = (
             len(matches) == 1
@@ -1089,7 +1089,7 @@ def _session_scope(scope: Scope) -> list[Defect]:
         if (resource in scoped) != correct:
             defects.append(
                 Defect(
-                    _pointer(("tables", resource, "columns")),
+                    json_pointer(("tables", resource, "columns")),
                     resource,
                     "session-preserving path and required assigned int32 session_id disagree",
                 )
@@ -1107,14 +1107,14 @@ def _registry_id(scope: Scope) -> list[Defect]:
 
 def _identity_names(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         columns = _columns(table)
         referenced = {name for reference in table["references"] for name in reference["columns"]}
         owned = {
             name
             for name in (table["primary_key"] or [])
             if name not in referenced
-            and (column := _one_column(table, name)) is not None
+            and (column := one_column(table, name)) is not None
             and column["role"] == "identifier"
             and column.get("identity") == "assigned"
         }
@@ -1138,7 +1138,7 @@ def _identity_names(scope: Scope) -> list[Defect]:
                 if not correct:
                     defects.append(
                         Defect(
-                            _pointer(("tables", resource, "columns")),
+                            json_pointer(("tables", resource, "columns")),
                             resource,
                             f"owned assigned identifier {name!r} needs exactly one string data column {expected!r}",
                         )
@@ -1146,7 +1146,7 @@ def _identity_names(scope: Scope) -> list[Defect]:
             elif matches:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "columns", matches[0][0])),
+                        json_pointer(("tables", resource, "columns", matches[0][0])),
                         resource,
                         f"carried or referenced identifier {name!r} must not have {expected!r}",
                     )
@@ -1156,7 +1156,7 @@ def _identity_names(scope: Scope) -> list[Defect]:
 
 def _metadata(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         columns = _columns(table)
         metadata = columns.get("metadata", [])
         for index, column in metadata:
@@ -1168,7 +1168,7 @@ def _metadata(scope: Scope) -> list[Defect]:
             ):
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "columns", index)),
+                        json_pointer(("tables", resource, "columns", index)),
                         resource,
                         "metadata does not have the exact standard declaration",
                     )
@@ -1177,7 +1177,7 @@ def _metadata(scope: Scope) -> list[Defect]:
         referenced = {name for reference in table["references"] for name in reference["columns"]}
         own = []
         for name in key:
-            key_column = _one_column(table, name)
+            key_column = one_column(table, name)
             if name not in referenced and key_column is not None and key_column["role"] == "identifier":
                 own.append(name)
         required = bool(own)
@@ -1185,7 +1185,7 @@ def _metadata(scope: Scope) -> list[Defect]:
         if required and len(metadata) != 1:
             defects.append(
                 Defect(
-                    _pointer(("tables", resource, "columns")),
+                    json_pointer(("tables", resource, "columns")),
                     resource,
                     f"table owning key identifiers {own!r} needs metadata",
                 )
@@ -1193,7 +1193,7 @@ def _metadata(scope: Scope) -> list[Defect]:
         if forbidden and metadata:
             defects.append(
                 Defect(
-                    _pointer(("tables", resource, "columns", metadata[0][0])),
+                    json_pointer(("tables", resource, "columns", metadata[0][0])),
                     resource,
                     "a relationship table keyed only by reference sources must not declare metadata",
                 )
@@ -1203,14 +1203,14 @@ def _metadata(scope: Scope) -> list[Defect]:
 
 def _determined_by(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         columns = _columns(table)
         for c_index, column in enumerate(table["columns"]):
             for d_index, name in enumerate(column.get("determined_by", [])):
                 if len(columns.get(name, [])) != 1:
                     defects.append(
                         Defect(
-                            _pointer(("tables", resource, "columns", c_index, "determined_by", d_index)),
+                            json_pointer(("tables", resource, "columns", c_index, "determined_by", d_index)),
                             resource,
                             f"determinant {name!r} does not resolve once in the table",
                         )
@@ -1220,7 +1220,7 @@ def _determined_by(scope: Scope) -> list[Defect]:
 
 def _discriminator_declarations(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    tables = _tables(scope.document)
+    tables = declared_tables(scope.document)
     for resource, table in tables.items():
         for index, column in enumerate(table["columns"]):
             if column["role"] != "discriminator" or (companion_name := column.get("discriminates")) is None:
@@ -1248,7 +1248,7 @@ def _discriminator_declarations(scope: Scope) -> list[Defect]:
             if not correct:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "columns", index)),
+                        json_pointer(("tables", resource, "columns", index)),
                         resource,
                         f"companion {companion_name!r} is not one string data or identifier column "
                         "with the presence Part 02 §8.3 requires",
@@ -1259,7 +1259,7 @@ def _discriminator_declarations(scope: Scope) -> list[Defect]:
 
 def _discriminator_paths(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    tables = _tables(scope.document)
+    tables = declared_tables(scope.document)
     for target_resource, target in tables.items():
         for c_index, column in enumerate(target["columns"]):
             via = column.get("discriminates_via")
@@ -1280,7 +1280,7 @@ def _discriminator_paths(scope: Scope) -> list[Defect]:
             if len(matches) != 1 or len(references) != 1:
                 defects.append(
                     Defect(
-                        _pointer(("tables", target_resource, "columns", c_index, "discriminates_via")),
+                        json_pointer(("tables", target_resource, "columns", c_index, "discriminates_via")),
                         target_resource,
                         f"{via!r} does not identify one reverse one-hop reference to {target_resource}",
                     )
@@ -1295,18 +1295,18 @@ def _resolve_context(
     universe: Mapping[str, Any],
 ) -> tuple[Mapping[str, Any] | None, str | None]:
     if value.count(".") == 0:
-        return _one_column(table, value), None
+        return one_column(table, value), None
     target_resource, target_column = value.rsplit(".", 1)
     target = universe.get(target_resource)
     references = [reference for reference in table["references"] if reference["resource"] == target_resource]
     if target is None or len(references) != 1:
         return None, target_resource
-    return _one_column(target, target_column), target_resource
+    return one_column(target, target_column), target_resource
 
 
 def _context_sources(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         for index, column in enumerate(table["columns"]):
             for field in ("unit_from", "clock_from"):
                 if field not in column:
@@ -1316,7 +1316,7 @@ def _context_sources(scope: Scope) -> list[Defect]:
                 if target is None and not unavailable_core:
                     defects.append(
                         Defect(
-                            _pointer(("tables", resource, "columns", index, field)),
+                            json_pointer(("tables", resource, "columns", index, field)),
                             resource,
                             f"{field} source {column[field]!r} does not resolve through exactly one path",
                         )
@@ -1326,7 +1326,7 @@ def _context_sources(scope: Scope) -> list[Defect]:
                     if target["type"] != "string" or UCUM_URI not in authorities:
                         defects.append(
                             Defect(
-                                _pointer(("tables", resource, "columns", index, field)),
+                                json_pointer(("tables", resource, "columns", index, field)),
                                 resource,
                                 "unit_from target is not a UCUM-authorized string column",
                             )
@@ -1339,7 +1339,7 @@ def _context_sources(scope: Scope) -> list[Defect]:
                 if not (scope.core_missing and "." in source_name):
                     defects.append(
                         Defect(
-                            _pointer(("tables", resource, "columns", index)),
+                            json_pointer(("tables", resource, "columns", index)),
                             resource,
                             f"coordinate clock source {source_name!r} does not resolve",
                         )
@@ -1357,7 +1357,7 @@ def _context_sources(scope: Scope) -> list[Defect]:
             if source["role"] != "identifier" or not participates:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "columns", index)),
+                        json_pointer(("tables", resource, "columns", index)),
                         resource,
                         f"clock source {source_name!r} is not an identifier referenced to core.clocks.clock_id",
                     )
@@ -1374,7 +1374,7 @@ def _absolute_uri(value: str) -> bool:
 
 def _authority_uris(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         for c_index, column in enumerate(table["columns"]):
             authorities = column.get("authority", [])
             if authorities and not (
@@ -1384,7 +1384,7 @@ def _authority_uris(scope: Scope) -> list[Defect]:
             ):
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "columns", c_index, "authority")),
+                        json_pointer(("tables", resource, "columns", c_index, "authority")),
                         resource,
                         "authority is permitted only on string data with an open or closed vocabulary",
                     )
@@ -1398,7 +1398,7 @@ def _authority_uris(scope: Scope) -> list[Defect]:
                 if not valid:
                     defects.append(
                         Defect(
-                            _pointer(("tables", resource, "columns", c_index, "authority", a_index)),
+                            json_pointer(("tables", resource, "columns", c_index, "authority", a_index)),
                             resource,
                             f"authority {name!r}, {uri!r} has invalid or duplicate identity",
                         )
@@ -1410,13 +1410,13 @@ def _authority_uris(scope: Scope) -> list[Defect]:
 def _rule_ids_unique(scope: Scope) -> list[Defect]:
     seen: set[str] = set()
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         for index, rule in enumerate(table["rules"]):
             rule_id = str(rule["id"])
             if rule_id in seen:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "rules", index, "id")),
+                        json_pointer(("tables", resource, "rules", index, "id")),
                         rule_id,
                         f"rule ID {rule_id!r} occurs more than once",
                     )
@@ -1427,7 +1427,7 @@ def _rule_ids_unique(scope: Scope) -> list[Defect]:
 
 def _rule_ids_owned(scope: Scope) -> list[Defect]:
     defects: list[Defect] = []
-    for resource, table in _tables(scope.document).items():
+    for resource, table in declared_tables(scope.document).items():
         for index, rule in enumerate(table["rules"]):
             rule_id = str(rule["id"])
             suffix = rule_id.removeprefix(f"{resource}.")
@@ -1436,7 +1436,7 @@ def _rule_ids_owned(scope: Scope) -> list[Defect]:
             if not valid:
                 defects.append(
                     Defect(
-                        _pointer(("tables", resource, "rules", index, "id")),
+                        json_pointer(("tables", resource, "rules", index, "id")),
                         rule_id,
                         f"rule ID is not exactly {resource}.local_rule_id",
                     )
@@ -1449,11 +1449,11 @@ def _core_device_detail(scope: Scope) -> list[Defect]:
         return []
     return [
         Defect(
-            _pointer(("tables", resource, "primary_key", 0)),
+            json_pointer(("tables", resource, "primary_key", 0)),
             resource,
             "a core table other than core.devices is shaped as a device-detail table",
         )
-        for resource, table in _tables(scope.document).items()
+        for resource, table in declared_tables(scope.document).items()
         if resource != "core.devices" and table["primary_key"] and table["primary_key"][0] == "device_id"
     ]
 
@@ -1512,14 +1512,15 @@ INVARIANTS = (
 )
 
 
-def _rule_outcomes(document: Mapping[str, Any], core: Mapping[str, Any] | None) -> list[Outcome]:
+def rule_outcomes(document: Mapping[str, Any], core: Mapping[str, Any] | None) -> list[Outcome]:
+    """Check each rule statically against the selected rule language, core being visible where given."""
     outcomes: list[Outcome] = []
-    visible = dict(_tables(document))
+    visible = dict(declared_tables(document))
     if core is not None:
-        visible = dict(_tables(core)) | visible
-    for resource, table in _tables(document).items():
+        visible = dict(declared_tables(core)) | visible
+    for resource, table in declared_tables(document).items():
         for index, rule in enumerate(table["rules"]):
-            pointer = _pointer(("tables", resource, "rules", index))
+            pointer = json_pointer(("tables", resource, "rules", index))
             rule_id = str(rule["id"])
             if document["rule_language"] != PROFILE_ID:
                 outcomes.append(
@@ -1535,18 +1536,18 @@ def _rule_outcomes(document: Mapping[str, Any], core: Mapping[str, Any] | None) 
             try:
                 checked = check_rule(str(rule["sql"]), document, core_resources=core)
             except RuleProfileError as exc:
-                outcomes.append(_invalid(PROFILE_ID, pointer, rule_id, str(exc)))
+                outcomes.append(invalid(PROFILE_ID, pointer, rule_id, str(exc)))
                 continue
             optional = sorted(
                 f"{input_resource}.{column}"
                 for input_resource, column in checked.inputs
                 if (spec := visible.get(input_resource)) is not None
-                and (declared := _one_column(spec, column)) is not None
+                and (declared := one_column(spec, column)) is not None
                 and declared["presence"] == "optional"
             )
             if optional:
                 outcomes.append(
-                    _invalid(
+                    invalid(
                         "registry.rule.required_inputs",
                         pointer,
                         rule_id,
@@ -1570,7 +1571,7 @@ def _ucum_parser() -> Any | None:
         return None
 
 
-def _external_domains() -> tuple[str, ...]:
+def external_domains() -> tuple[str, ...]:
     """Name the exact external semantic domains available to this evaluation."""
     return ("ucum-2.2-2024-06-17",) if _ucum_parser() is not None else ()
 
@@ -1592,7 +1593,8 @@ def ucum_error(expression: str) -> str | None:
     return None
 
 
-def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
+def unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
+    """Check each literal unit against the exact UCUM edition."""
     if _ucum_parser() is None:
         return [
             Outcome(
@@ -1603,16 +1605,16 @@ def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
             )
         ]
     outcomes: list[Outcome] = []
-    for resource, table in _tables(document).items():
+    for resource, table in declared_tables(document).items():
         for index, column in enumerate(table["columns"]):
             if "unit" not in column:
                 continue
             error = ucum_error(str(column["unit"]))
             if error is not None:
                 outcomes.append(
-                    _invalid(
+                    invalid(
                         "registry.unit.ucum_2_2_cs",
-                        _pointer(("tables", resource, "columns", index, "unit")),
+                        json_pointer(("tables", resource, "columns", index, "unit")),
                         resource,
                         error,
                     )
