@@ -259,8 +259,9 @@ Every module declares `__all__`.
 Any other module's `__all__` holds the names this package's own modules and tests import from it,
 and no other package imports them. A module but `adapter` exports only names it defines, so an
 adapter class is imported from the module defining it and not from `sources`. An underscore name
-is for its own module and for the test module named after it. `tests/test_surface.py` holds all
-of this, and the two tiers against `api.rst` in both directions.
+is for its own module and for the test module named after it, so a helper two test modules share
+has a public name in `tests/builders.py`, a `tests/*fixture.py` module or `tests/conftest.py`.
+`tests/test_surface.py` holds all of this, and the two tiers against `api.rst` in both directions.
 
 Before taking a name out of a tier, search the other packages for it.
 

@@ -16,7 +16,6 @@ were interface mismatches between modules that each passed their own tests, not 
 scale to appear.
 """
 
-import json
 from pathlib import Path
 
 import pyarrow as pa
@@ -24,90 +23,8 @@ import pyarrow.parquet as pq
 import pytest
 from escapewheel_validator import Level
 
-from tests import sorterfixture, syncfixture
+from tests.builders import CLOCK_NAME, session_recipe, session_sources
 from tests.conftest import REGISTRY
-
-#: The two streams the recipe sorts. `sorterfixture.build` would add the same probe sorted in a
-#: second experiment, which Part 05 §12 refuses as an alternative the packet does not choose between.
-STREAMS = (
-    "experiment1_Record Node 109#Neuropix-PXI-100.50720-1_recording1",
-    "experiment1_Record Node 109#Neuropix-PXI-100.50720-2_recording1",
-)
-
-#: Each stream's first raw sample, which is what makes its counter recording-relative.
-FIRST_SAMPLE = {"Neuropix-PXI-100.50720-1": 44_259_994, "Neuropix-PXI-100.50720-2": 44_251_369}
-
-#: What the recipe spells the reference clock, and so what `core.clocks.clock_name` must hold:
-#: a name is what its identifier stands for (Part 02 §8.2), never a human label.
-CLOCK_NAME = "harp"
-
-
-def _sources(root: Path) -> tuple[Path, Path]:
-    """Write a sorted asset and the raw tree whose pulses anchor its probe clocks."""
-    sorted_root = root / "sorted"
-    for name in STREAMS:
-        sorterfixture.stream(sorted_root, name, spikes=sorterfixture.SPIKES)
-
-    raw = root / "raw"
-    recording = raw / "Record Node 109" / "experiment1" / "recording1"
-    for name, first in FIRST_SAMPLE.items():
-        syncfixture.stream(
-            recording / "events",
-            name,
-            first_sample=first,
-            aligned=True,
-            continuous=recording / "continuous",
-        )
-    (raw / "structure.json").write_text(json.dumps({"note": "fixture"}))
-    return sorted_root, raw
-
-
-def _recipe(root: Path, sorted_root: Path, raw: Path) -> Path:
-    """A recipe of the shape a real one has: sync anchors the clocks, the sorter owns the units."""
-    path = root / "session.toml"
-    path.write_text(f"""
-[packet]
-id = "s1"
-out = "{root}/packet"
-
-[session]
-session_id = "s1"
-subject_id = "m001"
-reference_clock_id = "{CLOCK_NAME}"
-session_start_time = "2026-08-27T00:00:00Z"
-
-[subject]
-subject_id = "m001"
-species = "Mus musculus"
-sex = "male"
-date_of_birth = "2025-01-01"
-
-[[clock]]
-clock_id = "{CLOCK_NAME}"
-name = "HARP"
-tick_rate_num = 31250
-origin = "harp epoch"
-
-[[source]]
-kind = "sync"
-root = "{raw}"
-contributes = ["core.clocks", "core.clock_anchors", "core.clock_observation_intervals"]
-
-[[source]]
-kind = "sorter"
-root = "{sorted_root}"
-parent_clock_id = "{CLOCK_NAME}"
-contributes = ["core.clocks", "core.clock_observation_intervals", "core.processing_runs"]
-owns = [
-  "core.probes",
-  "core.units",
-  "core.spike_events",
-  "core.sorting_runs",
-  "core.curation_versions",
-  "core.unit_quality_labels",
-]
-""")
-    return path
 
 
 @pytest.fixture(scope="module")
@@ -120,8 +37,8 @@ def committed(tmp_path_factory):
     from escapewheel_writer import Recipe, import_packet
 
     root = tmp_path_factory.mktemp("e2e")
-    sorted_root, raw = _sources(root)
-    recipe = Recipe.load(_recipe(root, sorted_root, raw))
+    sorted_root, raw = session_sources(root)
+    recipe = Recipe.load(session_recipe(root, sorted_root, raw))
     return recipe.out, import_packet(recipe, REGISTRY)
 
 
@@ -164,8 +81,8 @@ def test_a_relative_root_is_recorded_as_the_recipe_writes_it(tmp_path):
     from escapewheel_writer.recipe import Recipe
     from escapewheel_writer.session import build
 
-    sorted_root, raw = _sources(tmp_path)
-    recipe = Recipe.load(_recipe(tmp_path, sorted_root.relative_to(tmp_path), raw.relative_to(tmp_path)))
+    sorted_root, raw = session_sources(tmp_path)
+    recipe = Recipe.load(session_recipe(tmp_path, sorted_root.relative_to(tmp_path), raw.relative_to(tmp_path)))
     build(recipe, REGISTRY).commit(recipe.out)
     assert _inputs(recipe.out) == ["raw", "sorted"]
 

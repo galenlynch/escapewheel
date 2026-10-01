@@ -22,8 +22,8 @@ from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS, Recipe
 from escapewheel_writer.sources.store import STORAGE_FORMAT, prune_kept, source_root
 from tests import sorterfixture
+from tests.builders import STREAMS, session_recipe, session_sources
 from tests.conftest import REGISTRY
-from tests.test_build_end_to_end import STREAMS, _recipe, _sources
 
 
 class TaggedStore(MemoryFileSystem):
@@ -112,8 +112,8 @@ delivery = {{ command = ["true"], declaration = "cached.json" }}
 
 def test_a_recipe_setting_a_term_is_refused(tmp_path):
     """A term resolves before an option, so a value the recipe sets for one would never arrive."""
-    sorted_root, raw = _sources(tmp_path)
-    path = _recipe(tmp_path, sorted_root, raw)
+    sorted_root, raw = session_sources(tmp_path)
+    path = session_recipe(tmp_path, sorted_root, raw)
     path.write_text(path.read_text().replace('kind = "sorter"', f'kind = "sorter"\nsource_cache = "{tmp_path}"'))
     (refused,) = [p for p in Recipe.load(path).check(REGISTRY) if p.code is RecipeFault.OPTION_IS_TERM]
     assert refused.message.startswith("source sorter sets 'source_cache'")
@@ -137,8 +137,8 @@ def test_an_accepting_adapter_is_supplied_the_location_and_no_other_is(tmp_path,
 
     for variable in ("ESCAPEWHEEL_SOURCE_CACHE", "TMPDIR"):
         monkeypatch.delenv(variable, raising=False)
-    sorted_root, raw = _sources(tmp_path)
-    recipe = Recipe.load(_recipe(tmp_path, sorted_root, raw))
+    sorted_root, raw = session_sources(tmp_path)
+    recipe = Recipe.load(session_recipe(tmp_path, sorted_root, raw))
     context = _context(recipe, tmp_path / "cache")
     sorter = next(spec for spec in recipe.sources if spec.kind == "sorter")
     assert supplied_to(sorter, recipe, context)["source_cache"] == str((tmp_path / "cache").resolve())
@@ -152,8 +152,8 @@ def test_an_accepting_adapter_is_supplied_the_location_and_no_other_is(tmp_path,
 def test_a_location_inside_the_packet_or_a_delivery_is_supplied_to_no_adapter(tmp_path, inside):
     from escapewheel_writer.sourcing import supplied_to
 
-    sorted_root, raw = _sources(tmp_path)
-    recipe = Recipe.load(_recipe(tmp_path, sorted_root, raw))
+    sorted_root, raw = session_sources(tmp_path)
+    recipe = Recipe.load(session_recipe(tmp_path, sorted_root, raw))
     context = _context(recipe, tmp_path / inside)
     assert context.source_cache is None
     assert NoteCode.NO_SOURCE_CACHE in codes(context.notes)
@@ -164,7 +164,7 @@ def test_a_location_inside_the_packet_or_a_delivery_is_supplied_to_no_adapter(tm
 def test_a_delivered_adapter_is_handed_the_location_only_where_it_accepts_it(tmp_path):
     from escapewheel_writer.serving import construct
 
-    sorted_root, _ = _sources(tmp_path)
+    sorted_root, _ = session_sources(tmp_path)
     source = construct(
         "sorter", {"root": str(sorted_root), "session_id": "s1", "source_cache": str(tmp_path / "cache"), "options": {}}
     )
@@ -286,9 +286,9 @@ def remote(double, tmp_path):
     """A recipe whose sorted asset is in the double, and a build of it into a named packet."""
     from escapewheel_writer.session import build
 
-    sorted_root, raw = _sources(tmp_path / "local")
+    sorted_root, raw = session_sources(tmp_path / "local")
     double.put(str(sorted_root), "/bucket/sorted", recursive=True)
-    path = _recipe(tmp_path / "local", "tagged://bucket/sorted", raw)
+    path = session_recipe(tmp_path / "local", "tagged://bucket/sorted", raw)
 
     def built(out: Path, location: Path | None):
         recipe = Recipe.load(path, out=out)

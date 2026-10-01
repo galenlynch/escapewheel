@@ -27,9 +27,8 @@ from escapewheel_writer.sources.openephys import OpenEphysSource
 from escapewheel_writer.sources.sorter import SorterSource
 from escapewheel_writer.sources.sync import SyncSource
 from escapewheel_writer.sources.waveforms import WaveformSource
-from tests import sorterfixture, syncfixture
+from tests import lfpfixture, sorterfixture, syncfixture
 from tests.test_harp_source import SCHEMA as HARP_SCHEMA
-from tests.test_lfp import CLOCK_ROW, _contacts, _series
 from tests.test_openephys_source import SETTINGS
 from tests.test_sync_source import FIRST_SAMPLES, PROBE_CLOCKS
 from tests.test_waveforms import build as analyzer
@@ -78,9 +77,9 @@ def _waveforms(root: Path) -> Any:
 
 def _lfp(root: Path) -> Any:
     nwb = root / "s.nwb"
-    _series(nwb)
-    _contacts(nwb)
-    return LFPSource(nwb, session_id=SESSION, clocks=[CLOCK_ROW])
+    lfpfixture.series(nwb)
+    lfpfixture.contacts(nwb)
+    return LFPSource(nwb, session_id=SESSION, clocks=[lfpfixture.CLOCK_ROW])
 
 
 BUILDERS: dict[str, Callable[[Path], Any]] = {

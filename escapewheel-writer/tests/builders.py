@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from escapewheel_writer import PacketWriter
 from escapewheel_writer.recipe import Recipe
+from tests import sorterfixture, syncfixture
 
 
 def commit_tables(root, registry, tables, **kwargs):
@@ -162,3 +164,109 @@ def prefixed(**by_kind):
         f'\n[[source]]\nkind = "{kind}"\nroot = "."\nowns = []\n' + ("" if value is None else f'prefix = "{value}"\n')
         for kind, value in by_kind.items()
     )
+
+
+#: The two streams the recipe sorts. `sorterfixture.build` would add the same probe sorted in a
+#: second experiment, which Part 05 §12 refuses as an alternative the packet does not choose between.
+STREAMS = (
+    "experiment1_Record Node 109#Neuropix-PXI-100.50720-1_recording1",
+    "experiment1_Record Node 109#Neuropix-PXI-100.50720-2_recording1",
+)
+
+#: Each stream's first raw sample, which is what makes its counter recording-relative.
+FIRST_SAMPLE = {"Neuropix-PXI-100.50720-1": 44_259_994, "Neuropix-PXI-100.50720-2": 44_251_369}
+
+#: What the recipe spells the reference clock, and so what `core.clocks.clock_name` must hold:
+#: a name is what its identifier stands for (Part 02 §8.2), never a human label.
+CLOCK_NAME = "harp"
+
+
+def session_sources(root: Path) -> tuple[Path, Path]:
+    """Write a sorted asset and the raw tree whose pulses anchor its probe clocks."""
+    sorted_root = root / "sorted"
+    for name in STREAMS:
+        sorterfixture.stream(sorted_root, name, spikes=sorterfixture.SPIKES)
+
+    raw = root / "raw"
+    recording = raw / "Record Node 109" / "experiment1" / "recording1"
+    for name, first in FIRST_SAMPLE.items():
+        syncfixture.stream(
+            recording / "events",
+            name,
+            first_sample=first,
+            aligned=True,
+            continuous=recording / "continuous",
+        )
+    (raw / "structure.json").write_text(json.dumps({"note": "fixture"}))
+    return sorted_root, raw
+
+
+def session_recipe(root: Path, sorted_root: Path, raw: Path) -> Path:
+    """A recipe of the shape a real one has: sync anchors the clocks, the sorter owns the units."""
+    path = root / "session.toml"
+    path.write_text(f"""
+[packet]
+id = "s1"
+out = "{root}/packet"
+
+[session]
+session_id = "s1"
+subject_id = "m001"
+reference_clock_id = "{CLOCK_NAME}"
+session_start_time = "2026-08-27T00:00:00Z"
+
+[subject]
+subject_id = "m001"
+species = "Mus musculus"
+sex = "male"
+date_of_birth = "2025-01-01"
+
+[[clock]]
+clock_id = "{CLOCK_NAME}"
+name = "HARP"
+tick_rate_num = 31250
+origin = "harp epoch"
+
+[[source]]
+kind = "sync"
+root = "{raw}"
+contributes = ["core.clocks", "core.clock_anchors", "core.clock_observation_intervals"]
+
+[[source]]
+kind = "sorter"
+root = "{sorted_root}"
+parent_clock_id = "{CLOCK_NAME}"
+contributes = ["core.clocks", "core.clock_observation_intervals", "core.processing_runs"]
+owns = [
+  "core.probes",
+  "core.units",
+  "core.spike_events",
+  "core.sorting_runs",
+  "core.curation_versions",
+  "core.unit_quality_labels",
+]
+""")
+    return path
+
+
+def amending_recipe(root: Path, sorted_root: Path, *, amends: str = "0.1.0", extra: str = "") -> Path:
+    """A recipe adding a second curation of the packet's sortings, and nothing it holds."""
+    path = root / "amend.toml"
+    path.write_text(f"""
+[packet]
+id = "s1"
+out = "{root}/packet"
+amends = "{amends}"
+
+[session]
+session_id = "s1"
+
+[[source]]
+kind = "sorter"
+root = "{sorted_root}"
+parent_clock_id = "{CLOCK_NAME}"
+curation = "recurated"
+contributes = ["core.processing_runs"]
+owns = ["core.units", "core.spike_events", "core.curation_versions", "core.unit_quality_labels"]
+{extra}""")
+    return path

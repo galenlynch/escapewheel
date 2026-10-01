@@ -17,8 +17,7 @@ from escapewheel_writer.errors import (
 )
 from escapewheel_writer.scripts import cli
 from escapewheel_writer.writer import PacketWriter
-from tests.test_amending_build import _amending, packet  # noqa: F401
-from tests.test_build_end_to_end import _recipe, _sources
+from tests.builders import amending_recipe, session_recipe, session_sources
 
 CORE = Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json"
 
@@ -53,7 +52,7 @@ def _printed(capsys, refusal) -> bool:
 
 @pytest.fixture
 def recipe(tmp_path):
-    return _recipe(tmp_path, *_sources(tmp_path))
+    return session_recipe(tmp_path, *session_sources(tmp_path))
 
 
 def test_an_unreadable_recipe_exits_2(tmp_path, capsys):
@@ -78,11 +77,11 @@ def test_a_commit_that_refuses_exits_1(recipe, monkeypatch, capsys, refusal):
     assert _printed(capsys, refusal)
 
 
-def test_an_amendment_that_refuses_exits_1(packet, monkeypatch, capsys):  # noqa: F811
+def test_an_amendment_that_refuses_exits_1(packet, monkeypatch, capsys):
     root, sorted_root = packet
     refusal = NotCommitted(f"{root / 'packet'} holds no committed packet.json; use commit() to create a packet")
     monkeypatch.setattr(PacketWriter, "amend", _raising(refusal))
-    assert main(["import", str(_amending(root, sorted_root))]) == 1
+    assert main(["import", str(amending_recipe(root, sorted_root))]) == 1
     assert _printed(capsys, refusal)
 
 

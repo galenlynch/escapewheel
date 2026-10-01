@@ -27,7 +27,7 @@ def test_a_vlen_bytes_scalar_reads_despite_its_numeric_fill_value(tmp_path):
 def test_a_multi_chunk_array_reassembles(tmp_path):
     values = np.arange(10, dtype=np.float64)
     path = nwbfixture.array(tmp_path / "a", values)
-    _rechunk(path, values, stride=4)
+    nwbfixture.rechunk(path, values, stride=4)
     assert read_array(path).tolist() == values.tolist()
 
 
@@ -35,7 +35,7 @@ def test_a_limit_decodes_only_the_chunks_that_hold_it(tmp_path):
     """The saving is the point: an LFP series is 7,983,750 timestamps and callers want two."""
     values = np.arange(10, dtype=np.float64)
     path = nwbfixture.array(tmp_path / "a", values)
-    _rechunk(path, values, stride=4)
+    nwbfixture.rechunk(path, values, stride=4)
     (path / "2").unlink()  # a full read would refuse this array; a bounded one never looks
     assert read_array(path, limit=2).tolist() == [0.0, 1.0]
     assert read_array(path, limit=5).tolist() == [0.0, 1.0, 2.0, 3.0, 4.0]
@@ -156,19 +156,3 @@ def test_a_strided_slab_is_refused(tmp_path):
     with pytest.raises(UnsupportedEncoding) as refused:
         DenseV2(path)[0:4:2]
     assert refused.value.code is SourceFault.STRIDED_READ
-
-
-def _rechunk(path, values, stride):
-    """Rewrite a written array as several chunks, which the fixture never does itself."""
-    import json
-
-    import numcodecs
-
-    marker = path / ".zarray"
-    meta = json.loads(marker.read_text())
-    meta["chunks"] = [stride]
-    marker.write_text(json.dumps(meta))
-    (path / "0").unlink()
-    codec = numcodecs.get_codec(nwbfixture.BLOSC)
-    for index in range((len(values) + stride - 1) // stride):
-        (path / str(index)).write_bytes(codec.encode(values[index * stride : (index + 1) * stride].tobytes()))

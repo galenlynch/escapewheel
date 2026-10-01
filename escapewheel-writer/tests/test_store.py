@@ -53,11 +53,9 @@ def test_a_failure_is_not_cached(tmp_path):
 
 def test_head_reads_only_the_chunks_it_needs(tmp_path):
     """64 MB decoded and retained per LFP series, to use two values, is what this avoids."""
-    from tests.test_zarr_compat import _rechunk
-
     values = np.arange(10, dtype=np.float64)
     path = nwbfixture.array(tmp_path / "a", values)
-    _rechunk(path, values, stride=4)
+    nwbfixture.rechunk(path, values, stride=4)
     (path / "2").unlink()
     assert SourceStore(tmp_path).head("a", 2).tolist() == [0.0, 1.0]
 

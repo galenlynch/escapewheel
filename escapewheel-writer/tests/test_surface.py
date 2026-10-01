@@ -182,3 +182,12 @@ def test_a_test_imports_an_underscore_name_only_from_the_module_it_is_named_for(
         for module, name in _imports(path):
             if name.startswith("_") and not name.startswith("__"):
                 assert path.name == f"test_{module.rpartition('.')[2]}.py", f"{path.name} imports {module}.{name}"
+
+
+def test_a_test_imports_no_underscore_name_from_a_test_or_helper_module():
+    """A helper two test modules share has a public name, in a helper module or in `conftest.py`."""
+    for path in sorted((PROJECT / "tests").glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom) and (node.level or (node.module or "").split(".")[0] != PACKAGE):
+                private = [alias.name for alias in node.names if alias.name.startswith("_")]
+                assert not private, f"{path.name} imports {private} from {'.' * node.level}{node.module or ''}"

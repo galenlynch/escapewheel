@@ -6,6 +6,10 @@ from pathlib import Path
 import pytest
 from escapewheel_validator import check_registry_context
 
+from escapewheel_writer.recipe import Recipe
+from escapewheel_writer.session import build
+from tests.builders import session_recipe, session_sources
+
 REGISTRY = json.loads((Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json").read_text())
 REGISTRY_CONTEXT = check_registry_context(REGISTRY)
 
@@ -57,3 +61,12 @@ def rebind_registry(root, document):
     manifest = json.loads(path.read_text())
     manifest["registries"][registry_id] |= {"path": relative, "sha256": hashlib.sha256(body).hexdigest()}
     path.write_text(json.dumps(manifest))
+
+
+@pytest.fixture
+def packet(tmp_path):
+    """A committed packet and its sorted asset, fresh for each test since an amendment changes it."""
+    sorted_root, raw = session_sources(tmp_path)
+    recipe = Recipe.load(session_recipe(tmp_path, sorted_root, raw))
+    assert build(recipe, REGISTRY).commit(recipe.out).passed
+    return tmp_path, sorted_root

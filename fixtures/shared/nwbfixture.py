@@ -72,6 +72,17 @@ def array(path: Path, values, *, filter_id: str | None = None, **attributes) -> 
     return path
 
 
+def rechunk(path: Path, values, stride: int) -> Path:
+    """Rewrite an unfiltered array `array` wrote as chunks of `stride` values."""
+    marker = path / ".zarray"
+    marker.write_text(json.dumps(json.loads(marker.read_text()) | {"chunks": [stride]}))
+    (path / "0").unlink()
+    codec = numcodecs.get_codec(BLOSC)
+    for index in range((len(values) + stride - 1) // stride):
+        (path / str(index)).write_bytes(codec.encode(values[index * stride : (index + 1) * stride].tobytes()))
+    return path
+
+
 def pickled(path: Path) -> Path:
     """Declare an array already written as pickled, which no reader here decodes."""
     marker = path / ".zarray"
