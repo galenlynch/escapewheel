@@ -15,7 +15,7 @@ from pathlib import Path
 
 from corpus_packets import PACKETS
 from escapewheel_reader import open_packet
-from escapewheel_validator import validate
+from escapewheel_validator import Verification, validate
 
 HERE = Path(__file__).resolve().parent
 
@@ -177,7 +177,8 @@ def _judge(name: str) -> tuple[bool, str, list[str], int, int]:
         open_packet(HERE / "packets" / name),
         # Off for every packet: R82 §2 made mandatory errors of the two rules that needed it.
         advisory=packet.advisory,
-        checksums=packet.checksums,
+        # Packet-owned digests alone: the corpus resolves no external resource.
+        verification=Verification(checksums=packet.checksums, external=False),
     )
     expected = packet.expected
     if expected is None:
