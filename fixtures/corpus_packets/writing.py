@@ -12,10 +12,6 @@ from .numbering import Numbering
 from .registry import EXTENSION, REGISTRY
 
 
-def sql_name(resource):
-    return resource.replace(".", "_")
-
-
 def crc(polynomial: int, bits: int, data: bytes) -> int:
     """A reflected CRC with all-ones initial value and final XOR, bit by bit (Part 04 §4.3).
 
