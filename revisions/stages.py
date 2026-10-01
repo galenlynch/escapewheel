@@ -20,6 +20,9 @@ except ModuleNotFoundError:  # Direct execution from revisions/.
 
 ROOT = Path(__file__).resolve().parent.parent
 HERE = ROOT / "revisions"
+sys.path.insert(0, str(ROOT / "spec" / "tools"))
+
+import specdoc
 
 ROW = re.compile(r"^\|\s*\*\*(.+?)\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
 HEADING = re.compile(r"^## (\d+)\.\s+(.+?)\s*$", re.MULTILINE)
@@ -162,7 +165,7 @@ def draft(path: Path) -> list[str]:
     for name in ("Amends", "Depends on", "Profile", "Decision clauses"):
         if not meta.get(name):
             errors.append(f"declares no `{name}` value")
-    declared = re.findall(r"§(\d+(?:\.\d+)*)", meta.get("Decision clauses", ""))
+    declared = specdoc.SECTION_CITATION.findall(meta.get("Decision clauses", ""))
     if not declared:
         errors.append("`Decision clauses` enumerates no section")
     known = set(NUMBERED.findall(text))
@@ -193,7 +196,7 @@ def accepted(path: Path) -> list[str]:
     for name in ("Amends", "Depends on", "Profile", "Decision clauses"):
         if not meta.get(name):
             errors.append(f"declares no `{name}` value")
-    declared = re.findall(r"§(\d+(?:\.\d+)*)", meta.get("Decision clauses", ""))
+    declared = specdoc.SECTION_CITATION.findall(meta.get("Decision clauses", ""))
     known = set(NUMBERED.findall(text))
     expected = {section for section in known if section.startswith("3.")} or ({"3"} if "3" in known else set())
     if not declared:

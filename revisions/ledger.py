@@ -49,7 +49,7 @@ class LedgerError(Exception):
 
 HEADING = specdoc.HEADING
 DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
-DECLARED_SECTION = re.compile(r"§(\d+(?:\.\d+)*)")
+DECLARED_SECTION = specdoc.SECTION_CITATION
 
 
 def targets(where: object) -> tuple[list[dict[str, str]], list[str]]:

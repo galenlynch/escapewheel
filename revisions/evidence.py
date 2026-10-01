@@ -32,8 +32,12 @@ ROOT = Path(__file__).resolve().parent.parent
 HERE = ROOT / "revisions"
 ACCEPTED = HERE / "accepted"
 MANIFESTS = HERE / "evidence"
+sys.path.insert(0, str(ROOT / "spec" / "tools"))
+
+import specdoc
+
 DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
-CLAUSE = re.compile(r"§(\d+(?:\.\d+)*)")
+CLAUSE = specdoc.SECTION_CITATION
 REVISION = re.compile(r"R(\d+)")
 SHA = re.compile(r"[0-9a-f]{40}")
 SURFACES = ("projections", "implementations", "documentation")

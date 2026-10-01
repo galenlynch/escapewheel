@@ -75,3 +75,29 @@ def test_an_anchor_line_gives_its_identifier_and_kind():
     assert specdoc.ANCHOR.fullmatch('<a id="ew-old-scope" data-spec-anchor="alias"></a>').group(2) == "alias"
     assert specdoc.ANCHOR.fullmatch('<a id="EW-scope" data-spec-anchor="canonical"></a>') is None
     assert specdoc.ANCHOR.fullmatch('<a id="ew-scope"></a>') is None
+
+
+def test_a_part_citation_reads_both_spellings_of_the_part():
+    pattern = specdoc.part_citation(" ")
+
+    assert pattern.search("see Part 03 §5.4.").groups() == (None, "03", "5.4")
+    assert pattern.search("see `03` §5").groups() == ("03", None, "5")
+    assert pattern.search("see Part 3 §5.4") is None
+
+
+def test_the_gap_decides_which_separations_a_part_citation_admits():
+    assert specdoc.part_citation(" ").search("Part 03  §5.4") is None
+    assert specdoc.part_citation(r"\s+").search("Part 03  §5.4").group(3) == "5.4"
+    assert specdoc.part_citation(r"\s+").search("Part 03\t§5.4").group(3) == "5.4"
+
+
+def test_a_revision_citation_gives_the_revision_and_the_section():
+    # Assembled, so that no tool reading this file for citations finds one to resolve.
+    first, second = 92, 7
+    text = f"R{first} §2.2 and R{second} §3, not PR{first} §1."
+
+    assert specdoc.REVISION_CITATION.findall(text) == [("92", "2.2"), ("7", "3")]
+
+
+def test_a_section_citation_drops_a_sentence_ending_dot():
+    assert specdoc.SECTION_CITATION.findall("§3.1, §4. Then §10.2.4") == ["3.1", "4", "10.2.4"]

@@ -37,9 +37,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LEDGER = ROOT / "revisions" / "applied.toml"
 HEADINGS = ROOT / "spec" / "tools" / "headings.toml"
+sys.path.insert(0, str(ROOT / "spec" / "tools"))
+
+import specdoc
 
 #: `R92 §2.2`. The same spelling `check_citations.py` resolves.
-REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
+REVISION = specdoc.REVISION_CITATION
 
 #: Sites where naming a revision is the point, each with why. A pattern is matched against the
 #: whole line. Every entry is checked to still match something, so a site that goes away takes

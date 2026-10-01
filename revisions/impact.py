@@ -35,8 +35,9 @@ HEADING = specdoc.titled_heading(2)
 
 #: `Part 03 §5.4`, as required by `revisions/CONTRIBUTING.md#ew-citation-context`, and the bare
 #: `03` §5.4 it replaced: a citation
-#: written before that clause still resolves, so both are read here.
-CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
+#: written before that clause still resolves, so both are read here. Any whitespace separates the
+#: part from the section sign.
+CITATION = specdoc.part_citation(r"\s+")
 ANCHOR = specdoc.ANCHOR
 
 #: History, read against the baseline it was written on, so a change never makes it stale. Every other
@@ -172,7 +173,7 @@ def main() -> int:
     args = parser.parse_args()
     changed = touched(args.ref)
     for value in args.section:
-        match = re.fullmatch(r"(\d\d):(\d+(?:\.\d+)*)", value)
+        match = re.fullmatch(rf"(\d\d):({specdoc.SECTION})", value)
         if match is None:
             parser.error(f"--section expects PART:SECTION, got {value!r}")
         part, section = match.groups()

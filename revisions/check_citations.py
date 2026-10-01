@@ -48,20 +48,20 @@ import specdoc
 
 HEADING = specdoc.HEADING
 #: `R92 §2.2`, `R92 §2`. The section may end a sentence, so the trailing dot is trimmed.
-REVISION = re.compile(r"\bR(\d+) §(\d+(?:\.\d+)*)")
+REVISION = specdoc.REVISION_CITATION
 #: `Part 03 §5.4` and the bare `03` §5.4 it replaced, both resolved. Two digits, not `0` and a
 #: digit: R93 added Part 10, and a
 #: pattern written before it read every Part 10 §x as an unprefixed local reference, which is the
-#: bucket that does not fail the build.
-PART = re.compile(r"(?:`(\d\d)`|Part (\d\d)) §(\d+(?:\.\d+)*)")
+#: bucket that does not fail the build. One space separates the part from the section sign.
+PART = specdoc.part_citation(" ")
 #: Any §, so the ones the two above did not claim can be treated as local.
-ANY = re.compile(r"§(\d+(?:\.\d+)*)")
+ANY = specdoc.SECTION_CITATION
 #: A part named by its number alone, which the current citation-context rule forbids in prose. Every
 #: backticked two-digit string in those documents is a part, so nothing yet needs excusing.
 NUMBERED = re.compile(r"`(\d\d)`")
 MARKDOWN_ANCHOR = re.compile(r"\[[^\]]+\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
 SOURCE_ANCHOR = re.compile(r"`([^`#]+\.md)#(ew-[a-z0-9-]+)`")
-LINKED_PART = re.compile(r"\[Part (\d\d) §(\d+(?:\.\d+)*)\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
+LINKED_PART = re.compile(rf"\[Part (\d\d) §({specdoc.SECTION})\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
 
 
 def headings(text: str) -> set[str]:
