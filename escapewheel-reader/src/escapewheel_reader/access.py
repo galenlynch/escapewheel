@@ -32,14 +32,14 @@ from .runs import check as _check_runs
 STORED = "stored"
 
 #: The activities whose runs produce units and spikes, so the accessors returning those know
-#: what to check for currency (Part 01 §2.4). An accessor already names one resource; naming what
-#: produces it is not the general activity-to-table map R44 §2.4 rejects, which an extension's
-#: tables could never be added to.
+#: what to check for currency. An accessor already names one resource, so naming what produces
+#: it is no general map from an activity to its tables, which an extension's tables could never
+#: be added to.
 SORTING_ACTIVITIES = ("spike_sorting", "curation")
 
 
 def intervals(packet: PacketLike, *, session_id: int | None = None, interval_kind: str | None = None) -> pa.Table:
-    """Read ``core.intervals``, optionally filtered (Part 01 §3.10).
+    """Read ``core.intervals``, optionally filtered.
 
     Filtering by kind prunes rather than scans: Part 02 §12.9 numbers each session's intervals
     of one kind consecutively, so each is a contiguous run in the file's order.
@@ -82,7 +82,7 @@ def units(packet: PacketLike, *, session_id: int | None = None, quality_label: s
     ------
     AmbiguousRun
         If the packet holds two sortings or curations of one probe and does not say which
-        to read (Part 01 §2.4). Returning both concatenated is two complete sets of units with
+        to read (Part 01 §2.6). Returning both concatenated is two complete sets of units with
         nothing marking the seam, so every count taken over the result is wrong. Read
         ``table("core.units")`` to get the rows anyway.
     """
@@ -106,7 +106,7 @@ def events(
     packet : Packet
         The packet to read.
     event_type : str, optional
-        Keep only events of this type. The type is the stream's since R91 §3.1, so this
+        Keep only events of this type. The type is the stream's (Part 01 §3.11), so this
         resolves the streams that emit it and keeps their events. The vocabulary is open,
         so an unrecognized value is not an error, only empty.
     session_id : int, optional
@@ -120,7 +120,7 @@ def events(
         The clock to return ticks on. Defaults to :func:`~escapewheel_reader.clocks.reference_clock`;
         pass :data:`STORED` for the ticks the file holds.
     seconds : bool, default False
-        Add a `t_second` column from the packet's declared origin (Part 01 §2.2). Refuses on
+        Add a `t_second` column from the packet's declared origin. Refuses on
         a packet that declares none, and on ticks that are not on the reference clock.
 
     Returns
@@ -130,7 +130,7 @@ def events(
     """
     streams = None
     if event_type is not None:
-        # R91 §3.1: one lookup in a table of streams, then a key filter on the events --
+        # One lookup in a table of streams, then a key filter on the events --
         # the shape R86 §2.4 measured as cheaper than carrying the type on every row.
         streams = (
             packet.table(
@@ -147,7 +147,7 @@ def events(
         found = packet.table(CORE_EVENTS, session_id=session_id, t_tick=span)
     else:
         found = packet.table(CORE_EVENTS, session_id=session_id, t_tick=span, stream_id=streams)
-    # A tick has no meaning without its clock, and R91 §3.2 puts the clock on the stream, so
+    # A tick has no meaning without its clock, and the clock is the stream's, so
     # the accessor attaches it: `core.event_streams` is tens of rows against an event table's
     # thousands, and every caller of this needs it either to convert or to report.
     stream_clocks = dict(
@@ -216,7 +216,7 @@ def spike_times(
         pass :data:`STORED` for the ticks the file holds. Mapping drops a spike the anchors
         cannot place, exactly as `analysis.spike_events` does.
     seconds : bool, default False
-        Add a `t_second` column from the packet's declared origin (Part 01 §2.2). Refuses on
+        Add a `t_second` column from the packet's declared origin. Refuses on
         a packet that declares none, and on ticks that are not on the reference clock.
 
     Returns
@@ -224,7 +224,7 @@ def spike_times(
     pyarrow.Table
         Columns ``t_tick`` and ``clock_id``, in stored order. When one `unit_id` is named
         and no `t_tick` range is given, the result carries the unit's observation window
-        (R38) in `schema.metadata`, so :func:`~escapewheel_reader.observation.rate_of` needs
+        in `schema.metadata`, so :func:`~escapewheel_reader.observation.rate_of` needs
         no second lookup. A range-narrowed read carries none: the span is the caller's
         choice and is no denominator for it.
 
@@ -277,9 +277,9 @@ def spike_times(
         wanted = wanted & (pc.field("session_id") == session_id)
     if (pushed := _span(packet, t_tick, clock)) is not None:
         wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
-    # R96 §3.4 struck `core.spike_events.clock_id`: a tick reaches its clock through its
-    # unit now, so the column comes from the caller's `units` rather than from the scan.
-    # A tick still travels with its clock, which is what this accessor exists to guarantee.
+    # `core.spike_events` carries no `clock_id`: a tick reaches its clock through its unit, so
+    # the column comes from `core.units` rather than from the scan. A tick still travels with
+    # its clock, which is what this accessor exists to guarantee.
     found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted)
     unit_clocks = _unit_clocks(packet, keys, session_id=session_id)
     found = found.append_column(
@@ -340,7 +340,7 @@ def _reference_columns(packet: PacketLike, resource_id: str, parent: str) -> lis
 
 
 def _unit_clocks(packet: PacketLike, keys: Sequence[str], **narrow: Any) -> dict[tuple[Any, ...], Any]:
-    """Map a unit's key to the clock its ticks are counted on (R96 §3.2).
+    """Map a unit's key to the clock its ticks are counted on (Part 02 §12.1).
 
     The clock is the unit's fact, reached by a spike through the reference it already declares,
     and a tick still travels with its clock out of an accessor.

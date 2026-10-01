@@ -31,7 +31,7 @@ from .resource_ids import (
 DECLARED = "declared"
 INHERITED = "inherited"
 
-#: What identifies a unit in a result. R81 §2.1 made `unit_id` the whole key; `session_id`
+#: What identifies a unit in a result. `unit_id` is the whole key (Part 02 §12.1); `session_id`
 #: stays because every unit table carries it and a caller filters on it.
 _UNIT_KEY = ("session_id", "unit_id")
 
@@ -44,9 +44,9 @@ def _has(packet: PacketLike, resource_id: str) -> bool:
 def _empty(names: tuple[str, ...]) -> pa.Table:
     """Build an empty result with the right columns, so a caller need not branch on absence.
 
-    Types follow R48's roles as the registry assigns them: a `_tick` is a coordinate in int64,
-    an `_id` an identifier in int32 (R53 §2.1), and what remains is a label. Pinning them all to
-    one type makes the empty result unable to concatenate with a populated one.
+    Types follow the roles the registry assigns: a `_tick` is a coordinate in int64, an `_id`
+    an identifier in int32 (Part 02 §5.3), and what remains is a label. Pinning them all to one
+    type makes the empty result unable to concatenate with a populated one.
     """
 
     def _type(name: str) -> pa.DataType:
@@ -124,9 +124,6 @@ def unit_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.Tab
         (:data:`DECLARED` or :data:`INHERITED`). One row per window, so a unit observed across
         a recording gap appears more than once.
     """
-    # R96 §3.2 moved the clock from the run to the unit, so the run is no longer read here: a
-    # unit names the clock its ticks are counted on, and the map through `core.sorting_runs`
-    # this used to build was answering that question one table away.
     if not _has(packet, CORE_UNITS):
         return _empty(_UNIT_KEY)
     units = packet.table(CORE_UNITS, columns=[*_UNIT_KEY, "clock_id"], session_id=session_id)
@@ -144,8 +141,7 @@ def unit_windows(packet: PacketLike, *, session_id: int | None = None) -> pa.Tab
 
     own = _empty(_UNIT_KEY)
     if _has(packet, CORE_UNIT_OBSERVATION_INTERVALS):
-        # R81 §2.3 leaves the interval row naming only the unit, and R96 §3.2 puts the clock on
-        # the unit, so one lookup answers what two did.
+        # The interval row names only the unit, and its clock is the unit's.
         by_unit = {u["unit_id"]: u["clock_id"] for u in units.to_pylist()}
         declared = packet.table(CORE_UNIT_OBSERVATION_INTERVALS, session_id=session_id).to_pylist()
         if declared:
@@ -360,8 +356,8 @@ def support_of(table: pa.Table) -> pa.Table | None:
     rows = json.loads(metadata[SUPPORT_KEY])
     return pa.table(
         {
-            # No type pinned: a clock_id is an int32 identifier (R53 §2.1) and the support is
-            # rebuilt from what was recorded, so the column takes the values' own type.
+            # No type pinned: the support is rebuilt from what was recorded, so the column
+            # takes the values' own type.
             "clock_id": pa.array([r["clock_id"] for r in rows]),
             "start_tick": pa.array([r["start_tick"] for r in rows], type=pa.int64()),
             "stop_tick": pa.array([r["stop_tick"] for r in rows], type=pa.int64()),

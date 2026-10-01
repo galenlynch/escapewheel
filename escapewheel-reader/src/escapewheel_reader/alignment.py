@@ -40,8 +40,8 @@ def _clock(packet: PacketLike, event_type: str, session_id: int | None) -> int:
     """Return the clock both sides are on, refusing if they differ.
 
     Checked rather than assumed. A packet may carry several streams on several clocks, and is
-    free to hold one the mapping never touched. The clock is the stream's since R91 §3.1, so this
-    reads `core.event_streams` where it read the event.
+    free to hold one the mapping never touched. The clock is the stream's (Part 01 §3.11), so
+    this reads `core.event_streams`.
     """
     streams = packet.table(
         CORE_EVENT_STREAMS,
@@ -80,7 +80,7 @@ def _literal(value: str) -> str:
 def _events(event_type: str, session_id: int | None) -> str:
     """Build the event subquery both operations join against.
 
-    The kind is the stream's (R91 §3.1), so selecting one kind of event is a join rather than a
+    The kind is the stream's, so selecting one kind of event is a join rather than a
     predicate on the event row.
     """
     where = f"m.event_type = {_literal(event_type)}"
@@ -96,7 +96,8 @@ def _spikes(session_id: int | None) -> str:
     """Build the spike relation with the same explicit session scope as the events.
 
     The mapped spikes, since `core.spike_events` carries each spike on the clock it was measured
-    on, and comparing that against an event is only meaningful after R30's mapping.
+    on, and comparing that against an event is only meaningful once it is mapped onto the
+    reference clock (Part 06 §4).
     """
     table = sql_name(ANALYSIS_SPIKE_EVENTS)
     return table if session_id is None else f"(SELECT * FROM {table} WHERE session_id = {session_id})"
@@ -171,9 +172,9 @@ def aligned_spikes(
     -------
     duckdb.DuckDBPyRelation
         Columns ``session_id``, ``unit_id``, ``event_tick``, ``t_tick`` and ``t_rel_tick``,
-        the last being the spike's tick relative to its event. R91 §3.2 struck ``event_id``;
-        an event is named by its tick,
-        unique within the ``(session_id, event_type)`` scope these queries impose.
+        the last being the spike's tick relative to its event. An event has no identifier of
+        its own, so it is named by its tick, unique within the ``(session_id, event_type)``
+        scope these queries impose.
         A relation rather than a table, so it composes with a filter or an aggregate and the
         rows a caller does not want are never materialised.
 
