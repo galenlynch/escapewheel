@@ -2,7 +2,7 @@
 
 - :class:`Location` -- one place bytes can be read from, with any caller-supplied rewrite.
 - :func:`read_sources`, :func:`check_sources`, :func:`sources_schema` -- read and check a source
-  resolution document (Part 04 §5.5).
+  resolution document.
 - :func:`resolve_sources` -- locate the external sources a packet names.
 
 A declared `uri` is what the packet says; it becomes a location only once a root and any rewrite
@@ -34,11 +34,11 @@ from .uri import decode, is_absolute
 #: makes immutable. `git config url.<base>.insteadOf` is the same mechanism.
 Rewrite = Mapping[str, str]
 
-#: A source resolution document's `sources` block, flattened to name -> URI (Part 04 §5.5).
+#: A source resolution document's `sources` block, flattened to name -> URI.
 Sources = Mapping[str, str]
 
 #: Where a writer SHOULD leave a default resolution document (Part 04 §5.5). Not a packet resource,
-#: so nothing in the manifest names it and Part 03 §8.1's immutability does not reach it.
+#: so nothing in the manifest names it and it may be corrected after the packet is committed.
 SOURCES_FILENAME = "sources.json"
 
 #: The one version of that document this reader knows how to read.
@@ -46,7 +46,7 @@ SOURCES_VERSION = "escapewheel-sources-v0.1"
 
 
 def sources_schema() -> dict[str, Any]:
-    """Load the bundled JSON Schema for a source resolution document (Part 04 §5.5).
+    """Load the bundled JSON Schema for a source resolution document.
 
     Copied from the specification's tree, because a wheel cannot read a file outside its package.
 
@@ -131,8 +131,8 @@ def _filesystem(store: str) -> tuple[Any, str]:
     Resolving costs a request -- pyarrow asks S3 which region a bucket is in -- so a packet
     with 28 tables in one bucket must not pay it 28 times.
 
-    **Credentials are deliberately not set.** Part 04 §5.1 makes reachability the caller's
-    situation, so this takes whatever the filesystem's own default chain finds.
+    **Credentials are deliberately not set.** Reachability is the caller's situation, so this
+    takes whatever the filesystem's own default chain finds.
     """
     from pyarrow.fs import FileSystem
 
@@ -274,7 +274,7 @@ class Location:
         Raises
         ------
         UnresolvedSource
-            If `source` is named and no resolution document locates it (Part 04 §5.5).
+            If `source` is named and no resolution document locates it.
         ResourceUnreadableError
             If `declared` is neither absolute nor a relative reference, such as a path beginning
             with `/` or one with a `..` segment, so it names no place under the root.

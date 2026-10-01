@@ -89,7 +89,7 @@ def _resolve(resource: Resource, root: Location) -> Path:
 def _store(resource: Resource, root: Location) -> str:
     """Return what to hand a Zarr store: the URI itself when remote, else the resolved path.
 
-    An external array is expected to be the large one (Part 04 §5.1), and in production that means
+    An external array is expected to be the large one, and in production that means
     an object store rather than a filesystem. Zarr opens such a URI directly given a backend
     for it, so resolving to a `Path` first would be the thing that made it unopenable.
     """
@@ -178,9 +178,9 @@ class TableResource:
         already takes. A store URI goes through `pyarrow.fs`, which pyarrow ships -- reading a
         remote table needs no dependency the read path did not already have.
 
-        **Credentials are the caller's, deliberately.** Part 04 §5.1 makes reachability a property
-        of the reader's situation rather than of the packet, so this takes whatever the
-        filesystem's own default chain finds and never configures one.
+        **Credentials are the caller's, deliberately.** Reachability is a property of the
+        reader's situation rather than of the packet, so this takes whatever the filesystem's own
+        default chain finds and never configures one.
 
         Raises
         ------
@@ -298,9 +298,9 @@ class ArrayResource:
 
     Metadata and values have different costs, and this class keeps them apart. A Zarr array's
     metadata is a JSON document in the store, so shape, dtype, chunking, fill value and codecs
-    are all answerable with no Zarr library present -- which is what lets a validator check
-    Part 04 §5.3's level 2 without taking a dependency on the thing it is checking. Only
-    :meth:`read` needs Zarr, behind the ``arrays`` extra.
+    are all answerable with no Zarr library present -- which is what lets a validator check an
+    array's metadata without taking a dependency on the thing it is checking. Only :meth:`read`
+    needs Zarr, behind the ``arrays`` extra.
     """
 
     def __init__(self, resource: Resource, root: Location | Path | str) -> None:
@@ -462,7 +462,7 @@ class ArrayResource:
 
     @property
     def fill_value(self) -> Any:
-        """The value an unwritten chunk reads as. Part 03 §6.1 requires one to be declared."""
+        """The value an unwritten chunk reads as."""
         return self.metadata().get("fill_value")
 
     @property
@@ -481,7 +481,7 @@ class ArrayResource:
 
     @property
     def within_reader_floor(self) -> bool:
-        """Whether the array lies within its Zarr variant's reader floor (Part 03 §6.4).
+        """Whether the array lies within its Zarr variant's reader floor.
 
         Outside it the array is valid but beyond the portability guarantee (Part 03 §2):
         this reader may decode it, and a conforming one need not.

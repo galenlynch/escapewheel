@@ -1,4 +1,4 @@
-"""Acquire the registry documents a packet binds (Part 04 §8, Part 03 §3.3).
+"""Acquire the registry documents a packet binds (Part 04 §8).
 
 - :func:`acquire` -- one bound registry's bytes, verified against its descriptor's digest.
 - :func:`parse` -- verified bytes decoded for declaration lookup.

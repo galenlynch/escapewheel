@@ -2,7 +2,7 @@
 
 - :class:`Manifest` -- the parsed manifest: resources, sessions and registry bindings.
 - :class:`Resource` -- one resource entry, resolving its declaration on demand.
-- :class:`RegistryBinding` -- one entry of the manifest's `registries` map (Part 04 §8).
+- :class:`RegistryBinding` -- one entry of the manifest's `registries` map.
 - :func:`decode_json` -- UTF-8 JSON, refusing a repeated object member.
 - :data:`MANIFEST_FILENAME`, :data:`MANIFESTS_DIRNAME` -- where a packet root keeps its manifest,
   and the manifests that one superseded.
@@ -224,7 +224,7 @@ class Manifest:
     sessions : tuple of str
         Every session the packet contains.
     registries : Mapping
-        Every bound registry's descriptor, by registry ID (Part 04 §8).
+        Every bound registry's descriptor, by registry ID.
     resources : tuple of Resource
         Every declared resource.
     entry : Mapping

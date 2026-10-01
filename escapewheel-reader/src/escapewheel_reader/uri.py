@@ -3,7 +3,7 @@
 - :func:`decode`, :func:`encode` -- a relative reference as the names it appends, and back.
 - :func:`canonical`, :func:`in_one_form` -- rewrite a reference in the one form, or check it is.
 - :func:`is_absolute` -- whether a `uri` has a scheme.
-- :func:`representable` -- whether a packet can hold a file under a name (Part 03 §11).
+- :func:`representable` -- whether a packet can hold a file under a name.
 
 A relative reference appends its decoded names to a root, never by RFC 3986's merge, and names are
 kept byte-exact.
@@ -43,7 +43,7 @@ def representable(name: str) -> bool:
 
 
 def encode(names: Iterable[str]) -> str:
-    """Spell a sequence of names as a relative reference in Part 03 §4's one form.
+    """Spell a sequence of names as a relative reference in the one form.
 
     Every unreserved character as itself and every other octet of the UTF-8 encoding as `%XX` with
     uppercase hexadecimal digits, which is what `quote` writes with nothing marked safe.
@@ -98,7 +98,7 @@ def decode(reference: str) -> tuple[str, ...]:
 
 
 def canonical(reference: str) -> str:
-    """Rewrite a relative reference in Part 03 §4's one form, as a build records a resource document's.
+    """Rewrite a relative reference in the one form, as a build records a resource document's.
 
     Raises
     ------

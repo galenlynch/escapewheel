@@ -38,8 +38,7 @@ def where(column: Any, value: Any) -> NDArray[np.int64]:
     """Offsets where a column equals `value`, comparing codes where it is a dictionary.
 
     The scalar takes the column's own type. Pinning it to one makes the helper work for the
-    columns that happened to have it and raise for the rest, which is the failure R53 §2.1
-    produced by turning every identifier into an integer.
+    columns that happened to have it and raise for the rest.
     """
     if pa.types.is_dictionary(column.type):
         code = column.dictionary.index(value).as_py()
