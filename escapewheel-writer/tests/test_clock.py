@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 import numpy as np
 import pytest
 
-from escapewheel_writer import Clock, NonFinite, OffGrid
-from escapewheel_writer.clock import HARP_TICK_RATE_HZ
+from escapewheel_writer import NonFinite, OffGrid
+from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
 from escapewheel_writer.errors import NaiveTimestamp, UsageError, UsageFault
 
 

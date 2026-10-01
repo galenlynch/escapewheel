@@ -437,3 +437,17 @@ def build(
             values = [coerce(v, field.name) for v in values]
         arrays.append(pa.array(values, type=field.type))
     return pa.table(arrays, schema=out)
+
+
+__all__ = [
+    "ARROW",
+    "COERCE",
+    "Paired",
+    "build",
+    "canonical_json",
+    "localize",
+    "number",
+    "number_batch",
+    "schema",
+    "sort_key",
+]

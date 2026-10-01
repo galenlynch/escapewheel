@@ -3,7 +3,10 @@ API Reference
 
 .. currentmodule:: escapewheel_writer
 
-Every name in the sections before ``Modules`` is importable from ``escapewheel_writer``.
+Two tiers of names are public. The user tier is importable from ``escapewheel_writer``: it builds a
+packet from a recipe and maintains one already published. The adapter tier is for a source adapter
+in another distribution, and each of its names is imported from ``escapewheel_writer.adapter``. A
+name this page does not list is the writer's own and may change without notice.
 
 Building a packet
 -----------------
@@ -11,21 +14,31 @@ Building a packet
 .. autosummary::
    :toctree: generated
 
-   build
+   import_packet
    Recipe
+   build
    PacketWriter
-   CommitRefused
-   verify
+   materializers
 
-Clocks
-------
+Maintaining a packet
+--------------------
 
 .. autosummary::
    :toctree: generated
 
-   Clock
-   OffGrid
-   NonFinite
+   verify
+   prune
+
+Notes
+-----
+
+What an adapter or a build worked around, as text carrying a code.
+
+.. autosummary::
+   :toctree: generated
+
+   Note
+   NoteCode
 
 Errors
 ------
@@ -65,70 +78,99 @@ the codes an error or a reported problem carries.
    CompensationsInvalid
    FixedOffsetZone
    NaiveTimestamp
+   OffGrid
+   NonFinite
    CarriedNotAnInteger
    OutOfRange
    TickOverflow
    Collided
+   CommitRefused
    PacketOccupied
    NotCommitted
    PromotionRecordUnreadable
 
-Notes
------
+The adapter contract
+--------------------
 
-What an adapter or a build worked around, as text carrying a code.
+What a build holds an adapter to (Part 05 §3.4): every adapter is a ``SourceAdapter``, and each
+other protocol is one capability a build tests for. ``escapewheel_writer.adapter`` also carries
+``Note``, ``NoteCode``, ``SourceDefect``, ``SourceFault`` and ``UnsupportedEncoding`` from the user
+tier, so an adapter imports from one module.
 
 .. autosummary::
    :toctree: generated
 
-   Note
-   NoteCode
+   adapter.SourceAdapter
+   adapter.Streams
+   adapter.StagesArrays
+   adapter.ReferencesArrays
+   adapter.ReferencesMedia
+   adapter.StagesPayloads
+   adapter.DeclaresCompensations
+   adapter.WithholdsAnchors
+   adapter.Located
+
+What an adapter returns
+-----------------------
+
+.. autosummary::
+   :toctree: generated
+
+   adapter.StagedArray
+   adapter.ExternalArray
+   adapter.ExternalMedia
+   adapter.Payload
+   adapter.coded
+   adapter.codes
+   adapter.Compensation
+   adapter.Compensates
+   adapter.COMPENSATION_GROUP
+
+Reading a source
+----------------
+
+.. autosummary::
+   :toctree: generated
+
+   adapter.Clock
+   adapter.epoch_from
+   adapter.zone_of
+   adapter.HARP_TICK_RATE_HZ
+   adapter.TICK_MIN
+   adapter.TICK_MAX
+   adapter.SourceStore
+   adapter.source_root
+   adapter.sex
+   adapter.utc_offset
+   adapter.clean
+   adapter.ABSENT
+   adapter.NWBSource
+   adapter.SortedStream
+   adapter.STREAM_FOLDER
+   adapter.ANALYZERS
+
+Registering and delivering
+--------------------------
+
+.. autosummary::
+   :toctree: generated
+
+   adapter.SOURCE_GROUP
+   adapter.discovered
+   adapter.ADAPTERS
+   adapter.STREAM
+   adapter.FILES
+   adapter.FLIGHT
+   adapter.PROTOCOLS
+   adapter.document_of
+   adapter.shape_problems
+   adapter.TERMS
+   adapter.serve
 
 Modules
 -------
 
-Each module's page lists what it holds beyond the names above.
-
 .. autosummary::
    :toctree: generated
 
-   recipe
-   session
-   writer
-   sources
-   keys
-   clock
-   arrow
-   encoding
-   arrays
-   opaque
-   materialize
-   amending
-   replacing
-   compare
-   declaration
-   delivery
-   extensions
-   scaffold
-   verify
-   prune
-   errors
-   notes
-
-Source adapters
----------------
-
-.. autosummary::
-   :toctree: generated
-
-   sources.nwb
-   sources.sorter
-   sources.sync
-   sources.waveforms
-   sources.lfp
-   sources.openephys
-   sources.harp
-   sources.store
-   sources.zarr_compat
-   sources.compensations
-   sources.values
+   adapter

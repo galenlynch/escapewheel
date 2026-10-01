@@ -1294,4 +1294,4 @@ def _resolve(root: Path) -> Path:
     )
 
 
-__all__ = ["ABSENT", "NWBSource", "clean"]
+__all__ = ["ABSENT", "NWBSource", "clean", "contact_columns", "contact_ids", "electrode_name", "ucum_code"]

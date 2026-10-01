@@ -9,12 +9,11 @@ import numpy as np
 import pytest
 from escapewheel_reader import open_packet
 
-from escapewheel_writer import Clock, OffGrid, PacketWriter
-from escapewheel_writer.clock import HARP_TICK_RATE_HZ
+from escapewheel_writer import OffGrid, PacketWriter
+from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
 from escapewheel_writer.errors import FixedOffsetZone, SourceDefect, SourceFault, UsageError, UsageFault
 from escapewheel_writer.notes import NoteCode, coded, codes
-from escapewheel_writer.sources import NWBSource
-from escapewheel_writer.sources.nwb import ucum_code
+from escapewheel_writer.sources.nwb import NWBSource, ucum_code
 from escapewheel_writer.sources.values import sex
 from tests import nwbfixture
 
@@ -345,7 +344,7 @@ SETTINGS = """<SETTINGS><NP_PROBE slot="3" port="2" dock="1" custom_probe_name="
 
 def test_a_probe_attaches_to_the_headstage_under_the_same_prefix(nwb, harp, tmp_path):
     """The headstage row is the acquisition source's, so the link resolves only if both carry the prefix."""
-    from escapewheel_writer.sources import OpenEphysSource
+    from escapewheel_writer.sources.openephys import OpenEphysSource
 
     settings = tmp_path / "settings.xml"
     settings.write_text(SETTINGS)

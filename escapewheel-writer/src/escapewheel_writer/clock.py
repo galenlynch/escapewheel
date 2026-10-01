@@ -337,4 +337,4 @@ def epoch_from(instant: datetime, t_tick: int, tick_rate_num: int, tick_rate_den
 HARP_TICK_RATE_HZ = 31250
 
 
-__all__ = ["HARP_TICK_RATE_HZ", "TICK_MAX", "TICK_MIN", "Clock", "epoch_from", "zone_of"]
+__all__ = ["HARP_TICK_RATE_HZ", "TICK_MAX", "TICK_MIN", "Clock", "TickGrid", "epoch_from", "zone_of"]

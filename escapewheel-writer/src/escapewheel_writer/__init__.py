@@ -1,9 +1,15 @@
 """Build Escapewheel packets from a recipe (Part 05 §2).
 
-:func:`build` runs the sources a :class:`Recipe` names and returns a :class:`PacketWriter` holding
-the staged packet, and :meth:`PacketWriter.commit` validates and publishes it. ``escapewheel
-import`` runs the same two steps from the command line. :func:`verify` records what a published
-packet's external resources hold, once they can be reached.
+:func:`import_packet` builds the packet a :class:`Recipe` describes and commits it, as
+``escapewheel import`` does from the command line. Its two steps are :func:`build`, which runs the
+recipe's sources and returns a :class:`PacketWriter` holding the staged packet, and
+:meth:`PacketWriter.commit`, which validates and publishes it and takes what
+:func:`materializers` derives. :func:`verify` records what a published packet's external
+resources hold, once they can be reached, and :func:`prune` removes the files a packet no longer
+needs.
+
+A source adapter in another distribution imports from :mod:`escapewheel_writer.adapter`. Every
+other module is the package's own.
 
 Its modules:
 
@@ -43,7 +49,6 @@ manifest into place last.
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .clock import Clock
 from .errors import (
     AmendmentFault,
     AmendmentRefused,
@@ -86,8 +91,9 @@ from .errors import (
     WriterError,
 )
 from .notes import Note, NoteCode
+from .prune import prune
 from .recipe import Recipe
-from .session import build, import_packet
+from .session import build, import_packet, materializers
 from .writer import PacketWriter
 
 try:
@@ -101,7 +107,6 @@ __all__ = [
     "AmendmentFault",
     "AmendmentRefused",
     "CarriedNotAnInteger",
-    "Clock",
     "Collided",
     "CommitRefused",
     "CompensationsInvalid",
@@ -145,5 +150,7 @@ __all__ = [
     "__version__",
     "build",
     "import_packet",
+    "materializers",
+    "prune",
     "verify",
 ]

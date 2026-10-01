@@ -13,13 +13,14 @@ from dataclasses import replace
 
 import pytest
 
-from escapewheel_writer import Clock, declaration, delivery
-from escapewheel_writer.clock import HARP_TICK_RATE_HZ
+from escapewheel_writer import declaration, delivery
+from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
 from escapewheel_writer.encoding import STREAMED_BATCH_ROWS
 from escapewheel_writer.errors import DeliveryFailed, RecipeFault, SourceDefect, SourceFault, UsageError, UsageFault
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS
-from escapewheel_writer.sources import ADAPTERS, NWBSource
+from escapewheel_writer.sources import ADAPTERS
+from escapewheel_writer.sources.nwb import NWBSource
 from tests import nwbfixture
 
 SESSION = "mini_2025-04-09"

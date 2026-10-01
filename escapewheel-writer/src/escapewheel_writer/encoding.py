@@ -320,3 +320,23 @@ def inefficient(resource_id: str, sample: pa.Table, delta: list[str], plain: lis
                 f"{got[chosen] / got[best]:.1f}x smaller on {head.num_rows:,} sampled rows"
             )
     return said
+
+
+__all__ = [
+    "DELTA_COLUMNS",
+    "DICTIONARY_COLUMNS",
+    "MATERIALIZED_BATCH_ROWS",
+    "NO_DICTIONARY",
+    "ONE_VALUE_ROWS",
+    "REPEATS",
+    "SAMPLE",
+    "STREAMED_BATCH_ROWS",
+    "TOLERANCE",
+    "Counts",
+    "choose",
+    "count",
+    "declared_order",
+    "encodings",
+    "inefficient",
+    "leading_identifier",
+]

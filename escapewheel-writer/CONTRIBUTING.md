@@ -245,6 +245,23 @@ resources in the manifest, and a commit writes a candidate manifest and renames 
 `packet.json` **last**. If you are adding a path that produces files, make sure a failure
 part-way leaves a packet that is absent rather than one that is half-declared.
 
+## Two tiers of public names
+
+Every module declares `__all__`.
+
+- **User tier**: what `__init__` exports. `docs/source/api.rst` documents it by subject.
+- **Adapter tier**: `escapewheel_writer.adapter.__all__`, for a source adapter in another
+  distribution. That module defines nothing: each name is one another module exports, and
+  `api.rst` lists it as `adapter.<name>`.
+
+Any other module's `__all__` holds the names this package's own modules and tests import from it,
+and no other package imports them. A module but `adapter` exports only names it defines, so an
+adapter class is imported from the module defining it and not from `sources`. An underscore name
+is for its own module and for the test module named after it. `tests/test_surface.py` holds all
+of this, and the two tiers against `api.rst` in both directions.
+
+Before taking a name out of a tier, search the other packages for it.
+
 ## Testing
 
 Tests build their own inputs rather than depending on real data or on `../fixtures/`. Size a

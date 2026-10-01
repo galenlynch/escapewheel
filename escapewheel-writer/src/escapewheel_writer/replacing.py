@@ -104,3 +104,6 @@ def read_replaced(entries: Iterable[str], base: Path) -> tuple[Replaced, ...]:
     if problems:
         raise ReplacementRefused("; ".join(p.message for p in problems), problems=problems)
     return tuple(read)
+
+
+__all__ = ["Replaced", "read_replaced"]

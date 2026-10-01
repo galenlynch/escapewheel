@@ -811,4 +811,12 @@ def _resolve(root: Path) -> Path:
     raise SourceDefect(f"{root} holds no Record Node directories", code=SourceFault.NO_RECORD_NODE, where=str(root))
 
 
-__all__ = ["ARCHIVE", "SyncSource", "SyncStream"]
+__all__ = [
+    "ARCHIVE",
+    "RecordingStart",
+    "SyncSource",
+    "SyncStream",
+    "phase_discontinuities",
+    "read_sync_messages",
+    "suspect_terminals",
+]

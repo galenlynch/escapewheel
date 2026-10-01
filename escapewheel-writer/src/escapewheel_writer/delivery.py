@@ -975,6 +975,7 @@ def _rendezvous(socket: str, child: subprocess.Popen[bytes]) -> Any:
 
 
 __all__ = [
+    "RESOURCES",
     "SENTINEL",
     "Delivered",
     "as_table",
@@ -983,6 +984,8 @@ __all__ = [
     "infers",
     "offered",
     "protocol_supplies",
+    "referenced",
     "report_of",
     "serve",
+    "written_arrays",
 ]

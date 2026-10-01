@@ -48,3 +48,6 @@ def lost(reference: Iterable[str], built: Iterable[str]) -> list[str]:
     which is what lets the line be diffed rather than only read.
     """
     return sorted(set(reference) - set(built))
+
+
+__all__ = ["lost", "resources"]

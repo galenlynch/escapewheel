@@ -70,14 +70,16 @@ GUESSED = "  # GUESS: nothing inspected says this; check it"
 
 def open_for_inspection(kind: str, root: Path, session_id: str) -> SourceAdapter:
     """Construct a source for inspection, with the least configuration that will open it."""
-    from ..sources import NWBSource, SorterSource, SyncSource
+    from ..sources.nwb import NWBSource
+    from ..sources.sorter import SorterSource
+    from ..sources.sync import SyncSource
 
     if kind == "sorter":
         return SorterSource(root, session_id=session_id)
     if kind == "sync":
         return SyncSource(root, session_id=session_id)
     if kind == "lfp":
-        from ..sources import LFPSource
+        from ..sources.lfp import LFPSource
 
         # Inspecting reads what the series declare; the clocks a build passes in change what the
         # rows say, not how many there are.
@@ -720,4 +722,4 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
     deliver.set_defaults(func=_deliver)
 
 
-__all__ = ["KINDS", "import_source_cache", "open_for_inspection", "register"]
+__all__ = ["HINTS", "KINDS", "declaration_protocols", "import_source_cache", "open_for_inspection", "register"]

@@ -215,4 +215,4 @@ def size(path: Path) -> int:
     return sum(member.stat().st_size for member in path.rglob("*") if member.is_file())
 
 
-__all__ = ["DELIVERIES", "ROOT", "Payload", "StagedPayload", "read", "size", "write"]
+__all__ = ["DELIVERIES", "ROOT", "Payload", "StagedPayload", "read", "shown", "size", "write"]

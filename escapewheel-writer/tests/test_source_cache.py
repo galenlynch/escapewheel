@@ -18,7 +18,7 @@ from upath.registry import register_implementation
 
 from escapewheel_writer import declaration
 from escapewheel_writer import recipe as recipe_module
-from escapewheel_writer.errors import RecipeFault
+from escapewheel_writer.errors import RecipeFault, SourceDefect
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS, Recipe
 from escapewheel_writer.sources.store import STORAGE_FORMAT, prune_kept, source_root
@@ -344,10 +344,10 @@ def test_the_location_survives_a_published_build_and_a_refused_one(remote, tmp_p
     assert kept
 
     def refused(self, *args, **kwargs):
-        raise sorter.SourceDefect("refused")
+        raise SourceDefect("refused")
 
     monkeypatch.setattr(sorter.SorterSource, "records", refused)
-    with pytest.raises(sorter.SourceDefect):
+    with pytest.raises(SourceDefect):
         remote(tmp_path / "refused", location)
     assert sorted(_kept(location)) == kept
     assert mine.read_text() == "keep"

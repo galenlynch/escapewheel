@@ -1,14 +1,12 @@
 """Source adapters, each reading one source into records for a build to assemble (Part 05 §2).
 
-- :class:`HarpSource`, :class:`OpenEphysSource`, :class:`SorterSource`, :class:`SyncSource`,
-  :class:`NWBSource`, :class:`WaveformSource`, :class:`LFPSource` -- the built-in adapters.
-- :class:`SortedStream`, :class:`SyncStream` -- one stream of a sorting, and of a sync tree.
-- :func:`discovered` -- the source kinds that installed distributions register, keyed by name.
 - :data:`ADAPTERS` -- a mapping from each built-in kind a recipe may name to its class.
+- :func:`discovered` -- the source kinds that installed distributions register, keyed by name.
 - :data:`SOURCE_GROUP` -- the entry-point group a distribution registers an adapter under.
 
 Each built-in adapter reads a standard that many institutions write. An adapter serving one
 institution is registered under :data:`SOURCE_GROUP`, and is reached exactly as a built-in kind is.
+An adapter class is imported from the module defining it.
 """
 
 import warnings
@@ -20,8 +18,8 @@ from .harp import HarpSource
 from .lfp import LFPSource
 from .nwb import NWBSource
 from .openephys import OpenEphysSource
-from .sorter import SortedStream, SorterSource
-from .sync import SyncSource, SyncStream
+from .sorter import SorterSource
+from .sync import SyncSource
 from .waveforms import WaveformSource
 
 #: Entry-point group a distribution registers a source adapter under. Part 07 names one CLI and the
@@ -67,17 +65,4 @@ def discovered() -> dict[str, Any]:
     return found
 
 
-__all__ = [
-    "ADAPTERS",
-    "SOURCE_GROUP",
-    "HarpSource",
-    "LFPSource",
-    "NWBSource",
-    "OpenEphysSource",
-    "SortedStream",
-    "SorterSource",
-    "SyncSource",
-    "SyncStream",
-    "WaveformSource",
-    "discovered",
-]
+__all__ = ["ADAPTERS", "SOURCE_GROUP", "discovered"]

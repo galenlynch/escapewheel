@@ -266,4 +266,4 @@ class DenseV2:
         return np.frombuffer(buffer, dtype=self.dtype).reshape(self.chunks, order=self._order)
 
 
-__all__ = ["DenseV2", "attrs", "members", "read_array"]
+__all__ = ["DenseV2", "attrs", "attrs_at", "members", "read_array"]

@@ -61,9 +61,8 @@ def test_the_nwb_source_declares_an_offset_it_kept(tmp_path):
     """The -07:53 on a date of birth is Pacific Local Mean Time, and it is kept as stored."""
     from zoneinfo import ZoneInfo
 
-    from escapewheel_writer import Clock
-    from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-    from escapewheel_writer.sources import NWBSource
+    from escapewheel_writer.clock import HARP_TICK_RATE_HZ, Clock
+    from escapewheel_writer.sources.nwb import NWBSource
     from tests import nwbfixture
 
     root = nwbfixture.build(tmp_path)
