@@ -184,7 +184,7 @@ def test_the_reference_cannot_be_directed_elsewhere(tmp_path):
 
 
 def test_a_session_declaring_no_reference_is_refused(tmp_path):
-    with pytest.raises(NotAligned, match="no reference_clock_id"):
+    with pytest.raises(NotAligned, match="declares a reference_clock_id"):
         rows(Fake(tmp_path, ticks=[1000], clocks=[PROBE], reference=None))
 
 
