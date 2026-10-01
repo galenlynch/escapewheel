@@ -22,6 +22,8 @@ from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from .errors import RecipeFault
+
 #: Part 12 §3's group for `escapewheel-portable-v0.1`: the ways rows cross a process boundary.
 #: A build supports every one of them, so no negotiation can fail; an adapter released
 #: independently of a build declares at least one, as a class's `PROTOCOLS` or a document's
@@ -150,7 +152,7 @@ def refusals(
     options: Collection[str],
     terms: Collection[str],
     payloads: Collection[str] = (),
-) -> list[str]:
+) -> list[tuple[RecipeFault, str]]:
     """Return what a build refuses this declaration for, reading it, the registry and the recipe.
 
     Part 12 §7's checks, each firing on its own and naming what is wrong. None of them
@@ -170,42 +172,62 @@ def refusals(
     payloads : collection of str
         The loaded registries' opaque singleton declarations, which an adapter may produce as a
         payload rather than as rows (Part 12 §5).
+
+    Returns
+    -------
+    list of (RecipeFault, str)
+        Each refusal as its code and the message that reports it.
     """
     found = [
-        f"declares protocol {protocol!r}, which is in no group this profile names"
+        (RecipeFault.PROTOCOL_UNKNOWN, f"declares protocol {protocol!r}, which is in no group this profile names")
         for protocol in document.get("protocols", ())
         if protocol not in PROTOCOLS
     ]
     for resource in document.get("produces", ()):
         if resource not in tables and resource not in payloads:
-            found.append(f"produces {resource}, which no loaded registry declares")
+            found.append((RecipeFault.PRODUCES_UNDECLARED, f"produces {resource}, which no loaded registry declares"))
     produced = set(document.get("produces", ()))
     found += [
-        f"contributes {resource}, which its produces does not name"
+        (RecipeFault.CONTRIBUTES_UNPRODUCED, f"contributes {resource}, which its produces does not name")
         for resource in document.get("contributes", ())
         if resource not in produced
     ]
     for field in document.get("states", ()):
         block, _, column = field.partition(".")
+        unresolved = None
         if (resource := BLOCKS.get(block)) is None:
-            found.append(f"states {field}, whose block is not one the recipe carries")
+            unresolved = f"states {field}, whose block is not one the recipe carries"
         elif resource not in tables:
-            found.append(f"states {field}, whose block resolves to {resource}, which no registry declares")
+            unresolved = f"states {field}, whose block resolves to {resource}, which no registry declares"
         elif column not in {c["name"] for c in tables[resource].get("columns", ())}:
-            found.append(f"states {field}, which is no column of {resource}")
+            unresolved = f"states {field}, which is no column of {resource}"
+        if unresolved is not None:
+            found.append((RecipeFault.STATES_UNRESOLVED, unresolved))
     return found + _name_refusals(document, options=options, terms=terms)
 
 
-def _name_refusals(document: Mapping[str, Any], *, options: Collection[str], terms: Collection[str]) -> list[str]:
+def _name_refusals(
+    document: Mapping[str, Any], *, options: Collection[str], terms: Collection[str]
+) -> list[tuple[RecipeFault, str]]:
     """Return what `needs` and `accepts` name that Part 12 §4 does not let them."""
-    found = []
+    found: list[tuple[RecipeFault, str]] = []
     for name in document.get("needs", ()):
         if name == SOURCE_CACHE:
-            found.append(f"needs {name}, which a build supplies only where it has a location, so it is accepted")
+            found.append(
+                (
+                    RecipeFault.NEEDS_SOURCE_CACHE,
+                    f"needs {name}, which a build supplies only where it has a location, so it is accepted",
+                )
+            )
         elif name in _protocol_terms():
-            found.append(f"needs {name}, which a protocol supplies rather than an adapter declaring it")
+            found.append(
+                (
+                    RecipeFault.NEEDS_PROTOCOL_TERM,
+                    f"needs {name}, which a protocol supplies rather than an adapter declaring it",
+                )
+            )
         elif name not in terms and name not in options:
-            found.append(f"needs {name}, neither a term nor an option this entry sets")
+            found.append((RecipeFault.NEEDS_UNFILLED, f"needs {name}, neither a term nor an option this entry sets"))
     # An accepted option is one the recipe may leave unset, so it is never checked for presence --
     # only that it is an option at all, and that it is not already mandatory (Part 12 §7).
     declared_needs = set(document.get("needs", ()))
@@ -213,9 +235,19 @@ def _name_refusals(document: Mapping[str, Any], *, options: Collection[str], ter
         if name == SOURCE_CACHE:
             continue
         if name in terms or name in _protocol_terms():
-            found.append(f"accepts {name}, which is a term a build fills rather than an option a recipe sets")
+            found.append(
+                (
+                    RecipeFault.ACCEPTS_TERM,
+                    f"accepts {name}, which is a term a build fills rather than an option a recipe sets",
+                )
+            )
         elif name in declared_needs:
-            found.append(f"accepts {name}, which it also needs, so it is both optional and required")
+            found.append(
+                (
+                    RecipeFault.ACCEPTS_NEEDED,
+                    f"accepts {name}, which it also needs, so it is both optional and required",
+                )
+            )
     return found
 
 

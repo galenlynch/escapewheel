@@ -10,7 +10,7 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import RegistryRejected
 
 from escapewheel_writer import PacketWriter
-from escapewheel_writer.errors import CommitRefused, ExtensionNotFound, RecipeError
+from escapewheel_writer.errors import CommitRefused, ExtensionNotFound, RecipeError, RecipeFault
 
 EXTENSION = {
     "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
@@ -592,7 +592,8 @@ def test_a_recipe_listing_two_extensions_builds_and_binds_both(tmp_path, registr
     recipe = Recipe.load(
         _extensions_recipe(tmp_path, ["task.json", "cue.json"], {"task.json": EXTENSION, "cue.json": _named("cue")})
     )
-    assert not [p for p in recipe.check(registry.document, [EXTENSION, _named("cue")]) if "extension" in p.message]
+    problems = recipe.check(registry.document, [EXTENSION, _named("cue")])
+    assert not [p for p in problems if p.code is RecipeFault.REPEATED_EXTENSION]
     writer = build(recipe, registry)
     assert writer.commit(recipe.out).passed
     bound = json.loads((recipe.out / "packet.json").read_text())["registries"]

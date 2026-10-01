@@ -17,6 +17,7 @@ from upath.registry import register_implementation
 
 from escapewheel_writer import declaration
 from escapewheel_writer import recipe as recipe_module
+from escapewheel_writer.errors import RecipeFault
 from escapewheel_writer.recipe import TERMS, Recipe
 from escapewheel_writer.sources.store import STORAGE_FORMAT, prune_kept, source_root
 from tests import sorterfixture
@@ -90,8 +91,8 @@ def test_accepts_may_name_source_cache():
 
 def test_needs_naming_source_cache_is_refused_naming_the_adapter(tmp_path):
     document = _document(needs=["root", "source_cache"], accepts=[])
-    (found,) = declaration.refusals(document, tables={}, options=(), terms=TERMS)
-    assert found.startswith("needs source_cache")
+    ((code, _),) = declaration.refusals(document, tables={}, options=(), terms=TERMS)
+    assert code is RecipeFault.NEEDS_SOURCE_CACHE
     (tmp_path / "cached.json").write_text(json.dumps({**document, "protocols": ["stream-v0.1"]}))
     (tmp_path / "session.toml").write_text(f"""
 [packet]
@@ -103,10 +104,9 @@ kind = "cached"
 root = "{tmp_path}"
 delivery = {{ command = ["true"], declaration = "cached.json" }}
 """)
-    problems = [p.message for p in Recipe.load(tmp_path / "session.toml").check(REGISTRY)]
-    assert (
-        "cached needs source_cache, which a build supplies only where it has a location, so it is accepted" in problems
-    )
+    problems = Recipe.load(tmp_path / "session.toml").check(REGISTRY)
+    (refused,) = [p for p in problems if p.code is RecipeFault.NEEDS_SOURCE_CACHE]
+    assert refused.message.startswith("cached needs source_cache")
 
 
 def test_a_recipe_setting_a_term_is_refused(tmp_path):
@@ -114,8 +114,8 @@ def test_a_recipe_setting_a_term_is_refused(tmp_path):
     sorted_root, raw = _sources(tmp_path)
     path = _recipe(tmp_path, sorted_root, raw)
     path.write_text(path.read_text().replace('kind = "sorter"', f'kind = "sorter"\nsource_cache = "{tmp_path}"'))
-    problems = [p.message for p in Recipe.load(path).check(REGISTRY)]
-    assert "source sorter sets 'source_cache', which is a term the build fills rather than an option" in problems
+    (refused,) = [p for p in Recipe.load(path).check(REGISTRY) if p.code is RecipeFault.OPTION_IS_TERM]
+    assert refused.message.startswith("source sorter sets 'source_cache'")
 
 
 # -- what a build supplies -----------------------------------------------------------------

@@ -15,7 +15,7 @@ import pytest
 
 from escapewheel_writer import Clock, declaration, delivery
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.errors import RecipeFault, SourceDefect
 from escapewheel_writer.recipe import TERMS
 from escapewheel_writer.sources import ADAPTERS, NWBSource
 from tests import nwbfixture
@@ -148,14 +148,14 @@ def test_declare_refuses_a_protocol_for_a_class_stating_its_own(monkeypatch, cap
 @pytest.mark.parametrize(
     ("broken", "expected"),
     [
-        ({"protocols": ["carrier-pigeon-v1"]}, "in no group"),
-        ({"produces": ["core.tirals"]}, "no loaded registry declares"),
-        ({"states": ["subject.sbuject_id"]}, "is no column of"),
-        ({"needs": ["open_store"]}, "neither a term nor an option"),
-        ({"needs": ["socket"]}, "a protocol supplies"),
-        ({"accepts": ["units"]}, "a term a build fills"),
-        ({"accepts": ["socket"]}, "a term a build fills"),
-        ({"accepts": ["zone"]}, "both optional and required"),
+        ({"protocols": ["carrier-pigeon-v1"]}, RecipeFault.PROTOCOL_UNKNOWN),
+        ({"produces": ["core.tirals"]}, RecipeFault.PRODUCES_UNDECLARED),
+        ({"states": ["subject.sbuject_id"]}, RecipeFault.STATES_UNRESOLVED),
+        ({"needs": ["open_store"]}, RecipeFault.NEEDS_UNFILLED),
+        ({"needs": ["socket"]}, RecipeFault.NEEDS_PROTOCOL_TERM),
+        ({"accepts": ["units"]}, RecipeFault.ACCEPTS_TERM),
+        ({"accepts": ["socket"]}, RecipeFault.ACCEPTS_TERM),
+        ({"accepts": ["zone"]}, RecipeFault.ACCEPTS_NEEDED),
     ],
 )
 def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected, registry):
@@ -171,7 +171,7 @@ def test_a_build_refuses_what_it_can_check_without_the_adapter(broken, expected,
         options={"zone", "interval_kind"},
         terms=TERMS,
     )
-    assert any(expected in refusal for refusal in found), found
+    assert expected in [code for code, _ in found], found
 
 
 def test_a_sound_declaration_is_refused_for_nothing(registry):

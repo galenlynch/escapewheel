@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 from escapewheel_writer import declaration
+from escapewheel_writer.errors import RecipeFault
 from escapewheel_writer.recipe import TERMS, Recipe
 from escapewheel_writer.sources import discovered
 
@@ -106,13 +107,14 @@ def _checked(tmp_path, text):
     path = tmp_path / "recipe.toml"
     path.write_text(text)
     recipe = Recipe.load(path)
-    return recipe, [p.message for p in recipe.check(registry) if p.level == "error"]
+    return recipe, [p for p in recipe.check(registry) if p.level == "error"]
 
 
 def test_a_subject_both_sources_describe_is_refused_until_the_recipe_prefers_one(tmp_path):
     """No distribution holds a preference for a build (Part 05 §3.3), so the recipe must name one."""
     _, errors = _checked(tmp_path, CONTESTED)
-    assert any(e.startswith("core.subjects is owned by 2 sources (nwb, session)") for e in errors), errors
+    contested = [e for e in errors if e.code is RecipeFault.SEVERAL_OWNERS]
+    assert any(e.message.startswith("core.subjects is owned by 2 sources (nwb, session)") for e in contested), errors
 
 
 def test_a_recipe_preferring_the_session_source_gives_it_the_subject(tmp_path):
@@ -120,7 +122,7 @@ def test_a_recipe_preferring_the_session_source_gives_it_the_subject(tmp_path):
     owners = {spec.kind: set(spec.owns) for spec in recipe.sources}
     assert "core.subjects" in owners["session"]
     assert "core.subjects" not in owners["nwb"]
-    assert not [e for e in errors if "core.subjects" in e], errors
+    assert not [e for e in errors if "core.subjects" in e.message], errors
 
 
 #: Every source that accepts `prefix`, each at one value, with the two contests settled.
@@ -179,4 +181,5 @@ def test_a_session_source_left_unprefixed_in_a_prefixed_build_is_refused(tmp_pat
     """Its calibration devices are the NWB's devices, so it cannot be the one source left at none."""
     prefixes = dict.fromkeys(MIXED_KINDS, "a_") | {"session": None}
     _, errors = _checked(tmp_path, _mixed(**prefixes))
-    assert [e for e in errors if "disagree on prefix" in e and "session unset" in e], errors
+    (refused,) = [e for e in errors if e.code is RecipeFault.PREFIX_DISAGREES]
+    assert "session unset" in refused.message
