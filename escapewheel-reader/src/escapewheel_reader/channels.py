@@ -41,8 +41,8 @@ class ChannelsUndeclared:
 def _rows(packet: PacketLike, resource_id: str, columns: list[str], *, required: bool = False) -> list[dict[str, Any]]:
     """Read named columns from a resource, or nothing where the packet holds it not at all.
 
-    `core.sorting_run_channels` arrived in R83, so a packet built before it carries no such
-    resource and absence is ordinary rather than an error. A column is another matter where
+    `core.sorting_run_channels` is optional, so a packet may carry no such resource and
+    absence is ordinary rather than an error. A column is another matter where
     `required` says the registry requires it: a table missing one is not a run declaring no
     channels, and reading it as one is the silent wrong answer this module exists to prevent.
     """
@@ -129,8 +129,8 @@ def electrode_at(
     Raises
     ------
     UnresolvableChannelIndex
-        Where the run declares no channels, which Part 02 §12.2 requires be reported rather than
-        resolved against `core.electrodes`, or where an index falls outside the list it declares.
+        Where the run declares no channels, which is reported rather than resolved against
+        `core.electrodes`, or where an index falls outside the list it declares.
         The exception's `channels_declared` tells the two apart.
     """
     kept = kept_channels(packet, sorting_run_id=sorting_run_id).get(sorting_run_id)
@@ -138,8 +138,7 @@ def electrode_at(
     if kept is None:
         raise UnresolvableChannelIndex(
             f"sorting run {sorting_run_id} declares no channels, so channel index "
-            f"{asked[0] if asked.size == 1 else f'{asked.size} indices'} resolves to no electrode "
-            f"(Part 02 §12.2)"
+            f"{asked[0] if asked.size == 1 else f'{asked.size} indices'} resolves to no electrode"
         )
     electrodes = np.asarray(kept, dtype=np.int32)
     outside = (asked < 0) | (asked >= electrodes.size)
@@ -158,8 +157,7 @@ def runs_without_channels(packet: PacketLike) -> tuple[ChannelsUndeclared, ...]:
     """Return every sorting run the packet records no channel list for.
 
     Reports rather than raises: a packet whose runs declare no channels is conforming, so the
-    answer a consumer owes its caller is which indices it cannot resolve, not a failed read
-    (Part 02 §12.2).
+    answer a consumer owes its caller is which indices it cannot resolve, not a failed read.
 
     Parameters
     ----------

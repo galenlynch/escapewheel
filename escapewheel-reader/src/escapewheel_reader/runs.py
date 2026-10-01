@@ -61,9 +61,8 @@ class Ambiguity:
 def _rows(packet: PacketLike, resource_id: str, columns: list[str]) -> list[dict[str, Any]]:
     """Read named columns from a resource, or nothing when the packet lacks it or them.
 
-    Every column here arrived in a revision and all of them are optional, so absence is the
-    normal case rather than an error: a packet predating R41 declares no runs at all, and one
-    predating R44 declares runs without scopes.
+    Every column here is optional, so absence is the normal case rather than an error: a packet
+    may declare no runs at all, or runs without scopes.
     """
     if resource_id not in {r.resource_id for r in packet.resources()}:
         return []
@@ -75,7 +74,7 @@ def _rows(packet: PacketLike, resource_id: str, columns: list[str]) -> list[dict
 
 
 def preferences(packet: PacketLike) -> dict[tuple[int | None, str, str, str], int]:
-    """Return the declared preferences, keyed by purpose (Part 01 §2.6).
+    """Return the declared preferences, keyed by purpose.
 
     Parameters
     ----------
@@ -107,8 +106,8 @@ def ambiguities(packet: PacketLike) -> tuple[Ambiguity, ...]:
     grouping that ignores scope reports twelve alternatives where there are none.
 
     A run whose `scope` is null is grouped alone and reported as undeterminable if its activity
-    has other runs, rather than assumed unique (Part 01 §2.6). An `import` run is skipped, since
-    imports are not alternatives to one another (Part 05 §12).
+    has other runs, rather than assumed unique. An `import` run is skipped, since imports are
+    not alternatives to one another.
 
     Parameters
     ----------
@@ -177,9 +176,9 @@ def preferred_run(
     packet : Packet
         The packet to read.
     activity_type : str
-        Which kind of output, e.g. ``spike_sorting``. Open (Part 02 §9.3).
+        Which kind of output, e.g. ``spike_sorting``. An open vocabulary.
     scope_kind : str
-        The resource whose primary key `scope` holds, as a dotted resource ID (R49 §2.2) --
+        The resource whose primary key `scope` holds, as a dotted resource ID --
         ``core.probes``, ``core.sorting_runs``, ``core.sessions``.
     scope : str
         The thing the run is about: the scoped row's key where that key is carried, and its
@@ -195,7 +194,7 @@ def preferred_run(
     Raises
     ------
     AmbiguousRun
-        If several runs share the purpose and none is preferred (Part 01 §2.6).
+        If several runs share the purpose and none is preferred.
     NotDeclared
         If no run matches the purpose at all.
     """
@@ -219,11 +218,11 @@ def preferred_run(
         if declared is not None:
             return int(declared)
     if len(matching) == 1:
-        # Part 01 §2.6: exactly one run is the preference by construction.
+        # Exactly one run is the preference by construction.
         return int(matching[0]["processing_run_id"])
     raise AmbiguousRun(
         f"{len(matching)} runs produced {activity_type!r} for {scope!r} and none is preferred; "
-        f"declare one in {CORE_PREFERRED_RUNS} (Part 01 §2.6)"
+        f"declare one in {CORE_PREFERRED_RUNS} (Part 05 §12)"
     )
 
 
@@ -235,11 +234,10 @@ def check(packet: PacketLike, activities: Iterable[str] | None = None) -> None:
     probe and fixing them one error at a time is twelve round trips.
 
     **The two states are treated differently on purpose.** A packet that records scopes and
-    still has two runs for one of them is unresolved, and Part 01 §2.6 forbids choosing, so it
-    raises. A packet that records no scopes cannot be judged either way, and Part 01 §2.6 asks for
-    that to be *reported* distinctly rather than refused -- the two call for different fixes,
-    declare a preference against record the scopes, and an exception for both would send a
-    writer to the wrong one.
+    still has two runs for one of them is unresolved, and a consumer may not choose, so it
+    raises. A packet that records no scopes cannot be judged either way, which is *reported*
+    distinctly rather than refused -- the two call for different fixes, declare a preference
+    against record the scopes, and an exception for both would send a writer to the wrong one.
 
     Parameters
     ----------
@@ -248,7 +246,7 @@ def check(packet: PacketLike, activities: Iterable[str] | None = None) -> None:
     activities : iterable of str, optional
         Restrict to these activity types. An accessor passes the activities that produce what
         it returns, so a second pose-estimation run does not stop anyone reading units. This
-        is not the core-table mapping R44 §2.4 rejects: an accessor already names one
+        is no general map from an activity to its tables: an accessor already names one
         resource, and this names what produces it. Checking everything is the default.
 
     Raises
@@ -273,14 +271,14 @@ def check(packet: PacketLike, activities: Iterable[str] | None = None) -> None:
         lines = "\n  ".join(str(a) for a in unknown)
         warnings.warn(
             f"cannot tell whether these runs are alternatives or complementary:\n  {lines}\n"
-            f"record each run's scope in {CORE_PROCESSING_RUNS} (R44 §2.1)",
+            f"record each run's scope in {CORE_PROCESSING_RUNS} (Part 05 §12)",
             stacklevel=2,
         )
     if unresolved:
         lines = "\n  ".join(str(a) for a in unresolved)
         raise AmbiguousRun(
             f"the packet does not say which run to read:\n  {lines}\n"
-            f"declare a preference in {CORE_PREFERRED_RUNS} (Part 01 §2.6)"
+            f"declare a preference in {CORE_PREFERRED_RUNS} (Part 05 §12)"
         )
 
 
