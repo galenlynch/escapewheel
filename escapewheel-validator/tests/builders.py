@@ -397,3 +397,19 @@ def add_extension(root, *, tables=None, mutate=None):
 def verdicts_of(report, *registries):
     """Return the packet's verdict, then each named registry's."""
     return report.verdict(), *(report.verdict(name) for name in registries)
+
+
+#: A digest that is no held manifest's.
+OTHER_SHA = "0" * 64
+
+
+def replaced_item(packet_id="session_001", packet_version="0.1.0", sha256=OTHER_SHA, **extra):
+    """One entry of a manifest's `replaces`: a packet version, named by its manifest's digest."""
+    return {"packet_id": packet_id, "packet_version": packet_version, "sha256": sha256, **extra}
+
+
+def set_replaces(root, version, *items):
+    """Rewrite the packet's manifest at `version`, naming `items` as the packets it replaces."""
+    path = root / "packet.json"
+    manifest = json.loads(path.read_text()) | {"packet_version": version, "replaces": list(items)}
+    path.write_text(json.dumps(manifest, indent=2) + "\n")

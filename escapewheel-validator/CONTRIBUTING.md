@@ -152,7 +152,8 @@ Every module declares `__all__`, and a name is public only through one.
   an adapter package import it from that module, and `api.rst` lists it under "Support tier".
 
 A bare name left out of `__all__` is for the validator's own modules and tests, and an underscore
-name for its own module and the test file named for it; another package imports neither. A module
+name for its own module and the test file named for it; another package imports neither. A helper
+two test files share has a public name in `tests/builders.py` or `tests/conftest.py`. A module
 exports only names it defines. The modules copied from the specification's tree keep the
 `__all__` their source declares. `tests/test_surface.py` holds the tiers against `api.rst` in both
 directions, and holds the validator to the reader's two tiers in what it imports from the reader.

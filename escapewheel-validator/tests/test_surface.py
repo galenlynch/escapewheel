@@ -199,12 +199,14 @@ def _named_for(test, module):
 
 
 def test_a_test_uses_the_underscore_names_of_its_own_module_only():
-    """An underscore name is for its module, and for the test file named for that module."""
+    """An underscore name is for its module, and for the test file named for that module.
+
+    So a helper two test files share has a public name, in `builders.py` or `conftest.py`.
+    """
     for path in sorted(Path(__file__).parent.glob("*.py")):
         for level, source, name in _imports(path.read_text()):
             if not name.startswith("_") or name.startswith("__"):
                 continue
             package, _, module = source.partition(".")
-            assert level or package != READER, f"{path.name}: {source}.{name}"
-            if not level and package == PACKAGE:
-                assert _named_for(path.stem, module), f"{path.name}: {source}.{name}"
+            assert not level and package == PACKAGE, f"{path.name}: {'.' * level}{source}.{name}"
+            assert _named_for(path.stem, module), f"{path.name}: {source}.{name}"

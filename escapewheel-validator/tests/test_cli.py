@@ -14,8 +14,7 @@ from escapewheel_validator import Report
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.scripts import cli
 
-from .builders import add_extension
-from .test_replaces import _item, _replacing
+from .builders import add_extension, replaced_item, set_replaces
 
 
 def test_validate_reports_a_conforming_packet(packet_root, capsys):
@@ -80,7 +79,7 @@ def test_validate_prints_a_refusal_in_place_of_a_traceback(packet_root, monkeypa
 
 def test_validate_treats_an_unreadable_replaced_manifest_as_a_bad_argument(packet_root, tmp_path, capsys):
     """An absent path and an unparsable manifest are one refusal, so they exit alike."""
-    _replacing(packet_root, "1.0.0", _item())
+    set_replaces(packet_root, "1.0.0", replaced_item())
     unparsable = tmp_path / "unparsable"
     unparsable.mkdir()
     (unparsable / "packet.json").write_text("not json")
