@@ -37,7 +37,7 @@ class Discriminator:
 
     @property
     def shape(self) -> str:
-        """Which of Part 02 §8.3's two resolutions applies: paired value, or shared key without one."""
+        """Which of the two resolutions applies: paired value, or shared key without one."""
         for field, name in SHAPES.items():
             if getattr(self, field) is not None:
                 return name
@@ -49,7 +49,7 @@ class Discriminator:
 
         Usually the table carrying the column. Where `discriminates_via` is declared the
         discriminator sits one reference away, so the specialised rows are the referencing
-        table's (Part 02 §8.3).
+        table's.
         """
         if self.discriminates_via is None:
             return self.resource
@@ -66,7 +66,7 @@ class Unresolved:
 
     @property
     def level(self) -> str:
-        """What Part 02 §8.3 makes of it.
+        """What the discriminator's `resolves` makes of it.
 
         A row declaring no kind is **undeterminable** whatever `resolves` says: the packet has
         not named a resource, so there is nothing to find missing.
@@ -95,9 +95,9 @@ def _tables(document: Mapping[str, Any] | None) -> dict[str, Any]:
 def registries(packet: PacketLike) -> dict[str, Any]:
     """Every table the packet's own registries declare, core and extensions together.
 
-    Built over every registry a packet carries, which Part 02 §8.3 requires of anything reading a
-    discriminator: an extension kind matching no branch and passing in silence is the one case the
-    mechanism exists to cover.
+    Built over every registry a packet carries, as anything reading a discriminator must be: an
+    extension kind matching no branch and passing in silence is the one case the mechanism exists
+    to cover.
     """
     tables = _tables(packet.registry)
     for document in packet.extensions().values():
@@ -140,8 +140,8 @@ def _one(packet: PacketLike, resource_id: str, column: str | None) -> Discrimina
 def kinds(packet: PacketLike, resource_id: str, column: str | None = None) -> dict[str | None, int]:
     """Each value the rows name, and how many name it.
 
-    `None` counts the rows declaring no kind, which Part 02 §8.3 makes undeterminable rather than
-    unresolvable and which a consumer reports apart from a value naming nothing.
+    `None` counts the rows declaring no kind, which are undeterminable rather than unresolvable
+    and which a consumer reports apart from a value naming nothing.
     """
     found = _one(packet, resource_id, column)
     values = packet.table(found.resource, columns=[found.column]).column(found.column).to_pylist()
@@ -154,9 +154,9 @@ def kinds(packet: PacketLike, resource_id: str, column: str | None = None) -> di
 def unresolved(packet: PacketLike) -> list[Unresolved]:
     """Every kind a packet names and does not hold, and every row naming none.
 
-    Reports rather than raises. Part 02 §8.3 makes an unresolvable value a defect only where
-    `resolves` is `required`; where it is `optional` the packet is saying it does not hold that
-    resource, which is a fact about the packet and not a fault in it.
+    Reports rather than raises. An unresolvable value is a defect only where `resolves` is
+    `required`; where it is `optional` the packet is saying it does not hold that resource, which
+    is a fact about the packet and not a fault in it.
     """
     held = {r.resource_id for r in packet.resources()}
     out = []
@@ -173,25 +173,25 @@ def unresolved(packet: PacketLike) -> list[Unresolved]:
 def _reference_back(packet: PacketLike, source: str, target: str) -> tuple[list[str], list[str]]:
     """Find the specialised table's one reference to the discriminator's, as (its columns, the key's).
 
-    Part 02 §8.3 requires the table `discriminates_via` names to declare exactly one.
+    The table `discriminates_via` names declares exactly one.
     """
     for reference in registries(packet).get(source, {}).get("references", []):
         if reference.get("resource") == target:
             return list(reference["columns"]), list(reference["resource_columns"])
-    raise NotDeclared(f"{source} declares no reference to {target}, which discriminates_via requires (Part 02 §8.3)")
+    raise NotDeclared(f"{source} declares no reference to {target}, which discriminates_via requires")
 
 
 def _specialising_reference(packet: PacketLike, kind: str, found: Discriminator) -> tuple[list[str], list[str]]:
     """Find the named resource's specialising reference naming the discriminator, as (its columns, the key's).
 
-    Part 02 §8.3 has shared-key resolution join through that reference; a named resource declaring
-    none is not a specialisation of the discriminator, whatever else it references.
+    Shared-key resolution joins through that reference; a named resource declaring none is not
+    a specialisation of the discriminator, whatever else it references.
     """
     named = f"{found.resource}.{found.column}"
     for reference in registries(packet).get(kind, {}).get("references", []):
         if reference.get("specialises") == named:
             return list(reference["columns"]), list(reference["resource_columns"])
-    raise NotDeclared(f"{kind} declares no specialising reference naming {named} (Part 02 §8.3)")
+    raise NotDeclared(f"{kind} declares no specialising reference naming {named}")
 
 
 def _key(packet: PacketLike, resource: str) -> list[str]:
@@ -200,7 +200,7 @@ def _key(packet: PacketLike, resource: str) -> list[str]:
 
 
 def _paired_target(packet: PacketLike, kind: str, found: Discriminator) -> str:
-    """Find the column a paired value joins to (Part 02 §8.3).
+    """Find the column a paired value joins to.
 
     An identifier value holds the named key's own value, so it joins the key. A string value joins
     the key where it is carried, and where it is assigned the `*_name` its owner carries, since a
@@ -216,9 +216,7 @@ def _paired_target(packet: PacketLike, kind: str, found: Discriminator) -> str:
         return key[0]
     named = f"{key[0].removesuffix('_id')}_name"
     if named not in declared_columns:
-        raise NotDeclared(
-            f"{kind} keys on an assigned {key[0]} and carries no {named} to match a paired value against (Part 02 §8.3)"
-        )
+        raise NotDeclared(f"{kind} keys on an assigned {key[0]} and carries no {named} to match a paired value against")
     return named
 
 

@@ -24,13 +24,13 @@ from .errors import AxisFault, UnresolvableAxis
 from .protocols import PacketLike
 from .resource_ids import CORE_ARRAY_CHANNELS
 
-#: The column whose value declares each coordinate form, as Part 03 §6.3's one-form rule counts them.
+#: The column whose value declares each coordinate form; an axis declares one.
 FORMS = ("origin_tick", "origin_value", "coordinate_array_asset_id", "coordinate_resource")
 
 
 @dataclass(frozen=True)
 class TickAxis:
-    """A regular axis on a clock: position *k* is tick ``origin_tick + k * step`` (Part 03 §6.3)."""
+    """A regular axis on a clock: position *k* is tick ``origin_tick + k * step``."""
 
     clock_id: int
     origin_tick: int
@@ -70,7 +70,7 @@ class IrregularAxis:
 
 @dataclass(frozen=True)
 class LabelledAxis:
-    """An axis whose positions stand for rows of `resource_id`, each named by a label (Part 03 §6.3).
+    """An axis whose positions stand for rows of `resource_id`, each named by a label.
 
     `rows` has one row per position in position order: the label, in a column named `key` after
     the key it holds, by_position to the named row's columns. On a dependent axis the labels change
@@ -192,7 +192,7 @@ def _labelled(
     else:
         raise UnresolvableAxis(
             AxisFault.DEPENDENCY_CHAIN,
-            f"axis {name!r} depends on axis {depends_on}, not on another independent axis (Part 03 §6.3)",
+            f"axis {name!r} depends on axis {depends_on}, not on another independent axis",
         )
     length = shape[axis]
     order = ["depends_on_position_index", "position_index"]
@@ -203,8 +203,7 @@ def _labelled(
     ):
         raise UnresolvableAxis(
             AxisFault.LABEL_COUNT,
-            f"axis {name!r} has {ours.num_rows} label rows for its {extent * length} positions, "
-            "not one at each (Part 03 §6.3)",
+            f"axis {name!r} has {ours.num_rows} label rows for its {extent * length} positions, not one at each",
         )
     if kind not in _held(packet):
         raise UnresolvableAxis(
@@ -251,17 +250,15 @@ def _coordinates(
     catalog: pa.Table,
     labels: tuple[Discriminator, pa.Table] | None,
 ) -> Coordinates:
-    """Return the one form an axis row declares (Part 03 §6.3)."""
+    """Return the one form an axis row declares."""
     name = row["dimension_name"]
     forms = [form for form in FORMS if row[form] is not None]
     if len(forms) != 1:
-        raise UnresolvableAxis(
-            AxisFault.FORM_COUNT, f"axis {name!r} declares {len(forms)} coordinate forms, not one (Part 03 §6.3)"
-        )
+        raise UnresolvableAxis(AxisFault.FORM_COUNT, f"axis {name!r} declares {len(forms)} coordinate forms, not one")
     if forms[0] != "coordinate_resource" and row["depends_on_axis_index"] is not None:
         raise UnresolvableAxis(
             AxisFault.DEPENDENCY_UNLABELLED,
-            f"axis {name!r} depends on another axis and has no labels to vary (Part 03 §6.3)",
+            f"axis {name!r} depends on another axis and has no labels to vary",
         )
     if forms[0] == "origin_tick":
         if row["step_tick_num"] is None or row["clock_id"] is None:
