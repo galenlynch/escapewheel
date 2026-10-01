@@ -1232,7 +1232,7 @@ def test_an_external_reference_may_resolve_under_the_packet_root(tmp_path, regis
         "core.probe.lfp",
         ExternalArray(array_asset_id="probe.lfp", declaration_id="core.array_asset_instances", uri="beside/l%c3%a9"),
     )
-    assert writer._referenced_arrays["core.probe.lfp"].uri == "beside/l%C3%A9"
+    assert writer._attachments.arrays["core.probe.lfp"].uri == "beside/l%C3%A9"
 
 
 def test_a_referenced_codec_is_not_projected_into_the_manifest(tmp_path, registry, minimal):

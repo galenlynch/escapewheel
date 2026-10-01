@@ -586,7 +586,7 @@ def test_a_delivered_array_binds_to_the_catalog_row_carrying_its_name(registry, 
         written=tmp_path / "core.waveform_mean.zarr",
     )
     writer.add_array("core.waveform_mean", delivered)
-    bound = writer._staged_arrays["core.waveform_mean"]
+    bound = writer._attachments.staged["core.waveform_mean"]
     assert (bound.declaration_id, bound.array_asset_id) == ("core.array_asset_instances", "mean")
 
 
