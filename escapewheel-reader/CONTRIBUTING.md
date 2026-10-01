@@ -26,8 +26,9 @@ workaround here.** The current v0.2 text continues to govern until the change is
 incorporated. Several revisions exist only because an implementation attempt exposed something —
 that is the process working, not a detour.
 
-Cite the current specification section for a behavioral rule. Add an accepted-revision citation
-where the code also needs to preserve why the rule exists.
+Cite the current specification section for a behavioral rule, once, at the definition that rule
+fixes. Code and tests cite no revision: why a rule exists is the specification's to say, and this
+guide and the design notes may name the revision where the reasoning helps a contributor.
 
 ## What belongs in the reader
 

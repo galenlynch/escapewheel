@@ -644,5 +644,6 @@ Found and left as they were:
 - Part 01 §3.9 does not state the estimator used past a terminal anchor, though the ledger places
   its clause there. Part 01 §3.9 also has a consumer report ticks it cannot map, and
   `clocks.on_clock` drops them as `analysis.spike_events` does under Part 06 §4.
-- The reader's contributing guide and design notes still ask for and carry revision citations.
+- The reader's contributing guide and design notes name revisions for rationale. They are
+  documentation, which §3.3 does not govern, and the guide now says that code cites none.
 - The validator's tests patch the reader's private `ordering._overrides`.
