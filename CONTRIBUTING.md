@@ -53,14 +53,16 @@ extensions/<id>/*.toml ───registries.py build──> extensions/<id>.json
 spec/artifacts/manifest.schema.json ─build.py─> spec/artifacts/resources.schema.json
                                     └─build.py─> Part 04 §§3, 4.1, 8 and 9 field tables
 
+spec/artifacts/physical_profiles/*.json ─build.py─> Part 03's interface and overriding-order tables
+
 spec/artifacts/*, spec/tools/checkers/* ──tools/copies.py──> each package's copies
 ```
 
 The registry documents, `tables.md`, the source guide's generated regions, the delivery schema,
-Part 04's field tables, and the packages' copies are **build artifacts that happen to be
-committed**. They are committed because a packet binds the registry and a reviewer should see it
-change; they are not files to edit. The delivery schema is the manifest's resource entry without
-`validation_state` and `derived_from`, so change the manifest schema and rebuild.
+Part 03's and Part 04's generated tables, and the packages' copies are **build artifacts that
+happen to be committed**. They are committed because a packet binds the registry and a reviewer
+should see it change; they are not files to edit. The delivery schema is the manifest's resource
+entry without `validation_state` and `derived_from`, so change the manifest schema and rebuild.
 
 The registry regenerates from its source: delete `logical_schemas.json` and `tables.md`, run
 `uv run --project spec/tools python spec/tools/build.py`, and both come back byte-identical.
@@ -253,7 +255,7 @@ separately adds checks of the tree's other artifacts. `tools/facts.py` counts th
 and those checks:
 
 <!-- BEGIN facts: checks -->
-29 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 36 further checks of the specification's tree
+29 registry-contract invariants, applied by class to core and each of the 4 extension registries, and 38 further checks of the specification's tree
 <!-- END facts: checks -->
 
 | check | catches |
@@ -271,6 +273,7 @@ and those checks:
 | `conformance/registries/check.py` | a core table set departing from the Part 02 ledger, or a Tier 2 rule that does not execute |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
 | `revisions/ledger.py` | an accepted clause with no disposition or an unresolved current-owner or registry target |
+| `spec/tools/build.py --check` | a file `build.py` writes that no longer reproduces its source; `check.py` makes the same comparison of each |
 | `spec/tools/columns.py --check` | a column table in a part that no longer reproduces the registry |
 | `spec/tools/combine.py --check` | a single-file spec rendering that no longer matches its parts |
 | `tools/facts.py` | a count in a root document that no longer matches what it counts |

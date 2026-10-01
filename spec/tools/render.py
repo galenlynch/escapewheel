@@ -5,8 +5,12 @@ content and cannot drift from it.
 
 It is not a standalone specification. The repository authority model identifies the sources that
 bind; this rendering exposes the generated registry content for inspection.
+
+    python render.py            # write the listing and the source guide's regions
+    python render.py --check    # write nothing, and fail where either is stale
 """
 
+import argparse
 import json
 import re
 from collections import Counter
@@ -204,14 +208,33 @@ def fill(text: str, filled: dict[str, str]) -> str:
     return REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", text)
 
 
+def outputs(registry: dict[str, Any]) -> dict[Path, str]:
+    """Return each file rendered from `registry` and the text it holds when current."""
+    return {OUT: render(registry), README: fill(README.read_text(), regions(registry))}
+
+
 def main() -> tuple[Path, Path]:
     """Write `tables.md` and refill the README's generated regions, beside the registry."""
-    registry = json.loads(REGISTRY.read_text())
-    OUT.write_text(render(registry))
-    README.write_text(fill(README.read_text(), regions(registry)))
+    for path, text in outputs(json.loads(REGISTRY.read_text())).items():
+        path.write_text(text)
     return OUT, README
 
 
-if __name__ == "__main__":
+def _run(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument("--check", action="store_true", help="write nothing, and fail where a rendering is stale")
+    if parser.parse_args(argv).check:
+        rendered = outputs(json.loads(REGISTRY.read_text()))
+        stale = [path for path, text in rendered.items() if not path.is_file() or path.read_text() != text]
+        for path in stale:
+            print(f"{path.name} is stale; run `python build.py`")
+        if not stale:
+            print(f"{', '.join(path.name for path in rendered)} current")
+        return 1 if stale else 0
     for path in main():
         print(f"wrote {path.name}: {len(path.read_text().splitlines())} lines")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_run())

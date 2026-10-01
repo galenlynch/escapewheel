@@ -15,7 +15,7 @@ import jsonschema
 import assemble
 import conventions
 import render
-from build import delivery_schema, fill_manifest_tables
+from build import delivery_schema, fill_manifest_tables, fill_physical_profile
 from canonical import dumps
 from checkers.descriptor import check_physical_profile, override_errors
 from checkers.registry_document import check_registry_context_bytes
@@ -225,6 +225,24 @@ def projection_checks(check: Checks, registry: dict) -> None:
         []
         if _json(ARTIFACTS / "resources.schema.json") == delivery_schema(manifest_schema)
         else ["resources.schema.json is stale; run build.py"],
+    )
+
+    # Part 03's two tables project the profile descriptor the same way.
+    part03 = (PARTS / "03_portable_physical_profile.md").read_text()
+    profile = _json(ARTIFACTS / "physical_profiles/escapewheel-portable-v0.1.json")
+    check(
+        "Part 03's generated regions project the physical profile",
+        []
+        if fill_physical_profile(part03, profile) == part03
+        else ["03_portable_physical_profile.md is stale; run build.py"],
+    )
+
+    listing = INFORMATIVE / "tables.md"
+    check(
+        "the rendered listing is what the registry renders to",
+        []
+        if listing.is_file() and render.render(registry) == listing.read_text()
+        else ["informative/tables.md is stale; run build.py"],
     )
 
     # A count restated in prose goes stale, so the source guide's are generated and compared.

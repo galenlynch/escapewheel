@@ -4,17 +4,28 @@
 and this script refreshes Part 03's and Part 04's projections and the delivery schema. Every output
 is committed and none is edited by hand. A package copies what it uses from the tree itself, so
 nothing here writes outside it.
+
+    python build.py            # write every output
+    python build.py --check    # write nothing, and fail where an output is stale
 """
 
+import argparse
 import json
 from pathlib import Path
 
 import assemble
+import render
+from canonical import dumps
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
 ARTIFACTS = TREE / "artifacts"
 PARTS = TREE / "parts"
+PROFILE = ARTIFACTS / "physical_profiles/escapewheel-portable-v0.1.json"
+MANIFEST = ARTIFACTS / "manifest.schema.json"
+DELIVERY = ARTIFACTS / "resources.schema.json"
+PART_03 = PARTS / "03_portable_physical_profile.md"
+PART_04 = PARTS / "04_packet_catalog.md"
 
 
 def _replace_region(text: str, name: str, rows: list[str]) -> str:
@@ -24,12 +35,10 @@ def _replace_region(text: str, name: str, rows: list[str]) -> str:
     return before + "\n".join([begin, *rows, end]) + after
 
 
-def render_physical_profile() -> Path:
-    """Refresh Part 03's kind-to-interface and overriding-order projections."""
-    descriptor = json.loads((ARTIFACTS / "physical_profiles/escapewheel-portable-v0.1.json").read_text())
-    path = PARTS / "03_portable_physical_profile.md"
+def fill_physical_profile(text: str, descriptor: dict) -> str:
+    """Replace Part 03's generated regions with their projections of the profile descriptor."""
     text = _replace_region(
-        path.read_text(),
+        text,
         "PHYSICAL PROFILE",
         [
             "| logical kind | generic interface |",
@@ -41,7 +50,7 @@ def render_physical_profile() -> Path:
         ],
     )
     tables = descriptor["interfaces"][descriptor["kind_interfaces"]["table"]]
-    text = _replace_region(
+    return _replace_region(
         text,
         "OVERRIDING ORDERS",
         [
@@ -53,8 +62,12 @@ def render_physical_profile() -> Path:
             ),
         ],
     )
-    path.write_text(text)
-    return path
+
+
+def render_physical_profile() -> Path:
+    """Refresh Part 03's kind-to-interface and overriding-order projections."""
+    PART_03.write_text(fill_physical_profile(PART_03.read_text(), json.loads(PROFILE.read_text())))
+    return PART_03
 
 
 #: Part 04's informative field tables, by region name, and the schema object each projects.
@@ -211,23 +224,54 @@ def delivery_schema(manifest: dict) -> dict:
     }
 
 
+def _delivery_text(manifest: dict) -> str:
+    return json.dumps(delivery_schema(manifest), indent=2) + "\n"
+
+
 def render_manifest() -> list[Path]:
     """Refresh Part 04's field tables and the delivery schema from the manifest schema."""
-    manifest = json.loads((ARTIFACTS / "manifest.schema.json").read_text())
-    part = PARTS / "04_packet_catalog.md"
-    part.write_text(fill_manifest_tables(part.read_text(), manifest))
-    delivery = ARTIFACTS / "resources.schema.json"
-    delivery.write_text(json.dumps(delivery_schema(manifest), indent=2) + "\n")
-    return [part, delivery]
+    manifest = json.loads(MANIFEST.read_text())
+    PART_04.write_text(fill_manifest_tables(PART_04.read_text(), manifest))
+    DELIVERY.write_text(_delivery_text(manifest))
+    return [PART_04, DELIVERY]
 
 
-if __name__ == "__main__":
+def stale() -> list[Path]:
+    """Return each file the build writes whose content it would change.
+
+    Each output is compared with what its source yields now, so the listing and the source guide
+    are judged against the registry the source assembles to rather than the committed one.
+    """
+    manifest = json.loads(MANIFEST.read_text())
+    registries = {out: assemble.assemble(directory) for directory, out in assemble.sources().items()}
+    expected = {out: dumps(document) for out, document in registries.items()}
+    expected |= render.outputs(registries[render.REGISTRY])
+    expected[PART_03] = fill_physical_profile(PART_03.read_text(), json.loads(PROFILE.read_text()))
+    expected[PART_04] = fill_manifest_tables(PART_04.read_text(), manifest)
+    expected[DELIVERY] = _delivery_text(manifest)
+    return [path for path, text in expected.items() if not path.is_file() or path.read_text() != text]
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Write every output, or with `--check` report each stale one and write nothing."""
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument("--check", action="store_true", help="write nothing, and fail where an output is stale")
+    if parser.parse_args(argv).check:
+        paths = stale()
+        for path in paths:
+            print(f"{path.relative_to(TREE)} is stale; run `python build.py`")
+        if not paths:
+            print("every file build.py writes is current")
+        return 1 if paths else 0
+
     for path in assemble.main():
         print(f"wrote {path.relative_to(TREE)}")
-
     # Rendered here rather than by hand, so the readable form cannot drift from the content.
-    import render
-
     print(f"wrote {', '.join(p.name for p in render.main())}")
     print(f"wrote {render_physical_profile().relative_to(TREE)}")
     print(f"wrote {', '.join(str(p.relative_to(TREE)) for p in render_manifest())}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
