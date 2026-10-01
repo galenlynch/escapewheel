@@ -19,9 +19,9 @@ from . import duck
 from .errors import RegistryFault, RegistryUnavailable, ResourceNotFoundError
 from .location import Location, Rewrite, Sources, resolve_sources
 from .manifest import Manifest, Resource
+from .protocols import Memo
 from .registries import acquire, parse
 from .resources import ArrayResource, TableResource
-from .runs import Ambiguity
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
@@ -57,12 +57,7 @@ class Packet:
         resolved = tuple(replace(resource, resolve=self._declaration) for resource in manifest.resources)
         self._manifest = replace(manifest, resources=resolved)
         self._by_id = {r.resource_id: r for r in resolved}
-        self._anchor_cache: dict[str, Any] | None = None
-        self._reference_cache: int | None = None
-        self._origin_cache: dict[int | None, tuple[int, int, int]] = {}
-        self._bound_cache: float | None = None
-        self._ambiguity_cache: tuple[Ambiguity, ...] | None = None
-        self._support_cache: pa.Table | None = None
+        self._memo = Memo()
 
     @property
     def root(self) -> Path:
@@ -89,6 +84,11 @@ class Packet:
     def sessions(self) -> tuple[str, ...]:
         """Every session this packet contains."""
         return self._manifest.sessions
+
+    @property
+    def memo(self) -> Memo:
+        """What the free functions have read from this packet and keep for its lifetime."""
+        return self._memo
 
     def __repr__(self) -> str:
         """Return a short representation naming the packet and its resource count."""
@@ -343,6 +343,8 @@ class Packet:
                 declarations.update(resources)
         resolved = tuple(replace(resource, resolve=declarations.get) for resource in self._manifest.resources)
         rebound = copy(self)
+        # A shallow copy: each keeps its own answers from here on, and the two share `origins`.
+        rebound._memo = copy(self._memo)
         rebound._manifest = replace(self._manifest, resources=resolved)
         rebound._by_id = {resource.resource_id: resource for resource in resolved}
         return rebound

@@ -22,7 +22,7 @@ import pyarrow.compute as pc
 from . import clocks
 from .errors import NotAligned, NotDeclared
 from .observation import attach_support, unit_windows
-from .protocols import PacketLike
+from .protocols import Memo, PacketLike
 from .resource_ids import CORE_EVENT_STREAMS, CORE_EVENTS, CORE_INTERVALS, CORE_SPIKE_EVENTS, CORE_UNITS
 from .runs import check as _check_runs
 
@@ -352,13 +352,13 @@ def _unit_clocks(packet: PacketLike, keys: Sequence[str], **narrow: Any) -> dict
 def _unit_support(packet: PacketLike, unit_id: int, session_id: int | None) -> pa.Table:
     """Return one unit's observation windows, from the packet's resolved set (R38).
 
-    The resolution is read once per packet and filtered here, because it reads three tables
-    and this is called per unit.
+    The resolution is read once into the packet's memo and filtered here, because it reads
+    three tables and this is called per unit.
     """
-    windows = getattr(packet, "_support_cache", None)
-    if windows is None:
-        windows = unit_windows(packet)
-        packet._support_cache = windows  # type: ignore[attr-defined]
+    memo = Memo.of(packet)
+    if memo.unit_windows is None:
+        memo.unit_windows = unit_windows(packet)
+    windows = memo.unit_windows
     if not windows.num_rows:
         return windows
     unit_column = windows.column("unit_id")

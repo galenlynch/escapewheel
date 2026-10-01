@@ -1,6 +1,7 @@
 """What a function taking a packet asks of it.
 
 - :class:`PacketLike` -- the members of :class:`~escapewheel_reader.Packet` the free functions use.
+- :class:`Memo` -- what those functions have read from one packet and keep for its lifetime.
 
 A function typed against it accepts a :class:`~escapewheel_reader.Packet` or anything else that
 resolves and reads resources the same way, such as a stand-in over in-memory tables.
@@ -8,24 +9,76 @@ resolves and reads resources the same way, such as a stand-in over in-memory tab
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Collection
 
+    import numpy as np
     import pyarrow as pa
     import pyarrow.dataset as pads
 
     # By name: inside the class body `duckdb` is the method.
     from duckdb import DuckDBPyConnection
+    from numpy.typing import NDArray
 
     from .manifest import Resource
     from .packet import Predicate
     from .resources import ArrayResource, TableResource
+    from .runs import Ambiguity
+
+
+@dataclass
+class Memo:
+    """What the free functions have read from one packet, kept for as long as the packet is.
+
+    The packet owns it because each answer is a property of the packet's bytes, so nothing here
+    is ever invalidated. A field is None, or `origins` lacks the key, until its function first
+    answers.
+
+    Attributes
+    ----------
+    anchors : dict or None
+        :func:`~escapewheel_reader.clocks.anchors`: each clock's anchor ticks and their parents.
+    bound : float or None
+        :func:`~escapewheel_reader.clocks.declared_bound`. Unset while the sessions table cannot
+        be read.
+    reference_clock : int or None
+        :func:`~escapewheel_reader.clocks.reference_clock` with no session named.
+    origins : dict
+        :func:`~escapewheel_reader.clocks.origin` by the `session_id` it was asked for, None
+        included.
+    ambiguities : tuple of Ambiguity or None
+        :func:`~escapewheel_reader.runs.ambiguities`.
+    unit_windows : pyarrow.Table or None
+        :func:`~escapewheel_reader.unit_windows` over every unit, which
+        :func:`~escapewheel_reader.spike_times` filters per unit.
+    """
+
+    anchors: dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]] | None = None
+    bound: float | None = None
+    reference_clock: int | None = None
+    origins: dict[int | None, tuple[int, int, int]] = field(default_factory=dict)
+    ambiguities: tuple[Ambiguity, ...] | None = None
+    unit_windows: pa.Table | None = None
+
+    @classmethod
+    def of(cls, packet: object) -> Memo:
+        """Return the packet's memo, or an empty one for a stand-in that keeps none.
+
+        Such a stand-in is read again on every call.
+        """
+        kept = getattr(packet, "memo", None)
+        return kept if isinstance(kept, cls) else cls()
 
 
 class PacketLike(Protocol):
     """Resolution and reading of one packet's resources, as the free functions use them."""
+
+    @property
+    def memo(self) -> Memo:
+        """What the free functions have read from this packet and keep."""
 
     @property
     def registry(self) -> dict[str, Any]:
@@ -68,4 +121,4 @@ class PacketLike(Protocol):
         """Register table resources as views and return the connection."""
 
 
-__all__ = ["PacketLike"]
+__all__ = ["Memo", "PacketLike"]

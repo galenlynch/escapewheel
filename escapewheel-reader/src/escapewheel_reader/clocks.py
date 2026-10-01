@@ -30,7 +30,7 @@ from numpy.typing import NDArray
 
 from .dictionaries import values, where
 from .errors import NotAligned, NoTimeOrigin, ResourceNotFoundError, Unanchored
-from .protocols import PacketLike
+from .protocols import Memo, PacketLike
 from .resource_ids import CORE_CLOCK_ANCHORS, CORE_CLOCKS, CORE_SESSIONS
 
 #: How far from an anchor the mapping stays defined, as a multiple of the median anchor
@@ -173,15 +173,15 @@ def extrapolation_error(
 
 
 def anchors(packet: PacketLike) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]]:
-    """Read `core.clock_anchors` into arrays per clock, memoised on the packet.
+    """Read `core.clock_anchors` into arrays per clock, kept in the packet's memo.
 
-    The packet owns the cache because the answer is a property of its bytes. Memoised because an
-    accessor is called per unit, and reading the anchor table for each of 6,781 units would cost
-    more than the spikes do. The table is optional, so a packet without it has no anchors.
+    Kept because an accessor is called per unit, and reading the anchor table for every unit
+    would cost more than the spikes do. The table is optional, so a packet without it has no
+    anchors.
     """
-    cached = getattr(packet, "_anchor_cache", None)
-    if cached is not None:
-        return cached  # type: ignore[no-any-return]
+    memo = Memo.of(packet)
+    if memo.anchors is not None:
+        return memo.anchors
     try:
         table = packet.table(CORE_CLOCK_ANCHORS)
     except ResourceNotFoundError:
@@ -195,8 +195,7 @@ def anchors(packet: PacketLike) -> dict[int, tuple[NDArray[np.int64], NDArray[np
         where = np.array([i for i, c in enumerate(clock) if c == name])
         order = np.argsort(tick[where], kind="stable")
         out[name] = (tick[where][order], parent[where][order])
-    if hasattr(packet, "_anchor_cache"):
-        packet._anchor_cache = out
+    memo.anchors = out
     return out
 
 
@@ -213,11 +212,11 @@ def declared_bound(packet: PacketLike) -> float:
     packet holds several sessions the widest wins, since the reader presents them as one relation
     (R86) and a tick placed under the wider bound has to stay placed.
 
-    Memoised on the packet, for the same reason :func:`anchors` is.
+    Kept in the packet's memo, for the same reason :func:`anchors` is.
     """
-    cached = getattr(packet, "_bound_cache", None)
-    if cached is not None:
-        return float(cached)
+    memo = Memo.of(packet)
+    if memo.bound is not None:
+        return memo.bound
 
     try:
         sessions = packet.table(CORE_SESSIONS, columns=["alignment_bound"])
@@ -225,8 +224,7 @@ def declared_bound(packet: PacketLike) -> float:
         return BOUND
     declared = [float(v) for v in sessions.column("alignment_bound").to_pylist() if v is not None]
     widest = max([BOUND, *declared])
-    if hasattr(packet, "_bound_cache"):
-        packet._bound_cache = widest
+    memo.bound = widest
     return widest
 
 
@@ -252,9 +250,9 @@ def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int
         If no session declares one, if the named session does not, or if sessions declare
         different clocks and none was named.
     """
-    cached = getattr(packet, "_reference_cache", None)
-    if session_id is None and cached is not None:
-        return int(cached)
+    memo = Memo.of(packet)
+    if session_id is None and memo.reference_clock is not None:
+        return memo.reference_clock
     table = packet.table(CORE_SESSIONS)
     if "reference_clock_id" not in table.column_names:
         raise NotAligned(f"{CORE_SESSIONS} carries no reference_clock_id (R27 §2)")
@@ -274,8 +272,7 @@ def reference_clock(packet: PacketLike, *, session_id: int | None = None) -> int
         raise NotAligned("no session declares a reference_clock_id (R27 §2)")
     if len(named) > 1:
         raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
-    if hasattr(packet, "_reference_cache"):
-        packet._reference_cache = named[0]
+    memo.reference_clock = named[0]
     return named[0]
 
 
@@ -407,9 +404,9 @@ def origin(packet: PacketLike, session_id: int | None = None) -> tuple[int, int,
         If the packet declares none, or if sessions declare different origins and none was
         named. Part 01 §2.2 requires refusing rather than inventing one.
     """
-    cache = getattr(packet, "_origin_cache", None)
-    if cache is not None and session_id in cache:
-        return cache[session_id]  # type: ignore[no-any-return]
+    origins = Memo.of(packet).origins
+    if session_id in origins:
+        return origins[session_id]
     sessions = packet.table(CORE_SESSIONS)
     if "t_zero_tick" not in sessions.column_names:
         raise NoTimeOrigin(f"{CORE_SESSIONS} carries no t_zero_tick, so seconds are undefined (Part 01 §2.2)")
@@ -432,9 +429,8 @@ def origin(packet: PacketLike, session_id: int | None = None) -> tuple[int, int,
             raise NoTimeOrigin(f"sessions declare different origins {found}; name a session_id")
         found_tick = int(found[0])
     num, den = tick_rate(packet, reference_clock(packet, session_id=session_id))
-    if cache is not None:
-        cache[session_id] = (found_tick, num, den)
-    return (found_tick, num, den)
+    origins[session_id] = (found_tick, num, den)
+    return origins[session_id]
 
 
 def on_clock(packet: PacketLike, table: pa.Table, clock: int | None = None, *, bound: float | None = None) -> pa.Table:

@@ -179,6 +179,7 @@ the module that defines it.
    :toctree: generated
 
    protocols.PacketLike
+   protocols.Memo
    clocks.anchors
    clocks.declared_bound
    clocks.extrapolation_error

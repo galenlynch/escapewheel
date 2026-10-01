@@ -79,6 +79,12 @@ method that delegates to one: a delegate is a second name for the same call, and
 which functions get one. `tests/test_surface.py` checks that no `Packet` method shares a name with
 an exported function.
 
+A function taking a packet is typed against `protocols.PacketLike`, so it also runs on a stand-in
+that resolves and reads the same way. An answer it must not read twice goes in `packet.memo`, a
+`protocols.Memo` with one field per function, reached through `Memo.of(packet)` so that a stand-in
+keeping no memo is read each time instead. Nothing in a memo is invalidated: keep there only an
+answer that is a property of the packet's bytes, and add no cache attribute to `Packet`.
+
 ### Two tiers of public names
 
 Every module declares `__all__`, and a name is public only through one.

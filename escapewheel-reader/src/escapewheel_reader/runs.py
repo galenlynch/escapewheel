@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .errors import AmbiguousRun, NotDeclared
-from .protocols import PacketLike
+from .protocols import Memo, PacketLike
 from .resource_ids import CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS
 
 #: The activity whose runs are never alternatives to one another (Part 05 §12).
@@ -123,13 +123,12 @@ def ambiguities(packet: PacketLike) -> tuple[Ambiguity, ...]:
 
     Notes
     -----
-    Reads the run log once and memoises on the packet, which owns the cache because the answer
-    is a property of the packet's bytes. Costs 0.8 ms otherwise, against 6 ms for the accessor
-    it guards, and `spike_times` is called once per unit.
+    Reads the run log once and keeps the answer in the packet's memo, because `spike_times`
+    checks it once per unit.
     """
-    cached = getattr(packet, "_ambiguity_cache", None)
-    if cached is not None:
-        return cached  # type: ignore[no-any-return]
+    memo = Memo.of(packet)
+    if memo.ambiguities is not None:
+        return memo.ambiguities
 
     rows = _rows(
         packet, CORE_PROCESSING_RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"]
@@ -159,8 +158,7 @@ def ambiguities(packet: PacketLike) -> tuple[Ambiguity, ...]:
         if len(run_ids) > 1 and (session_id, activity_type, scope_kind, scope) not in declared:
             found.append(Ambiguity(session_id, activity_type, scope_kind, scope, tuple(run_ids)))
     out = tuple(sorted(found, key=lambda a: (a.activity_type, a.scope or "")))
-    if hasattr(packet, "_ambiguity_cache"):
-        packet._ambiguity_cache = out
+    memo.ambiguities = out
     return out
 
 
