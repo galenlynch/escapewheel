@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -55,7 +55,7 @@ def _measure(entry: dict[str, Any], level: str, notes: list[str]) -> bool:
         notes.append(f"{entry['resource_id']}: unchanged, {exc}")
         return False
     entry["size_bytes"] = found.size_bytes
-    entry["verified_at"] = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    entry["verified_at"] = datetime.now(tz=UTC).isoformat().replace("+00:00", "Z")
     if digested is not None:
         entry["digest"] = {"algorithm": digested.algorithm, "value": digested.value}
         values: tuple[str | None, ...] = digested.members
@@ -153,7 +153,7 @@ def verify(
 
     candidate["validation"] = {
         "status": "passed",
-        "validated_at": datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+        "validated_at": datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
         "validator_name": "escapewheel_validator",
         "validator_version": _version(),
     }

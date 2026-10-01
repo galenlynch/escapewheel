@@ -1,10 +1,8 @@
 # Escapewheel Reader
 
-[![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 [![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-grayscale-inverted-border.json)](https://github.com/copier-org/copier)
 
 Read Escapewheel packets: Parquet tables, Zarr v3 arrays, and the JSON manifest binding them.
 
@@ -62,24 +60,17 @@ Zarr only to read.
 
 ## Installation
 
-If you choose to clone the repository, you can install the package by running the following command from the root directory of the repository:
+Nothing is published to an index; install from a clone of the monorepo. `uv sync` in this
+directory sets up the development environment:
 
 ```bash
-pip install .
-```
-
-Otherwise, you can use pip:
-
-```bash
-pip install escapewheel-reader
-```
-
-
-
-To develop the code, run:
-```bash
+git clone https://github.com/galenlynch/escapewheel.git
+cd escapewheel/escapewheel-reader
 uv sync
 ```
+
+The root [README](../README.md#building-and-reading-a-packet) describes building and reading a
+packet.
 
 ## Development
 
@@ -94,6 +85,7 @@ Please test your changes using the full linting and testing suite:
 ```
 
 Or run individual commands:
+
 ```bash
 uv run --frozen ruff format          # Code formatting
 uv run --frozen ruff check           # Linting
@@ -103,12 +95,11 @@ uv run --frozen codespell --check-filenames  # Spell checking
 uv run --frozen pytest --cov escapewheel_reader # Tests with coverage
 ```
 
-
 ### Documentation
+
 ```bash
 sphinx-build -b html docs/source/ docs/build/html
 ```
-
 
 ## License
 

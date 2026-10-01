@@ -14,10 +14,9 @@ uv sync
 
 ## Quick Start
 
-```python
-import escapewheel_writer
-
-# Your code here
+```bash
+escapewheel import session.toml --check  # everything wrong, before any I/O
+escapewheel import session.toml          # stage, validate, commit
 ```
 
 ## Documentation

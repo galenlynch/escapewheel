@@ -1,9 +1,9 @@
 """This package's copies agree with the specification's tree they come from."""
 
+import tomllib
 from pathlib import Path
 
 import pytest
-import tomllib
 
 PACKAGE = Path(__file__).resolve().parents[1]
 TREE = PACKAGE.parent / "spec"

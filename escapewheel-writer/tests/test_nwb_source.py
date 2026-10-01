@@ -2,7 +2,7 @@
 
 import json
 import shutil
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -164,12 +164,12 @@ def test_a_clock_from_another_session_is_refused(nwb):
 
 def test_the_session_start_is_converted_to_utc(source):
     start = source.records()["core.sessions"][0]["session_start_time"]
-    assert start.astimezone(timezone.utc) == datetime(2025, 4, 10, 0, 25, 12, tzinfo=timezone.utc)
+    assert start.astimezone(UTC) == datetime(2025, 4, 10, 0, 25, 12, tzinfo=UTC)
 
 
 def test_a_fixed_offset_is_not_a_zone(nwb, harp):
     with pytest.raises(TypeError, match="IANA zone"):
-        NWBSource(nwb, reference_clock=harp.record(), zone=timezone.utc, interval_kind=KIND)
+        NWBSource(nwb, reference_clock=harp.record(), zone=UTC, interval_kind=KIND)
 
 
 def test_a_zone_is_accepted_as_the_name_a_recipe_wrote(nwb, harp):

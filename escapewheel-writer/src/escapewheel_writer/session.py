@@ -419,7 +419,7 @@ def _stored(value: Any, declared_type: str | None) -> Any:
         return value.date() if declared_type == "date" else value
     if isinstance(value, date):
         return value
-    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(str(value))
     return parsed.date() if declared_type == "date" else parsed
 
 
@@ -441,7 +441,7 @@ def _normalized(value: Any, declared_type: str | None) -> Any:
             return value.date()
         if isinstance(value, date):
             return value
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).date()
+        return datetime.fromisoformat(str(value)).date()
     return str(value)
 
 

@@ -1,7 +1,7 @@
 """Cleanup over a committed packet (Part 05 §15.5)."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -109,8 +109,8 @@ def test_an_argument_overrides_what_the_packet_declares(packet):
 
 def test_both_floors_must_permit_an_expiry(packet):
     """Part 05 §15.5: keep_versions and keep_days are floors, not alternatives."""
-    assert prune(packet, keep_versions=0, keep_days=365, now=datetime(2026, 2, 1, tzinfo=timezone.utc)).expired == ()
-    old = datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(days=400)
+    assert prune(packet, keep_versions=0, keep_days=365, now=datetime(2026, 2, 1, tzinfo=UTC)).expired == ()
+    old = datetime(2026, 1, 1, tzinfo=UTC) + timedelta(days=400)
     assert prune(packet, keep_versions=0, keep_days=365, now=old).expired
 
 

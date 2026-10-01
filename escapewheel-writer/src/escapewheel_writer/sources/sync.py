@@ -46,7 +46,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -107,7 +107,7 @@ def read_sync_messages(path: Path, node: str) -> RecordingStart | None:
         return None
     return RecordingStart(
         node=node,
-        started=datetime.fromtimestamp(int(stamp.group(1)) / 1000, tz=timezone.utc),
+        started=datetime.fromtimestamp(int(stamp.group(1)) / 1000, tz=UTC),
         samples={
             f"{m['processor'].replace(' ', '')}-{m['id']}.{m['stream']}": int(m["sample"])
             for m in START_TIME.finditer(text)

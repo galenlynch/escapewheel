@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone, tzinfo
+from datetime import UTC, datetime, timedelta, tzinfo
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -257,7 +257,7 @@ class Clock:
             raise ValueError(f"{self.clock_id}: no tick_zero_utc, so a wall clock locates no tick on it")
         if instant.tzinfo is None or instant.utcoffset() is None:
             raise ValueError(f"{instant!r} carries no offset, so it locates no tick")
-        elapsed = (instant.astimezone(timezone.utc) - self.tick_zero_utc).total_seconds()
+        elapsed = (instant.astimezone(UTC) - self.tick_zero_utc).total_seconds()
         tick = round(elapsed * self.tick_rate_num / self.tick_rate_den)
         if tick < TICK_MIN or tick > TICK_MAX:
             raise OverflowError(f"{self.clock_id}: tick {tick} exceeds int64")
@@ -346,7 +346,7 @@ def epoch_from(instant: datetime, t_tick: int, tick_rate_num: int, tick_rate_den
     if instant.tzinfo is None or instant.utcoffset() is None:
         raise ValueError(f"{instant!r} carries no offset, so it does not locate tick 0")
     elapsed = timedelta(seconds=t_tick * tick_rate_den / tick_rate_num)
-    return instant.astimezone(timezone.utc) - elapsed
+    return instant.astimezone(UTC) - elapsed
 
 
 #: HARP's native fractional resolution: 32 µs, measured exact for every behaviour and trial

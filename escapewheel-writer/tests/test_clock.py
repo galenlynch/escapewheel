@@ -1,6 +1,6 @@
 """A clock quantizes or refuses; it never fits."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 import pytest
@@ -61,7 +61,7 @@ def test_the_record_carries_one_rate_form():
 
 
 def test_tick_zero_is_written_only_when_given():
-    epoch = datetime(2024, 11, 27, 0, 51, 12, tzinfo=timezone.utc)
+    epoch = datetime(2024, 11, 27, 0, 51, 12, tzinfo=UTC)
     assert harp(tick_zero_utc=epoch).record()["tick_zero_utc"] == epoch
 
 
@@ -85,7 +85,7 @@ def test_epoch_from_does_its_arithmetic_in_utc():
 
     session = datetime(2025, 4, 9, 17, 25, 12, tzinfo=ZoneInfo("America/Los_Angeles"))
     epoch = epoch_from(session, 361751245672, HARP_TICK_RATE_HZ)
-    assert epoch == datetime(2024, 11, 27, 0, 51, 12, 138496, tzinfo=timezone.utc)
+    assert epoch == datetime(2024, 11, 27, 0, 51, 12, 138496, tzinfo=UTC)
     # what the naive form gives, an hour out
     assert session - (session - epoch) != epoch.astimezone(ZoneInfo("America/Los_Angeles"))
 

@@ -15,9 +15,10 @@ uv sync
 ## Quick Start
 
 ```python
-import escapewheel_reader
+from escapewheel_reader import open_packet
 
-# Your code here
+packet = open_packet("session_packet/")
+trials = packet.intervals(session_id=1, interval_kind="task.trials")  # a pyarrow.Table
 ```
 
 ## Documentation

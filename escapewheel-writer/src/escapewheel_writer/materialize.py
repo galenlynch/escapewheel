@@ -28,7 +28,7 @@ from __future__ import annotations
 import shutil
 import tempfile
 from collections.abc import Iterable, Iterator, Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -424,7 +424,7 @@ def into(
     resource = "analysis.spike_events"
     session = packet.sessions[0] if len(packet.sessions) == 1 else None
     bound = declared_bound(packet) if bound is None else bound
-    started = datetime.now(tz=timezone.utc)
+    started = datetime.now(tz=UTC)
     dropped: dict[int, int] = {}
     run: dict[str, Any] = {
         "processing_run_id": writer.name_apart("processing_run_id", run_id),
@@ -464,7 +464,7 @@ def into(
         run["parameters"]["spikes_without_a_defined_mapping"] = [
             {"clock_id": clock, "spikes": count} for clock, count in sorted(dropped.items())
         ]
-        run["ended_at"] = datetime.now(tz=timezone.utc)
+        run["ended_at"] = datetime.now(tz=UTC)
 
     writer.add_batches(resource, streamed())
     # The anchor table is optional, and lineage may name only a resource the packet carries.

@@ -29,7 +29,7 @@ import shutil
 import time
 from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from queue import Queue
 from threading import Thread
@@ -1615,7 +1615,7 @@ class PacketWriter:
     ) -> dict[str, Any]:
         """Build the manifest for these resources, binding the registries `_store_registries` wrote."""
         sessions = sorted({r["session_id"] for r in self._tables.get("core.sessions", []) if "session_id" in r})
-        now = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+        now = datetime.now(tz=UTC).isoformat().replace("+00:00", "Z")
         validation = {
             "status": "not_run" if report is None else ("passed" if report.passed else "failed"),
             "validated_at": now,
@@ -2057,7 +2057,7 @@ class PacketWriter:
         }
         amended["validation"] = {
             "status": "passed",
-            "validated_at": datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+            "validated_at": datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
             "validator_name": "escapewheel_validator",
             "validator_version": _version(),
         }

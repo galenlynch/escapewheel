@@ -15,9 +15,11 @@ uv sync
 ## Quick Start
 
 ```python
-import escapewheel_validator
+from escapewheel_reader import open_packet
+from escapewheel_validator import validate
 
-# Your code here
+report = validate(open_packet("packet/"))
+report.passed, report.errors, report.warnings
 ```
 
 ## Documentation

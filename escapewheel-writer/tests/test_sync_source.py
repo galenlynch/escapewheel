@@ -1,6 +1,6 @@
 """The sync adapter turns shared pulses into anchors, and refuses the unaligned stubs."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from itertools import pairwise
 
 import numpy as np
@@ -305,7 +305,7 @@ def test_a_node_states_when_it_began_and_where_every_counter_stood(tmp_path):
     source = SyncSource(tree, session_id=SESSION)
     stream = next(s for s in source.aligned() if s.node == "109")
     started = source.started(stream)
-    assert started.started == datetime(2025, 4, 10, 0, 25, 12, 90_000, tzinfo=timezone.utc)
+    assert started.started == datetime(2025, 4, 10, 0, 25, 12, 90_000, tzinfo=UTC)
     assert started.samples["Neuropix-PXI-100.probeA"] == FIRST_SAMPLE["Neuropix-PXI-100.probeA"]
     # It lists every stream the node saw, owned or not, as the TTL directories do.
     assert set(FIRST_SAMPLE) <= set(started.samples)

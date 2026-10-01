@@ -69,7 +69,7 @@ def _timestamp(value: Any, column: str) -> Any:
     if value is None:
         return None
     if isinstance(value, str):
-        value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        value = datetime.fromisoformat(value)
     if isinstance(value, datetime) and value.tzinfo is None:
         raise NaiveTimestamp(f"{column}: {value!r} carries no UTC offset")
     return value

@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -82,7 +82,7 @@ def _stamp(manifest: Mapping[str, Any]) -> datetime | None:
     if not isinstance(raw, str):
         return None
     try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        return datetime.fromisoformat(raw)
     except ValueError:
         return None
 
@@ -170,7 +170,7 @@ def prune(
     # Retention is decided first, because an orphan is judged against the manifests that
     # *survive*: a file named only by a manifest being kept is still needed, and deleting it
     # would leave that manifest uninterpretable -- which is the property Part 05 §15.3 retains for.
-    moment = now or datetime.now(tz=timezone.utc)
+    moment = now or datetime.now(tz=UTC)
     keep, expire, notes = [], [], []
     for index, (path, manifest) in enumerate(reversed(superseded)):  # newest first
         if index < max(0, int(versions)):

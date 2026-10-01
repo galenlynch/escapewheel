@@ -23,13 +23,13 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import tomllib
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import tomllib
 from upath import UPath
 
 from .sources.store import source_root
@@ -1392,12 +1392,12 @@ def normalized_chosen_at(value: Any) -> datetime | None:
     """
     if isinstance(value, str):
         try:
-            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            value = datetime.fromisoformat(value)
         except ValueError:
             return None
     if not isinstance(value, datetime) or value.tzinfo is None:
         return None
-    return value.astimezone(timezone.utc)
+    return value.astimezone(UTC)
 
 
 __all__ = [

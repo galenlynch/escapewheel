@@ -31,7 +31,7 @@ once. `conversion` is *not*: it is one value per series here, so it stays on
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -324,7 +324,7 @@ class LFPSource(Compensates):
             codecs=array.codecs,
             digest=None if digested is None else {"algorithm": digested.algorithm, "value": digested.value},
             size_bytes=found.size_bytes,
-            verified_at=datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+            verified_at=datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
             members=members,
         )
 

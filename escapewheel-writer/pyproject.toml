@@ -61,11 +61,6 @@ import = "escapewheel_writer.scripts.cli:register"
 [project.urls]
 Repository = "https://github.com/galenlynch/escapewheel/"
 Issues = "https://github.com/galenlynch/escapewheel/issues"
-Changelog = "https://github.com/galenlynch/escapewheel/blob/main/escapewheel-writer/CHANGELOG.md"
-
-[project.scripts]
-# Add your CLI scripts here, e.g.:
-# my_command = "escapewheel_writer.scripts.my_command:main"
 
 [dependency-groups]
 types = [
@@ -106,7 +101,7 @@ packages = ["src/escapewheel_writer"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py312"
 extend-exclude = ["scratch"]
 
 [tool.ruff.lint]
@@ -138,13 +133,6 @@ exclude = [
   "scratch",
   ".venv",
 ]
-
-[tool.commitizen]
-version_provider = "pep621"
-update_changelog_on_bump = true
-tag_format = "v$version"
-major_version_zero = true
-
 
 [tool.mypy]
 files = ["src/escapewheel_writer"]
