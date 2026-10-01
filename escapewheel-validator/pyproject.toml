@@ -78,6 +78,7 @@ docs = [
 "src/escapewheel_validator/registry_document.py" = "tools/checkers/registry_document.py"
 "src/escapewheel_validator/registry_result.py" = "tools/checkers/registry_result.py"
 "src/escapewheel_validator/registry_invariants.py" = "tools/checkers/registry_invariants.py"
+"src/escapewheel_validator/registry_phases.py" = "tools/checkers/registry_phases.py"
 "src/escapewheel_validator/rule_language.py" = "tools/checkers/rule_language.py"
 "src/escapewheel_validator/schemas/registry.schema.json" = "artifacts/registry.schema.json"
 "src/escapewheel_validator/schemas/registry_result.schema.json" = "artifacts/registry_result.schema.json"

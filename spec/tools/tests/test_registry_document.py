@@ -6,7 +6,7 @@ import json
 import pytest
 from jsonschema import Draft202012Validator
 
-from checkers import registry_document, registry_invariants
+from checkers import registry_document, registry_invariants, registry_phases
 from checkers.artifacts import ARTIFACTS
 from checkers.registry_document import (
     CONTRACT,
@@ -604,14 +604,14 @@ def test_external_domain_uses_exact_ucum_syntax():
 
 
 def test_missing_exact_ucum_domain_is_unsupported(monkeypatch):
-    monkeypatch.setattr(registry_document, "_ucum_parser", lambda: None)
+    monkeypatch.setattr(registry_phases, "_ucum_parser", lambda: None)
     result = check_registry(_document(), CORE)
     assert result.state == "unsupported"
     assert next(phase for phase in result.phases if phase.phase == "external_domain").state == "unsupported"
 
 
 def test_invalid_outcome_dominates_an_independent_unsupported_phase(monkeypatch):
-    monkeypatch.setattr(registry_document, "_ucum_parser", lambda: None)
+    monkeypatch.setattr(registry_phases, "_ucum_parser", lambda: None)
     document = _document()
     _table(document)["columns"].append(copy.deepcopy(_table(document)["columns"][1]))
     result = check_registry(document, CORE)
