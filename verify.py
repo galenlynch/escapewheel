@@ -90,7 +90,7 @@ STAGES: list[Stage] = [
     _python("revisions: process semantics tests", ROOT, WRITER, "revisions/test_process.py"),
     _python("revisions: accepted evidence manifests resolve", ROOT, WRITER, "revisions/evidence.py"),
     _python("spec: structural checks", TREE, TREE, "check.py"),
-    Stage("spec: checker tests", TREE, TREE, ("pytest", "-q", "-p", "no:cacheprovider")),
+    Stage("spec: checker tests", TREE, TREE, ("pytest", "-q", "-p", "no:cacheprovider", "-n", "8")),
     # CONTRIBUTING.md's rules for the tree: it regenerates and checks itself alone, and its tools
     # import only what it declares and locks.
     _python("spec: the tree regenerates and checks itself alone", ROOT, WRITER, "tools/tree.py"),
@@ -164,12 +164,13 @@ STAGES: list[Stage] = [
 #: its own, so it runs in the writer's environment, which carries all three.
 SUITES: list[Stage] = [
     *(
-        Stage(f"{package}: tests", ROOT / package, ROOT / package, ("pytest", "-vv"))
-        for package in (
-            "escapewheel-reader",
-            "escapewheel-validator",
-            "escapewheel-writer",
-            "escapewheel-aind",
+        Stage(f"{package}: tests", ROOT / package, ROOT / package, ("pytest", "-vv", *workers))
+        # A suite of a few seconds runs in one process, since starting workers costs about as much.
+        for package, workers in (
+            ("escapewheel-reader", ()),
+            ("escapewheel-validator", ("-n", "4")),
+            ("escapewheel-writer", ("-n", "6")),
+            ("escapewheel-aind", ()),
         )
     ),
     Stage("integration: tests", ROOT / "integration", WRITER, ("pytest", "-vv")),

@@ -52,7 +52,15 @@ types = [
     "pyarrow-stubs>=20.0.0.20260819",
     "types-jsonschema>=4.26.0.20260518",
 ]
-dev = [{ include-group = "types" }, "codespell", "pytest", "pytest-cov", "ruff", "interrogate"]
+dev = [
+    { include-group = "types" },
+    "codespell",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "interrogate",
+    "pytest-xdist",
+]
 jupyter = [{ include-group = "dev" }, "ipykernel", "pip"]
 docs = [
   { include-group = "dev" },
