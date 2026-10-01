@@ -2,19 +2,19 @@
 
 | | |
 |---|---|
-| **Status** | Non-authoritative maintenance inventory |
+| **Status** | Closed: every entry is resolved. Non-authoritative maintenance inventory |
 | **Updated** | 2026-09-29 |
 | **Review baseline** | `523685027ddbcf18b31e6891ada3034e09aac80f` |
 
 This document tracks statements that appear to occupy the wrong specification abstraction or to
 duplicate a rule owned elsewhere. It is deliberately separate from both the normative
-specification and the higher-level [reconciliation roadmap](proposals/ROADMAP.md). The generated
+specification and the higher-level [reconciliation roadmap](../proposals/ROADMAP.md). The generated
 v0.2 specification remains authoritative while an entry is open; this inventory neither overrides
 that text nor decides the replacement rule.
 
 The initial entries come from the
-[project sanity check](reviews/2026-09-17-project-sanity-check.md) and the appraisal of the
-[R122](accepted/R122-define-specification-artifacts-and-normative-ownership.md). A
+[project sanity check](2026-09-17-project-sanity-check.md) and the appraisal of the
+[R122](../accepted/R122-define-specification-artifacts-and-normative-ownership.md). A
 candidate destination identifies where appraisal should begin, not an accepted ownership decision.
 
 ## Maintaining the inventory

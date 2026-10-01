@@ -117,7 +117,7 @@ fixed in the package.
 
 ## Status
 
-Current phase status, packet measurements, and generated repository counts are maintained in
+Current phase status, the packets built, and generated repository counts are maintained in
 [STATUS.md](STATUS.md). Run the monorepo verification command below to check the working tree rather
 than copying those values into another document.
 ## Development
