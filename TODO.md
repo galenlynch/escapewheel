@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 3 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 2 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -133,9 +133,9 @@ specification tooling are restructured apart from the registry checker's split. 
 the 2026-09-06 request is not answered by it: which problems a dependency already solves that this
 code solves again.
 
-## 3a. One draft awaits acceptance and three proposals await promotion
+## 3a. Two drafts await acceptance and two proposals await promotion
 
-The draft is under `revisions/drafts/` and the proposals under `revisions/proposals/`.
+The drafts are under `revisions/drafts/` and the proposals under `revisions/proposals/`.
 
 - **The reader floor bounds an array's byte order.** A draft, promoted 2026-10-01 and not
   accepted. It supersedes R3 §7.1's little-endian and
@@ -143,10 +143,11 @@ The draft is under `revisions/drafts/` and the proposals under `revisions/propos
   Zarr v2 reader floor to little-endian and single-byte data types. Three code sites wait on it:
   the first paragraph of `arrays.py`'s module docstring, the validator's `array.no_fill_value`
   message with its test, and the citation of Part 03 §6.1 beside them.
-- **A build records a recipe without its credentials.** A build replaces a credential it
-  recognizes with a marker the specification names, or refuses the recipe. It also covers a
-  credential inside a source root, which is wider than the request that prompted it and may be
-  split out. One code site waits on it: the docstring of `recipe._storage_problems`.
+- **A build records a recipe without its credentials.** A draft, promoted 2026-10-01 and not
+  accepted. A build writes no credential it recognizes, records `[redacted]` in its place in the
+  recorded recipe, and may refuse the recipe instead. It also covers a credential inside a source
+  root wherever the build writes that root, which is wider than the request that prompted it. The
+  writer waits on it for root recognition and for the docstring of `recipe._storage_problems`.
 - **Core declares a catalog of sidecars.** §3b describes it. Two questions are open in it: whether
   a sidecar is of class `documentation` or `core`, and whether its table is scoped to the packet
   or to a session.
