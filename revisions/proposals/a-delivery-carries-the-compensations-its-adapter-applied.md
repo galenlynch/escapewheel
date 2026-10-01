@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | 2026-10-01 |
-| **Based on** | `01ef23a4674067c47392cff670ce9c99a570a4f0` |
+| **Based on** | `cba7d7777c8a018e7aa781d096ce425e0fc008d6` |
 | **Decision domain** | specification |
 | **Affects** | Part 05 §4.3's sentence on a compensation; Part 12 §5's list of what a delivery states; Part 12 §6's reserved resource identifiers |
 
@@ -76,10 +76,18 @@ under `states` (Part 12 §7). A build reads a declared field absent from the rep
 Part 12 §3 gives each protocol its way of carrying a table: a Parquet file named by the resource
 identifier under `files-v0.1`, an Arrow IPC stream whose schema names the resource under
 `stream-v0.1`, and a descriptor for each resource under `flight-v0.1`. The resource document is
-JSON, so it travels as a file under `files-v0.1` and as text in a single-row table under the other
-two (Part 12 §6). A list of compensations is a set of rows with the same few text columns.
+JSON, so it travels as a file under `files-v0.1` and as text in a single-row table under
+`stream-v0.1` (Part 12 §6). A list of compensations is a set of rows with the same few text columns.
 
-### 2.7 The reference build records a delivered adapter's compensations nowhere
+### 2.7 A named protocol keeps its meaning
+
+Part 12 §3 forbids a profile to change what a named protocol means, and makes a protocol that
+changes how rows cross a new member of its group. A search of Parts 05 and 12 finds no rule for a
+table that arrives under an identifier the build did not ask for and no registry declares: Part 05
+§3.4 covers rows for a resource another source owns and a resource no source claims, both of them
+declared resources.
+
+### 2.8 The reference build records a delivered adapter's compensations nowhere
 
 The reference build keeps a registry of compensations, each an identifier with a defect, an action
 and the evidence for the defect. It holds six: three for adapters the writer ships and three for
@@ -126,8 +134,9 @@ The table is preferred to the report member because Part 05 §4.3 requires the r
 channel a build may not depend on cannot carry a required record (§2.5).
 
 **A row describes itself.** It carries an identifier, the defect and the action as text, so a
-build records it without knowing the adapter (§2.7). An identifier is a name the adapter's author
-chooses, namespaced as a resource identifier is, so two adapters do not collide.
+build records it without knowing the adapter (§2.8). An identifier is a name the adapter's author
+chooses, namespaced as a resource identifier is, so two adapters do not collide. Where two rows
+share an identifier and differ in their text, a build records both.
 
 **A build records each row** in the import run's parameters, beside the compensations of the
 adapters in its own process. Part 05 §4.3 says what a recorded compensation states: its identifier,
@@ -143,6 +152,12 @@ it.
 compensation, so every existing adapter that applies none conforms unchanged. Part 12 §5's rule
 that an owned resource with no rows arrives empty applies to a resource the recipe asked for, and
 no recipe asks for this one.
+
+**The three protocols keep their names.** The table crosses as every table does, so how rows cross
+is unchanged (§2.7), and an adapter that delivers none is served as before. A build written to the
+current text meets a table it has no rule for (§2.7), and the specification that names the protocols
+has no release. The alternative is a second version of each protocol, which every build then
+supports beside the first under Part 12 §3.
 
 **Part 05 §4.3's "declare" is read as stating at run time.** The sentence gains the two channels:
 an adapter in the writer's process states its compensations to the build directly, and an adapter
@@ -174,6 +189,11 @@ concerns another source's rows and is a separate decision.
 2. Whether an adapter that applied no compensation delivers an empty table, so that a build can
    tell a run that applied none from an adapter that states none. Requiring it changes every
    existing adapter; the direction above does not require it.
+
+3. Whether reserving the identifier changes what `files-v0.1`, `stream-v0.1` and `flight-v0.1`
+   mean under Part 12 §3. The direction above keeps the three names.
+
+Each answer fixes a Decision clause, so all three are needed before a draft is appraised.
 
 ## 7. Promotion criteria
 

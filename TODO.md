@@ -172,8 +172,10 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
   `compensations`, whose rows describe themselves and cross as any table does in each protocol; a
   build records them and refuses a table it cannot read. Part 05 §4.3 says what a recorded
   compensation states. A member of the run report is the alternative, and a report is optional.
-  Two questions are open and neither blocks promotion: an evidence column, and whether an adapter
-  that applied none delivers an empty table. The writer's serving and reading code wait on it.
+  Appraised 2026-10-01 and ready to promote. Three questions are open and are answered before its
+  draft is appraised: an evidence column, whether an adapter that applied none delivers an empty
+  table, and whether the three protocols keep their names. The writer's serving and reading code
+  wait on it.
 
 ## 3b. A file the packet only indexes has no declaration
 
