@@ -1051,7 +1051,7 @@ def variants():  # noqa: C901
         ]
 
     def undeclared_currency(c):
-        # One probe sorted twice with nothing saying which to read (Part 01 §2.4). Both runs carry
+        # One probe sorted twice with nothing saying which to read (Part 01 §2.6). Both runs carry
         # a scope, so the packet says enough to know they compete -- which is what separates
         # this from `unscoped_runs` below.
         c["core.processing_runs"][0]["scope_kind"] = "core.sessions"
@@ -1075,7 +1075,7 @@ def variants():  # noqa: C901
 
     def unscoped_runs(c):
         # Two runs of one activity, neither saying what it is about, so whether they compete
-        # cannot be determined (Part 01 §2.4). The fix is to record the scopes, not to choose.
+        # cannot be determined (Part 01 §2.6). The fix is to record the scopes, not to choose.
         for suffix in ("a", "b"):
             c["core.processing_runs"].append(
                 {

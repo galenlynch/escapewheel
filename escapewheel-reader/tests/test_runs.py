@@ -78,7 +78,7 @@ def test_one_run_per_scope_is_unambiguous(tmp_path, packet_root):
 
 
 def test_two_runs_one_scope_is_ambiguous(tmp_path, packet_root):
-    """One probe sorted twice, with nothing saying which to read (Part 01 §2.4)."""
+    """One probe sorted twice, with nothing saying which to read (Part 01 §2.6)."""
     runs = [(1, "spike_sorting", "probe_1"), (2, "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "resorted", runs)
 
@@ -101,7 +101,7 @@ def test_two_imports_of_one_session_are_not_alternatives(tmp_path, packet_root):
 
 
 def test_a_preference_resolves_it(tmp_path, packet_root):
-    """A declared preference settles the choice and removes the finding (Part 01 §2.4)."""
+    """A declared preference settles the choice and removes the finding (Part 01 §2.6)."""
     runs = [(1, "spike_sorting", "probe_1"), (2, "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "chosen", runs, prefs=[("spike_sorting", "probe_1", 2)])
 
@@ -126,7 +126,7 @@ def test_a_preference_does_not_leak_across_scopes(tmp_path, packet_root):
 
 
 def test_unrecorded_scope_warns_rather_than_refusing(tmp_path, packet_root):
-    """Without scopes the packet cannot be judged either way (Part 01 §2.4).
+    """Without scopes the packet cannot be judged either way (Part 01 §2.6).
 
     Reported rather than refused, because the fix is to record the scopes and not to choose
     between the runs.
@@ -143,7 +143,7 @@ def test_unrecorded_scope_warns_rather_than_refusing(tmp_path, packet_root):
 
 
 def test_one_unscoped_run_is_not_a_finding(tmp_path, packet_root):
-    """A single run needs no scope: it is the preference by construction (Part 01 §2.4)."""
+    """A single run needs no scope: it is the preference by construction (Part 01 §2.6)."""
     runs = [(1, "import", None), (2, "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "one_each", runs)
     assert ambiguities(packet) == ()
@@ -157,7 +157,7 @@ def test_preferred_run_falls_back_to_the_only_run(tmp_path, packet_root):
 
 
 def test_preferred_run_refuses_to_guess(tmp_path, packet_root):
-    """Two runs and no preference is an error, not a choice (Part 01 §2.4)."""
+    """Two runs and no preference is an error, not a choice (Part 01 §2.6)."""
     runs = [(1, "spike_sorting", "probe_1"), (2, "spike_sorting", "probe_1")]
     packet = _with_runs(tmp_path, packet_root, "guess", runs)
     with pytest.raises(AmbiguousRun, match="none is preferred"):

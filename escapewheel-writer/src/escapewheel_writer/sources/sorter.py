@@ -490,7 +490,7 @@ class SorterSource:
 
         `supersedes` stays null. A first import supersedes nothing, and a writer that does not
         know what a run replaced must not guess (Part 01 §3.20). `scope` is set, because a run whose
-        subject is unrecorded is undeterminable rather than unique (Part 01 §2.4).
+        subject is unrecorded is undeterminable rather than unique (Part 01 §2.6).
         """
         rows = []
         for stream in self.streams():

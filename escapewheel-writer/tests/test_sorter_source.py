@@ -413,7 +413,7 @@ def test_a_sorting_and_its_curation_name_different_runs(source):
 def test_every_run_declares_its_scope(source):
     """R44 §2.1: without it, twelve probes sorted once each look like twelve alternatives."""
     runs = rows_of(source, "core.processing_runs")
-    assert all(r.get("scope") for r in runs), "a run with no scope is undeterminable (Part 01 §2.4)"
+    assert all(r.get("scope") for r in runs), "a run with no scope is undeterminable (Part 01 §2.6)"
 
     sorting = [r for r in runs if r["activity_type"] == "spike_sorting"]
     probes = {r["probe_id"] for r in rows_of(source, "core.sorting_runs")}
