@@ -824,14 +824,15 @@ KEYS = ["unit_id", "t_tick"]
 
 
 def test_ordered_batches_pass_through_unchanged():
-    from escapewheel_validator import verify_order
+    from escapewheel_validator.validator import verify_order
 
     batches = [_batch(0), _batch(5), _batch(10)]
     assert [b.num_rows for b in verify_order(iter(batches), KEYS)] == [5, 5, 5]
 
 
 def test_a_descent_inside_a_batch_is_caught():
-    from escapewheel_validator import OrderFault, OrderViolation, verify_order
+    from escapewheel_validator import OrderFault, OrderViolation
+    from escapewheel_validator.validator import verify_order
 
     bad = pa.record_batch({"unit_id": pa.array(["u1"] * 3), "t_tick": pa.array([0, 5, 2], type=pa.int64())})
     with pytest.raises(OrderViolation) as refused:
@@ -841,7 +842,8 @@ def test_a_descent_inside_a_batch_is_caught():
 
 def test_a_descent_on_a_batch_seam_is_caught():
     """The case a per-batch check misses: each batch is ordered, the pair is not."""
-    from escapewheel_validator import OrderFault, OrderViolation, verify_order
+    from escapewheel_validator import OrderFault, OrderViolation
+    from escapewheel_validator.validator import verify_order
 
     with pytest.raises(OrderViolation) as refused:
         list(verify_order(iter([_batch(10), _batch(0)]), KEYS))
@@ -849,7 +851,8 @@ def test_a_descent_on_a_batch_seam_is_caught():
 
 
 def test_a_duplicate_on_a_batch_seam_is_caught():
-    from escapewheel_validator import OrderFault, OrderViolation, verify_order
+    from escapewheel_validator import OrderFault, OrderViolation
+    from escapewheel_validator.validator import verify_order
 
     tail = pa.record_batch({"unit_id": pa.array(["u1"]), "t_tick": pa.array([4], type=pa.int64())})
     with pytest.raises(OrderViolation) as refused:
@@ -859,7 +862,8 @@ def test_a_duplicate_on_a_batch_seam_is_caught():
 
 def test_a_violation_is_worded_by_position_and_names_its_table_once_known():
     """The stored row is an index, so the sixth row is stored as 5 and reads as row 6."""
-    from escapewheel_validator import OrderViolation, verify_order
+    from escapewheel_validator import OrderViolation
+    from escapewheel_validator.validator import verify_order
 
     with pytest.raises(OrderViolation) as refused:
         list(verify_order(iter([_batch(10), _batch(0)]), KEYS))
@@ -869,7 +873,7 @@ def test_a_violation_is_worded_by_position_and_names_its_table_once_known():
 
 
 def test_an_empty_batch_does_not_break_the_seam():
-    from escapewheel_validator import verify_order
+    from escapewheel_validator.validator import verify_order
 
     empty = _batch(0, n=0)
     assert [b.num_rows for b in verify_order(iter([_batch(0), empty, _batch(5)]), KEYS)] == [5, 0, 5]

@@ -564,3 +564,6 @@ def generate(
         declared=declared,
         keys=keys,
     )
+
+
+__all__ = ["adjacency_settles_uniqueness"]

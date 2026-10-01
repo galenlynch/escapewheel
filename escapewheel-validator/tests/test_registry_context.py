@@ -2,7 +2,8 @@
 
 import pytest
 
-from escapewheel_validator import RegistryRejected, generate
+from escapewheel_validator import RegistryRejected
+from escapewheel_validator.generate import generate
 from escapewheel_validator.registry_document import check_registry_context
 
 

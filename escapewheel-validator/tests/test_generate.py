@@ -1,10 +1,9 @@
 """The checks a registry's structure implies, and which of them an amendment re-runs (Part 02 §10.1)."""
 
-import sys
-
 from escapewheel_reader import open_packet
 
 from escapewheel_validator import check_table, validate
+from escapewheel_validator import generate as generating
 from escapewheel_validator.generate import Check, adjacency_settles_uniqueness, concerns
 from escapewheel_validator.generate import _generate as generate
 
@@ -52,17 +51,13 @@ def test_a_column_determined_by_a_non_key_still_refuses(monkeypatch):
         "primary_key": ["a", "b"],
         "columns": [{"name": "x", "type": "string", "presence": "required", "determined_by": ["c"]}],
     }
-    monkeypatch.setattr(
-        sys.modules[adjacency_settles_uniqueness.__module__], "stored_order", lambda resource, table: ["a", "x", "b"]
-    )
+    monkeypatch.setattr(generating, "stored_order", lambda resource, table: ["a", "x", "b"])
     assert not adjacency_settles_uniqueness("x.y", table)
 
 
 def test_an_undeclared_column_ahead_of_the_key_refuses(monkeypatch):
     table = {"primary_key": ["a", "b"], "columns": [{"name": "x"}]}
-    monkeypatch.setattr(
-        sys.modules[adjacency_settles_uniqueness.__module__], "stored_order", lambda resource, table: ["a", "x", "b"]
-    )
+    monkeypatch.setattr(generating, "stored_order", lambda resource, table: ["a", "x", "b"])
     assert not adjacency_settles_uniqueness("x.y", table)
 
 

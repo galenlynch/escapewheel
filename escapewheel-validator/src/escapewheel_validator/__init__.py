@@ -3,7 +3,8 @@
 :func:`validate` takes a packet opened by `escapewheel_reader` and returns a :class:`Report` of
 findings and verdicts; ``escapewheel validate`` is the same call from the command line.
 :func:`check_packet_manifest` runs the manifest phases alone, and :func:`check_registry_context`
-checks a registry document with no packet in hand. Every error the package raises on purpose is a
+checks a registry document with no packet in hand. :func:`manifest_schema` and
+:func:`registry_meta_schema` are the two schemas those read. Every error the package raises on purpose is a
 :class:`ValidatorError`. A finding's level, a verdict, an evaluation's status and a registry result's
 state are members of :class:`Level`, :class:`Verdict`, :class:`EvaluationStatus` and
 :class:`RegistryState`, each equal to the string a report's JSON carries. Every check a finding is
@@ -34,6 +35,9 @@ vocabulary
 
 A rule is SQL that returns offending rows, so the validator needs DuckDB where the reader does
 not.
+
+The names here are the user tier. A name another Escapewheel package needs is in the ``__all__`` of
+the module that defines it, and is imported from that module.
 """
 
 from importlib.metadata import PackageNotFoundError, version
@@ -50,7 +54,6 @@ from .errors import (
     UnknownAlgorithm,
     ValidatorError,
 )
-from .generate import Check, generate
 from .manifest import manifest_schema
 from .registry_document import (
     CheckedRegistryContext,
@@ -65,8 +68,8 @@ from .validator import (
     RegistryEvaluation,
     Report,
     check_packet_manifest,
+    registry_meta_schema,
     validate,
-    verify_order,
 )
 from .vocabulary import EvaluationStatus, Level, RegistryState, Verdict
 
@@ -76,7 +79,6 @@ except PackageNotFoundError:  # pragma: no cover - only when running from a sour
     __version__ = "0.0.0.dev0"
 
 __all__ = [
-    "Check",
     "CheckEntry",
     "CheckedRegistryContext",
     "Evaluation",
@@ -103,8 +105,7 @@ __all__ = [
     "check_registry_context",
     "check_registry_context_bytes",
     "check_table",
-    "generate",
     "manifest_schema",
+    "registry_meta_schema",
     "validate",
-    "verify_order",
 ]

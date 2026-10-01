@@ -3,8 +3,10 @@ API Reference
 
 .. currentmodule:: escapewheel_validator
 
-Every name here is importable from ``escapewheel_validator``. Open a packet with
-``escapewheel_reader.open_packet`` and pass it to :func:`validate`.
+Two tiers of names are public. The user tier is importable from ``escapewheel_validator``: open a
+packet with ``escapewheel_reader.open_packet`` and pass it to :func:`validate`. The support tier is
+for another Escapewheel package, and each of its names is imported from the module shown. A name
+this page does not list is the validator's own and may change without notice.
 
 Validating a packet
 -------------------
@@ -42,6 +44,7 @@ ID, and a function for each family whose IDs are built from a resource or a colu
 .. autosummary::
    :toctree: generated
 
+   check_table
    CheckEntry
    Scope
 
@@ -57,16 +60,14 @@ Checking a registry document
    RegistryResult
    RegistryRejected
 
-Generated checks and physical order
------------------------------------
+Schemas
+-------
 
 .. autosummary::
    :toctree: generated
 
-   generate
-   Check
-   verify_order
    manifest_schema
+   registry_meta_schema
 
 Errors
 ------
@@ -83,6 +84,45 @@ Errors
    OrderViolation
    OrderFault
 
+Support tier
+------------
+
+For the writer and an adapter package. Every user-tier name is also importable from the module
+that defines it.
+
+.. autosummary::
+   :toctree: generated
+
+   validator.verify_order
+   generate.adjacency_settles_uniqueness
+   amendment.IDENTITY
+   amendment.PREFERENCES
+   amendment.DERIVED
+   amendment.PROVENANCE
+   amendment.Version
+   amendment.absent
+   amendment.chain_reaches
+   manifest.format_checker
+   stores.listing
+   stores.Listing
+   stores.Member
+   stores.StoreDigest
+   stores.store_digest
+   stores.listing_digest
+   stores.digest
+   stores.digest_resource
+   stores.Digested
+   scripts.cli.register
+
+The two checkers copied from the specification's tree are in the support tier whole, each with the
+names its source exports.
+
+.. autosummary::
+   :toctree: generated
+
+   registry_document
+   rule_language
+
 Modules
 -------
 
@@ -94,11 +134,8 @@ Each module's page lists what it holds beyond the names above.
    validator
    manifest
    generate
-   registry_document
-   rule_language
    amendment
-   check_table
    errors
    stores
-   opaque
    vocabulary
+   scripts.cli

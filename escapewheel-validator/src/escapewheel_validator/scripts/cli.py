@@ -135,3 +135,6 @@ def register(subcommands: argparse._SubParsersAction[argparse.ArgumentParser]) -
         "difference from its item (Part 04 §3); repeatable",
     )
     parser.set_defaults(func=_validate)
+
+
+__all__ = ["register"]

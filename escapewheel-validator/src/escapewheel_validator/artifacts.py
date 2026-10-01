@@ -6,3 +6,5 @@
 from pathlib import Path
 
 ARTIFACTS = Path(__file__).resolve().parent / "schemas"
+
+__all__: list[str] = []

@@ -35,7 +35,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, UnresolvedSource, sql_name
+from escapewheel_reader import Location, Packet, PacketError, ResourceUnreadableError, UnresolvedSource
 from escapewheel_reader.location import SOURCES_FILENAME
 from escapewheel_reader.manifest import MANIFEST_FILENAME, Manifest
 from escapewheel_reader.ordering import stored_order
@@ -2894,13 +2894,12 @@ def check_packet_manifest(
 
 
 __all__ = [
-    "ARROW_TYPES",
-    "VERDICTS",
     "Evaluation",
     "Finding",
+    "RegistryEvaluation",
     "Report",
     "check_packet_manifest",
     "registry_meta_schema",
-    "sql_name",
     "validate",
+    "verify_order",
 ]

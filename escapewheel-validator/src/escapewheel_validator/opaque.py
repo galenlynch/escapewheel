@@ -102,11 +102,4 @@ def describe(resource_id: str, directory: str, names: Sequence[str], reason: str
     return f"{resource_id}: in {directory!r}, {names[0]!r} is a name Windows cannot hold"
 
 
-__all__ = [
-    "caseless",
-    "colliding",
-    "describe",
-    "findings",
-    "payload_directories",
-    "unportable_to_windows",
-]
+__all__: list[str] = []

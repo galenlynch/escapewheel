@@ -138,6 +138,22 @@ packet, which is worse than having no check.
   `OrderViolation.row` holds the index, and the text shows `row` plus one. A value a column stores,
   such as an `axis_index`, is printed as stored.
 
+## Two tiers of public names
+
+Every module declares `__all__`, and a name is public only through one.
+
+- **User tier**: what `__init__` exports. `docs/source/api.rst` documents it by subject.
+- **Support tier**: a name in a module's `__all__` that `__init__` does not export. The writer and
+  an adapter package import it from that module, and `api.rst` lists it under "Support tier".
+
+A bare name left out of `__all__` is for the validator's own modules and tests, and an underscore
+name for its own module and the test file named for it; another package imports neither. A module
+exports only names it defines. The two checkers copied from the specification's tree keep the
+`__all__` their source declares. `tests/test_surface.py` holds the tiers against `api.rst` in both
+directions, and holds the validator to the reader's two tiers in what it imports from the reader.
+
+Before taking a name out of a tier, search the other packages for it.
+
 ## An advisory rule is not a compromise
 
 A rule may be `advisory` (R26): off by default, never `error`, so enabling it cannot change

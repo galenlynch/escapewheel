@@ -401,13 +401,7 @@ __all__ = [
     "IDENTITY",
     "PREFERENCES",
     "PROVENANCE",
-    "Finding",
     "Version",
     "absent",
     "chain_reaches",
-    "compare",
-    "group_lists",
-    "predecessor",
-    "quoted",
-    "semver",
 ]
