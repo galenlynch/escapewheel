@@ -22,6 +22,8 @@ manifest
     Manifest conformance and registry binding (Part 04 §10).
 declarations
     The manifest's entries against the declarations and the sources they name.
+shim
+    The checks of how a packet is stored, which no query over its tables can make.
 generate
     Tier 1 checks generated from a registry's structure.
 registry_document, rule_language
