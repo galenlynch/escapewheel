@@ -18,6 +18,7 @@ from escapewheel_reader import EscapewheelError, ManifestError, open_packet
 
 from ..errors import ReplacedPacketUnreadable
 from ..validator import check_packet_manifest, validate
+from ..vocabulary import EvaluationStatus, Level
 
 
 def _validate(args: argparse.Namespace) -> int:
@@ -63,7 +64,7 @@ def _report(args: argparse.Namespace) -> int:
         for row in finding.rows:
             print(f"           {tuple(row)}")
     for evaluation in report.evaluations:
-        if evaluation.status == "complete":
+        if evaluation.status == EvaluationStatus.COMPLETE:
             continue
         rule = f" {evaluation.rule}" if evaluation.rule else ""
         detail = f": {evaluation.detail}" if evaluation.detail else ""
@@ -72,7 +73,7 @@ def _report(args: argparse.Namespace) -> int:
     # visible as the reason a packet whose core passed did not.
     print(f"\n{packet_id}: {report.verdict()} — {report.errors} error(s), {report.warnings} warning(s)")
     for registry in report.bound:
-        errors = sum(f.level == "error" and f.registry == registry for f in report.findings)
+        errors = sum(f.level == Level.ERROR and f.registry == registry for f in report.findings)
         print(f"{' ' * len(packet_id)}  {registry}: {report.verdict(registry)} — {errors} error(s)")
 
     if args.report is not None:

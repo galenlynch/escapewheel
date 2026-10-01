@@ -39,6 +39,7 @@ from escapewheel_reader.uri import in_one_form
 from .errors import FormatCheckUnavailable, ReplacedPacketUnreadable
 from .registry_document import CheckedRegistryContext, check_registry_context_bytes
 from .stores import listing_digest
+from .vocabulary import RegistryState
 
 MANIFEST_FILENAME = "packet.json"
 
@@ -67,7 +68,7 @@ class Bound:
     def directs(self, registry_id: str) -> bool:
         """Whether this registry may direct packet checks (Part 05 §14.5)."""
         context = self.contexts.get(registry_id)
-        return registry_id in self.passed and context is not None and context.result.state == "valid"
+        return registry_id in self.passed and context is not None and context.result.state == RegistryState.VALID
 
     @property
     def core(self) -> CheckedRegistryContext | None:

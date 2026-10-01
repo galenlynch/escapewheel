@@ -22,6 +22,7 @@ from escapewheel_reader import quote, sql_name
 from escapewheel_reader.ordering import stored_order
 
 from .registry_document import CheckedRegistryContext, RegistryRejected
+from .vocabulary import Level, RegistryState
 
 
 @dataclass(frozen=True)
@@ -160,7 +161,7 @@ def _discriminator(
     checks = [
         Check(
             f"{resource}.{column['name']}.is_a_resource_id",
-            "error",
+            Level.ERROR,
             f"{column['name']} holds a value that is not a dotted resource ID",
             f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND NOT regexp_matches({col}, '{RESOURCE_ID}')",
             resource,
@@ -176,7 +177,7 @@ def _discriminator(
             # Part 02 §8.3. Where an unresolvable kind is a fact rather than a defect it is still
             # reported: passed in silence, an extension kind would go unchecked without anything
             # saying so.
-            "error" if column.get("resolves") == "required" else "info",
+            Level.ERROR if column.get("resolves") == "required" else Level.INFO,
             f"{column['name']} names a resource this packet does not declare",
             f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({declared})",
             resource,
@@ -214,7 +215,7 @@ def _discriminator(
             checks.append(
                 Check(
                     f"{resource}.{column['name']}.{sql_name(kind)}_is_specialised",
-                    "error",
+                    Level.ERROR,
                     message,
                     sql,
                     resource,
@@ -245,7 +246,7 @@ def _kind_matches(found: Specialisation, reachable: Collection[str]) -> list[Che
     return [
         Check(
             f"{found.detail}.{'_'.join(c for c, _ in found.on)}.names_a_row_of_its_kind",
-            "error",
+            Level.ERROR,
             f"a row specialises a {found.target} row whose {found.column} does not name {found.detail} (Part 02 §8.3)",
             f"SELECT {detail} FROM {found.detail} t {joins} WHERE {value} IS NULL OR {value} <> '{found.detail}'",
             found.detail,
@@ -313,7 +314,7 @@ def _paired_value(
         checks.append(
             Check(
                 f"{resource}.{column['name']}.key_fits_paired_value",
-                "error",
+                Level.ERROR,
                 f"{column['name']} names a resource whose primary key is not one column {paired} can hold "
                 "(Part 02 §8.3)",
                 f"SELECT DISTINCT {col} FROM {name} WHERE {col} IN ({', '.join(repr(k) for k in misfits)})",
@@ -352,7 +353,7 @@ def _paired_value(
         checks.append(
             Check(
                 f"{resource}.{column['name']}.{sql_name(kind)}_resolves",
-                "error",
+                Level.ERROR,
                 f"{paired} names no row of {kind}, which {column['name']} names (Part 02 §8.3)",
                 f"SELECT DISTINCT {selected} FROM {rows}{join} "
                 f"WHERE {kind_of} = '{kind}' AND r.{quote(paired)} IS NOT NULL "
@@ -365,7 +366,7 @@ def _paired_value(
         checks.append(
             Check(
                 f"{resource}.{column['name']}.specialised_row_has_kind",
-                "error",
+                Level.ERROR,
                 f"a {holder} row pairs {paired} with no kind, since its {column['name']} is null (Part 02 §8.3)",
                 f"SELECT {selected} FROM {rows}{join} WHERE {kind_of} IS NULL",
                 resource,
@@ -444,7 +445,7 @@ def _generate(  # noqa: C901
                 checks.append(
                     Check(
                         f"{resource}.{column['name']}.not_null",
-                        "error",
+                        Level.ERROR,
                         f"required column {column['name']} contains nulls",
                         f"SELECT * FROM {name} WHERE {quote(column['name'])} IS NULL",
                         resource,
@@ -455,7 +456,7 @@ def _generate(  # noqa: C901
                 checks.append(
                     Check(
                         f"{resource}.{column['name']}.finite",
-                        "error",
+                        Level.ERROR,
                         f"{column['name']} holds NaN or an infinity",
                         f"SELECT * FROM {name} WHERE NOT isfinite({quote(column['name'])})",
                         resource,
@@ -468,7 +469,7 @@ def _generate(  # noqa: C901
                 checks.append(
                     Check(
                         f"{resource}.{column['name']}.in_vocabulary",
-                        "error",
+                        Level.ERROR,
                         f"{column['name']} carries a value outside its closed vocabulary",
                         f"SELECT DISTINCT {col} FROM {name} WHERE {col} IS NOT NULL AND {col} NOT IN ({allowed})",
                         resource,
@@ -487,7 +488,7 @@ def _generate(  # noqa: C901
             checks.append(
                 Check(
                     f"{resource}.primary_key_unique",
-                    "error",
+                    Level.ERROR,
                     "duplicate primary key",
                     f"SELECT {columns}, COUNT(*) AS n FROM {name} GROUP BY {columns} HAVING COUNT(*) > 1",
                     resource,
@@ -514,7 +515,7 @@ def _generate(  # noqa: C901
             checks.append(
                 Check(
                     f"{resource}.{'_'.join(ref['columns'])}_resolves",
-                    "error",
+                    Level.ERROR,
                     f"{', '.join(ref['columns'])} does not resolve to {ref['resource']}",
                     f"SELECT DISTINCT {selected} FROM {name} c LEFT JOIN {parent} p ON {on} WHERE {where}",
                     resource,
@@ -546,7 +547,7 @@ def generate(
     """Build checks only from a valid context bound to the registry it checked."""
     if not isinstance(registry, CheckedRegistryContext):
         raise TypeError("generate() requires a CheckedRegistryContext")
-    if registry.result.state != "valid":
+    if registry.result.state != RegistryState.VALID:
         raise RegistryRejected("check generator", registry)
     document = registry.document
     if not isinstance(document, Mapping):  # guarded by a valid result; retained for type safety

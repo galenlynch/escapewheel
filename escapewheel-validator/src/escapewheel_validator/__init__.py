@@ -4,7 +4,9 @@
 findings and verdicts; ``escapewheel validate`` is the same call from the command line.
 :func:`check_packet_manifest` runs the manifest phases alone, and :func:`check_registry_context`
 checks a registry document with no packet in hand. Every error the package raises on purpose is a
-:class:`ValidatorError`.
+:class:`ValidatorError`. A finding's level, a verdict, an evaluation's status and a registry result's
+state are members of :class:`Level`, :class:`Verdict`, :class:`EvaluationStatus` and
+:class:`RegistryState`, each equal to the string a report's JSON carries.
 
 Its modules:
 
@@ -24,6 +26,8 @@ stores
     Listings and digests of external resources, run only where a mode asks.
 opaque
     Names in an opaque payload that some filesystem cannot hold.
+vocabulary
+    The levels, verdicts, evaluation statuses and registry states a report is written in.
 
 A rule is SQL that returns offending rows, so the validator needs DuckDB where the reader does
 not.
@@ -59,6 +63,7 @@ from .validator import (
     validate,
     verify_order,
 )
+from .vocabulary import EvaluationStatus, Level, RegistryState, Verdict
 
 try:
     __version__ = version("escapewheel-validator")
@@ -69,19 +74,23 @@ __all__ = [
     "Check",
     "CheckedRegistryContext",
     "Evaluation",
+    "EvaluationStatus",
     "Finding",
     "FormatCheckUnavailable",
+    "Level",
     "OrderFault",
     "OrderViolation",
     "RegistryEvaluation",
     "RegistryRejected",
     "RegistryResult",
+    "RegistryState",
     "ReplacedPacketUnreadable",
     "Report",
     "ResourceMissing",
     "StoreUnreachable",
     "UnknownAlgorithm",
     "ValidatorError",
+    "Verdict",
     "__version__",
     "check_packet_manifest",
     "check_registry_context",

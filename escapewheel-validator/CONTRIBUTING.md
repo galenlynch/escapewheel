@@ -116,6 +116,10 @@ packet, which is worse than having no check.
   base only where a caller already catches that built-in. A test asserts the class and those
   attributes, never the wording. `tests/test_errors.py` holds the rule; `RegistryRejected` and
   `RuleProfileError` stand outside it, being defined in the copied checkers.
+- **A level, a verdict, an evaluation status and a registry state are members of the enumerations
+  in `vocabulary.py`, never string literals.** Each member equals the string a report's JSON
+  carries, so a caller holding that string compares against the member. `tests/test_vocabulary.py`
+  holds the rule.
 
 ## An advisory rule is not a compromise
 

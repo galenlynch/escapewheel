@@ -19,6 +19,19 @@ Validating a packet
    Evaluation
    RegistryEvaluation
 
+Vocabularies
+------------
+
+Each is a string enumeration whose members equal the strings a report's JSON carries.
+
+.. autosummary::
+   :toctree: generated
+
+   Level
+   Verdict
+   EvaluationStatus
+   RegistryState
+
 Checking a registry document
 ----------------------------
 
@@ -74,3 +87,4 @@ Each module's page lists what it holds beyond the names above.
    errors
    stores
    opaque
+   vocabulary

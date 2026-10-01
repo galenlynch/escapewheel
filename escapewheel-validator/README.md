@@ -55,6 +55,11 @@ report.verdict(), report.verdict("core")       # "passed", "failed", or "incompl
 report.registries  # complete, role-labelled registry-document results
 ```
 
+A verdict is a `Verdict`, a finding's level a `Level`, an evaluation's status an `EvaluationStatus`,
+and a registry result's state a `RegistryState`. Each is a string enumeration whose members equal
+the strings the JSON report carries, so `report.verdict() == Verdict.PASSED` and
+`report.verdict() == "passed"` are one test.
+
 ## Resource digests
 
 Every resource the packet owns records a `digest` naming its algorithm: `sha256`, `crc64nvme`,
