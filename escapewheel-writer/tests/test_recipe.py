@@ -14,17 +14,13 @@ from escapewheel_writer.errors import (
     SourceFault,
     SourcesNotOrdered,
 )
+from escapewheel_writer.facts import refuse_a_discarded_fact
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.notes import coded as noted
 from escapewheel_writer.recipe import RECIPE_SUPPLIES, Recipe
-from escapewheel_writer.session import (
-    Context,
-    grouped_encoding_exceptions,
-    note_unclaimed,
-    order,
-    refuse_a_discarded_fact,
-)
+from escapewheel_writer.session import Context, grouped_encoding_exceptions, note_unclaimed
 from escapewheel_writer.sources import ADAPTERS
+from escapewheel_writer.sourcing import order
 
 BASE = """
 [packet]

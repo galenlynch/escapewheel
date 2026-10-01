@@ -124,7 +124,8 @@ def test_a_recipe_setting_a_term_is_refused(tmp_path):
 
 
 def _context(recipe, location):
-    from escapewheel_writer.session import Context, resolved_source_cache
+    from escapewheel_writer.session import Context
+    from escapewheel_writer.sourcing import resolved_source_cache
 
     context = Context(session_id="s1", workspace=Path(f"{recipe.out}.deliveries"))
     context.source_cache = resolved_source_cache(location, recipe.out, context)
@@ -133,7 +134,7 @@ def _context(recipe, location):
 
 def test_an_accepting_adapter_is_supplied_the_location_and_no_other_is(tmp_path, monkeypatch):
     """In its input object, with no environment variable set, and to no adapter that did not ask."""
-    from escapewheel_writer.session import supplied_to
+    from escapewheel_writer.sourcing import supplied_to
 
     for variable in ("ESCAPEWHEEL_SOURCE_CACHE", "TMPDIR"):
         monkeypatch.delenv(variable, raising=False)
@@ -150,7 +151,7 @@ def test_an_accepting_adapter_is_supplied_the_location_and_no_other_is(tmp_path,
 
 @pytest.mark.parametrize("inside", ["packet", "packet.deliveries/sorter", "packet/.staging"])
 def test_a_location_inside_the_packet_or_a_delivery_is_supplied_to_no_adapter(tmp_path, inside):
-    from escapewheel_writer.session import supplied_to
+    from escapewheel_writer.sourcing import supplied_to
 
     sorted_root, raw = _sources(tmp_path)
     recipe = Recipe.load(_recipe(tmp_path, sorted_root, raw))

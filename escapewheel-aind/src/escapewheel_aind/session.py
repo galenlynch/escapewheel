@@ -177,7 +177,7 @@ class SessionSource(Compensates):
     ACCEPTS: ClassVar[tuple[str, ...]] = ("prefix", "source_cache")
 
     #: Part 05 §3.4: the kinds whose output this adapter reads, which is what orders a build.
-    #: `aind_nwb` rather than `nwb`: a kind is matched by name, and `session.order` raises on one
+    #: `aind_nwb` rather than `nwb`: a kind is matched by name, and `sourcing.order` raises on one
     #: the recipe does not declare, so an adapter pairs with the NWB reader it ships beside.
     CONSUMES: ClassVar[tuple[str, ...]] = ("sorter", "sync", "aind_nwb")
 

@@ -17,7 +17,10 @@ from tests.test_adapter_columns import BUILDERS, emitted
 PACKAGE = Path(escapewheel_writer.__file__).parent
 
 #: The modules whose notes reach a build's report: every adapter, the build and a delivery.
-NOTING = [*sorted((PACKAGE / "sources").glob("*.py")), PACKAGE / "session.py", PACKAGE / "delivery.py"]
+NOTING = [
+    *sorted((PACKAGE / "sources").glob("*.py")),
+    *(PACKAGE / f"{name}.py" for name in ("session", "sourcing", "facts", "alignment", "delivery")),
+]
 
 
 def _uncoded(path: Path) -> list[str]:

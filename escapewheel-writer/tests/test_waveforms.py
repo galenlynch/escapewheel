@@ -323,8 +323,9 @@ def test_a_unit_the_build_harvested_resolves_under_a_prefix(tmp_path: Path, pref
     """
     from types import SimpleNamespace
 
-    from escapewheel_writer.session import Context, harvest, rows_reader
+    from escapewheel_writer.session import Context
     from escapewheel_writer.sources.sorter import SorterSource
+    from escapewheel_writer.sourcing import harvest, rows_reader
     from tests import sorterfixture
 
     root = tmp_path / "sorted"

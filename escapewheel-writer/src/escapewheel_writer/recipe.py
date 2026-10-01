@@ -50,7 +50,7 @@ from escapewheel_reader.registries import declared_tables
 from escapewheel_reader.resource_ids import CORE_PROCESSING_RUNS, CORE_SESSIONS, CORE_SUBJECTS
 from upath import UPath
 
-from .errors import DeclarationUnreadable, RecipeFault, RecipeUnreadable
+from .errors import DeclarationUnreadable, RecipeFault, RecipeUnreadable, RecipeUnsound
 from .sources.store import source_root
 
 #: Source kinds that accept a `sample` cap, for the development flag that makes a round trip
@@ -303,6 +303,12 @@ class Problem:
     def __str__(self) -> str:
         """Render as ``level: message``."""
         return f"{self.level}: {self.message}"
+
+
+def refusal(recipe: Recipe, lead: str, problems: Sequence[Problem], *, cites: str = "") -> RecipeUnsound:
+    """Return the refusal of `recipe`: its path, `lead`, each problem, and the part `cites` names."""
+    message = f"{recipe.path}: {lead}" + "; ".join(p.message for p in problems) + cites
+    return RecipeUnsound(message, path=recipe.path, problems=problems)
 
 
 @dataclass(frozen=True)
@@ -1588,6 +1594,7 @@ __all__ = [
     "protocols",
     "reached_by",
     "redacted",
+    "refusal",
     "schema",
     "shape_problems",
     "state_accessors",

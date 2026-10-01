@@ -9,9 +9,10 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import Level
 
 from escapewheel_writer.errors import RecipeFault, RecipeUnsound, SourceDefect, SourceFault
+from escapewheel_writer.facts import compare_held_facts
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import Recipe, SourceSpec
-from escapewheel_writer.session import build, compare_held_facts
+from escapewheel_writer.session import build
 from tests.conftest import REGISTRY
 from tests.test_build_end_to_end import CLOCK_NAME, _recipe, _sources
 

@@ -8,14 +8,9 @@ a consumer derives from it.
 import numpy as np
 import pytest
 
+from escapewheel_writer.alignment import TOLERANCE, bound_for, declare_withheld, time_origin
 from escapewheel_writer.notes import NoteCode, coded
-from escapewheel_writer.session import (
-    TOLERANCE,
-    Context,
-    bound_for,
-    declare_withheld,
-    time_origin,
-)
+from escapewheel_writer.session import Context
 
 AP, HARP = 30000, 31250
 

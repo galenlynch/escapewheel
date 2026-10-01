@@ -58,7 +58,7 @@ SUPPLIES_NOTE = "the recipe supplies core.sessions, core.subjects and core.proce
 KINDS = ("lfp", "nwb", "sorter", "sync")
 
 #: Options an adapter requires that no inspection can supply, drafted so the recipe builds.
-#: `session.build_source` pops these; without them a build dies on a KeyError rather than a finding.
+#: `sourcing.build_source` pops these; without them a build dies on a KeyError rather than a finding.
 REQUIRED = {
     "nwb": (("zone", '"America/Los_Angeles"', "the rig's zone, which resolves a naive stamp"),),
 }

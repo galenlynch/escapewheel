@@ -9,7 +9,8 @@ import pytest
 from escapewheel_writer.errors import SourceDefect, SourceFault
 from escapewheel_writer.notes import NoteCode, coded, codes
 from escapewheel_writer.recipe import SourceSpec
-from escapewheel_writer.session import Context, composed, harvest
+from escapewheel_writer.session import Context, composed
+from escapewheel_writer.sourcing import harvest
 
 BEGAN = datetime(2025, 4, 10, 0, 25, 12, tzinfo=UTC)
 ENDED = datetime(2025, 4, 10, 2, 38, 44, tzinfo=UTC)

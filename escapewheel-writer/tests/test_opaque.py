@@ -413,7 +413,8 @@ def test_a_hand_over_with_nowhere_to_go_is_refused_over_a_protocol(tmp_path):
 def test_opaque_location_is_supplied_empty_under_staging_one_per_source(tmp_path):
     """Part 12 §4: supplied empty, since what is found there is bound; apart from `array_location`'s."""
     from escapewheel_writer.recipe import TERMS, SourceSpec
-    from escapewheel_writer.session import Context, filled_terms
+    from escapewheel_writer.session import Context
+    from escapewheel_writer.sourcing import filled_terms
 
     assert "opaque_location" in TERMS
     context = Context(session_id="s001")
@@ -435,7 +436,8 @@ def test_opaque_location_is_supplied_empty_under_staging_one_per_source(tmp_path
 
 def test_opaque_location_is_supplied_only_where_declared(tmp_path):
     from escapewheel_writer.recipe import SourceSpec
-    from escapewheel_writer.session import Context, filled_terms
+    from escapewheel_writer.session import Context
+    from escapewheel_writer.sourcing import filled_terms
 
     context = Context(session_id="s001")
     context.staging = tmp_path / "staging"

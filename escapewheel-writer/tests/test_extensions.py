@@ -223,7 +223,8 @@ def test_a_registered_source_kind_is_built(tmp_path, monkeypatch):
     leaves NWB's own mechanism unused."""
     from escapewheel_writer import session as session_module
     from escapewheel_writer.recipe import SourceSpec
-    from escapewheel_writer.session import Context, build_source
+    from escapewheel_writer.session import Context
+    from escapewheel_writer.sourcing import build_source
 
     monkeypatch.setattr("escapewheel_writer.sources.discovered", lambda: {"tasklog": _Registered})
     spec = SourceSpec(kind="tasklog", root=tmp_path, owns=("task.trials",), options={"zone": "utc"})
@@ -243,7 +244,8 @@ def test_a_builtin_kind_cannot_be_shadowed(tmp_path, monkeypatch):
 
 def test_an_unknown_kind_names_what_is_known(tmp_path, monkeypatch):
     from escapewheel_writer.recipe import SourceSpec
-    from escapewheel_writer.session import Context, build_source
+    from escapewheel_writer.session import Context
+    from escapewheel_writer.sourcing import build_source
 
     monkeypatch.setattr("escapewheel_writer.sources.discovered", lambda: {"tasklog": _Registered})
     spec = SourceSpec(kind="nonesuch", root=tmp_path, owns=())

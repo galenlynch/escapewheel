@@ -115,7 +115,8 @@ def test_the_adapters_that_share_a_root_share_its_store(tmp_path, registry):
     theirs.
     """
     from escapewheel_writer.recipe import Recipe
-    from escapewheel_writer.session import Context, build_source
+    from escapewheel_writer.session import Context
+    from escapewheel_writer.sourcing import build_source
 
     root = nwbfixture.build(tmp_path)
     text = f"""

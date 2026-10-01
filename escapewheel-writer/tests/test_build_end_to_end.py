@@ -174,7 +174,7 @@ def test_sources_sharing_a_root_record_it_once():
     """A source stating no root states none to record."""
     from types import SimpleNamespace
 
-    from escapewheel_writer.session import source_roots
+    from escapewheel_writer.provenance import source_roots
 
     document = {"source": [{"kind": "sync", "root": "raw"}, {"kind": "harp", "root": "raw"}, {"kind": "thermistor"}]}
     assert source_roots(SimpleNamespace(document=document)) == ["raw"]

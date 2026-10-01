@@ -102,11 +102,15 @@ def test_the_build_dispatches_on_no_kind():
     `harvest` is not in the list: it reads what a source produced rather than supplying it, and
     what replaces its per-kind reach is a delivery rather than a declaration.
     """
-    from escapewheel_writer import session
+    from escapewheel_writer import session, sourcing
 
-    source = Path(session.__file__).read_text()
     checked = {"build_source", "composed", "_add_records"}
-    functions = [n for n in ast.walk(ast.parse(source)) if isinstance(n, ast.FunctionDef) and n.name in checked]
+    functions = [
+        n
+        for module in (session, sourcing)
+        for n in ast.walk(ast.parse(Path(module.__file__).read_text()))
+        if isinstance(n, ast.FunctionDef) and n.name in checked
+    ]
     assert {n.name for n in functions} == checked
     for function in functions:
         dispatched = {
