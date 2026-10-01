@@ -34,12 +34,14 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ### What stands between here and a v0.2 release
 
-1. **Field-test the release candidate** (roadmap P10.2). Packets are built and used from the
+1. **Finish the pre-release refactor.** [REFACTOR.md](REFACTOR.md) holds the audit's findings, the
+   settled decisions and five stages of work; all five land before the field test.
+2. **Field-test the release candidate** (roadmap P10.2). Packets are built and used from the
    current contract with every identifier still a development identifier (Part 02 §9.2). A defect
    in a part, registry or schema it finds is a revision; an implementation defect is maintenance.
    The user decides when it ends.
-2. **Assign final identifiers** (P10.3), once the field test's revisions are incorporated.
-3. **Publish immutably** (P11): the released artifact set, its manifest and the publication
+3. **Assign final identifiers** (P10.3), once the field test's revisions are incorporated.
+4. **Publish immutably** (P11): the released artifact set, its manifest and the publication
    verifier.
 
 ---
@@ -108,12 +110,62 @@ revision because it adds a report key. A table of sync's own would restate R99's
 general way for one source to contribute columns to another's rows is more mechanism than one fact
 warrants. Nothing needs it while every recipe runs sync in process.
 
-## 3. No code quality audit has run
+## 3. The pre-release refactor
 
-Asked for on 2026-09-06 and not started. Correctness, interpretability, maintainability, and
-above all **which problem domains this project owns**: where a dependency already solves something
-well, the code should not be solving it again. The reader's `Location`, the writer's store
-abstraction, the registry's generators and the clock arithmetic are the places to look first.
+**Planned, not started.** The audit asked for on 2026-09-06 ran on 2026-10-01 over the four
+packages, the repository scripts and the specification tooling. [REFACTOR.md](REFACTOR.md) records
+what it found, the decisions taken, the defects to fix and the work as five stages of checklists:
+errors, declared vocabularies, the public surface, module splits, and structural changes. Stage 1
+begins in the reader. One question from the 2026-09-06 request is not answered by it: which
+problems a dependency already solves that this code solves again.
+
+## 3a. Two proposals await promotion
+
+Both are committed under `revisions/proposals/` and neither is promoted.
+
+- **The reader floor bounds an array's byte order.** It supersedes R3 §7.1's little-endian and
+  `fill_value` sentences, which the ledger records as applied and no part states, and narrows the
+  Zarr v2 reader floor to little-endian and single-byte data types. Three code sites wait on it:
+  the first paragraph of `arrays.py`'s module docstring, the validator's `array.no_fill_value`
+  message with its test, and the citation of Part 03 §6.1 beside them.
+- **A build records a recipe without its credentials.** A build replaces a credential it
+  recognizes with a marker the specification names, or refuses the recipe. It also covers a
+  credential inside a source root, which is wider than the request that prompted it and may be
+  split out. One code site waits on it: the docstring of `recipe._storage_problems`.
+
+## 3b. A document, a volume or a viewer state has no declared home in a packet
+
+**Under discussion, 2026-10-01.** Part 02 §2.3 defines the `opaque` kind and Part 02 §2.4 three instance
+modes. What exists today:
+
+- Every opaque resource is a manifest entry, which records an ID, a declaration, a URI, a digest
+  and a size, and no format, media type or description. Only a catalog-mode declaration also gives
+  each resource a table row.
+- Core declares one opaque resource, `core.media_asset_instances`, catalogued by
+  `core.media_assets`, whose columns describe frames on a clock. No extension in this repository
+  declares another.
+- A payload reaches a packet only through an adapter: written under `opaque_location` in a
+  directory named by its resource ID, or returned from `staged_payloads()` in process
+  (Part 12 §5). No shipped adapter delivers a packet-owned payload, and a recipe has no way to
+  attach a file without one. The aind video adapter references external media.
+- Part 12 §5 binds a payload to a catalog row or to a singleton declaration. It names no route for
+  a family-mode declaration, and the writer binds none, so the one mode that would hold many
+  uncatalogued documents under one declaration cannot be delivered.
+
+So a PDF, a NIfTI volume or a Neuroglancer state needs an extension registry written to declare
+it, and an adapter written to deliver it. Open questions: whether core should declare a catalogued
+document resource with a name, a media type and a description; whether an MRI volume is a dense
+array once it is Zarr and opaque otherwise; whether family mode gets a delivery route or is
+removed; and whether a recipe may attach a file directly.
+
+## 3c. `bench/` is untracked and holds no script yet
+
+`bench/` has a `pyproject.toml` and a lock file and nothing else. Still to do: port the benchmark
+scripts to the current packet shape, re-measure the cold-read figures on the NVMe, write its
+README, fold in the older measurements, fix the probes' default paths, move the results into
+Part 10, and add a `bench/` row to the root README's layout table. The figures in
+`escapewheel-writer/docs/source/performance.md` are stale, and those removed from the validator's
+design page have no home until this lands.
 
 ## 4. The repository directory is still `nwb-lake/`
 
@@ -183,6 +235,14 @@ natural.
   no gain is carried, so a packet alone cannot put them in physical units. Add a conversion when an
   importer needs one.
 - **Zarr.jl over an object store, and Julia as a Zarr writer, are untested.**
+- **The corpus expects four check IDs no part names.** `array.dimension_names`, `owned.digest`,
+  `schema.column_absent` and `schema.column_type` are the reference validator's spellings, so those
+  packets test this validator and not the specification. It matters only if the corpus is to judge
+  a second validator.
+- **A delivered adapter's compensations are dropped.** Section 4 of REFACTOR.md lists the defect. If carrying
+  them needs a new key in the delivery report (Part 12 §9), that part is a revision.
+- **The ledger cannot see that an applied clause's text has gone.** Two accepted sentences were
+  lost this way and found by hand. Section 9 of REFACTOR.md describes the process proposal still to write.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
