@@ -123,12 +123,15 @@ warrants. Nothing needs it while every recipe runs sync in process.
 
 ## 3. The pre-release refactor
 
-**Planned, not started.** The audit asked for on 2026-09-06 ran on 2026-10-01 over the four
-packages, the repository scripts and the specification tooling. [REFACTOR.md](REFACTOR.md) records
-what it found, the decisions taken, the defects to fix and the work as five stages of checklists:
-errors, declared vocabularies, the public surface, module splits, and structural changes. Stage 1
-begins in the reader. One question from the 2026-09-06 request is not answered by it: which
-problems a dependency already solves that this code solves again.
+**Under way.** The audit asked for on 2026-09-06 ran on 2026-10-01 over the four packages, the
+repository scripts and the specification tooling. [REFACTOR.md](REFACTOR.md) records what it found,
+the decisions taken, the defects to fix and the work as five stages of checklists: errors, declared
+vocabularies, the public surface, module splits, and structural changes. Its checkboxes say what
+has landed and its section 11 records each choice made on the way. Stage 1 is done in every
+package apart from the last test conversions; the reader is through stage 5; the corpus and the
+specification tooling are restructured apart from the registry checker's split. One question from
+the 2026-09-06 request is not answered by it: which problems a dependency already solves that this
+code solves again.
 
 ## 3a. Four proposals await promotion
 
