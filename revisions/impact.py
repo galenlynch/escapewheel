@@ -82,13 +82,7 @@ def index() -> dict[tuple[str, str], tuple[str, ...]]:
     One pass over the tree, not one per section: a commit changing 51 sections walked it 51 times.
     """
     found: dict[tuple[str, str], list[str]] = defaultdict(list)
-    listed = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    listed = specdoc.tracked_files(ROOT, whole_names=False)
     for name in listed:
         # The combined rendering is generated from the parts, so a citation inside it is one of
         # theirs counted twice.
@@ -134,13 +128,7 @@ def anchor_location(anchor: str) -> tuple[str, str, str] | None:
 def anchor_citers(anchor: str) -> list[str]:
     """Return live files and lines that refer to an anchor identifier."""
     found = []
-    listed = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    listed = specdoc.tracked_files(ROOT, whole_names=False)
     for name in listed:
         if name.startswith(SKIPPED) or "Implementation_Spec" in name:
             continue

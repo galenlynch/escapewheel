@@ -23,6 +23,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TREE = ROOT / "spec"
 TOOLS = TREE / "tools"
+sys.path.insert(0, str(TOOLS))
+
+import specdoc
 
 #: What regenerates the tree, then what checks it, each run from `tools/` in the copy.
 GENERATE = (["build.py"], ["columns.py"], ["combine.py"])
@@ -34,15 +37,8 @@ IMPORT_NAMES = {"pytest": "pytest"}
 
 def members() -> list[Path]:
     """Every file of the tree Git would commit, relative to it, including new ones."""
-    listed = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "spec"],
-        cwd=ROOT,
-        capture_output=True,
-        check=True,
-    ).stdout.split(b"\0")
-    return sorted(
-        path.relative_to(TREE) for path in (ROOT / name.decode() for name in listed if name) if path.is_file()
-    )
+    listed = specdoc.tracked_files(ROOT, "spec")
+    return sorted(path.relative_to(TREE) for path in (ROOT / name for name in listed) if path.is_file())
 
 
 def regeneration_errors() -> list[str]:
@@ -129,7 +125,6 @@ def unchecked_artifacts() -> list[str]:
 
 def outside_path_errors() -> list[str]:
     """Report each path a part or artifact gives under a repository entry outside the tree."""
-    sys.path.insert(0, str(TOOLS))
     import framework
 
     outside = [path.name for path in ROOT.iterdir() if path.is_dir() and path != TREE and not path.name.startswith(".")]

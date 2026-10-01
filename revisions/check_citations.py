@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -223,13 +222,7 @@ def current_contract_history_refs() -> list[str]:
 
 def elsewhere() -> list[Path]:
     """Every live working-tree document and source file other than the proposals and drafts."""
-    listed = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-        cwd=HERE.parent,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    listed = specdoc.tracked_files(HERE.parent, whole_names=False)
     found = []
     for name in listed:
         path = HERE.parent / name

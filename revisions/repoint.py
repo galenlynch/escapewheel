@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -166,13 +165,7 @@ def ledger() -> dict[str, list[str]]:
 
 def tracked() -> list[str]:
     """Every working-tree Python file, relative to the repository root."""
-    listed = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.py"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    listed = specdoc.tracked_files(ROOT, "*.py", whole_names=False)
     return [name for name in listed if (ROOT / name).is_file()]
 
 

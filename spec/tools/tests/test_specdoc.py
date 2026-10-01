@@ -1,5 +1,7 @@
 """The helpers the specification's tools share."""
 
+import subprocess
+
 import pytest
 
 import specdoc
@@ -185,3 +187,39 @@ def test_a_token_after_a_scalar_raises_with_it():
 
     assert raised.value.token == "deeper"
     assert isinstance(raised.value, TypeError)
+
+
+@pytest.fixture
+def repository(tmp_path):
+    """A repository with a committed-to-be file, a new one, an ignored one and a spaced name."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    for name in ("staged.md", "new.py", "ignored.log", "two words.md", "nested/deep.md"):
+        (tmp_path / name).parent.mkdir(exist_ok=True)
+        (tmp_path / name).write_text("")
+    (tmp_path / ".gitignore").write_text("*.log\n")
+    subprocess.run(["git", "add", "staged.md"], cwd=tmp_path, check=True)
+    return tmp_path
+
+
+def test_tracked_files_are_the_staged_and_the_new_but_not_the_ignored(repository):
+    assert sorted(specdoc.tracked_files(repository)) == [
+        ".gitignore",
+        "nested/deep.md",
+        "new.py",
+        "staged.md",
+        "two words.md",
+    ]
+
+
+def test_pathspecs_narrow_the_tracked_files(repository):
+    assert sorted(specdoc.tracked_files(repository, "*.py")) == ["new.py"]
+    assert sorted(specdoc.tracked_files(repository, "nested", "*.py")) == ["nested/deep.md", "new.py"]
+
+
+def test_a_listing_split_on_whitespace_breaks_a_spaced_name(repository):
+    assert sorted(specdoc.tracked_files(repository, "*.md", whole_names=False)) == [
+        "nested/deep.md",
+        "staged.md",
+        "two",
+        "words.md",
+    ]

@@ -14,13 +14,15 @@ from __future__ import annotations
 import ast
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "spec/artifacts/logical_schemas.json"
 EXTENSIONS = (ROOT / "extensions", ROOT / "escapewheel-aind/extensions")
+sys.path.insert(0, str(ROOT / "spec/tools"))
+
+import specdoc
 
 REGION = re.compile(r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL)
 
@@ -32,13 +34,7 @@ def documents() -> list[Path]:
     is what proved it: each carried hand-typed counts of tables, packets and accepted revisions,
     none of which any list named, and all of which were years of revisions out of date.
     """
-    listed = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "*.md"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
+    listed = specdoc.tracked_files(ROOT, "*.md", whole_names=False)
     found = []
     for name in listed:
         path = ROOT / name
@@ -70,7 +66,6 @@ def _check_counts() -> tuple[int, int]:
         )
 
     per_document = len(json.loads((ROOT / REGISTRY_CONTRACT).read_text())["invariants"])
-    sys.path.insert(0, str(ROOT / "spec/tools"))
     import conventions
 
     loop = len(conventions.convention_failures({}, {}, {})) - 1

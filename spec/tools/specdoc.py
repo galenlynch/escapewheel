@@ -4,6 +4,7 @@ Only the standard library is imported, so a tool outside the tree's environment 
 """
 
 import re
+import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -123,3 +124,17 @@ def resolve_pointer(document: object, pointer: object) -> object:
         else:
             raise ScalarError(token)
     return current
+
+
+def tracked_files(root: Path, *pathspecs: str, whole_names: bool = True) -> list[str]:
+    """Return each file under `root` that Git would commit, new ones included, relative to `root`.
+
+    `pathspecs` narrow the listing. Where `whole_names` is false the listing is split on
+    whitespace, which breaks a name holding any and keeps the quoting Git puts on an unusual name.
+    """
+    command = ["git", "ls-files", "--cached", "--others", "--exclude-standard"]
+    if not whole_names:
+        listing = subprocess.run([*command, "--", *pathspecs], cwd=root, capture_output=True, text=True, check=True)
+        return listing.stdout.split()
+    exact = subprocess.run([*command, "-z", "--", *pathspecs], cwd=root, capture_output=True, check=True)
+    return [name.decode() for name in exact.stdout.split(b"\0") if name]
