@@ -100,7 +100,13 @@ not hold — the Tier 2 rules' execution in DuckDB, Git history, the frozen v0.1
 uv run --project escapewheel-writer python verify.py
 uv run --project escapewheel-writer python verify.py --quick  # no test suite
 uv run --project escapewheel-writer python verify.py --stage-timeout 60
+uv run --project escapewheel-writer python verify.py --jobs 1  # one stage at a time
 ```
+
+The stages that write tracked files (the generators, the root documents' counts and the corpus
+build) run first, alone and in order. Every other stage only reads the tree, and those run
+together, one per CPU unless `--jobs` says otherwise. A stage added to `verify.py` that writes a
+tracked file is declared as a generator there, or it races the stages that read what it writes.
 
 Run it before committing anything that touches the registry, a rule, a fixture, or a generator.
 It prints each stage before entering it; every stage is bounded to 300 seconds by default, and

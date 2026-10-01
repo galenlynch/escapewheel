@@ -17,7 +17,11 @@ Usage:
     python verify.py            # every stage; package suites dominate the runtime
     python verify.py --quick    # every generator and check, and no test suite
     python verify.py --stage-timeout 60  # bound each individual stage
-    python verify.py --heartbeat 30      # report the active stage every 30 seconds
+    python verify.py --heartbeat 30      # report each active stage every 30 seconds
+    python verify.py --jobs 1            # one stage at a time, in the order declared
+
+The stages that write tracked files run first, alone and in the order declared. Every other stage
+only reads the tree, so the rest run together, up to `--jobs` at once.
 
 `--quick` runs none of the four package suites and not the integration tests, so it says nothing
 about a package's behaviour beyond what the corpus and the conformance checks exercise.
@@ -32,8 +36,10 @@ import re
 import signal
 import subprocess
 import tempfile
+import threading
 import time
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -55,6 +61,8 @@ class Stage:
     #: The uv project whose environment runs `command`.
     project: Path
     command: tuple[str, ...]
+    #: Whether the stage writes tracked files. One that does runs alone, before any that reads them.
+    writes: bool = False
 
     @property
     def argv(self) -> list[str]:
@@ -67,10 +75,15 @@ def _python(name: str, cwd: Path, project: Path, *arguments: str) -> Stage:
     return Stage(name, cwd, project, ("python", *arguments))
 
 
+def _generator(name: str, cwd: Path, project: Path, *arguments: str) -> Stage:
+    """Return a stage whose script writes tracked files."""
+    return replace(_python(name, cwd, project, *arguments), writes=True)
+
+
 STAGES: list[Stage] = [
-    _python("spec: generate", TREE, TREE, "build.py"),
-    _python("extensions: generate", ROOT, TREE, "extensions/registries.py", "build", *EXTENSIONS),
-    _python("root: the documents' counts are current", ROOT, WRITER, "tools/facts.py"),
+    _generator("spec: generate", TREE, TREE, "build.py"),
+    _generator("extensions: generate", ROOT, TREE, "extensions/registries.py", "build", *EXTENSIONS),
+    _generator("root: the documents' counts are current", ROOT, WRITER, "tools/facts.py"),
     _python("revisions: open stages are structurally complete", ROOT, WRITER, "revisions/stages.py"),
     _python("revisions: process tooling tests", ROOT, WRITER, "-m", "unittest", "revisions.test_evidence"),
     _python("root: verifier control-flow tests", ROOT, WRITER, "-m", "unittest", "tools.test_verify"),
@@ -141,7 +154,7 @@ STAGES: list[Stage] = [
     # Part 08 shows a packet the writer builds, so its layout and manifest follow the registries.
     _python("spec: Part 08 shows the packet the writer builds", ROOT / "integration", WRITER, "example.py"),
     _python("spec: the single-file rendering is current", TREE, TREE, "combine.py", "--check"),
-    _python("corpus: write every packet", ROOT / "fixtures", WRITER, "build.py"),
+    _generator("corpus: write every packet", ROOT / "fixtures", WRITER, "build.py"),
     _python("corpus: every packet behaves as specified", ROOT / "fixtures", WRITER, "corpus.py"),
 ]
 
@@ -178,6 +191,15 @@ GENERATED = (
     "TODO.md",
     "CONTRIBUTING.md",
 )
+
+
+_REPORT = threading.Lock()
+
+
+def _say(line: str = "") -> None:
+    """Print one whole line, which stages running together would otherwise interleave."""
+    with _REPORT:
+        print(line, flush=True)
 
 
 def _text(output: str | bytes | None) -> str:
@@ -269,10 +291,7 @@ def run(
                 return False, (
                     f"timed out after {timeout:g}s; last output: {_last_output(output)[:160]}; full log: {log}"
                 )
-            print(
-                f"wait {name:46s} {elapsed:5.1f}s  {_last_output(output)[:160]}",
-                flush=True,
-            )
+            _say(f"wait {name:46s} {elapsed:5.1f}s  {_last_output(output)[:160]}")
 
     if process.returncode:
         log = _failure_log(name, output)
@@ -325,19 +344,16 @@ def state_changes(before: dict[str, tuple[int, str]], after: dict[str, tuple[int
 
 def _reported(stage: Stage, timeout: float | None, heartbeat: float | None) -> bool:
     """Run one stage, printing its name before and its outcome after, and return whether it passed."""
-    print(f"run  {stage.name}", flush=True)
+    _say(f"run  {stage.name}")
     clock = time.perf_counter()
     passed, tail = run(stage.name, stage.cwd, stage.argv, timeout, heartbeat)
     detail = tail[:80] if passed else tail
-    print(
-        f"{'ok  ' if passed else 'FAIL'} {stage.name:46s} {time.perf_counter() - clock:5.1f}s  {detail}",
-        flush=True,
-    )
+    _say(f"{'ok  ' if passed else 'FAIL'} {stage.name:46s} {time.perf_counter() - clock:5.1f}s  {detail}")
     return passed
 
 
 def main() -> int:
-    """Run every stage in order, reporting each, and return non-zero on any failure."""
+    """Run every stage, reporting each, and return non-zero on any failure."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "--quick",
@@ -356,7 +372,15 @@ def main() -> int:
         default=15,
         help="seconds between progress reports; 0 disables them (default: 15)",
     )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=os.cpu_count() or 1,
+        help="how many stages that only read the tree run at once (default: one per CPU)",
+    )
     args = parser.parse_args()
+    if args.jobs < 1:
+        parser.error("--jobs must be at least 1")
     if args.stage_timeout < 0:
         parser.error("--stage-timeout cannot be negative")
     if args.heartbeat < 0:
@@ -374,7 +398,13 @@ def main() -> int:
         stages += SUITES
 
     baseline = {where: candidate_state(where) for where in GENERATED}
-    failed = [stage.name for stage in stages if not _reported(stage, timeout, heartbeat)]
+    # A stage that reads the tree must see what the generators wrote, so the writers finish first.
+    writers = [stage for stage in stages if stage.writes]
+    readers = [stage for stage in stages if not stage.writes]
+    passed = [_reported(stage, timeout, heartbeat) for stage in writers]
+    with ThreadPoolExecutor(max_workers=args.jobs) as pool:
+        passed += pool.map(lambda stage: _reported(stage, timeout, heartbeat), readers)
+    failed = [stage.name for stage, ok in zip(writers + readers, passed, strict=True) if not ok]
 
     # The one thing no stage above can report: whether generation changed the candidate. Comparing
     # snapshots admits intentional pre-commit diffs while still catching stale or hand-edited output.

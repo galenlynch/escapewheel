@@ -64,6 +64,65 @@ class VerifierRuntimeGateTests(unittest.TestCase):
         )
 
 
+class StageOrderTests(unittest.TestCase):
+    """Keep a stage that reads the tree from running before one that writes it."""
+
+    def _run(
+        self, stages: list[verify.Stage], outcomes: dict[str, bool], *arguments: str
+    ) -> tuple[int, list[str], str]:
+        started: list[str] = []
+
+        def run(name: str, *_: object) -> tuple[bool, str]:
+            started.append(name)
+            return outcomes.get(name, True), name
+
+        printed = io.StringIO()
+        with (
+            mock.patch.object(sys, "argv", ["verify.py", "--quick", *arguments]),
+            mock.patch.object(verify, "STAGES", stages),
+            mock.patch.object(verify, "GENERATED", ()),
+            mock.patch.object(verify, "run", side_effect=run),
+            contextlib.redirect_stdout(printed),
+        ):
+            return verify.main(), started, printed.getvalue()
+
+    def test_writers_run_first_in_declared_order(self) -> None:
+        stages = [
+            verify.Stage("reads", verify.ROOT, verify.ROOT, ()),
+            verify.Stage("writes first", verify.ROOT, verify.ROOT, (), writes=True),
+            verify.Stage("writes second", verify.ROOT, verify.ROOT, (), writes=True),
+        ]
+        result, started, _ = self._run(stages, {})
+
+        self.assertEqual(result, 0)
+        self.assertEqual(started, ["writes first", "writes second", "reads"])
+
+    def test_one_job_runs_the_readers_in_declared_order(self) -> None:
+        stages = [verify.Stage(name, verify.ROOT, verify.ROOT, ()) for name in ("a", "b", "c", "d")]
+        _, started, _ = self._run(stages, {}, "--jobs", "1")
+
+        self.assertEqual(started, ["a", "b", "c", "d"])
+
+    def test_a_failure_among_stages_run_together_fails_the_run_and_stops_no_other(self) -> None:
+        stages = [verify.Stage(name, verify.ROOT, verify.ROOT, ()) for name in ("a", "b", "c")]
+        result, started, printed = self._run(stages, {"b": False})
+
+        self.assertEqual(result, 1)
+        self.assertEqual(sorted(started), ["a", "b", "c"])
+        self.assertIn("1 stage(s) failed:\n  b\n", printed)
+
+    def test_only_the_generators_write(self) -> None:
+        self.assertEqual(
+            [stage.name for stage in [*verify.STAGES, *verify.SUITES] if stage.writes],
+            [
+                "spec: generate",
+                "extensions: generate",
+                "root: the documents' counts are current",
+                "corpus: write every packet",
+            ],
+        )
+
+
 class StageTableTests(unittest.TestCase):
     """Keep the stage table uniform, since other tools read its names and commands."""
 
