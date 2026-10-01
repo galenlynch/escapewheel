@@ -1166,6 +1166,7 @@ where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 [clause."R8 §4"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
+note = "restored 2026-10-01; the prohibition on a value outside the reserved set was absent"
 
 [clause."R10 §6"]
 disposition = "registry"

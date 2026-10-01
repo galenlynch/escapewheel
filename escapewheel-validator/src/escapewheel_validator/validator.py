@@ -1861,15 +1861,11 @@ def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, An
 
 
 def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
-    """Part 02 §9.3. A value outside a column's reserved set, at `info`.
+    """Report a value outside a column's reserved set at `info` (Part 02 §9.3).
 
-    Never a failure: the vocabulary is open (Part 02 §9.3) and an unrecognised value is exactly what
-    openness admits. What the report is for is the case R101 §2.5 measured — `core.array_assets`
-    carried `dense_array_asset`, a manifest resource kind, in the column reserving `raw`, `ap`,
-    `lfp` and `waveform`, and nothing could see it because no column declared a set.
-
-    Whether a value is a *synonym* for a reserved one stays uncheckable, so Part 02 §9.3's prohibition
-    binds a writer and no rule (Part 01 §3.5).
+    Never a failure: an open vocabulary admits an unrecognised value. A synonym of a reserved value
+    is prohibited and cannot be recognised from the packet, so that obligation binds the writer and
+    no check here enforces it.
     """
     for resource_id, handle in present.items():
         for column in tables[resource_id]["columns"]:

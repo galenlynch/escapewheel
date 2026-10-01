@@ -670,7 +670,7 @@ Four columns are closed:
 
 A scorer's own `label` is open, because aggregating over scorers is incompatible with one closed set.
 
-A value MAY be reserved only where it is read **whole**: where a consumer comparing two packets learns something from the value alone, without knowing what either packet was doing. Where an external nomenclature defines the values instead, the registry names it rather than copying a set the standard does not itself define. A validator SHOULD report a value outside a reserved set at `info`, and MUST NOT fail on one.
+A value MAY be reserved only where it is read **whole**: where a consumer comparing two packets learns something from the value alone, without knowing what either packet was doing. Where an external nomenclature defines the values instead, the registry names it rather than copying a set the standard does not itself define. A validator SHOULD report a value outside a reserved set at `info`, and MUST NOT fail on one. A writer MUST NOT write a value outside a column's reserved set for data that a reserved value describes. No validator checks this obligation: whether a value is a synonym of a reserved one cannot be decided from the packet, so it binds the writer, which alone knows what its data is.
 
 An `open` column MUST carry a nonempty description stating the form its values take. A string data
 column with an open or closed vocabulary MAY declare `authority`, a nonempty array whose entries
