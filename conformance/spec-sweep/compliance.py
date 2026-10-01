@@ -3,7 +3,7 @@ import pathlib
 import re
 
 T = json.load(open(str(pathlib.Path(__file__).parent / "tables02.json")))
-t09 = pathlib.Path("nwb_lake_poc_docs/09_metadata_minimalism_and_extensions.md").read_text()
+t09 = pathlib.Path("revisions/baseline-v0.1/09_metadata_minimalism_and_extensions.md").read_text()
 
 covered = sorted({m.group(1) for m in re.finditer(r"`(core\.[a-z_]+)`\s+(?:MUST|SHOULD|MAY)\s+include", t09)})
 print("09 §4 field-list coverage:", ", ".join(c.replace("core.", "") for c in covered))

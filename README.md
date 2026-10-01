@@ -20,7 +20,7 @@ For v0.2, authority is assigned by concern in
 - `spec/README.md` is an informational entry point, and
   `Escapewheel_POC_v0.2_Implementation_Spec.md` is a generated convenience rendering. Neither is a
   separately edited normative owner.
-- `nwb_lake_poc_docs/` and `revisions/` preserve the starting point, decisions, and rationale.
+- `revisions/` preserves the starting point, in `baseline-v0.1/`, and the decisions and rationale.
   Implementations, tests, examples, and developer documentation provide behavior or evidence but
   acquire no independent authority.
 
@@ -45,8 +45,7 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 | Directory | What it is |
 |---|---|
 | `spec/` | The specification's tree: the README and style guide, the numbered parts in `parts/`, the incorporated artifacts in `artifacts/`, the core registry's source in `source/`, the rendered listing, single-file rendering and examples in `informative/`, and the tools producing and checking them in `tools/`. See [Authority](#authority). |
-| `nwb_lake_poc_docs/` | The frozen v0.1 specification it was compiled from. Never edited. |
-| [`revisions/`](revisions/) | The specification-change lifecycle, including proposals, drafts, and accepted decision records. |
+| [`revisions/`](revisions/) | The specification-change lifecycle: proposals, drafts, accepted decision records, project reviews, and in `baseline-v0.1/` the frozen v0.1 specification the current one was compiled from. |
 | `extensions/` | The dynamic-foraging and VR-foraging extension registries, generated from TOML sources and checked where they sit by the tree's checker. |
 | `escapewheel-reader/` | The reference reader. Opens a packet, resolves resources, gives tabular and array access. |
 | `escapewheel-validator/` | The reference validator. SQL rules generated from the registry, plus the shim for what SQL cannot see. |

@@ -132,14 +132,7 @@ class ProcessSemanticsTests(unittest.TestCase):
 
     def test_part00_process_citations_are_repointed(self) -> None:
         sites = [site for section in ("10.1", "10.2", "10.3", "10.4") for site in impact.citers("00", section)]
-        live_process = [
-            site
-            for site in sites
-            if not site.startswith("revisions/accepted/") and not site.startswith("spec/parts/07_")
-        ]
-        self.assertEqual(live_process, [])
-        self.assertTrue(sites)
-        self.assertTrue(all(site.startswith("revisions/accepted/") for site in sites))
+        self.assertEqual([site for site in sites if not site.startswith("spec/parts/07_")], [])
 
 
 if __name__ == "__main__":

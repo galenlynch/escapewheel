@@ -192,7 +192,7 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
 
 
 #: History, read against the baseline it was written on, and the rendering generated from the parts.
-HISTORICAL = ("nwb_lake_poc_docs/", "revisions/accepted/", "revisions/reviews/")
+HISTORICAL = ("revisions/baseline-v0.1/", "revisions/accepted/", "revisions/reviews/")
 
 CURRENT_CONTRACT = (
     SPEC / "README.md",

@@ -3,7 +3,7 @@
 line-length = 120
 target-version = "py312"
 # Markdown is prose: a revision record is frozen once accepted, and its code blocks quote, not run.
-extend-exclude = ["nwb_lake_poc_docs", "conformance/zarr-probe/node_modules", "*.md"]
+extend-exclude = ["conformance/zarr-probe/node_modules", "*.md"]
 # Directories whose modules their scripts import as local code.
 src = [".", "spec/tools", "revisions"]
 

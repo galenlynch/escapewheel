@@ -27,7 +27,9 @@ current owner occur as one reviewable change; the accepted record is then stored
 [`accepted/`](accepted/), with clause evidence under [`evidence/`](evidence/).
 
 Whole-project reviews that fed the roadmap are kept in [`reviews/`](reviews/), named by review
-date. Like accepted records, they are history and are not updated as the project changes.
+date. [`baseline-v0.1/`](baseline-v0.1/) holds the frozen v0.1 specification the current one was
+compiled from, which the earliest accepted records cite. Like accepted records, both are history and
+are not updated as the project changes.
 
 The [templates](templates/) describe each authored artifact. The proposal and draft directories
 describe how their own contents are maintained.

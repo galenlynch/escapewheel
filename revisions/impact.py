@@ -35,12 +35,9 @@ HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
 CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
 ANCHOR = re.compile(r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="(canonical|alias)"></a>$')
 
-#: Not searched. Everything else tracked is, because a citation is load-bearing wherever it is
-#: written: a test asserting `03` §5.5's rule and a contribution guide explaining it both go stale when
-#: that section is rewritten. Listing directories instead left **234 citations across 38 files**
-#: unreachable -- every instruction file, every root document and every test -- so the one tool that
-#: finds what a change invalidates could not name the documents a sweep later found stale.
-SKIPPED = ("nwb_lake_poc_docs/",)
+#: History, read against the baseline it was written on, so a change never makes it stale. Every other
+#: tracked file is searched, because a citation is load-bearing wherever it is written.
+SKIPPED = ("revisions/baseline-v0.1/", "revisions/accepted/", "revisions/reviews/")
 
 
 def sections(path: Path) -> list[tuple[int, str, str]]:
@@ -144,7 +141,7 @@ def anchor_citers(anchor: str) -> list[str]:
         check=True,
     ).stdout.split()
     for name in listed:
-        if name.startswith(("revisions/accepted/", *SKIPPED)) or "Implementation_Spec" in name:
+        if name.startswith(SKIPPED) or "Implementation_Spec" in name:
             continue
         path = ROOT / name
         if path.suffix not in {".py", ".md", ".json", ".toml"} or not path.is_file():

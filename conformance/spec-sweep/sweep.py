@@ -2,7 +2,7 @@ import json
 import pathlib
 import re
 
-D = pathlib.Path("nwb_lake_poc_docs")
+D = pathlib.Path("revisions/baseline-v0.1")
 t02 = (D / "02_core_logical_schemas.md").read_text()
 t09 = (D / "09_metadata_minimalism_and_extensions.md").read_text()
 
