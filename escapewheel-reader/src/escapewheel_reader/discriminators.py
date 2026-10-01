@@ -11,7 +11,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -20,6 +19,7 @@ import pyarrow.compute as pc
 
 from .errors import NotDeclared
 from .protocols import PacketLike
+from .registries import declared_tables
 
 #: The field a discriminator declares beyond its role to take the paired-value shape.
 SHAPES = {"discriminates": "paired value"}
@@ -83,15 +83,6 @@ class Unresolved:
         return f"{where}: {self.rows} row(s) name {self.kind}, which the packet does not hold ({self.level})"
 
 
-def _tables(document: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Take the tables a registry document declares, or nothing where there is no document."""
-    return {
-        str(name): declaration["table"]
-        for name, declaration in (document or {}).get("resources", {}).items()
-        if declaration.get("kind") == "table" and "table" in declaration
-    }
-
-
 def registries(packet: PacketLike) -> dict[str, Any]:
     """Every table the packet's own registries declare, core and extensions together.
 
@@ -99,9 +90,9 @@ def registries(packet: PacketLike) -> dict[str, Any]:
     extension kind matching no branch and passing in silence is the one case the mechanism exists
     to cover.
     """
-    tables = _tables(packet.registry)
+    tables = declared_tables(packet.registry)
     for document in packet.extensions().values():
-        tables.update(_tables(document))
+        tables.update(declared_tables(document))
     return tables
 
 

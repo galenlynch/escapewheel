@@ -25,6 +25,7 @@ from .errors import MultiSessionUnresolved, ResourceNotFoundError
 from .location import Location
 from .packet import Packet, open_packet
 from .protocols import PacketLike
+from .registries import declared_tables
 from .resource_ids import CORE_SESSIONS
 from .resources import TableResource
 from .sql import sql_name
@@ -58,11 +59,7 @@ def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
     frozenset of str
         Dotted resource IDs, `core.sessions` included.
     """
-    tables = {
-        str(name): declaration["table"]
-        for name, declaration in registry.get("resources", {}).items()
-        if declaration.get("kind") == "table" and "table" in declaration
-    }
+    tables = declared_tables(registry)
     edges = {n: {r["resource"] for r in t.get("references", [])} for n, t in tables.items()}
 
     def reaches(name: str, seen: set[str]) -> bool:

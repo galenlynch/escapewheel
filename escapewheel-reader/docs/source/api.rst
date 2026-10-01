@@ -190,6 +190,7 @@ the module that defines it.
    profile.parquet_floor
    profile.zarr_floor_admits
    registries.acquire
+   registries.declared_tables
    registries.gunzip_member
    uri.canonical
    uri.decode

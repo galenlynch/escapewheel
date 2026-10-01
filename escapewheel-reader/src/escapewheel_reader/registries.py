@@ -3,6 +3,7 @@
 - :func:`acquire` -- one bound registry's bytes, verified against its descriptor's digest.
 - :func:`parse` -- verified bytes decoded for declaration lookup.
 - :func:`gunzip_member` -- exactly one gzip member, decompressed.
+- :func:`declared_tables` -- the tables a registry document declares.
 
 A registry is read only from its descriptor's path and only after its digest matches; no other copy
 stands in for it.
@@ -13,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import zlib
+from collections.abc import Mapping
 from typing import Any
 
 from .errors import RegistryFault, RegistryUnavailable
@@ -136,4 +138,46 @@ def parse(binding: RegistryBinding, document: bytes) -> dict[str, Any]:
     return parsed
 
 
-__all__ = ["acquire", "gunzip_member"]
+def declared_tables(document: Mapping[str, Any] | None, *, strict: bool = False) -> dict[str, Any]:
+    """Return each table a registry document declares, by its resource ID.
+
+    A resource of another kind declares no table and is left out.
+
+    Parameters
+    ----------
+    document : Mapping or None
+        A parsed registry document, or None where the caller holds none.
+    strict : bool, default False
+        Whether the document is taken to be valid. Where it is not, no document, a document without
+        `resources`, a resource without a `kind` and a table resource without a `table` each declare
+        nothing, which is what reading a document nobody has checked needs.
+
+    Returns
+    -------
+    dict
+        Each table declaration, in the document's order.
+
+    Raises
+    ------
+    KeyError
+        Under `strict`, where the document lacks `resources`, a resource lacks `kind`, or a table
+        resource lacks `table`.
+    TypeError
+        Under `strict`, where there is no document.
+    """
+    if strict:
+        if document is None:
+            raise TypeError("a strict reading needs a registry document")
+        return {
+            str(name): declaration["table"]
+            for name, declaration in document["resources"].items()
+            if declaration["kind"] == "table"
+        }
+    return {
+        str(name): declaration["table"]
+        for name, declaration in (document or {}).get("resources", {}).items()
+        if declaration.get("kind") == "table" and "table" in declaration
+    }
+
+
+__all__ = ["acquire", "declared_tables", "gunzip_member"]
