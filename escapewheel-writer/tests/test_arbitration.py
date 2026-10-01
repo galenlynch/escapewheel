@@ -15,7 +15,8 @@ from pathlib import Path
 import pytest
 
 from escapewheel_writer import recipe
-from escapewheel_writer.recipe import RECIPE_SUPPLIES, contributes, produces
+from escapewheel_writer.kinds import contributes, produces
+from escapewheel_writer.recipe import RECIPE_SUPPLIES
 from escapewheel_writer.scripts.cli import KINDS
 from escapewheel_writer.sources import ADAPTERS, discovered
 

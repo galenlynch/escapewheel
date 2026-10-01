@@ -16,7 +16,8 @@ from escapewheel_reader.resource_ids import CORE_PROCESSING_RUNS, CORE_SESSIONS
 from .alignment import alignment_parameters
 from .amending import Held
 from .errors import RecipeFault
-from .recipe import Problem, Recipe, normalized_chosen_at, redacted, refusal
+from .recipe import Problem, Recipe, normalized_chosen_at, refusal
+from .secrets import redacted
 from .sources.compensations import describe
 from .writer import PacketWriter
 

@@ -16,8 +16,7 @@ from fsspec.implementations.memory import MemoryFileSystem
 from upath.implementations.memory import MemoryPath
 from upath.registry import register_implementation
 
-from escapewheel_writer import declaration
-from escapewheel_writer import recipe as recipe_module
+from escapewheel_writer import declaration, kinds
 from escapewheel_writer.errors import RecipeFault, SourceDefect
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS, Recipe
@@ -145,7 +144,7 @@ def test_an_accepting_adapter_is_supplied_the_location_and_no_other_is(tmp_path,
     assert supplied_to(sorter, recipe, context)["source_cache"] == str((tmp_path / "cache").resolve())
 
     declining = type("Declining", (), {"NEEDS": ("root", "session_id"), "ACCEPTS": ()})
-    monkeypatch.setattr(recipe_module, "adapter_for", lambda kind: declining)
+    monkeypatch.setattr(kinds, "adapter_for", lambda kind: declining)
     assert "source_cache" not in supplied_to(sorter, recipe, context)
 
 

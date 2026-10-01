@@ -34,8 +34,9 @@ from .. import compare
 from ..amending import Held
 from ..errors import AmendmentRefused, CommitRefused, ReplacementRefused, SourceDefect
 from ..extensions import load_checked as load_extension_context
+from ..kinds import contributes, produces
 from ..protocols import SourceAdapter
-from ..recipe import RECIPE_SUPPLIES, Recipe, contributes, produces
+from ..recipe import RECIPE_SUPPLIES, Recipe
 from ..replacing import read_replaced
 from ..session import build, commit_arguments
 

@@ -259,7 +259,8 @@ def test_a_required_option_is_reported_not_crashed_on(tmp_path):
     What makes it reportable is the adapter's own `NEEDS` (Part 05 §3.4): `zone` resolves to no
     term, so it falls through to the recipe's options and the entry has to carry it.
     """
-    from escapewheel_writer.recipe import Recipe, needs
+    from escapewheel_writer.kinds import needs
+    from escapewheel_writer.recipe import Recipe
 
     path = tmp_path / "recipe.toml"
     path.write_text(
@@ -1092,7 +1093,7 @@ def test_a_token_that_names_a_mode_is_not_a_credential(tmp_path, registry):
 
 def test_what_a_run_records_carries_no_credential(tmp_path):
     """Applied wherever a recipe is written down, since one written before the refusal exists."""
-    from escapewheel_writer.recipe import REDACTED, redacted
+    from escapewheel_writer.secrets import REDACTED, redacted
 
     document = {
         "source": [
