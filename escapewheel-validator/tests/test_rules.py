@@ -1,11 +1,11 @@
-"""The validator module's own helpers, exercised without a packet around them."""
+"""Running a rule and reading back its offending rows."""
 
 import sys
 
 import duckdb
 import pytest
 
-from escapewheel_validator.validator import _offending
+from escapewheel_validator.rules import _offending
 
 
 def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatch):

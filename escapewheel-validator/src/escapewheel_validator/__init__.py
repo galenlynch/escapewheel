@@ -26,6 +26,8 @@ shim
     The checks of how a packet is stored, which no query over its tables can make.
 generate
     Tier 1 checks generated from a registry's structure.
+rules
+    Running the generated checks and a registry's Tier 2 rules over the packet's tables.
 registry_document, rule_language
     A registry document's own conformance, and the static check of its Tier 2 SQL.
 amendment
