@@ -175,27 +175,6 @@ class RegistryRejected(ValueError):
         super().__init__(f"{subject} registry is {context.result.state}")
 
 
-@dataclass(frozen=True)
-class Finding:
-    """Compatibility view used by the extension-author command."""
-
-    label: str
-    offenders: tuple[str, ...] = ()
-
-    @property
-    def passed(self) -> bool:
-        """Whether the represented invariant passed."""
-        return not self.offenders
-
-    def __str__(self) -> str:
-        """Render a concise human-oriented finding."""
-        if self.passed:
-            return self.label
-        shown = ", ".join(self.offenders[:4])
-        more = f", +{len(self.offenders) - 4} more" if len(self.offenders) > 4 else ""
-        return f"{self.label} ({len(self.offenders)}): {shown}{more}"
-
-
 class _Object(dict[str, Any]):
     """Decoded object retaining duplicate member names for the JSON phase."""
 
@@ -1781,65 +1760,6 @@ def _unit_outcomes(document: Mapping[str, Any]) -> list[Outcome]:
     return outcomes
 
 
-def against_schema(document: Any) -> list[Finding]:
-    """Return the shape phase as the legacy finding view."""
-    if not isinstance(document, Mapping):
-        return [Finding("shape", ("document is not a mapping",))]
-    result = check_registry(document)
-    shape = next(phase for phase in result.phases if phase.phase == "shape")
-    return [Finding("shape", tuple(item.detail or item.id for item in shape.outcomes))]
-
-
-def structural(resources: Mapping[str, Any], universe: Mapping[str, Any], *, is_core: bool = False) -> list[Finding]:
-    """Return semantic invariants for callers that already selected and shaped a document."""
-    document: dict[str, Any] = {"resources": resources}
-    if not is_core:
-        namespace = next(iter(resources)).split(".", 1)[0] if resources else "extension"
-        document["extension_id"] = namespace
-    table_universe = {
-        name: declaration["table"] for name, declaration in universe.items() if declaration.get("kind") == "table"
-    }
-    outcomes = _semantic_outcomes(
-        document,
-        table_universe,
-        "core" if is_core else "extension",
-        True,
-        declaration_universe=universe,
-    )
-    labels = [entry["id"] for entry in json.loads(CONTRACT.read_text())["invariants"] if entry["phase"] == "semantic"]
-    return [
-        Finding(
-            label,
-            tuple(item.detail or item.instance for item in outcomes if item.id == label and item.state == "invalid"),
-        )
-        for label in labels
-        if is_core or label != "registry.core.device_detail"
-    ]
-
-
-def declarations(document: Any, name: str | None = None) -> list[Finding]:
-    """Return document-class and namespace findings through the compatibility interface."""
-    del name
-    if not isinstance(document, Mapping) or "resources" not in document:
-        return [Finding("registry document shape", ("document has no resources mapping",))]
-    universe = document["resources"]
-    outcomes = _namespace_owned(document, universe, "extension", True) + _reference_direction(
-        document, universe, "extension", True
-    )
-    return [
-        Finding(label, tuple(item.detail or item.instance for item in outcomes if item.id == label))
-        for label in ("registry.namespace.owned", "registry.namespace.reference_direction")
-    ]
-
-
-def check_extension(document: Any, core: Any, *, name: str | None = None) -> RegistryResult:
-    """Validate one extension and return its complete portable result."""
-    del name
-    if not isinstance(document, Mapping) or not isinstance(core, Mapping):
-        return check_registry({})
-    return check_registry(document, core)
-
-
 __all__ = [
     "CONTRACT",
     "CONTRACT_SCHEMA",
@@ -1847,17 +1767,12 @@ __all__ = [
     "RESULT_SCHEMA_ID",
     "SCHEMA",
     "CheckedRegistryContext",
-    "Finding",
     "Outcome",
     "PhaseRecord",
     "RegistryRejected",
     "RegistryResult",
-    "against_schema",
-    "check_extension",
     "check_registry",
     "check_registry_bytes",
     "check_registry_context",
     "check_registry_context_bytes",
-    "declarations",
-    "structural",
 ]
