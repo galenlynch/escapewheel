@@ -23,7 +23,7 @@ from pathlib import Path
 
 from escapewheel_reader.uri import representable
 
-from .errors import PayloadRefused
+from .errors import PayloadFault, PayloadProblem, PayloadRefused
 
 #: Where under the staging area each source's `opaque_location` lies, one directory per source kind.
 #: Apart from `array_location`'s, which an adapter writes into directly.
@@ -82,22 +82,40 @@ def write(payloads: Iterable[Payload], location: str | Path | None, source: str)
     if not handed:
         return 0
     if not location:
-        raise PayloadRefused(
-            f"{source}: hands over a packet-owned opaque resource and declares no opaque_location; a payload "
-            "crosses into a location the build supplies (Part 12 §5)"
+        raise _refused(
+            source,
+            PayloadFault.NO_LOCATION,
+            "hands over a packet-owned opaque resource and declares no opaque_location; a payload "
+            "crosses into a location the build supplies (Part 12 §5)",
         )
     root = Path(location)
     for payload in handed:
         directory = root / payload.resource_id
         if not representable(payload.resource_id):
-            raise PayloadRefused(f"{source}: {payload.resource_id!r} cannot name a resource directory")
+            raise _refused(
+                source,
+                PayloadFault.RESOURCE_ID_UNREPRESENTABLE,
+                f"{payload.resource_id!r} cannot name a resource directory",
+            )
         target = directory / payload.name
         if not representable(payload.name):
-            raise PayloadRefused(f"{source}: {shown(directory)}: payload name {payload.name!r} is not representable")
+            raise _refused(
+                source,
+                PayloadFault.NAME_UNREPRESENTABLE,
+                f"{shown(directory)}: payload name {payload.name!r} is not representable",
+            )
         if (payload.data is None) == (payload.files is None):
-            raise PayloadRefused(f"{source}: {shown(target)}: a payload is one file's bytes or a directory's files")
+            raise _refused(
+                source,
+                PayloadFault.NOT_ONE_FORM,
+                f"{shown(target)}: a payload is one file's bytes or a directory's files",
+            )
         if directory.exists() and any(directory.iterdir()):
-            raise PayloadRefused(f"{source}: {shown(directory)}: a resource directory holds one payload")
+            raise _refused(
+                source,
+                PayloadFault.NOT_ONE_PAYLOAD,
+                f"{shown(directory)}: a resource directory holds one payload",
+            )
         directory.mkdir(parents=True, exist_ok=True)
         if payload.data is not None:
             target.write_bytes(payload.data)
@@ -107,8 +125,10 @@ def write(payloads: Iterable[Payload], location: str | Path | None, source: str)
         for relative, data in payload.files.items():
             names = relative.split("/")
             if bad := [name for name in names if not representable(name)]:
-                raise PayloadRefused(
-                    f"{source}: {shown(target)}: {relative!r} holds {bad[0]!r}, which is not representable"
+                raise _refused(
+                    source,
+                    PayloadFault.NAME_UNREPRESENTABLE,
+                    f"{shown(target)}: {relative!r} holds {bad[0]!r}, which is not representable",
                 )
             path = target.joinpath(*names)
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -129,40 +149,63 @@ def read(source: str, location: str | Path | None, owned: Collection[str] | None
     if not location or not Path(location).is_dir():
         return []
     held = frozenset(owned) if owned is not None else None
-    found, problems = [], []
+    found: list[StagedPayload] = []
+    problems: list[PayloadProblem] = []
     for directory in sorted(Path(location).iterdir()):
         if directory.is_symlink() or not directory.is_dir():
-            problems.append(f"{shown(directory)} is not a resource directory; opaque_location holds only directories")
+            problems.append(
+                PayloadProblem(
+                    PayloadFault.NOT_A_RESOURCE_DIRECTORY,
+                    f"{shown(directory)} is not a resource directory; opaque_location holds only directories",
+                )
+            )
             continue
         members = sorted(directory.iterdir())
         if len(members) != 1:
-            problems.append(f"{shown(directory)} holds {len(members)} payloads; a resource directory holds one")
+            problems.append(
+                PayloadProblem(
+                    PayloadFault.NOT_ONE_PAYLOAD,
+                    f"{shown(directory)} holds {len(members)} payloads; a resource directory holds one",
+                )
+            )
             continue
         refused = list(_refusals(members[0]))
         problems += refused
         if not refused:
             found.append(StagedPayload(source, directory.name, members[0], held))
     if problems:
-        raise PayloadRefused(f"{source}: " + "; ".join(problems) + " (Part 12 §5)")
+        raise PayloadRefused(
+            f"{source}: " + "; ".join(p.message for p in problems) + " (Part 12 §5)", problems=problems, source=source
+        )
     return found
 
 
-def _refusals(path: Path) -> Iterator[str]:
+def _refused(source: str, code: PayloadFault, message: str) -> PayloadRefused:
+    """Return the refusal of one thing `source` handed over."""
+    return PayloadRefused(f"{source}: {message}", problems=[PayloadProblem(code, message)], source=source)
+
+
+def _refusals(path: Path) -> Iterator[PayloadProblem]:
     """Yield what a payload holds that a packet cannot own: a non-regular file, an empty directory, a bad name."""
     if not representable(path.name):
-        yield f"{shown(path)}: the name is not representable"
+        yield PayloadProblem(PayloadFault.NAME_UNREPRESENTABLE, f"{shown(path)}: the name is not representable")
     mode = path.lstat().st_mode
     if stat.S_ISREG(mode):
         return
     if stat.S_ISDIR(mode):
         children = sorted(path.iterdir())
         if not children:
-            yield f"{shown(path)} is an empty directory, which a prefix of objects cannot hold"
+            yield PayloadProblem(
+                PayloadFault.EMPTY_DIRECTORY,
+                f"{shown(path)} is an empty directory, which a prefix of objects cannot hold",
+            )
         for child in children:
             yield from _refusals(child)
         return
     what = "a symbolic link" if stat.S_ISLNK(mode) else "neither a regular file nor a directory"
-    yield f"{shown(path)} is {what}; a payload holds only regular files and directories"
+    yield PayloadProblem(
+        PayloadFault.NOT_REGULAR, f"{shown(path)} is {what}; a payload holds only regular files and directories"
+    )
 
 
 def size(path: Path) -> int:

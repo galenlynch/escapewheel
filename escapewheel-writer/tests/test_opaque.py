@@ -13,7 +13,7 @@ from escapewheel_reader import open_packet
 from escapewheel_validator.stores import listing_digest
 
 from escapewheel_writer import declaration, delivery, opaque
-from escapewheel_writer.errors import PayloadRefused, SourceDefect
+from escapewheel_writer.errors import PayloadFault, PayloadRefused, SourceDefect
 from escapewheel_writer.opaque import Payload
 from escapewheel_writer.writer import ExternalMedia, PacketWriter
 from tests import opaquefixture
@@ -164,30 +164,37 @@ def test_every_name_is_kept_and_a_fragile_one_warned_of(tmp_path, registry, mini
 # -- structural refusals, naming the source and the path ------------------------------------
 
 
-def _refused(tmp_path, arrange) -> str:
+def _refused(tmp_path, arrange, fault) -> str:
+    """Read what `arrange` lays down, requiring one refusal of `fault`, and return its message."""
     location = tmp_path / "delivered"
     location.mkdir()
     arrange(location)
     with pytest.raises(PayloadRefused) as refused:
         opaque.read("clips", location)
-    message = str(refused.value)
-    assert message.startswith("clips: ") and "Part 12 §5" in message
-    return message
+    assert refused.value.source == "clips"
+    assert str(refused.value).startswith("clips: ") and "Part 12 §5" in str(refused.value)
+    (problem,) = refused.value.problems
+    assert problem.code is fault
+    return problem.message
 
 
 def test_a_file_directly_in_the_location_is_refused(tmp_path):
-    message = _refused(tmp_path, lambda here: (here / "clip.mp4").write_bytes(b"x"))
-    assert f"{tmp_path / 'delivered' / 'clip.mp4'} is not a resource directory" in message
+    message = _refused(
+        tmp_path, lambda here: (here / "clip.mp4").write_bytes(b"x"), PayloadFault.NOT_A_RESOURCE_DIRECTORY
+    )
+    assert message.startswith(f"{tmp_path / 'delivered' / 'clip.mp4'} ")
 
 
 def test_a_resource_directory_holding_two_payloads_is_refused(tmp_path):
-    message = _refused(tmp_path, lambda here: _lay(here / "core.clip", {"a.mp4": b"a", "b.mp4": b"b"}))
-    assert f"{tmp_path / 'delivered' / 'core.clip'} holds 2 payloads" in message
+    message = _refused(
+        tmp_path, lambda here: _lay(here / "core.clip", {"a.mp4": b"a", "b.mp4": b"b"}), PayloadFault.NOT_ONE_PAYLOAD
+    )
+    assert message.startswith(f"{tmp_path / 'delivered' / 'core.clip'} holds 2 payloads")
 
 
 def test_a_resource_directory_holding_none_is_refused(tmp_path):
-    message = _refused(tmp_path, lambda here: (here / "core.clip").mkdir())
-    assert f"{tmp_path / 'delivered' / 'core.clip'} holds 0 payloads" in message
+    message = _refused(tmp_path, lambda here: (here / "core.clip").mkdir(), PayloadFault.NOT_ONE_PAYLOAD)
+    assert message.startswith(f"{tmp_path / 'delivered' / 'core.clip'} holds 0 payloads")
 
 
 def test_a_symbolic_link_is_refused(tmp_path):
@@ -198,8 +205,8 @@ def test_a_symbolic_link_is_refused(tmp_path):
         _lay(here / "core.frames" / "frames", {"0.png": b"0"})
         (here / "core.frames" / "frames" / "1.png").symlink_to(target)
 
-    message = _refused(tmp_path, arrange)
-    assert f"{tmp_path / 'delivered' / 'core.frames' / 'frames' / '1.png'} is a symbolic link" in message
+    message = _refused(tmp_path, arrange, PayloadFault.NOT_REGULAR)
+    assert message.startswith(f"{tmp_path / 'delivered' / 'core.frames' / 'frames' / '1.png'} is a symbolic link")
 
 
 def test_an_empty_directory_within_a_payload_is_refused(tmp_path):
@@ -207,8 +214,8 @@ def test_an_empty_directory_within_a_payload_is_refused(tmp_path):
         _lay(here / "core.frames" / "frames", {"0.png": b"0"})
         (here / "core.frames" / "frames" / "later").mkdir()
 
-    message = _refused(tmp_path, arrange)
-    assert f"{tmp_path / 'delivered' / 'core.frames' / 'frames' / 'later'} is an empty directory" in message
+    message = _refused(tmp_path, arrange, PayloadFault.EMPTY_DIRECTORY)
+    assert message.startswith(f"{tmp_path / 'delivered' / 'core.frames' / 'frames' / 'later'} ")
 
 
 def test_a_name_that_is_not_utf8_is_refused(tmp_path):
@@ -217,15 +224,18 @@ def test_a_name_that_is_not_utf8_is_refused(tmp_path):
         with open(os.path.join(os.fsencode(here / "core.clip"), b"clip\xff.mp4"), "wb") as handle:
             handle.write(b"x")
 
-    message = _refused(tmp_path, arrange)
-    assert "clip\\xff.mp4: the name is not representable" in message
+    message = _refused(tmp_path, arrange, PayloadFault.NAME_UNREPRESENTABLE)
+    assert "clip\\xff.mp4: " in message
 
 
 # -- binding refusals, naming the directory and the resource ID -----------------------------
 
 
-def _bind_refused(tmp_path, registry, minimal, deliveries, *, rows=(), extensions=(), referenced=None) -> str:
-    """Commit `deliveries`, a source to its (resource ID, tree, owned) triples, requiring a refusal."""
+def _bind_refused(tmp_path, registry, minimal, deliveries, fault, *, rows=(), extensions=(), referenced=None) -> str:
+    """Commit `deliveries`, a source to its (resource ID, tree, owned) triples, requiring a refusal.
+
+    Returns the message of the one problem carrying `fault`.
+    """
     writer = _writer(registry, minimal, rows, extensions)
     for source, payloads in deliveries.items():
         location = tmp_path / source
@@ -240,13 +250,14 @@ def _bind_refused(tmp_path, registry, minimal, deliveries, *, rows=(), extension
         writer.commit(root)
     assert not (root / "packet.json").exists() and not (root / "opaque").exists()
     assert "Part 12 §5" in str(refused.value)
-    return str(refused.value)
+    (problem,) = [p for p in refused.value.problems if p.code is fault]
+    return problem.message
 
 
 def test_a_directory_binding_nothing_is_refused(tmp_path, registry, minimal):
-    message = _bind_refused(tmp_path, registry, minimal, {"clips": [("core.nothing", {"a.mp4": b"a"}, None)]})
-    assert f"clips: {tmp_path / 'clips' / 'core.nothing'} names core.nothing" in message
-    assert "the resource_id of no catalog row of an opaque catalog family" in message
+    deliveries = {"clips": [("core.nothing", {"a.mp4": b"a"}, None)]}
+    message = _bind_refused(tmp_path, registry, minimal, deliveries, PayloadFault.BINDS_NOTHING)
+    assert message.startswith(f"clips: {tmp_path / 'clips' / 'core.nothing'} names core.nothing")
 
 
 def test_a_directory_named_by_a_dense_array_row_is_refused(tmp_path, registry, minimal):
@@ -258,8 +269,11 @@ def test_a_directory_named_by_a_dense_array_row_is_refused(tmp_path, registry, m
     )
     _lay(tmp_path / "clips" / "core.lfp", {"lfp.bin": b"x"})
     writer.add_payloads("clips", tmp_path / "clips")
-    with pytest.raises(PayloadRefused, match="names core.lfp, which is the resource_id of no catalog row of an opaque"):
+    with pytest.raises(PayloadRefused) as refused:
         writer.commit(tmp_path / "s001")
+    (problem,) = refused.value.problems
+    assert problem.code is PayloadFault.BINDS_NOTHING
+    assert "names core.lfp" in problem.message
 
 
 def test_a_resource_id_delivered_by_two_sources_is_refused(tmp_path, registry, minimal):
@@ -268,9 +282,10 @@ def test_a_resource_id_delivered_by_two_sources_is_refused(tmp_path, registry, m
         registry,
         minimal,
         {"clips": [("core.clip", {"a.mp4": b"a"}, None)], "more": [("core.clip", {"b.mp4": b"b"}, None)]},
+        PayloadFault.DELIVERED_TWICE,
         rows=["core.clip"],
     )
-    assert "core.clip is delivered as a payload 2 times" in message
+    assert message.startswith("core.clip is delivered as a payload 2 times")
     assert f"clips at {tmp_path / 'clips' / 'core.clip'}" in message
     assert f"more at {tmp_path / 'more' / 'core.clip'}" in message
 
@@ -285,17 +300,23 @@ def test_a_resource_id_delivered_as_a_payload_and_referenced_is_refused(tmp_path
         registry,
         minimal,
         {"clips": [("core.clip", {"a.mp4": b"a"}, None)]},
+        PayloadFault.DELIVERED_AND_REFERENCED,
         rows=["core.clip"],
         referenced=referenced,
     )
-    assert "core.clip is delivered both as a payload" in message and "as a referenced resource" in message
+    assert message.startswith("core.clip ")
 
 
 def test_an_opaque_catalog_row_nothing_binds_is_refused(tmp_path, registry, minimal):
     message = _bind_refused(
-        tmp_path, registry, minimal, {"clips": [("core.clip", {"a.mp4": b"a"}, None)]}, rows=["core.clip", "core.lost"]
+        tmp_path,
+        registry,
+        minimal,
+        {"clips": [("core.clip", {"a.mp4": b"a"}, None)]},
+        PayloadFault.ROW_UNBOUND,
+        rows=["core.clip", "core.lost"],
     )
-    assert "core.media_assets row with resource_id core.lost is bound by no payload" in message
+    assert message.startswith("core.media_assets row with resource_id core.lost ")
 
 
 def test_a_directory_naming_a_row_and_a_singleton_is_refused(tmp_path, registry, minimal):
@@ -304,10 +325,11 @@ def test_a_directory_naming_a_row_and_a_singleton_is_refused(tmp_path, registry,
         registry,
         minimal,
         {"clips": [("qc.report", {"QC.pdf": PDF}, frozenset({"qc.report"}))]},
+        PayloadFault.ROW_AND_SINGLETON,
         rows=["qc.report"],
         extensions=[QC],
     )
-    assert f"{tmp_path / 'clips' / 'qc.report'} names qc.report, which is both a catalog row's resource_id" in message
+    assert f"{tmp_path / 'clips' / 'qc.report'} names qc.report" in message
 
 
 def test_a_singleton_another_source_owns_is_refused(tmp_path, registry, minimal):
@@ -316,11 +338,10 @@ def test_a_singleton_another_source_owns_is_refused(tmp_path, registry, minimal)
         registry,
         minimal,
         {"more": [("qc.report", {"QC.pdf": PDF}, frozenset({"core.media_assets"}))]},
+        PayloadFault.SINGLETON_NOT_OWNED,
         extensions=[QC],
     )
-    assert "more: delivers a payload for opaque singleton qc.report, which the recipe does not leave more owning" in (
-        message
-    )
+    assert message.startswith("more: delivers a payload for opaque singleton qc.report")
 
 
 # -- the in-process hand-over ---------------------------------------------------------------
@@ -340,24 +361,34 @@ def test_handed_over_bytes_land_as_a_protocol_adapter_would_write_them(tmp_path)
 
 
 @pytest.mark.parametrize(
-    ("handed", "location", "refusal"),
+    ("handed", "location", "fault", "named"),
     [
-        ([Payload("core.clip", "clip.mp4", data=b"x")], None, "declares no opaque_location"),
-        ([Payload("core.clip", "../clip.mp4", data=b"x")], "here", "payload name '../clip.mp4' is not representable"),
-        ([Payload("core.clip", "..", data=b"x")], "here", "payload name '..' is not representable"),
-        ([Payload("core.frames", "frames", files={"a/../b.png": b"x"})], "here", "holds '..', which is not"),
-        ([Payload("core.clip", "clip.mp4")], "here", "a payload is one file's bytes or a directory's files"),
+        ([Payload("core.clip", "clip.mp4", data=b"x")], None, PayloadFault.NO_LOCATION, ""),
+        ([Payload("core.clip", "../clip.mp4", data=b"x")], "here", PayloadFault.NAME_UNREPRESENTABLE, "'../clip.mp4'"),
+        ([Payload("core.clip", "..", data=b"x")], "here", PayloadFault.NAME_UNREPRESENTABLE, "'..'"),
+        (
+            [Payload("core.frames", "frames", files={"a/../b.png": b"x"})],
+            "here",
+            PayloadFault.NAME_UNREPRESENTABLE,
+            "'a/../b.png' holds '..'",
+        ),
+        ([Payload("core.clip", "clip.mp4")], "here", PayloadFault.NOT_ONE_FORM, "clip.mp4"),
         (
             [Payload("core.clip", "a.mp4", data=b"a"), Payload("core.clip", "b.mp4", data=b"b")],
             "here",
-            "a resource directory holds one payload",
+            PayloadFault.NOT_ONE_PAYLOAD,
+            "core.clip",
         ),
     ],
     ids=["no-location", "slash", "dot-dot", "segment", "neither", "second-payload"],
 )
-def test_a_hand_over_a_location_could_not_hold_is_refused(tmp_path, handed, location, refusal):
-    with pytest.raises(PayloadRefused, match=refusal.replace("(", r"\(").replace(".", r"\.")):
+def test_a_hand_over_a_location_could_not_hold_is_refused(tmp_path, handed, location, fault, named):
+    with pytest.raises(PayloadRefused) as refused:
         opaque.write(handed, tmp_path / location if location else None, "clips")
+    (problem,) = refused.value.problems
+    assert problem.code is fault
+    assert named in problem.message
+    assert refused.value.source == "clips"
 
 
 def test_a_hand_over_with_nowhere_to_go_is_refused_over_a_protocol(tmp_path):
@@ -368,8 +399,10 @@ def test_a_hand_over_with_nowhere_to_go_is_refused_over_a_protocol(tmp_path):
         def staged_payloads(self):
             return [Payload("core.clip", "clip.mp4", data=b"x")]
 
-    with pytest.raises(PayloadRefused, match="Handing: hands over a packet-owned opaque resource"):
+    with pytest.raises(PayloadRefused) as refused:
         delivery.serve(Handing(), {}, "stream-v0.1", out=io.BytesIO())
+    assert refused.value.source == "Handing"
+    assert [p.code for p in refused.value.problems] == [PayloadFault.NO_LOCATION]
 
 
 # -- the build-supplied location and the routes ---------------------------------------------
@@ -513,10 +546,13 @@ def test_two_sources_delivering_one_resource_id_are_both_seen_and_refused(tmp_pa
     ]
     recipe, writer = _build(tmp_path, registry, monkeypatch, sources)
     staging = recipe.out / "staging" / opaque.DELIVERIES
-    with pytest.raises(PayloadRefused, match="core.clip is delivered as a payload 2 times") as refused:
+    with pytest.raises(PayloadRefused) as refused:
         writer.commit(recipe.out)
-    assert f"clips at {staging / 'clips' / 'core.clip'}" in str(refused.value)
-    assert f"more at {staging / 'more' / 'core.clip'}" in str(refused.value)
+    (problem,) = refused.value.problems
+    assert problem.code is PayloadFault.DELIVERED_TWICE
+    assert problem.message.startswith("core.clip ")
+    assert f"clips at {staging / 'clips' / 'core.clip'}" in problem.message
+    assert f"more at {staging / 'more' / 'core.clip'}" in problem.message
     assert not (recipe.out / "packet.json").exists()
 
 
@@ -527,8 +563,11 @@ def test_a_build_refuses_a_singleton_the_recipe_leaves_another_source_owning(tmp
     ]
     monkeypatch.setattr(opaquefixture.Clips, "PRODUCES", opaquefixture.Reports.PRODUCES)
     recipe, writer = _build(tmp_path, registry, monkeypatch, sources, extensions={"qc.json": QC})
-    with pytest.raises(PayloadRefused, match="the recipe does not leave more owning"):
+    with pytest.raises(PayloadRefused) as refused:
         writer.commit(recipe.out)
+    (problem,) = refused.value.problems
+    assert problem.code is PayloadFault.SINGLETON_NOT_OWNED
+    assert problem.message.startswith("more: ")
 
 
 def test_an_adapter_declaring_no_opaque_location_is_given_none(tmp_path, registry, monkeypatch):
@@ -546,8 +585,10 @@ def test_an_adapter_declaring_no_opaque_location_is_given_none(tmp_path, registr
 
 def test_an_adapter_handing_over_bytes_without_declaring_where_is_refused(tmp_path, registry, monkeypatch):
     source = _source(tmp_path, "undeclared", {"core.clip": {"a.mp4": b"a"}}, ["core.media_assets"])
-    with pytest.raises(PayloadRefused, match="undeclared: hands over a packet-owned opaque resource"):
+    with pytest.raises(PayloadRefused) as refused:
         _build(tmp_path, registry, monkeypatch, [source])
+    assert refused.value.source == "undeclared"
+    assert [p.code for p in refused.value.problems] == [PayloadFault.NO_LOCATION]
 
 
 def test_an_occupied_opaque_directory_refuses_a_commit(tmp_path, registry, minimal):

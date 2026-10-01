@@ -1,7 +1,7 @@
 """Every exception this package raises on purpose; each derives from :exc:`WriterError`.
 
 The codes an error or a reported problem carries are declared beside the classes:
-:class:`RecipeFault`.
+:class:`RecipeFault` and :class:`PayloadFault`.
 
 A recipe that cannot be built:
 
@@ -41,6 +41,7 @@ A packet root that cannot be committed to, or read back:
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -352,8 +353,74 @@ class UnsupportedEncoding(WriterError, ValueError):
     """An array uses an encoding this package will not decode, such as ``pickle``."""
 
 
+class PayloadFault(StrEnum):
+    """What a packet cannot own in a delivered payload, or why a payload binds no single resource."""
+
+    #: An adapter hands over a payload and declares no `opaque_location`.
+    NO_LOCATION = "no_location"
+    #: A resource ID cannot name a resource directory.
+    RESOURCE_ID_UNREPRESENTABLE = "resource_id_unrepresentable"
+    #: A payload, or a member of one, has a name that is not representable.
+    NAME_UNREPRESENTABLE = "name_unrepresentable"
+    #: A handed-over payload is neither one file's bytes nor a directory's files.
+    NOT_ONE_FORM = "not_one_form"
+    #: A resource directory holds no payload, or more than one.
+    NOT_ONE_PAYLOAD = "not_one_payload"
+    #: An entry of the location is not a resource directory.
+    NOT_A_RESOURCE_DIRECTORY = "not_a_resource_directory"
+    #: A payload holds an empty directory.
+    EMPTY_DIRECTORY = "empty_directory"
+    #: A payload holds a member that is neither a regular file nor a directory.
+    NOT_REGULAR = "not_regular"
+    #: A payload names both a catalog row's resource and an opaque singleton.
+    ROW_AND_SINGLETON = "row_and_singleton"
+    #: A payload names a singleton the recipe does not leave its source owning.
+    SINGLETON_NOT_OWNED = "singleton_not_owned"
+    #: A payload names a resource several catalog rows carry.
+    SEVERAL_ROWS = "several_rows"
+    #: A payload names neither a catalog row's resource nor an opaque singleton.
+    BINDS_NOTHING = "binds_nothing"
+    #: One resource is delivered as a payload more than once.
+    DELIVERED_TWICE = "delivered_twice"
+    #: One resource is delivered as a payload and as a referenced resource.
+    DELIVERED_AND_REFERENCED = "delivered_and_referenced"
+    #: A catalog row of an opaque family carries no resource ID.
+    ROW_UNNAMED = "row_unnamed"
+    #: A catalog row of an opaque family is bound by no payload or referenced resource.
+    ROW_UNBOUND = "row_unbound"
+
+
+@dataclass(frozen=True)
+class PayloadProblem:
+    """One thing a :exc:`PayloadRefused` refuses.
+
+    Attributes
+    ----------
+    code : PayloadFault
+        Which fault it is, whatever the names in the message.
+    message : str
+        What is refused, naming the path or the resource.
+    """
+
+    code: PayloadFault
+    message: str
+
+
 class PayloadRefused(WriterError, ValueError):
-    """A delivery holds something a packet cannot own, or a payload binds no single resource."""
+    """A delivery holds something a packet cannot own, or a payload binds no single resource.
+
+    Attributes
+    ----------
+    problems : list of PayloadProblem
+        Each thing refused, carrying its code.
+    source : str or None
+        The source whose delivery is refused; None where the problems span sources.
+    """
+
+    def __init__(self, message: str, *, problems: Sequence[PayloadProblem] = (), source: str | None = None) -> None:
+        super().__init__(message)
+        self.problems = list(problems)
+        self.source = source
 
 
 class OffGrid(WriterError, ValueError):

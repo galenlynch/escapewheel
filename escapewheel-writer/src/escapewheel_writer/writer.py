@@ -53,7 +53,14 @@ from . import opaque
 from .amending import Held
 from .arrow import build, number_batch, schema, sort_key
 from .encoding import encodings, inefficient
-from .errors import CommitRefused, NotCommitted, PayloadRefused, PromotionRecordUnreadable
+from .errors import (
+    CommitRefused,
+    NotCommitted,
+    PayloadFault,
+    PayloadProblem,
+    PayloadRefused,
+    PromotionRecordUnreadable,
+)
 from .keys import Keys
 
 
@@ -1166,17 +1173,22 @@ class PacketWriter:
         """
         families, singletons = self._opaque_declarations()
         rows: dict[str, list[str]] = {}
-        unbound: list[str] = []
+        unbound: list[PayloadProblem] = []
         for declaration_id, (catalog, column) in sorted(families.items()):
             for row in self._tables.get(catalog, []):
                 value = row.get(column)
                 if value is None:
                     shown = {k: v for k, v in row.items() if k != "metadata"}
-                    unbound.append(f"a {catalog} row carries no {column}, so nothing binds it: {shown}")
+                    unbound.append(
+                        PayloadProblem(
+                            PayloadFault.ROW_UNNAMED,
+                            f"a {catalog} row carries no {column}, so nothing binds it: {shown}",
+                        )
+                    )
                     continue
                 rows.setdefault(str(value), []).append(declaration_id)
         referenced = {*self._referenced_media, *self._referenced_arrays}
-        problems: list[str] = []
+        problems: list[PayloadProblem] = []
         bound: list[tuple[opaque.StagedPayload, str]] = []
         by_id: dict[str, list[opaque.StagedPayload]] = {}
         for payload in self._payloads:
@@ -1185,43 +1197,68 @@ class PacketWriter:
             matched, singleton = rows.get(resource_id, []), resource_id in singletons
             if matched and singleton:
                 problems.append(
-                    f"{payload.source}: {where} names {resource_id}, which is both a catalog row's resource_id "
-                    "and an opaque singleton declaration"
+                    PayloadProblem(
+                        PayloadFault.ROW_AND_SINGLETON,
+                        f"{payload.source}: {where} names {resource_id}, which is both a catalog row's resource_id "
+                        "and an opaque singleton declaration",
+                    )
                 )
             elif singleton:
                 if payload.owned is not None and resource_id not in payload.owned:
                     problems.append(
-                        f"{payload.source}: delivers a payload for opaque singleton {resource_id}, which the "
-                        f"recipe does not leave {payload.source} owning (Part 05 §3.4)"
+                        PayloadProblem(
+                            PayloadFault.SINGLETON_NOT_OWNED,
+                            f"{payload.source}: delivers a payload for opaque singleton {resource_id}, which the "
+                            f"recipe does not leave {payload.source} owning (Part 05 §3.4)",
+                        )
                     )
                 bound.append((payload, resource_id))
             elif len(matched) == 1:
                 bound.append((payload, matched[0]))
             elif matched:
                 problems.append(
-                    f"{payload.source}: {where} names {resource_id}, which {len(matched)} catalog rows carry"
+                    PayloadProblem(
+                        PayloadFault.SEVERAL_ROWS,
+                        f"{payload.source}: {where} names {resource_id}, which {len(matched)} catalog rows carry",
+                    )
                 )
             else:
                 problems.append(
-                    f"{payload.source}: {where} names {resource_id}, which is the resource_id of no catalog row of "
-                    "an opaque catalog family and the ID of no opaque singleton declaration"
+                    PayloadProblem(
+                        PayloadFault.BINDS_NOTHING,
+                        f"{payload.source}: {where} names {resource_id}, which is the resource_id of no catalog row "
+                        "of an opaque catalog family and the ID of no opaque singleton declaration",
+                    )
                 )
         for resource_id, payloads in sorted(by_id.items()):
             places = ", ".join(f"{p.source} at {opaque.shown(p.path.parent)}" for p in payloads)
             if len(payloads) > 1:
-                problems.append(f"{resource_id} is delivered as a payload {len(payloads)} times: {places}")
+                problems.append(
+                    PayloadProblem(
+                        PayloadFault.DELIVERED_TWICE,
+                        f"{resource_id} is delivered as a payload {len(payloads)} times: {places}",
+                    )
+                )
             if resource_id in referenced:
-                problems.append(f"{resource_id} is delivered both as a payload ({places}) and as a referenced resource")
+                problems.append(
+                    PayloadProblem(
+                        PayloadFault.DELIVERED_AND_REFERENCED,
+                        f"{resource_id} is delivered both as a payload ({places}) and as a referenced resource",
+                    )
+                )
         delivered = set(by_id) | referenced
         unbound += [
-            f"{families[declaration_id][0]} row with resource_id {resource_id} is bound by no payload or "
-            "referenced resource"
+            PayloadProblem(
+                PayloadFault.ROW_UNBOUND,
+                f"{families[declaration_id][0]} row with resource_id {resource_id} is bound by no payload or "
+                "referenced resource",
+            )
             for resource_id, declarations in sorted(rows.items())
             for declaration_id in declarations
             if resource_id not in delivered
         ]
-        if problems or unbound:
-            raise PayloadRefused("; ".join([*problems, *unbound]) + " (Part 12 §5)")
+        if refused := [*problems, *unbound]:
+            raise PayloadRefused("; ".join(p.message for p in refused) + " (Part 12 §5)", problems=refused)
         return bound
 
     @property
