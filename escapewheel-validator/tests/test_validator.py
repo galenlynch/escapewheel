@@ -9,7 +9,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from escapewheel_validator import Report
-from escapewheel_validator.validator import _check_column, _offending, _report_unassessed, _scan_one_ordering
+from escapewheel_validator.validator import _check_column, _offending, _scan_one_ordering, report_unassessed
 
 
 def test_a_finding_that_projects_a_timestamp_is_reported_without_pytz(monkeypatch):
@@ -66,7 +66,7 @@ def test_each_unassessed_external_is_its_own_registrys_finding():
         {"core.array_asset_instances": "core", "core.media": "core", "task.arrays": "task", "task.tables": "task"},
         resources,
     )
-    _report_unassessed(SimpleNamespace(resources=lambda: resources), {"task.table"}, report)
+    report_unassessed(SimpleNamespace(resources=lambda: resources), {"task.table"}, report)
     assert [(f.level, f.check, f.registry, f.rows) for f in report.findings] == [
         ("info", "external.physical_unassessed", "core", (("core.lfp",),)),
         ("info", "external.physical_unassessed", "task", (("task.lfp",),)),

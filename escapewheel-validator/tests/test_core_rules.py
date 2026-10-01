@@ -7,7 +7,7 @@ import duckdb
 import pytest
 
 from escapewheel_validator.rule_language import check_rule
-from escapewheel_validator.validator import _DDL
+from escapewheel_validator.validator import DDL
 
 ROOT = Path(__file__).resolve().parents[2]
 CORE = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
@@ -20,7 +20,7 @@ def _flagged(rule_id, rows):
     connection.sql("CREATE SCHEMA core")
     for resource_id in {table for table, _ in rows}:
         columns = ", ".join(
-            f'"{c["name"]}" {_DDL[c["type"]]}' for c in CORE["resources"][resource_id]["table"]["columns"]
+            f'"{c["name"]}" {DDL[c["type"]]}' for c in CORE["resources"][resource_id]["table"]["columns"]
         )
         connection.sql(f"CREATE TABLE {resource_id} ({columns})")
     for resource_id, row in rows:

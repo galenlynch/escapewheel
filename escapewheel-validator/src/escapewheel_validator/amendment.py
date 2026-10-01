@@ -93,9 +93,9 @@ def predecessor(root: Path, current: Mapping[str, Any]) -> Mapping[str, Any] | N
 
 def absent(column: Mapping[str, Any]) -> str:
     """Return SQL selecting a column a file omits, as a null of its declared type (Part 05 §15.6)."""
-    from .validator import _DDL
+    from .validator import DDL
 
-    return f"CAST(NULL AS {_DDL.get(str(column.get('type')), 'VARCHAR')}) AS {quoted(column['name'])}"
+    return f"CAST(NULL AS {DDL.get(str(column.get('type')), 'VARCHAR')}) AS {quoted(column['name'])}"
 
 
 def group_lists(spec: Mapping[str, Any]) -> list[list[str]]:

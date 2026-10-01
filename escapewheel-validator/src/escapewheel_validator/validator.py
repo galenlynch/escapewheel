@@ -86,7 +86,7 @@ ARROW_TYPES = {
 }
 
 
-def _tables(registry: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+def table_contracts(registry: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     """Project the table contracts from registry resource declarations."""
     return {
         str(name): declaration["table"]
@@ -95,7 +95,7 @@ def _tables(registry: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     }
 
 
-def _declarations(
+def visible_declarations(
     core: Mapping[str, Any], extensions: Sequence[Mapping[str, Any]] = ()
 ) -> dict[str, Mapping[str, Any]]:
     """Combine the visible declarations without creating another serialized authority."""
@@ -105,7 +105,7 @@ def _declarations(
     return visible
 
 
-def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact validation phase
+def check_resource_declarations(  # noqa: C901 - one ordered cross-artifact validation phase
     packet: Packet,
     core: Mapping[str, Any],
     extensions: Mapping[str, Mapping[str, Any]],
@@ -117,7 +117,7 @@ def _check_resource_declarations(  # noqa: C901 - one ordered cross-artifact val
     An entry in the namespace of an extension registry that failed binding or its registry result
     is withheld rather than reported undeclared: nothing about it can be decided (Part 05 §14.5).
     """
-    visible = _declarations(core, list(extensions.values()))
+    visible = visible_declarations(core, list(extensions.values()))
     entries = [entry for entry in packet.resources() if entry.declaration_id.split(".", 1)[0] not in withheld]
     by_id = {entry.resource_id: entry for entry in packet.resources()}
 
@@ -648,7 +648,7 @@ def _onto(
     return tick
 
 
-def _check_time_origin(packet: Packet, report: Report) -> None:
+def check_time_origin(packet: Packet, report: Report) -> None:
     """Part 05 §5.3: each declared `t_zero_tick` is its session's earliest observation start.
 
     Not SQL: the minimum is taken across clocks, and carrying a start onto the reference walks the
@@ -746,7 +746,7 @@ def _floor_level(resource: Any) -> Level:
     return Level.WARNING if role == "reader_and_packet_writer" and not resource.is_external else Level.INFO
 
 
-def _check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report) -> None:
+def check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report) -> None:
     """Report an array whose own metadata matches no entry of its variant's reader floor (Part 03 §6.4).
 
     An unrecognized codec is valid metadata outside the floor, so it draws this finding and nothing else;
@@ -775,7 +775,7 @@ def _check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report
     )
 
 
-def _check_parquet_floor(resource: Any, metadata: Any, report: Report) -> None:
+def check_parquet_floor(resource: Any, metadata: Any, report: Report) -> None:
     """Compare a table's footer-reported compressions and encodings with the Parquet floor (Part 03 §5.5)."""
     floor = parquet_floor()
     compressions: set[str] = set()
@@ -799,7 +799,7 @@ def _check_parquet_floor(resource: Any, metadata: Any, report: Report) -> None:
         )
 
 
-def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAxes], report: Report) -> None:
+def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, ArrayAxes], report: Report) -> None:
     """Check one packet-owned array against the metadata document in its own store."""
     try:
         metadata = handle.metadata()
@@ -829,7 +829,7 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAx
             registry=report.resource_owner(resource.resource_id),
         )
 
-    _check_zarr_floor(resource, metadata, report)
+    check_zarr_floor(resource, metadata, report)
 
     if (grid := metadata.get("chunk_grid", {}).get("name")) != "regular":
         report.add(
@@ -867,24 +867,24 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, _ArrayAx
         )
 
 
-def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
+def check_packet_owned_arrays(packet: Packet, report: Report) -> None:
     """Layer 1c: every packet-owned array against its own Zarr metadata (Part 04 §5.3, level 2).
 
     Always runs, and needs no Zarr: a Zarr array's metadata is a JSON document in the store,
     which `ArrayResource` parses directly. The packet owns these bytes, so an array it
     describes wrongly is a defect in the packet rather than in the reader's situation. An
-    external array is level 3 and stays with the requested mode, and `_report_unassessed` reports it
+    external array is level 3 and stays with the requested mode, and `report_unassessed` reports it
     where that mode did not read it.
 
     Storage, not values, so the shim and not SQL (R12 §4): no query can see a chunk grid or a codec
     pipeline.
     """
-    # A resource naming a source is not packet-owned whatever `external` says, and `_check_sources`
+    # A resource naming a source is not packet-owned whatever `external` says, and `check_sources`
     # has already reported the contradiction; resolving it here would raise instead of report.
     owned = [r for r in packet.resources(kind="dense_array") if not r.is_external and r.source is None]
     if not owned:
         return
-    declared = _declared_axes(packet)
+    declared = declared_axes(packet)
     if not declared:
         report.add(
             check_table.ARRAY_NO_ARRAY_DIMENSIONS_TABLE,
@@ -892,7 +892,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         )
     for resource in owned:
         try:
-            listing(_owned_uri(packet, resource.entry))
+            listing(owned_uri(packet, resource.entry))
         except ResourceMissing as exc:
             report.add(
                 check_table.RESOURCE_MISSING,
@@ -905,7 +905,7 @@ def _check_packet_owned_arrays(packet: Packet, report: Report) -> None:
         _check_one_array(resource, packet.array_resource(resource.resource_id), declared, report)
 
 
-def _check_packet_owned_opaque(packet: Packet, report: Report) -> None:
+def check_packet_owned_opaque(packet: Packet, report: Report) -> None:
     """Every packet-owned opaque payload is present, and its names survive a copy (Part 05 §5.3).
 
     A payload is one file or a directory of them (Part 03 §11), so its listing is all either check
@@ -915,7 +915,7 @@ def _check_packet_owned_opaque(packet: Packet, report: Report) -> None:
         if resource.is_external or resource.source is not None:
             continue
         try:
-            found = listing(_owned_uri(packet, resource.entry))
+            found = listing(owned_uri(packet, resource.entry))
         except ResourceMissing as exc:
             report.add(
                 check_table.RESOURCE_MISSING,
@@ -935,7 +935,7 @@ def _check_packet_owned_opaque(packet: Packet, report: Report) -> None:
             )
 
 
-def _report_unassessed(packet: Packet, assessed: Collection[str], report: Report) -> None:
+def report_unassessed(packet: Packet, assessed: Collection[str], report: Report) -> None:
     """One `info` finding per external resource with a reader floor whose own metadata was not read (Part 05 §5.3)."""
     for resource in packet.resources():
         if resource.is_external and resource.interface is not None and resource.resource_id not in assessed:
@@ -948,7 +948,7 @@ def _report_unassessed(packet: Packet, assessed: Collection[str], report: Report
             )
 
 
-def _report_page_types_unassessed(tables: int, report: Report) -> None:
+def report_page_types_unassessed(tables: int, report: Report) -> None:
     """Part 03 §5.5: a validator comparing only footers states that it did not assess data-page types."""
     if tables:
         report.add(
@@ -958,7 +958,7 @@ def _report_page_types_unassessed(tables: int, report: Report) -> None:
         )
 
 
-def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool = True) -> None:
+def check_owned_digests(packet: Packet, report: Report, store_checksums: bool = True) -> None:
     """Part 04 §5.3, level 2: every packet-owned resource's recorded digest holds.
 
     A disagreement is an **error**, where the external equivalent is one too but means something
@@ -978,7 +978,7 @@ def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool =
             continue
         try:
             found = digest_resource(
-                _owned_uri(packet, entry), str(claimed["algorithm"]), store_checksums=store_checksums
+                owned_uri(packet, entry), str(claimed["algorithm"]), store_checksums=store_checksums
             )
         except StoreUnreachable as exc:
             report.add(
@@ -1002,17 +1002,17 @@ def _check_owned_digests(packet: Packet, report: Report, store_checksums: bool =
     if checked:
         report.add(
             check_table.OWNED_VERIFIED,
-            f"{matched} of {checked} packet-owned resource(s) hold their recorded digest; {_routes(routes)}",
+            f"{matched} of {checked} packet-owned resource(s) hold their recorded digest; {route_summary(routes)}",
             routes,
         )
 
 
-def _owned_uri(packet: Packet, entry: Mapping[str, Any]) -> str:
+def owned_uri(packet: Packet, entry: Mapping[str, Any]) -> str:
     """Where a packet-owned entry's bytes are, under the packet's own location."""
     return packet.location.resolve(str(entry.get("uri", ""))).uri
 
 
-def _routes(routes: Sequence[tuple[str, str, str]]) -> str:
+def route_summary(routes: Sequence[tuple[str, str, str]]) -> str:
     """Name how each digest was established (Part 04 §5.3), by resource where the routes differ.
 
     A finding keeps five rows, so the message carries the route of every digest.
@@ -1025,7 +1025,7 @@ def _routes(routes: Sequence[tuple[str, str, str]]) -> str:
     )
 
 
-def _check_sources(packet: Packet, report: Report) -> None:
+def check_sources(packet: Packet, report: Report) -> None:
     """R80: what a source declaration must be, decided without reaching the network.
 
     Two things are structural and one is not; the manifest schema already requires `external` beside
@@ -1079,7 +1079,7 @@ def _check_sources(packet: Packet, report: Report) -> None:
         )
 
 
-def _resolve_external(
+def resolve_external(
     packet: Packet,
     report: Report,
     checksums: bool = False,
@@ -1126,7 +1126,7 @@ def _resolve_external(
     routes: list[tuple[str, str, str]] = []
     # Only read core.array_dimensions where an external array would use it.
     external_arrays = [r for r in packet.resources(kind="dense_array") if r.is_external]
-    axes_by_array = _declared_axes(packet) if external_arrays else {}
+    axes_by_array = declared_axes(packet) if external_arrays else {}
     for resource in packet.resources():
         if not resource.is_external:
             continue
@@ -1158,7 +1158,7 @@ def _resolve_external(
         )
     if checked:
         did = ", ".join(f"{count} {field}" for field, count in sorted(compared.items())) or "nothing"
-        established = f"; digest {_routes(routes)}" if routes else ""
+        established = f"; digest {route_summary(routes)}" if routes else ""
         report.add(
             check_table.EXTERNAL_VERIFIED,
             f"{checked} external resource(s) resolved; compared {did}{established}",
@@ -1173,7 +1173,7 @@ def _compare_external(
     report: Report,
     checksums: bool,
     store_digests: bool = False,
-    axes_by_array: Mapping[str, _ArrayAxes] | None = None,
+    axes_by_array: Mapping[str, ArrayAxes] | None = None,
     store_checksums: bool = True,
     routes: list[tuple[str, str, str]] | None = None,
     assessed: set[str] | None = None,
@@ -1208,11 +1208,11 @@ def _compare_external(
                 registry=report.resource_owner(resource.resource_id),
             )
     if resource.kind == "dense_array" and (metadata := _stored_metadata(uri, found)) is not None:
-        _check_zarr_floor(resource, metadata, report)
+        check_zarr_floor(resource, metadata, report)
         if assessed is not None:
             assessed.add(resource.resource_id)
         if axes_by_array:
-            fields.extend(_compare_shape(resource, metadata, axes_by_array, report))
+            fields.extend(compare_shape(resource, metadata, axes_by_array, report))
     if checksums and isinstance(claimed := entry.get("digest"), Mapping):
         try:
             found_digest = digest_resource(uri, str(claimed["algorithm"]), store_checksums=store_checksums)
@@ -1323,7 +1323,7 @@ def _stored_metadata(uri: str, found: Any) -> Mapping[str, Any] | None:
 
 
 @dataclass
-class _ArrayAxes:
+class ArrayAxes:
     """What a packet's tables assert about one dense array's axes (Part 03 §6.3).
 
     Keyed by stored `axis_index`. `labels` holds each labelled axis's rows as
@@ -1359,7 +1359,7 @@ def _rows_by_array(
     return grouped
 
 
-def _declared_axes(packet: Packet) -> dict[str, _ArrayAxes]:  # noqa: C901
+def declared_axes(packet: Packet) -> dict[str, ArrayAxes]:  # noqa: C901
     """Resolve each dense array's axes, labels and channels through its declaration and catalog row.
 
     The label rows are in the table the axes table's `coordinate_resource` names as its
@@ -1372,7 +1372,7 @@ def _declared_axes(packet: Packet) -> dict[str, _ArrayAxes]:  # noqa: C901
             declarations.update(document.get("resources", {}))
 
     cache: dict[Any, Any] = {}
-    found: dict[str, _ArrayAxes] = {}
+    found: dict[str, ArrayAxes] = {}
     for resource in packet.resources(kind="dense_array"):
         declaration = declarations.get(resource.declaration_id)
         if declaration is None:
@@ -1401,7 +1401,7 @@ def _declared_axes(packet: Packet) -> dict[str, _ArrayAxes]:  # noqa: C901
         if not (keys := catalog.get((resource.resource_id,))):
             continue
         wanted_key = keys[0]
-        axes = _ArrayAxes()
+        axes = ArrayAxes()
         extra = ["axis_index", "dimension_name", "coordinate_resource", "depends_on_axis_index"]
         for axis, name, coordinate, depends in _rows_by_array(packet, axes_id, binding["columns"], extra, cache).get(
             wanted_key, []
@@ -1464,7 +1464,7 @@ class _AxisFault(Enum):
     CHANNEL_INDEX = auto()
 
 
-def _axis_findings(shape: Sequence[int], axes: _ArrayAxes) -> dict[_AxisFault, list[tuple[Any, ...]]]:
+def _axis_findings(shape: Sequence[int], axes: ArrayAxes) -> dict[_AxisFault, list[tuple[Any, ...]]]:
     """Compare one array's shape with its label and channel rows, by fault (Part 03 §6.3)."""
     length = dict(enumerate(shape))
     found: dict[_AxisFault, list[tuple[Any, ...]]] = {fault: [] for fault in _AxisFault}
@@ -1532,7 +1532,7 @@ _EXTERNAL_AXIS_CHECKS = {
 
 
 def _report_axes(
-    resource: Any, shape: Sequence[int], axes: _ArrayAxes, entries: Mapping[_AxisFault, CheckEntry], report: Report
+    resource: Any, shape: Sequence[int], axes: ArrayAxes, entries: Mapping[_AxisFault, CheckEntry], report: Report
 ) -> None:
     """Report each way an array's label and channel rows disagree with its shape, under its entry of `entries`."""
     for fault, rows in _axis_findings(shape, axes).items():
@@ -1545,8 +1545,8 @@ def _report_axes(
             )
 
 
-def _compare_shape(
-    resource: Any, metadata: Mapping[str, Any], declared: Mapping[str, _ArrayAxes], report: Report
+def compare_shape(
+    resource: Any, metadata: Mapping[str, Any], declared: Mapping[str, ArrayAxes], report: Report
 ) -> list[str]:
     """Check an external array's stored shape against what the packet's tables assert (Part 03 §6.3).
 
@@ -1573,7 +1573,7 @@ def _compare_shape(
     return ["rank", *(["labels"] if axes.labelled else []), *(["channels"] if axes.channels else [])]
 
 
-def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> dict[str, Any]:
+def check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> dict[str, Any]:
     """Layer 2: column presence and physical type, which SQL cannot see (R12 §4)."""
     declared = {r.resource_id for r in packet.resources()}
     present: dict[str, Any] = {}
@@ -1594,7 +1594,7 @@ def _check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) ->
             footer = pq.read_metadata(path, filesystem=filesystem)
         except (OSError, pa.ArrowException):
             continue  # an unreadable footer leaves the floor unassessed, not failed (Part 05 §9.4)
-        _check_parquet_floor(handle.resource, footer, report)
+        check_parquet_floor(handle.resource, footer, report)
     return present
 
 
@@ -1799,7 +1799,7 @@ def _duplicated_columns(handle: Any, spec: Mapping[str, Any]) -> list[tuple[str,
     return [(a, b) for a, b in candidates if table.column(a).equals(table.column(b))]
 
 
-def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
+def check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
     """Part 05 §5.3. Reported at `info` and never as a failure.
 
     Independently numbered identifiers can coincide, which is a fact about a packet rather than a
@@ -1818,7 +1818,7 @@ def _check_duplication(present: Mapping[str, Any], tables: Mapping[str, Any], re
             )
 
 
-def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
+def check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
     """Part 05 §5.3. A declared `metadata` column a resource's file omits or leaves null, at `info`.
 
     Whether a table in Part 02 §8.6's middle band declares one is a judgement, and this is the
@@ -1858,7 +1858,7 @@ def _check_unfilled_metadata(present: Mapping[str, Any], tables: Mapping[str, An
                 )
 
 
-def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
+def check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
     """Report a value outside a column's reserved set at `info` (Part 02 §9.3).
 
     Never a failure: an open vocabulary admits an unrecognised value. A synonym of a reserved value
@@ -1885,7 +1885,7 @@ def _check_reserved_values(present: Mapping[str, Any], tables: Mapping[str, Any]
                 )
 
 
-def _check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
+def check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], report: Report) -> None:
     """Part 05 §5.3. Every non-null value of a unit column is a UCUM code (Part 02 §8.4).
 
     Covers every table a directing registry declares (Part 05 §5.4), and files each finding and each
@@ -1916,7 +1916,7 @@ def _check_unit_codes(present: Mapping[str, Any], tables: Mapping[str, Any], rep
                 )
 
 
-def _check_ordering(
+def check_ordering(
     tables: Mapping[str, Any],
     present: Mapping[str, Any],
     report: Report,
@@ -2068,7 +2068,7 @@ def _scan_one_ordering(  # noqa: C901
 def verify_order(batches: Iterable[Any], keys: Sequence[str], unique: Sequence[str] | None = None) -> Iterator[Any]:
     """Yield batches, raising if one sorts before its predecessor or repeats the key.
 
-    The same comparison :func:`_check_ordering` makes against a written file, made instead
+    The same comparison :func:`check_ordering` makes against a written file, made instead
     against the batches on their way into one. It is offered because a writer is the one caller
     that can establish a file's order without reading the file: the rows pass through its hands
     already, so the check costs the comparison and not the re-read of the file that finding the
@@ -2137,7 +2137,7 @@ def _tail_key(tail: tuple[Any, ...], keys: Sequence[str], unique: Sequence[str])
 
 
 #: Registry column type -> the DuckDB type used for the empty stand-in tables below.
-_DDL = {
+DDL = {
     "string": "VARCHAR",
     "int32": "INTEGER",
     "int64": "BIGINT",
@@ -2165,7 +2165,7 @@ _DDL = {
 LIMITS: dict[str, Any] = {"memory_limit": "4GB", "threads": 4}
 
 
-def _bounded(connection: Any, limits: Mapping[str, Any], spill: Path | None = None) -> Any:
+def bounded(connection: Any, limits: Mapping[str, Any], spill: Path | None = None) -> Any:
     """Apply resource limits to a connection, ignoring settings this DuckDB lacks.
 
     `spill` supplies `temp_directory` when the caller has not, since a memory limit without
@@ -2183,7 +2183,7 @@ def _bounded(connection: Any, limits: Mapping[str, Any], spill: Path | None = No
 
 
 @contextlib.contextmanager
-def _spill_beside(packet: Packet) -> Iterator[Path | None]:
+def spill_beside(packet: Packet) -> Iterator[Path | None]:
     """Yield a directory for DuckDB to spill into, removed afterwards.
 
     Beside the packet, not inside it. The filesystem has to be the packet's -- `/tmp` is tmpfs
@@ -2211,7 +2211,7 @@ def _spill_beside(packet: Packet) -> Iterator[Path | None]:
     yield None
 
 
-def _run_rules(
+def run_rules(
     packet: Packet,
     core_context: CheckedRegistryContext,
     extension_contexts: Mapping[str, CheckedRegistryContext],
@@ -2228,8 +2228,8 @@ def _run_rules(
     extension_documents = [
         context.document for context in extension_contexts.values() if context.result.state == RegistryState.VALID
     ]
-    with _spill_beside(packet) as spill:
-        connection = _bounded(packet.duckdb(), LIMITS if limits is None else limits, spill)
+    with spill_beside(packet) as spill:
+        connection = bounded(packet.duckdb(), LIMITS if limits is None else limits, spill)
         try:
             unreadable = _install_rule_relations(packet, connection, [registry, *extension_documents])
 
@@ -2279,7 +2279,7 @@ def _install_rule_relations(packet: Packet, connection: Any, documents: Sequence
     unreadable: set[str] = set()
     installed: set[str] = set()
     for document in documents:
-        for resource_id, spec in _tables(document).items():
+        for resource_id, spec in table_contracts(document).items():
             if resource_id in installed:
                 continue
             installed.add(resource_id)
@@ -2291,7 +2291,7 @@ def _install_rule_relations(packet: Packet, connection: Any, documents: Sequence
                     continue
                 except (PacketError, OSError, ValueError):
                     unreadable.add(resource_id)
-            columns = ", ".join(f'"{c["name"]}" {_DDL[c["type"]]}' for c in spec["columns"])
+            columns = ", ".join(f'"{c["name"]}" {DDL[c["type"]]}' for c in spec["columns"])
             connection.sql(f"CREATE OR REPLACE TABLE {resource_id} ({columns})")
     return unreadable
 
@@ -2321,7 +2321,7 @@ def _tier2(context: CheckedRegistryContext, core_context: CheckedRegistryContext
     language = document.get("rule_language")
     checked: list[Check] = []
     invalid: list[tuple[Any, str]] = []
-    for resource, table in _tables(document).items() if language == PROFILE_ID else ():
+    for resource, table in table_contracts(document).items() if language == PROFILE_ID else ():
         for rule in table.get("rules", []):
             if rule.get("advisory") and not advisory:
                 continue
@@ -2475,11 +2475,11 @@ def _namable(
     Core's absent tables get empty stand-ins in _layer4, so all of them can be joined; an
     extension's do not, so only what the packet carries can be.
     """
-    tables = dict(_tables(registry))
+    tables = dict(table_contracts(registry))
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
     for document in extensions:
-        if isinstance(_tables(document), Mapping):
-            tables.update({n: t for n, t in _tables(document).items() if n in carried})
+        if isinstance(table_contracts(document), Mapping):
+            tables.update({n: t for n, t in table_contracts(document).items() if n in carried})
     return tables
 
 
@@ -2521,11 +2521,11 @@ def _specialisations(
     interval may hold one row per interval without being a kind, and inference from references
     takes every related table for a misdirection.
     """
-    tables = dict(_tables(registry))
+    tables = dict(table_contracts(registry))
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
     for document in extensions:
-        if isinstance(_tables(document), Mapping):
-            tables.update({n: t for n, t in _tables(document).items() if n in carried})
+        if isinstance(table_contracts(document), Mapping):
+            tables.update({n: t for n, t in table_contracts(document).items() if n in carried})
     found: dict[str, list[Specialisation]] = {}
     for name, spec in tables.items():
         for reference in spec.get("references", []):
@@ -2590,7 +2590,7 @@ def _check_extensions(
             continue
         document = extension_context.document
         assert isinstance(document, Mapping)
-        declared = set(_tables(document))
+        declared = set(table_contracts(document))
         # What the *packet* declares, not what the core registry knows: an extension's tables are
         # by definition absent from core's, and `present` is built from core's.
         carried = declared & {r.resource_id for r in packet.resources(kind="table")}
@@ -2606,7 +2606,7 @@ def _check_extensions(
             only=carried,
             advisory=advisory,
             aggregate=unsound or set(),
-            resolvable=set(_tables(registry)),
+            resolvable=set(table_contracts(registry)),
             kinds=kinds,
             specialises=specialises,
             declared=False,
@@ -2743,32 +2743,32 @@ def validate(
         {declaration: str(name) for name, document in directing for declaration in document.get("resources", {})},
         packet.resources(),
     )
-    _check_sources(packet, report)
+    check_sources(packet, report)
     if core_context is None:
         return report
     effective = core_context.document
     withheld = set(packet.manifest.extensions) - set(extensions)
     packet = packet.with_declarations(effective, *extensions.values())
-    _check_resource_declarations(packet, effective, extensions, withheld, report)
-    assessed = _resolve_external(packet, report, checksums, store_digests, store_checksums) if external else set()
+    check_resource_declarations(packet, effective, extensions, withheld, report)
+    assessed = resolve_external(packet, report, checksums, store_digests, store_checksums) if external else set()
     if checksums:
-        _check_owned_digests(packet, report, store_checksums)
-    _check_packet_owned_arrays(packet, report)
-    _check_packet_owned_opaque(packet, report)
-    _check_time_origin(packet, report)
+        check_owned_digests(packet, report, store_checksums)
+    check_packet_owned_arrays(packet, report)
+    check_packet_owned_opaque(packet, report)
+    check_time_origin(packet, report)
     # Every directing registry's tables receive the same storage checks (Part 05 §5.4).
-    tables = _tables(effective)
+    tables = table_contracts(effective)
     for document in extensions.values():
-        tables.update(_tables(document))
-    present = _check_schemas(packet, tables, report)
-    _report_page_types_unassessed(len(present), report)
-    _report_unassessed(packet, assessed | set(present), report)
-    unsound = _check_ordering(tables, present, report, scan)
-    _check_duplication(present, tables, report)
-    _check_unfilled_metadata(present, tables, report)
-    _check_reserved_values(present, tables, report)
-    _check_unit_codes(present, tables, report)
-    _run_rules(
+        tables.update(table_contracts(document))
+    present = check_schemas(packet, tables, report)
+    report_page_types_unassessed(len(present), report)
+    report_unassessed(packet, assessed | set(present), report)
+    unsound = check_ordering(tables, present, report, scan)
+    check_duplication(present, tables, report)
+    check_unfilled_metadata(present, tables, report)
+    check_reserved_values(present, tables, report)
+    check_unit_codes(present, tables, report)
+    run_rules(
         packet,
         core_context,
         bound.extensions,
@@ -2823,8 +2823,8 @@ def _check_amendment(
         named = {resource.resource_id for resource in version.resources(kind="table")}
         return lambda resource_id: version.path(resource_id) if resource_id in named else None
 
-    with _spill_beside(packet) as spill:
-        connection = _bounded(duckdb.connect(), LIMITS if limits is None else limits, spill)
+    with spill_beside(packet) as spill:
+        connection = bounded(duckdb.connect(), LIMITS if limits is None else limits, spill)
         try:
             found = amendment.compare(
                 connection,

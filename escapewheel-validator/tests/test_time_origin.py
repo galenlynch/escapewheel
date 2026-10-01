@@ -9,7 +9,7 @@ import pytest
 from escapewheel_reader import ResourceNotFoundError
 from escapewheel_reader.protocols import Memo
 
-from escapewheel_validator.validator import Report, _check_time_origin
+from escapewheel_validator.validator import Report, check_time_origin
 
 #: Probe anchors onto the reference: 30 parent ticks per tick, offset by 500.
 ANCHORS = [(t, 30 * t + 500) for t in range(0, 11_000, 1000)]
@@ -67,7 +67,7 @@ def _packet(clocks, starts, *, origin, reference=1, anchors=(), sessions=None):
 
 def _checks(packet):
     report = Report()
-    _check_time_origin(packet, report)
+    check_time_origin(packet, report)
     assert all(f.level == "error" and f.registry == "core" for f in report.findings)
     return [f.check for f in report.findings]
 
