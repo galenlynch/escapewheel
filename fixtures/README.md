@@ -238,3 +238,11 @@ Four, in the validator's own order — what each owes is Part 05 §5's:
 Physical sort order is checked between 3 and 4, by reading each file in written order.
 **It is not a SQL rule and cannot be**: a query has no access to physical row order. That
 was found here, building this fixture, and corrects R2 §7.1 and R5 §7 — see R12.
+
+## The suites' packet fixture
+
+`shared/packet_fixture.py` is not part of the corpus. It writes the small packet the reader's and
+the validator's unit suites each build in a temporary directory, and it lives here so that
+neither package's tests import the other's. `core_registry` cuts the core registry down to the
+resources and columns a suite names, keeping each as core declares it, and `write_packet` writes
+the rows for them. A suite states its columns in its own `tests/conftest.py`.
