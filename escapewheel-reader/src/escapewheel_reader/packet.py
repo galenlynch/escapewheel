@@ -1,28 +1,33 @@
-"""The packet: a dataset bundle under a declared physical profile."""
+"""Open one packet, and read its resources by ID.
+
+- :func:`open_packet` -- open a packet at a local directory or a store prefix.
+- :class:`Packet` -- list, resolve and read resources, acquire the registries the packet binds,
+  and register tables with DuckDB.
+- :func:`resolve_sources` -- locate the external sources a packet names (Part 04 §5.5).
+"""
 
 from __future__ import annotations
 
 import contextlib
 import re
 import warnings
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import pyarrow as pa
-import pyarrow.compute as pc
 import pyarrow.dataset as pads
 
-from .clocks import NotAligned, anchors, on_clock, origin, seconds, stored_span
+from . import access
+from .clocks import on_clock, origin, reference_clock, seconds
 from .errors import RegistryUnavailable, ResourceNotFoundError, ResourceUnreadableError
 from .location import SOURCES_FILENAME, Location, Rewrite, Sources, read_sources
 from .manifest import Manifest, Resource
-from .observation import VIEWS, attach_support, register_views, unit_windows
+from .observation import VIEWS, register_views
 from .registries import acquire, parse
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity
-from .runs import check as _check_runs
 from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -35,18 +40,6 @@ if TYPE_CHECKING:  # pragma: no cover
 #: What a column constraint may be: a scalar for equality, a two-item tuple for a closed
 #: range, or None to leave the column unconstrained.
 Predicate = str | int | float | bool | tuple[Any, Any] | list[Any] | None
-
-#: Ask for ticks exactly as the file stores them. Spikes are counted on the probe that
-#: recorded them, so stored ticks from two probes are not comparable and neither is a stored
-#: tick against a behavioural event -- which is why reaching them takes saying so.
-STORED = "stored"
-
-
-#: The activities whose runs produce units and spikes, so the accessors returning those know
-#: what to check for currency (Part 01 §2.4). An accessor already names one resource; naming what
-#: produces it is not the general activity-to-table map R44 §2.4 rejects, which an extension's
-#: tables could never be added to.
-SORTING_ACTIVITIES = ("spike_sorting", "curation")
 
 
 class Packet:
@@ -587,50 +580,12 @@ class Packet:
         return expression
 
     def intervals(self, *, session_id: int | None = None, interval_kind: str | None = None) -> pa.Table:
-        """Read ``core.intervals``, optionally filtered (Part 01 §3.10).
-
-        Filtering by kind prunes rather than scans: Part 02 §12.9 numbers each session's intervals
-        of one kind consecutively, so each is a contiguous run in the file's order.
-
-        Parameters
-        ----------
-        session_id : int, optional
-            Keep only this session.
-        interval_kind : str, optional
-            Keep only intervals of this kind, named as a dotted resource ID.
-
-        Returns
-        -------
-        pyarrow.Table
-            Matching intervals.
-        """
-        return self.table("core.intervals", session_id=session_id, interval_kind=interval_kind)
+        """Read ``core.intervals``. Delegates to :func:`escapewheel_reader.access.intervals`."""
+        return access.intervals(self, session_id=session_id, interval_kind=interval_kind)
 
     def units(self, *, session_id: int | None = None, quality_label: str | None = None) -> pa.Table:
-        """Read ``core.units``, optionally filtered.
-
-        Parameters
-        ----------
-        session_id : int, optional
-            Keep only this session.
-        quality_label : str, optional
-            Keep only units with this curation label: ``sua``, ``mua``, or ``noise``.
-
-        Returns
-        -------
-        pyarrow.Table
-            Matching units.
-
-        Raises
-        ------
-        AmbiguousRun
-            If the packet holds two sortings or curations of one probe and does not say which
-            to read (Part 01 §2.4). Returning both concatenated is two complete sets of units with
-            nothing marking the seam, so every count taken over the result is wrong. Read
-            ``table("core.units")`` to get the rows anyway.
-        """
-        _check_runs(self, SORTING_ACTIVITIES)
-        return self.table("core.units", session_id=session_id, quality_label=quality_label)
+        """Read ``core.units``, refusing coexisting sortings. Delegates to :func:`escapewheel_reader.access.units`."""
+        return access.units(self, session_id=session_id, quality_label=quality_label)
 
     def events(
         self,
@@ -641,86 +596,10 @@ class Packet:
         clock: int | Literal["stored"] | None = None,
         seconds: bool = False,
     ) -> pa.Table:
-        """Read ``core.events``, on the packet's reference clock unless told otherwise.
-
-        Parameters
-        ----------
-        event_type : str, optional
-            Keep only events of this type. The type is the stream's since R91 §3.1, so this
-            resolves the streams that emit it and keeps their events. The vocabulary is open,
-            so an unrecognized value is not an error, only empty.
-        session_id : int, optional
-            Keep only this session.
-        t_tick : tuple of int, optional
-            Keep only events within this closed tick range, stated on the clock the result
-            comes back on -- so a range and the ticks it selects are always in the same space.
-            A loose translation of it is pushed into the Parquet reader for pruning and the
-            exact one applied after mapping.
-        clock : int or 'stored', optional
-            The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
-            :data:`STORED` for the ticks the file holds.
-        seconds : bool, default False
-            Add a `t_second` column from the packet's declared origin (Part 01 §2.2). Refuses on
-            a packet that declares none, and on ticks that are not on the reference clock.
-
-        Returns
-        -------
-        pyarrow.Table
-            Matching events, with `t_tick` on `clock` and `clock_id` naming it.
-        """
-        streams = None
-        if event_type is not None:
-            # R91 §3.1: one lookup in a table of streams, then a key filter on the events --
-            # the shape R86 §2.4 measured as cheaper than carrying the type on every row.
-            streams = (
-                self.table(
-                    "core.event_streams",
-                    columns=["event_stream_id"],
-                    event_type=event_type,
-                    session_id=session_id,
-                )
-                .column("event_stream_id")
-                .to_pylist()
-            )
-        span = self._span(t_tick, clock)
-        if streams is None:
-            found = self.table("core.events", session_id=session_id, t_tick=span)
-        else:
-            found = self.table(
-                "core.events",
-                session_id=session_id,
-                t_tick=span,
-                stream_id=streams,
-            )
-        # A tick has no meaning without its clock, and R91 §3.2 puts the clock on the stream, so
-        # the accessor attaches it: `core.event_streams` is tens of rows against an event table's
-        # thousands, and every caller of this needs it either to convert or to report.
-        clocks = dict(
-            zip(
-                *(
-                    self.table("core.event_streams", columns=["event_stream_id", "clock_id"]).column(c).to_pylist()
-                    for c in ("event_stream_id", "clock_id")
-                ),
-                strict=True,
-            )
+        """Read ``core.events`` on one clock. Delegates to :func:`escapewheel_reader.access.events`."""
+        return access.events(
+            self, event_type=event_type, session_id=session_id, t_tick=t_tick, clock=clock, seconds=seconds
         )
-        found = found.append_column(
-            "clock_id", pa.array([clocks.get(s) for s in found.column("stream_id").to_pylist()])
-        )
-        if clock != STORED:
-            target_clock = None if clock is None else int(clock)
-            found = self._narrowed(self.on_clock(found, target_clock), t_tick)
-        return self.seconds(found, session_id=session_id) if seconds else found
-
-    def _unit_clocks(self, keys: Sequence[str], **narrow: Any) -> dict[tuple[Any, ...], Any]:
-        """Map a unit's key to the clock its ticks are counted on (R96 §3.2).
-
-        `core.spike_events` carried `clock_id` until R96 §3.4 struck it: the fact belongs to the
-        unit, and a spike reaches it through the reference it already declares. A tick still
-        travels with its clock out of this accessor, which is what the column was for.
-        """
-        rows = self.table("core.units", columns=[*keys, "clock_id"], **narrow).to_pylist()
-        return {tuple(r[k] for k in keys): r["clock_id"] for r in rows}
 
     def spike_times(
         self,
@@ -732,167 +611,14 @@ class Packet:
         clock: int | Literal["stored"] | None = None,
         seconds: bool = False,
     ) -> pa.Table:
-        """Read spike times for one unit, or for a table of them.
-
-        **On the reference clock by default.** A spike is counted on the probe that recorded
-        it, so stored ticks from two probes are not comparable and neither is a stored tick
-        against a behavioural event; returning them by default makes the wrong answer the
-        easy one. `clock_id` comes back alongside `t_tick` either way, because a tick has no
-        meaning without the clock it was counted on.
-
-        A unit is identified within a packet by ``unit_id`` alone. ``session_id`` scopes the
-        rows searched but never contributes to the unit's identity. An exact ``unit_id`` or an
-        explicit table of units is already an unambiguous selection, so this accessor does not
-        apply the current-run chooser used by :meth:`units`.
-
-        It is also the fast path. `core.units` is thousands of rows and `core.spike_events` is
-        hundreds of millions, so resolving which units are wanted in the small table and
-        pushing their keys into the large one is the shape this format is built for: the keys
-        are compared against row-group statistics, and groups that cannot match are never
-        read. The alternative -- reading the identity columns back out of the spike table to
-        work out which rows are wanted -- scans hundreds of millions of rows to answer a
-        question thousands of rows already answer.
-
-        Parameters
-        ----------
-        unit_id : int, optional
-            One unit. Mutually exclusive with `units`.
-        units : pyarrow.Table, optional
-            Units to read, as returned by :meth:`units` and filtered however the caller
-            likes. Only its key columns are used; any others are ignored.
-        session_id : int, optional
-            Restrict every session-scoped input used by the read to this session.
-        t_tick : tuple of int, optional
-            Keep only spikes within this closed tick range, stated on the clock the result
-            comes back on, not on the unit's stored clock -- a range and the ticks it selects
-            are always in the same space. Pass `clock=STORED` for both in stored ticks.
-        clock : int or 'stored', optional
-            The clock to return ticks on. Defaults to :meth:`reference_clock`; pass
-            :data:`STORED` for the ticks the file holds. Mapping drops a spike the anchors
-            cannot place, exactly as `analysis.spike_events` does.
-        seconds : bool, default False
-            Add a `t_second` column from the packet's declared origin (Part 01 §2.2). Refuses on
-            a packet that declares none, and on ticks that are not on the reference clock.
-
-        Returns
-        -------
-        pyarrow.Table
-            Columns ``t_tick`` and ``clock_id``, in stored order. When one `unit_id` is named
-            and no `t_tick` range is given, the result carries the unit's observation window
-            (R38) in `schema.metadata`, so :func:`~escapewheel_reader.observation.rate_of` needs
-            no second lookup. A range-narrowed read carries none: the span is the caller's
-            choice and is no denominator for it.
-
-        Raises
-        ------
-        ValueError
-            If both or neither of `unit_id` and `units` are given.
-
-        Examples
-        --------
-        >>> packet.spike_times(units=packet.units(quality_label="sua"))  # doctest: +SKIP
-        """
-        if (unit_id is None) == (units is None):
-            raise ValueError("name exactly one of unit_id or units")
-        if unit_id is not None:
-            found = self.table(
-                "core.spike_events",
-                columns=["t_tick"],
-                unit_id=unit_id,
-                session_id=session_id,
-                t_tick=self._span(t_tick, clock),
-            )
-            clocks = self._unit_clocks(["unit_id"], unit_id=unit_id, session_id=session_id)
-            found = found.append_column("clock_id", pa.array([clocks.get((unit_id,))] * found.num_rows))
-            if clock != STORED:
-                target_clock = None if clock is None else int(clock)
-                found = self._narrowed(self.on_clock(found, target_clock), t_tick)
-            if seconds:
-                found = self.seconds(found, session_id=session_id)
-            if t_tick is None:
-                # Only for the unit's whole record. A range-narrowed read is a subset the
-                # caller chose, and the window it was observed over is no denominator for it.
-                found = attach_support(found, self._unit_support(unit_id, session_id))
-            return found
-
-        assert units is not None  # the exclusivity check above settles this
-        keys = self._reference_columns("core.spike_events", "core.units")
-        missing = [k for k in keys if k not in units.schema.names]
-        if missing:
-            raise ValueError(f"units is missing {missing}, which identify a unit in this packet")
-        # The values must match the type the scan produces. A caller may hand in a table
-        # whose key columns are dictionary-encoded, and Arrow will not compare a dictionary
-        # array against a plain column, so take the dictionary's values instead.
-        tests = []
-        for key in keys:
-            values = units.column(key).unique()
-            if pa.types.is_dictionary(values.type):
-                values = values.cast(pa.string())
-            tests.append(pc.field(key).isin(values))
-        wanted = tests[0]
-        for test in tests[1:]:
-            wanted = wanted & test
-        if session_id is not None:
-            wanted = wanted & (pc.field("session_id") == session_id)
-        if (pushed := self._span(t_tick, clock)) is not None:
-            wanted = wanted & (pc.field("t_tick") >= pushed[0]) & (pc.field("t_tick") <= pushed[1])
-        # R96 §3.4 struck `core.spike_events.clock_id`: a tick reaches its clock through its
-        # unit now, so the column comes from the caller's `units` rather than from the scan.
-        # A tick still travels with its clock, which is what this accessor exists to guarantee.
-        found = self.scan("core.spike_events").to_table(columns=["t_tick", *keys], filter=wanted)
-        clocks = self._unit_clocks(keys, session_id=session_id)
-        found = found.append_column(
-            "clock_id", pa.array([clocks.get(tuple(r[k] for k in keys)) for r in found.select(keys).to_pylist()])
+        """Read spike times on one clock. Delegates to :func:`escapewheel_reader.access.spike_times`."""
+        return access.spike_times(
+            self, unit_id, units=units, session_id=session_id, t_tick=t_tick, clock=clock, seconds=seconds
         )
-        found = found.select(["t_tick", "clock_id"])
-        if clock != STORED:
-            target_clock = None if clock is None else int(clock)
-            found = self._narrowed(self.on_clock(found, target_clock), t_tick)
-        return self.seconds(found, session_id=session_id) if seconds else found
 
     def reference_clock(self, *, session_id: int | None = None) -> int:
-        """Return the clock this packet reports times on (R27 §2).
-
-        Parameters
-        ----------
-        session_id : int, optional
-            Which session's reference to return. Only needed where a multi-session packet's
-            sessions disagree, which is refused rather than resolved by picking one.
-
-        Returns
-        -------
-        int
-            The declared `clock_id`.
-
-        Raises
-        ------
-        NotAligned
-            If no session declares one, if the named session does not, or if sessions declare
-            different clocks and none was named.
-        """
-        if session_id is None and self._reference_cache is not None:
-            return self._reference_cache
-        table = self.table("core.sessions")
-        if "reference_clock_id" not in table.column_names:
-            raise NotAligned("core.sessions carries no reference_clock_id (R27 §2)")
-        declared = {
-            session: clock
-            for session, clock in zip(
-                table.column("session_id").to_pylist(), table.column("reference_clock_id").to_pylist(), strict=True
-            )
-            if clock is not None
-        }
-        if session_id is not None:
-            if session_id not in declared:
-                raise NotAligned(f"session {session_id!r} declares no reference_clock_id (R27 §2)")
-            return int(declared[session_id])
-        named = sorted({int(clock) for clock in declared.values()})
-        if not named:
-            raise NotAligned("no session declares a reference_clock_id (R27 §2)")
-        if len(named) > 1:
-            raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
-        self._reference_cache = int(named[0])
-        return self._reference_cache
+        """Return the reference clock. Delegates to :func:`escapewheel_reader.clocks.reference_clock`."""
+        return reference_clock(self, session_id=session_id)
 
     def t_zero(self, *, session_id: int | None = None) -> int:
         """Return the session's time origin, on the reference clock (Part 01 §2.2).
@@ -923,90 +649,9 @@ class Packet:
         """
         return on_clock(self, table, clock, bound=bound)
 
-    def _unit_support(self, unit_id: int, session_id: int | None) -> pa.Table:
-        """Return one unit's observation windows, from the packet's resolved set (R38).
-
-        The resolution is read once per packet and filtered here, because it reads three tables
-        and this is called per unit.
-        """
-        if self._support_cache is None:
-            self._support_cache = unit_windows(self)
-        windows = self._support_cache
-        if not windows.num_rows:
-            return windows
-        unit_column = windows.column("unit_id")
-        keep = pc.equal(unit_column, pa.scalar(unit_id, type=unit_column.type))
-        if session_id is not None:
-            session_column = windows.column("session_id")
-            keep = pc.and_(keep, pc.equal(session_column, pa.scalar(session_id, type=session_column.type)))
-        return windows.filter(keep)
-
-    def _span(self, span: tuple[int, int] | None, clock: int | Literal["stored"] | None) -> tuple[int, int] | None:
-        """Widen a range stated on the result's clock into one the file can be pruned by."""
-        if span is None or clock == STORED:
-            return span
-        try:
-            target = self.reference_clock() if clock is None else int(clock)
-        except NotAligned:
-            return span
-        return stored_span(anchors(self), target, span)
-
-    def _narrowed(self, table: pa.Table, span: tuple[int, int] | None) -> pa.Table:
-        """Apply the caller's range exactly, now that every row is on one clock."""
-        if span is None:
-            return table
-        ticks = table.column("t_tick")
-        lower = pa.scalar(span[0], type=ticks.type)
-        upper = pa.scalar(span[1], type=ticks.type)
-        return table.filter(pc.and_(pc.greater_equal(ticks, lower), pc.less_equal(ticks, upper)))
-
-    def _reference_columns(self, resource_id: str, parent: str) -> list[str]:
-        """Return the columns by which one resource references another, per the registry.
-
-        Taking this from the registry keeps the accessor synchronized with the incorporated
-        declaration instead of restating a relationship that can change independently.
-        """
-        registry = self.registry
-        declaration = (registry or {}).get("resources", {}).get(resource_id, {})
-        table = declaration.get("table", {}) if declaration.get("kind") == "table" else {}
-        for reference in table.get("references", []):
-            if reference["resource"] == parent:
-                return list(reference["columns"])
-        raise ResourceNotFoundError(f"the registry declares no reference from {resource_id} to {parent}")
-
     def distinct(self, resource_id: str, column: str) -> pa.ChunkedArray[Any]:
-        """Return the distinct values of a column, from whichever table owns them.
-
-        A foreign key means the parent table holds every value the child may carry, and it is
-        the smaller table by construction -- `core.units` is thousands of rows where
-        `core.spike_events` is hundreds of millions. So the answer comes from the parent, and
-        the fact table is never scanned. Falls back to reading the column when no reference
-        covers it, which is the honest thing rather than a wrong answer.
-
-        Parameters
-        ----------
-        resource_id : str
-            Dotted resource ID.
-        column : str
-            The column whose values are wanted.
-
-        Returns
-        -------
-        pyarrow.Array
-            The distinct values, unordered.
-        """
-        registry = self.registry
-        declaration = (registry or {}).get("resources", {}).get(resource_id, {})
-        table = declaration.get("table", {}) if declaration.get("kind") == "table" else {}
-        for reference in table.get("references", []):
-            if column not in reference["columns"]:
-                continue
-            at = reference["columns"].index(column)
-            parent = reference["resource"]
-            if parent not in {r.resource_id for r in self.resources()}:
-                continue
-            return self.table(parent, columns=[reference["resource_columns"][at]]).column(0).unique()
-        return self.table(resource_id, columns=[column]).column(0).unique()
+        """Return a column's distinct values. Delegates to :func:`escapewheel_reader.access.distinct`."""
+        return access.distinct(self, resource_id, column)
 
 
 def _prepare_remote(connection: duckdb.DuckDBPyConnection) -> None:

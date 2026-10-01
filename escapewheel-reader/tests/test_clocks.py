@@ -245,17 +245,18 @@ def test_seconds_is_the_same_whether_called_as_a_function_or_a_method(two_clock_
     assert seconds(packet, mapped_spikes).to_pylist() == packet.seconds(mapped_spikes).to_pylist()
 
 
-def test_the_packet_carries_no_transformation_of_its_own(two_clock_packet):
+def test_the_packet_carries_no_transformation_of_its_own():
     """`Packet` is manifest, resolution, IO and registration. Anything that could be a free
-    function is one, so the delegates are one line each and there are few of them."""
+    function is one, so each delegate's body is a docstring and a single return."""
+    import ast
     import inspect
+    import textwrap
 
     from escapewheel_reader.packet import Packet
 
-    for name in ("on_clock", "seconds"):
-        body = [
-            line
-            for line in inspect.getsource(getattr(Packet, name)).splitlines()
-            if line.strip() and not line.strip().startswith(('"""', "#", "def ", "Delegates"))
-        ]
-        assert any(line.strip().startswith("return ") for line in body), name
+    delegates = ("intervals", "units", "events", "spike_times", "distinct", "reference_clock", "t_zero")
+    for name in (*delegates, "seconds", "on_clock"):
+        function = ast.parse(textwrap.dedent(inspect.getsource(getattr(Packet, name)))).body[0]
+        assert isinstance(function, ast.FunctionDef)
+        body = [statement for statement in function.body if not isinstance(statement, ast.Expr)]
+        assert len(body) == 1 and isinstance(body[0], ast.Return), name

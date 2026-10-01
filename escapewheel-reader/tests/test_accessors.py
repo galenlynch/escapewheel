@@ -4,7 +4,7 @@ import shutil
 import pyarrow as pa
 import pytest
 
-from escapewheel_reader import STORED, NotAligned, NoTimeOrigin, open_packet
+from escapewheel_reader import STORED, NotAligned, NoTimeOrigin, clocks, open_packet
 from escapewheel_reader.observation import support_of
 from tests.conftest import (
     CLOCK_BEHAVIOUR,
@@ -285,13 +285,13 @@ def test_rows_spanning_clocks_with_no_reference_are_refused(two_clock_packet, mo
     """Returning these as stored would invite a comparison that means nothing."""
     pkt = open_packet(two_clock_packet)
     spanning = pkt.spike_times(units=pkt.units(), clock=STORED)
-    monkeypatch.setattr(pkt, "reference_clock", _raise_unaligned)
+    monkeypatch.setattr(clocks, "reference_clock", _raise_unaligned)
     assert sorted(set(spanning.to_pydict()["clock_id"])) == [CLOCK_BEHAVIOUR, CLOCK_PROBE]
     with pytest.raises(NotAligned):
         pkt.on_clock(spanning)
 
 
-def _raise_unaligned(**kwargs):
+def _raise_unaligned(*args, **kwargs):
     raise NotAligned("no reference declared")
 
 

@@ -1,15 +1,46 @@
-"""Read Escapewheel packets.
+"""Read Escapewheel packets: Parquet tables, Zarr arrays, and the JSON manifest binding them.
 
-A packet is a dataset bundle under a declared physical profile: Parquet tables, Zarr
-arrays, and a JSON manifest binding them. This package opens one and provides tabular
-access; it does not write packets and does not validate their contents beyond the
-manifest's own shape.
+Open a packet with :func:`open_packet`, or several as one relation with :func:`open_dataset`, then
+pass it to the functions below. An access function takes ``(packet, ...)`` and returns a
+`pyarrow.Table`; a semantics function such as :func:`on_clock` takes ``(packet, table)`` and returns
+a table, so the two compose. The `Packet` methods of the same names are one-line delegates. The
+documentation's Design page explains why each function exists.
+
+Its modules:
+
+access
+    The commonest reads: :func:`intervals`, :func:`units`, :func:`events`, :func:`spike_times`.
+alignment
+    Spikes against events, per event or per spike.
+axes
+    What a dense array's positions and values mean.
+channels
+    The electrode a sorter's channel index names.
+clocks
+    Ticks onto one clock, and ticks to seconds.
+dataset
+    Many packets as one relation.
+discriminators
+    The rows a discriminator's kind names.
+observation
+    When something was observing, and rates over that span.
+packet
+    Opening one packet and reading its resources.
+runs
+    Which of several coexisting sortings or curations to read.
+manifest, resources, location
+    What the manifest declares, handles that read it, and where its bytes are.
+errors
+    What reading raises.
+profile, descriptor, ordering, registries, dictionaries, sql, uri
+    Shared with the writer and validator.
 """
 
 from __future__ import annotations
 
 from importlib.metadata import version
 
+from .access import STORED, distinct, events, intervals, spike_times, units
 from .alignment import ClockMismatch, aligned_spikes, assigned_spikes, windows_disjoint
 from .axes import (
     ArrayDescription,
@@ -23,7 +54,7 @@ from .axes import (
     describe,
 )
 from .channels import ChannelsUndeclared, electrode_at, kept_channels, runs_without_channels
-from .clocks import BOUND, NotAligned, Unanchored, align, on_clock, origin, seconds
+from .clocks import BOUND, NotAligned, Unanchored, align, on_clock, origin, reference_clock, seconds
 from .dataset import (
     PROJECTED,
     Dataset,
@@ -66,7 +97,7 @@ from .observation import (
     support_of,
     unit_windows,
 )
-from .packet import STORED, Packet, Predicate, open_packet, resolve_sources
+from .packet import Packet, Predicate, open_packet, resolve_sources
 from .profile import interface_for, physical_profile
 from .resources import ArrayResource, TableResource
 from .runs import Ambiguity, ambiguities, preferred_run
@@ -124,8 +155,11 @@ __all__ = [
     "clock_windows",
     "declared",
     "describe",
+    "distinct",
     "electrode_at",
+    "events",
     "interface_for",
+    "intervals",
     "kept_channels",
     "kinds",
     "observed_seconds",
@@ -140,6 +174,7 @@ __all__ = [
     "rate",
     "rate_of",
     "read_sources",
+    "reference_clock",
     "resolve_sources",
     "resolved",
     "runs_without_channels",
@@ -147,10 +182,12 @@ __all__ = [
     "session_scoped",
     "sources_schema",
     "specialised",
+    "spike_times",
     "sql_name",
     "stream_windows",
     "support_of",
     "unit_windows",
+    "units",
     "unresolved",
     "windows_disjoint",
 ]

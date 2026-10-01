@@ -60,7 +60,7 @@ EXEMPT: tuple[tuple[str, str, str], ...] = (
 #: clause rather than by line, since a line number moves and this pairing does not.
 REASONING: tuple[tuple[str, str, str], ...] = (
     (
-        "escapewheel-reader/src/escapewheel_reader/packet.py",
+        "escapewheel-reader/src/escapewheel_reader/access.py",
         "R86 §2.4",
         "the measurement that a scalar projection beats a join, not the rule it justified",
     ),

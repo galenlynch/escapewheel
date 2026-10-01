@@ -1,35 +1,22 @@
-"""Map ticks from one clock onto its parent, through anchors.
+"""Ticks onto one clock, and ticks to seconds (R13 §3, Part 01 §3.9).
 
-Lives in the reader because both reading and writing need it and there must be one of it: a
-packet whose spikes are mapped at write time and a caller mapping the same spikes at read
-time have to agree, and two implementations of a piecewise map agree only by luck.
+Over a packet:
 
-This is R13 §3's piecewise-linear mapping with Part 01 §3.9's bound, and it is the only place
-that arithmetic is written. A spike's tick is exact on its probe's clock and means nothing
-beside another probe's; the anchors are what relate them, and this turns the relation into
-numbers.
+- :func:`on_clock` -- a table with its ticks on one clock, without what no anchor places.
+- :func:`seconds` -- a table with `t_second` added, from the session's declared origin.
+- :func:`reference_clock` -- the clock a packet reports times on.
+- :func:`origin` -- a session's time origin and the reference clock's rational rate.
+- :func:`anchors`, :func:`declared_bound`, :func:`tick_rate` -- what those are computed from.
 
-Three rules, and the second is the one that was wrong
------------------------------------------------------
+Over arrays:
 
-Let *m* be the median interval between a clock's anchors.
+- :func:`align` -- ticks mapped onto a parent clock, and a mask of those it cannot place.
+- :func:`rate` -- the parent-to-child rate fitted over an anchor sequence.
+- :func:`extrapolation_error` -- :func:`align`'s error beyond the terminal anchors.
+- :func:`mapped`, :func:`stored_span`, :func:`default_clock` -- the accessors' and the writer's
+  building blocks.
 
-1. Between two anchors no more than 2*m* apart, linear interpolation on that pair.
-2. Beyond the terminal anchors, ``parent(a) + rate * (t - a)`` where *a* is the nearer
-   terminal anchor and `rate` is fitted over the whole sequence (Part 01 §3.9). Both halves
-   matter and for different reasons. The *rate* is global because a terminal segment's slope
-   comes from two anchors and degrades to ~0.9 ms; the *offset* is the terminal anchor's own
-   parent tick because a global fit's intercept carries the session's clock wander -- ±1.7 ms
-   over 6,387 s here, which a straight line cannot bend to follow. Anchoring at the terminal
-   anchor drops p95 extrapolation error from 525 µs to 258 µs (R37 §2).
-3. Anywhere further than *m* from every anchor -- past the ends, or inside a wider gap -- the
-   mapping is undefined by default, and this returns a mask saying so rather than a plausible
-   number. Part 01 §3.9 makes the real bound one on *error*: a caller that has measured its own
-   clocks may widen `bound`, and one that has not gets Part 01 §3.9's distance unchanged.
-
-The mask is not a formality. On a real session the first sync pulse arrives 18,000 to 28,000
-samples after the recording starts, so the spikes in that window have no defined parent tick
-and are exactly the ones a caller would otherwise silently misplace.
+The writer maps with these functions too, so ticks mapped at write time and at read time agree.
 """
 
 from __future__ import annotations
@@ -253,15 +240,53 @@ def declared_bound(packet: Any) -> float:
     return widest
 
 
-def reference_clock(packet: Any) -> int:
-    """Return the clock a session reports its times on (R27 §2)."""
-    sessions = packet.table("core.sessions")
-    declared = (
-        sessions.column("reference_clock_id").to_pylist() if "reference_clock_id" in sessions.column_names else []
-    )
-    if named := [d for d in declared if d is not None]:
-        return int(named[0])
-    raise NotAligned("the session declares no reference_clock_id (R27 §2), so there is nothing to map onto")
+def reference_clock(packet: Any, *, session_id: int | None = None) -> int:
+    """Return the clock a packet reports its times on (R27 §2).
+
+    Parameters
+    ----------
+    packet : Packet
+        The packet to read.
+    session_id : int, optional
+        Which session's reference to return. Only needed where a multi-session packet's
+        sessions disagree, which is refused rather than resolved by picking one.
+
+    Returns
+    -------
+    int
+        The declared `clock_id`.
+
+    Raises
+    ------
+    NotAligned
+        If no session declares one, if the named session does not, or if sessions declare
+        different clocks and none was named.
+    """
+    cached = getattr(packet, "_reference_cache", None)
+    if session_id is None and cached is not None:
+        return int(cached)
+    table = packet.table("core.sessions")
+    if "reference_clock_id" not in table.column_names:
+        raise NotAligned("core.sessions carries no reference_clock_id (R27 §2)")
+    declared = {
+        session: clock
+        for session, clock in zip(
+            table.column("session_id").to_pylist(), table.column("reference_clock_id").to_pylist(), strict=True
+        )
+        if clock is not None
+    }
+    if session_id is not None:
+        if session_id not in declared:
+            raise NotAligned(f"session {session_id!r} declares no reference_clock_id (R27 §2)")
+        return int(declared[session_id])
+    named = sorted({int(clock) for clock in declared.values()})
+    if not named:
+        raise NotAligned("no session declares a reference_clock_id (R27 §2)")
+    if len(named) > 1:
+        raise NotAligned(f"sessions declare different reference clocks {named}; name a session_id")
+    if hasattr(packet, "_reference_cache"):
+        packet._reference_cache = named[0]
+    return named[0]
 
 
 def mapped(batch: pa.RecordBatch, reference: Any, anchors: Any, bound: float) -> tuple[Any, Any]:
@@ -361,7 +386,7 @@ def default_clock(packet: Any, present: list[int]) -> int:
     as stored invites a comparison that means nothing.
     """
     try:
-        return int(packet.reference_clock())
+        return reference_clock(packet)
     except NotAligned:
         if len(present) == 1:
             return present[0]
@@ -431,7 +456,7 @@ def origin(packet: Any, session_id: int | None = None) -> tuple[int, int, int]:
         if len(found) > 1:
             raise NoTimeOrigin(f"sessions declare different origins {found}; name a session_id")
         found_tick = int(found[0])
-    num, den = tick_rate(packet, packet.reference_clock(session_id=session_id))
+    num, den = tick_rate(packet, reference_clock(packet, session_id=session_id))
     if cache is not None:
         cache[session_id] = (found_tick, num, den)
     return (found_tick, num, den)
@@ -524,7 +549,7 @@ def seconds(packet: Any, table: pa.Table, *, session_id: int | None = None) -> p
         clock's ticks would be a different quantity wearing the same name.
     """
     start, num, den = origin(packet, session_id)
-    reference = packet.reference_clock(session_id=session_id)
+    reference = reference_clock(packet, session_id=session_id)
     present = _present(_flat(table.column("clock_id"))) if table.num_rows else [reference]
     if present != [reference]:
         raise NotAligned(

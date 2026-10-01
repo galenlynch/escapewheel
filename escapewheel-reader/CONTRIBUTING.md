@@ -74,7 +74,8 @@ transformations on the object because they own `DataFrame` and `Dataset`. Our cu
 Free functions are what is left once that is faced, not a stylistic preference.
 
 Write the function first and the delegate second, never the other way round. A delegate is one
-line and carries no behaviour; the docstring lives on the function. `Packet` is manifest,
+line and carries no behaviour; the docstring lives on the function. The accessors live in
+`access.py`, and `tests/test_clocks.py` checks that every `Packet` delegate is a single return. `Packet` is manifest,
 resolution, IO and DuckDB registration — **nothing may be added to it that would work as a free
 function instead.**
 
@@ -140,8 +141,8 @@ uv run --no-cache --with ../escapewheel-validator --with duckdb python ../fixtur
 ./scripts/run_linters_and_checks.sh -c    # format, lint, mypy, interrogate, codespell, pytest
 ```
 
-Known noise: `mypy` reports a handful of pyarrow-stub errors in `packet.py` and `clocks.py` that
-predate any current work, and `codespell` flags "sortings", which is correct usage here.
+Known noise: `mypy` reports a handful of pyarrow-stub errors in `discriminators.py` and
+`profile.py`, and `codespell` flags "sortings", which is correct usage here.
 
 Commits are conventional (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`). The title is
 imperative; the body says **what changed and why**, not how — the diff already says how. Where a
