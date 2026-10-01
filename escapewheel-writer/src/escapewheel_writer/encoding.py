@@ -10,6 +10,8 @@
 - :data:`DELTA_COLUMNS`, :data:`NO_DICTIONARY`, :data:`DICTIONARY_COLUMNS` -- the measured
   exceptions to the rules.
 - :data:`ONE_VALUE_ROWS` -- the row count at which a column of one value repays its dictionary page.
+- :data:`STREAMED_BATCH_ROWS`, :data:`MATERIALIZED_BATCH_ROWS` -- the rows in a row group of a table
+  written batch by batch.
 
 The exception tables name only `core.*` and `analysis.*` tables. An extension supplies its own
 exceptions to :class:`~escapewheel_writer.writer.PacketWriter`, and the rules apply to its tables
@@ -45,6 +47,16 @@ DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     # plain: delta 1.19x to 1.27x over plain.
     CORE_ELECTRODES: ("probe_id",),
 }
+
+#: Rows per batch of a table streamed into staging, and so per row group, one being written for
+#: each batch. Sized for pruning and not for an object store's fetch band: no reader prunes below a
+#: row group, so a larger one multiplies what a predicate must read.
+STREAMED_BATCH_ROWS = 1_000_000
+
+#: Rows per batch of `analysis.spike_events`, and so per row group. Smaller than
+#: :data:`STREAMED_BATCH_ROWS` so that a filter on the unit prunes within a time bucket, for 0.6%
+#: more bytes.
+MATERIALIZED_BATCH_ROWS = 1 << 17
 
 #: Columns the rules give a dictionary or delta that plain serves better, each measured.
 NO_DICTIONARY: dict[str, tuple[str, ...]] = {

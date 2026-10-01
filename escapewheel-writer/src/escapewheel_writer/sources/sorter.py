@@ -42,6 +42,7 @@ from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 from numpy.typing import NDArray
 
 from ..clock import Clock
+from ..encoding import STREAMED_BATCH_ROWS
 from ..errors import SourceDefect, SourceFault
 from ..notes import Note, NoteCode
 from .store import source_root
@@ -923,7 +924,7 @@ class SorterSource:
 
     # -- spikes, which do not fit in memory as records ----------------------------------
 
-    def spike_batches(self, *, batch_rows: int = 1_000_000) -> Iterator[pa.RecordBatch]:
+    def spike_batches(self, *, batch_rows: int = STREAMED_BATCH_ROWS) -> Iterator[pa.RecordBatch]:
         """`core.spike_events`, streamed in the registry's sort order.
 
         Yielded stream by stream in `sorting_run_id` order, and within a stream sorted by
@@ -937,7 +938,7 @@ class SorterSource:
 
         Parameters
         ----------
-        batch_rows : int, default 1_000_000
+        batch_rows : int, default `STREAMED_BATCH_ROWS`
             Rows per batch, and therefore the writer's peak memory.
 
         Yields
@@ -992,7 +993,7 @@ class SorterSource:
         }
         return {resource: rows for resource, rows in built.items() if rows}
 
-    def into(self, writer: Any, *, batch_rows: int = 1_000_000) -> dict[str, int]:
+    def into(self, writer: Any, *, batch_rows: int = STREAMED_BATCH_ROWS) -> dict[str, int]:
         """Add every record and the spike stream to a :class:`~escapewheel_writer.writer.PacketWriter`.
 
         Returns

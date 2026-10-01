@@ -5,8 +5,7 @@
 - :func:`materializers` -- the recipe's `[[materialize]]` entries as callables `commit` runs.
 - :class:`Context` -- what earlier sources produced, for the sources that consume it.
 - :data:`MATERIALIZERS` -- the analysis resources a recipe may ask for by name.
-- :data:`BATCH_ROWS`, :data:`TOLERANCE` -- rows per streamed batch, and the most error a clock
-  mapping may carry, in seconds.
+- :data:`TOLERANCE` -- the most error a clock mapping may carry, in seconds.
 
 A build orders sources by what each adapter declares it consumes, not by the registry's
 references, and filters a source's rows to the resources the recipe leaves it owning.
@@ -49,6 +48,7 @@ from numpy.typing import NDArray
 from . import opaque
 from .amending import Held
 from .declaration import SOURCE_CACHE
+from .encoding import STREAMED_BATCH_ROWS
 from .errors import (
     AmendmentRefused,
     MaterializerNotFound,
@@ -85,14 +85,6 @@ from .writer import PacketWriter
 #: staged packet. Part 06 §2 makes these disposable, so a recipe that names none is complete.
 MATERIALIZERS: dict[str, str] = {ANALYSIS_SPIKE_EVENTS: "spike_events"}
 
-
-#: Rows per batch when streaming a spike table into staging, and therefore the row-group size:
-#: `_write_stream` makes one row group per batch, so the caller owns the boundaries.
-#:
-#: Sized for pruning, not for an object store's fetch band: neither pyarrow nor DuckDB prunes
-#: below a row group, so the row group is both the fetch unit and the prune unit, and a larger
-#: one multiplies what a predicate must read.
-BATCH_ROWS = 1_000_000
 
 #: The most error a mapping may carry before Part 01 §3.9 calls it undefined, in **seconds**.
 #:
@@ -753,7 +745,7 @@ def _add_batches(
         # Counted from the arrays' headers, so an unclaimed spike table still reports its size.
         produced[CORE_SPIKE_EVENTS] = source.spike_count
         if CORE_SPIKE_EVENTS in spec.claims:
-            writer.add_batches(CORE_SPIKE_EVENTS, source.spike_batches(batch_rows=BATCH_ROWS))
+            writer.add_batches(CORE_SPIKE_EVENTS, source.spike_batches(batch_rows=STREAMED_BATCH_ROWS))
             counts[CORE_SPIKE_EVENTS] = produced[CORE_SPIKE_EVENTS]
     streamed = getattr(source, "batches", None)
     if streamed is None:
@@ -1567,7 +1559,6 @@ def _alignment_parameters(context: Context | None) -> dict[str, Any]:
 
 
 __all__ = [
-    "BATCH_ROWS",
     "MATERIALIZERS",
     "TOLERANCE",
     "Context",

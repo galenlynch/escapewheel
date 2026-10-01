@@ -44,6 +44,7 @@ from escapewheel_reader.uri import canonical, is_absolute
 
 from . import opaque
 from .declaration import PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_CACHE
+from .encoding import STREAMED_BATCH_ROWS
 from .errors import DeliveryFailed, SourceDefect, SourceFault
 from .notes import Note, NoteCode
 
@@ -55,9 +56,6 @@ SENTINEL = "end"
 #: writes (Part 12 §5). Carried as text in a single-row table where a protocol carries Arrow,
 #: so the manifest's schema stays the one description of an entry.
 RESOURCES = "resources"
-
-#: Rows per record batch when a delivery is written from records rather than from batches.
-BATCH_ROWS = 1_000_000
 
 #: How long to wait between attempts on a `flight-v0.1` socket, in seconds. A build retries until
 #: the address answers or the adapter's process exits (Part 12 §8), so this only decides how
@@ -104,7 +102,7 @@ def offered(source: Any) -> dict[str, Iterator[pa.RecordBatch] | pa.Table]:
     for resource, rows in source.records().items():
         delivering[resource] = as_table(rows)
     if hasattr(source, "spike_batches"):
-        delivering[CORE_SPIKE_EVENTS] = source.spike_batches(batch_rows=BATCH_ROWS)
+        delivering[CORE_SPIKE_EVENTS] = source.spike_batches(batch_rows=STREAMED_BATCH_ROWS)
     for resource, batches in (getattr(source, "batches", dict)() or {}).items():
         delivering[resource] = batches
     return delivering
@@ -405,7 +403,7 @@ class Delivered:
         What is left is a table too large to hold, which is what the streaming path exists for,
         and which reaches a build in the order the adapter streamed it.
         """
-        return resource in self.merged or self.offers().get(resource, 0) <= BATCH_ROWS
+        return resource in self.merged or self.offers().get(resource, 0) <= STREAMED_BATCH_ROWS
 
     def records(self) -> dict[str, list[dict[str, Any]]]:
         """Return every resource this build holds, as rows for the writer to sort and merge."""
@@ -505,7 +503,7 @@ def _batches(table: pa.Table | Path) -> Iterator[pa.RecordBatch]:
     """One delivered resource as batches, read from disk where it is still there."""
     if isinstance(table, pa.Table):
         return iter(table.to_batches())
-    return pq.ParquetFile(table).iter_batches(batch_size=BATCH_ROWS)
+    return pq.ParquetFile(table).iter_batches(batch_size=STREAMED_BATCH_ROWS)
 
 
 def fetch(
@@ -968,7 +966,6 @@ def _rendezvous(socket: str, child: subprocess.Popen[bytes]) -> Any:
 
 
 __all__ = [
-    "BATCH_ROWS",
     "SENTINEL",
     "Delivered",
     "as_table",

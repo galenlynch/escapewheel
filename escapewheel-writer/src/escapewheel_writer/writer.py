@@ -115,7 +115,7 @@ def _options(
     row-group granularity too. arrow-rs, DataFusion and Spark would use it, and it costs little
     -- but a packet rebuilds from its recipe, so carrying an unexercised feature buys less than
     turning it on when a reader needs it. pyarrow defaults it off, which is where this leaves
-    it. See `session.BATCH_ROWS` for the row-group half.
+    it. See `encoding.STREAMED_BATCH_ROWS` for the row-group half.
 
     `sorting_columns` is written for every table that declares an order. It costs nothing, and
     it is what lets a file state which of several possible orderings it is in rather than
@@ -1496,7 +1496,7 @@ class PacketWriter:
                 # one only adds requests and duplicates its string dictionary.
                 #
                 # Sizing a row group for the fetch band is a mistake on both paths. See
-                # `session.BATCH_ROWS` for the streaming case; here the trap is that estimating
+                # `encoding.STREAMED_BATCH_ROWS` for the streaming case; here the trap is that estimating
                 # from `Table.nbytes` is 320x out on a string-heavy table, because Arrow
                 # materialises strings that Parquet stores as dictionary codes.
                 options = _options(resource_id, spec, table.schema, self._encoding_exceptions, table)

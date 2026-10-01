@@ -35,6 +35,7 @@ from escapewheel_reader.resource_ids import (
 from numpy.typing import NDArray
 
 from .arrow import schema as arrow_schema
+from .encoding import MATERIALIZED_BATCH_ROWS
 from .errors import Collided
 
 #: The resource these buckets become, so the spill can take the encoding its columns want.
@@ -61,11 +62,6 @@ def _refuse_on_collision(units: Any, ticks: Any, carry: tuple[int, int] | None) 
     if carry is not None and units.size and units[0] == carry[0] and ticks[0] == carry[1]:
         raise _collided(int(units[0]), int(ticks[0]))
 
-
-#: Rows per batch, and therefore per row group and per unit of writer memory. Measured: 128 K
-#: costs 0.6% in bytes over 1 M once `t_tick` is not dictionary-encoded, and is what makes the
-#: unit filter prune within a bucket (R30 §6).
-BATCH_ROWS = 1 << 17
 
 #: Bucket width in seconds of the reference clock. The dial trades scattered-unit access
 #: against time-window access, through how many row groups fit in one bucket; 300 s was the
@@ -121,7 +117,7 @@ def _bytes(budget: int | str) -> int:
 
 
 def _coalesced(batches: Iterable[pa.RecordBatch], out: pa.Schema) -> Iterator[pa.RecordBatch]:
-    """Merge small batches up to `BATCH_ROWS`, so held rows yield the row groups spilled ones do.
+    """Merge small batches up to `MATERIALIZED_BATCH_ROWS`, so held rows yield the row groups spilled ones do.
 
     A core batch spans many buckets, so splitting it leaves each bucket a handful of rows. Held
     and yielded as they arrive those become row groups of a couple of thousand rows: tens of
@@ -132,7 +128,7 @@ def _coalesced(batches: Iterable[pa.RecordBatch], out: pa.Schema) -> Iterator[pa
     for batch in batches:
         held.append(batch)
         rows += batch.num_rows
-        if rows >= BATCH_ROWS:
+        if rows >= MATERIALIZED_BATCH_ROWS:
             yield _merged(held, out)
             held, rows = [], 0
     if held:
@@ -198,7 +194,7 @@ class _Buckets:
             # rather than a wall: with nothing full enough to spill, holding a little more
             # beats a stream of tiny row groups, and the excess is bounded by one batch per
             # bucket. Biggest first, so one write buys the most room.
-            ready = [b for b in self._held if self._rows[b] >= BATCH_ROWS]
+            ready = [b for b in self._held if self._rows[b] >= MATERIALIZED_BATCH_ROWS]
             if not ready:
                 break
             self._flush(max(ready, key=lambda b: self._rows[b]))
@@ -215,7 +211,7 @@ class _Buckets:
         self._writers[bucket].write_table(pa.Table.from_batches(held, schema=self._out))
 
     def drain(self) -> Iterator[pa.RecordBatch]:
-        """Yield every bucket's rows in bucket order, in batches of at most `BATCH_ROWS`.
+        """Yield every bucket's rows in bucket order, in batches of at most `MATERIALIZED_BATCH_ROWS`.
 
         A batch never spans two buckets, so each becomes a row group lying inside one bucket
         (Part 03 §5.4). Row groups cut at a fixed row count would straddle boundaries and span
@@ -234,7 +230,7 @@ class _Buckets:
                 # Coalesced on the way out as well as on the way in: reading a column as codes
                 # cuts a batch wherever the dictionary changes, so `batch_size` is a ceiling
                 # and not the size, and each short batch would become its own row group.
-                batches = _coalesced(reader.iter_batches(batch_size=BATCH_ROWS), self._out)
+                batches = _coalesced(reader.iter_batches(batch_size=MATERIALIZED_BATCH_ROWS), self._out)
             else:
                 batches = _coalesced(self._held[bucket], self._out)
             yield from batches
@@ -287,7 +283,7 @@ def spike_events(
     Yields
     ------
     pyarrow.RecordBatch
-        In Part 03 §5.4's order, at most `BATCH_ROWS` rows, never spanning two buckets.
+        In Part 03 §5.4's order, at most `MATERIALIZED_BATCH_ROWS` rows, never spanning two buckets.
 
     Raises
     ------
@@ -318,7 +314,7 @@ def spike_events(
     try:
         reader = pq.ParquetFile(handle.path)
         carry: tuple[int, int] | None = None
-        for batch in reader.iter_batches(batch_size=BATCH_ROWS, columns=columns):
+        for batch in reader.iter_batches(batch_size=MATERIALIZED_BATCH_ROWS, columns=columns):
             units = batch.column("unit_id").to_numpy(zero_copy_only=False)
             if units.size and int(units.max()) >= on_clock.size:
                 raise NotAligned(
@@ -456,4 +452,4 @@ def into(
     return resource
 
 
-__all__ = ["BATCH_ROWS", "BUCKET_SECONDS", "RUN_ID", "into", "spike_events"]
+__all__ = ["BUCKET_SECONDS", "RUN_ID", "into", "spike_events"]

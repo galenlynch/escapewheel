@@ -15,6 +15,7 @@ import pytest
 
 from escapewheel_writer import Clock, declaration, delivery
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
+from escapewheel_writer.encoding import STREAMED_BATCH_ROWS
 from escapewheel_writer.errors import DeliveryFailed, RecipeFault, SourceDefect, SourceFault, UsageError, UsageFault
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS
@@ -613,7 +614,7 @@ def test_a_table_too_large_to_hold_arrives_as_the_stream_it_was_sent_as():
     import pyarrow as pa
 
     small = pa.table({"unit_id": ["1", "2"]})
-    big = pa.table({"t_tick": list(range(delivery.BATCH_ROWS + 1))})
+    big = pa.table({"t_tick": list(range(STREAMED_BATCH_ROWS + 1))})
     got = delivery.Delivered("sorter", {"core.units": small, "core.spike_events": big})
     assert got.held("core.units") and not got.held("core.spike_events")
     assert sorted(got.records()) == ["core.units"]
@@ -624,7 +625,7 @@ def test_a_shared_resource_is_held_however_large_it_is():
     """A writer takes one table from one path, since two streams cannot be sorted across a seam."""
     import pyarrow as pa
 
-    big = pa.table({"clock_id": ["harp"] * (delivery.BATCH_ROWS + 1)})
+    big = pa.table({"clock_id": ["harp"] * (STREAMED_BATCH_ROWS + 1)})
     got = delivery.Delivered("sync", {"core.clocks": big}, merged=("core.clocks",))
     assert got.held("core.clocks")
     assert got.batches() == {}
