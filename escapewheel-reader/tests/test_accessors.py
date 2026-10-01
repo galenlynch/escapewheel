@@ -34,7 +34,7 @@ def test_accessors_use_no_sql_engine(packet_root, monkeypatch):
 
     table(), the accessors, and TableResource all go through PyArrow. Packet.duckdb() is a
     read path too and does need DuckDB; the point is that it is not the only one, so a
-    minimal reader stays possible in a language without an embedded SQL engine (R3 2.1).
+    minimal reader stays possible in a language without an embedded SQL engine (Part 02 §5.2).
     """
     import builtins
 
@@ -109,8 +109,8 @@ def test_accessors_push_predicates_into_the_reader(packet_root, monkeypatch):
 
 
 def test_table_pushes_equality_constraints(packet_root):
-    """R91 §3.2 leaves `stream_id` as the event's only equality column; the type is the
-    stream's, which `events()` resolves and `table()` does not."""
+    """`stream_id` is the event's only equality column; the type is the stream's
+    (Part 01 §3.11), which `events()` resolves and `table()` does not."""
     pkt = open_packet(packet_root)
     assert pkt.table("core.events", stream_id=1).num_rows == 1
     assert pkt.table("core.events", stream_id=0).num_rows == 2
@@ -249,7 +249,7 @@ def test_scan_is_lazy(packet_root):
     assert pq  # the import exists so the lazy contrast is explicit
 
 
-# -- the packet's default clock (R27 §2) --------------------------------------------------
+# -- the packet's default clock ------------------------------------------------------------
 
 
 def test_spike_times_come_back_on_the_reference_clock(two_clock_packet):
@@ -324,7 +324,7 @@ def test_an_event_range_is_on_the_reference_clock(two_clock_packet):
 
 
 def test_the_origin_is_read_not_recomputed(two_clock_packet):
-    """The writer took the minimum across clocks through R13's map; a reader repeats none of it."""
+    """The writer took the minimum across clocks through the anchor map; a reader repeats none of it."""
     assert clocks.origin(open_packet(two_clock_packet))[0] == 1_000_000
 
 
@@ -369,7 +369,7 @@ def test_mapping_uses_the_bound_the_writer_established(two_clock_packet, tmp_pat
     root = tmp_path / "wide"
     shutil.copytree(two_clock_packet, root)
     manifest = json.loads((root / "packet.json").read_text())
-    # R99 §3.1 puts the bound on the session, so this widens the packet's own session row
+    # The bound is on the session (Part 02 §12.6), so this widens the packet's own session row
     # rather than standing a new table beside it.
     import pyarrow.parquet as pq
 

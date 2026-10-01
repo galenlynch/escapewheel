@@ -144,7 +144,7 @@ def test_one_run_declaring_leaves_the_other_reported(tmp_path, packet_root):
 
 
 def test_a_packet_predating_the_table_reports_every_run(tmp_path, packet_root):
-    """R83 added the table, so a packet built before it declares no channels anywhere."""
+    """A writer may emit no such table (Part 02 §12.2), and the packet then declares no channels anywhere."""
     packet = _with_channels(tmp_path, packet_root, "older", runs=[SORTING_RUN], channels={})
     assert [gap.sorting_run_id for gap in runs_without_channels(packet)] == [SORTING_RUN]
 

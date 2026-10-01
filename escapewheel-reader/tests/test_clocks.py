@@ -73,8 +73,8 @@ def test_a_wider_bound_admits_more():
 
 
 def test_extrapolation_uses_the_fitted_rate_not_the_last_segment():
-    """R27 §5.2: the terminal segment's slope comes from two anchors and degrades; the
-    global fit does not. A jittered final anchor must not steer the *rate*."""
+    """The terminal segment's slope comes from two anchors and degrades; the global fit
+    does not. A jittered final anchor must not steer the *rate*."""
     jittered = ANCHOR_P.copy()
     jittered[-1] += 400  # one bad edge detection
     beyond = np.array([ANCHOR_T[-1] + AP // 2], dtype=np.int64)
@@ -99,8 +99,8 @@ def test_extrapolation_starts_at_the_terminal_anchor():
 
 
 def test_a_bent_sequence_extrapolates_from_where_it_ended():
-    """The finding R37 was written for: a clock that wanders leaves a fitted line offset
-    from local truth at the ends, and the offset does not shrink with distance."""
+    """A clock that wanders leaves a fitted line offset from local truth at the ends, and
+    the offset does not shrink with distance."""
     bend = np.rint(200 * np.sin(np.arange(8) * 0.7)).astype(np.int64)
     wandering = ANCHOR_P + bend
     parent, _ = align(np.array([ANCHOR_T[-1] + AP], dtype=np.int64), ANCHOR_T, wandering)
@@ -169,7 +169,7 @@ def test_a_clean_clock_extrapolates_within_quantization():
 
 
 def test_error_grows_with_the_bend_not_with_the_distance():
-    """R37 §2's finding: what costs is the sequence's wander, not how far you reach."""
+    """What costs is the sequence's wander, not how far you reach."""
     wandering = ANCHOR_P + np.rint(300 * np.sin(np.arange(ANCHOR_T.size) * 0.9)).astype(np.int64)
     assert extrapolation_error(ANCHOR_T, wandering, 1)["median"] > extrapolation_error(ANCHOR_T, ANCHOR_P, 1)["median"]
 
@@ -178,7 +178,7 @@ def test_too_few_anchors_measure_nothing():
     assert extrapolation_error(ANCHOR_T[:3], ANCHOR_P[:3], 5) == {}
 
 
-# -- reading the bound a writer established (R99 §3.1) ----------------------------------
+# -- reading the bound a writer established (Part 02 §12.6) -----------------------------
 
 
 class _Sessions:
@@ -193,17 +193,17 @@ class _Sessions:
 
 
 def test_a_packet_that_says_nothing_maps_at_the_default():
-    """R99 §3.1: a null is a writer that stayed within Part 01 §3.9's default."""
+    """A null is read as the default of one median anchor interval."""
     assert declared_bound(_Sessions(None)) == BOUND
 
 
 def test_the_declared_bound_is_read_from_the_session():
-    """R99 §3.1 moved it out of `core.processing_runs.parameters`, where no rule could see it."""
+    """The bound is a column of the session, not a key of `core.processing_runs.parameters`."""
     assert declared_bound(_Sessions(2.0)) == 2.0
 
 
 def test_the_widest_declared_bound_wins():
-    """A tick placed under the wider bound stays placed when the packets are read as one (R86)."""
+    """A tick placed under the wider bound stays placed when the packets are read as one."""
     assert declared_bound(_Sessions(3.0, 1.0, None)) == 3.0
 
 

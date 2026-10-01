@@ -1,4 +1,4 @@
-"""When something was observing, and what a rate is divided by (R38).
+"""When something was observing, and what a rate is divided by (Part 01 §2.3).
 
 The fixture uses a 1 kHz clock observing ticks 0 to 999, so a window's length in ticks and in
 milliseconds are the same number and every expectation can be read off by hand. `unit_002`
@@ -98,7 +98,7 @@ def observed_packet(tmp_path, packet_root):
                 "sorting_run_id": pa.array([SORTING_RUN] * 2, type=pa.int32()),
                 "curation_id": pa.array([CURATION] * 2, type=pa.int32()),
                 "quality_label": pa.array(["sua", "mua"]),
-                # R96 §3.2: the unit names the clock, so this fixture's units name CLOCK.
+                # The unit names the clock, so this fixture's units name CLOCK.
                 "clock_id": pa.array([CLOCK] * 2, type=pa.int32()),
             }
         ),
@@ -142,7 +142,7 @@ def test_a_refinement_replaces_the_inherited_window(observed_packet):
 
 
 def test_both_ends_are_observed(observed_packet):
-    """R18 §2 and R38 §2.2 make the interval closed, so 0..999 is 1000 ticks and not 999."""
+    """Part 01 §2.3 makes the interval closed, so 0..999 is 1000 ticks and not 999."""
     rows = unit_windows(observed_packet)
     first = rows.filter(pa.compute.equal(rows.column("unit_id"), UNITS[0]))
     assert observed_ticks(first) == 1000
@@ -250,7 +250,7 @@ def test_the_view_survives_a_packet_with_no_refinements(tmp_path, packet_root):
                 "sorting_run_id": pa.array([SORTING_RUN] * 2, type=pa.int32()),
                 "curation_id": pa.array([CURATION] * 2, type=pa.int32()),
                 "quality_label": pa.array(["sua", "mua"]),
-                # R96 §3.2: the unit names the clock, so this fixture's units name CLOCK.
+                # The unit names the clock, so this fixture's units name CLOCK.
                 "clock_id": pa.array([CLOCK] * 2, type=pa.int32()),
             }
         ),
@@ -307,7 +307,7 @@ def stream_packet(tmp_path, observed_packet):
 
 
 def test_a_stream_refines_or_inherits_like_a_unit(stream_packet):
-    """R38 §2.2 gives streams the same inheritance, which is why they share a resolution."""
+    """Part 01 §2.3 gives streams the same inheritance, which is why they share a resolution."""
     rows = {r["event_stream_id"]: r for r in stream_windows(stream_packet).to_pylist()}
     assert rows[LICKS]["source"] == DECLARED
     assert (rows[LICKS]["start_tick"], rows[LICKS]["stop_tick"]) == (200, 899)

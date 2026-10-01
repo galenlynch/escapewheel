@@ -8,9 +8,9 @@ import pytest
 
 TS = pa.timestamp("us", tz="UTC")
 
-#: R53 §2.1 makes an identifier an integer. The values are distinct across kinds so a test that
-#: confuses two of them fails rather than passing by coincidence, and a carried one (R53 §2.3)
-#: is the number its source would really have supplied.
+#: An identifier is an integer (Part 02 §5.3). The values are distinct across kinds so a test
+#: that confuses two of them fails rather than passing by coincidence, and a carried one
+#: (Part 01 §2.1) is the number its source would really have supplied.
 SESSION = 1
 SUBJECT = 7
 CLOCK_BEHAVIOUR = 3
@@ -22,7 +22,7 @@ CURATION = 6
 EVENTS = (20, 21, 22)
 
 #: The session's name, which is what the manifest lists and what a stable cross-packet
-#: reference uses (R53 §2.3.1).
+#: reference uses (Part 01 §2.1).
 SESSION_NAME = "s001"
 
 
@@ -75,14 +75,14 @@ def _resource(resource_id, uri, **extra):
     return entry
 
 
-#: R53 §2.3, mirroring the registry's own map: an identifier is the source's own number or one
-#: this format chose, and only the second obliges its owner to carry a `*_name`.
+#: Mirroring the registry's own map (Part 02 §8.2): an identifier is the source's own number or
+#: one the writer chose, and only the second obliges its owner to carry a `*_name`.
 _CARRIED = {"unit_id"}
 
 
 def _col(name, type_, presence, **extra):
-    # R48 §2.1: every column declares a role. Inferred here from the same two conventions the
-    # registry's own map rests on, because a test fixture's columns are all ordinary shapes.
+    # Every column declares a role (Part 02 §8.1). Inferred here from the same two conventions
+    # the registry's own map rests on, because a test fixture's columns are all ordinary shapes.
     role = (
         "coordinate" if name.endswith("_tick") else "identifier" if name.endswith("_id") else extra.pop("role", "data")
     )
@@ -186,7 +186,7 @@ def _registry():
                     _col("sorting_run_id", "int32", "required"),
                     _col("curation_id", "int32", "required"),
                     _col("quality_label", "string", "nullable", enum=["sua", "mua", "noise"]),
-                    # R96 §3.2: the unit names the clock its ticks are counted on.
+                    # The unit names the clock its ticks are counted on.
                     _col("clock_id", "int32", "required"),
                 ],
                 "primary_key": ["unit_id"],
@@ -199,7 +199,7 @@ def _registry():
                 ],
                 "rules": [],
             },
-            # R91 §3.2: an event is a tick on a stream. The kind and the clock are the stream's.
+            # An event is a tick on a stream; the kind and the clock are the stream's (Part 01 §3.11).
             "core.event_streams": {
                 "columns": [
                     _col("event_stream_id", "int32", "required"),
@@ -454,7 +454,7 @@ def two_clock_packet(tmp_path, packet_root):
             "t_tick": pa.array([1_200_000], type=pa.int64()),
         }
     )
-    # R91 §3.1: the kind lives on the stream, so the fixture declares the one it emits.
+    # The kind lives on the stream, so the fixture declares the one it emits.
     event_streams = pa.table(
         {
             "event_stream_id": pa.array([0], type=i32),

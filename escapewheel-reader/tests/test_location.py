@@ -37,7 +37,7 @@ def test_a_store_location_has_no_path():
 
 
 def test_a_rewrite_redirects_an_absolute_uri():
-    """Part 04 §5.1 makes reachability the caller's situation; this is how the caller says so."""
+    """Part 04 §5.5 makes reachability the caller's situation; this is how the caller says so."""
     root = Location.of("/data/packet", {"file:///mnt/Data/ephys/": "s3://bucket/ephys/"})
     assert root.resolve("file:///mnt/Data/ephys/session.nwb/lfp").uri == "s3://bucket/ephys/session.nwb/lfp"
 

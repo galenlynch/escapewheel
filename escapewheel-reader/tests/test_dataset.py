@@ -1,4 +1,4 @@
-"""Many packets as one relation (R86)."""
+"""Many packets as one relation (Part 05 §13.1)."""
 
 import json
 import shutil
@@ -19,7 +19,7 @@ SECOND_NAME = "s002"
 def _second(packet_root, tmp_path):
     """A second packet holding a different session under the same identifiers.
 
-    The point of R86: two packets number their sessions and units independently, so the second
+    Two packets number their sessions and units independently, so the second
     reuses `session_id` and `unit_id` for things that are not the first's.
     """
     root = tmp_path / "session_002"
@@ -45,7 +45,7 @@ def two(packet_root, tmp_path):
     return open_dataset([packet_root, _second(packet_root, tmp_path)])
 
 
-# -- §2.1 a table is session-scoped where it reaches core.sessions ----------------------
+# -- a table is session-scoped where it reaches core.sessions ---------------------------
 
 
 def _registry(**references):
@@ -92,7 +92,7 @@ def test_a_self_reference_is_not_a_route_to_sessions():
     assert session_scoped(_registry(**{"core.devices": ("core.devices",)})) == {"core.sessions"}
 
 
-# -- §2.2 a reader discriminates by what it knows --------------------------------------
+# -- a reader discriminates by what it knows -------------------------------------------
 
 
 def test_every_session_of_every_packet_is_numbered(two):
@@ -110,7 +110,7 @@ def test_a_scoped_table_carries_the_discriminator(two):
 
 
 def test_the_identifier_collides_and_the_pair_does_not(two):
-    """R86 §1.2. 4,505 `unit_id` values name a unit in both real packets; no pair does."""
+    """A `unit_id` names a unit in each packet; no pair of key and identifier names two."""
     units = two.table("core.units")
     ids = units.column("unit_id").to_pylist()
     pairs = list(zip(units.column("session_key").to_pylist(), ids, strict=True))
@@ -180,7 +180,7 @@ def test_a_dataset_needs_a_packet():
         Dataset([])
 
 
-# -- §2.4 the identity is projected, not joined for -------------------------------------
+# -- the identity is projected, not joined for ------------------------------------------
 
 
 def test_the_sql_view_projects_the_identity(two):
@@ -247,7 +247,7 @@ def test_a_resource_no_packet_holds_is_not_a_view(two):
     assert refused.value.resource_id == "core.absent"
 
 
-# -- what R86 requires and does not specify --------------------------------------------
+# -- what a reader is required to do and is not told how -------------------------------
 
 
 def test_a_multi_session_packet_refuses_a_table_that_cannot_say_which(packet_root, tmp_path):

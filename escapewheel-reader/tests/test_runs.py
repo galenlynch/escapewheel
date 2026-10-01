@@ -1,4 +1,4 @@
-"""Choosing between coexisting runs (R41, R44)."""
+"""Choosing between coexisting runs (Part 01 §2.6)."""
 
 import json
 import shutil
@@ -17,9 +17,8 @@ def _with_runs(tmp_path, packet_root, name, runs, prefs=None):
     """Copy the fixture packet and give it a run log, optionally with preferences.
 
     `runs` is a list of ``(run_id, activity_type, scope)``; a scope of None is a run whose
-    subject the packet does not record, which is the state R44 §2.1 exists to remove. The kind
-    (R49 §2.1) is derived from the activity, since every scope in these fixtures is a probe or a
-    sorting run.
+    subject the packet does not record. The kind is derived from the activity, since every
+    scope in these fixtures is a probe or a sorting run.
     """
     kind_of = {
         "spike_sorting": "core.probes",
@@ -66,10 +65,10 @@ def test_no_run_log_is_clean(packet_root):
 
 
 def test_one_run_per_scope_is_unambiguous(tmp_path, packet_root):
-    """Twelve probes sorted once each are complementary, not alternatives (R44 §1).
+    """Twelve probes sorted once each are complementary, not alternatives.
 
-    Grouping by activity alone would call this ambiguous, which is the mistake R44 exists to
-    stop; the scope is what separates the two cases.
+    Grouping by activity alone would call this ambiguous; the scope is what separates the two
+    cases.
     """
     runs = [(i, "spike_sorting", f"probe_{i}") for i in range(12)]
     packet = _with_runs(tmp_path, packet_root, "per_probe", runs)

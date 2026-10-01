@@ -222,7 +222,7 @@ def array_packet(tmp_path, packet_root):
 
 
 def test_array_opens_a_declared_array(array_packet):
-    """Part 07 Phase 5 names this call; it is the counterpart of `table` and does the same job."""
+    """`array` is the counterpart of `table` and does the same job."""
     packet = open_packet(array_packet)
     opened = packet.array("core.lfp")
     assert opened.shape == (4, 3)
@@ -243,7 +243,7 @@ def test_array_reports_an_undeclared_resource(array_packet):
 
 
 def test_a_store_uri_pyarrow_cannot_open_is_reported(packet_root):
-    """Part 04 §5.1: reachability is the reader's situation, so an unreachable store is a readable
+    """Part 04 §5.5: reachability is the reader's situation, so an unreachable store is a readable
     error and not a traceback from inside pyarrow."""
     import json
 

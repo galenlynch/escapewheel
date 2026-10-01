@@ -167,8 +167,8 @@ def test_a_packet_in_a_store_resolves_its_tables_there(packet_root):
 
 
 def test_a_rewrite_reaches_bytes_the_manifest_names_elsewhere(packet_root, tmp_path):
-    """Part 04 §5.1 makes reachability the reader's situation, and a committed packet records the
-    writer's -- so a caller redirects rather than editing bytes Part 04 §5.1 makes immutable."""
+    """Part 04 §5.5 makes reachability the reader's situation, and a committed packet records the
+    writer's -- so a caller redirects rather than editing bytes Part 03 §8.1 makes immutable."""
     import json
     import shutil
 

@@ -1,4 +1,4 @@
-"""Spikes against events (R43 §4).
+"""Spikes against events.
 
 The fixture is sized so every expected count can be read off by hand. Two events at ticks 100
 and 200; five spikes at 90, 100, 145, 190 and 210.
@@ -50,7 +50,7 @@ def aligned_packet(tmp_path, packet_root):
             "time_bucket_tick": pa.array([0] * len(SPIKES), type=pa.int64()),
         }
     )
-    # R91 §3.1: the kind and the clock are the stream's, and an event is a tick on one.
+    # The kind and the clock are the stream's, and an event is a tick on one (Part 01 §3.11).
     events = pa.table(
         {
             "session_id": pa.array([SESSION] * len(CUES)),
@@ -85,7 +85,7 @@ def test_disjoint_windows_are_recognised(aligned_packet):
 
 
 def test_a_spike_in_two_windows_is_returned_twice(aligned_packet):
-    """The duplicating semantics R43 §4 needs: each event contributes its own window."""
+    """The duplicating semantics an event-aligned histogram needs: each event contributes its own window."""
     rows = aligned_spikes(aligned_packet, "cue", 60).fetchall()
     assert len(rows) == 6, "five spikes, one of them in both windows"
 
@@ -138,8 +138,8 @@ def test_preceding_and_nearest_disagree(aligned_packet):
     """Two rules, two answers.
 
     Spike 190 has the second cue as its nearest and the first as its preceding, and the first is
-    further away than the window, so preceding drops it while nearest keeps it. R91 §3.2 names an
-    event by its tick, there being no identifier to name it by.
+    further away than the window, so preceding drops it while nearest keeps it. An event
+    is named by its tick, there being no identifier to name it by.
     """
     nearest = {r[2]: r[3] for r in assigned_spikes(aligned_packet, "cue", to="nearest", half_window=60).fetchall()}
     preceding = {r[2]: r[3] for r in assigned_spikes(aligned_packet, "cue", to="preceding", half_window=60).fetchall()}
@@ -168,9 +168,9 @@ def test_an_absent_event_type_is_a_lookup_failure(aligned_packet):
 
 
 def test_events_on_another_clock_are_refused(aligned_packet):
-    """A tick means nothing beside a tick on another clock (R27 §2), so this must not join."""
+    """A tick means nothing beside a tick on another clock, so this must not join."""
     root = aligned_packet.root
-    # The clock is the stream's since R91 §3.1, so moving the events means moving their stream.
+    # The clock is the stream's, so moving the events means moving their stream.
     path = root / "tables" / "core" / "event_streams.parquet"
     streams = pq.read_table(path)
     moved = streams.set_column(
