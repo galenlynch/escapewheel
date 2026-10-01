@@ -13,7 +13,7 @@ v0.2 specification remains authoritative while an entry is open; this inventory 
 that text nor decides the replacement rule.
 
 The initial entries come from the
-[project sanity check](../Escapewheel_Project_Sanity_Check_2026-09-17.md) and the appraisal of the
+[project sanity check](reviews/2026-09-17-project-sanity-check.md) and the appraisal of the
 [R122](accepted/R122-define-specification-artifacts-and-normative-ownership.md). A
 candidate destination identifies where appraisal should begin, not an accepted ownership decision.
 

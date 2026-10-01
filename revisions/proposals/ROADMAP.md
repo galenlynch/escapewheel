@@ -22,8 +22,8 @@ are not section numbers in a proposal or draft, and they are not the permanent `
 assigned to accepted revisions.
 
 The principal inputs are the
-[project sanity check](../../Escapewheel_Project_Sanity_Check_2026-09-17.md), the
-[change-process audit](../../Escapewheel_Specification_Change_Process_Audit.md), the root
+[project sanity check](../reviews/2026-09-17-project-sanity-check.md), the
+[change-process audit](../reviews/2026-09-17-change-process-audit.md), the root
 [TODO](../../TODO.md), and the research carried into the current
 [R122 authority revision](../accepted/R122-define-specification-artifacts-and-normative-ownership.md). The project review
 was performed at commit `32f9e06884b483818c7156f80ea81f7e3a6ce002`. Subsequent commits through

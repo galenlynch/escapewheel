@@ -26,5 +26,8 @@ Acceptance requires explicit authorization. Acceptance and incorporation into th
 current owner occur as one reviewable change; the accepted record is then stored under
 [`accepted/`](accepted/), with clause evidence under [`evidence/`](evidence/).
 
+Whole-project reviews that fed the roadmap are kept in [`reviews/`](reviews/), named by review
+date. Like accepted records, they are history and are not updated as the project changes.
+
 The [templates](templates/) describe each authored artifact. The proposal and draft directories
 describe how their own contents are maintained.
