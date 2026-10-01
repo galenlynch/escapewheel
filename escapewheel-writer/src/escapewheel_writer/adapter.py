@@ -38,6 +38,8 @@ How an adapter is found and run:
   class generates, where one fails the published schema, and the terms a build supplies
   (Part 12 §4, §7).
 - :func:`serve` -- deliver an opened adapter's rows by one protocol.
+- :func:`build_table`, :func:`write_zarr` -- what a build makes of delivered rows and of a staged
+  array, for an adapter that checks its output or writes its own delivery.
 
 :class:`NWBSource` is the one adapter meant for subclassing, by a dialect of NWB. A dialect
 extends the class tables `FRAME_AXES`, `FRAME_BASIS`, `UNIT_AXES`, `UNIT_FRAME`, `TRIAL_EVENTS`,
@@ -46,6 +48,8 @@ extends the class tables `FRAME_AXES`, `FRAME_BASIS`, `UNIT_AXES`, `UNIT_FRAME`,
 reads the file through `attrs` and `table`.
 """
 
+from .arrays import write_zarr
+from .arrow import build_table
 from .clock import HARP_TICK_RATE_HZ, TICK_MAX, TICK_MIN, Clock, epoch_from, zone_of
 from .declaration import FILES, FLIGHT, PROTOCOLS, STREAM, document_of, shape_problems
 from .delivery import serve
@@ -112,6 +116,7 @@ __all__ = [
     "Streams",
     "UnsupportedEncoding",
     "WithholdsAnchors",
+    "build_table",
     "clean",
     "coded",
     "codes",
@@ -123,5 +128,6 @@ __all__ = [
     "shape_problems",
     "source_root",
     "utc_offset",
+    "write_zarr",
     "zone_of",
 ]

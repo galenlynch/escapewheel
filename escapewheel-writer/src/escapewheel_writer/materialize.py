@@ -2,7 +2,7 @@
 
 - :func:`spike_events` -- `analysis.spike_events` as batches: core spikes on the reference clock,
   bucketed by time.
-- :func:`into` -- add that table to a writer, with its lineage and a run row.
+- :func:`materialize_spike_events` -- add that table to a writer, with its lineage and a run row.
 - :data:`RUN_ID` -- the `processing_run_id` of the run row a materialization records.
 
 The table keeps the reference tick and not the probe tick, and drops any spike that no anchor
@@ -369,7 +369,7 @@ def spike_events(
 RUN_ID = "materialize.analysis.spike_events"
 
 
-def into(
+def materialize_spike_events(
     packet: Any,
     writer: Any,
     *,
@@ -429,7 +429,7 @@ def into(
     }
 
     def streamed() -> Iterator[pa.RecordBatch]:
-        # The writer consumes this at commit, after `into` has returned but before it builds
+        # The writer consumes this at commit, after this function has returned but before it builds
         # `core.processing_runs`, so the run row is completed here rather than when it is added.
         yield from spike_events(
             packet,
@@ -452,4 +452,4 @@ def into(
     return resource
 
 
-__all__ = ["BUCKET_SECONDS", "RUN_ID", "into", "spike_events"]
+__all__ = ["BUCKET_SECONDS", "RUN_ID", "materialize_spike_events", "spike_events"]

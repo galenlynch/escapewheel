@@ -26,8 +26,7 @@ sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer"))
 sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
 
 import nwbfixture
-from escapewheel_writer import arrow
-from escapewheel_writer.sources.nwb import NWBSource
+from escapewheel_writer.adapter import NWBSource, build_table
 
 REGISTRY_DOCUMENT = json.loads((HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text())
 REGISTRY = {
@@ -43,7 +42,7 @@ def reconcile(resource: str, table) -> pa.Table:
     The same call the writer makes on records handed over in process, so a boundary that changes
     nothing leaves the two tables equal.
     """
-    return arrow.build(resource, REGISTRY[resource], table.to_pylist())
+    return build_table(resource, REGISTRY[resource], table.to_pylist())
 
 
 import serve_nwb

@@ -4,7 +4,8 @@
 ``escapewheel import`` does from the command line. Its two steps are :func:`build`, which runs the
 recipe's sources and returns a :class:`PacketWriter` holding the staged packet, and
 :meth:`PacketWriter.commit`, which validates and publishes it and takes what
-:func:`materializers` derives. :func:`verify` records what a published packet's external
+:func:`materializers` derives from a recipe; a caller holding no recipe passes
+:func:`materialize_spike_events` itself. :func:`verify` records what a published packet's external
 resources hold, once they can be reached, and :func:`prune` removes the files a packet no longer
 needs.
 
@@ -90,6 +91,7 @@ from .errors import (
     UsageFault,
     WriterError,
 )
+from .materialize import materialize_spike_events
 from .notes import Note, NoteCode
 from .prune import prune
 from .recipe import Recipe
@@ -150,6 +152,7 @@ __all__ = [
     "__version__",
     "build",
     "import_packet",
+    "materialize_spike_events",
     "materializers",
     "prune",
     "verify",

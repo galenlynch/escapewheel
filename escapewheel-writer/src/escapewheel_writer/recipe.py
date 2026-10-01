@@ -1449,7 +1449,7 @@ class Recipe:
 
         taken = {
             name
-            for name, parameter in inspect.signature(materialize.into).parameters.items()
+            for name, parameter in inspect.signature(materialize.materialize_spike_events).parameters.items()
             if parameter.kind is inspect.Parameter.KEYWORD_ONLY
         }
         problems: list[_Found] = []

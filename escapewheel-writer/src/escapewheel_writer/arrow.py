@@ -1,6 +1,6 @@
 """Turn records into Arrow tables with exactly the schema the registry declares.
 
-- :func:`build` -- a sorted Arrow table for one resource.
+- :func:`build_table` -- a sorted Arrow table for one resource.
 - :func:`schema`, :func:`sort_key` -- a table's Arrow schema, and the columns it is sorted by.
 - :func:`number`, :func:`number_batch` -- identifier values numbered as their declarations
   require, over records and over a streamed batch.
@@ -386,7 +386,7 @@ def number_batch(spec: Mapping[str, Any], batch: pa.RecordBatch, keys: Any) -> p
     return pa.RecordBatch.from_arrays(list(columns.values()), names=list(columns))
 
 
-def build(
+def build_table(
     resource: str,
     spec: Mapping[str, Any],
     records: Sequence[Mapping[str, Any]],
@@ -443,7 +443,7 @@ __all__ = [
     "ARROW",
     "COERCE",
     "Paired",
-    "build",
+    "build_table",
     "canonical_json",
     "localize",
     "number",

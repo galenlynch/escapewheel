@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 import pyarrow as pa
 import pyarrow.flight as fl
-from escapewheel_writer.sources.nwb import NWBSource
+from escapewheel_writer.adapter import NWBSource
 
 #: What this adapter declares it needs. Four resolve against the vocabulary a build can supply and
 #: two against the recipe's options -- `zone` and `interval_kind` -- because an option an adapter

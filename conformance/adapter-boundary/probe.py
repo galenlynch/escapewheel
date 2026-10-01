@@ -24,8 +24,9 @@ sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer"))
 sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
 
 import nwbfixture
-from escapewheel_writer.sources.nwb import NWBSource
-from escapewheel_writer.sources.waveforms import WaveformSource
+from escapewheel_writer.adapter import ADAPTERS, NWBSource
+
+WaveformSource = ADAPTERS["waveforms"]
 
 SESSION = "mini_2025-04-09"
 KIND = "task.trials"

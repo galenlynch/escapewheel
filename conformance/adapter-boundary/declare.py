@@ -26,7 +26,7 @@ sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer/tests"))
 import build_side
 import nwbfixture
 import serve_nwb
-from escapewheel_writer.sources import ADAPTERS
+from escapewheel_writer.adapter import ADAPTERS
 
 REGISTRY_DOCUMENT = json.loads((HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text())
 REGISTRY = {

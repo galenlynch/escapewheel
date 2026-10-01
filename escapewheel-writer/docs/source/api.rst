@@ -19,6 +19,7 @@ Building a packet
    build
    PacketWriter
    materializers
+   materialize_spike_events
 
 Maintaining a packet
 --------------------
@@ -166,6 +167,8 @@ Registering and delivering
    adapter.shape_problems
    adapter.TERMS
    adapter.serve
+   adapter.build_table
+   adapter.write_zarr
 
 Modules
 -------

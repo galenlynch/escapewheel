@@ -5,8 +5,7 @@ import pathlib
 import shutil
 
 import numpy as np
-from escapewheel_writer.arrays import write_zarr
-from escapewheel_writer.writer import StagedArray
+from escapewheel_writer.adapter import StagedArray, write_zarr
 
 root = pathlib.Path(__file__).parent / "writer_arrays"
 shutil.rmtree(root, ignore_errors=True)

@@ -835,13 +835,13 @@ def _derive(options: Mapping[str, Any], packet: Any, writer: Any) -> None:
     """Add one derived resource to a writer, reading its inputs from the staged packet."""
     from . import materialize
 
-    materialize.into(packet, writer, **options)
+    materialize.materialize_spike_events(packet, writer, **options)
 
 
 def materializers(recipe: Recipe, memory_budget: int | str = 0) -> list[Callable[[Any, Any], None]]:
     """Turn a recipe's `[[materialize]]` entries into callables `commit` can run.
 
-    Each is handed the staged packet and the writer, which is the pair `materialize.into` wants:
+    Each is handed the staged packet and the writer, which is the pair `materialize_spike_events` takes:
     it reads the core resources from the one and adds the derived rows, the run record and the
     lineage to the other.
 

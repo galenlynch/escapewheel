@@ -54,7 +54,7 @@ from escapewheel_validator.shim.ordering import verify_order
 
 from . import opaque
 from .amending import Held
-from .arrow import build, number_batch, schema, sort_key
+from .arrow import build_table, number_batch, schema, sort_key
 from .encoding import encodings, inefficient
 from .errors import (
     CommitRefused,
@@ -120,7 +120,7 @@ def _options(
     `sorting_columns` is written for every table that declares an order. It costs nothing, and
     it is what lets a file state which of several possible orderings it is in rather than
     leaving a reader to infer it from statistics. It is only truthful because both write paths
-    produce the declared order: the records path sorts in `arrow.build`, and the streaming path
+    produce the declared order: the records path sorts in `arrow.build_table`, and the streaming path
     is checked by the validator's physical-order shim (R12 §4) before the commit completes.
     """
     options: dict[str, Any] = {"compression": "zstd", "data_page_version": "1.0"}
@@ -1480,7 +1480,9 @@ class PacketWriter:
                     # Nothing the amendment adds, so the held entry stands (Part 05 §4.3).
                     continue
             else:
-                built = build(resource_id, spec, self._tables[resource_id], self.keys, self._paired_kinds(resource_id))
+                built = build_table(
+                    resource_id, spec, self._tables[resource_id], self.keys, self._paired_kinds(resource_id)
+                )
                 table = built if self._held is None else self._held.settle(resource_id, built, derived=self._derived)
                 if table is None:
                     continue

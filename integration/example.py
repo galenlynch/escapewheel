@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from escapewheel_writer import PacketWriter, materialize
-from escapewheel_writer.writer import ExternalArray, StagedArray
+from escapewheel_writer import PacketWriter, materialize_spike_events
+from escapewheel_writer.adapter import ExternalArray, StagedArray
 
 ROOT = Path(__file__).resolve().parents[1]
 PART = ROOT / "spec" / "parts" / "08_example_packet.md"
@@ -199,7 +199,7 @@ def writer(
 
 
 #: Run at commit, so `analysis.spike_events` is derived from the staged core tables.
-MATERIALIZE: tuple[Callable[[Any, PacketWriter], Any], ...] = (materialize.into,)
+MATERIALIZE: tuple[Callable[[Any, PacketWriter], Any], ...] = (materialize_spike_events,)
 
 
 def build(root: Path, **options: Any) -> Any:

@@ -264,7 +264,7 @@ def test_a_batch_where_nothing_maps_yields_nothing(tmp_path):
 
 
 class Recorder:
-    """The calls `into` makes on a writer, for a packet holding no run of the name it gives."""
+    """The calls `materialize_spike_events` makes on a writer, for a packet holding no run of the name it gives."""
 
     def __init__(self):
         self.batches, self.tables, self.derived = {}, {}, {}
@@ -284,10 +284,10 @@ class Recorder:
 
 def test_into_records_lineage_and_a_run_row(tmp_path):
     """Part 04 §7 requires the lineage; Part 06 §5 permits the run, which no manifest member names."""
-    from escapewheel_writer.materialize import RUN_ID, into
+    from escapewheel_writer.materialize import RUN_ID, materialize_spike_events
 
     writer = Recorder()
-    assert into(Fake(tmp_path, ticks=[1000], clocks=[PROBE]), writer) == "analysis.spike_events"
+    assert materialize_spike_events(Fake(tmp_path, ticks=[1000], clocks=[PROBE]), writer) == "analysis.spike_events"
     assert writer.derived["analysis.spike_events"] == [
         "core.spike_events",
         "core.clock_anchors",
@@ -301,23 +301,23 @@ def test_into_records_lineage_and_a_run_row(tmp_path):
 
 def test_lineage_names_only_a_source_the_packet_carries(tmp_path):
     """`core.clock_anchors` is optional, and a packet without it cannot be a lineage source."""
-    from escapewheel_writer.materialize import into
+    from escapewheel_writer.materialize import materialize_spike_events
 
     writer = Recorder()
-    into(Fake(tmp_path, ticks=[1000], clocks=[REF], absent={"core.clock_anchors"}), writer)
+    materialize_spike_events(Fake(tmp_path, ticks=[1000], clocks=[REF], absent={"core.clock_anchors"}), writer)
     assert writer.derived["analysis.spike_events"] == ["core.spike_events", "core.clocks"]
 
 
 def test_the_dropped_count_is_the_one_the_stream_reached(tmp_path):
-    """A writer consumes the stream at commit, after `into` has returned the run row."""
-    from escapewheel_writer.materialize import into
+    """A writer consumes the stream at commit, after `materialize_spike_events` has returned the run row."""
+    from escapewheel_writer.materialize import materialize_spike_events
 
     class Deferred(Recorder):
         def add_batches(self, rid, batches):
             self.batches[rid] = batches
 
     writer = Deferred()
-    into(Fake(tmp_path, ticks=[1000, 1000 + 20 * AP], clocks=[PROBE] * 2), writer)
+    materialize_spike_events(Fake(tmp_path, ticks=[1000, 1000 + 20 * AP], clocks=[PROBE] * 2), writer)
     list(writer.batches["analysis.spike_events"])
     assert writer.tables["core.processing_runs"][0]["parameters"]["spikes_without_a_defined_mapping"] == [
         {"clock_id": PROBE, "spikes": 1}
@@ -326,10 +326,10 @@ def test_the_dropped_count_is_the_one_the_stream_reached(tmp_path):
 
 def test_the_bucket_width_is_recorded_because_it_cannot_be_recovered(tmp_path):
     """Part 06 §5: an unrecoverable transform parameter is recorded."""
-    from escapewheel_writer.materialize import into
+    from escapewheel_writer.materialize import materialize_spike_events
 
     writer = Recorder()
-    into(Fake(tmp_path, ticks=[1000], clocks=[PROBE]), writer, bucket_seconds=17)
+    materialize_spike_events(Fake(tmp_path, ticks=[1000], clocks=[PROBE]), writer, bucket_seconds=17)
     assert writer.tables["core.processing_runs"][0]["parameters"]["bucket_seconds"] == 17
 
 

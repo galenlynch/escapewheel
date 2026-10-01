@@ -29,7 +29,7 @@ import build_side
 import nwbfixture
 import serve_nwb
 import serve_stream
-from escapewheel_writer.sources.nwb import NWBSource
+from escapewheel_writer.adapter import NWBSource
 
 SESSION = "mini_2025-04-09"
 #: The four bytes every Arrow IPC message opens with, and the eight that end a stream.

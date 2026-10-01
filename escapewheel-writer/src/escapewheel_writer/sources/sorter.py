@@ -363,7 +363,7 @@ class SorterSource:
 
     # -- identity ---------------------------------------------------------------------
 
-    # These compose a *name*. `arrow.build` maps it to the integer the column holds (R53 §2.1),
+    # These compose a *name*. `arrow.build_table` maps it to the integer the column holds (R53 §2.1),
     # against one `Keys` shared by every adapter -- because the recipe exists precisely because
     # four sources can each produce `core.probes`, and two of them numbering the same probe
     # differently is a defect no foreign key could see: both values resolve, to different rows.
