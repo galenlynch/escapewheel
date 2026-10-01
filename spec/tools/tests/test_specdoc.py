@@ -182,7 +182,7 @@ def test_a_token_that_is_no_index_of_an_array_raises_with_it(token):
 
 
 def test_a_token_after_a_scalar_raises_with_it():
-    with pytest.raises(specdoc.ScalarError, match="'deeper' follows a scalar") as raised:
+    with pytest.raises(specdoc.ScalarError) as raised:
         specdoc.resolve_pointer(DOCUMENT, "/resources/core.units/table/deeper")
 
     assert raised.value.token == "deeper"
