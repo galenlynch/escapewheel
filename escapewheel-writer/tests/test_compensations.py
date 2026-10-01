@@ -76,7 +76,7 @@ def test_the_nwb_source_declares_an_offset_it_kept(tmp_path):
 
 def test_strict_refuses_a_build_that_worked_around_something(tmp_path, registry):
     """Every note is a place the packet says less than the source could have."""
-    from escapewheel_writer.errors import RecipeError
+    from escapewheel_writer.errors import NotesUnderStrict
     from escapewheel_writer.recipe import Recipe
     from escapewheel_writer.session import build
     from tests import sorterfixture
@@ -104,13 +104,15 @@ owns = ["core.units", "core.clocks", "core.curation_versions", "core.sorting_run
 """)
     recipe = Recipe.load(path)
     assert build(recipe, registry)  # the same build passes without the flag
-    with pytest.raises(RecipeError, match=r"note\(s\) under --strict"):
+    with pytest.raises(NotesUnderStrict) as refused:
         build(recipe, registry, strict=True)
+    assert refused.value.kind == "sorter"
+    assert refused.value.notes
 
 
 def test_a_build_refuses_a_recipe_its_check_refuses(tmp_path, registry):
     """Part 05 §3.5: before any source is opened, whether or not a caller checked it first."""
-    from escapewheel_writer.errors import RecipeError
+    from escapewheel_writer.errors import RecipeFault, RecipeUnsound
     from escapewheel_writer.recipe import Recipe
     from escapewheel_writer.session import build
 
@@ -119,6 +121,8 @@ def test_a_build_refuses_a_recipe_its_check_refuses(tmp_path, registry):
         '[packet]\nid = "s1"\n[session]\nsession_id = "s1"\n[[source]]\nkind = "sorter"\nroot = "absent"\nwindow = 3\n'
     )
     recipe = Recipe.load(path)
-    with pytest.raises(RecipeError, match="sets 'window', which it declares neither"):
+    with pytest.raises(RecipeUnsound) as refused:
         build(recipe, registry)
+    (problem,) = [p for p in refused.value.problems if p.code is RecipeFault.OPTION_UNREAD]
+    assert "'window'" in problem.message
     assert not (recipe.out / "staging").exists(), "refused before anything was prepared"

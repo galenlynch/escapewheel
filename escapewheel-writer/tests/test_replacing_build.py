@@ -9,7 +9,7 @@ import pytest
 from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
-from escapewheel_writer.errors import RecipeError, ReplacementRefused
+from escapewheel_writer.errors import RecipeFault, RecipeUnsound, ReplacementRefused
 from escapewheel_writer.recipe import Recipe
 from escapewheel_writer.replacing import read_replaced
 from escapewheel_writer.scripts.cli import register
@@ -52,34 +52,40 @@ def test_a_recipe_naming_no_packet_records_no_replaces(packet):  # noqa: F811
 
 
 @pytest.mark.parametrize(
-    ("entries", "match"),
+    ("entries", "fault", "named"),
     [
-        (("absent",), "absent: no published manifest can be read"),
-        (("packet", "packet/packet.json"), "packet and packet/packet.json read one manifest"),
+        (("absent",), RecipeFault.REPLACED_UNREADABLE, "absent: "),
+        (("packet", "packet/packet.json"), RecipeFault.REPLACED_TWICE, "packet and packet/packet.json "),
     ],
     ids=["unreadable", "one-manifest-twice"],
 )
-def test_a_build_refuses_what_it_cannot_replace_before_any_source_opens(packet, entries, match):  # noqa: F811
+def test_a_build_refuses_what_it_cannot_replace_before_any_source_opens(packet, entries, fault, named):  # noqa: F811
     root, _ = packet
     recipe = Recipe.load(_replacing(root, *entries))
-    with pytest.raises(RecipeError, match=r"\[packet\]\.replaces \(Part 05 §3\.5\)"):
+    with pytest.raises(RecipeUnsound) as unsound:
         build(recipe, REGISTRY)
-    with pytest.raises(ReplacementRefused, match=match):
+    with pytest.raises(ReplacementRefused) as refused:
         read_replaced(entries, root)
+    (problem,) = refused.value.problems
+    assert problem.code is fault
+    assert problem.message.startswith(named)
+    assert unsound.value.problems == [problem]
 
 
 def test_an_entry_whose_identity_fails_the_manifest_schema_is_refused(tmp_path):
     (tmp_path / "old.json").write_text(json.dumps({"packet_id": "s1"}))
-    with pytest.raises(ReplacementRefused, match="fails the manifest schema"):
+    with pytest.raises(ReplacementRefused) as refused:
         read_replaced(["old.json"], tmp_path)
+    assert [p.code for p in refused.value.problems] == [RecipeFault.REPLACED_NO_IDENTITY]
 
 
 def test_a_recipe_both_replacing_and_amending_is_refused(packet):  # noqa: F811
     root, sorted_root = packet
     path = _amending(root, sorted_root)
     path.write_text(path.read_text().replace('amends = "0.1.0"', 'amends = "0.1.0"\nreplaces = ["packet"]'))
-    with pytest.raises(RecipeError, match="both replaces and amends"):
+    with pytest.raises(RecipeUnsound) as refused:
         build(Recipe.load(path), REGISTRY)
+    assert RecipeFault.REPLACES_AND_AMENDS in {p.code for p in refused.value.problems}
 
 
 def test_an_amendment_keeps_the_major_version(packet):  # noqa: F811

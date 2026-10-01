@@ -48,7 +48,7 @@ from typing import Any, NamedTuple
 
 from upath import UPath
 
-from .errors import RecipeFault
+from .errors import RecipeFault, RecipeUnreadable
 from .sources.store import source_root
 
 #: Source kinds that accept a `sample` cap, for the development flag that makes a round trip
@@ -679,7 +679,7 @@ class Recipe:
 
         Raises
         ------
-        ValueError
+        RecipeUnreadable
             If the file is not valid TOML, declares no packet ID, or fails the recipe schema.
         """
         path = Path(path)
@@ -687,13 +687,19 @@ class Recipe:
         try:
             document = tomllib.loads(raw.decode())
         except tomllib.TOMLDecodeError as exc:
-            raise ValueError(f"{path}: not valid TOML: {exc}") from exc
+            unreadable = [Problem("error", f"not valid TOML: {exc}", RecipeFault.NOT_TOML)]
+            raise RecipeUnreadable(f"{path}: not valid TOML: {exc}", path=path, problems=unreadable) from exc
 
         packet = document.get("packet", {})
         if not packet.get("id"):
-            raise ValueError(f"{path}: [packet] declares no id")
+            unnamed = [Problem("error", "[packet] declares no id", RecipeFault.NO_PACKET_ID)]
+            raise RecipeUnreadable(f"{path}: [packet] declares no id", path=path, problems=unnamed)
         if problems := shape_problems(document):
-            raise ValueError(f"{path}: not a recipe (Part 05 §3.1):\n  " + "\n  ".join(problems))
+            raise RecipeUnreadable(
+                f"{path}: not a recipe (Part 05 §3.1):\n  " + "\n  ".join(problems),
+                path=path,
+                problems=[Problem("error", problem, RecipeFault.RECIPE_SHAPE) for problem in problems],
+            )
 
         here = path.parent
 

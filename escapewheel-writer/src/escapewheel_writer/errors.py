@@ -5,7 +5,14 @@ The codes an error or a reported problem carries are declared beside the classes
 
 A recipe that cannot be built:
 
-- :exc:`RecipeError` -- a recipe that cannot be built.
+- :exc:`RecipeError` -- a recipe that cannot be built; each cause below is a subclass.
+- :exc:`RecipeUnreadable` -- a file is not a recipe: not TOML, no packet ID, or off the schema.
+- :exc:`RecipeUnsound` -- a build refuses a recipe, and carries each problem it found.
+- :exc:`UnknownSourceKind` -- a source names a kind no adapter is registered for.
+- :exc:`SourcesNotOrdered` -- what the sources consume gives them no order to run in.
+- :exc:`TermUnfilled` -- a source needs a name the build cannot supply.
+- :exc:`MaterializerNotFound` -- a `[[materialize]]` entry names a resource nothing derives.
+- :exc:`NotesUnderStrict` -- a source reported a note in a build that admits none.
 - :exc:`ReplacementRefused` -- a `[packet].replaces` entry names something a build cannot replace.
 - :exc:`AmendmentRefused` -- the amendment would change a held row, or the packet cannot be amended.
 - :exc:`ExtensionNotFound` -- an entry names neither a file nor an installed distribution.
@@ -33,6 +40,7 @@ A packet root that cannot be committed to, or read back:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -41,6 +49,8 @@ from escapewheel_reader.errors import EscapewheelError, NotAligned
 
 if TYPE_CHECKING:  # pragma: no cover
     from escapewheel_validator import Report
+
+    from .recipe import Problem
 
 
 class WriterError(EscapewheelError):
@@ -154,14 +164,172 @@ class RecipeFault(StrEnum):
     REFERENCE_CLOCK_UNDECLARED = "reference_clock_undeclared"
     #: A clock names a parent that is declared nowhere.
     PARENT_CLOCK_UNDECLARED = "parent_clock_undeclared"
+    #: The file is not valid TOML.
+    NOT_TOML = "not_toml"
+    #: `[packet]` declares no ID.
+    NO_PACKET_ID = "no_packet_id"
+    #: The document does not satisfy the recipe schema.
+    RECIPE_SHAPE = "recipe_shape"
+    #: No published manifest can be read at a `[packet].replaces` entry.
+    REPLACED_UNREADABLE = "replaced_unreadable"
+    #: A replaced manifest's packet ID or version does not satisfy the manifest schema.
+    REPLACED_NO_IDENTITY = "replaced_no_identity"
+    #: Two `[packet].replaces` entries read one manifest.
+    REPLACED_TWICE = "replaced_twice"
+    #: The packet at the recipe's output cannot be amended, or the amendment would change it.
+    AMENDMENT_REFUSED = "amendment_refused"
+    #: The packet an amending recipe names has another packet ID.
+    AMENDS_OTHER_PACKET = "amends_other_packet"
+    #: The packet an amending recipe names is at another version.
+    AMENDS_OTHER_VERSION = "amends_other_version"
+    #: The packet an amending recipe names does not list the recipe's session.
+    AMENDS_OTHER_SESSION = "amends_other_session"
+    #: A registry's standard version differs from the amended packet's.
+    AMENDS_OTHER_STANDARD = "amends_other_standard"
+    #: A `preferred_run` entry names a run neither the packet holds nor the build records.
+    PREFERRED_RUN_UNKNOWN = "preferred_run_unknown"
+    #: A `preferred_run` entry's activity or scope differs from its run's.
+    PREFERRED_RUN_DIFFERS = "preferred_run_differs"
 
 
 class RecipeError(WriterError):
-    """A recipe cannot be built: a source kind is unknown, or its dependencies do not order."""
+    """A recipe cannot be built. Each cause is a subclass."""
+
+
+class RecipeUnreadable(RecipeError, ValueError):
+    """A file is not a recipe: it is not TOML, declares no packet ID, or fails the recipe schema.
+
+    Attributes
+    ----------
+    path : Path
+        The file.
+    problems : list of Problem
+        What is wrong with it, each an error carrying its code.
+    """
+
+    def __init__(self, message: str, *, path: Path, problems: Sequence[Problem]) -> None:
+        super().__init__(message)
+        self.path = path
+        self.problems = list(problems)
+
+
+class RecipeUnsound(RecipeError):
+    """A build refuses a recipe for what its check, or the packet it names, reports (Part 05 §3.5).
+
+    Attributes
+    ----------
+    path : Path
+        The recipe's file.
+    problems : list of Problem
+        Every problem that refuses it, each an error carrying its code.
+    """
+
+    def __init__(self, message: str, *, path: Path, problems: Sequence[Problem]) -> None:
+        super().__init__(message)
+        self.path = path
+        self.problems = list(problems)
+
+
+class UnknownSourceKind(RecipeError):
+    """A source names a kind no adapter is registered for.
+
+    Attributes
+    ----------
+    kind : str
+        The kind the source names.
+    known : tuple of str
+        The kinds an adapter is registered for.
+    """
+
+    def __init__(self, message: str, *, kind: str, known: Sequence[str]) -> None:
+        super().__init__(message)
+        self.kind = kind
+        self.known = tuple(known)
+
+
+class SourcesNotOrdered(RecipeError):
+    """What the sources consume gives them no order to run in.
+
+    Attributes
+    ----------
+    kinds : tuple of str
+        The sources that cannot be placed.
+    missing : tuple of str
+        The kinds they consume that the recipe does not declare; empty where they depend on each
+        other.
+    """
+
+    def __init__(self, message: str, *, kinds: Sequence[str], missing: Sequence[str] = ()) -> None:
+        super().__init__(message)
+        self.kinds = tuple(kinds)
+        self.missing = tuple(missing)
+
+
+class TermUnfilled(RecipeError):
+    """A source needs a name the build cannot supply (Part 12 §4).
+
+    The name is a term the recipe cannot fill, or an option its entry does not set.
+
+    Attributes
+    ----------
+    kind : str
+        The source's kind.
+    name : str
+        The name its adapter declares it needs.
+    """
+
+    def __init__(self, message: str, *, kind: str, name: str) -> None:
+        super().__init__(message)
+        self.kind = kind
+        self.name = name
+
+
+class MaterializerNotFound(RecipeError):
+    """A `[[materialize]]` entry names a resource nothing derives.
+
+    Attributes
+    ----------
+    resource : str
+        The resource the entry names.
+    known : tuple of str
+        The resources this writer derives.
+    """
+
+    def __init__(self, message: str, *, resource: str, known: Sequence[str]) -> None:
+        super().__init__(message)
+        self.resource = resource
+        self.known = tuple(known)
+
+
+class NotesUnderStrict(RecipeError):
+    """A source reported a note in a build that admits none.
+
+    Attributes
+    ----------
+    kind : str
+        The source's kind.
+    notes : list of str
+        The notes it reported since the build last looked.
+    """
+
+    def __init__(self, message: str, *, kind: str, notes: Sequence[str]) -> None:
+        super().__init__(message)
+        self.kind = kind
+        self.notes = list(notes)
 
 
 class ReplacementRefused(WriterError):
-    """A recipe's `[packet].replaces` names what a build cannot replace (Part 05 §3.5)."""
+    """A recipe's `[packet].replaces` names what a build cannot replace (Part 05 §3.5).
+
+    Attributes
+    ----------
+    problems : list of Problem
+        One per entry refused, each an error carrying its code.
+    """
+
+    def __init__(self, message: str, *, problems: Sequence[Problem] = ()) -> None:
+        super().__init__(message)
+        self.problems = list(problems)
 
 
 class AmendmentRefused(WriterError, ValueError):

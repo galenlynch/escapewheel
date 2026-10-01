@@ -33,11 +33,23 @@ from numpy.typing import NDArray
 from . import opaque
 from .amending import Held
 from .declaration import SOURCE_CACHE
-from .errors import AmendmentRefused, RecipeError, ReplacementRefused, SourceDefect
+from .errors import (
+    AmendmentRefused,
+    MaterializerNotFound,
+    NotesUnderStrict,
+    RecipeFault,
+    RecipeUnsound,
+    ReplacementRefused,
+    SourceDefect,
+    SourcesNotOrdered,
+    TermUnfilled,
+    UnknownSourceKind,
+)
 from .extensions import load_checked as load_extension_context
 from .recipe import (
     RECIPE_SUPPLIES,
     TERMS,
+    Problem,
     Recipe,
     SourceSpec,
     declared,
@@ -190,7 +202,7 @@ def order(recipe: Recipe) -> list[SourceSpec]:
 
     Raises
     ------
-    RecipeError
+    SourcesNotOrdered
         If a source consumes a kind the recipe does not declare, or the dependencies cycle.
     """
     remaining = list(recipe.sources)
@@ -198,15 +210,21 @@ def order(recipe: Recipe) -> list[SourceSpec]:
     for spec in remaining:
         missing = [k for k in declared(spec)["consumes"] if k not in kinds]
         if missing:
-            raise RecipeError(f"source {spec.kind} consumes {', '.join(missing)}, which the recipe does not declare")
+            raise SourcesNotOrdered(
+                f"source {spec.kind} consumes {', '.join(missing)}, which the recipe does not declare",
+                kinds=[spec.kind],
+                missing=missing,
+            )
 
     ordered: list[SourceSpec] = []
     done: set[str] = set()
     while remaining:
         ready = [s for s in remaining if set(declared(s)["consumes"]) <= done]
         if not ready:
-            stuck = ", ".join(sorted(s.kind for s in remaining))
-            raise RecipeError(f"sources {stuck} depend on each other and cannot be ordered")
+            stuck = sorted(s.kind for s in remaining)
+            raise SourcesNotOrdered(
+                f"sources {', '.join(stuck)} depend on each other and cannot be ordered", kinds=stuck
+            )
         ordered.extend(ready)
         done.update(s.kind for s in ready)
         remaining = [s for s in remaining if s not in ready]
@@ -290,10 +308,14 @@ def _supplied(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str, A
     for name in names:
         if name in TERMS:
             if name not in terms:
-                raise RecipeError(f"source {spec.kind} needs {name!r}, which this recipe cannot fill")
+                raise TermUnfilled(
+                    f"source {spec.kind} needs {name!r}, which this recipe cannot fill", kind=spec.kind, name=name
+                )
             supplied[name] = terms[name]
         elif name not in spec.options:
-            raise RecipeError(f"source {spec.kind} needs {name!r}, which this entry does not set")
+            raise TermUnfilled(
+                f"source {spec.kind} needs {name!r}, which this entry does not set", kind=spec.kind, name=name
+            )
     if SOURCE_CACHE in declared(spec)["accepts"] and context.source_cache is not None:
         supplied[SOURCE_CACHE] = str(context.source_cache)
     return {**supplied, "options": dict(spec.options)}
@@ -337,8 +359,10 @@ def _build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> Any:
 
     adapter = ADAPTERS.get(spec.kind) or discovered().get(spec.kind)
     if adapter is None:
-        known = ", ".join(sorted({*ADAPTERS, *discovered()}))
-        raise RecipeError(f"unknown source kind {spec.kind!r}; known kinds are {known}")
+        known = sorted({*ADAPTERS, *discovered()})
+        raise UnknownSourceKind(
+            f"unknown source kind {spec.kind!r}; known kinds are {', '.join(known)}", kind=spec.kind, known=known
+        )
     # In process, adapters reading one Zarr root share an open store, so they cannot disagree about
     # what is in it and the electrode table is parsed once. A handle is not something an adapter may
     # declare (Part 12 §4), so it is supplied where the class accepts one rather than from a
@@ -354,7 +378,10 @@ def _reference_clock(recipe: Recipe, context: Context) -> Any:
     for spec in recipe.clocks:
         if spec.clock_id == wanted:
             return spec.clock(context.session_id)
-    raise RecipeError(f"no [[clock]] declares {wanted!r}, which [session].reference_clock_id names")
+    message = f"no [[clock]] declares {wanted!r}, which [session].reference_clock_id names"
+    raise RecipeUnsound(
+        message, path=recipe.path, problems=[Problem("error", message, RecipeFault.REFERENCE_CLOCK_UNDECLARED)]
+    )
 
 
 #: Part 05 §3.6: facts whose difference refuses a build rather than being reported. A subject is not
@@ -762,14 +789,18 @@ def materializers(recipe: Recipe, memory_budget: int | str = 0) -> list[Callable
 
     Raises
     ------
-    RecipeError
+    MaterializerNotFound
         If a resource is named that nothing knows how to derive.
     """
     built: list[Callable[[Any, Any], None]] = []
     for spec in recipe.materialize:
         if spec.resource not in MATERIALIZERS:
-            known = ", ".join(sorted(MATERIALIZERS)) or "nothing"
-            raise RecipeError(f"no materializer for {spec.resource}; this writer derives {known}")
+            known = sorted(MATERIALIZERS)
+            raise MaterializerNotFound(
+                f"no materializer for {spec.resource}; this writer derives {', '.join(known) or 'nothing'}",
+                resource=spec.resource,
+                known=known,
+            )
         options = dict(spec.options)
         if memory_budget and "memory_budget" not in options:
             options["memory_budget"] = memory_budget
@@ -836,15 +867,15 @@ def build(  # noqa: C901
         try:
             replaced = read_replaced(recipe.replaces, recipe.path.parent)
         except ReplacementRefused as exc:
-            raise RecipeError(f"{recipe.path}: refused, [packet].replaces (Part 05 §3.5): {exc}") from None
+            raise _refusal(recipe, "refused, [packet].replaces (Part 05 §3.5): ", exc.problems) from exc
     problems = recipe.check(
         checked_registry,
         extension_documents,
         held_tables=() if held is None else held.tables_named(),
         held_clocks=() if held is None else held.clock_names(),
     )
-    if errors := [p.message for p in problems if p.level == "error"]:
-        raise RecipeError(f"{recipe.path}: refused, {len(errors)} error(s): " + "; ".join(errors))
+    if errors := [p for p in problems if p.level == "error"]:
+        raise _refusal(recipe, f"refused, {len(errors)} error(s): ", errors)
     session_id = str(recipe.session["session_id"])
     context = Context(
         session_id=session_id,
@@ -877,7 +908,7 @@ def build(  # noqa: C901
         try:
             writer.amending(held, prevail=True)
         except AmendmentRefused as exc:
-            raise RecipeError(f"{recipe.path}: refused: {exc}") from None
+            raise _refusal(recipe, "refused: ", [_amendment_refused(exc)]) from exc
         _from_packet(context, held, writer, session_id)
     context.staging = writer.stage_at(recipe.out)
 
@@ -1002,29 +1033,60 @@ def _held(recipe: Recipe, registry: Mapping[str, Any], extensions: Collection[Ma
     try:
         held = Held.open(recipe.out)
     except AmendmentRefused as exc:
-        raise RecipeError(f"{recipe.path}: refused: {exc} (Part 05 §3.5)") from None
+        raise _refusal(recipe, "refused: ", [_amendment_refused(exc)], cites=" (Part 05 §3.5)") from exc
     manifest = held.manifest
     problems = []
     if manifest["packet_id"] != recipe.packet_id:
-        problems.append(f"the packet at {recipe.out} is {manifest['packet_id']}, and [packet].id is {recipe.packet_id}")
+        problems.append(
+            Problem(
+                "error",
+                f"the packet at {recipe.out} is {manifest['packet_id']}, and [packet].id is {recipe.packet_id}",
+                RecipeFault.AMENDS_OTHER_PACKET,
+            )
+        )
     if manifest["packet_version"] != recipe.amends:
         problems.append(
-            f"the packet at {recipe.out} is at version {manifest['packet_version']}, and [packet].amends is "
-            f"{recipe.amends}"
+            Problem(
+                "error",
+                f"the packet at {recipe.out} is at version {manifest['packet_version']}, and [packet].amends is "
+                f"{recipe.amends}",
+                RecipeFault.AMENDS_OTHER_VERSION,
+            )
         )
     if str(recipe.session.get("session_id")) not in manifest.get("sessions", ()):
-        problems.append(f"the packet does not list session {recipe.session.get('session_id')}")
+        problems.append(
+            Problem(
+                "error",
+                f"the packet does not list session {recipe.session.get('session_id')}",
+                RecipeFault.AMENDS_OTHER_SESSION,
+            )
+        )
     for document in (registry, *extensions):
         name = str(document.get("extension_id", "core"))
         standards = ("logical_standard_version",) + (("semantic_standard_version",) if name == "core" else ())
         problems += [
-            f"registry {name} has {standard} {document.get(standard)}, and the packet {manifest.get(standard)}"
+            Problem(
+                "error",
+                f"registry {name} has {standard} {document.get(standard)}, and the packet {manifest.get(standard)}",
+                RecipeFault.AMENDS_OTHER_STANDARD,
+            )
             for standard in standards
             if document.get(standard) != manifest.get(standard)
         ]
     if problems:
-        raise RecipeError(f"{recipe.path}: refused, an amending recipe (Part 05 §3.5): " + "; ".join(problems))
+        raise _refusal(recipe, "refused, an amending recipe (Part 05 §3.5): ", problems)
     return held
+
+
+def _refusal(recipe: Recipe, lead: str, problems: Sequence[Problem], *, cites: str = "") -> RecipeUnsound:
+    """Return the refusal of `recipe`: its path, `lead`, each problem, and the part `cites` names."""
+    message = f"{recipe.path}: {lead}" + "; ".join(p.message for p in problems) + cites
+    return RecipeUnsound(message, path=recipe.path, problems=problems)
+
+
+def _amendment_refused(refusal: AmendmentRefused) -> Problem:
+    """Return an amendment's refusal as the problem a recipe's refusal carries."""
+    return Problem("error", str(refusal), RecipeFault.AMENDMENT_REFUSED)
 
 
 def _from_packet(context: Context, held: Held, writer: PacketWriter, session_id: str) -> None:
@@ -1075,7 +1137,7 @@ def _preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, ses
 
     Raises
     ------
-    RecipeError
+    RecipeUnsound
         Naming each entry whose run neither the packet holds nor the build records, or whose run's
         activity or scope differs from the entry's.
     """
@@ -1088,7 +1150,13 @@ def _preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, ses
         name = str(entry["processing_run_name"])
         run = runs.get(name)
         if run is None:
-            problems.append(f"[[preferred_run]] {name} names no run the packet holds or this build records")
+            problems.append(
+                Problem(
+                    "error",
+                    f"[[preferred_run]] {name} names no run the packet holds or this build records",
+                    RecipeFault.PREFERRED_RUN_UNKNOWN,
+                )
+            )
             continue
         differs = [
             f"{column} {run.get(column)!r}, not {entry[column]!r}"
@@ -1096,7 +1164,13 @@ def _preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, ses
             if str(run.get(column)) != str(entry[column])
         ]
         if differs:
-            problems.append(f"[[preferred_run]] {name} names a run whose {', '.join(differs)}")
+            problems.append(
+                Problem(
+                    "error",
+                    f"[[preferred_run]] {name} names a run whose {', '.join(differs)}",
+                    RecipeFault.PREFERRED_RUN_DIFFERS,
+                )
+            )
             continue
         rows.append(
             {
@@ -1110,7 +1184,7 @@ def _preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, ses
             }
         )
     if problems:
-        raise RecipeError(f"{recipe.path}: refused (Part 05 §3.5): " + "; ".join(problems))
+        raise _refusal(recipe, "refused (Part 05 §3.5): ", problems)
     return rows
 
 
@@ -1145,7 +1219,9 @@ def _say_notes(kind: str, source: Any, seen: int, say: Callable[[str], None], st
     for note in notes[seen:]:
         say(f"  note: {note}")
     if strict and len(notes) > seen:
-        raise RecipeError(f"{kind}: {len(notes) - seen} note(s) under --strict; first is {notes[seen]}")
+        raise NotesUnderStrict(
+            f"{kind}: {len(notes) - seen} note(s) under --strict; first is {notes[seen]}", kind=kind, notes=notes[seen:]
+        )
     return len(notes)
 
 

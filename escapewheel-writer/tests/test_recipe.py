@@ -6,11 +6,16 @@ from typing import ClassVar
 
 import pytest
 
-from escapewheel_writer.errors import RecipeFault, SourceDefect
+from escapewheel_writer.errors import (
+    RecipeFault,
+    RecipeUnreadable,
+    RecipeUnsound,
+    SourceDefect,
+    SourcesNotOrdered,
+)
 from escapewheel_writer.recipe import RECIPE_SUPPLIES, Recipe
 from escapewheel_writer.session import (
     Context,
-    RecipeError,
     _encoding_exceptions,
     _note_unclaimed,
     _refuse_a_discarded_fact,
@@ -235,15 +240,17 @@ def test_sources_order_after_what_they_consume(tmp_path, registry):
 def test_a_source_consuming_an_undeclared_kind_is_refused(tmp_path):
     """`NWBSource` needs the sorter's units to attach a unit to an electrode."""
     body = '\n[[source]]\nkind = "nwb"\nroot = "."\nowns = []\n'
-    with pytest.raises(RecipeError, match="consumes sorter"):
+    with pytest.raises(SourcesNotOrdered) as refused:
         order(Recipe.load(write(tmp_path, body)))
+    assert (refused.value.kinds, refused.value.missing) == (("nwb",), ("sorter",))
 
 
 def test_a_dependency_cycle_is_refused(tmp_path, monkeypatch):
     monkeypatch.setattr(ADAPTERS["sorter"], "CONSUMES", ("nwb",))
     body = '\n[[source]]\nkind = "nwb"\nroot = "."\nowns = []\n\n[[source]]\nkind = "sorter"\nroot = "."\nowns = []\n'
-    with pytest.raises(RecipeError, match="depend on each other"):
+    with pytest.raises(SourcesNotOrdered) as refused:
         order(Recipe.load(write(tmp_path, body)))
+    assert (refused.value.kinds, refused.value.missing) == (("nwb", "sorter"), ())
 
 
 def test_a_required_option_is_reported_not_crashed_on(tmp_path):
@@ -565,9 +572,10 @@ def test_a_kind_listed_twice_is_refused(tmp_path, registry):
 )
 def test_a_recipe_failing_the_schema_is_refused_on_load(tmp_path, body, where):
     """Part 05 §3.1: a misspelled block is refused rather than dropped, before any source opens."""
-    with pytest.raises(ValueError, match="not a recipe") as refused:
+    with pytest.raises(RecipeUnreadable) as refused:
         Recipe.load(write(tmp_path, body))
-    assert where in str(refused.value)
+    assert {p.code for p in refused.value.problems} == {RecipeFault.RECIPE_SHAPE}
+    assert any(where in p.message for p in refused.value.problems)
 
 
 def test_a_defaulted_entry_contributes_and_does_not_own_what_it_lists_under_contributes(tmp_path, registry):
@@ -627,8 +635,11 @@ def test_an_override_is_recorded_rather_than_warned(tmp_path, registry):
 def test_an_override_with_no_reason_is_refused(tmp_path):
     """Part 05 §3.6: a bare marker would silence a difference without saying why."""
     body = '\n[overrides]\n"subject.subject_id" = "   "\n' + NWB
-    with pytest.raises(ValueError, match="overrides/subject.subject_id"):
+    with pytest.raises(RecipeUnreadable) as refused:
         Recipe.load(write(tmp_path, body))
+    (problem,) = refused.value.problems
+    assert problem.code is RecipeFault.RECIPE_SHAPE
+    assert problem.message.startswith("overrides/subject.subject_id")
 
 
 def test_an_override_of_a_fact_nothing_states_is_reported_not_refused(tmp_path, registry):
@@ -696,8 +707,10 @@ def test_an_encoding_declaration_needs_a_choice_and_a_reason(tmp_path, entry):
     The reason is what makes the entry re-judgeable: an encoding is a fact about one packet's
     values, so a bare choice cannot be checked against the next session's data.
     """
-    with pytest.raises(ValueError, match="encoding/aind_unit_qc.metrics.silhouette"):
+    with pytest.raises(RecipeUnreadable) as refused:
         Recipe.load(write(tmp_path, f'\n[encoding]\n"aind_unit_qc.metrics.silhouette" = {entry}\n'))
+    assert {p.code for p in refused.value.problems} == {RecipeFault.RECIPE_SHAPE}
+    assert all(p.message.startswith("encoding/aind_unit_qc.metrics.silhouette") for p in refused.value.problems)
 
 
 def test_an_encoding_declaration_names_a_declared_column(tmp_path):
@@ -1154,8 +1167,9 @@ def test_a_build_refuses_disagreeing_prefixes_before_opening_a_source(tmp_path, 
     from escapewheel_writer.session import build
 
     recipe = Recipe.load(write(tmp_path, prefixed(sorter="a.", nwb=None).replace('root = "."', 'root = "absent"')))
-    with pytest.raises(RecipeError, match="disagree on prefix"):
+    with pytest.raises(RecipeUnsound) as refused:
         build(recipe, registry)
+    assert RecipeFault.PREFIX_DISAGREES in {p.code for p in refused.value.problems}
     assert not (recipe.out / "staging").exists(), "refused before anything was prepared"
 
 

@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 from escapewheel_reader import open_packet
 
-from escapewheel_writer.errors import RecipeError, SourceDefect
+from escapewheel_writer.errors import RecipeFault, RecipeUnsound, SourceDefect
 from escapewheel_writer.recipe import Recipe, SourceSpec
 from escapewheel_writer.session import _compare_held_facts, build
 from tests.conftest import REGISTRY
@@ -77,8 +77,9 @@ def test_an_amending_build_adds_a_curation_and_prefers_it(packet):
 def test_an_amending_build_refuses_a_version_it_does_not_amend(packet):
     root, sorted_root = packet
     recipe = Recipe.load(_amending(root, sorted_root, amends="0.2.0"))
-    with pytest.raises(RecipeError, match="amends is 0.2.0"):
+    with pytest.raises(RecipeUnsound) as refused:
         build(recipe, REGISTRY)
+    assert [p.code for p in refused.value.problems] == [RecipeFault.AMENDS_OTHER_VERSION]
 
 
 def test_an_amending_recipe_declares_no_session_fact(packet):
@@ -86,15 +87,19 @@ def test_an_amending_recipe_declares_no_session_fact(packet):
     root, sorted_root = packet
     path = _amending(root, sorted_root)
     path.write_text(path.read_text().replace('session_id = "s1"\n', 'session_id = "s1"\ntask_name = "x"\n', 1))
-    with pytest.raises(RecipeError, match=r"\[session\] task_name"):
+    with pytest.raises(RecipeUnsound) as refused:
         build(Recipe.load(path), REGISTRY)
+    (problem,) = refused.value.problems
+    assert problem.code is RecipeFault.AMENDING_DECLARES
+    assert "[session] task_name" in problem.message
 
 
 def test_an_amending_build_refuses_a_held_clock_declared_again(packet):
     root, sorted_root = packet
     clock = f'\n[[clock]]\nclock_id = "{CLOCK_NAME}"\nname = "HARP"\ntick_rate_num = 31250\norigin = "harp epoch"\n'
-    with pytest.raises(RecipeError, match="holds a clock of that name"):
+    with pytest.raises(RecipeUnsound) as refused:
         build(Recipe.load(_amending(root, sorted_root, extra=clock)), REGISTRY)
+    assert [p.code for p in refused.value.problems] == [RecipeFault.CLOCK_HELD]
 
 
 def test_rerunning_the_held_curation_adds_none_of_its_rows(packet):
@@ -131,8 +136,9 @@ def test_a_preferred_run_naming_no_run_is_refused(packet):
         '\n[[preferred_run]]\nactivity_type = "curation"\nscope_kind = "core.sorting_runs"\n'
         'scope = "x"\nprocessing_run_name = "nothing"\nreason = "r"\n'
     )
-    with pytest.raises(RecipeError, match="names no run"):
+    with pytest.raises(RecipeUnsound) as refused:
         build(Recipe.load(_amending(root, sorted_root, extra=entry)), REGISTRY)
+    assert [p.code for p in refused.value.problems] == [RecipeFault.PREFERRED_RUN_UNKNOWN]
 
 
 def _stating(**facts):

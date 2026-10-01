@@ -19,7 +19,8 @@ from typing import Any
 import jsonschema
 from escapewheel_validator.manifest import manifest_schema
 
-from .errors import ReplacementRefused
+from .errors import RecipeFault, ReplacementRefused
+from .recipe import Problem
 from .writer import MANIFEST
 
 
@@ -58,7 +59,7 @@ def read_replaced(entries: Iterable[str], base: Path) -> tuple[Replaced, ...]:
         Naming every entry refused.
     """
     identity = jsonschema.Draft202012Validator(_identity_schema())
-    problems: list[str] = []
+    problems: list[Problem] = []
     read: list[Replaced] = []
     for entry in entries:
         path = base / entry
@@ -67,11 +68,23 @@ def read_replaced(entries: Iterable[str], base: Path) -> tuple[Replaced, ...]:
             body = path.read_bytes()
             manifest = json.loads(body)
         except (OSError, ValueError) as exc:
-            problems.append(f"{entry}: no published manifest can be read ({type(exc).__name__})")
+            problems.append(
+                Problem(
+                    "error",
+                    f"{entry}: no published manifest can be read ({type(exc).__name__})",
+                    RecipeFault.REPLACED_UNREADABLE,
+                )
+            )
             continue
         errors = [] if not isinstance(manifest, dict) else [e.message for e in identity.iter_errors(manifest)]
         if not isinstance(manifest, dict) or errors:
-            problems.append(f"{entry}: the manifest's packet_id or packet_version fails the manifest schema")
+            problems.append(
+                Problem(
+                    "error",
+                    f"{entry}: the manifest's packet_id or packet_version fails the manifest schema",
+                    RecipeFault.REPLACED_NO_IDENTITY,
+                )
+            )
             continue
         entries_read = [r for r in manifest.get("resources", ()) if isinstance(r, Mapping) and "resource_id" in r]
         resources = frozenset(str(r["resource_id"]) for r in entries_read)
@@ -83,7 +96,11 @@ def read_replaced(entries: Iterable[str], base: Path) -> tuple[Replaced, ...]:
     by_digest: dict[str, list[str]] = {}
     for replaced in read:
         by_digest.setdefault(replaced.sha256, []).append(replaced.entry)
-    problems += [f"{' and '.join(named)} read one manifest" for named in by_digest.values() if len(named) > 1]
+    problems += [
+        Problem("error", f"{' and '.join(named)} read one manifest", RecipeFault.REPLACED_TWICE)
+        for named in by_digest.values()
+        if len(named) > 1
+    ]
     if problems:
-        raise ReplacementRefused("; ".join(problems))
+        raise ReplacementRefused("; ".join(p.message for p in problems), problems=problems)
     return tuple(read)

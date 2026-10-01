@@ -10,7 +10,13 @@ from escapewheel_reader import open_packet
 from escapewheel_validator import RegistryRejected
 
 from escapewheel_writer import PacketWriter
-from escapewheel_writer.errors import CommitRefused, ExtensionNotFound, RecipeError, RecipeFault
+from escapewheel_writer.errors import (
+    CommitRefused,
+    ExtensionNotFound,
+    RecipeFault,
+    RecipeUnsound,
+    UnknownSourceKind,
+)
 
 EXTENSION = {
     "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
@@ -233,8 +239,10 @@ def test_an_unknown_kind_names_what_is_known(tmp_path, monkeypatch):
 
     monkeypatch.setattr("escapewheel_writer.sources.discovered", lambda: {"tasklog": _Registered})
     spec = SourceSpec(kind="nonesuch", root=tmp_path, owns=())
-    with pytest.raises(RecipeError, match="known kinds are .*tasklog"):
+    with pytest.raises(UnknownSourceKind) as refused:
         _build_source(spec, None, Context(session_id="s001"))
+    assert refused.value.kind == "nonesuch"
+    assert "tasklog" in refused.value.known
 
 
 def test_a_broken_plugin_is_skipped_not_raised(monkeypatch):
@@ -535,10 +543,10 @@ def _build_refuses(recipe, registry, monkeypatch):
         raise AssertionError("a source was opened")
 
     monkeypatch.setattr(session, "_build_source", opened)
-    with pytest.raises(RecipeError) as refused:
+    with pytest.raises(RecipeUnsound) as refused:
         session.build(recipe, registry)
     assert not (recipe.out / "staging").exists(), "refused before anything was prepared"
-    return str(refused.value)
+    return refused.value
 
 
 @pytest.mark.parametrize(
@@ -566,8 +574,9 @@ def test_a_recipe_listing_one_extension_twice_is_refused(
     recipe = Recipe.load(_extensions_recipe(tmp_path, entries, documents, SORTER))
     refusal = _build_refuses(recipe, registry, monkeypatch)
     named = ", ".join(repr(entry) for entry in entries)
-    assert "refused, 1 error(s)" in refusal
-    assert f"extension task is listed in 2 entries ({named})" in refusal
+    (problem,) = refusal.problems
+    assert problem.code is RecipeFault.REPEATED_EXTENSION
+    assert f"extension task is listed in 2 entries ({named})" in problem.message
 
 
 def test_the_check_command_refuses_one_extension_listed_twice(tmp_path, capsys):

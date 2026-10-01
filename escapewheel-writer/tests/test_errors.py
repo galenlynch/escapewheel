@@ -32,6 +32,7 @@ def test_every_exception_is_defined_in_the_error_module_under_the_package_base()
 def test_an_error_a_caller_catches_as_a_built_in_stays_one():
     """Each of these was a `ValueError` before the package had a base class."""
     for cls in (
+        errors.RecipeUnreadable,
         errors.AmendmentRefused,
         errors.SourceDefect,
         errors.UnsupportedEncoding,
