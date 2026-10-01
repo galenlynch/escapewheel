@@ -157,8 +157,8 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 
 ### 5.4 Tests
 
-- [ ] Convert every cross-package `match=` to a class and attribute assertion.
-- [ ] Convert in-package `match=` where a code or attribute now exists.
+- [x] Convert every cross-package `match=` to a class and attribute assertion.
+- [x] Convert in-package `match=` where a code or attribute now exists.
 
 ## 6. Stages 2 and 3: vocabularies and the public surface
 
@@ -203,7 +203,7 @@ module declares `__all__`, and `api.rst` lists exactly the two tiers.
       hooks that aind overrides, with the two accessors and the `clean` helper it calls; delete
       `into()`.
 - [x] aind and `conformance/`: import only from the tiers.
-- [ ] Tests: stop importing private names across modules, or move the test beside the module
+- [x] Tests: stop importing private names across modules, or move the test beside the module
       whose private name it needs.
 
 ## 7. Stage 4: splits
@@ -256,7 +256,7 @@ Known obstacles:
       caches they reach by `getattr` become one public memo.
 - [x] Tests: split `test_validation.py` (2,336 lines), `test_writer.py` (1,530) and
       `test_recipe.py` (1,194) along the new modules.
-- [ ] Tests: one shared packet-fixture helper for the reader's and validator's suites, with its
+- [x] Tests: one shared packet-fixture helper for the reader's and validator's suites, with its
       small registry derived from the real one; one `nwbfixture` for the writer and aind.
 - [x] Corpus: `fixtures/build.py` (2,312 lines) is held together by the module globals `KEYS` and
       `SPECS`. Replace them with an object, declare each packet once as a record that carries its
@@ -850,3 +850,32 @@ Found and left as they were:
   declares, since a tree tool imports nothing outside the tree.
 - The writer's contributor guide and its performance page cite the part that states a rule. aind
   has no documentation tree and no importable tier, which its README now states.
+
+### 11.19 The shared NWB fixture, test helpers and the last `match=` assertions
+
+- The NWB fixture the writer's and aind's suites build is `fixtures/shared/nwbfixture.py`,
+  reached through pytest's `pythonpath` as the packet fixture of §11.16 is. aind's
+  `tests/nwbfixture.py` stays as an overlay that adds the AIND dialect to the shared build, at the
+  path `revisions/repoint.py` exempts its citation by. Both fixtures' files were compared by
+  bytes before and after.
+- `fixtures/shared/adapter_columns.py` holds the comparison of an adapter's columns with its
+  declaration that both packages' tests repeated.
+- A helper two test modules share has a public name in a helper module: `tests/builders.py` in
+  the writer, aind and validator, the writer's `tests/lfpfixture.py`, and `conftest.py` for a
+  fixture. Each package's surface test refuses an underscore name imported from a test or helper
+  module, and each contributor guide states the rule.
+- A test of a private function sits in the test module named for that function's module, so
+  `test_reading.py` is new. aind's HARP dialect test stubs the `yaml` module and no longer patches
+  a private method of the writer.
+- The surface tests check imports. A test still reaches a private attribute through an object in
+  nine places with no public equivalent, among them `writer._attachments`,
+  `writer._encoding_notes` and `serving._write` from a generated child script.
+- `conformance/adapter-boundary/probe.py` imports the writer's `test_waveforms` as its fixture
+  and keeps the writer's tests on its path. `conformance/specification-framework/probe.py` and
+  three tests under `spec/tools/tests` reach private names of `framework`, `assemble` and
+  `canonical`, which have no public equivalent; §6.2 names the four packages and these stay.
+- No test matches the text of another package's exception. What remains matches a built-in or
+  third-party exception, a warning, or a class carrying only a message: the reader's 44 and the
+  validator's one of §11.16, one in the writer, and ten under `spec/tools`, where
+  `GenerationError` and `RuleProfileError` have no attribute for the cause. One parametrized case
+  there passes an empty `match`, which asserts nothing.

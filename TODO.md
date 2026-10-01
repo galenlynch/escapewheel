@@ -34,8 +34,9 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 
 ### What stands between here and a v0.2 release
 
-1. **Finish the pre-release refactor.** [REFACTOR.md](REFACTOR.md) holds the audit's findings, the
-   settled decisions and five stages of work; all five land before the field test.
+1. **Close the pre-release refactor.** [REFACTOR.md](REFACTOR.md) holds the audit's findings, the
+   settled decisions and five stages of work, all landed. Two of its listed defects wait on a
+   revision each (§3).
 2. **Field-test the release candidate** (roadmap P10.2). Packets are built and used from the
    current contract with every identifier still a development identifier (Part 02 §9.2). A defect
    in a part, registry or schema it finds is a revision; an implementation defect is maintenance.
@@ -123,15 +124,19 @@ warrants. Nothing needs it while every recipe runs sync in process.
 
 ## 3. The pre-release refactor
 
-**Under way.** The audit asked for on 2026-09-06 ran on 2026-10-01 over the four packages, the
-repository scripts and the specification tooling. [REFACTOR.md](REFACTOR.md) records what it found,
-the decisions taken, the defects to fix and the work as five stages of checklists: errors, declared
-vocabularies, the public surface, module splits, and structural changes. Its checkboxes say what
-has landed and its section 11 records each choice made on the way. Stage 1 is done in every
-package apart from the last test conversions; the reader is through stage 5; the corpus and the
-specification tooling are restructured apart from the registry checker's split. One question from
-the 2026-09-06 request is not answered by it: which problems a dependency already solves that this
-code solves again.
+**Done apart from two defects that wait on a decision.** The audit asked for on 2026-09-06 ran on
+2026-10-01 over the four packages, the repository scripts and the specification tooling.
+[REFACTOR.md](REFACTOR.md) records what it found, the decisions taken and the work as five stages
+of checklists, and its section 11 records each choice made on the way. Every stage and the
+specification tooling work have landed. Two defects of its section 4 stay open, since neither can
+be fixed without a revision:
+
+- a delivered adapter's compensations are dropped, and either way of carrying them changes
+  Part 12 (§6 below lists it); and
+- the ledger's two weak checks, which the two ledger proposals of §3a cover.
+
+One question from the 2026-09-06 request is not answered by it: which problems a dependency
+already solves that this code solves again.
 
 ## 3a. Two drafts await acceptance and three proposals await promotion
 
