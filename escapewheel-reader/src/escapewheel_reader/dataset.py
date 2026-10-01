@@ -5,7 +5,6 @@
   :meth:`~Dataset.table` or as DuckDB views from :meth:`~Dataset.duckdb`.
 - :class:`Session` -- one packet's session, and the ``session_key`` the dataset gave it.
 - :func:`session_scoped` -- the tables a registry scopes to a session.
-- :class:`MultiSessionUnresolved` -- a scoped table cannot say which session a row is from.
 
 An identifier is assigned within its packet, so rows from two packets are told apart by
 ``session_key``, never by their identifiers.
@@ -21,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from .errors import PacketError
+from .errors import MultiSessionUnresolved
 from .location import Location
 from .packet import Packet, open_packet
 from .resources import TableResource
@@ -37,16 +36,6 @@ SESSIONS = "core.sessions"
 #: discriminator Part 05 §13.1 requires; `session_name` is the label it permits beside one, and
 #: promises nothing about what two packets' matching labels denote.
 PROJECTED = ("session_key", "session_name")
-
-
-class MultiSessionUnresolved(PacketError):
-    """A packet holds several sessions and a scoped table cannot say which row is whose.
-
-    Part 05 §13.1 requires a discriminator on every session-scoped table a reader presents. Part
-    02 §7.1 requires every such table to carry `session_id`, so a conforming current packet cannot
-    reach this. It is kept because an older packet can, and refusing such a packet loudly is what
-    a reader owes rows it cannot attribute.
-    """
 
 
 def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
@@ -434,7 +423,6 @@ __all__ = [
     "PROJECTED",
     "SESSIONS",
     "Dataset",
-    "MultiSessionUnresolved",
     "Session",
     "open_dataset",
     "session_scoped",

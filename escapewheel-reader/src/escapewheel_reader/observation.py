@@ -6,7 +6,6 @@
 - :func:`rate` -- a count divided by a duration, neither defaulted.
 - :func:`rate_of` -- a table's rows divided by the support attached to it.
 - :func:`attach_support`, :func:`support_of` -- set and read that support.
-- :class:`StaleSupport` -- a table's rows changed after its support was attached.
 - :func:`register_views` -- `unit_observation` and `stream_observation` as DuckDB views.
 """
 
@@ -18,6 +17,8 @@ from typing import TYPE_CHECKING, Any
 
 import pyarrow as pa
 import pyarrow.compute as pc
+
+from .errors import StaleSupport
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
@@ -405,15 +406,6 @@ SUPPORT_KEY = b"escapewheel.support"
 ROWS_KEY = b"escapewheel.support_rows"
 
 
-class StaleSupport(ValueError):
-    """A table carries a support that no longer describes it.
-
-    Raised when the row count has changed since the support was attached -- a filter, a slice
-    or a concatenation. The support itself is still true of the thing it was read for; it is
-    the association with *these rows* that has broken, so re-read rather than adjust.
-    """
-
-
 def attach_support(table: pa.Table, windows: pa.Table) -> pa.Table:
     """Return `table` carrying `windows` as its support, fingerprinted by row count.
 
@@ -555,7 +547,6 @@ __all__ = [
     "SUPPORT_KEY",
     "UNIT_INTERVALS",
     "VIEWS",
-    "StaleSupport",
     "attach_support",
     "clock_windows",
     "observed_seconds",

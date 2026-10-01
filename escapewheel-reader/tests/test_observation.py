@@ -12,11 +12,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_reader import open_packet
+from escapewheel_reader import StaleSupport, open_packet
 from escapewheel_reader.observation import (
     DECLARED,
     INHERITED,
-    StaleSupport,
     attach_support,
     clock_windows,
     observed_seconds,

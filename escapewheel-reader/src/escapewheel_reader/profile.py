@@ -5,7 +5,6 @@
 - :func:`variant_for_zarr_format` -- the descriptor variant a Zarr format version selects.
 - :func:`parquet_floor`, :func:`zarr_floor_admits` -- the reader floors (Part 03 §6.4).
 - :func:`physical_profile_schema` -- the schema the descriptor is checked against.
-- :class:`PhysicalProfileError` -- the descriptor is malformed or inconsistent.
 """
 
 from __future__ import annotations
@@ -17,10 +16,7 @@ from importlib import resources as importlib_resources
 from typing import Any
 
 from .descriptor import check_physical_profile
-
-
-class PhysicalProfileError(ValueError):
-    """The physical-profile descriptor is malformed or internally inconsistent."""
+from .errors import PhysicalProfileError
 
 
 def _bundled_json(relative: str) -> dict[str, Any]:

@@ -14,9 +14,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from escapewheel_reader import open_packet
+from escapewheel_reader import ClockMismatch, open_packet
 from escapewheel_reader.alignment import (
-    ClockMismatch,
     aligned_spikes,
     assigned_spikes,
     windows_disjoint,

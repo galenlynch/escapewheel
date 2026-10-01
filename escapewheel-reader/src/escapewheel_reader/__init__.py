@@ -41,7 +41,7 @@ from __future__ import annotations
 from importlib.metadata import version
 
 from .access import STORED, distinct, events, intervals, spike_times, units
-from .alignment import ClockMismatch, aligned_spikes, assigned_spikes, windows_disjoint
+from .alignment import aligned_spikes, assigned_spikes, windows_disjoint
 from .axes import (
     ArrayDescription,
     Axis,
@@ -50,15 +50,13 @@ from .axes import (
     NumericAxis,
     Scaling,
     TickAxis,
-    UnresolvableAxis,
     describe,
 )
 from .channels import ChannelsUndeclared, electrode_at, kept_channels, runs_without_channels
-from .clocks import BOUND, NotAligned, Unanchored, align, on_clock, origin, reference_clock, seconds
+from .clocks import BOUND, align, on_clock, origin, reference_clock, seconds
 from .dataset import (
     PROJECTED,
     Dataset,
-    MultiSessionUnresolved,
     Session,
     open_dataset,
     session_scoped,
@@ -74,12 +72,18 @@ from .discriminators import (
 )
 from .errors import (
     AmbiguousRun,
+    ClockMismatch,
     ManifestError,
+    MultiSessionUnresolved,
+    NotAligned,
     NoTimeOrigin,
     PacketError,
     RegistryUnavailable,
     ResourceNotFoundError,
     ResourceUnreadableError,
+    StaleSupport,
+    Unanchored,
+    UnresolvableAxis,
     UnresolvableChannelIndex,
     UnresolvedSource,
     UnsupportedCodecError,
@@ -87,7 +91,6 @@ from .errors import (
 from .location import Location, check_sources, read_sources, sources_schema
 from .manifest import Manifest, RegistryBinding, Resource
 from .observation import (
-    StaleSupport,
     clock_windows,
     observed_seconds,
     observed_ticks,

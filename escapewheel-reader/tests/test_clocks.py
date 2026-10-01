@@ -5,7 +5,8 @@ import pyarrow as pa
 import pytest
 
 from escapewheel_reader import ResourceNotFoundError, open_packet
-from escapewheel_reader.clocks import BOUND, Unanchored, align, anchors, declared_bound, extrapolation_error, rate
+from escapewheel_reader.clocks import BOUND, align, anchors, declared_bound, extrapolation_error, rate
+from escapewheel_reader.errors import Unanchored
 
 AP, HARP = 30000, 31250
 

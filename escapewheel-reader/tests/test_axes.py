@@ -10,7 +10,8 @@ import pyarrow.parquet as pq
 import pytest
 
 from escapewheel_reader import open_packet
-from escapewheel_reader.axes import LabelledAxis, NumericAxis, Scaling, TickAxis, UnresolvableAxis, describe
+from escapewheel_reader.axes import LabelledAxis, NumericAxis, Scaling, TickAxis, describe
+from escapewheel_reader.errors import UnresolvableAxis
 
 from .conftest import CLOCK_PROBE, SESSION, _col, _resource, install_registry, read_registry
 

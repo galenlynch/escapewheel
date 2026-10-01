@@ -4,7 +4,6 @@
 - :class:`ArrayDescription` -- one :class:`Axis` per dimension, and any :class:`Scaling`.
 - :class:`TickAxis`, :class:`NumericAxis`, :class:`IrregularAxis`, :class:`LabelledAxis` -- the
   four forms an axis's coordinates take.
-- :class:`UnresolvableAxis` -- the declarations do not determine one answer.
 
 Nothing here needs Zarr or an array library, so an adapter to one can build on it.
 """
@@ -21,21 +20,13 @@ import pyarrow.compute as pc
 from numpy.typing import NDArray
 
 from .discriminators import Discriminator, _one, _paired_target, registries
-from .errors import PacketError
+from .errors import UnresolvableAxis
 
 #: The column whose value declares each coordinate form, as Part 03 §6.3's one-form rule counts them.
 FORMS = ("origin_tick", "origin_value", "coordinate_array_asset_id", "coordinate_resource")
 
 #: Per-channel scaling, which belongs to the arrays of whichever axes table it references.
 CHANNELS = "core.array_channels"
-
-
-class UnresolvableAxis(PacketError):
-    """An array's declared coordinates or scaling do not determine one answer.
-
-    Raised rather than falling back to positions, because every fallback is plausible: another
-    array's labels, labels in storage order, or a padding position read as a row.
-    """
 
 
 @dataclass(frozen=True)
@@ -368,6 +359,5 @@ __all__ = [
     "NumericAxis",
     "Scaling",
     "TickAxis",
-    "UnresolvableAxis",
     "describe",
 ]

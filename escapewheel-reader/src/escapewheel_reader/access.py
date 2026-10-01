@@ -20,7 +20,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from . import clocks
-from .errors import ResourceNotFoundError
+from .errors import NotAligned, ResourceNotFoundError
 from .observation import attach_support, unit_windows
 from .runs import check as _check_runs
 
@@ -378,7 +378,7 @@ def _span(
         return span
     try:
         target = clocks.reference_clock(packet) if clock is None else int(clock)
-    except clocks.NotAligned:
+    except NotAligned:
         return span
     return clocks.stored_span(clocks.anchors(packet), target, span)
 

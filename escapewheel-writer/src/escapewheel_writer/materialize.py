@@ -22,7 +22,8 @@ from typing import Any
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
-from escapewheel_reader.clocks import NotAligned, anchors, declared_bound, mapped, reference_clock
+from escapewheel_reader.clocks import anchors, declared_bound, mapped, reference_clock
+from escapewheel_reader.errors import NotAligned
 from numpy.typing import NDArray
 
 from .arrow import schema as arrow_schema
@@ -452,4 +453,4 @@ def into(
     return resource
 
 
-__all__ = ["BATCH_ROWS", "BUCKET_SECONDS", "RUN_ID", "Collided", "NotAligned", "into", "spike_events"]
+__all__ = ["BATCH_ROWS", "BUCKET_SECONDS", "RUN_ID", "Collided", "into", "spike_events"]

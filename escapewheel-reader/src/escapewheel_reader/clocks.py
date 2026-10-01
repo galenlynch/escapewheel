@@ -29,21 +29,13 @@ import pyarrow.compute as pc
 from numpy.typing import NDArray
 
 from .dictionaries import values, where
-from .errors import NoTimeOrigin, ResourceNotFoundError
+from .errors import NotAligned, NoTimeOrigin, ResourceNotFoundError, Unanchored
 
 #: How far from an anchor the mapping stays defined, as a multiple of the median anchor
 #: interval (Part 01 §3.9). One, so that the same threshold covers a gap between anchors and the
 #: unanchored ends -- the bound and the region it has to cover are the same quantity, because
 #: a free-running sync pulse leaves less than one interval at each end by construction.
 BOUND = 1.0
-
-
-class Unanchored(ValueError):
-    """A clock has too few anchors to define a mapping.
-
-    Two anchors define a segment but no median interval worth trusting, so the bound would
-    rest on a single observation.
-    """
 
 
 def rate(anchor_t: NDArray[np.int64], anchor_p: NDArray[np.int64]) -> tuple[float, float]:
@@ -176,10 +168,6 @@ def extrapolation_error(
         "max": float(error.max()),
         "n": int(error.size),
     }
-
-
-class NotAligned(ValueError):
-    """A clock the spikes are on has no anchors, so its ticks reach no reference."""
 
 
 def anchors(packet: Any) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]]]:
@@ -341,8 +329,6 @@ def stored_span(
 
 __all__ = [
     "BOUND",
-    "NotAligned",
-    "Unanchored",
     "align",
     "anchors",
     "declared_bound",

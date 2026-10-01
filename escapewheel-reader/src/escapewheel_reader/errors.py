@@ -1,4 +1,4 @@
-"""Exceptions raised when reading a packet; each derives from :class:`PacketError`.
+"""Every exception this package raises on purpose.
 
 - :class:`ManifestError` -- the manifest is absent, unparsable, or of the wrong shape.
 - :class:`RegistryUnavailable` -- a bound registry cannot be acquired or fails its digest.
@@ -9,6 +9,12 @@
 - :class:`AmbiguousRun` -- several runs produced the same thing and none is preferred.
 - :class:`UnresolvableChannelIndex` -- a channel index names no electrode of its run.
 - :class:`UnresolvedSource` -- no resolution document locates a named source.
+- :class:`UnresolvableAxis` -- an array's declarations do not determine one answer.
+- :class:`MultiSessionUnresolved` -- a scoped table cannot say which session a row is from.
+- :class:`NotAligned`, :class:`Unanchored` -- a clock's anchors reach no reference, or are too few.
+- :class:`ClockMismatch` -- spikes and events are counted on different clocks.
+- :class:`StaleSupport` -- a table's rows changed after its support was attached.
+- :class:`PhysicalProfileError` -- the bundled profile descriptor is malformed or inconsistent.
 """
 
 from __future__ import annotations
@@ -116,3 +122,53 @@ class UnresolvedSource(PacketError):
     so the packet is not invalid. It is raised when the bytes are actually asked for, and the
     resource is otherwise readable metadata.
     """
+
+
+class UnresolvableAxis(PacketError):
+    """An array's declared coordinates or scaling do not determine one answer.
+
+    Raised rather than falling back to positions, because every fallback is plausible: another
+    array's labels, labels in storage order, or a padding position read as a row.
+    """
+
+
+class MultiSessionUnresolved(PacketError):
+    """A packet holds several sessions and a scoped table cannot say which row is whose.
+
+    Part 05 §13.1 requires a discriminator on every session-scoped table a reader presents. Part
+    02 §7.1 requires every such table to carry `session_id`, so a conforming packet cannot reach
+    this; a packet that lacks the column can, and its rows cannot be attributed.
+    """
+
+
+class NotAligned(ValueError):
+    """A clock the spikes are on has no anchors, so its ticks reach no reference."""
+
+
+class Unanchored(ValueError):
+    """A clock has too few anchors to define a mapping.
+
+    Two anchors define a segment but no median interval worth trusting, so the bound would
+    rest on a single observation.
+    """
+
+
+class ClockMismatch(ValueError):
+    """The spikes and the events are counted on different clocks.
+
+    A tick has no meaning beside a tick on another clock, so comparing them would return rows
+    that look right and are not. An event stream on another clock has to be mapped first.
+    """
+
+
+class StaleSupport(ValueError):
+    """A table carries a support that no longer describes it.
+
+    Raised when the row count has changed since the support was attached -- a filter, a slice
+    or a concatenation. The support itself is still true of the thing it was read for; it is
+    the association with *these rows* that has broken, so re-read rather than adjust.
+    """
+
+
+class PhysicalProfileError(ValueError):
+    """The physical-profile descriptor is malformed or internally inconsistent."""

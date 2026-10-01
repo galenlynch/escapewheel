@@ -4,7 +4,6 @@
 - :func:`assigned_spikes` -- at most one row per spike, labelled with its preceding or nearest
   event.
 - :func:`windows_disjoint` -- whether no spike falls in two windows, where the two agree.
-- :class:`ClockMismatch` -- spikes and events are counted on different clocks.
 
 Everything here runs on DuckDB, the optional `sql` extra.
 """
@@ -13,6 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from .errors import ClockMismatch
 from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -28,15 +28,6 @@ STREAMS = "core.event_streams"
 
 #: How a spike is matched to the one event it is assigned to.
 ASSIGNMENTS = ("preceding", "nearest")
-
-
-class ClockMismatch(ValueError):
-    """The spikes and the events are counted on different clocks.
-
-    A tick has no meaning beside a tick on another clock (R27 §2), so comparing them would
-    return rows that look right and are not. R30 maps spikes onto the reference clock for
-    exactly this comparison; an event stream on a different one has to be mapped first.
-    """
 
 
 def _connect(packet: Any, connection: duckdb.DuckDBPyConnection | None) -> duckdb.DuckDBPyConnection:
@@ -290,7 +281,6 @@ __all__ = [
     "EVENTS",
     "SPIKES",
     "STREAMS",
-    "ClockMismatch",
     "aligned_spikes",
     "assigned_spikes",
     "windows_disjoint",

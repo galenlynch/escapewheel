@@ -582,7 +582,8 @@ def _step(
     upward: bool,
 ) -> int:
     """Carry one tick across the edge from `child` to its parent, or back down it."""
-    from escapewheel_reader.clocks import Unanchored, align
+    from escapewheel_reader.clocks import align
+    from escapewheel_reader.errors import Unanchored
 
     edge = graph[child]
     if edge["transform_slope"] is not None and edge["transform_offset"] is not None:

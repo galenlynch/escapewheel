@@ -6,8 +6,9 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from escapewheel_reader.errors import NotAligned
 
-from escapewheel_writer.materialize import Collided, NotAligned, spike_events
+from escapewheel_writer.materialize import Collided, spike_events
 
 from .conftest import REGISTRY
 
