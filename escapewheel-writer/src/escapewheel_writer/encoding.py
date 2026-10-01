@@ -40,7 +40,7 @@ from escapewheel_reader.resource_ids import (
 from .arrow import sort_key
 
 #: Columns the rules leave off delta that delta serves, each with the measurement that justifies it.
-#: `test_writer.py` refuses an entry naming no such column, which is `check.py`'s discipline for a
+#: `test_encoding.py` refuses an entry naming no such column, which is `check.py`'s discipline for a
 #: naming exception.
 DELTA_COLUMNS: dict[str, tuple[str, ...]] = {
     # A reference climbing through a dozen runs hundreds of rows long, which the run rule gives
