@@ -58,8 +58,10 @@ class CheckEntry:
     scope : Scope
         What one finding names.
     named : bool or None
-        Whether a numbered part of the specification writes the ID, or for a family an ID its
-        template admits. None for an ID declared outside this table.
+        Whether a numbered part of the specification writes the ID standing alone, joined to no
+        longer ID. A family is named where a part writes its template, whatever the part calls
+        each ``<name>``, or one ID the template admits. None for an ID declared outside this
+        table.
     """
 
     id: str

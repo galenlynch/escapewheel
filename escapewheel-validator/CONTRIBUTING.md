@@ -125,6 +125,10 @@ packet, which is worse than having no check.
   template and a function for a family built from a resource or a column. `Report.add` takes the
   entry and reports at its level; `entry.at(level)` is for a check whose level depends on what was
   found. No other module writes an ID as a string. `tests/test_check_table.py` holds the rule.
+- **An entry's `named` flag says whether a numbered part writes the ID**, and the same test
+  reads `../spec/parts/` to hold it: the ID standing alone for a fixed ID, and the template or
+  one ID it admits for a family. Where the two disagree the flag is wrong, never the part: the
+  specification need not name every check ID, and no part is edited to make the test pass.
 
 ## An advisory rule is not a compromise
 

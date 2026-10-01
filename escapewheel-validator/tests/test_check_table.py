@@ -5,6 +5,7 @@ import inspect
 import re
 from pathlib import Path
 
+import pytest
 from escapewheel_reader import open_packet
 
 import escapewheel_validator
@@ -19,6 +20,8 @@ FAMILIES = [entry for entry in TABLE if entry.templated]
 #: The constructors of an entry for an ID a registry or the registry contract declares.
 DECLARED_ELSEWHERE = {"rule", "registry_outcome"}
 PART = re.compile(r"<(\w+)>")
+#: The numbered parts of the specification, which stand beside this package in the monorepo.
+PARTS = Path(__file__).resolve().parents[2] / "spec" / "parts"
 
 
 def _pattern(template: str) -> re.Pattern[str]:
@@ -140,3 +143,23 @@ def test_no_module_writes_a_check_id():
                 if called in takes_an_entry:
                     found.add((path.name, ast.unparse(node.args[0])))
     assert not found
+
+
+def _written(check_id: str) -> re.Pattern[str]:
+    """Compile the text that names an ID in a part.
+
+    The ID stands alone: no ID character or full stop joins it to a longer ID on either side, so
+    `registry.determined_by.resolves` does not name `<resource_id>.determined_by`. A family is named
+    by its template or by one of its IDs, so each part of the template stands for any run of ID
+    characters, full stops and angle brackets, whatever the part calls it.
+    """
+    body = r"[\w<>.]+".join(re.escape(text) for text in PART.split(check_id)[::2])
+    return re.compile(r"(?<![\w.<>])" + body + r"(?![\w<]|\.[\w<])")
+
+
+@pytest.mark.skipif(not PARTS.is_dir(), reason="the specification's tree is not beside this package")
+def test_an_entry_is_flagged_named_where_a_numbered_part_writes_its_id():
+    parts = [path.read_text() for path in sorted(PARTS.glob("[0-9][0-9]_*.md"))]
+    assert parts
+    named = {entry.id for entry in TABLE if any(_written(entry.id).search(text) for text in parts)}
+    assert {entry.id for entry in TABLE if entry.named} == named
