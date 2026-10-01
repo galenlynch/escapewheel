@@ -647,3 +647,23 @@ Found and left as they were:
 - The reader's contributing guide and design notes name revisions for rationale. They are
   documentation, which §3.3 does not govern, and the guide now says that code cites none.
 - The validator's tests patch the reader's private `ordering._overrides`.
+
+### 11.13 The registry checker's invariant table
+
+- The registry checker's legacy interface is deleted: `Finding`, `against_schema`, `structural`,
+  `declarations` and `check_extension` had no caller in the tree, the tools, the probes, the
+  extensions, the fixtures or any package.
+- `INVARIANTS` is one tuple of `Invariant(id, check, universe, needs_core)` holding the 27
+  semantic invariants. The semantic phase reads it in place of a dispatch map, a set of
+  core-dependent IDs and a test of the ID's prefix.
+- A check takes one `Scope` and returns `Defect(instance, owner, detail)` tuples, and the phase
+  reports each under the ID the table registers, so an ID is written once.
+- The rule and unit phases keep their own IDs and do not read the descriptor, since reading it
+  would change the result under a caller's own descriptor.
+- The nine helpers the split modules will share lose their underscore, and `__all__` names the
+  four names other modules import that it omitted.
+- The checker's results were recorded before the change over 1,421 registry cases and every
+  entry-point call of its tests and probe, and compared identical after each commit.
+- The split into `registry_result`, `registry_invariants` and `registry_phases` is written and
+  waits on the validator's tests, three of which hard-code the two copied modules. It lands with
+  those tests deriving the set from the copy map.
