@@ -24,13 +24,9 @@ import assemble
 import conventions
 from canonical import dumps
 from checkers.registry_document import check_registry_context_bytes
-from specdoc import GenerationError
+from specdoc import GenerationError, registry_tables
 
 RULE_LANGUAGE = "escapewheel-rule-sql-v0.2"
-
-
-def _tables(document: dict) -> dict:
-    return {name: entry["table"] for name, entry in document["resources"].items() if entry["kind"] == "table"}
 
 
 def _check(directory: Path, core, meta_id: str) -> list[str]:
@@ -62,7 +58,7 @@ def _check(directory: Path, core, meta_id: str) -> list[str]:
     ]
     declared = tomllib.loads((directory / "conventions.toml").read_text())
     built = [json.loads(out.read_text()) for out in targets.values() if out.is_file()]
-    tables = {name: table for document in built for name, table in _tables(document).items()}
+    tables = {name: table for document in built for name, table in registry_tables(document).items()}
     for label, bad in conventions.convention_failures(
         tables, declared.get("naming_exceptions", {}), declared.get("names_a_kind", {})
     ).items():

@@ -21,22 +21,13 @@ from canonical import dumps
 from checkers.descriptor import check_physical_profile, override_errors
 from checkers.registry_document import check_registry_context_bytes
 from checkers.rule_language import RuleProfileError, check_rule
-from specdoc import GenerationError, part_paths
+from specdoc import GenerationError, part_paths, registry_tables
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
 ARTIFACTS = TREE / "artifacts"
 INFORMATIVE = TREE / "informative"
 PARTS = TREE / "parts"
-
-
-def tables(document):
-    """Project table contracts from the authoritative resource declarations."""
-    return {
-        name: declaration["table"]
-        for name, declaration in document["resources"].items()
-        if declaration["kind"] == "table"
-    }
 
 
 class Checks:
@@ -274,11 +265,11 @@ def schema_checks(check: Checks, registry: dict) -> None:
         ),
         (
             "table since",
-            lambda document: next(iter(tables(document).values())).update({"since": "R1"}),
+            lambda document: next(iter(registry_tables(document).values())).update({"since": "R1"}),
         ),
         (
             "column since",
-            lambda document: next(iter(tables(document).values()))["columns"][0].update({"since": "R1"}),
+            lambda document: next(iter(registry_tables(document).values()))["columns"][0].update({"since": "R1"}),
         ),
     ):
         case = json.loads(json.dumps(registry))
@@ -404,7 +395,7 @@ def main() -> int:
     """Run every check of the tree in order; return non-zero where any fails."""
     registry_bytes = (ARTIFACTS / "logical_schemas.json").read_bytes()
     registry = json.loads(registry_bytes)
-    core = tables(registry)
+    core = registry_tables(registry)
     check = Checks()
 
     try:

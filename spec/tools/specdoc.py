@@ -51,6 +51,19 @@ def part_path(directory: Path, number: str) -> Path | None:
     return found[0] if found else None
 
 
+def registry_tables(registry: dict) -> dict[str, dict]:
+    """Return each table a registry document declares, by its resource's identifier.
+
+    The document is taken to be valid: a resource without a `kind`, or a table resource without a
+    `table`, raises KeyError.
+    """
+    return {
+        name: declaration["table"]
+        for name, declaration in registry["resources"].items()
+        if declaration["kind"] == "table"
+    }
+
+
 def titled_heading(shallowest: int) -> re.Pattern[str]:
     """Match a numbered heading from `shallowest` to four deep, capturing its number and title."""
     return re.compile(rf"^#{{{shallowest},4}} ({SECTION})\.? +(.+)$", re.MULTILINE)

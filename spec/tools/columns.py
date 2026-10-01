@@ -28,7 +28,7 @@ import re
 import sys
 from pathlib import Path
 
-from specdoc import GenerationError, part_paths
+from specdoc import GenerationError, part_paths, registry_tables
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = HERE.parent / "artifacts" / "logical_schemas.json"
@@ -64,11 +64,7 @@ def main() -> int:
     args = ap.parse_args()
 
     registry = json.loads(REGISTRY.read_text())
-    tables = {
-        name: declaration["table"]
-        for name, declaration in registry["resources"].items()
-        if declaration["kind"] == "table"
-    }
+    tables = registry_tables(registry)
     stale, written = [], 0
     try:
         for path in part_paths(HERE.parent / "parts"):

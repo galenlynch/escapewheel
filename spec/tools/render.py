@@ -18,7 +18,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from specdoc import GenerationError
+from specdoc import GenerationError, registry_tables
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = HERE.parent / "artifacts/logical_schemas.json"
@@ -109,7 +109,7 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
 def render(registry: dict[str, Any]) -> str:
     """Build the whole document."""
     resources = registry["resources"]
-    tables = {name: declaration["table"] for name, declaration in resources.items() if declaration["kind"] == "table"}
+    tables = registry_tables(registry)
     columns = sum(len(t["columns"]) for t in tables.values())
     references = sum(len(t.get("references") or []) for t in tables.values())
     rules = sum(len(t.get("rules") or []) for t in tables.values())
@@ -164,7 +164,7 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
     validator's judgement, and a second implementation of it would drift.
     """
     resources = registry["resources"]
-    tables = {name: declaration["table"] for name, declaration in resources.items() if declaration["kind"] == "table"}
+    tables = registry_tables(registry)
     columns = [c for t in tables.values() for c in t["columns"]]
     rules = [r for t in tables.values() for r in t["rules"]]
     levels = Counter(r["level"] for r in rules)

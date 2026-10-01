@@ -123,11 +123,7 @@ def _revision_span(numbers: set[int]) -> str:
 def facts() -> dict[str, str]:
     """Every count the root documents state, computed from what states it."""
     registry = json.loads(REGISTRY.read_text())
-    tables = {
-        name: declaration["table"]
-        for name, declaration in registry["resources"].items()
-        if declaration["kind"] == "table"
-    }
+    tables = specdoc.registry_tables(registry)
     columns = [c for t in tables.values() for c in t["columns"]]
     rules = [r for t in tables.values() for r in t["rules"]]
     advisory = sum(1 for r in rules if r.get("advisory"))

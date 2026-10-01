@@ -223,3 +223,25 @@ def test_a_listing_split_on_whitespace_breaks_a_spaced_name(repository):
         "two",
         "words.md",
     ]
+
+
+def test_a_registry_gives_its_tables_and_not_its_other_resources():
+    registry = {
+        "resources": {
+            "core.units": {"kind": "table", "table": {"columns": ["unit_id"]}},
+            "core.spike_times": {"kind": "array"},
+            "core.sessions": {"kind": "table", "table": {"columns": []}},
+        }
+    }
+
+    assert specdoc.registry_tables(registry) == {
+        "core.units": {"columns": ["unit_id"]},
+        "core.sessions": {"columns": []},
+    }
+    assert list(specdoc.registry_tables(registry)) == ["core.units", "core.sessions"]
+
+
+@pytest.mark.parametrize("resource", [{}, {"kind": "table"}])
+def test_a_resource_missing_what_a_valid_registry_gives_it_raises(resource):
+    with pytest.raises(KeyError):
+        specdoc.registry_tables({"resources": {"core.units": resource}})
