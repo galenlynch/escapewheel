@@ -1,18 +1,20 @@
 """Validate a packet against the registries it binds (Part 05 §5).
 
-- :func:`validate` -- run every layer over an opened packet and return its :class:`.Report`.
+- :func:`validate` -- run every phase over an opened packet and return its :class:`.Report`.
 - :func:`check_packet_manifest` -- the manifest and registry-binding phases alone, from the
   manifest's bytes.
 
-The layers run in order: the manifest's shape, the registries the packet binds, each resource's
-physical schema, then the rules. Storage is checked in Python and not in SQL, because a query
-cannot see how data is stored and a storage check written as SQL passes in silence.
+`validate` is four phases over one context: the manifest and the registries it binds, what each
+resource stores, each table's physical schema and order, then the rules. A phase reads what the
+ones before it established. Storage is checked in Python and not in SQL, because a query cannot see
+how data is stored and a storage check written as SQL passes in silence.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Collection, Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +32,7 @@ from .manifest import (
     confirm_replaced,
     named_registries,
 )
+from .registry_document import CheckedRegistryContext
 from .registry_types import (
     registry_meta_schema,  # noqa: F401 - `escapewheel_writer.scaffold` imports it from here
     table_contracts,
@@ -129,23 +132,76 @@ def validate(
     TypeError
         If a mode keyword is given beside `verification`.
     """
-    modes = _modes(
-        verification,
-        external=external,
-        checksums=checksums,
-        store_digests=store_digests,
-        store_checksums=store_checksums,
+    context = _Context(
+        packet,
+        _modes(
+            verification,
+            external=external,
+            checksums=checksums,
+            store_digests=store_digests,
+            store_checksums=store_checksums,
+        ),
+        advisory=advisory,
+        limits=limits,
+        scan=scan,
+        recheck=recheck,
+        superseded=superseded,
+        replaced=replaced,
     )
+    if _bind(context):
+        _check_resources(context)
+        _check_tables(context)
+        _check_rules(context)
+    return context.report
+
+
+@dataclass
+class _Context:
+    """What the phases of one validation share: what was asked, and what each phase established."""
+
+    packet: Packet
+    modes: Verification
+    advisory: bool = False
+    limits: Mapping[str, Any] | None = None
+    scan: Collection[str] | None = None
+    recheck: Collection[str] | None = None
+    superseded: Mapping[str, Any] | None = None
+    replaced: Sequence[str | Path] = ()
+    report: Report = field(default_factory=Report)
+    #: What binding established; set where the manifest phases reached it.
+    bound: Bound | None = None
+    #: The core registry's checked context, where it directs packet checks.
+    core: CheckedRegistryContext | None = None
+    #: Every directing registry's table contracts, by resource ID.
+    tables: dict[str, Mapping[str, Any]] = field(default_factory=dict)
+    #: External resources whose own metadata a mode read.
+    assessed: set[str] = field(default_factory=set)
+    #: Each table whose file opened, by resource ID.
+    present: dict[str, Any] = field(default_factory=dict)
+    #: Tables whose uniqueness the ordering scan could not settle, which the aggregate decides.
+    unsound: set[str] = field(default_factory=set)
+
+    @property
+    def documents(self) -> list[Mapping[str, Any]]:
+        """Core's registry document, then each directing extension's."""
+        assert self.bound is not None and self.core is not None
+        return [self.core.document, *(extension.document for extension in self.bound.extensions.values())]
+
+
+def _bind(context: _Context) -> bool:
+    """Run the manifest phases, and return whether a core registry directs the phases after them."""
+    packet = context.packet
     # The manifest the packet carries, which for an amendment's candidate is not the file on disk. A
     # reader already refused bytes the `json` phase would, so re-encoding what it decoded loses no finding.
     manifest = json.dumps(packet.manifest.entry).encode()
-    report, bound = check_packet_manifest(packet.location, advisory=advisory, manifest=manifest)
+    report, bound = check_packet_manifest(packet.location, advisory=context.advisory, manifest=manifest)
+    context.report, context.bound = report, bound
     if bound is None:
-        return report
-    for message, rows in confirm_replaced(packet.manifest.entry, replaced):
+        return False
+    for message, rows in confirm_replaced(packet.manifest.entry, context.replaced):
         report.add(check_table.PACKET_REPLACES_MISMATCH, message, rows)
     core_context = bound.core
-    extensions = {name: context.document for name, context in bound.extensions.items()}
+    extensions = {name: extension.document for name, extension in bound.extensions.items()}
     directing = ([] if core_context is None else [(bound.core_id, core_context.document)]) + list(extensions.items())
     report.attribute(
         {declaration: str(name) for name, document in directing for declaration in document.get("resources", {})},
@@ -153,46 +209,60 @@ def validate(
     )
     check_sources(packet, report)
     if core_context is None:
-        return report
+        return False
     effective = core_context.document
     withheld = set(packet.manifest.extensions) - set(extensions)
-    packet = packet.with_declarations(effective, *extensions.values())
-    check_resource_declarations(packet, effective, extensions, withheld, report)
-    assessed = (
-        resolve_external(packet, report, modes.checksums, modes.store_digests, modes.store_checksums)
-        if modes.resolves_external
-        else set()
-    )
+    context.core = core_context
+    context.packet = packet.with_declarations(effective, *extensions.values())
+    check_resource_declarations(context.packet, effective, extensions, withheld, report)
+    return True
+
+
+def _check_resources(context: _Context) -> None:
+    """Check what each resource stores against what the manifest and the tables say of it."""
+    packet, report, modes = context.packet, context.report, context.modes
+    if modes.resolves_external:
+        context.assessed = resolve_external(packet, report, modes.checksums, modes.store_digests, modes.store_checksums)
     if modes.checksums:
         check_owned_digests(packet, report, modes.store_checksums)
     check_packet_owned_arrays(packet, report)
     check_packet_owned_opaque(packet, report)
     check_time_origin(packet, report)
-    # Every directing registry's tables receive the same storage checks (Part 05 §5.4).
-    tables = table_contracts(effective)
-    for document in extensions.values():
-        tables.update(table_contracts(document))
-    present = check_schemas(packet, tables, report)
+
+
+def _check_tables(context: _Context) -> None:
+    """Give every directing registry's tables the same storage checks (Part 05 §5.4)."""
+    report = context.report
+    for document in context.documents:
+        context.tables.update(table_contracts(document))
+    tables = context.tables
+    present = context.present = check_schemas(context.packet, tables, report)
     report_page_types_unassessed(len(present), report)
-    report_unassessed(packet, assessed | set(present), report)
-    unsound = check_ordering(tables, present, report, scan)
+    report_unassessed(context.packet, context.assessed | set(present), report)
+    context.unsound = check_ordering(tables, present, report, context.scan)
     check_duplication(present, tables, report)
     check_unfilled_metadata(present, tables, report)
     check_reserved_values(present, tables, report)
     check_unit_codes(present, tables, report)
+
+
+def _check_rules(context: _Context) -> None:
+    """Run each directing registry's rules, then compare an amendment with what it supersedes."""
+    assert context.bound is not None and context.core is not None
     run_rules(
-        packet,
-        core_context,
-        bound.extensions,
-        present,
-        report,
-        advisory,
-        limits,
-        unsound,
-        recheck,
+        context.packet,
+        context.core,
+        context.bound.extensions,
+        context.present,
+        context.report,
+        context.advisory,
+        context.limits,
+        context.unsound,
+        context.recheck,
     )
-    _check_amendment(packet, [effective, *extensions.values()], tables, report, limits, superseded)
-    return report
+    _check_amendment(
+        context.packet, context.documents, context.tables, context.report, context.limits, context.superseded
+    )
 
 
 def _modes(verification: Verification | None, **keywords: bool | None) -> Verification:
