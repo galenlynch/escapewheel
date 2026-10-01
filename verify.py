@@ -2,10 +2,9 @@
 
 The chain is reproducible — `spec/tools/build.py` writes the core registry, the rendered
 listing and the source guide's counts; `fixtures/build.py` writes the
-conformance corpus; the prototype writes its own packets — but reproducibility nobody runs is a
-claim rather than a property, and three artifacts drifted for many revisions without anything
-noticing: the corpus stopped building at R54, the prototype's registry left R2's format at R48,
-and the registry README's counts were wrong in five places at once.
+conformance corpus — but reproducibility nobody runs is a claim rather than a property: the
+corpus stopped building at R54, and the registry README's counts were wrong in five places at
+once, before anything noticed.
 
 The load-bearing stage is **regenerate, then demand an unchanged candidate tree**. The candidate
 may already contain intentional generated changes, so the verifier snapshots their content before
@@ -102,7 +101,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         [*TREE_RUN, "extensions/registries.py", "check", *EXTENSIONS],
     ),
     (
-        "registries: ledger, prototype and rule execution",
+        "registries: ledger and rule execution",
         ROOT,
         ["uv", "run", "--project", str(TOOLS), "python", "conformance/registries/check.py"],
     ),
@@ -240,7 +239,6 @@ GENERATED = (
     "spec",
     "extensions",
     "escapewheel-aind/extensions",
-    "prototype",
     "fixtures",
     "STATUS.md",
     "TODO.md",

@@ -57,7 +57,7 @@ per-packet label and never a cross-packet fact.
 ## 4. What this implies for the schema
 
 - A camera is a `core.devices` row, identified by its serial, and a media asset should reference
-  it. The adapter reads `rig.json` already, for the rig's time zone alone (`sources/aind.py`).
+  it. The adapter reads `rig.json` already, for the rig's time zone alone (`escapewheel-aind/src/escapewheel_aind/session.py`).
 - The **view** is a label the source states, so it is carried as a label — not as a pose. A pose
   column would be the principled shape and would be null in every row this dataset can produce.
 - Where the label goes is a schema question this inventory does not settle: `camera_target`

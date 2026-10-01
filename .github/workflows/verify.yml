@@ -1,9 +1,8 @@
 name: verify
 
 # Every generated file in this repository is committed, so `verify.py` regenerates them and
-# demands that generation preserve the candidate state. Three artifacts drifted for many revisions
-# before anything ran that check: the conformance corpus stopped building, the prototype's registry
-# left R2's format, and the registry README's counts went wrong in five places.
+# demands that generation preserve the candidate state. The conformance corpus stopped building and
+# a README's counts went wrong in five places before anything ran that check.
 on:
   push:
     branches: [main]
@@ -15,6 +14,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The history-cleanup and registry-contract probes read files at earlier commits.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true

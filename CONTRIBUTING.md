@@ -91,8 +91,8 @@ is software. Four rules keep the tree whole, and `verify.py` checks each through
 
 A checker locates its artifacts through the `artifacts` module beside it, which each place
 supplies for itself, so a copy matches its source byte for byte. Checks needing what the tree does
-not hold — the Tier 2 rules' execution in DuckDB, Git history, the frozen v0.1 documents, the
-prototype — lie in `conformance/`.
+not hold — the Tier 2 rules' execution in DuckDB, Git history, the frozen v0.1 documents — lie in
+`conformance/`.
 
 ## 4. The one command
 
@@ -258,7 +258,7 @@ and those checks:
 | `ci/tree.py` | a tree that cannot regenerate itself alone, or a tree tool importing what the tree does not declare |
 | `copies.py --check` | a package copy differing from the tree, or a package not admitting the tree's locked library |
 | `extensions/registries.py check` | an extension registry failing the contract or the conventions where it sits |
-| `conformance/registries/check.py` | a core table set departing from the Part 02 ledger, a prototype document the format rejects, or a Tier 2 rule that does not execute |
+| `conformance/registries/check.py` | a core table set departing from the Part 02 ledger, or a Tier 2 rule that does not execute |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
 | `revisions/ledger.py` | an accepted clause with no disposition or an unresolved current-owner or registry target |
 | `spec/tools/columns.py --check` | a column table in a part that no longer reproduces the registry |
