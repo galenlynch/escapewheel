@@ -2,7 +2,6 @@
 
 import json
 from datetime import UTC, datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 
 import pytest
 from escapewheel_writer import FixedOffsetZone, NaiveTimestamp, SourceDefect, UsageError, UsageFault
@@ -10,17 +9,16 @@ from escapewheel_writer.adapter import HARP_TICK_RATE_HZ, Clock, coded, codes
 
 from escapewheel_aind.errors import AindFault
 from escapewheel_aind.notes import AindNote
-from escapewheel_aind.session import SessionSource
-
-PACIFIC = ZoneInfo("America/Los_Angeles")
-SESSION = "ecephys_776259_2025-04-09_17-25-12"
-
-#: The ephys stream's start, stamped `+00:00` on a Pacific reading -- the real defect.
-EPHYS_START = "2025-04-09T17:25:12+00:00"
-EPHYS_STOP = "2025-04-09T19:11:39+00:00"
-#: The behaviour stream's, stamped correctly.
-BEHAVIOR_START = "2025-04-09T17:27:55.339024-07:00"
-BEHAVIOR_STOP = "2025-04-09T19:38:44.147959-07:00"
+from tests.builders import (
+    BEHAVIOR_START,
+    EPHYS_START,
+    EPHYS_STOP,
+    HARP_ROW,
+    PACIFIC,
+    SESSION,
+    session_asset,
+    session_source,
+)
 
 #: The first spike, on the HARP clock. Anchors the epoch.
 FIRST_SPIKE_TICK = round(11_575_876.219 * HARP_TICK_RATE_HZ)
@@ -29,54 +27,14 @@ FIRST_EVENT_TICK = round(11_576_039.862 * HARP_TICK_RATE_HZ)
 LAST_EVENT_TICK = round(11_583_848.938 * HARP_TICK_RATE_HZ)
 
 
-def build(root, *, streams=None):
-    """Write a minimal `session.json` into an asset directory."""
-    asset = root / SESSION
-    asset.mkdir(parents=True, exist_ok=True)
-    if streams is None:
-        streams = [
-            {
-                "stream_start_time": EPHYS_START,
-                "stream_end_time": EPHYS_STOP,
-                "ephys_modules": [{"assembly_name": "46100"}],
-            },
-            {
-                "stream_start_time": BEHAVIOR_START,
-                "stream_end_time": BEHAVIOR_STOP,
-                "ephys_modules": [],
-                "stream_modalities": [{"abbreviation": "behavior-videos"}],
-            },
-        ]
-    (asset / "session.json").write_text(
-        json.dumps({"session_start_time": EPHYS_START, "subject_id": "776259", "data_streams": streams})
-    )
-    return asset
-
-
 @pytest.fixture
 def asset(tmp_path):
-    return build(tmp_path)
-
-
-#: The reference clock's row, which a build supplies and this source emits as given.
-HARP_ROW = {
-    "clock_id": "harp",
-    "session_id": SESSION,
-    "origin": "HARP device power-on",
-    "tick_rate_num": HARP_TICK_RATE_HZ,
-    "tick_rate_den": 1,
-}
-
-
-def _session(root, **kwargs):
-    kwargs.setdefault("reference_clock", HARP_ROW)
-    kwargs.setdefault("zone", PACIFIC)
-    return SessionSource(root, **kwargs)
+    return session_asset(tmp_path)
 
 
 @pytest.fixture
 def source(asset):
-    return _session(asset)
+    return session_source(asset)
 
 
 @pytest.fixture
@@ -87,7 +45,7 @@ def harp(source):
 @pytest.fixture
 def located(asset, harp):
     """The source as a build hands it over: a reference clock whose tick 0 is already located."""
-    return _session(asset, reference_clock={**HARP_ROW, "tick_zero_utc": harp.tick_zero_utc})
+    return session_source(asset, reference_clock={**HARP_ROW, "tick_zero_utc": harp.tick_zero_utc})
 
 
 def window(source, clock):
@@ -105,13 +63,13 @@ def window(source, clock):
 
 
 def test_it_accepts_the_asset_directory_or_the_file(asset):
-    assert _session(asset).streams()
-    assert _session(asset / "session.json").streams()
+    assert session_source(asset).streams()
+    assert session_source(asset / "session.json").streams()
 
 
 def test_a_missing_session_json_is_a_defect(tmp_path):
     with pytest.raises(SourceDefect) as refused:
-        _session(tmp_path)
+        session_source(tmp_path)
     assert refused.value.code is AindFault.NO_SESSION_JSON
     assert refused.value.where == str(tmp_path)
 
@@ -119,7 +77,7 @@ def test_a_missing_session_json_is_a_defect(tmp_path):
 def test_a_fixed_offset_is_refused(asset):
     """PDT for the session and PST for the epoch it counts from; a constant is wrong half the year."""
     with pytest.raises(FixedOffsetZone):
-        _session(asset, zone=timezone(timedelta(hours=-7)))
+        session_source(asset, zone=timezone(timedelta(hours=-7)))
 
 
 def test_the_streams_split_on_ephys_modules(source):
@@ -129,20 +87,20 @@ def test_the_streams_split_on_ephys_modules(source):
 
 
 def test_a_stream_missing_its_window_is_a_defect(tmp_path):
-    asset = build(tmp_path, streams=[{"ephys_modules": []}])
+    asset = session_asset(tmp_path, streams=[{"ephys_modules": []}])
     with pytest.raises(SourceDefect) as refused:
-        _session(asset).streams()
+        session_source(asset).streams()
     assert refused.value.code is AindFault.STREAM_FIELD_ABSENT
     assert refused.value.where == "data_streams[0]"
 
 
 def test_an_ambiguous_split_is_a_defect(tmp_path):
-    asset = build(
+    asset = session_asset(
         tmp_path,
         streams=[{"stream_start_time": EPHYS_START, "stream_end_time": EPHYS_STOP, "ephys_modules": []}] * 2,
     )
     with pytest.raises(SourceDefect) as refused:
-        _session(asset).behavior()
+        session_source(asset).behavior()
     assert refused.value.code is AindFault.NO_ONE_STREAM
 
 
@@ -244,11 +202,11 @@ def test_the_ephys_window_is_the_other_one_this_source_declares(source):
 
 
 def test_an_inverted_window_is_a_defect(tmp_path, harp):
-    asset = build(
+    asset = session_asset(
         tmp_path,
         streams=[{"stream_start_time": EPHYS_STOP, "stream_end_time": EPHYS_START, "ephys_modules": []}],
     )
-    source = _session(asset, reference_clock={**HARP_ROW, "tick_zero_utc": harp.tick_zero_utc})
+    source = session_source(asset, reference_clock={**HARP_ROW, "tick_zero_utc": harp.tick_zero_utc})
     with pytest.raises(SourceDefect) as refused:
         source.records()
     assert refused.value.code is AindFault.STREAM_REVERSED
@@ -280,7 +238,7 @@ def test_records_emit_the_clock_row_the_build_supplied(source):
 def test_a_located_tick_zero_reaches_the_row_unchanged(asset):
     """A build that located tick 0 from the record nodes' stamps knows better than this JSON."""
     located = datetime(2024, 11, 27, 0, 53, 55, 855_000, tzinfo=UTC)
-    source = _session(asset, reference_clock={**HARP_ROW, "tick_zero_utc": located})
+    source = session_source(asset, reference_clock={**HARP_ROW, "tick_zero_utc": located})
     assert source.records()["core.clocks"][0]["tick_zero_utc"] == located
     assert "aind.tick_zero_from_stream_start" not in source.compensations
 
@@ -318,7 +276,7 @@ WATER = {
 
 def rig(asset, calibrations):
     (asset / "rig.json").write_text(json.dumps({"calibrations": calibrations}))
-    return _session(asset)
+    return session_source(asset)
 
 
 def modules(*names, transform=TRANSFORM, date=CALIBRATED):
@@ -361,8 +319,8 @@ def test_a_series_with_unequal_sides_is_refused(asset):
 
 def test_six_modules_citing_one_file_are_one_calibration(tmp_path):
     """A `device_id` on the calibration would record six where the rig performed one."""
-    asset = build(tmp_path, streams=modules("46100", "46122", "50209", "46113", "45883", "46116"))
-    source = _session(asset)
+    asset = session_asset(tmp_path, streams=modules("46100", "46122", "50209", "46113", "45883", "46116"))
+    source = session_source(asset)
     (row,) = source.calibrations()
     assert row["calibration_type"] == "manipulator_transform"
     assert row["calibrated_at"] == datetime(2025, 4, 9, 10, tzinfo=UTC)
@@ -373,20 +331,20 @@ def test_six_modules_citing_one_file_are_one_calibration(tmp_path):
 
 def test_an_array_calibration_records_that_its_content_is_elsewhere(tmp_path):
     """Part 02 §12.3: this adapter does not read the `.npy`, so the row is unrecorded, not absent."""
-    source = _session(build(tmp_path, streams=modules("46100")))
+    source = session_source(session_asset(tmp_path, streams=modules("46100")))
     (row,) = source.calibrations()
     assert (row["array_asset_id"], row["detail_kind"], row["metadata"]) == (None, None, None)
     assert source.calibration_points() == []
 
 
 def test_a_module_stating_no_transform_yields_no_calibration(tmp_path):
-    source = _session(build(tmp_path, streams=modules("46100", transform=None)))
+    source = session_source(session_asset(tmp_path, streams=modules("46100", transform=None)))
     assert source.calibrations() == [] and source.calibration_devices() == []
 
 
 def test_a_transform_with_no_date_is_null_rather_than_invented(tmp_path):
     """Part 01 §3.23. Three `stick_microscopes` state a calibration and no date for it."""
-    source = _session(build(tmp_path, streams=modules("46100", date=None)))
+    source = session_source(session_asset(tmp_path, streams=modules("46100", date=None)))
     assert source.calibrations()[0]["calibrated_at"] is None
 
 
@@ -402,7 +360,7 @@ def test_the_calibration_resources_are_omitted_when_empty(source):
 
 
 def test_the_calibration_resources_are_staged_when_present(tmp_path):
-    asset = build(tmp_path, streams=modules("46100", "46122"))
+    asset = session_asset(tmp_path, streams=modules("46100", "46122"))
     source = rig(asset, [WATER])
     got = source.records()
     assert len(got["core.calibrations"]) == 2
@@ -421,9 +379,9 @@ def test_the_calibration_resources_are_staged_when_present(tmp_path):
 
 def test_a_prefix_reaches_every_calibration_and_the_device_it_covers(tmp_path):
     """Each ID this source mints, and its name, carries the prefix; the clock and subject are given."""
-    asset = build(tmp_path, streams=modules("46100", "46122"))
+    asset = session_asset(tmp_path, streams=modules("46100", "46122"))
     (asset / "rig.json").write_text(json.dumps({"calibrations": [WATER]}))
-    got = _session(asset, prefix="A_").records()
+    got = session_source(asset, prefix="A_").records()
     assert [(c["calibration_id"], c["calibration_name"]) for c in got["core.calibrations"]] == [
         ("A_Lick spout Left", "A_Lick spout Left"),
         (f"A_{TRANSFORM}", f"A_{TRANSFORM}"),
@@ -444,6 +402,6 @@ def test_a_calibrated_device_is_the_nwb_device_under_one_prefix(tmp_path):
     nwb = nwbfixture.build(tmp_path / "nwb")
     clock = {**HARP_ROW, "session_id": "mini_2025-04-09"}
     devices = AindNWBSource(nwb, reference_clock=clock, zone=PACIFIC, prefix="A_").devices()
-    asset = build(tmp_path, streams=modules("probeA"))
-    (covered,) = _session(asset, prefix="A_").calibration_devices()
+    asset = session_asset(tmp_path, streams=modules("probeA"))
+    (covered,) = session_source(asset, prefix="A_").calibration_devices()
     assert covered["device_id"] in {d["device_id"] for d in devices}

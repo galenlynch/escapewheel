@@ -19,14 +19,18 @@ HARP_ROW = {"clock_id": "harp", "session_id": "s001", "tick_rate_num": 31250, "o
 TIMING = "1.0,100,0\n1.002,101,2000000\n1.006,103,6000000\n"
 
 
-@pytest.fixture
-def root(tmp_path, monkeypatch):
-    """One camera with its timing CSV, and ffprobe answered from here rather than run."""
-    (tmp_path / "bottom_camera.mp4").write_bytes(b"")
-    (tmp_path / "bottom_camera.csv").write_text(TIMING)
+def camera(root, monkeypatch):
+    """Write one camera with its timing CSV under `root`, and answer ffprobe from here rather than run it."""
+    (root / "bottom_camera.mp4").write_bytes(b"")
+    (root / "bottom_camera.csv").write_text(TIMING)
     answers = {"stream=time_base": "1/90000\n", "packet=pts": "0\n3000\n6000\n"}
     monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
-    return tmp_path
+    return root
+
+
+@pytest.fixture
+def root(tmp_path, monkeypatch):
+    return camera(tmp_path, monkeypatch)
 
 
 def _source(root, **options):

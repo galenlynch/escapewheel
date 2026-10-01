@@ -5,6 +5,8 @@ which is the point: the base reader ignores a column the schema does not declare
 is where knowing what those columns mean lives.
 """
 
+import sys
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -212,13 +214,14 @@ def test_a_mapped_task_column_is_not_repeated_in_metadata(nwb, harp):
 def test_a_signal_names_the_harp_device_under_the_same_prefix(nwb, harp, tmp_path, monkeypatch):
     """The device row is the Harp schema's, so the signal's reference resolves only if both carry the prefix.
 
-    The schema's parse is stubbed, since its YAML parser is the writer's `harp` extra and not ours.
+    The YAML parser is stubbed, since it is the writer's `harp` extra and not ours.
     """
     from escapewheel_writer.adapter import ADAPTERS
 
     HarpSource = ADAPTERS["harp"]
 
-    monkeypatch.setattr(HarpSource, "_read", lambda self, path: {"device": "SniffDetector", "whoAmI": 1401})
+    parsed = {"device": "SniffDetector", "whoAmI": 1401}
+    monkeypatch.setitem(sys.modules, "yaml", SimpleNamespace(safe_load=lambda text: parsed))
 
     sniff = nwbfixture.group(
         nwb / "acquisition/sniff", neurodata_type="TimeSeries", description="imported from HARP SniffDetector__32.bin"

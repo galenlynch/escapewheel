@@ -19,30 +19,24 @@ import pytest
 from adapter_columns import emitted, undeclared
 from escapewheel_writer.adapter import HARP_TICK_RATE_HZ, SOURCE_GROUP, Clock
 
-from escapewheel_aind import video
 from escapewheel_aind.nwb import AindNWBSource
 from escapewheel_aind.unit_qc import UnitQCSource
 from escapewheel_aind.video import VideoSource
 from tests import nwbfixture
-from tests.test_session_source import _session
-from tests.test_session_source import build as session_json
+from tests.builders import session_asset, session_source
 from tests.test_unit_qc import UNITS as QC_UNITS
 from tests.test_unit_qc import stream as analyzer
-from tests.test_video_source import HARP_ROW, TIMING
+from tests.test_video_source import HARP_ROW, camera
 
 # -- one fixture per kind ----------------------------------------------------------------
 
 
 def _session_source(root: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
-    return _session(session_json(root))
+    return session_source(session_asset(root))
 
 
 def _video(root: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
-    (root / "bottom_camera.mp4").write_bytes(b"")
-    (root / "bottom_camera.csv").write_text(TIMING)
-    answers = {"stream=time_base": "1/90000\n", "packet=pts": "0\n3000\n6000\n"}
-    monkeypatch.setattr(video, "_ffprobe", lambda path, entries: answers[entries])
-    return VideoSource(root, session_id="s001", reference_clock=HARP_ROW)
+    return VideoSource(camera(root, monkeypatch), session_id="s001", reference_clock=HARP_ROW)
 
 
 def _nwb(root: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
