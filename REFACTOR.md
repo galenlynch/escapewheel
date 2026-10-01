@@ -332,8 +332,8 @@ plan left open, as it was made.
 
 ### 11.2 The ledger proposal
 
-The proposal is `revisions/proposals/the-ledger-locks-the-text-an-applied-clause-lands-in.md`. It
-departs from §9's preferred form in one place and settles three points §9 left open.
+The proposal was first written as a digest lock, and the four points below record that form. It
+departed from §9's preferred form in one place and settled three points §9 left open.
 
 - The lock is a file of its own beside the ledger under `revisions/`, and `headings.toml` does not
   hold it. The specification tree is checked from a copy of itself alone, the ledger that says
@@ -346,7 +346,20 @@ departs from §9's preferred form in one place and settles three points §9 left
 - A clause that strikes a requirement and has no successor is disposed `applied` at the section it
   struck from. One entry, R107 §3.5, is recorded `superseded` with no `by` today.
 
-Writing the tool waits on the proposal's promotion and acceptance.
+The proposal was then revised and split, on 2026-10-01, into two files under
+`revisions/proposals/`.
+
+- `the-ledger-reads-no-text-of-the-section-a-clause-lands-in.md` prefers a quoted witness passage
+  for each applied target over a digest. A replay of 180 commits showed a digest reporting 61 of
+  68 incorporations with a median of 20 clauses to re-read, and both documented failures were
+  clauses never stated at their target, which a first digest would have recorded as correct. A
+  hand reading of 40 of the 770 targets found 9 whose section does not fully state the clause, and
+  the proposal's first open question is whether to pay for the full audit.
+- `the-ledger-resolves-a-superseded-entrys-successor-and-keeps-no-ratchet.md` carries the required
+  `by` and the removal of the ratchet. It records R107 §3.5 as `applied` at Part 02 §9.4, where
+  its own rule is stated, and no longer at the section a requirement was struck from.
+
+Writing either tool change waits on that proposal's promotion and acceptance.
 
 ### 11.3 Validator errors
 

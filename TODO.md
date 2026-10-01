@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 2 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 3 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -133,7 +133,7 @@ specification tooling are restructured apart from the registry checker's split. 
 the 2026-09-06 request is not answered by it: which problems a dependency already solves that this
 code solves again.
 
-## 3a. Two drafts await acceptance and two proposals await promotion
+## 3a. Two drafts await acceptance and three proposals await promotion
 
 The drafts are under `revisions/drafts/` and the proposals under `revisions/proposals/`.
 
@@ -151,10 +151,15 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
 - **Core declares a catalog of sidecars.** §3b describes it. Two questions are open in it: whether
   a sidecar is of class `documentation` or `core`, and whether its table is scoped to the packet
   or to a session.
-- **The ledger locks the text an applied clause lands in.** A process-domain proposal: the ledger
-  keeps a digest of each section an applied clause names, and a changed digest fails the check and
-  lists the clauses to re-read. It also makes a superseded entry's `by` required and checked, and
-  removes the ratchet that rewrites `applied.toml`. No code waits on it.
+- **The ledger reads no text of the section a clause lands in.** A process-domain proposal: each
+  applied target quotes the passage that states its clause, and the check fails where the section
+  no longer contains it. A replay over 180 commits showed that a digest of each section would have
+  reported 61 of 68 incorporations. A hand reading of 40 of the 770 targets found 9 whose section does not fully
+  state the clause. Three questions are open in it, the first being whether to pay for the audit
+  that reading implies. No code waits on it.
+- **The ledger resolves a superseded entry's successor and keeps no ratchet.** A process-domain
+  proposal split from the one above: `by` becomes a required, resolved field, R107 §3.5's entry is
+  corrected, and the ratchet that rewrites `applied.toml` is removed. Ready to promote.
 
 ## 3b. A file the packet only indexes has no declaration
 
@@ -269,8 +274,9 @@ natural.
   the repair leaves it out of the comparison. Not in REFACTOR.md's list, so it waits for a decision.
 - **Four corpus packets expected to warn are not checked to pass**, and `tone_in_place_of_its_own`
   names no registry. REFACTOR.md §11.6 lists them.
-- **The ledger cannot see that an applied clause's text has gone.** Two accepted sentences were
-  lost this way and found by hand. The ledger proposal of §3a addresses it.
+- **The ledger cannot see whether a section states an applied clause.** Two clauses were recorded
+  at sections that never stated them and were found by hand. The first ledger proposal of §3a
+  addresses it.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
