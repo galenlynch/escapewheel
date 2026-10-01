@@ -42,6 +42,9 @@ HERE = Path(__file__).resolve().parent
 ACCEPTED = HERE / "accepted"
 SPEC = HERE.parent / "spec"
 PARTS = SPEC / "parts"
+sys.path.insert(0, str(SPEC / "tools"))
+
+import specdoc
 
 #: `## 3.` and `### 3.1 ` alike; the trailing dot is optional and the numbering may nest.
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
@@ -89,8 +92,7 @@ def document(number: str) -> Path | None:
 
 def part(number: str) -> Path | None:
     """The v0.2 part with this number."""
-    found = sorted(PARTS.glob(f"{number}_*.md"))
-    return found[0] if found else None
+    return specdoc.part_path(PARTS, number)
 
 
 def numbered(text: str) -> list[str]:
@@ -196,7 +198,7 @@ HISTORICAL = ("revisions/baseline-v0.1/", "revisions/accepted/", "revisions/revi
 
 CURRENT_CONTRACT = (
     SPEC / "README.md",
-    *sorted(PARTS.glob("[0-9][0-9]_*.md")),
+    *specdoc.part_paths(PARTS),
     SPEC / "artifacts/logical_schemas.json",
     SPEC / "artifacts/registry.schema.json",
     SPEC / "artifacts/manifest.schema.json",
@@ -273,7 +275,7 @@ def main() -> int:
 
     # Unique ascending numbering is checked before any citation: a duplicate number makes a citation
     # ambiguous rather than unresolvable, so nothing downstream can see it.
-    for target in sorted(PARTS.glob("[0-9][0-9]_*.md")):
+    for target in specdoc.part_paths(PARTS):
         repeated, descending = numbering(target.read_text())
         for number in repeated:
             print(f"  BROKEN  {target.name}: two sections numbered {number}")

@@ -20,11 +20,15 @@ import argparse
 import functools
 import re
 import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PARTS = ROOT / "spec" / "parts"
+sys.path.insert(0, str(ROOT / "spec" / "tools"))
+
+import specdoc
 
 #: A heading that opens a numbered section, at any depth.
 HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
@@ -109,7 +113,7 @@ def citers(part: str, section: str) -> list[str]:
 
 def anchor_location(anchor: str) -> tuple[str, str, str] | None:
     """Return the part, section, and title immediately following a canonical anchor."""
-    for path in sorted(PARTS.glob("[0-9][0-9]_*.md")):
+    for path in specdoc.part_paths(PARTS):
         pending: set[str] = set()
         fenced = False
         for line in path.read_text().splitlines():
@@ -176,10 +180,10 @@ def main() -> int:
         if match is None:
             parser.error(f"--section expects PART:SECTION, got {value!r}")
         part, section = match.groups()
-        files = sorted(PARTS.glob(f"{part}_*.md"))
-        if not files:
+        file = specdoc.part_path(PARTS, part)
+        if file is None:
             parser.error(f"--section names absent Part {part}")
-        declared = {number for _, number, _ in sections(files[0])}
+        declared = {number for _, number, _ in sections(file)}
         if section not in declared:
             parser.error(f"--section names absent Part {part} §{section}")
         changed[part].add(section)
@@ -196,7 +200,7 @@ def main() -> int:
         return 0
     total = 0
     for part in sorted(changed):
-        titles = {n: t for _, n, t in sections(PARTS / next(p.name for p in PARTS.glob(f"{part}_*.md")))}
+        titles = {n: t for _, n, t in sections(specdoc.part_path(PARTS, part))}
         for section in sorted(changed[part], key=lambda s: [int(x) for x in s.split(".")]):
             who = citers(part, section)
             total += len(who)

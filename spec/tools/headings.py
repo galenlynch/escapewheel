@@ -26,6 +26,8 @@ import re
 import tomllib
 from pathlib import Path
 
+from specdoc import part_paths
+
 HERE = Path(__file__).resolve().parent
 LOCK = HERE / "headings.toml"
 PARTS = HERE.parent / "parts"
@@ -51,7 +53,7 @@ def current() -> dict[str, dict[str, str]]:
     """Each part's section numbers, mapped to the heading each one carries."""
     return {
         path.name[:2]: {number: title.strip() for number, title in HEADING.findall(path.read_text())}
-        for path in sorted(PARTS.glob("[0-9][0-9]_*.md"))
+        for path in part_paths(PARTS)
     }
 
 
@@ -66,7 +68,7 @@ def anchors() -> tuple[dict[str, dict[str, object]], list[str]]:
     index: dict[str, dict[str, object]] = {}
     seen: dict[str, str] = {}
     defects = []
-    for path in sorted(PARTS.glob("[0-9][0-9]_*.md")):
+    for path in part_paths(PARTS):
         pending: list[tuple[str, str]] = []
         fenced = False
         for number, line in enumerate(path.read_text().splitlines(), 1):

@@ -18,6 +18,7 @@ import argparse
 import functools
 import json
 import re
+import sys
 import tomllib
 from pathlib import Path
 
@@ -29,6 +30,10 @@ except ModuleNotFoundError:  # Direct execution from revisions/.
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 PARTS = ROOT / "spec" / "parts"
+sys.path.insert(0, str(ROOT / "spec" / "tools"))
+
+import specdoc
+
 REVISIONS = HERE / "accepted"
 LEDGER = HERE / "applied.toml"
 REGISTRY_TARGETS = HERE / "registry-targets.toml"
@@ -75,8 +80,8 @@ def targets(where: object) -> tuple[list[dict[str, str]], list[str]]:
 @functools.cache
 def sections(part: str) -> frozenset[str] | None:
     """Every section number a part declares, or None where no part carries that number."""
-    found = sorted(PARTS.glob(f"{part}_*.md"))
-    return frozenset(HEADING.findall(found[0].read_text())) if found else None
+    found = specdoc.part_path(PARTS, part)
+    return frozenset(HEADING.findall(found.read_text())) if found else None
 
 
 def pointer(document: object, value: str) -> object:
@@ -200,10 +205,10 @@ def unresolved(  # noqa: C901
                     )
             elif "part" in target:
                 part = target["part"]
-                files = sorted(PARTS.glob(f"{part}_*.md"))
-                if not files:
+                file = specdoc.part_path(PARTS, part)
+                if file is None:
                     dangling.append((key, f"`{part}` — no part has that number"))
-                elif target["anchor"] not in canonical_anchors(files[0].read_text()):
+                elif target["anchor"] not in canonical_anchors(file.read_text()):
                     dangling.append((key, f"`{part}` has no canonical #{target['anchor']}"))
             else:
                 path = (ROOT / target["path"]).resolve()

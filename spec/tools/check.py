@@ -21,7 +21,7 @@ from canonical import dumps
 from checkers.descriptor import check_physical_profile, override_errors
 from checkers.registry_document import check_registry_context_bytes
 from checkers.rule_language import RuleProfileError, check_rule
-from specdoc import GenerationError
+from specdoc import GenerationError, part_paths
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
@@ -299,7 +299,7 @@ def schema_checks(check: Checks, registry: dict) -> None:
         "registry contract invariant IDs are unique",
         [item for item, count in Counter(invariant_ids).items() if count > 1],
     )
-    parts = "\n".join(path.read_text() for path in sorted(PARTS.glob("[0-9][0-9]_*.md")))
+    parts = "\n".join(path.read_text() for path in part_paths(PARTS))
     check(
         "every registry contract anchor resolves uniquely in the numbered specification",
         [

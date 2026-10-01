@@ -16,6 +16,8 @@ import re
 import sys
 from pathlib import Path
 
+from specdoc import part_paths
+
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
 
@@ -24,7 +26,7 @@ TREE = HERE.parent
 #: and identifiers.
 SOURCES = {
     "README.md": TREE / "README.md",
-    **{path.name: path for path in sorted((TREE / "parts").glob("[0-9][0-9]_*.md"))},
+    **{path.name: path for path in part_paths(TREE / "parts")},
 }
 ORDER = tuple(SOURCES)
 

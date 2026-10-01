@@ -27,13 +27,14 @@ from framework_data import (
     REFERENCE_OWNERS,
     REFERENCE_ROWS,
 )
+from specdoc import part_paths
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
 ARTIFACTS = TREE / "artifacts"
 CORE_REGISTRY = ARTIFACTS / "logical_schemas.json"
 
-PARTS = {path.name[:2]: path.name for path in sorted((HERE.parent / "parts").glob("[0-9][0-9]_*.md"))}
+PARTS = {path.name[:2]: path.name for path in part_paths(TREE / "parts")}
 
 REFERENCE_SECTION_ANCHOR = re.compile(r'id="(ew-[a-z-]*normative-references)"')
 LINK_TARGET = re.compile(r"\]\(([^)\s]+)\)")

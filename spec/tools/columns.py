@@ -28,7 +28,7 @@ import re
 import sys
 from pathlib import Path
 
-from specdoc import GenerationError
+from specdoc import GenerationError, part_paths
 
 HERE = Path(__file__).resolve().parent
 REGISTRY = HERE.parent / "artifacts" / "logical_schemas.json"
@@ -71,7 +71,7 @@ def main() -> int:
     }
     stale, written = [], 0
     try:
-        for path in sorted((HERE.parent / "parts").glob("[0-9][0-9]_*.md")):
+        for path in part_paths(HERE.parent / "parts"):
             old = path.read_text()
             new = render(old, tables)
             if new == old:
