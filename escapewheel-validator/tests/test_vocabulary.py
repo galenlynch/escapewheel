@@ -50,11 +50,9 @@ def test_a_report_holds_members_and_renders_strings(packet_root):
     assert {evaluation["status"] for evaluation in rendered["evaluations"]} == {"complete"}
 
 
-def test_a_level_or_status_given_as_its_string_is_stored_as_the_member():
+def test_a_status_given_as_its_string_is_stored_as_the_member():
     report = Report()
-    report.add("warning", "verify.unreachable", "a caller's own finding")
     report.record_evaluation("core", "complete")
-    assert report.findings[0].level is Level.WARNING
     assert report.evaluations[0].status is EvaluationStatus.COMPLETE
 
 

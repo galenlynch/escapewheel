@@ -16,7 +16,7 @@ from __future__ import annotations
 import itertools
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, overload
+from typing import Any
 
 from . import check_table
 from .check_table import CheckEntry
@@ -207,7 +207,6 @@ class Report:
                 registry=subject,
             )
 
-    @overload
     def add(
         self,
         check: CheckEntry,
@@ -219,33 +218,14 @@ class Report:
         resource: str | None = None,
         column: str | None = None,
         counts: Mapping[str, int] | None = None,
-    ) -> None: ...
-
-    @overload
-    def add(
-        self,
-        level: str,
-        check: str,
-        message: str,
-        /,
-        rows: Iterable[Sequence[Any]] = (),
-        registry: str | None = None,
-        *,
-        resource: str | None = None,
-        column: str | None = None,
-        counts: Mapping[str, int] | None = None,
-    ) -> None: ...
-
-    def add(self, check: CheckEntry | str, *given: Any, **named: Any) -> None:
-        """Record a finding under an entry of the check table, at the entry's level.
-
-        A caller outside this package whose check the table does not hold gives a level and a check
-        ID in the entry's place, as ``add(level, check, message, ...)``.
+    ) -> None:
+        """Record a finding under a check entry, at the entry's level.
 
         Parameters
         ----------
         check : CheckEntry
-            The check, from :mod:`.check_table`; `CheckEntry.at` gives it at another level.
+            The check: an entry of :mod:`.check_table`, or a caller's own for a check the table
+            does not hold. `CheckEntry.at` gives it at another level.
         message : str
             What went wrong.
         rows : iterable, optional
@@ -257,26 +237,10 @@ class Report:
         counts : Mapping of str to int, optional
             What the finding counted, by name.
         """
-        if isinstance(check, CheckEntry):
-            self._record(check.level, check.id, *given, **named)
-        else:
-            self._record(Level(check), *given, **named)
-
-    def _record(
-        self,
-        level: Level,
-        check: str,
-        message: str,
-        rows: Iterable[Sequence[Any]] = (),
-        registry: str | None = None,
-        *,
-        resource: str | None = None,
-        column: str | None = None,
-        counts: Mapping[str, int] | None = None,
-    ) -> None:
-        """Append one finding, keeping its first `ROW_CAP` rows as strings."""
         kept = tuple(tuple(str(v) for v in row) for row in itertools.islice(rows, ROW_CAP))
-        self.findings.append(Finding(level, check, message, kept, registry, resource, column, dict(counts or {})))
+        self.findings.append(
+            Finding(check.level, check.id, message, kept, registry, resource, column, dict(counts or {}))
+        )
 
     def add_about(
         self,
