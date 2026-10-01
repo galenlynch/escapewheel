@@ -272,8 +272,15 @@ natural.
   and either is a revision. A report is optional while Part 05 §4.3 requires every compensation
   recorded, which favours the resource. Undecided.
 - **An in-process source that omits an empty table escapes a refusal a delivered one draws.**
-  `session.refuse_a_discarded_fact` skips a resource fewer than two source kinds stated.
+  `facts.refuse_a_discarded_fact` skips a resource fewer than two source kinds stated.
   REFACTOR.md §11.15 records it; changing it is behaviour the refactor does not list.
+- **An amendment writes no `sources.json`**, so a source an amendment adds has no entry in the
+  resolution document Part 04 §5.5 recommends. REFACTOR.md §11.17 records it.
+- **The import command and `import_packet` bind different registries on an amendment.** The
+  command binds a registry the amended packet binds and the recipe does not name; `build` and
+  `import_packet` called directly do not. REFACTOR.md §11.17 records it.
+- **No test amends a packet with a materializer.** The pipeline change of REFACTOR.md §11.17 was
+  compared by bytes over eight such scenarios held outside the repository.
 - **Four corpus packets expected to warn are not checked to pass**, and `tone_in_place_of_its_own`
   names no registry. REFACTOR.md §11.6 lists them.
 - **The ledger cannot see whether a section states an applied clause.** Two clauses were recorded

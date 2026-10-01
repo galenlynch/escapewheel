@@ -202,7 +202,7 @@ module declares `__all__`, and `api.rst` lists exactly the two tiers.
 - [x] Writer: add `escapewheel_writer.adapter`; publish the `NWBSource` class tables and the five
       hooks that aind overrides, with the two accessors and the `clean` helper it calls; delete
       `into()`.
-- [ ] aind and `conformance/`: import only from the tiers.
+- [x] aind and `conformance/`: import only from the tiers.
 - [ ] Tests: stop importing private names across modules, or move the test beside the module
       whose private name it needs.
 
@@ -241,11 +241,11 @@ Known obstacles:
 
 ## 8. Stage 5: structural changes
 
-- [ ] Writer: `commit` and `_amend` are one pipeline written twice (staging, notes and hooks,
+- [x] Writer: `commit` and `_amend` are one pipeline written twice (staging, notes and hooks,
       materialize and restage, refusal, promotion claim, publish). Make the URI base a staging
       parameter in place of the `_amending` flag, then express both as the same phases. This is
       the riskiest item and lands alone.
-- [ ] Writer: `build` and the import command repeat the same preparation. One path.
+- [x] Writer: `build` and the import command repeat the same preparation. One path.
 - [x] Validator: `Finding` gains `resource` and `column`, summary findings carry their counts as
       data, and the row cap has one value. The report's JSON gains members; Part 05 §9.1 requires
       a level, a check and a message and forbids none of this.
@@ -254,7 +254,7 @@ Known obstacles:
 - [x] Validator: `validate` becomes four phase calls over one context object.
 - [x] Reader: functions that take a packet are typed against `PacketLike`, and the six memo
       caches they reach by `getattr` become one public memo.
-- [ ] Tests: split `test_validation.py` (2,336 lines), `test_writer.py` (1,530) and
+- [x] Tests: split `test_validation.py` (2,336 lines), `test_writer.py` (1,530) and
       `test_recipe.py` (1,194) along the new modules.
 - [ ] Tests: one shared packet-fixture helper for the reader's and validator's suites, with its
       small registry derived from the real one; one `nwbfixture` for the writer and aind.
@@ -729,7 +729,7 @@ Found and left as they were:
   adapter declares.
 - Every adapter omits an empty table from `records()`, `batches()` and `offers()`, and `offers()`
   is derived from `records()` and `stream_rows()`. `LFPSource.offers()` counts from the file,
-  since `init` and `inspect` open it without the clocks `records()` needs. `delivery.Delivered`
+  since `init` and `inspect` open it without the clocks `records()` needs. `reading.Delivered`
   still reports every table that arrived.
 - An adapter has one streaming surface, `batches()` and `stream_rows()`.
 - The support tier is one module, `escapewheel_writer.adapter`, which defines nothing and
@@ -743,14 +743,14 @@ Found and left as they were:
   recipe amends, and `commit_arguments(recipe, memory_budget)` holds what a recipe passes a
   commit. The command line still calls `build` and the commit itself, because a refusal before
   the commit exits 2 and a refused commit exits 1, and takes its arguments from
-  `commit_arguments`.
+  `commit_arguments`. §11.17 gives the preparation the two share.
 - `encoding.STREAMED_BATCH_ROWS` (1,000,000) and `encoding.MATERIALIZED_BATCH_ROWS` (131,072) are
   both deliberate and each is defined once. aind's `video.BATCH_ROWS` stays as the default of
   that adapter's own option.
 - Compensations are not carried across a delivery, and §4's item stays open. The run report of
   Part 12 §9 has no member for them and a delivery reserves no resource for them, so either
   route is a specification change and waits for a decision.
-- Found and left as behaviour §4 does not list: `session.refuse_a_discarded_fact` skips a
+- Found and left as behaviour §4 does not list: `facts.refuse_a_discarded_fact` skips a
   resource fewer than two source kinds stated, so a preferred in-process source that omits an
   empty table is not refused where the same source delivered out of process is.
 
@@ -780,3 +780,43 @@ Found and left as they were:
 - The reader keeps 44 `match=` assertions and the validator one. Each matches a built-in or
   third-party exception, a warning, or an error class with no attribute for the cause the test
   tells apart; two were converted to `UnsupportedCodecError.outside_floor`.
+
+### 11.17 Writer splits and the one publish pipeline
+
+- `PacketWriter` keeps two collaborators: `registries.Declarations` holds a packet's registries
+  and what they declare, and `attachments.Attachments` holds its arrays, media and payloads.
+  `PacketWriter.rows` is the accessor the build reads a writer's added records through, in place
+  of the private table map.
+- `sources/nwb/` composes `NWBSource` from four mixins (`Devices`, `Electrodes`, `Signals`,
+  `Events`) over `names` and `file`, so a hook aind overrides stays a method of the class.
+- `sources/analyzer` holds the analyzer reading the sorter, waveform and unit-QC adapters share,
+  as functions that take the open analyzer.
+- `sources/sync.py` waited for the lane of §11.18: its two revision citations are exempted by
+  file path in `revisions/repoint.py`.
+- `session.prepare` validates the extension registries, opens an amended packet and checks the
+  recipe once, and returns a `Prepared`. `build` and `import_packet` take one or prepare for
+  themselves, and the import command prepares, prints the recipe's problems and passes the result
+  on. The command still loads the registries an amended packet binds and still calls the commit
+  itself.
+- `PacketWriter._publish` runs one sequence of phases over a `publication.NewPacket` or a
+  `publication.Amendment`, which hold what differs between the two: where a resource is written,
+  which deliveries are staged, where registries are bound, how the staged packet is validated,
+  which paths promotion creates and how staged files reach them. Where a resource is written is a
+  parameter of staging, and the `_amending` flag is gone.
+- The pipeline change was checked by bytes. A recorder wrapped every commit and amendment the
+  writer suite makes and compared each packet's files before and after: 190 calls, all identical.
+  Eight scenarios of an amendment with a materializer, which no test in the repository covers,
+  were compared the same way outside it.
+- `materialize.into` is `materialize_spike_events` in the user tier, and `arrow.build` is
+  `build_table` in the adapter tier beside a new `write_zarr`.
+- The writer takes `semver` from the validator and `declared_tables` from the reader, strict in
+  `Recipe.check` and where an amended packet's kinds are read.
+- `integration/` and `conformance/` import the writer only through its two tiers. aind has no
+  tier, and a surface test holds its entry points as its whole surface.
+- The citation pass covered the source and tests of the writer and aind: no revision is cited,
+  and a requirement cites its part once within a definition. A helper that repeats its caller's
+  citation was not audited.
+- Found and left as behaviour §4 does not list: an amendment writes no `sources.json`; the import
+  command binds a registry an amended packet binds and the recipe does not name, where `build`
+  and `import_packet` called directly do not; and no test in the repository amends with a
+  materializer.
