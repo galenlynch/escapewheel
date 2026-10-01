@@ -133,19 +133,15 @@ def outside_path_errors() -> list[str]:
 
 def main() -> int:
     """Run the four checks; return non-zero where any fails."""
-    failed = False
+    report = specdoc.Reporter(shown=10)
     for label, check in (
         ("a tree tool imports only what the tree declares", import_errors),
         ("a tool in the tree names every incorporated artifact", unchecked_artifacts),
         ("no part gives a path under the repository outside the tree", outside_path_errors),
         ("a copy of the tree alone regenerates and checks itself", regeneration_errors),
     ):
-        errors = check()
-        print(f"{'FAIL' if errors else 'ok  '}  {label}" + (f"  ({len(errors)})" if errors else ""))
-        for error in errors[:10]:
-            print(f"          {error}")
-        failed |= bool(errors)
-    return 1 if failed else 0
+        report(label, check())
+    return 1 if report.failed else 0
 
 
 if __name__ == "__main__":

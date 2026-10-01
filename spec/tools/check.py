@@ -8,7 +8,6 @@ import json
 import sys
 import tomllib
 from collections import Counter
-from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import jsonschema
@@ -21,32 +20,13 @@ from canonical import dumps
 from checkers.descriptor import check_physical_profile, override_errors
 from checkers.registry_document import check_registry_context_bytes
 from checkers.rule_language import RuleProfileError, check_rule
-from specdoc import GenerationError, part_paths, registry_tables
+from specdoc import GenerationError, Reporter, part_paths, registry_tables
 
 HERE = Path(__file__).resolve().parent
 TREE = HERE.parent
 ARTIFACTS = TREE / "artifacts"
 INFORMATIVE = TREE / "informative"
 PARTS = TREE / "parts"
-
-
-class Checks:
-    """Print each check's outcome and keep the labels of those that failed.
-
-    An instance is called as `check(label, bad)`, the spelling `tools/facts.py` counts.
-    """
-
-    def __init__(self) -> None:
-        self.failed: list[str] = []
-
-    def __call__(self, label: str, bad: Iterable, fmt: Callable[[object], str] = str) -> None:
-        """Report one check, which fails where `bad` yields anything."""
-        bad = list(bad)
-        print(f"{'FAIL' if bad else 'ok  '}  {label}" + (f"  ({len(bad)})" if bad else ""))
-        for b in bad[:4]:
-            print(f"          {fmt(b)}")
-        if bad:
-            self.failed.append(label)
 
 
 def _json(path: Path):
@@ -59,7 +39,7 @@ def _schema_errors(schema: dict, instance, format_checker=None) -> list[str]:
     return [f"{list(e.path)[:4]} {e.message[:60]}" for e in validator.iter_errors(instance)]
 
 
-def identity_checks(check: Checks, registry_bytes: bytes, registry: dict) -> None:
+def identity_checks(check: Reporter, registry_bytes: bytes, registry: dict) -> None:
     """Check the registry's complete contract result and the identifiers it records."""
     # Part 02 §9.4 defines one complete result for a registry document, which this consumes rather
     # than maintaining another invariant subset. The schema its portable form is held to is
@@ -97,7 +77,7 @@ def identity_checks(check: Checks, registry_bytes: bytes, registry: dict) -> Non
     )
 
 
-def profile_checks(check: Checks, registry: dict, core: dict) -> None:
+def profile_checks(check: Reporter, registry: dict, core: dict) -> None:
     """Check the physical-profile descriptor and the orders it overrides."""
     # Part 03 incorporates the physical-profile descriptor. Its reusable schema owns local shape;
     # this generic checker owns cross-member, cross-artifact, and anchor invariants without
@@ -130,7 +110,7 @@ def profile_checks(check: Checks, registry: dict, core: dict) -> None:
     )
 
 
-def source_checks(check: Checks, core: dict) -> None:
+def source_checks(check: Reporter, core: dict) -> None:
     """Check the table set and that the registry is what its source assembles to."""
     check(
         "withdrawn tables absent",
@@ -158,7 +138,7 @@ def source_checks(check: Checks, core: dict) -> None:
     )
 
 
-def convention_checks(check: Checks, core: dict) -> None:
+def convention_checks(check: Reporter, core: dict) -> None:
     """Check the authoring conventions and report which resources a paired value can name."""
     for label, bad in conventions.convention_failures(
         core, conventions.NAMING_EXCEPTIONS, conventions.NAMES_A_KIND
@@ -201,7 +181,7 @@ def convention_checks(check: Checks, core: dict) -> None:
         print(f"      note  {r} has a single-column key but no name to match, so a scope cannot name it")
 
 
-def projection_checks(check: Checks, registry: dict) -> None:
+def projection_checks(check: Reporter, registry: dict) -> None:
     """Check the generated regions and schema that project another artifact."""
     # Part 04's field tables and Part 03's delivery schema are projections of the incorporated
     # manifest schema, so a hand edit to either, or a schema change nobody rebuilt, is a defect.
@@ -246,7 +226,7 @@ def projection_checks(check: Checks, registry: dict) -> None:
     )
 
 
-def schema_checks(check: Checks, registry: dict) -> None:
+def schema_checks(check: Reporter, registry: dict) -> None:
     """Check each incorporated schema, and each document or example a schema governs."""
     # Part 02 §9.2: the registry validates against its published meta-schema.
     meta = _json(ARTIFACTS / "registry.schema.json")
@@ -375,7 +355,7 @@ def schema_checks(check: Checks, registry: dict) -> None:
     )
 
 
-def rule_checks(check: Checks, registry: dict, core: dict) -> None:
+def rule_checks(check: Reporter, registry: dict, core: dict) -> None:
     """Check every core rule against the portable profile.
 
     Executing the rules needs an engine, which the tree does not declare, so their execution is
@@ -396,7 +376,8 @@ def main() -> int:
     registry_bytes = (ARTIFACTS / "logical_schemas.json").read_bytes()
     registry = json.loads(registry_bytes)
     core = registry_tables(registry)
-    check = Checks()
+    # Named `check` throughout this module: `tools/facts.py` counts the calls of that name.
+    check = Reporter(shown=4)
 
     try:
         identity_checks(check, registry_bytes, registry)

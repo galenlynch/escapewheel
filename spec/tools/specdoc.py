@@ -37,6 +37,26 @@ class ScalarError(TypeError):
         self.token = token
 
 
+class Reporter:
+    """Print each check's outcome and keep the labels of those that failed.
+
+    `shown` is how many of a failing check's items are printed under its label.
+    """
+
+    def __init__(self, shown: int) -> None:
+        self.shown = shown
+        self.failed: list[str] = []
+
+    def __call__(self, label: str, bad: Iterable, fmt: Callable[[object], str] = str) -> None:
+        """Report one check, which fails where `bad` yields anything."""
+        bad = list(bad)
+        print(f"{'FAIL' if bad else 'ok  '}  {label}" + (f"  ({len(bad)})" if bad else ""))
+        for item in bad[: self.shown]:
+            print(f"          {fmt(item)}")
+        if bad:
+            self.failed.append(label)
+
+
 def part_paths(directory: Path) -> list[Path]:
     """Return every numbered part in `directory`, in number order."""
     return sorted(directory.glob(PART_GLOB))

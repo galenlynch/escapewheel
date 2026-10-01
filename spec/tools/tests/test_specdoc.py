@@ -299,3 +299,37 @@ def test_each_named_region_is_filled_from_its_name_and_the_rest_is_kept():
 def test_what_fills_a_region_may_refuse_a_name():
     with pytest.raises(KeyError):
         specdoc.fill_regions(specdoc.named_regions("facts"), NAMED, {"tables": "only\n"}.__getitem__)
+
+
+def test_a_passing_check_prints_its_label_and_is_not_kept(capsys):
+    report = specdoc.Reporter(shown=4)
+
+    report("every part is numbered", [])
+
+    assert capsys.readouterr().out == "ok    every part is numbered\n"
+    assert report.failed == []
+
+
+def test_a_failing_check_prints_its_count_and_no_more_items_than_are_shown(capsys):
+    report = specdoc.Reporter(shown=2)
+
+    report("every part is numbered", (name for name in ("a.md", "b.md", "c.md")))
+
+    assert capsys.readouterr().out == ("FAIL  every part is numbered  (3)\n          a.md\n          b.md\n")
+    assert report.failed == ["every part is numbered"]
+
+
+def test_a_failing_check_formats_its_items_as_asked(capsys):
+    report = specdoc.Reporter(shown=4)
+
+    report("pairs agree", [("a", 1)], lambda pair: f"{pair[0]} is {pair[1]}")
+
+    assert capsys.readouterr().out == "FAIL  pairs agree  (1)\n          a is 1\n"
+
+
+def test_failed_labels_accumulate_in_the_order_reported():
+    report = specdoc.Reporter(shown=0)
+    for label, bad in (("first", [1]), ("second", []), ("third", [1])):
+        report(label, bad)
+
+    assert report.failed == ["first", "third"]
