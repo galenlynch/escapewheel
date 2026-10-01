@@ -19,13 +19,17 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from .errors import NotDeclared, StaleSupport
+from .resource_ids import (
+    CORE_CLOCK_OBSERVATION_INTERVALS,
+    CORE_CLOCKS,
+    CORE_EVENT_STREAM_OBSERVATION_INTERVALS,
+    CORE_EVENT_STREAMS,
+    CORE_UNIT_OBSERVATION_INTERVALS,
+    CORE_UNITS,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
-
-CLOCK_INTERVALS = "core.clock_observation_intervals"
-UNIT_INTERVALS = "core.unit_observation_intervals"
-STREAM_INTERVALS = "core.event_stream_observation_intervals"
 
 #: Where a resolved window came from. `declared` is the thing's own refinement, `inherited` is
 #: its clock's. Kept because the two mean different things to a writer reading a finding back.
@@ -75,7 +79,7 @@ def clock_windows(packet: Any, *, session_id: int | None = None, clock_id: int |
         Columns ``session_id``, ``clock_id``, ``start_tick`` and ``stop_tick``. Empty when the
         packet declares none, which Part 02 §12.5 forbids; no extent is invented for it.
     """
-    if not _has(packet, CLOCK_INTERVALS):
+    if not _has(packet, CORE_CLOCK_OBSERVATION_INTERVALS):
         return pa.table(
             {
                 n: pa.array([], type=pa.int32() if n.endswith("id") else pa.int64())
@@ -83,7 +87,9 @@ def clock_windows(packet: Any, *, session_id: int | None = None, clock_id: int |
             }
         )
     columns = ["session_id", "clock_id", "start_tick", "stop_tick"]
-    table: pa.Table = packet.table(CLOCK_INTERVALS, columns=columns, session_id=session_id, clock_id=clock_id)
+    table: pa.Table = packet.table(
+        CORE_CLOCK_OBSERVATION_INTERVALS, columns=columns, session_id=session_id, clock_id=clock_id
+    )
     return table
 
 
@@ -126,9 +132,9 @@ def unit_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
     # R96 §3.2 moved the clock from the run to the unit, so the run is no longer read here: a
     # unit names the clock its ticks are counted on, and the map through `core.sorting_runs`
     # this used to build was answering that question one table away.
-    if not _has(packet, "core.units"):
+    if not _has(packet, CORE_UNITS):
         return _empty(_UNIT_KEY)
-    units = packet.table("core.units", columns=[*_UNIT_KEY, "clock_id"], session_id=session_id)
+    units = packet.table(CORE_UNITS, columns=[*_UNIT_KEY, "clock_id"], session_id=session_id)
     windows: dict[tuple[int | None, int | None], list[tuple[int, int]]] = {}
     for row in clock_windows(packet, session_id=session_id).to_pylist():
         windows.setdefault((row["session_id"], row["clock_id"]), []).append((row["start_tick"], row["stop_tick"]))
@@ -142,11 +148,11 @@ def unit_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
     inherited = pa.Table.from_pylist(rows, schema=_empty(_UNIT_KEY).schema) if rows else _empty(_UNIT_KEY)
 
     own = _empty(_UNIT_KEY)
-    if _has(packet, UNIT_INTERVALS):
+    if _has(packet, CORE_UNIT_OBSERVATION_INTERVALS):
         # R81 §2.3 leaves the interval row naming only the unit, and R96 §3.2 puts the clock on
         # the unit, so one lookup answers what two did.
         by_unit = {u["unit_id"]: u["clock_id"] for u in units.to_pylist()}
-        declared = packet.table(UNIT_INTERVALS, session_id=session_id).to_pylist()
+        declared = packet.table(CORE_UNIT_OBSERVATION_INTERVALS, session_id=session_id).to_pylist()
         if declared:
             own = pa.Table.from_pylist(
                 [
@@ -181,10 +187,10 @@ def stream_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
         ``source``.
     """
     key = ("event_stream_id",)
-    if not _has(packet, "core.event_streams"):
+    if not _has(packet, CORE_EVENT_STREAMS):
         return _empty(key)
     streams = packet.table(
-        "core.event_streams", columns=["event_stream_id", "session_id", "clock_id"], session_id=session_id
+        CORE_EVENT_STREAMS, columns=["event_stream_id", "session_id", "clock_id"], session_id=session_id
     ).to_pylist()
     windows: dict[tuple[int | None, int | None], list[tuple[int, int]]] = {}
     for row in clock_windows(packet, session_id=session_id).to_pylist():
@@ -204,9 +210,13 @@ def stream_windows(packet: Any, *, session_id: int | None = None) -> pa.Table:
     inherited = pa.Table.from_pylist(rows, schema=_empty(key).schema) if rows else _empty(key)
 
     own = _empty(key)
-    if _has(packet, STREAM_INTERVALS):
+    if _has(packet, CORE_EVENT_STREAM_OBSERVATION_INTERVALS):
         clock_of = {s["event_stream_id"]: s["clock_id"] for s in streams}
-        declared = [d for d in packet.table(STREAM_INTERVALS).to_pylist() if d["event_stream_id"] in clock_of]
+        declared = [
+            d
+            for d in packet.table(CORE_EVENT_STREAM_OBSERVATION_INTERVALS).to_pylist()
+            if d["event_stream_id"] in clock_of
+        ]
         if declared:
             own = pa.Table.from_pylist(
                 [
@@ -386,7 +396,7 @@ def observed_seconds(packet: Any, windows: pa.Table) -> float:
         return 0.0
     rates = {}
     for clock in packet.table(
-        "core.clocks", columns=["clock_id", "tick_rate_hz", "tick_rate_num", "tick_rate_den"]
+        CORE_CLOCKS, columns=["clock_id", "tick_rate_hz", "tick_rate_num", "tick_rate_den"]
     ).to_pylist():
         if clock["tick_rate_num"] and clock["tick_rate_den"]:
             rates[clock["clock_id"]] = clock["tick_rate_num"] / clock["tick_rate_den"]
@@ -539,13 +549,10 @@ def rate(count: int, seconds: float) -> float:
 
 
 __all__ = [
-    "CLOCK_INTERVALS",
     "DECLARED",
     "INHERITED",
     "ROWS_KEY",
-    "STREAM_INTERVALS",
     "SUPPORT_KEY",
-    "UNIT_INTERVALS",
     "VIEWS",
     "attach_support",
     "clock_windows",

@@ -30,6 +30,7 @@ from numpy.typing import NDArray
 
 from .dictionaries import values, where
 from .errors import NotAligned, NoTimeOrigin, ResourceNotFoundError, Unanchored
+from .resource_ids import CORE_CLOCK_ANCHORS, CORE_CLOCKS, CORE_SESSIONS
 
 #: How far from an anchor the mapping stays defined, as a multiple of the median anchor
 #: interval (Part 01 §3.9). One, so that the same threshold covers a gap between anchors and the
@@ -181,7 +182,7 @@ def anchors(packet: Any) -> dict[int, tuple[NDArray[np.int64], NDArray[np.int64]
     if cached is not None:
         return cached  # type: ignore[no-any-return]
     try:
-        table = packet.table("core.clock_anchors")
+        table = packet.table(CORE_CLOCK_ANCHORS)
     except ResourceNotFoundError:
         empty = pa.array([], pa.int64())
         table = pa.table({"clock_id": pa.array([], pa.int32()), "t_tick": empty, "parent_tick": empty})
@@ -218,7 +219,7 @@ def declared_bound(packet: Any) -> float:
         return float(cached)
 
     try:
-        sessions = packet.table("core.sessions", columns=["alignment_bound"])
+        sessions = packet.table(CORE_SESSIONS, columns=["alignment_bound"])
     except Exception:  # noqa: BLE001 -- an absent or unreadable table is simply no record
         return BOUND
     declared = [float(v) for v in sessions.column("alignment_bound").to_pylist() if v is not None]
@@ -253,9 +254,9 @@ def reference_clock(packet: Any, *, session_id: int | None = None) -> int:
     cached = getattr(packet, "_reference_cache", None)
     if session_id is None and cached is not None:
         return int(cached)
-    table = packet.table("core.sessions")
+    table = packet.table(CORE_SESSIONS)
     if "reference_clock_id" not in table.column_names:
-        raise NotAligned("core.sessions carries no reference_clock_id (R27 §2)")
+        raise NotAligned(f"{CORE_SESSIONS} carries no reference_clock_id (R27 §2)")
     declared = {
         session: clock
         for session, clock in zip(
@@ -381,10 +382,10 @@ def default_clock(packet: Any, present: list[int]) -> int:
 
 def tick_rate(packet: Any, clock_id: int) -> tuple[int, int]:
     """Return a clock's rational tick rate, which Part 01 §3.9 prefers to `tick_rate_hz`."""
-    clocks = packet.table("core.clocks")
+    clocks = packet.table(CORE_CLOCKS)
     names = clocks.column("clock_id").to_pylist()
     if clock_id not in names:
-        raise NotAligned(f"core.clocks declares no {clock_id!r}, so its rate is unknown")
+        raise NotAligned(f"{CORE_CLOCKS} declares no {clock_id!r}, so its rate is unknown")
     row = names.index(clock_id)
     num = clocks.column("tick_rate_num")[row].as_py()
     den = clocks.column("tick_rate_den")[row].as_py() if "tick_rate_den" in clocks.column_names else 1
@@ -421,9 +422,9 @@ def origin(packet: Any, session_id: int | None = None) -> tuple[int, int, int]:
     cache = getattr(packet, "_origin_cache", None)
     if cache is not None and session_id in cache:
         return cache[session_id]  # type: ignore[no-any-return]
-    sessions = packet.table("core.sessions")
+    sessions = packet.table(CORE_SESSIONS)
     if "t_zero_tick" not in sessions.column_names:
-        raise NoTimeOrigin("core.sessions carries no t_zero_tick, so seconds are undefined (Part 01 §2.2)")
+        raise NoTimeOrigin(f"{CORE_SESSIONS} carries no t_zero_tick, so seconds are undefined (Part 01 §2.2)")
     declared = {
         session: tick
         for session, tick in zip(

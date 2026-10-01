@@ -18,10 +18,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .errors import PacketError, UnresolvableChannelIndex
-
-#: The list a run kept, and the run log whose rows it belongs to (Part 02 §12.2).
-CHANNELS = "core.sorting_run_channels"
-RUNS = "core.sorting_runs"
+from .resource_ids import CORE_SORTING_RUN_CHANNELS, CORE_SORTING_RUNS
 
 
 @dataclass(frozen=True)
@@ -85,7 +82,7 @@ def kept_channels(packet: Any, *, sorting_run_id: int | None = None) -> dict[int
         wrong electrode and says nothing, so it is refused here too rather than assumed away in
         a packet this reader did not validate.
     """
-    rows = _rows(packet, CHANNELS, ["sorting_run_id", "channel_index", "electrode_id"], required=True)
+    rows = _rows(packet, CORE_SORTING_RUN_CHANNELS, ["sorting_run_id", "channel_index", "electrode_id"], required=True)
     by_run: dict[int, list[tuple[int, int]]] = {}
     for row in rows:
         run = row["sorting_run_id"]
@@ -175,7 +172,7 @@ def runs_without_channels(packet: Any) -> tuple[ChannelsUndeclared, ...]:
         the packet declares no sorting runs at all.
     """
     declared = set(kept_channels(packet))
-    runs = _rows(packet, RUNS, ["sorting_run_id", "session_id"])
+    runs = _rows(packet, CORE_SORTING_RUNS, ["sorting_run_id", "session_id"])
     return tuple(
         ChannelsUndeclared(sorting_run_id=int(row["sorting_run_id"]), session_id=row["session_id"])
         for row in sorted(runs, key=lambda r: int(r["sorting_run_id"]))
@@ -184,8 +181,6 @@ def runs_without_channels(packet: Any) -> tuple[ChannelsUndeclared, ...]:
 
 
 __all__ = [
-    "CHANNELS",
-    "RUNS",
     "ChannelsUndeclared",
     "electrode_at",
     "kept_channels",

@@ -23,14 +23,12 @@ import pyarrow.compute as pc
 from .errors import MultiSessionUnresolved, ResourceNotFoundError
 from .location import Location
 from .packet import Packet, open_packet
+from .resource_ids import CORE_SESSIONS
 from .resources import TableResource
 from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from duckdb import DuckDBPyConnection
-
-#: The table session scope is measured against (Part 02 §7.1).
-SESSIONS = "core.sessions"
 
 #: The columns a dataset projects onto every session-scoped table. `session_key` is the
 #: discriminator Part 05 §13.1 requires; `session_name` is the label it permits beside one, and
@@ -63,7 +61,7 @@ def session_scoped(registry: Mapping[str, Any]) -> frozenset[str]:
     edges = {n: {r["resource"] for r in t.get("references", [])} for n, t in tables.items()}
 
     def reaches(name: str, seen: set[str]) -> bool:
-        if name == SESSIONS:
+        if name == CORE_SESSIONS:
             return True
         if name in seen:
             # A self-reference is well-founded (Part 01 §3.5) and is not a route to anywhere.
@@ -143,7 +141,7 @@ class Dataset:
         """
         numbered, key = [], 0
         for packet in packets:
-            rows = packet.table(SESSIONS).to_pylist()
+            rows = packet.table(CORE_SESSIONS).to_pylist()
             for row in sorted(rows, key=lambda r: r["session_id"]):
                 numbered.append(
                     Session(
@@ -423,7 +421,6 @@ def open_dataset(
 
 __all__ = [
     "PROJECTED",
-    "SESSIONS",
     "Dataset",
     "Session",
     "open_dataset",

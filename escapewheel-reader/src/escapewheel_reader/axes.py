@@ -21,12 +21,10 @@ from numpy.typing import NDArray
 
 from .discriminators import Discriminator, _one, _paired_target, registries
 from .errors import AxisFault, UnresolvableAxis
+from .resource_ids import CORE_ARRAY_CHANNELS
 
 #: The column whose value declares each coordinate form, as Part 03 §6.3's one-form rule counts them.
 FORMS = ("origin_tick", "origin_value", "coordinate_array_asset_id", "coordinate_resource")
-
-#: Per-channel scaling, which belongs to the arrays of whichever axes table it references.
-CHANNELS = "core.array_channels"
 
 
 @dataclass(frozen=True)
@@ -284,10 +282,10 @@ def _channel_scaling(packet: Any, array_asset_id: int, axes_id: str) -> pa.Table
     A channel table belongs to the arrays of the axes table it references: an analysis array is
     numbered apart from a core one, and a channel row for a core array with its number is not its.
     """
-    references = registries(packet).get(CHANNELS, {}).get("references", [])
-    if CHANNELS not in _held(packet) or not any(r.get("resource") == axes_id for r in references):
+    references = registries(packet).get(CORE_ARRAY_CHANNELS, {}).get("references", [])
+    if CORE_ARRAY_CHANNELS not in _held(packet) or not any(r.get("resource") == axes_id for r in references):
         return None
-    table: pa.Table = packet.table(CHANNELS)
+    table: pa.Table = packet.table(CORE_ARRAY_CHANNELS)
     return table.filter((pc.field("array_asset_id") == array_asset_id) & pc.field("conversion").is_valid())
 
 

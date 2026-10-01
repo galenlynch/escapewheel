@@ -32,6 +32,8 @@ manifest, resources, location
     What the manifest declares, handles that read it, and where its bytes are.
 errors
     What reading raises.
+resource_ids
+    The core registry's resource IDs that code names.
 profile, descriptor, ordering, registries, dictionaries, sql, uri
     Shared with the writer and validator.
 """

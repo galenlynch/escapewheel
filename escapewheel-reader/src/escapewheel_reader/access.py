@@ -22,6 +22,7 @@ import pyarrow.compute as pc
 from . import clocks
 from .errors import NotAligned, NotDeclared
 from .observation import attach_support, unit_windows
+from .resource_ids import CORE_EVENT_STREAMS, CORE_EVENTS, CORE_INTERVALS, CORE_SPIKE_EVENTS, CORE_UNITS
 from .runs import check as _check_runs
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -59,7 +60,7 @@ def intervals(packet: Packet, *, session_id: int | None = None, interval_kind: s
     pyarrow.Table
         Matching intervals.
     """
-    return packet.table("core.intervals", session_id=session_id, interval_kind=interval_kind)
+    return packet.table(CORE_INTERVALS, session_id=session_id, interval_kind=interval_kind)
 
 
 def units(packet: Packet, *, session_id: int | None = None, quality_label: str | None = None) -> pa.Table:
@@ -88,7 +89,7 @@ def units(packet: Packet, *, session_id: int | None = None, quality_label: str |
         ``table("core.units")`` to get the rows anyway.
     """
     _check_runs(packet, SORTING_ACTIVITIES)
-    return packet.table("core.units", session_id=session_id, quality_label=quality_label)
+    return packet.table(CORE_UNITS, session_id=session_id, quality_label=quality_label)
 
 
 def events(
@@ -135,7 +136,7 @@ def events(
         # the shape R86 §2.4 measured as cheaper than carrying the type on every row.
         streams = (
             packet.table(
-                "core.event_streams",
+                CORE_EVENT_STREAMS,
                 columns=["event_stream_id"],
                 event_type=event_type,
                 session_id=session_id,
@@ -145,16 +146,16 @@ def events(
         )
     span = _span(packet, t_tick, clock)
     if streams is None:
-        found = packet.table("core.events", session_id=session_id, t_tick=span)
+        found = packet.table(CORE_EVENTS, session_id=session_id, t_tick=span)
     else:
-        found = packet.table("core.events", session_id=session_id, t_tick=span, stream_id=streams)
+        found = packet.table(CORE_EVENTS, session_id=session_id, t_tick=span, stream_id=streams)
     # A tick has no meaning without its clock, and R91 §3.2 puts the clock on the stream, so
     # the accessor attaches it: `core.event_streams` is tens of rows against an event table's
     # thousands, and every caller of this needs it either to convert or to report.
     stream_clocks = dict(
         zip(
             *(
-                packet.table("core.event_streams", columns=["event_stream_id", "clock_id"]).column(c).to_pylist()
+                packet.table(CORE_EVENT_STREAMS, columns=["event_stream_id", "clock_id"]).column(c).to_pylist()
                 for c in ("event_stream_id", "clock_id")
             ),
             strict=True,
@@ -242,7 +243,7 @@ def spike_times(
         raise ValueError("name exactly one of unit_id or units")
     if unit_id is not None:
         found = packet.table(
-            "core.spike_events",
+            CORE_SPIKE_EVENTS,
             columns=["t_tick"],
             unit_id=unit_id,
             session_id=session_id,
@@ -258,7 +259,7 @@ def spike_times(
         return found
 
     assert units is not None  # the exclusivity check above settles this
-    keys = _reference_columns(packet, "core.spike_events", "core.units")
+    keys = _reference_columns(packet, CORE_SPIKE_EVENTS, CORE_UNITS)
     missing = [k for k in keys if k not in units.schema.names]
     if missing:
         raise ValueError(f"units is missing {missing}, which identify a unit in this packet")
@@ -281,7 +282,7 @@ def spike_times(
     # R96 §3.4 struck `core.spike_events.clock_id`: a tick reaches its clock through its
     # unit now, so the column comes from the caller's `units` rather than from the scan.
     # A tick still travels with its clock, which is what this accessor exists to guarantee.
-    found = packet.scan("core.spike_events").to_table(columns=["t_tick", *keys], filter=wanted)
+    found = packet.scan(CORE_SPIKE_EVENTS).to_table(columns=["t_tick", *keys], filter=wanted)
     unit_clocks = _unit_clocks(packet, keys, session_id=session_id)
     found = found.append_column(
         "clock_id", pa.array([unit_clocks.get(tuple(r[k] for k in keys)) for r in found.select(keys).to_pylist()])
@@ -346,7 +347,7 @@ def _unit_clocks(packet: Packet, keys: Sequence[str], **narrow: Any) -> dict[tup
     The clock is the unit's fact, reached by a spike through the reference it already declares,
     and a tick still travels with its clock out of an accessor.
     """
-    rows = packet.table("core.units", columns=[*keys, "clock_id"], **narrow).to_pylist()
+    rows = packet.table(CORE_UNITS, columns=[*keys, "clock_id"], **narrow).to_pylist()
     return {tuple(r[k] for k in keys): r["clock_id"] for r in rows}
 
 

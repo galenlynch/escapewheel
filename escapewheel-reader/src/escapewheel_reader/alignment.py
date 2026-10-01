@@ -13,18 +13,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from .errors import ClockMismatch, NotDeclared
+from .resource_ids import ANALYSIS_SPIKE_EVENTS, CORE_EVENT_STREAMS, CORE_EVENTS
 from .sql import sql_name
 
 if TYPE_CHECKING:  # pragma: no cover
     import duckdb
-
-#: Where mapped spikes live. `core.spike_events` carries each spike on the clock it was measured
-#: on, so comparing it against an event is only meaningful after R30's mapping.
-SPIKES = "analysis.spike_events"
-EVENTS = "core.events"
-#: R91 §3.1 moved `event_type` and `clock_id` onto the stream, so selecting one kind of event and
-#: knowing what clock it is on both go through here.
-STREAMS = "core.event_streams"
 
 #: How a spike is matched to the one event it is assigned to.
 ASSIGNMENTS = ("preceding", "nearest")
@@ -36,7 +29,9 @@ def _connect(packet: Any, connection: duckdb.DuckDBPyConnection | None) -> duckd
     Named rather than left to the default, which registers nothing: over an object store each
     registration is a round trip, and an alignment touches three of a packet's twenty-eight.
     """
-    con: duckdb.DuckDBPyConnection = packet.duckdb(connection=connection, tables=(SPIKES, EVENTS, STREAMS))
+    con: duckdb.DuckDBPyConnection = packet.duckdb(
+        connection=connection, tables=(ANALYSIS_SPIKE_EVENTS, CORE_EVENTS, CORE_EVENT_STREAMS)
+    )
     return con
 
 
@@ -48,19 +43,24 @@ def _clock(packet: Any, event_type: str, session_id: int | None) -> int:
     reads `core.event_streams` where it read the event.
     """
     streams = packet.table(
-        STREAMS,
+        CORE_EVENT_STREAMS,
         columns=["event_type", "clock_id"],
         event_type=event_type,
         session_id=session_id,
     )
     if not streams.num_rows:
-        raise NotDeclared(f"no {event_type!r} stream in {STREAMS}")
+        raise NotDeclared(f"no {event_type!r} stream in {CORE_EVENT_STREAMS}")
     on = sorted({v for v in streams.column("clock_id").unique().to_pylist() if v is not None})
-    spikes = packet.table(SPIKES, columns=["clock_id"], session_id=session_id).column("clock_id").unique().to_pylist()
+    spikes = (
+        packet.table(ANALYSIS_SPIKE_EVENTS, columns=["clock_id"], session_id=session_id)
+        .column("clock_id")
+        .unique()
+        .to_pylist()
+    )
     reference = sorted({v for v in spikes if v is not None})
     if len(on) > 1 or on != reference:
         raise ClockMismatch(
-            f"{event_type!r} events are on {on} and {SPIKES} is on {reference}; "
+            f"{event_type!r} events are on {on} and {ANALYSIS_SPIKE_EVENTS} is on {reference}; "
             "map one onto the other before comparing ticks"
         )
     return int(on[0])
@@ -86,14 +86,18 @@ def _events(event_type: str, session_id: int | None) -> str:
     if session_id is not None:
         where += f" AND e.session_id = {session_id}"
     return (
-        f"(SELECT e.session_id, e.t_tick FROM {sql_name(EVENTS)} e "
-        f"JOIN {sql_name(STREAMS)} m ON e.stream_id = m.event_stream_id WHERE {where})"
+        f"(SELECT e.session_id, e.t_tick FROM {sql_name(CORE_EVENTS)} e "
+        f"JOIN {sql_name(CORE_EVENT_STREAMS)} m ON e.stream_id = m.event_stream_id WHERE {where})"
     )
 
 
 def _spikes(session_id: int | None) -> str:
-    """Build the spike relation with the same explicit session scope as the events."""
-    table = sql_name(SPIKES)
+    """Build the spike relation with the same explicit session scope as the events.
+
+    The mapped spikes, since `core.spike_events` carries each spike on the clock it was measured
+    on, and comparing that against an event is only meaningful after R30's mapping.
+    """
+    table = sql_name(ANALYSIS_SPIKE_EVENTS)
     return table if session_id is None else f"(SELECT * FROM {table} WHERE session_id = {session_id})"
 
 
@@ -278,9 +282,6 @@ def assigned_spikes(
 
 __all__ = [
     "ASSIGNMENTS",
-    "EVENTS",
-    "SPIKES",
-    "STREAMS",
     "aligned_spikes",
     "assigned_spikes",
     "windows_disjoint",

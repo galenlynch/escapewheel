@@ -157,6 +157,7 @@ Each module's page lists everything it holds, including what is not exported abo
    resources
    location
    errors
+   resource_ids
    profile
    descriptor
    ordering

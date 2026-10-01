@@ -17,13 +17,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from .errors import AmbiguousRun, NotDeclared
-
-#: Where the run log lives, and where a preference over it lives (R9 §2, Part 01 §2.6).
-RUNS = "core.processing_runs"
+from .resource_ids import CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS
 
 #: The activity whose runs are never alternatives to one another (Part 05 §12).
 IMPORT = "import"
-PREFERENCES = "core.preferred_runs"
 
 
 @dataclass(frozen=True)
@@ -92,7 +89,7 @@ def preferences(packet: Any) -> dict[tuple[int | None, str, str, str], int]:
         when the packet declares no preferences, which is most of them.
     """
     columns = ["session_id", "activity_type", "scope_kind", "scope", "processing_run_id"]
-    rows = _rows(packet, PREFERENCES, columns)
+    rows = _rows(packet, CORE_PREFERRED_RUNS, columns)
     return {
         (row["session_id"], row["activity_type"], row["scope_kind"], row["scope"]): row["processing_run_id"]
         for row in rows
@@ -133,7 +130,9 @@ def ambiguities(packet: Any) -> tuple[Ambiguity, ...]:
     if cached is not None:
         return cached  # type: ignore[no-any-return]
 
-    rows = _rows(packet, RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"])
+    rows = _rows(
+        packet, CORE_PROCESSING_RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"]
+    )
     declared = preferences(packet) if rows else {}
 
     grouped: dict[tuple[int | None, str, str | None, str | None], list[int]] = {}
@@ -201,7 +200,9 @@ def preferred_run(
     NotDeclared
         If no run matches the purpose at all.
     """
-    rows = _rows(packet, RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"])
+    rows = _rows(
+        packet, CORE_PROCESSING_RUNS, ["processing_run_id", "session_id", "activity_type", "scope_kind", "scope"]
+    )
     matching = [
         row
         for row in rows
@@ -223,7 +224,7 @@ def preferred_run(
         return int(matching[0]["processing_run_id"])
     raise AmbiguousRun(
         f"{len(matching)} runs produced {activity_type!r} for {scope!r} and none is preferred; "
-        f"declare one in {PREFERENCES} (Part 01 §2.6)"
+        f"declare one in {CORE_PREFERRED_RUNS} (Part 01 §2.6)"
     )
 
 
@@ -273,15 +274,15 @@ def check(packet: Any, activities: Iterable[str] | None = None) -> None:
         lines = "\n  ".join(str(a) for a in unknown)
         warnings.warn(
             f"cannot tell whether these runs are alternatives or complementary:\n  {lines}\n"
-            f"record each run's scope in {RUNS} (R44 §2.1)",
+            f"record each run's scope in {CORE_PROCESSING_RUNS} (R44 §2.1)",
             stacklevel=2,
         )
     if unresolved:
         lines = "\n  ".join(str(a) for a in unresolved)
         raise AmbiguousRun(
             f"the packet does not say which run to read:\n  {lines}\n"
-            f"declare a preference in {PREFERENCES} (Part 01 §2.6)"
+            f"declare a preference in {CORE_PREFERRED_RUNS} (Part 01 §2.6)"
         )
 
 
-__all__ = ["PREFERENCES", "RUNS", "Ambiguity", "ambiguities", "check", "preferences", "preferred_run"]
+__all__ = ["Ambiguity", "ambiguities", "check", "preferences", "preferred_run"]
