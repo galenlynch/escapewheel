@@ -97,11 +97,11 @@ behaviour unless this document says otherwise. A move and a behaviour change nev
 
 These are wrong today whatever the shape of the code. Each is fixed in the stage named.
 
-- [ ] `escapewheel import` exits with a traceback on most build failures. Its call to `build`
+- [x] `escapewheel import` exits with a traceback on most build failures. Its call to `build`
       handles only `RegistryRejected`, so `RecipeError`, `SourceDefect`, `PayloadRefused` and
       `NotCommitted` escape, and the shared entry point catches only the reader's `PacketError`.
       Stage 1.
-- [ ] `UnsupportedEncoding` is not a `SourceDefect`, and only the NWB adapter and aind's unit-QC
+- [x] `UnsupportedEncoding` is not a `SourceDefect`, and only the NWB adapter and aind's unit-QC
       adapter catch it, so the sorter, waveform and LFP adapters fail with a traceback. Stage 1.
 - [x] The validator builds the check ID `packet.registry.<reason>` from the free-text `reason` of
       the reader's `RegistryUnavailable`. Stage 1.
@@ -109,7 +109,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
       from the source object, and the delivery module never carries the attribute across.
       Stage 2; if the delivery report needs a new key, that part is a specification change.
 - [x] Three fixture builders write `validator_name` as `escapewheel_validate`. Stage 2.
-- [ ] The validator's test registry declares `core.trials`, which the core registry does not
+- [x] The validator's test registry declares `core.trials`, which the core registry does not
       have. Stage 5.
 - [ ] `BATCH_ROWS` has three definitions and two values in the writer. Stage 2.
 - [ ] The ledger checks that an applied clause's target exists and never that its text is there,
@@ -144,16 +144,16 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 
 ### 5.3 Writer and adapters
 
-- [ ] Add `WriterError`; every class the writer defines derives from it.
-- [ ] Split `RecipeError` by cause: an unsound recipe (carrying its problems), an unknown source
+- [x] Add `WriterError`; every class the writer defines derives from it.
+- [x] Split `RecipeError` by cause: an unsound recipe (carrying its problems), an unknown source
       kind, a source-order error, an unfilled term, a missing materializer, strict-mode notes, an
       unreadable recipe file.
-- [ ] Give `Problem` a `code`, and `PayloadRefused` its problems as a list.
-- [ ] Give `SourceDefect` `where` and `code`, and make `UnsupportedEncoding` a `SourceDefect`.
-- [ ] Give adapter notes a code, so a test asserts a code where it now matches note text.
-- [ ] Name the built-in raises tests tell apart by text: an undeclared resource, an occupied
+- [x] Give `Problem` a `code`, and `PayloadRefused` its problems as a list.
+- [x] Give `SourceDefect` `where` and `code`, and make `UnsupportedEncoding` a `SourceDefect`.
+- [x] Give adapter notes a code, so a test asserts a code where it now matches note text.
+- [x] Name the built-in raises tests tell apart by text: an undeclared resource, an occupied
       packet path, a usage error.
-- [ ] The command line catches `EscapewheelError` once and prints the refusal.
+- [x] The command line catches `EscapewheelError` once and prints the refusal.
 
 ### 5.4 Tests
 
@@ -170,7 +170,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
       `f30864e`, 30 of the 71 literal IDs appear in no part.
 - [ ] Validator: a `Level` enumeration, and constants for verdicts and evaluation statuses. The
       writer compares against them where it now compares against `"valid"`.
-- [ ] Settle `source.absolute_uri` against the three `sources.*` IDs: one prefix.
+- [x] Settle `source.absolute_uri` against the three `sources.*` IDs: one prefix.
 - [x] Reader: the resource-ID module of §2, the packet file names, and the profile ID, each
       defined once.
 - [ ] Writer: a `SourceAdapter` protocol and one capability protocol for each optional member
@@ -268,19 +268,19 @@ Known obstacles:
       Delete its uncalled legacy interface, register each invariant with its ID, its dependence on
       core and its universe, then split it into a result model, the invariants, the rule and unit
       phases and the entry points. Each new file needs a line in the copy map.
-- [ ] One shared module for what the tools each reimplement: parts by number, fence-aware headings
+- [x] One shared module for what the tools each reimplement: parts by number, fence-aware headings
       and anchors, the citation grammar, metadata rows, JSON Pointer, tracked files, the tables a
       registry declares, region replacement, and one reporter.
-- [ ] `check.py` is a script that exits on import. It becomes functions under a `main`, and it
+- [x] `check.py` is a script that exits on import. It becomes functions under a `main`, and it
       meta-validates the two schemas it skips.
-- [ ] The Part 03 generated regions and `spec/informative/tables.md` have no `--check` of their
+- [x] The Part 03 generated regions and `spec/informative/tables.md` have no `--check` of their
       own; only the verifier's whole-tree comparison catches a stale one. Give each a check.
-- [ ] Generators raise an error class and `main` converts it, in place of `SystemExit` raised
+- [x] Generators raise an error class and `main` converts it, in place of `SystemExit` raised
       inside importable functions.
-- [ ] `framework.py`: move its expected-value data out and cut `defects` by phase.
+- [x] `framework.py`: move its expected-value data out and cut `defects` by phase.
 - [x] `verify.py`: one stage record type and one spelling of the interpreter. `--quick` runs no
       package suite; either it gains a marked fast subset or its documentation says so.
-- [ ] Two verifier stages execute every shipped rule over empty tables. Keep one.
+- [x] Two verifier stages execute every shipped rule over empty tables. Keep one.
 - [x] Ledger, as a process proposal. Preferred form: `headings.toml` locks a
       whitespace-normalized digest of each section an applied clause lands in, and a changed
       digest prints those clauses for re-reading before it is relocked. The ledger has 830
@@ -516,3 +516,101 @@ Found and left as they were:
   returns the default bound and reads again on every call.
 - `ordering.overridden` is used only by its own test, and the validator's tests patch the private
   `ordering._overrides`.
+
+### 11.9 Writer and adapter errors
+
+- Every exception class of the writer is defined in `escapewheel_writer.errors` and derives from
+  `WriterError`. `escapewheel_writer.sources.defect` is removed, and no old import path remains.
+  A test in the writer and in aind refuses a built-in exception raised from the package's source.
+- `RecipeFault` is a string enumeration and `Problem` carries one as a required third field,
+  `code`. A fault reported from two places shares a member. `declaration.refusals` returns pairs
+  of a fault and a message.
+- `RecipeError` has seven subclasses: `RecipeUnreadable` (still a `ValueError`), `RecipeUnsound`,
+  `UnknownSourceKind`, `SourcesNotOrdered`, `TermUnfilled`, `MaterializerNotFound` and
+  `NotesUnderStrict`. The first two carry `path` and a list of `Problem`. A refusal a build makes
+  is a `RecipeUnsound`; a wrapped `ReplacementRefused` or `AmendmentRefused` is chained as its
+  cause. `AmendmentRefused` has no codes and is wrapped as one problem.
+- `PayloadRefused.problems` is a list of `PayloadProblem`, each with a `PayloadFault` code and a
+  message, and `PayloadRefused.source` names the source.
+- `SourceDefect(message, *, code=None, where=None)` keeps its one-argument form, so an adapter
+  released apart from the writer raises it unchanged. The writer's codes are `SourceFault`, and
+  aind declares its own `AindFault`. A test in each package refuses a defect raised with no code.
+- `UnsupportedEncoding` is a `SourceDefect`. The NWB adapter still notes a pickled optional column
+  where it noted one, and aind's unit-QC adapter still skips a pickled metric column.
+- A failed delivery raises `DeliveryFailed`, a `SourceDefect` carrying each failure as a
+  `SourceDefect` in `failures`.
+- A note is a `Note`, a `str` subclass with a `code`, in `escapewheel_writer.notes` beside
+  `NoteCode`; aind declares `AindNote`. `notes` stays a list of strings, and plain text is a note
+  whose code is None. A code does not cross an out-of-process delivery, whose report carries a
+  level, a message and a resource; a relayed note is `NoteCode.REPORTED`. Carrying the code across
+  would add a key to the delivery report, which is a specification change.
+- The built-in raises became nine classes, each keeping the built-in it was as a second base:
+  `UsageError` (with a `UsageFault` code), `UndeclaredResource`, `PacketOccupied`,
+  `UnknownCompensation`, `CompensationsInvalid`, `DeclarationUnreadable`, `FixedOffsetZone`,
+  `OutOfRange` and `TickOverflow`. `UndeclaredResource` and `UnknownCompensation` stay `KeyError`
+  and print their message without the quotes a `KeyError` adds.
+- The shared entry point catches `EscapewheelError` where it caught `PacketError`, prints the
+  refusal and returns 1. `escapewheel import` returns 2 for any `EscapewheelError` raised before
+  the commit begins and 1 for one raised by the commit; a source that streams its rows is read
+  during the commit, so its defect there returns 1. A missing recipe file is still an `OSError`.
+- Where a test's point is a subject or a count no attribute carries, it selects by code and keeps
+  a substring for that subject or count.
+
+Left for §5.4 and stage 3: the new names are not yet exported from the writer's `__init__` or
+listed in its `api.rst`, and these `match=` assertions remain: `NaiveTimestamp` and `NotCommitted`
+in `test_writer.py`, two on the reader's `NotAligned`, two on the validator's `OrderViolation`,
+and those on `AmendmentRefused`, `NonFinite`, `ExtensionNotFound`, `Collided` and
+`PromotionRecordUnreadable`, whose classes carry no attribute for the fact matched.
+
+### 11.10 Specification tooling
+
+- The shared module is `spec/tools/specdoc.py`. It imports only the standard library, so a script
+  under `revisions/` or `tools/` imports it after putting `spec/tools` on its path. The scripts
+  under `revisions/` were edited to use it; no record, ledger entry or evidence file was.
+- A shared helper takes the directory it reads as an argument, so the patch points the process
+  tests use still work.
+- Duplicated helpers that differed keep each caller's behaviour through a parameter:
+  `part_citation(gap)` takes the separator, `metadata` keeps the last of a repeated row and
+  `metadata_value` the first, and `tracked_files(..., whole_names=False)` splits on whitespace as
+  five callers did. Nothing was unified where callers disagreed.
+- `resolve_pointer` is the ledger's resolver, and `ScalarError` carries the token so the evidence
+  checker keeps its own wording.
+- A generator raises `specdoc.GenerationError` and the ledger `LedgerError`; each entry point
+  prints the message and exits 1, as the former `SystemExit` did. `tools/facts.py` still raises
+  `SystemExit` at two sites.
+- `spec/tools/check.py` runs from seven functions under `main`, with its output unchanged. The
+  registry result schema and the physical profile schema are meta-validated by a raising call
+  with no report line.
+- The two new comparisons, of Part 03's generated regions and of the rendered listing, are checks
+  of the existing structural-checks stage, and `build.py --check` and `render.py --check` call the
+  same functions. No stage was added.
+- The framework checker's expected values are in `spec/tools/framework_data.py`, and `defects`
+  concatenates fourteen phase functions in the former order.
+- The shipped rules execute over empty tables in one stage; the rule-language probe keeps their
+  static check and binding.
+- The probes under `conformance/` keep their own reporters and table projections, since they run
+  in the package environments. The copied checkers keep theirs.
+
+Found and left as they were:
+
+- No heading enumeration skips fenced code, so a numbered heading inside a fence would count as a
+  section. No part has one.
+- Five callers split the tracked-file listing on whitespace, which breaks on a name holding a
+  space. No tracked name has one.
+- In a fresh checkout the quick verifier fails once at the process tooling tests, because the
+  ignored `fixtures/packets/` does not exist until the corpus stage has written it.
+
+### 11.11 Validator constants and the test registry
+
+- The validator takes every core resource ID, the manifest file name, the manifests directory
+  name and the Zarr metadata file names from the reader's constants, and a test fails on a whole
+  string literal in the package's own source that equals one. The copied checkers are outside the
+  rule. Its own `MANIFEST_FILENAME` is removed.
+- No test literal was converted: each is a fixture's row, manifest or registry text.
+- The validator reads a prefix holding both Zarr metadata documents as version 2 and the reader
+  reads it as version 3. Left as found, since aligning them changes behaviour this plan does not
+  list.
+- The validator's test registry declares `core.intervals` where it declared `core.trials`, with
+  the same simplified shape, so each test checks what it checked. A test holds that the fixture
+  declares only resources the core registry declares. Individual tests still add declarations
+  core lacks; the shared fixture of §8 is the place for those.
