@@ -1,6 +1,7 @@
 """What the adapter of a source kind declares, read from its class (Part 05 §3.4).
 
-- :func:`adapter_for` -- the class a kind names.
+- :func:`adapter_for`, :func:`required_adapter` -- the class a kind names, or None, and the same
+  refusing a kind no adapter is registered for.
 - :func:`produces`, :func:`contributes`, :func:`consumes` -- the resources it can supply, those
   it supplies only part of, and the kinds whose output it reads.
 - :func:`needs`, :func:`accepts` -- the names a build must supply it, and the options it can run
@@ -14,8 +15,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, Any
+
+from .errors import UnknownSourceKind
+
+if TYPE_CHECKING:
+    from .protocols import SourceAdapter
 
 
 def adapter_for(kind: str) -> Any:
@@ -30,6 +36,25 @@ def adapter_for(kind: str) -> Any:
     from . import sources
 
     return sources.ADAPTERS.get(kind) or sources.discovered().get(kind)
+
+
+def required_adapter(kind: str) -> Callable[..., SourceAdapter]:
+    """Return the class this kind names, where an adapter has to exist for what follows.
+
+    Raises
+    ------
+    UnknownSourceKind
+        If no adapter is registered for the kind, naming every kind one is registered for.
+    """
+    from . import sources
+
+    adapter: Callable[..., SourceAdapter] | None = adapter_for(kind)
+    if adapter is None:
+        known = sorted({*sources.ADAPTERS, *sources.discovered()})
+        raise UnknownSourceKind(
+            f"unknown source kind {kind!r}; known kinds are {', '.join(known)}", kind=kind, known=known
+        )
+    return adapter
 
 
 def states(kind: str) -> Mapping[str, str]:
@@ -136,6 +161,7 @@ __all__ = [
     "needs",
     "produces",
     "protocols",
+    "required_adapter",
     "state_accessors",
     "states",
 ]

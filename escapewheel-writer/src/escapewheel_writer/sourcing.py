@@ -28,13 +28,13 @@ from escapewheel_reader.resource_ids import (
 
 from . import opaque
 from .declaration import SOURCE_CACHE
-from .errors import RecipeFault, RecipeUnsound, SourcesNotOrdered, TermUnfilled, UnknownSourceKind
+from .errors import RecipeFault, RecipeUnsound, SourcesNotOrdered, TermUnfilled
 from .facts import as_stored, compare_declared_facts
+from .kinds import required_adapter
 from .notes import Note, NoteCode
 from .protocols import SourceAdapter
 from .reading import Delivered
 from .recipe import TERMS, Problem, Recipe, SourceSpec, declared, reached_by
-from .sources import ADAPTERS
 
 if TYPE_CHECKING:
     from .session import Context
@@ -185,7 +185,6 @@ def build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAd
     import inspect
 
     from . import reading
-    from .sources import discovered
     from .sources.store import store_for
 
     supplied = supplied_to(spec, recipe, context)
@@ -210,12 +209,7 @@ def build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAd
             say=context.say,
         )
 
-    adapter = ADAPTERS.get(spec.kind) or discovered().get(spec.kind)
-    if adapter is None:
-        known = sorted({*ADAPTERS, *discovered()})
-        raise UnknownSourceKind(
-            f"unknown source kind {spec.kind!r}; known kinds are {', '.join(known)}", kind=spec.kind, known=known
-        )
+    adapter = required_adapter(spec.kind)
     # In process, adapters reading one Zarr root share an open store, so they cannot disagree about
     # what is in it and the electrode table is parsed once. A handle is not something an adapter may
     # declare, so it is supplied where the class accepts one rather than from a

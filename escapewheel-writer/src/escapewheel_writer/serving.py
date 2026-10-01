@@ -28,7 +28,8 @@ import pyarrow.parquet as pq
 from . import opaque
 from .bindings import ExternalArray, ExternalMedia
 from .declaration import FILES, FLIGHT, REPORT_AS_FILE, SOURCE_CACHE, STREAM
-from .errors import SourceDefect, SourceFault
+from .errors import SourceDefect, SourceFault, UnknownSourceKind
+from .kinds import required_adapter
 from .protocols import ReferencesArrays, ReferencesMedia, SourceAdapter, StagesArrays, StagesPayloads, Streams
 
 #: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
@@ -141,15 +142,13 @@ def construct(kind: str, supplied: Mapping[str, Any]) -> SourceAdapter:
     on: an adapter never declared it, and a build supplied it because of the protocol. The root is
     opened uncached, and an adapter accepting `source_cache` reads through it for itself.
     """
-    from .sources import ADAPTERS, discovered
     from .sources.store import source_root
 
-    adapter = ADAPTERS.get(kind) or discovered().get(kind)
-    if adapter is None:
-        known = ", ".join(sorted({*ADAPTERS, *discovered()}))
-        raise SourceDefect(
-            f"unknown source kind {kind!r}; this build ships {known}", code=SourceFault.UNKNOWN_KIND, where=kind
-        )
+    try:
+        adapter = required_adapter(kind)
+    except UnknownSourceKind as exc:
+        # A delivery fails as a source defect, which is what the command prints and exits on.
+        raise SourceDefect(str(exc), code=SourceFault.UNKNOWN_KIND, where=kind) from None
     declared = getattr(adapter, "NEEDS", ("root", "session_id"))
     terms = {name: supplied[name] for name in declared if name in supplied and name != "root"}
     if SOURCE_CACHE in supplied and SOURCE_CACHE in getattr(adapter, "ACCEPTS", ()):

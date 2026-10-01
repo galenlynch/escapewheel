@@ -31,9 +31,9 @@ from escapewheel_validator import (
 )
 
 from .. import compare
-from ..errors import CommitRefused, ReplacementRefused, SourceDefect
+from ..errors import CommitRefused, ReplacementRefused, SourceDefect, UnknownSourceKind
 from ..extensions import load_checked as load_extension_context
-from ..kinds import contributes, produces
+from ..kinds import contributes, produces, required_adapter
 from ..protocols import SourceAdapter
 from ..recipe import RECIPE_SUPPLIES, Recipe
 from ..replacing import read_replaced
@@ -502,12 +502,11 @@ def _extension_check(args: argparse.Namespace) -> int:
 def _declare(args: argparse.Namespace) -> int:
     """Write one adapter's declarations as the document Part 12 §7 publishes the shape of."""
     from .. import declaration
-    from ..sources import ADAPTERS, discovered
 
-    adapter = ADAPTERS.get(args.kind) or discovered().get(args.kind)
-    if adapter is None:
-        known = ", ".join(sorted({*ADAPTERS, *discovered()}))
-        print(f"unknown source kind {args.kind!r}; this build ships {known}", file=sys.stderr)
+    try:
+        adapter = required_adapter(args.kind)
+    except UnknownSourceKind as exc:
+        print(exc, file=sys.stderr)
         return 2
     if args.protocol and getattr(adapter, "PROTOCOLS", ()):
         print(f"{args.kind} declares its own protocols; --protocol is for an adapter that states none", file=sys.stderr)
