@@ -20,6 +20,8 @@ registry_types
     What a registry document's column types and declarations mean to the layers reading them.
 manifest
     Manifest conformance and registry binding (Part 04 §10).
+declarations
+    The manifest's entries against the declarations and the sources they name.
 generate
     Tier 1 checks generated from a registry's structure.
 registry_document, rule_language
