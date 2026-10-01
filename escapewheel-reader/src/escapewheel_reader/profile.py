@@ -5,6 +5,7 @@
 - :func:`variant_for_zarr_format` -- the descriptor variant a Zarr format version selects.
 - :func:`parquet_floor`, :func:`zarr_floor_admits` -- the reader floors (Part 03 §6.4).
 - :func:`physical_profile_schema` -- the schema the descriptor is checked against.
+- :data:`PROFILE_ID` -- the profile's identifier.
 """
 
 from __future__ import annotations
@@ -17,6 +18,10 @@ from typing import Any
 
 from .descriptor import check_physical_profile
 from .errors import PhysicalProfileError
+
+#: The portable profile's identifier (Part 03 §1): a manifest's `profile_id`, the bundled
+#: descriptor's `id`, and the name that descriptor is filed under.
+PROFILE_ID = "escapewheel-portable-v0.1"
 
 
 def _bundled_json(relative: str) -> dict[str, Any]:
@@ -34,7 +39,7 @@ def physical_profile_schema() -> dict[str, Any]:
 @cache
 def physical_profile() -> dict[str, Any]:
     """Return the bundled profile after one cached conformance check."""
-    descriptor = _bundled_json("schemas/physical_profiles/escapewheel-portable-v0.1.json")
+    descriptor = _bundled_json(f"schemas/physical_profiles/{PROFILE_ID}.json")
     errors = check_physical_profile(descriptor, physical_profile_schema())
     if errors:
         raise PhysicalProfileError("; ".join(errors))
