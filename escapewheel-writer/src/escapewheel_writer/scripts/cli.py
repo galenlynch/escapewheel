@@ -31,14 +31,13 @@ from escapewheel_validator import (
 )
 
 from .. import compare
-from ..amending import Held
-from ..errors import AmendmentRefused, CommitRefused, ReplacementRefused, SourceDefect
+from ..errors import CommitRefused, ReplacementRefused, SourceDefect
 from ..extensions import load_checked as load_extension_context
 from ..kinds import contributes, produces
 from ..protocols import SourceAdapter
 from ..recipe import RECIPE_SUPPLIES, Recipe
 from ..replacing import read_replaced
-from ..session import build, commit_arguments
+from ..session import build, commit_arguments, prepare
 
 
 def declaration_protocols() -> tuple[str, ...]:
@@ -236,7 +235,6 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
     if core_context.result.state != RegistryState.VALID:
         print(f"error: core registry is {core_context.result.state}", file=sys.stderr)
         return 2
-    registry = core_context.document
     extension_contexts = [
         load_extension_context(named, core_context, base=recipe.path.parent) for named in recipe.extensions
     ]
@@ -248,27 +246,19 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
         for registry_id, body in sorted(bound.items())
         if registry_id != "core" and registry_id not in named_ids
     ]
-    rejected = [context for context in extension_contexts if context.result.state != RegistryState.VALID]
-    if rejected:
-        print(f"error: extension registry is {rejected[0].result.state}", file=sys.stderr)
-        return 2
-    extensions = [context.document for context in extension_contexts]
     if args.sample:
         recipe = recipe.with_sample(args.sample)
 
-    held = {}
-    if recipe.amends is not None:
-        try:
-            amended = Held.open(recipe.out)
-        except AmendmentRefused as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 2
-        held = {"held_tables": amended.tables_named(), "held_clocks": amended.clock_names()}
-    problems = recipe.check(registry, extensions, **held)
-    for problem in problems:
+    # Prepared once: every problem is printed here, and the build takes the result.
+    try:
+        prepared = prepare(recipe, core_context, extension_contexts=extension_contexts)
+    except RegistryRejected as exc:
+        print(f"error: extension registry is {exc.result.state}", file=sys.stderr)
+        return 2
+    for problem in prepared.problems:
         print(f"  {problem}", file=sys.stderr)
-    if any(p.level == "error" for p in problems):
-        print(f"{recipe.path}: refused, {sum(p.level == 'error' for p in problems)} error(s)", file=sys.stderr)
+    if errors := prepared.errors:
+        print(f"{recipe.path}: refused, {len(errors)} error(s)", file=sys.stderr)
         return 2
     try:
         replaced = read_replaced(recipe.replaces, recipe.path.parent)
@@ -298,11 +288,11 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
         writer = build(
             recipe,
             core_context,
-            extension_contexts=extension_contexts,
             say=say,
             strict=args.strict,
             source_cache=import_source_cache(args, recipe.out),
             replaced=replaced,
+            prepared=prepared,
         )
     except RegistryRejected as exc:
         print(json.dumps(exc.result.to_dict(), indent=2), file=sys.stderr)

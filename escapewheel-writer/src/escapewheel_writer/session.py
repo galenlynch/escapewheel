@@ -2,6 +2,7 @@
 
 - :func:`build` -- run every source and return a writer holding the packet, uncommitted.
 - :func:`import_packet` -- build the packet a recipe describes and commit it.
+- :func:`prepare`, :class:`Prepared` -- what a build settles before it opens a source.
 - :func:`commit_arguments` -- the limits and materializers a recipe passes a commit.
 - :func:`materializers` -- the recipe's `[[materialize]]` entries as callables `commit` runs.
 - :class:`Context` -- what earlier sources produced, for the sources that consume it.
@@ -304,44 +305,59 @@ def materializers(recipe: Recipe, memory_budget: int | str = 0) -> list[Callable
     return built
 
 
-def build(  # noqa: C901
+@dataclass(frozen=True)
+class Prepared:
+    """What a build settles before it opens a source (Part 05 §3.5).
+
+    Attributes
+    ----------
+    registry : CheckedRegistryContext
+        The core registry, valid.
+    extensions : tuple of CheckedRegistryContext
+        The extension registries the build binds, each valid.
+    held : Held or None
+        The packet an amending recipe amends, opened; None where the recipe amends none.
+    problems : tuple of Problem
+        Everything the recipe's check reports, warnings included.
+    """
+
+    registry: CheckedRegistryContext
+    extensions: tuple[CheckedRegistryContext, ...]
+    held: Held | None
+    problems: tuple[Problem, ...]
+
+    @property
+    def errors(self) -> list[Problem]:
+        """The problems that refuse the recipe."""
+        return [problem for problem in self.problems if problem.level == "error"]
+
+
+def prepare(
     recipe: Recipe,
     registry: Mapping[str, Any] | CheckedRegistryContext,
     *,
     extension_contexts: Collection[CheckedRegistryContext] | None = None,
-    say: Callable[[str], None] = lambda _: None,
-    strict: bool = False,
-    source_cache: str | Path | None = None,
-    replaced: Sequence[Replaced] | None = None,
-) -> PacketWriter:
-    """Run every source and return a writer holding the packet, uncommitted.
+) -> Prepared:
+    """Check the registries and the recipe, and open the packet an amending recipe amends.
+
+    The recipe's problems are returned and not raised, so a caller can report every one before it
+    refuses.
 
     Parameters
     ----------
     recipe : Recipe
-        The parsed recipe. Checked here as well as by a caller that reports every problem, since
-        a build MUST refuse an unsound recipe before it opens any source (Part 05 §3.5).
-    registry : Mapping
-        The registry to write against.
-    say : callable, optional
-        Progress reporter.
-    strict : bool, default False
-        Refuse the build on any adapter note. A note is something the importer worked around --
-        an absent column, a dropped timestamp, an offset that disagreed -- and every one is a
-        place the packet says less than the source could have. Off by default because working
-        around them is the point of an adapter; on in CI, where a new one is news.
-    source_cache : str or Path, optional
-        The source-cache location, supplied as `source_cache` to each adapter accepting it
-        (Part 12 §10). Created where absent and never emptied. One inside the packet root or the
-        delivery workspace is supplied to no adapter, and the build notes that and proceeds.
-    replaced : sequence of Replaced, optional
-        The packets `[packet].replaces` names, already read by a caller that compares against them.
-        Read here where absent, before any source opens.
+        The parsed recipe.
+    registry : Mapping or CheckedRegistryContext
+        The core registry to write against.
+    extension_contexts : collection of CheckedRegistryContext, optional
+        The extension registries to bind. Those the recipe names are loaded where absent.
 
-    Returns
-    -------
-    PacketWriter
-        Loaded with every record, ready to commit.
+    Raises
+    ------
+    RegistryRejected
+        If the core registry, or an extension's, is not valid.
+    AmendmentRefused
+        If the recipe amends a packet no build can amend.
     """
     registry_context = registry if isinstance(registry, CheckedRegistryContext) else check_registry_context(registry)
     if registry_context.result.state != RegistryState.VALID:
@@ -357,20 +373,78 @@ def build(  # noqa: C901
             document = extension_context.document
             subject = str(document.get("extension_id", "extension")) if isinstance(document, Mapping) else "extension"
             raise RegistryRejected(subject, extension_context)
+    held = Held.open(recipe.out) if recipe.amends is not None else None
+    problems = recipe.check(
+        checked_registry,
+        [extension.document for extension in extension_contexts],
+        held_tables=() if held is None else held.tables_named(),
+        held_clocks=() if held is None else held.clock_names(),
+    )
+    return Prepared(registry_context, tuple(extension_contexts), held, tuple(problems))
+
+
+def build(  # noqa: C901
+    recipe: Recipe,
+    registry: Mapping[str, Any] | CheckedRegistryContext,
+    *,
+    extension_contexts: Collection[CheckedRegistryContext] | None = None,
+    say: Callable[[str], None] = lambda _: None,
+    strict: bool = False,
+    source_cache: str | Path | None = None,
+    replaced: Sequence[Replaced] | None = None,
+    prepared: Prepared | None = None,
+) -> PacketWriter:
+    """Run every source and return a writer holding the packet, uncommitted.
+
+    Parameters
+    ----------
+    recipe : Recipe
+        The parsed recipe. A build MUST refuse an unsound one before it opens any source
+        (Part 05 §3.5).
+    registry : Mapping or CheckedRegistryContext
+        The registry to write against.
+    say : callable, optional
+        Progress reporter.
+    strict : bool, default False
+        Refuse the build on any adapter note. A note is something the importer worked around --
+        an absent column, a dropped timestamp, an offset that disagreed -- and every one is a
+        place the packet says less than the source could have. Off by default because working
+        around them is the point of an adapter; on in CI, where a new one is news.
+    source_cache : str or Path, optional
+        The source-cache location, supplied as `source_cache` to each adapter accepting it
+        (Part 12 §10). Created where absent and never emptied. One inside the packet root or the
+        delivery workspace is supplied to no adapter, and the build notes that and proceeds.
+    replaced : sequence of Replaced, optional
+        The packets `[packet].replaces` names, already read by a caller that compares against them.
+        Read here where absent, before any source opens.
+    prepared : Prepared, optional
+        What :func:`prepare` returned for this recipe, from a caller that reported its problems.
+        Its registries are the ones written against. Prepared here where absent.
+
+    Returns
+    -------
+    PacketWriter
+        Loaded with every record, ready to commit.
+    """
+    if prepared is None:
+        try:
+            prepared = prepare(recipe, registry, extension_contexts=extension_contexts)
+        except AmendmentRefused as exc:
+            raise refusal(recipe, "refused: ", [_amendment_refused(exc)], cites=" (Part 05 §3.5)") from exc
+    registry_context = prepared.registry
+    checked_registry = registry_context.document
+    assert isinstance(checked_registry, Mapping)
+    extension_contexts = prepared.extensions
     extension_documents = [extension.document for extension in extension_contexts]
-    held = _held(recipe, checked_registry, extension_documents) if recipe.amends is not None else None
+    held = prepared.held
+    if held is not None:
+        _refuse_another_packet(recipe, held, checked_registry, extension_documents)
     if replaced is None:
         try:
             replaced = read_replaced(recipe.replaces, recipe.path.parent)
         except ReplacementRefused as exc:
             raise refusal(recipe, "refused, [packet].replaces (Part 05 §3.5): ", exc.problems) from exc
-    problems = recipe.check(
-        checked_registry,
-        extension_documents,
-        held_tables=() if held is None else held.tables_named(),
-        held_clocks=() if held is None else held.clock_names(),
-    )
-    if errors := [p for p in problems if p.level == "error"]:
+    if errors := prepared.errors:
         raise refusal(recipe, f"refused, {len(errors)} error(s): ", errors)
     session_id = str(recipe.session["session_id"])
     context = Context(
@@ -541,6 +615,7 @@ def import_packet(
     strict: bool = False,
     source_cache: str | Path | None = None,
     replaced: Sequence[Replaced] | None = None,
+    prepared: Prepared | None = None,
     memory_budget: int | str = 0,
 ) -> Report:
     """Build the packet a recipe describes and commit it at `recipe.out` (Part 05 §2).
@@ -566,17 +641,16 @@ def import_packet(
         strict=strict,
         source_cache=source_cache,
         replaced=replaced,
+        prepared=prepared,
     )
     publish = writer.amend if recipe.amends is not None else writer.commit
     return publish(recipe.out, say=say, **commit_arguments(recipe, memory_budget))
 
 
-def _held(recipe: Recipe, registry: Mapping[str, Any], extensions: Collection[Mapping[str, Any]]) -> Held:
-    """Open the packet an amending recipe amends, refusing what §3.5 refuses before any source opens."""
-    try:
-        held = Held.open(recipe.out)
-    except AmendmentRefused as exc:
-        raise refusal(recipe, "refused: ", [_amendment_refused(exc)], cites=" (Part 05 §3.5)") from exc
+def _refuse_another_packet(
+    recipe: Recipe, held: Held, registry: Mapping[str, Any], extensions: Collection[Mapping[str, Any]]
+) -> None:
+    """Refuse an amending recipe the packet it amends does not answer to (Part 05 §3.5)."""
     manifest = held.manifest
     problems = []
     if manifest["packet_id"] != recipe.packet_id:
@@ -618,7 +692,6 @@ def _held(recipe: Recipe, registry: Mapping[str, Any], extensions: Collection[Ma
         ]
     if problems:
         raise refusal(recipe, "refused, an amending recipe (Part 05 §3.5): ", problems)
-    return held
 
 
 def _amendment_refused(refusal: AmendmentRefused) -> Problem:
@@ -776,6 +849,7 @@ def note_unclaimed(
 __all__ = [
     "MATERIALIZERS",
     "Context",
+    "Prepared",
     "build",
     "commit_arguments",
     "composed",
@@ -783,4 +857,5 @@ __all__ = [
     "import_packet",
     "materializers",
     "note_unclaimed",
+    "prepare",
 ]
