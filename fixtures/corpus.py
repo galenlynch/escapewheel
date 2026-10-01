@@ -15,7 +15,7 @@ from pathlib import Path
 
 from corpus_packets import PACKETS
 from escapewheel_reader import open_packet
-from escapewheel_validator import Verification, validate
+from escapewheel_validator import Verdict, Verification, validate
 
 HERE = Path(__file__).resolve().parent
 
@@ -197,7 +197,7 @@ def _judge(name: str) -> tuple[bool, str, list[str], int, int]:
                 report.verdict(expected.registry),
                 report.verdict("core"),
                 report.verdict(),
-            ) == ("failed", "passed", "failed")
+            ) == (Verdict.FAILED, Verdict.PASSED, Verdict.FAILED)
         if expected.conforming:
             ok = ok and report.passed
         verdict = "caught" if ok else f"MISSED {expected.check}"
