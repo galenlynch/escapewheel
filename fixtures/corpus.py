@@ -7,13 +7,19 @@ The validator under test is `escapewheel_validator`. Nothing is reimplemented he
 a second copy of the checks would be the drift this corpus exists to detect.
 """
 
+import os
 import sys
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import get_context
 from pathlib import Path
 
 from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
 HERE = Path(__file__).resolve().parent
+
+#: Packets validated at once. Each validation is independent and takes a fraction of a second.
+WORKERS = 8
 
 # packet -> (expected level, the check that must fire); None means it must be clean
 EXPECTED: dict[str, tuple[str, str] | None] = {
@@ -211,46 +217,52 @@ CHECKSUMS: set[str] = {
 }
 
 
+def _judge(name: str) -> tuple[bool, str, list[str], int, int]:
+    """Validate one packet and return whether it behaved, the verdict, its checks and counts."""
+    expect = EXPECTED[name]
+    report = validate(
+        open_packet(HERE / "packets" / name),
+        advisory=name in ADVISORY,
+        checksums=name in CHECKSUMS,
+    )
+    absent = ABSENT.get(name, set())
+    if expect is None:
+        ok = report.passed and report.warnings == 0
+        verdict = "clean" if ok else "UNEXPECTED FINDINGS"
+    else:
+        level, check = expect
+        subject = EXTENSION_FINDINGS.get(name)
+        fired = sum(
+            f.check == check and f.level == level and (subject is None or f.registry == subject)
+            for f in report.findings
+        )
+        ok = fired == COUNTS[name] if name in COUNTS else fired > 0
+        if subject is not None:
+            ok = ok and (
+                report.verdict(subject),
+                report.verdict("core"),
+                report.verdict(),
+            ) == ("failed", "passed", "failed")
+        if name in CONFORMING:
+            ok = ok and report.passed
+        verdict = "caught" if ok else f"MISSED {check}"
+    if any(f.check in absent for f in report.findings):
+        ok, verdict = False, "DREW AN ABSENT CHECK"
+    return ok, verdict, sorted({f.check for f in report.findings}), report.errors, report.warnings
+
+
 def main() -> int:
     failures = []
     print(f"{'packet':26s} {'expected':9s} {'result':22s} findings")
     print("-" * 80)
-    for name, expect in EXPECTED.items():
-        report = validate(
-            open_packet(HERE / "packets" / name),
-            advisory=name in ADVISORY,
-            checksums=name in CHECKSUMS,
-        )
-        absent = ABSENT.get(name, set())
-        if expect is None:
-            ok = report.passed and report.warnings == 0
-            verdict = "clean" if ok else "UNEXPECTED FINDINGS"
-        else:
-            level, check = expect
-            subject = EXTENSION_FINDINGS.get(name)
-            fired = sum(
-                f.check == check and f.level == level and (subject is None or f.registry == subject)
-                for f in report.findings
-            )
-            ok = fired == COUNTS[name] if name in COUNTS else fired > 0
-            if subject is not None:
-                ok = ok and (
-                    report.verdict(subject),
-                    report.verdict("core"),
-                    report.verdict(),
-                ) == ("failed", "passed", "failed")
-            if name in CONFORMING:
-                ok = ok and report.passed
-            verdict = "caught" if ok else f"MISSED {check}"
-        if any(f.check in absent for f in report.findings):
-            ok, verdict = False, "DREW AN ABSENT CHECK"
-        if not ok:
-            failures.append((name, verdict, sorted({f.check for f in report.findings})))
-        expected_level = "clean" if expect is None else expect[0]
-        print(
-            f"{'ok ' if ok else 'FAIL'} {name:21s} {expected_level:9s} {verdict:22s} "
-            f"{report.errors}e {report.warnings}w"
-        )
+    # Spawned, since a forked worker inherits the thread pools the imports above may have started.
+    with ProcessPoolExecutor(min(WORKERS, os.cpu_count() or 1), mp_context=get_context("spawn")) as pool:
+        judged = pool.map(_judge, EXPECTED, chunksize=4)
+        for (name, expect), (ok, verdict, checks, errors, warnings) in zip(EXPECTED.items(), judged, strict=True):
+            if not ok:
+                failures.append((name, verdict, checks))
+            expected_level = "clean" if expect is None else expect[0]
+            print(f"{'ok ' if ok else 'FAIL'} {name:21s} {expected_level:9s} {verdict:22s} {errors}e {warnings}w")
 
     print("-" * 80)
     if failures:
