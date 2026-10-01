@@ -9,12 +9,17 @@ Use the monorepo's [authority model](../README.md#authority). The registry embed
 governs that packet's declared tables and rules; the current core registry in
 `../spec/artifacts/` is generated source data for new packets.
 
-The schemas under `src/escapewheel_validator/schemas/`, and `registry_document.py` and
-`rule_language.py`, are copies of files in the specification's tree, listed in `pyproject.toml`'s
-`[tool.escapewheel.copies]`. Change the tree's file, run `tools/copies.py` from the monorepo root, and
-commit both; never edit a copy directly. `tests/test_copies.py` fails where a copy disagrees.
+The schemas under `src/escapewheel_validator/schemas/` and the checker modules are copies of files
+in the specification's tree, listed in `pyproject.toml`'s `[tool.escapewheel.copies]`. The checker
+modules are `registry_document.py`, the three it is built from (`registry_result.py`,
+`registry_invariants.py` and `registry_phases.py`) and `rule_language.py`. Change the tree's file,
+run `tools/copies.py` from the monorepo root, and commit both; never edit a copy directly.
+`tests/test_copies.py` fails where a copy disagrees, and a test that scans the package's own source
+reads the copy map through `tests/copies.py`, so a new copy needs a line in the map and nothing else.
 
-`registry_document.py` returns the complete ordered Part 02 §9.4 result. Do not add a second
+`registry_document.py` returns the complete ordered Part 02 §9.4 result: `registry_result.py` holds
+the result model, `registry_invariants.py` the semantic invariants and the table registering them,
+and `registry_phases.py` the rule and unit phases. Do not add a second
 registry checker at a caller boundary: invoke that result. The descriptor enumerates invariant
 IDs and applicability, while Parts 02 and 09—not Python labels—own their meaning. Literal-unit
 checks use the exact offline UCUM 2.2 data dated 2024-06-17; a printable-character approximation
@@ -148,7 +153,7 @@ Every module declares `__all__`, and a name is public only through one.
 
 A bare name left out of `__all__` is for the validator's own modules and tests, and an underscore
 name for its own module and the test file named for it; another package imports neither. A module
-exports only names it defines. The two checkers copied from the specification's tree keep the
+exports only names it defines. The modules copied from the specification's tree keep the
 `__all__` their source declares. `tests/test_surface.py` holds the tiers against `api.rst` in both
 directions, and holds the validator to the reader's two tiers in what it imports from the reader.
 

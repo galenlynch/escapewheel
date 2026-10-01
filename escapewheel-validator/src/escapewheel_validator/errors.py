@@ -13,7 +13,7 @@
 - :class:`_Unmappable` -- a tick reaches no value on another clock; raised and caught inside the
   time-origin check.
 
-:exc:`~escapewheel_validator.registry_document.RegistryRejected` and
+:exc:`~escapewheel_validator.registry_result.RegistryRejected` and
 :exc:`~escapewheel_validator.rule_language.RuleProfileError` are defined in the modules copied
 from the specification's tree, outside this taxonomy.
 """

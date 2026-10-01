@@ -116,7 +116,9 @@ that defines it.
    scripts.cli.register
 
 The two checkers copied from the specification's tree are in the support tier whole, each with the
-names its source exports.
+names its source exports. ``registry_document`` exports the result model it takes from
+``registry_result``; that module, ``registry_invariants`` and ``registry_phases`` are what it is
+built from, and are copied with it for its own use.
 
 .. autosummary::
    :toctree: generated

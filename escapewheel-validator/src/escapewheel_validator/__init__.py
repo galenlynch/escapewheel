@@ -31,6 +31,9 @@ rules
     Running the generated checks and a registry's Tier 2 rules over the packet's tables.
 registry_document, rule_language
     A registry document's own conformance, and the static check of its Tier 2 SQL.
+registry_result, registry_invariants, registry_phases
+    What `registry_document` is built from: the result model, the semantic invariants, and the
+    rule and unit phases.
 amendment
     An amendment compared with the version it supersedes.
 check_table
