@@ -306,8 +306,9 @@ def test_a_payload_whose_name_needs_encoding_opens_under_its_own_name(packet_roo
 def test_a_uri_that_is_no_relative_reference_is_unreadable_naming_the_entry(packet_root, uri):
     """The packet still opens; the one resource fails, naming itself."""
     packet = _owned_payload(packet_root, uri)
-    with pytest.raises(ResourceUnreadableError, match=r"^core\.qc_report: .*neither absolute nor a relative reference"):
+    with pytest.raises(ResourceUnreadableError, match="neither absolute nor a relative reference") as refused:
         _ = packet.path("core.qc_report")
+    assert refused.value.resource_id == "core.qc_report"
     assert packet.table("core.intervals").num_rows == 2
 
 
