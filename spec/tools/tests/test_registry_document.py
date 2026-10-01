@@ -6,7 +6,7 @@ import json
 import pytest
 from jsonschema import Draft202012Validator
 
-from checkers import registry_document
+from checkers import registry_document, registry_invariants
 from checkers.artifacts import ARTIFACTS
 from checkers.registry_document import (
     CONTRACT,
@@ -146,8 +146,8 @@ def test_result_schema_rejects_inconsistent_serializations(mutate):
 def test_descriptor_and_semantic_implementation_have_no_hidden_checks():
     descriptor = json.loads(CONTRACT.read_text())
     described = {entry["id"] for entry in descriptor["invariants"] if entry["phase"] == "semantic"}
-    assert {invariant.id for invariant in registry_document.INVARIANTS} == described
-    assert len(registry_document.INVARIANTS) == len(described)
+    assert {invariant.id for invariant in registry_invariants.INVARIANTS} == described
+    assert len(registry_invariants.INVARIANTS) == len(described)
 
 
 def test_byte_entry_rejects_a_nested_duplicate_at_its_containing_object():
