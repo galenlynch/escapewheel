@@ -60,17 +60,17 @@ def json_pointer(document: object, value: object) -> str | None:
     """Return a defect if an RFC 6901 pointer does not resolve."""
     if not isinstance(value, str) or not value.startswith("/"):
         return "JSON owner needs a nonempty pointer beginning with `/`"
-    current = document
     try:
-        for raw in value[1:].split("/"):
-            token = raw.replace("~1", "/").replace("~0", "~")
-            if isinstance(current, dict):
-                current = current[token]
-            elif isinstance(current, list) and token.isdigit():
-                current = current[int(token)]
-            else:
-                return f"pointer {value!r} follows a scalar at {token!r}"
-    except (KeyError, IndexError):
+        specdoc.resolve_pointer(document, value)
+    except specdoc.ScalarError as error:
+        return f"pointer {value!r} follows a scalar at {error.token!r}"
+    except IndexError as error:
+        # An array addressed by a name is reported as a scalar is, and one too short as unresolved.
+        token = error.args[0]
+        if not token.isdigit():
+            return f"pointer {value!r} follows a scalar at {token!r}"
+        return f"pointer {value!r} does not resolve"
+    except KeyError:
         return f"pointer {value!r} does not resolve"
     return None
 

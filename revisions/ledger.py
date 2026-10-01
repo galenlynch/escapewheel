@@ -82,26 +82,6 @@ def sections(part: str) -> frozenset[str] | None:
     return frozenset(HEADING.findall(found.read_text())) if found else None
 
 
-def pointer(document: object, value: str) -> object:
-    """Resolve one RFC 6901 JSON Pointer, raising a useful lookup error."""
-    if not isinstance(value, str) or not value.startswith("/"):
-        raise ValueError("pointer must be a nonempty RFC 6901 string beginning with `/`")
-    current = document
-    for raw in value[1:].split("/"):
-        token = raw.replace("~1", "/").replace("~0", "~")
-        if isinstance(current, dict):
-            if token not in current:
-                raise KeyError(token)
-            current = current[token]
-        elif isinstance(current, list):
-            if not token.isdigit() or int(token) >= len(current):
-                raise IndexError(token)
-            current = current[int(token)]
-        else:
-            raise TypeError(f"{token!r} follows a scalar")
-    return current
-
-
 def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
     """Return missing, stale, malformed, or unresolved registry target declarations."""
     try:
@@ -149,7 +129,7 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
                 continue
             try:
                 document = loaded.setdefault(artifact, json.loads(artifact.read_text()))
-                resolved = pointer(document, at)
+                resolved = specdoc.resolve_pointer(document, at)
                 if "equals" in location and resolved != location["equals"]:
                     defects.append(f"{key}: {path}#{at} is {resolved!r}, expected {location['equals']!r}")
                 elif any(token.isdigit() for token in at.split("/")[1:]) and "equals" not in location:

@@ -140,3 +140,48 @@ def test_metadata_past_the_head_of_the_document_is_not_read():
 
     assert specdoc.metadata(late) == {}
     assert specdoc.metadata_value(late, "Status") is None
+
+
+DOCUMENT = {"resources": {"core.units": {"table": "units", "key": ["unit_id"]}}, "a/b": {"m~n": 1}, "": 0}
+
+
+@pytest.mark.parametrize(
+    ("pointer", "addressed"),
+    [
+        ("/resources/core.units/table", "units"),
+        ("/resources/core.units/key/0", "unit_id"),
+        ("/a~1b/m~0n", 1),
+        ("/", 0),
+    ],
+)
+def test_a_pointer_resolves_members_indices_and_escapes(pointer, addressed):
+    assert specdoc.resolve_pointer(DOCUMENT, pointer) == addressed
+
+
+@pytest.mark.parametrize("pointer", ["", "resources", None, 3])
+def test_a_pointer_is_a_string_beginning_with_a_slash(pointer):
+    with pytest.raises(ValueError, match="RFC 6901"):
+        specdoc.resolve_pointer(DOCUMENT, pointer)
+
+
+def test_a_missing_member_raises_with_its_token():
+    with pytest.raises(KeyError) as raised:
+        specdoc.resolve_pointer(DOCUMENT, "/resources/absent")
+
+    assert raised.value.args == ("absent",)
+
+
+@pytest.mark.parametrize("token", ["1", "first", "-1"])
+def test_a_token_that_is_no_index_of_an_array_raises_with_it(token):
+    with pytest.raises(IndexError) as raised:
+        specdoc.resolve_pointer(DOCUMENT, f"/resources/core.units/key/{token}")
+
+    assert raised.value.args == (token,)
+
+
+def test_a_token_after_a_scalar_raises_with_it():
+    with pytest.raises(specdoc.ScalarError, match="'deeper' follows a scalar") as raised:
+        specdoc.resolve_pointer(DOCUMENT, "/resources/core.units/table/deeper")
+
+    assert raised.value.token == "deeper"
+    assert isinstance(raised.value, TypeError)

@@ -28,6 +28,14 @@ class GenerationError(Exception):
     """A source a generator cannot produce its output from; the message names it and says why."""
 
 
+class ScalarError(TypeError):
+    """A JSON Pointer token that addresses into a value holding nothing; `token` is that token."""
+
+    def __init__(self, token: str) -> None:
+        super().__init__(f"{token!r} follows a scalar")
+        self.token = token
+
+
 def part_paths(directory: Path) -> list[Path]:
     """Return every numbered part in `directory`, in number order."""
     return sorted(directory.glob(PART_GLOB))
@@ -90,3 +98,28 @@ def outside_fences(text: str) -> Iterator[tuple[int, str | None]]:
             yield position, None
         elif not fenced:
             yield position, line
+
+
+def resolve_pointer(document: object, pointer: object) -> object:
+    """Return what an RFC 6901 JSON Pointer addresses in `document`.
+
+    Raises ValueError for anything but a string beginning with `/`, KeyError for a member an object
+    lacks, IndexError for a token that is no index of an array, and ScalarError for a token that
+    follows a scalar; the last three carry the token.
+    """
+    if not isinstance(pointer, str) or not pointer.startswith("/"):
+        raise ValueError("pointer must be a nonempty RFC 6901 string beginning with `/`")
+    current = document
+    for raw in pointer[1:].split("/"):
+        token = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(current, dict):
+            if token not in current:
+                raise KeyError(token)
+            current = current[token]
+        elif isinstance(current, list):
+            if not token.isdigit() or int(token) >= len(current):
+                raise IndexError(token)
+            current = current[int(token)]
+        else:
+            raise ScalarError(token)
+    return current
