@@ -20,8 +20,8 @@ from typing import Any, Protocol, runtime_checkable
 
 import pyarrow as pa
 
+from .bindings import ExternalArray, ExternalMedia, StagedArray
 from .opaque import Payload
-from .writer import ExternalArray, ExternalMedia, StagedArray
 
 
 class SourceAdapter(Protocol):

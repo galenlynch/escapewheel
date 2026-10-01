@@ -44,12 +44,12 @@ from escapewheel_reader.resource_ids import CORE_ARRAY_ASSETS, CORE_MEDIA_ASSETS
 from escapewheel_reader.uri import canonical, is_absolute
 
 from . import opaque
+from .bindings import ExternalArray, ExternalMedia
 from .declaration import FILES, FLIGHT, PROTOCOL_TERMS, REPORT_AS_FILE, SOURCE_CACHE, STREAM
 from .encoding import STREAMED_BATCH_ROWS
 from .errors import DeliveryFailed, SourceDefect, SourceFault
 from .notes import Note, NoteCode
 from .protocols import ReferencesArrays, ReferencesMedia, SourceAdapter, StagesArrays, StagesPayloads, Streams
-from .writer import ExternalArray, ExternalMedia
 
 #: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
 #: identifier is dotted, so no undotted token can collide with it.
@@ -421,7 +421,7 @@ class Delivered:
         or a layout to apply: staging moves the directory and reads the manifest entry off it. The
         directory's name is the only binding, which the writer resolves against the catalog rows.
         """
-        from .writer import StagedArray
+        from .bindings import StagedArray
 
         if self.arrays is None or not self.arrays.is_dir():
             return []
@@ -433,13 +433,13 @@ class Delivered:
 
     def external_arrays(self) -> dict[str, Any]:
         """Every referenced array the delivery described, as the build's own reference object."""
-        from .writer import ExternalArray
+        from .bindings import ExternalArray
 
         return self._referenced(ExternalArray, "array_asset_id", CORE_ARRAY_ASSETS)
 
     def external_media(self) -> dict[str, Any]:
         """Every referenced media asset the delivery described."""
-        from .writer import ExternalMedia
+        from .bindings import ExternalMedia
 
         return self._referenced(ExternalMedia, "media_asset_id", CORE_MEDIA_ASSETS)
 

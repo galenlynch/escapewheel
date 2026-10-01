@@ -30,6 +30,7 @@ from escapewheel_validator.amendment import PREFERENCES, Version, absent
 
 from .arrow import sort_key
 from .errors import AmendmentFault, AmendmentRefused
+from .promotion import act_on_promotion
 
 #: Tables the packet identifies itself by, whose held rows prevail over every source in an amending
 #: build (Part 05 §3.5).
@@ -109,10 +110,8 @@ class Held:
         AmendmentRefused
             If `root` holds no published manifest.
         """
-        from .writer import _act_on_promotion
-
         root = Path(root)
-        _act_on_promotion(root)
+        act_on_promotion(root)
         path = root / MANIFEST_FILENAME
         if not path.is_file():
             raise AmendmentRefused(

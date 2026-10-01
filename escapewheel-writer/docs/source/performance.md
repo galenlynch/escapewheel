@@ -54,7 +54,7 @@ records the choice. That single fact settles most of the rules below.
 **Do not advertise them.** Writing a dictionary column stores an Arrow schema saying so, and
 the file then reads back as a dictionary by default — a type the registry does not declare.
 `store_schema=False` withholds it; every other type survives, timestamps and their zone
-included. `_as_held` and `_options` in `writer.py` are that pair.
+included. `_as_held` and `parquet_options` in `staging.py` are that pair.
 
 **Never compare codes for order.** A dictionary is unordered, so code order is not value order.
 Comparing `.indices` is valid only for equality, and only within one dictionary.

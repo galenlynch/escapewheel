@@ -50,6 +50,7 @@ reads the file through `attrs` and `table`.
 
 from .arrays import write_zarr
 from .arrow import build_table
+from .bindings import ExternalArray, ExternalMedia, StagedArray
 from .clock import HARP_TICK_RATE_HZ, TICK_MAX, TICK_MIN, Clock, epoch_from, zone_of
 from .declaration import FILES, FLIGHT, PROTOCOLS, STREAM, document_of, shape_problems
 from .delivery import serve
@@ -75,7 +76,6 @@ from .sources.sorter import STREAM_FOLDER, SortedStream
 from .sources.store import SourceStore, source_root
 from .sources.values import sex, utc_offset
 from .sources.waveforms import ANALYZERS
-from .writer import ExternalArray, ExternalMedia, StagedArray
 
 __all__ = [
     "ABSENT",

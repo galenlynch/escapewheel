@@ -25,7 +25,7 @@ from escapewheel_writer.errors import (
     UsageError,
     UsageFault,
 )
-from escapewheel_writer.writer import _options
+from escapewheel_writer.staging import parquet_options
 
 
 def _write(root, registry, tables, **kwargs):
@@ -737,7 +737,7 @@ def _array_tables(asset_id: str = "wf") -> dict[str, list[dict]]:
 
 
 def test_an_array_is_written_as_zarr_v3(tmp_path, registry, minimal):
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     root = tmp_path / "s001"
     writer = PacketWriter(registry, packet_id=root.name)
@@ -774,7 +774,7 @@ def test_the_array_reads_back_identically(tmp_path, registry, minimal):
     import numpy as np
     import zarr
 
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     root = tmp_path / "s001"
     writer = PacketWriter(registry, packet_id=root.name)
@@ -803,7 +803,7 @@ def test_a_written_array_carries_its_axes_names(tmp_path, registry, minimal):
     """Part 03 §6.5: the names come from `core.array_dimensions`, so no source has to repeat them."""
     import zarr
 
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     root = tmp_path / "s001"
     writer = PacketWriter(registry, packet_id=root.name)
@@ -833,7 +833,7 @@ def _labelled_writer(registry, minimal, contacts=CONTACTS, electrodes=("e1", "e2
     """A writer holding an array whose channel axis depends on its unit axis (Part 03 §6.3)."""
     import numpy as np
 
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     tables = _array_tables()
     axes = tables["core.array_dimensions"]
@@ -909,7 +909,7 @@ def test_a_dependent_position_with_no_label_row_refuses_the_commit(tmp_path, reg
 
 def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal):
     """A partial shard is not a regular chunk grid, which Part 03 §6.1 requires."""
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     root = tmp_path / "s001"
     writer = PacketWriter(registry, packet_id=root.name)
@@ -936,7 +936,7 @@ def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal
 def test_a_codec_outside_the_reader_floor_is_written(tmp_path):
     """Part 03 §6.4: the Zarr reader floor is not a writer ceiling."""
     from escapewheel_writer.arrays import declared_codecs
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     spec = StagedArray(
         values=_waveforms(),
@@ -1002,13 +1002,13 @@ def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
     """
     import pyarrow as pa
 
-    from escapewheel_writer.writer import _write_stream
+    from escapewheel_writer.staging import write_stream
 
     rows = (1 << 20) + 200_000  # deliberately over pyarrow's default cut
     spec = registry["resources"]["core.spike_events"]["table"]
     batch = pa.record_batch(
         {
-            # int32 since R53 §2.1. `_write_stream` is below `add_batches`, which is where a
+            # int32 since R53 §2.1. `write_stream` is below `add_batches`, which is where a
             # streamed batch's identifiers are numbered, so this builds them already numbered.
             "session_id": pa.repeat(pa.scalar(0, pa.int32()), rows),
             "unit_id": pa.repeat(pa.scalar(1, pa.int32()), rows),
@@ -1022,7 +1022,7 @@ def test_one_batch_becomes_exactly_one_row_group(tmp_path, registry):
         },
     ).slice(0, 1000)
     path = tmp_path / "spike_events.parquet"
-    _write_stream(spec, [batch, tail], path, "core.spike_events")
+    write_stream(spec, [batch, tail], path, "core.spike_events")
 
     metadata = pq.ParquetFile(path).metadata
     assert metadata.num_row_groups == 2, "a batch was split into several row groups"
@@ -1173,7 +1173,7 @@ def _run(run_id, activity="import"):
 
 def test_a_referenced_array_is_declared_external_and_copied_nowhere(tmp_path, registry, minimal):
     """Part 04 §5.1: the bytes stay where they are and the packet says where that is."""
-    from escapewheel_writer.writer import ExternalArray
+    from escapewheel_writer.bindings import ExternalArray
 
     root = tmp_path / "s001"
     writer = PacketWriter(registry, packet_id="s001")
@@ -1207,7 +1207,7 @@ def test_a_referenced_array_is_declared_external_and_copied_nowhere(tmp_path, re
 @pytest.mark.parametrize("uri", ["../lfp", "arrays/l fp", "arrays%2Flfp"])
 def test_a_reference_neither_absolute_nor_relative_is_refused(tmp_path, registry, uri):
     """Part 03 §4: a uri without a scheme is a relative reference, and one no reader could decode is refused."""
-    from escapewheel_writer.writer import ExternalArray
+    from escapewheel_writer.bindings import ExternalArray
 
     writer = PacketWriter(registry, packet_id="s001")
     for resource_id, records in _array_tables("probe.lfp").items():
@@ -1223,7 +1223,7 @@ def test_a_reference_neither_absolute_nor_relative_is_refused(tmp_path, registry
 
 def test_an_external_reference_may_resolve_under_the_packet_root(tmp_path, registry):
     """Part 04 §5.1: external says who owns the bytes, not where they resolve, so a relative uri is kept."""
-    from escapewheel_writer.writer import ExternalArray
+    from escapewheel_writer.bindings import ExternalArray
 
     writer = PacketWriter(registry, packet_id="s001")
     for resource_id, records in _array_tables("probe.lfp").items():
@@ -1236,7 +1236,7 @@ def test_an_external_reference_may_resolve_under_the_packet_root(tmp_path, regis
 
 
 def test_a_referenced_codec_is_not_projected_into_the_manifest(tmp_path, registry, minimal):
-    from escapewheel_writer.writer import ExternalArray
+    from escapewheel_writer.bindings import ExternalArray
 
     root = tmp_path / "s001"
     writer = PacketWriter(registry, packet_id="s001")
@@ -1309,7 +1309,7 @@ def test_a_refused_commit_publishes_no_manifest(tmp_path, registry, minimal):
 
 def test_a_referenced_source_reaches_the_default_document(tmp_path, registry, minimal):
     """Part 04 §5.5: written at the packet root, and not declared as a resource."""
-    from escapewheel_writer.writer import ExternalArray
+    from escapewheel_writer.bindings import ExternalArray
 
     root = tmp_path / "s001"
     writer = PacketWriter(registry, packet_id=root.name)
@@ -1460,7 +1460,7 @@ def test_a_string_chosen_plain_is_written_without_a_dictionary(tmp_path, registr
     table = pa.table({"electrode_name": names if held == "strings" else names.dictionary_encode()})
     path = tmp_path / "electrodes.parquet"
     spec = registry["resources"]["core.electrodes"]["table"]
-    pq.write_table(table, path, **_options("core.electrodes", spec, table.schema, sample=table))
+    pq.write_table(table, path, **parquet_options("core.electrodes", spec, table.schema, sample=table))
     encodings = {str(e) for e in pq.ParquetFile(path).metadata.row_group(0).column(0).encodings}
     assert not any("DICTIONARY" in e for e in encodings), encodings
     assert pq.read_table(path).column(0).to_pylist() == names.to_pylist()
@@ -1468,7 +1468,7 @@ def test_a_string_chosen_plain_is_written_without_a_dictionary(tmp_path, registr
 
 def _stream_units(tmp_path, registry, extra=None, report=None, **columns):
     """Stream one batch of `core.units` through the writer and return each column's encodings."""
-    from escapewheel_writer.writer import _write_stream
+    from escapewheel_writer.staging import write_stream
 
     rows = 1_000
     batch = pa.record_batch(
@@ -1479,7 +1479,7 @@ def _stream_units(tmp_path, registry, extra=None, report=None, **columns):
         }
     )
     path = tmp_path / "units.parquet"
-    _write_stream(registry["resources"]["core.units"]["table"], iter([batch]), path, "core.units", extra, report)
+    write_stream(registry["resources"]["core.units"]["table"], iter([batch]), path, "core.units", extra, report)
     metadata = pq.ParquetFile(path).metadata
     return {
         metadata.schema.column(i).name: {str(e) for e in metadata.row_group(0).column(i).encodings}

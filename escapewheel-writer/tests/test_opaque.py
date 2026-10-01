@@ -14,9 +14,10 @@ from escapewheel_validator import Verdict, check_table
 from escapewheel_validator.stores import listing_digest
 
 from escapewheel_writer import declaration, delivery, opaque
+from escapewheel_writer.bindings import ExternalMedia
 from escapewheel_writer.errors import DeliveryFailed, PacketOccupied, PayloadFault, PayloadRefused, SourceFault
 from escapewheel_writer.opaque import Payload
-from escapewheel_writer.writer import ExternalMedia, PacketWriter
+from escapewheel_writer.writer import PacketWriter
 from tests import opaquefixture
 
 PDF = b"%PDF-1.7\n" + bytes(range(256))

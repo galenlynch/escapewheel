@@ -269,7 +269,7 @@ class LFPSource(Compensates):
 
     def external_arrays(self) -> dict[str, Any]:
         """Return the `ExternalArray` to reference per series, keyed by resource ID."""
-        from ..writer import ExternalArray
+        from ..bindings import ExternalArray
 
         out = {}
         for series in self._series:
@@ -304,7 +304,7 @@ class LFPSource(Compensates):
         from escapewheel_validator.errors import StoreUnreachable
         from escapewheel_validator.stores import digest_resource, listing
 
-        from ..writer import ExternalArray
+        from ..bindings import ExternalArray
 
         if self.verify == "none":
             return array

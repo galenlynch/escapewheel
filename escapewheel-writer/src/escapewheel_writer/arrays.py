@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 from .errors import UsageError, UsageFault
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .writer import StagedArray
+    from .bindings import StagedArray
 
 #: Array-to-array codecs, which run before the bytes codec rather than after it. Named as the
 #: store names them -- zarr registers numcodecs codecs under a `numcodecs.` prefix, so `delta`

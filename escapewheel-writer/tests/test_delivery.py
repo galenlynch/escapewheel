@@ -456,7 +456,7 @@ def test_an_array_crosses_as_the_bytes_the_adapter_wrote(tmp_path):
     """The adapter writes it where it was told, named by its resource, which is all a build reads."""
     import numpy as np
 
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     class Stages:
         def records(self):
@@ -489,7 +489,8 @@ def test_a_written_array_is_moved_into_staging_and_read_for_what_it_declares(tmp
     """Every field of its manifest entry is in the array or in the build (Part 12 §5)."""
     import numpy as np
 
-    from escapewheel_writer.writer import PacketWriter, StagedArray
+    from escapewheel_writer.bindings import StagedArray
+    from escapewheel_writer.writer import PacketWriter
 
     delivered = tmp_path / "delivered"
     delivered.mkdir()
@@ -572,7 +573,7 @@ def _array_writer(registry, rows):
 
 def test_a_delivered_array_binds_to_the_catalog_row_carrying_its_name(registry, tmp_path):
     """The directory's name is the row's `resource_id`, and the row supplies the rest (Part 12 §5)."""
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     writer = _array_writer(
         registry, [{"session_id": "s001", "array_asset_id": "mean", "resource_id": "core.waveform_mean"}]
@@ -590,7 +591,7 @@ def test_a_delivered_array_binds_to_the_catalog_row_carrying_its_name(registry, 
 
 
 def test_a_delivered_array_no_catalog_row_names_is_refused(registry, tmp_path):
-    from escapewheel_writer.writer import StagedArray
+    from escapewheel_writer.bindings import StagedArray
 
     writer = _array_writer(registry, [{"session_id": "s001", "array_asset_id": "mean"}])
     delivered = StagedArray(
@@ -855,7 +856,7 @@ class Referencing:
         }
 
     def external_arrays(self):
-        from escapewheel_writer.writer import ExternalArray
+        from escapewheel_writer.bindings import ExternalArray
 
         return {
             "core.46101.lfp": ExternalArray(
@@ -869,7 +870,7 @@ class Referencing:
         }
 
     def external_media(self):
-        from escapewheel_writer.writer import ExternalMedia
+        from escapewheel_writer.bindings import ExternalMedia
 
         return {
             "core.bottom_camera": ExternalMedia(

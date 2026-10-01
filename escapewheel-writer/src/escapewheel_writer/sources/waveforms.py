@@ -577,7 +577,7 @@ class WaveformSource:
         becoming one object per chunk (`conformance/zarr-probe/waveforms.py`).
         """
         from ..arrays import shard_for
-        from ..writer import StagedArray
+        from ..bindings import StagedArray
 
         built = self._read()
         wanted = [(self.array_asset_id, built["values"])]

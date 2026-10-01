@@ -11,7 +11,8 @@ from escapewheel_validator import validate
 import escapewheel_writer.writer as module
 from escapewheel_writer import CommitRefused, PacketWriter
 from escapewheel_writer.errors import PacketOccupied, PromotionRecordUnreadable
-from escapewheel_writer.writer import PROMOTION, STAGING, read_promotion
+from escapewheel_writer.layout import PROMOTION, STAGING
+from escapewheel_writer.promotion import read_promotion
 from tests.test_writer import _runs, _write
 
 

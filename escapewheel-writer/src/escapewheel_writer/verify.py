@@ -23,8 +23,9 @@ from escapewheel_validator.amendment import semver
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.stores import digest, digest_resource, listing
 
+from .documents import VALIDATION_PASSED, bump, writer_version
 from .errors import NotCommitted, UsageError, UsageFault
-from .writer import VALIDATION_PASSED, _bump, _version, retained
+from .layout import retained
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
 #: records a prefix's Part 04 §5.4 per-member listing with the entity tag the store handed over,
@@ -116,7 +117,7 @@ def verify(
         raise NotCommitted(f"{root} holds no committed {MANIFEST_FILENAME}; there is nothing to verify")
     superseded_body = (root / MANIFEST_FILENAME).read_bytes()
     superseded = json.loads(superseded_body)
-    version = packet_version or _bump(superseded["packet_version"])
+    version = packet_version or bump(superseded["packet_version"])
     before = semver(superseded["packet_version"])
     if semver(version) <= before or semver(version)[0] != before[0]:
         raise UsageError(
@@ -162,7 +163,7 @@ def verify(
         "status": VALIDATION_PASSED,
         "validated_at": datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
         "validator_name": "escapewheel_validator",
-        "validator_version": _version(),
+        "validator_version": writer_version(),
     }
     versions = root / MANIFESTS_DIRNAME
     versions.mkdir(exist_ok=True)

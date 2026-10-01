@@ -2,12 +2,6 @@
 
 - :class:`PacketWriter` -- collect records, arrays, references and payloads, then commit them as a
   validated packet or amend one.
-- :class:`StagedArray` -- a dense array to write into the packet, with the layout it takes.
-- :class:`ExternalArray`, :class:`ExternalMedia` -- an array, and an image or video, the packet
-  references rather than owns.
-- :func:`read_promotion` -- the version and paths of the promotion record at a root.
-- :func:`retained` -- the name of a manifest's retained copy.
-- :data:`STAGING`, :data:`PROMOTION` -- where a packet keeps its staging area and its promotion record.
 
 A commit stages and validates everything under ``staging/``, promotes it, and renames the
 manifest to ``packet.json`` last, so a reader finds a whole packet or none.
@@ -21,12 +15,10 @@ import json
 import os
 import shutil
 import time
-from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, replace
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
-from queue import Queue
-from threading import Thread
 from typing import Any
 
 import pyarrow as pa
@@ -34,11 +26,11 @@ import pyarrow.parquet as pq
 from escapewheel_reader import Manifest, Packet, check_sources, open_packet
 from escapewheel_reader.location import SOURCES_FILENAME, SOURCES_VERSION
 from escapewheel_reader.manifest import MANIFEST_FILENAME, MANIFESTS_DIRNAME
-from escapewheel_reader.profile import PROFILE_ID, parquet_floor
+from escapewheel_reader.profile import PROFILE_ID
 from escapewheel_reader.registries import declared_tables
 from escapewheel_reader.registries import gunzip_member as gzip_member
 from escapewheel_reader.resource_ids import CORE_INTERVALS, CORE_PREFERRED_RUNS, CORE_PROCESSING_RUNS, CORE_SESSIONS
-from escapewheel_reader.uri import canonical, encode, is_absolute
+from escapewheel_reader.uri import encode
 from escapewheel_validator import (
     CheckedRegistryContext,
     RegistryRejected,
@@ -49,523 +41,35 @@ from escapewheel_validator import (
 )
 from escapewheel_validator.amendment import DERIVED, PROVENANCE, chain_reaches, semver
 from escapewheel_validator.errors import OrderViolation
-from escapewheel_validator.generate import adjacency_settles_uniqueness
-from escapewheel_validator.shim.ordering import verify_order
 
 from . import opaque
 from .amending import Held
-from .arrow import build_table, number_batch, schema, sort_key
-from .encoding import encodings, inefficient
+from .arrow import build_table, number_batch, sort_key
+from .bindings import ExternalArray, ExternalMedia, StagedArray, check_reference
+from .documents import (
+    VALIDATION_FAILED,
+    VALIDATION_NOT_RUN,
+    VALIDATION_PASSED,
+    bump,
+    first_version,
+    sha256_of,
+    writer_version,
+)
+from .encoding import inefficient
 from .errors import (
     CommitRefused,
     NotCommitted,
-    PacketOccupied,
     PayloadFault,
     PayloadProblem,
     PayloadRefused,
-    PromotionRecordUnreadable,
     UndeclaredResource,
     UsageError,
     UsageFault,
 )
 from .keys import Keys
-
-
-def _version() -> str:
-    """Read this package's version without importing it at module scope."""
-    from . import __version__
-
-    return __version__
-
-
-#: Where the portable profile stores each bound registry, as `<registry_id>/<version>.json.gz`
-#: (Part 03 §3.3).
-REGISTRIES = "registries"
-
-#: The directories under the packet root a commit promotes from its staging area, which a root holding
-#: any of them without a committed manifest cannot take another commit into.
-PROMOTED = ("tables", "arrays", opaque.ROOT, REGISTRIES)
-
-#: What a manifest's `validation.status` and a resource's `validation_state` may say (Part 04 §4.1, §9).
-VALIDATION_PASSED = "passed"
-VALIDATION_FAILED = "failed"
-VALIDATION_NOT_RUN = "not_run"
-
-#: The portable profile's staging area, directly under the packet root (Part 03 §3.4).
-STAGING = "staging"
-
-#: The promotion record inside the staging area (Part 05 §6). Its format is this writer's.
-PROMOTION = "promotion.json"
-
-
-def _options(
-    resource_id: str,
-    spec: Mapping[str, Any],
-    out: pa.Schema,
-    extra: Mapping[str, Any] | None = None,
-    sample: pa.Table | pa.RecordBatch | None = None,
-) -> dict[str, Any]:
-    """Parquet settings for one resource.
-
-    **No page index.** `ColumnIndex` and `OffsetIndex` would give per-page bounds and byte
-    offsets, letting pages behave like the chunks inside a Zarr shard — but unlike a shard index,
-    nothing obliges a reader to read one, and neither DuckDB nor pyarrow does. DuckDB says so
-    outright (duckdb#2755, closed as "not supported… mostly improves point queries which is not
-    what DuckDB is focused on") and measures identically with it and without; pyarrow prunes at
-    row-group granularity too. arrow-rs, DataFusion and Spark would use it, and it costs little
-    -- but a packet rebuilds from its recipe, so carrying an unexercised feature buys less than
-    turning it on when a reader needs it. pyarrow defaults it off, which is where this leaves
-    it. See `encoding.STREAMED_BATCH_ROWS` for the row-group half.
-
-    `sorting_columns` is written for every table that declares an order. It costs nothing, and
-    it is what lets a file state which of several possible orderings it is in rather than
-    leaving a reader to infer it from statistics. It is only truthful because both write paths
-    produce the declared order: the records path sorts in `arrow.build_table`, and the streaming path
-    is checked by the validator's physical-order shim (R12 §4) before the commit completes.
-    """
-    options: dict[str, Any] = {"compression": "zstd", "data_page_version": "1.0"}
-    # A caller may hand over a column as dictionary codes rather than decoding what Parquet is
-    # about to re-encode. Parquet has no dictionary type -- the column is BYTE_ARRAY/String
-    # either way -- so the only thing that would record the choice is the Arrow schema pyarrow
-    # stores as metadata, and storing it would make the file advertise a type the registry does
-    # not declare. Withhold it, and the file reads back as the registry says.
-    if any(pa.types.is_dictionary(field.type) for field in out):
-        options["store_schema"] = False
-    delta, plain = encodings(resource_id, spec, out, extra, sample)
-    if delta or plain:
-        options["use_dictionary"] = [n for n in out.names if n not in {*delta, *plain}]
-        if delta:
-            options["column_encoding"] = dict.fromkeys(delta, "DELTA_BINARY_PACKED")
-    keys = sort_key(resource_id, spec) or []
-    if columns := [pq.SortingColumn(out.names.index(k)) for k in keys if k in out.names]:
-        options["sorting_columns"] = columns
-    return options
-
-
-def _check_parquet_floor(path: Path) -> None:
-    """Refuse a packet-owned table whose footer exceeds the incorporated writer floor."""
-    floor = parquet_floor()
-    metadata = pq.ParquetFile(path).metadata
-    compressions: set[str] = set()
-    encodings: set[str] = set()
-    for row_group in range(metadata.num_row_groups):
-        group = metadata.row_group(row_group)
-        for column in range(group.num_columns):
-            chunk = group.column(column)
-            compressions.add(str(chunk.compression).upper())
-            encodings.update(str(value).upper() for value in chunk.encodings)
-    outside_compression = sorted(compressions - set(floor["compressions"]))
-    outside_encoding = sorted(encodings - set(floor["encodings"]))
-    if outside_compression or outside_encoding:
-        detail = []
-        if outside_compression:
-            detail.append(f"compression {outside_compression}")
-        if outside_encoding:
-            detail.append(f"encoding {outside_encoding}")
-        raise UsageError(
-            f"{path}: Parquet footer exceeds the portable writer floor: {', '.join(detail)}",
-            code=UsageFault.PARQUET_FLOOR,
-            where=str(path),
-        )
-
-
-#: Batches held ahead of the Parquet writer. Building a batch and encoding one cost about the
-#: same, so serially a stream pays both and one worker ahead overlaps them. The depth is a
-#: memory budget, not a throughput knob: one takes most of the available time, each further
-#: batch held buys little for the memory it costs, and output is byte-identical at every depth.
-PREFETCH = 1
-
-
-def _prefetch(batches: Iterable[pa.RecordBatch], depth: int = PREFETCH) -> Iterator[pa.RecordBatch]:
-    """Yield batches while the next is built on a worker thread.
-
-    The producer's exception is re-raised in the consumer rather than lost in the thread, so a
-    source that fails mid-stream still refuses the commit instead of truncating it silently.
-    """
-    queue: Queue[Any] = Queue(maxsize=depth)
-    done = object()
-
-    def produce() -> None:
-        try:
-            for batch in batches:
-                queue.put(batch)
-        except BaseException as exc:  # noqa: BLE001 - handed to the consumer, not swallowed
-            queue.put(exc)
-        else:
-            queue.put(done)
-
-    worker = Thread(target=produce, daemon=True)
-    worker.start()
-    try:
-        while (item := queue.get()) is not done:
-            if isinstance(item, BaseException):
-                raise item
-            yield item
-    finally:
-        worker.join(timeout=0)
-
-
-def _as_held(out: pa.Schema, held: pa.Schema) -> pa.Schema:
-    """Take the registry's schema, but keep a column the caller already holds as codes.
-
-    Decoding a dictionary here would only hand Parquet strings it is about to dictionary-encode
-    again. The value type must still match what the registry declares; only the encoding is the
-    caller's to choose.
-    """
-    fields = []
-    for field in out:
-        carried = held.field(field.name).type if field.name in held.names else None
-        if carried is not None and pa.types.is_dictionary(carried) and carried.value_type == field.type:
-            field = field.with_type(carried)
-        fields.append(field)
-    return pa.schema(fields)
-
-
-def _write_stream(
-    spec: Mapping[str, Any],
-    batches: Iterable[pa.RecordBatch],
-    path: Path,
-    resource_id: str,
-    extra: Mapping[str, Any] | None = None,
-    report: list[str] | None = None,
-) -> int:
-    """Write batches to Parquet one row group at a time, casting each to the registry schema.
-
-    The first batch fixes the schema, exactly as the first record does on the records path:
-    an optional column is emitted when something carries it. A later batch may omit a
-    declared column -- it is written as nulls, like a record that lacks the key -- but may
-    not introduce one the schema does not have, because that column would be dropped without
-    a word.
-
-    An empty stream writes nothing and leaves no file, matching the records path, where a
-    resource with no rows is simply absent from the packet.
-
-    Returns the rows written, which is the only count of a streamed table anything holds: a
-    generator's length is not knowable before it has run.
-
-    Each batch becomes exactly one row group, so the caller controls row-group boundaries as
-    well as order. That is what lets `analysis.spike_events` keep every row group inside a
-    single time bucket (Part 03 §5.4) — cutting at a fixed row count instead would let a group
-    straddle two buckets and span twice the intended time range — and it is what lets a caller
-    size row groups for the store the packet will live on.
-    """
-    writer: pq.ParquetWriter | None = None
-    out: pa.Schema | None = None
-    written = 0
-    try:
-        # Verified on the way in, not read back afterwards. The rows pass through here
-        # already sorted by the source, so comparing them costs the comparison alone, where
-        # establishing the same fact from the written file costs re-reading its sort columns.
-        # It runs inside the producer thread, so the comparison overlaps the Parquet encoding
-        # rather than adding to it. `commit` tells the validator which resources this settled; a
-        # validator handed an unknown packet still reads every one.
-        keys = sort_key(resource_id, spec) or []
-        unique = spec["primary_key"] if keys and adjacency_settles_uniqueness(resource_id, spec) else None
-        # Three stages, not two: building a batch, comparing it and encoding it cost about the
-        # same, so folding the comparison into the producer would make it the bottleneck and
-        # give back what skipping the re-read saves. A queue either side of it lets all three
-        # run at once, and the slowest one sets the pace.
-        for batch in _prefetch(_prefetch(verify_order(batches, keys, unique)) if keys else batches):
-            first = out is None
-            if out is None:
-                out = _as_held(schema(spec, set(batch.schema.names)), batch.schema)
-            if unexpected := sorted(set(batch.schema.names) - set(out.names)):
-                # Two causes reach here and they send an author to different files: a column the
-                # registry never declared, and an optional one the first batch lacked so `schema`
-                # left it out. The check fires on the first batch too, where only the first is
-                # possible, so a message naming only the second described the rarer case.
-                declared = {c["name"] for c in spec["columns"]}
-                said = []
-                if undeclared := [n for n in unexpected if n not in declared]:
-                    said.append(f"{undeclared} is declared by no registry this build loaded")
-                if late := [n for n in unexpected if n in declared]:
-                    said.append(f"{late} is optional and absent from the first batch")
-                raise UsageError(
-                    f"{resource_id}: {'; '.join(said)}; the column would be dropped silently",
-                    code=UsageFault.UNDECLARED_COLUMN if undeclared else UsageFault.COLUMN_AFTER_FIRST_BATCH,
-                    where=resource_id,
-                )
-            columns = [
-                batch.column(name) if name in batch.schema.names else pa.nulls(batch.num_rows, field.type)
-                for name, field in zip(out.names, out, strict=True)
-            ]
-            held = pa.record_batch(columns, schema=out)
-            if first:
-                # Chosen from the batch as it will be written, not as it arrived: a column the source
-                # omits is written as nulls and counts as none, and a column cast to the registry's
-                # type is measured at that type, where the source's can cost 77x as much plain.
-                options = _options(resource_id, spec, out, extra, held)
-                writer = pq.ParquetWriter(path, out, **options)
-                if report is not None:
-                    report.extend(
-                        inefficient(
-                            resource_id,
-                            pa.Table.from_batches([held]),
-                            options.get("column_encoding", {}) and list(options["column_encoding"]) or [],
-                            [
-                                n
-                                for n in out.names
-                                if n not in options.get("use_dictionary", out.names)
-                                and n not in options.get("column_encoding", {})
-                            ],
-                        )
-                    )
-            assert writer is not None
-            # `row_group_size` is load-bearing, not decoration: left to pyarrow it defaults to
-            # 2**20 rows and silently cuts a larger batch into several row groups, which would
-            # break the boundary guarantee this docstring makes.
-            writer.write_batch(held, row_group_size=batch.num_rows)
-            written += batch.num_rows
-    finally:
-        if writer is not None:
-            writer.close()
-    return written
-
-
-def retained(manifest: Mapping[str, Any]) -> str:
-    """Name a manifest's retained copy under `MANIFESTS_DIRNAME` by its version (Part 03 §3.1)."""
-    return f"{manifest['packet_version']}.json"
-
-
-def _first_version(packet_id: str, replaces: Sequence[Mapping[str, str]]) -> str:
-    """Return a new packet's version: a major version above every packet it replaces of its id (Part 05 §9.3)."""
-    majors = [int(item["packet_version"].split(".", 1)[0]) for item in replaces if item["packet_id"] == packet_id]
-    return f"{max(majors) + 1}.0.0" if majors else "0.1.0"
-
-
-def _record_promotion(staging: Path, packet_version: str, paths: Iterable[str]) -> None:
-    """Write the promotion record durably, before anything is written outside `staging` (Part 05 §6)."""
-    body = json.dumps({"packet_version": packet_version, "paths": sorted(set(paths))}, indent=2) + "\n"
-    pending = staging / f"{PROMOTION}.pending"
-    with pending.open("w") as handle:
-        handle.write(body)
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(pending, staging / PROMOTION)
-    directory = os.open(staging, os.O_RDONLY)
-    try:
-        os.fsync(directory)
-    finally:
-        os.close(directory)
-
-
-def read_promotion(root: Path) -> tuple[str, list[str]] | None:
-    """Return the version and paths of the promotion record at `root`, or None where there is none.
-
-    Raises
-    ------
-    PromotionRecordUnreadable
-        If the record cannot be parsed, or lists a path outside the packet root.
-    """
-    path = root / STAGING / PROMOTION
-    if not path.exists():
-        return None
-    try:
-        record = json.loads(path.read_text())
-        version = str(record["packet_version"])
-        paths = [str(p) for p in record["paths"]]
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        raise PromotionRecordUnreadable(f"{path}: cannot read the promotion record ({error})", path=path) from None
-    if escaping := [p for p in paths if Path(p).is_absolute() or ".." in Path(p).parts or not p]:
-        raise PromotionRecordUnreadable(f"{path}: lists {escaping[0]!r}, which is not under the packet root", path=path)
-    return version, paths
-
-
-def _act_on_promotion(root: Path) -> None:
-    """Undo what an unpublished promotion created, before anything else happens at `root` (Part 05 §6).
-
-    Where the record's version is already published the record is stale and the listed paths are
-    the packet's, so nothing is removed; the staging area is emptied afterwards either way.
-    """
-    record = read_promotion(root)
-    if record is None:
-        return
-    version, paths = record
-    manifest = root / MANIFEST_FILENAME
-    if manifest.is_file() and semver(json.loads(manifest.read_text())["packet_version"]) >= semver(version):
-        return
-    for relative in paths:
-        target = root / relative
-        if target.is_dir() and not target.is_symlink():
-            shutil.rmtree(target)
-        elif target.exists() or target.is_symlink():
-            target.unlink()
-
-
-def _claim(root: Path, paths: Iterable[str]) -> None:
-    """Refuse to promote onto a path that already exists, naming it (Part 05 §6)."""
-    if taken := sorted(p for p in paths if (root / p).exists()):
-        raise PacketOccupied(
-            f"{root / taken[0]} already exists, so promotion would overwrite it", root=root, occupied=taken
-        )
-
-
-def _created(root: Path, relative: str) -> str:
-    """Return the outermost path writing `relative` under `root` would create."""
-    parts = Path(relative).parts
-    for depth in range(1, len(parts) + 1):
-        if not (root / Path(*parts[:depth])).exists():
-            return Path(*parts[:depth]).as_posix()
-    return relative
-
-
-def _bump(version: str) -> str:
-    """Return the next packet version.
-
-    Patch level, so a packet under development stays inside one minor series while the
-    structure moves. Part 05 §15.1 requires only that the new version keep the major version and
-    sort strictly after the superseded one, so nothing here rests on the choice.
-    """
-    major, minor, patch, *_ = (*version.split("."), "0", "0", "0")
-    return f"{int(major)}.{int(minor)}.{int(patch) + 1}"
-
-
-@dataclass(frozen=True)
-class StagedArray:
-    """A dense array to write into the packet, with the layout it should take.
-
-    The chunk should be the unit of the question, the shard keeps that from becoming one file
-    per chunk, and the compressor belongs *inside* the shard -- wrapping a shard in an outer
-    codec disables the partial read it exists for (`conformance/zarr-probe/waveforms.py`).
-    """
-
-    values: Any
-    resource_id: str
-    #: Empty for an array delivered by name alone, which `add_array` binds by its catalog row.
-    declaration_id: str
-    array_asset_id: str
-    chunks: tuple[int, ...] = ()
-    shard: tuple[int, ...] | None = None
-    codecs: tuple[str, ...] = ("blosc",)
-    fill_value: Any = 0
-    #: Each axis's `dimension_name`, in stored order (Part 03 §6.5). Unset, staging takes them
-    #: from the axes records this array's catalog row has.
-    dimension_names: tuple[str, ...] | None = None
-    #: Where an adapter already wrote this array, for one delivered out of process (Part 03
-    #: §11.3). Set, the layout above is the array's own and is read back off it rather than
-    #: applied: staging moves the directory where it would have written one.
-    written: Path | None = None
-
-
-@dataclass(frozen=True)
-class ExternalArray:
-    """A dense array the packet references rather than owns (Part 04 §5.1).
-
-    Referencing is the expected form for a large one. Copying duplicates the bulk of a dataset
-    for no gain, and transcoding to the portable floor throws away the acquisition's own
-    compression.
-
-    `digest`, `size_bytes`, `members` and `verified_at` record what was true when someone
-    looked, not a promise about now: immutability covers packet-owned bytes only (Part 03 §8),
-    and an external array may change or vanish without the packet changing at all. `digest` is
-    Part 04 §4.3's `{"algorithm", "value"}` object.
-
-    `members` is Part 04 §5.4's record of what the prefix held, each entry carrying its own digest
-    where the resource records one and the store's entity tag where it offered one. It is a record
-    and not a resolution rule -- a reader hands the URI to Zarr, which addresses chunks by key and
-    never enumerates.
-    """
-
-    array_asset_id: str
-    declaration_id: str
-    uri: str
-    #: Part 04 §5.5: the body of data these bytes belong to. Where set, `uri` is a path relative to
-    #: wherever that source turns out to be rather than a location, and a resolution document
-    #: says where that is.
-    source: str | None = None
-    physical_profile: str = "zarr_v3"
-    codecs: tuple[str, ...] = ()
-    digest: Mapping[str, str] | None = None
-    size_bytes: int | None = None
-    verified_at: str | None = None
-    members: tuple[dict[str, Any], ...] | None = None
-
-
-@dataclass(frozen=True)
-class ExternalMedia:
-    """An image or video the packet references rather than owns (Part 04 §5.1).
-
-    The same bargain `ExternalArray` makes, for the same reason: a session's behaviour video is
-    larger than everything else it holds, so a packet that copied it would be mostly video.
-    What the packet owns instead is the timing -- one row per frame
-    in `core.media_frames`, on a declared clock -- which is what makes the video addressable and
-    is the part no player can supply.
-
-    `digest`, `size_bytes` and `verified_at` record what was true when someone looked, not a
-    promise about now (Part 04 §5.2).
-    """
-
-    media_asset_id: str
-    declaration_id: str
-    uri: str
-    format: str = ""
-    #: Part 04 §5.5, as on `ExternalArray`.
-    source: str | None = None
-    digest: Mapping[str, str] | None = None
-    size_bytes: int | None = None
-    verified_at: str | None = None
-
-
-def _check_reference(resource_id: str, uri: str, source: str | None) -> str:
-    """Return a referenced URI as the manifest records it, refusing one no reader could resolve.
-
-    Relative where the entry names a source, because the source supplies the part in front and an
-    absolute URI there would ignore it (Part 04 §5.5). A relative one is a relative reference, which
-    the manifest spells in one form (Part 03 §4); without a source it resolves under the packet root,
-    which an external resource may (Part 04 §5.1).
-    """
-    if is_absolute(uri):
-        if source is not None:
-            raise UsageError(
-                f"{resource_id}: {uri!r} is absolute, so naming source {source!r} would have no effect",
-                code=UsageFault.SOURCE_ON_ABSOLUTE_URI,
-                where=resource_id,
-            )
-        return uri
-    try:
-        return canonical(uri)
-    except ValueError as exc:
-        raise UsageError(
-            f"{resource_id}: uri is neither absolute nor a relative reference: {exc} (Part 03 §4)",
-            code=UsageFault.URI_UNRESOLVABLE,
-            where=resource_id,
-        ) from None
-
-
-def _refuse_occupied(root: Path) -> None:
-    """Refuse a root holding a committed manifest or a directory commit would promote into.
-
-    Called after `_act_on_promotion`, so what remains is a promoted directory no promotion record
-    claims: a stray a writer may not remove (Part 05 §15.5), and moving another into it would nest
-    the new one inside.
-    """
-    if (root / MANIFEST_FILENAME).exists():
-        raise PacketOccupied(
-            f"{root} already holds a committed {MANIFEST_FILENAME}", root=root, occupied=[MANIFEST_FILENAME]
-        )
-    if occupied := [name for name in PROMOTED if (root / name).exists()]:
-        raise PacketOccupied(
-            f"{root} holds {', '.join(occupied)} but no committed {MANIFEST_FILENAME}, as an interrupted promotion "
-            "leaves it; remove them or commit elsewhere",
-            root=root,
-            occupied=occupied,
-        )
-
-
-def _digest(path: Path) -> dict[str, str]:
-    """Part 04 §4.3: what the packet says its own bytes are, under SHA-256.
-
-    Required of every packet-owned resource, because the promise it makes checkable is not optional
-    either: Part 03 §8.1 declares these bytes immutable and Part 05 §15.4 spends that, bounding
-    revalidation after an amendment to what the amendment wrote. Costs 0.5% of a build -- the bytes
-    were just written, so they are in page cache and hash at ~2 GB/s.
-
-    A prefix goes through Part 04 §4.3's listing, a single file is its own bytes; `digest` already
-    distinguishes them.
-    """
-    from escapewheel_validator.stores import digest
-
-    return {"algorithm": "sha256", "value": digest(str(path))}
+from .layout import PROMOTED, REGISTRIES, STAGING, retained
+from .promotion import act_on_promotion, claim, created, record_promotion, refuse_occupied
+from .staging import check_parquet_floor, parquet_options, write_stream
 
 
 class PacketWriter:
@@ -1134,7 +638,7 @@ class PacketWriter:
         """
         if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
             raise UsageError(f"{resource_id} already has an array", code=UsageFault.STAGED_TWICE, where=resource_id)
-        array = replace(array, uri=_check_reference(resource_id, array.uri, array.source))
+        array = replace(array, uri=check_reference(resource_id, array.uri, array.source))
         declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
         self._bind_catalog_row(declaration, resource_id, "array_asset_id", array.array_asset_id)
         self._referenced_arrays[resource_id] = array
@@ -1160,7 +664,7 @@ class PacketWriter:
         """
         if resource_id in self._referenced_media:
             raise UsageError(f"{resource_id} already has media", code=UsageFault.STAGED_TWICE, where=resource_id)
-        media = replace(media, uri=_check_reference(resource_id, media.uri, media.source))
+        media = replace(media, uri=check_reference(resource_id, media.uri, media.source))
         declaration = self._family_declaration(media.declaration_id, resource_id, "opaque")
         self._bind_catalog_row(declaration, resource_id, "media_asset_id", media.media_asset_id)
         self._referenced_media[resource_id] = media
@@ -1356,7 +860,7 @@ class PacketWriter:
                     "uri": encode(relative.split("/")),
                     "validation_state": VALIDATION_NOT_RUN,
                     "size_bytes": size,
-                    "digest": _digest(path),
+                    "digest": sha256_of(path),
                 }
             )
         return entries
@@ -1390,7 +894,7 @@ class PacketWriter:
                     "uri": encode((opaque.ROOT, payload.resource_id, payload.path.name)),
                     "validation_state": VALIDATION_NOT_RUN,
                     "size_bytes": opaque.size(staged),
-                    "digest": _digest(staged),
+                    "digest": sha256_of(staged),
                 }
             )
         return entries
@@ -1436,7 +940,7 @@ class PacketWriter:
     def _stage(self, staging: Path, only: Collection[str] | None = None) -> list[dict[str, Any]]:
         """Write every table under `staging` and return its manifest entries.
 
-        Records in `_ordered` the resources whose physical order `_write_stream` established as
+        Records in `_ordered` the resources whose physical order `write_stream` established as
         it wrote them, so the commit that follows need not read them back to learn it.
         """
         entries = []
@@ -1460,7 +964,7 @@ class PacketWriter:
                 if self._held is not None:
                     batches = self._held.settle_stream(resource_id, batches, derived=self._derived)
                 try:
-                    self.rows_written[resource_id] = _write_stream(
+                    self.rows_written[resource_id] = write_stream(
                         spec,
                         batches,
                         path,
@@ -1496,7 +1000,7 @@ class PacketWriter:
                 # `encoding.STREAMED_BATCH_ROWS` for the streaming case; here the trap is that estimating
                 # from `Table.nbytes` is 320x out on a string-heavy table, because Arrow
                 # materialises strings that Parquet stores as dictionary codes.
-                options = _options(resource_id, spec, table.schema, self._encoding_exceptions, table)
+                options = parquet_options(resource_id, spec, table.schema, self._encoding_exceptions, table)
                 pq.write_table(table, path, **options)
                 delta = list(options.get("column_encoding", {}))
                 kept = set(options.get("use_dictionary", table.schema.names))
@@ -1508,14 +1012,14 @@ class PacketWriter:
                         [n for n in table.schema.names if n not in kept and n not in delta],
                     )
                 )
-            _check_parquet_floor(path)
+            check_parquet_floor(path)
             entry: dict[str, Any] = {
                 "resource_id": resource_id,
                 "declaration_id": resource_id,
                 "uri": encode(relative.split("/")),
                 "validation_state": VALIDATION_NOT_RUN,
             }
-            entry["digest"] = _digest(path)
+            entry["digest"] = sha256_of(path)
             entries.append(entry)
         return entries
 
@@ -1674,11 +1178,11 @@ class PacketWriter:
             else (VALIDATION_PASSED if report.passed else VALIDATION_FAILED),
             "validated_at": now,
             "validator_name": "escapewheel_validator",
-            "validator_version": _version(),
+            "validator_version": writer_version(),
         }
         manifest: dict[str, Any] = {
             "packet_id": self._packet_id,
-            "packet_version": _first_version(self._packet_id, self._replaces),
+            "packet_version": first_version(self._packet_id, self._replaces),
             "profile_id": PROFILE_ID,
             "semantic_standard_version": self._registry["semantic_standard_version"],
             "logical_standard_version": self._registry["logical_standard_version"],
@@ -1761,9 +1265,9 @@ class PacketWriter:
             If the staging area holds a promotion record this writer cannot read.
         """
         root = Path(root)
-        _act_on_promotion(root)
+        act_on_promotion(root)
         if self._held is None:
-            _refuse_occupied(root)
+            refuse_occupied(root)
         self._prepared = None
         staging = self._staging(root)
         self._prepared = staging.resolve()
@@ -1825,8 +1329,8 @@ class PacketWriter:
             If the staging area holds a promotion record this writer cannot read.
         """
         root = Path(root)
-        _act_on_promotion(root)
-        _refuse_occupied(root)
+        act_on_promotion(root)
+        refuse_occupied(root)
         # R1 §6 makes the session inventory part of the manifest and the schema requires it
         # non-empty. Refusing here beats letting the staged manifest fail its own schema,
         # which surfaces as an unhelpful error from a directory the caller never named.
@@ -1892,7 +1396,7 @@ class PacketWriter:
             )
             say(f"staged {len(restaged)} derived or updated resource(s) in {time.perf_counter() - clock:.1f} s")
             clock = time.perf_counter()
-        # Scan the order of everything except what `_write_stream` compared on the way in.
+        # Scan the order of everything except what `write_stream` compared on the way in.
         # Not a shortcut around the check: the same comparison ran, over the same rows, from
         # the same code, one step earlier (R12 §4 still governs where it lives).
         staged = {e["resource_id"] for e in entries}
@@ -1907,8 +1411,8 @@ class PacketWriter:
         sources = self._sources_document()
         promoted = [name for name in PROMOTED if (staging / name).exists()]
         creates = [*promoted, *([SOURCES_FILENAME] if sources is not None else []), f"{MANIFEST_FILENAME}.candidate"]
-        _claim(root, creates)
-        _record_promotion(staging, str(self._manifest(entries, registries, None)["packet_version"]), creates)
+        claim(root, creates)
+        record_promotion(staging, str(self._manifest(entries, registries, None)["packet_version"]), creates)
         if sources is not None:
             # At the root so a copy carries it, and outside the manifest so a moved mirror is fixed by
             # editing it in place (Part 04 §5.5).
@@ -1982,7 +1486,7 @@ class PacketWriter:
             If the staging area holds a promotion record this writer cannot read.
         """
         root = Path(root)
-        _act_on_promotion(root)
+        act_on_promotion(root)
         if not (root / MANIFEST_FILENAME).is_file():
             raise NotCommitted(f"{root} holds no committed {MANIFEST_FILENAME}; use commit() to create a packet")
         if self._held is None:
@@ -1990,7 +1494,7 @@ class PacketWriter:
         held = self._held
         assert held is not None
         superseded = dict(held.manifest)
-        version = packet_version or _bump(str(superseded["packet_version"]))
+        version = packet_version or bump(str(superseded["packet_version"]))
         if semver(version) <= semver(str(superseded["packet_version"])):
             raise UsageError(
                 f"packet_version {version} does not sort after {superseded['packet_version']} (Part 05 §15.1)",
@@ -2104,10 +1608,10 @@ class PacketWriter:
             for manifest in (superseded, amended)
             if not (root / MANIFESTS_DIRNAME / retained(manifest)).exists()
         ]
-        creates = {_created(root, relative) for relative in (*moved, *added_registries, *copies)}
+        creates = {created(root, relative) for relative in (*moved, *added_registries, *copies)}
         creates |= {f"{MANIFEST_FILENAME}.candidate"}
-        _claim(root, creates)
-        _record_promotion(staging, version, creates)
+        claim(root, creates)
+        record_promotion(staging, version, creates)
         for relative in (*moved, *added_registries):
             destination = root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -2124,7 +1628,7 @@ class PacketWriter:
             "status": VALIDATION_PASSED,
             "validated_at": datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
             "validator_name": "escapewheel_validator",
-            "validator_version": _version(),
+            "validator_version": writer_version(),
         }
 
         body = (json.dumps(amended, indent=2) + "\n").encode()
@@ -2254,17 +1758,4 @@ class PacketWriter:
         return descriptors, added
 
 
-__all__ = [
-    "PROMOTION",
-    "REGISTRIES",
-    "STAGING",
-    "VALIDATION_FAILED",
-    "VALIDATION_NOT_RUN",
-    "VALIDATION_PASSED",
-    "ExternalArray",
-    "ExternalMedia",
-    "PacketWriter",
-    "StagedArray",
-    "read_promotion",
-    "retained",
-]
+__all__ = ["PacketWriter"]

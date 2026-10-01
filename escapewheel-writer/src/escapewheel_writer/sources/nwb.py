@@ -940,7 +940,7 @@ class NWBSource(Compensates):
         One array per signal. Its time axis is not an array: the samples are regular on the
         device's dispatch clock, so `array_dimensions` declares the axis in regular form.
         """
-        from ..writer import StagedArray
+        from ..bindings import StagedArray
 
         staged = []
         for name in self.signals:
