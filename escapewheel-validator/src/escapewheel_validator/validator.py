@@ -21,6 +21,7 @@ from typing import Any
 import pyarrow as pa
 from escapewheel_reader import Location, Packet, PacketError
 from escapewheel_reader.manifest import MANIFEST_FILENAME, Manifest
+from escapewheel_reader.registries import declared_tables
 
 from . import amendment, check_table
 from .declarations import check_resource_declarations, check_sources
@@ -35,7 +36,6 @@ from .manifest import (
 from .registry_document import CheckedRegistryContext
 from .registry_types import (
     registry_meta_schema,  # noqa: F401 - `escapewheel_writer.scaffold` imports it from here
-    table_contracts,
 )
 from .report import Report
 from .rules import LIMITS, bounded, run_rules, spill_beside
@@ -234,7 +234,7 @@ def _check_tables(context: _Context) -> None:
     """Give every directing registry's tables the same storage checks (Part 05 §5.4)."""
     report = context.report
     for document in context.documents:
-        context.tables.update(table_contracts(document))
+        context.tables.update(declared_tables(document))
     tables = context.tables
     present = context.present = check_schemas(context.packet, tables, report)
     report_page_types_unassessed(len(present), report)

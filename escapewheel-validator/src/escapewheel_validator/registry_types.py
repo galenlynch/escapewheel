@@ -3,7 +3,6 @@
 - :func:`registry_meta_schema` -- the meta-schema a registry document is checked against.
 - :data:`ARROW_TYPES` -- each registry column type's Arrow type, for the schema comparison.
 - :data:`DDL` -- each registry column type's DuckDB type, for a typed empty relation.
-- :func:`table_contracts` -- the table contracts a registry document declares, by resource ID.
 - :func:`visible_declarations` -- core's declarations with those of the extensions beside it.
 
 No module of the package is imported here, so every layer may read it.
@@ -28,15 +27,6 @@ ARROW_TYPES = {
     "timestamp": "timestamp[us, tz=UTC]",
     "json_string": "string",
 }
-
-
-def table_contracts(registry: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
-    """Project the table contracts from registry resource declarations."""
-    return {
-        str(name): declaration["table"]
-        for name, declaration in registry.get("resources", {}).items()
-        if declaration.get("kind") == "table" and "table" in declaration
-    }
 
 
 def visible_declarations(

@@ -2,6 +2,7 @@
 
 import pyarrow as pa
 import pyarrow.compute as pc
+from escapewheel_reader.registries import declared_tables
 
 from .registry import OVERRIDING_ORDERS
 
@@ -29,10 +30,7 @@ class Numbering:
     def __init__(self, *registries: dict) -> None:
         #: Every table the packet may write, by resource ID.
         self.specs = {
-            name: declaration["table"]
-            for document in registries
-            for name, declaration in document["resources"].items()
-            if declaration["kind"] == "table"
+            name: table for document in registries for name, table in declared_tables(document, strict=True).items()
         }
         #: Each identifier column's map from a name to its number.
         self.keys: dict[str, dict[str, int]] = {}

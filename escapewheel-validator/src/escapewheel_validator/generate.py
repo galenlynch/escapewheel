@@ -20,6 +20,7 @@ from typing import Any
 
 from escapewheel_reader import quote
 from escapewheel_reader.ordering import stored_order
+from escapewheel_reader.registries import declared_tables
 
 from . import check_table
 from .check_table import CheckEntry
@@ -442,11 +443,7 @@ def _generate(  # noqa: C901
         Generated Tier 1 checks followed by the registry's Tier 2 rules.
     """
     checks: list[Check] = []
-    tables: Mapping[str, Any] = {
-        str(name): declaration["table"]
-        for name, declaration in registry["resources"].items()
-        if declaration["kind"] == "table"
-    }
+    tables = declared_tables(registry, strict=True)
     included = set(tables) if only is None else set(only)
     # What a reference may point at, which is not the same as what gets checks. An extension
     # declares its own tables and references core's (Part 09 §6.1), so without this its foreign keys

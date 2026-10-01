@@ -21,6 +21,7 @@ from typing import Any
 
 import pyarrow as pa
 from escapewheel_reader import Packet, PacketError
+from escapewheel_reader.registries import declared_tables
 from escapewheel_reader.resource_ids import (
     CORE_SESSIONS,
 )
@@ -30,7 +31,7 @@ from .generate import Check, Specialisation, concerns, generate
 from .registry_document import (
     CheckedRegistryContext,
 )
-from .registry_types import DDL, table_contracts
+from .registry_types import DDL
 from .report import Report
 from .rule_language import PROFILE_ID, RuleProfileError, check_rule
 from .vocabulary import EvaluationStatus, Level, RegistryState
@@ -163,7 +164,7 @@ def _install_rule_relations(packet: Packet, connection: Any, documents: Sequence
     unreadable: set[str] = set()
     installed: set[str] = set()
     for document in documents:
-        for resource_id, spec in table_contracts(document).items():
+        for resource_id, spec in declared_tables(document).items():
             if resource_id in installed:
                 continue
             installed.add(resource_id)
@@ -205,7 +206,7 @@ def _tier2(context: CheckedRegistryContext, core_context: CheckedRegistryContext
     language = document.get("rule_language")
     checked: list[Check] = []
     invalid: list[tuple[Any, str]] = []
-    for resource, table in table_contracts(document).items() if language == PROFILE_ID else ():
+    for resource, table in declared_tables(document).items() if language == PROFILE_ID else ():
         for rule in table.get("rules", []):
             if rule.get("advisory") and not advisory:
                 continue
@@ -355,11 +356,11 @@ def _namable(
     Core's absent tables get empty stand-ins in `run_rules`, so all of them can be joined; an
     extension's do not, so only what the packet carries can be.
     """
-    tables = dict(table_contracts(registry))
+    tables = dict(declared_tables(registry))
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
     for document in extensions:
-        if isinstance(table_contracts(document), Mapping):
-            tables.update({n: t for n, t in table_contracts(document).items() if n in carried})
+        if isinstance(declared_tables(document), Mapping):
+            tables.update({n: t for n, t in declared_tables(document).items() if n in carried})
     return tables
 
 
@@ -401,11 +402,11 @@ def _specialisations(
     interval may hold one row per interval without being a kind, and inference from references
     takes every related table for a misdirection.
     """
-    tables = dict(table_contracts(registry))
+    tables = dict(declared_tables(registry))
     carried = {resource.resource_id for resource in packet.resources(kind="table")}
     for document in extensions:
-        if isinstance(table_contracts(document), Mapping):
-            tables.update({n: t for n, t in table_contracts(document).items() if n in carried})
+        if isinstance(declared_tables(document), Mapping):
+            tables.update({n: t for n, t in declared_tables(document).items() if n in carried})
     found: dict[str, list[Specialisation]] = {}
     for name, spec in tables.items():
         for reference in spec.get("references", []):
@@ -470,7 +471,7 @@ def _check_extensions(
             continue
         document = extension_context.document
         assert isinstance(document, Mapping)
-        declared = set(table_contracts(document))
+        declared = set(declared_tables(document))
         # What the *packet* declares, not what the core registry knows: an extension's tables are
         # by definition absent from core's, and `present` is built from core's.
         carried = declared & {r.resource_id for r in packet.resources(kind="table")}
@@ -487,7 +488,7 @@ def _check_extensions(
             only=carried,
             advisory=advisory,
             aggregate=unsound or set(),
-            resolvable=set(table_contracts(registry)),
+            resolvable=set(declared_tables(registry)),
             kinds=kinds,
             specialises=specialises,
             declared=False,
