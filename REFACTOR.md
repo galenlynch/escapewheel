@@ -258,7 +258,7 @@ Known obstacles:
       `test_recipe.py` (1,194) along the new modules.
 - [ ] Tests: one shared packet-fixture helper for the reader's and validator's suites, with its
       small registry derived from the real one; one `nwbfixture` for the writer and aind.
-- [ ] Corpus: `fixtures/build.py` (2,312 lines) is held together by the module globals `KEYS` and
+- [x] Corpus: `fixtures/build.py` (2,312 lines) is held together by the module globals `KEYS` and
       `SPECS`. Replace them with an object, declare each packet once as a record that carries its
       expected finding, then split the module.
 
@@ -401,3 +401,31 @@ Writing the tool waits on the proposal's promotion and acceptance.
 - `PROFILE_ID` is defined in `profile`, and a test checks it against the bundled descriptor.
 - The validator, the writer and the adapters still spell these literals. Their conversion goes
   with each package's stage 2.
+
+### 11.6 The corpus
+
+- A packet is declared once, as a `Packet` record in `fixtures/corpus_packets/` that carries its
+  build function, its expected finding, the checks it must not draw, and whether it is validated
+  with checksums. `fixtures/build.py` writes each record and `fixtures/corpus.py` judges each.
+- `corpus.py` keeps `EXPECTED` as a literal, because `revisions/evidence.py` and `tools/facts.py`
+  read it from that file's syntax tree without importing it. `corpus.py` exits 1 before judging
+  anything where the literal and the records disagree. Removing the literal means changing those
+  two tools to import the records, which is not done here.
+- The module globals `KEYS` and `SPECS` are replaced by a `Numbering` object that each build
+  creates for its own packet.
+- The package holds the record, four helper modules (registry, numbering, writing, arrays), the
+  valid session's rows in `session.py`, and one module for each subject's packets. `build.py`
+  re-exports `PACKETS`, `VALID` and `content` for the callers that load it by path.
+- `fixtures/packets/` is ignored, so the verifier's candidate-state check does not see a change
+  to the corpus. The split was checked by comparing a digest of every written file before and
+  after: identical, apart from the `validator_name` lines the first commit corrected.
+
+Found and left as they were, since each changes what the corpus asserts or is outside the split:
+
+- Four of the six packets expected to draw a warning are not marked `conforming`, so the corpus
+  does not check that they pass: `spike_outside_window`, `wide_anchor_gap`, `two_primaries` and
+  `outside_table_floor`.
+- `tone_in_place_of_its_own` expects an extension's check and names no `registry`, so the
+  per-registry verdicts are not checked for it.
+- `fixtures/README.md`'s table of variants is incomplete and stale in places.
+- `writing.sql_name` is defined and never called.
