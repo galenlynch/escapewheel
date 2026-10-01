@@ -39,7 +39,9 @@ def test_bytes_that_are_not_utf8_json_are_refused(packet_root, raw):
 
 def test_a_repeated_member_inside_an_entry_is_named_where_it_repeats(packet_root):
     text = (packet_root / "packet.json").read_text()
-    repeated = text.replace('"resource_id": "core.trials"', '"resource_id": "core.trials", "resource_id": "core.x"')
+    repeated = text.replace(
+        '"resource_id": "core.intervals"', '"resource_id": "core.intervals", "resource_id": "core.x"'
+    )
     (packet_root / "packet.json").write_text(repeated)
     report, _ = check_packet_manifest(packet_root)
     assert [f.check for f in report.findings] == ["packet.manifest.duplicate_member"]
@@ -243,7 +245,7 @@ def test_an_external_entry_need_not_record_a_digest(packet_root):
 @pytest.mark.parametrize(
     "uri",
     [
-        pytest.param("tables/core/trials%20one.parquet", id="encoded_space"),
+        pytest.param("tables/core/intervals%20one.parquet", id="encoded_space"),
         pytest.param("opaque/core.qc_report/QC%20report%20%C3%A9.pdf", id="encoded_utf8"),
         pytest.param("s3://bucket/QC report é.pdf", id="absolute"),
     ],
@@ -257,16 +259,16 @@ def test_a_uri_in_the_one_form_passes(packet_root, uri):
 @pytest.mark.parametrize(
     "uri",
     [
-        pytest.param("tables/core/trials one.parquet", id="raw_space"),
+        pytest.param("tables/core/intervals one.parquet", id="raw_space"),
         pytest.param("tables/core/r%c3%a9sum%c3%a9.parquet", id="lowercase_hex"),
         pytest.param("tables/core/%41.parquet", id="encoded_unreserved"),
-        pytest.param("tables/../tables/core/trials.parquet", id="dot_dot_segment"),
-        pytest.param("tables/./core/trials.parquet", id="dot_segment"),
-        pytest.param("/tables/core/trials.parquet", id="leading_slash"),
-        pytest.param("tables//core/trials.parquet", id="empty_segment"),
+        pytest.param("tables/../tables/core/intervals.parquet", id="dot_dot_segment"),
+        pytest.param("tables/./core/intervals.parquet", id="dot_segment"),
+        pytest.param("/tables/core/intervals.parquet", id="leading_slash"),
+        pytest.param("tables//core/intervals.parquet", id="empty_segment"),
         pytest.param("tables/a%2Fb.parquet", id="encoded_slash"),
         pytest.param("tables/%FF.parquet", id="not_utf8"),
-        pytest.param("c:/tables/core/trials.parquet", id="windows_drive"),
+        pytest.param("c:/tables/core/intervals.parquet", id="windows_drive"),
     ],
 )
 def test_a_uri_not_in_the_one_form_is_an_entries_finding(packet_root, uri):
@@ -274,8 +276,8 @@ def test_a_uri_not_in_the_one_form_is_an_entries_finding(packet_root, uri):
     _edit(packet_root, lambda m: m["resources"][1].update(uri=uri))
     report, bound = check_packet_manifest(packet_root)
     assert [(f.level, f.check) for f in report.findings] == [("error", "packet.resource.uri_form")]
-    assert report.findings[0].rows == (("core.trials", uri),)
-    assert report.findings[0].message.startswith("core.trials: ")
+    assert report.findings[0].rows == (("core.intervals", uri),)
+    assert report.findings[0].message.startswith("core.intervals: ")
     assert bound is None
 
 

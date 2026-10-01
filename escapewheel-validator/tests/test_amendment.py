@@ -50,11 +50,11 @@ def _rows(held, **columns):
 def test_an_amendment_adding_a_new_group_passes(packet_root):
     report = _amended(
         packet_root,
-        "trials",
+        "intervals",
         lambda held: _rows(
             held,
             session_id=pa.array([1], type=pa.int32()),
-            trial_id=pa.array([3], type=pa.int32()),
+            interval_id=pa.array([3], type=pa.int32()),
             start_tick=pa.array([11000], type=pa.int64()),
             stop_tick=pa.array([15000], type=pa.int64()),
             clock_id=pa.array([1], type=pa.int32()),
@@ -68,12 +68,12 @@ def test_changing_a_held_row_is_row_changed(packet_root):
     def shifted(held):
         return held.set_column(2, "start_tick", pa.array([1001, 6000], type=pa.int64()))
 
-    report = _amended(packet_root, "trials", shifted)
+    report = _amended(packet_root, "intervals", shifted)
     assert _checks(report) == {"amendment.row_changed", "amendment.group_grown"}
 
 
 def test_removing_a_held_row_is_row_changed(packet_root):
-    assert _checks(_amended(packet_root, "trials", lambda held: held.slice(0, 1))) == {"amendment.row_changed"}
+    assert _checks(_amended(packet_root, "intervals", lambda held: held.slice(0, 1))) == {"amendment.row_changed"}
 
 
 def test_a_row_joining_a_held_group_is_group_grown(packet_root):
@@ -131,38 +131,38 @@ def test_removing_a_canonical_resource_is_resource_changed(packet_root):
 
 
 def _analysis(root):
-    """Declare a derived table over `core.trials`, stored apart from it."""
+    """Declare a derived table over `core.intervals`, stored apart from it."""
     registry = read_registry(root)
-    registry["resources"]["analysis.trial_summary"] = {
+    registry["resources"]["analysis.interval_summary"] = {
         "content_class": "analysis",
         "kind": "table",
         "instances": {"mode": "singleton", "presence": "optional"},
         "requires": [],
         "lineage": "required",
-        "table": {**registry["resources"]["core.trials"]["table"], "rules": [], "amendment_groups": []},
+        "table": {**registry["resources"]["core.intervals"]["table"], "rules": [], "amendment_groups": []},
     }
     install_registry(root, registry)
-    uri = f"{TABLES}/trial_summary.parquet"
-    pq.write_table(pq.read_table(root / TABLES / "trials.parquet"), root / uri)
+    uri = f"{TABLES}/interval_summary.parquet"
+    pq.write_table(pq.read_table(root / TABLES / "intervals.parquet"), root / uri)
     manifest = json.loads((root / "packet.json").read_text())
     manifest["resources"].append(
         {
-            "resource_id": "analysis.trial_summary",
-            "declaration_id": "analysis.trial_summary",
+            "resource_id": "analysis.interval_summary",
+            "declaration_id": "analysis.interval_summary",
             "uri": uri,
             "digest": owned_digest(root, uri),
             "validation_state": "passed",
-            "derived_from": ["core.trials"],
+            "derived_from": ["core.intervals"],
         }
     )
     (root / "packet.json").write_text(json.dumps(manifest, indent=2))
 
 
-def _new_trial(held):
+def _new_interval(held):
     return _rows(
         held,
         session_id=pa.array([1], type=pa.int32()),
-        trial_id=pa.array([3], type=pa.int32()),
+        interval_id=pa.array([3], type=pa.int32()),
         start_tick=pa.array([11000], type=pa.int64()),
         stop_tick=pa.array([15000], type=pa.int64()),
         clock_id=pa.array([1], type=pa.int32()),
@@ -171,16 +171,16 @@ def _new_trial(held):
 
 def test_a_derived_resource_kept_over_a_written_source_is_stale(packet_root):
     _analysis(packet_root)
-    report = _amended(packet_root, "trials", _new_trial)
+    report = _amended(packet_root, "intervals", _new_interval)
     assert _checks(report) == {"amendment.derived_resource_stale"}
 
 
 def test_removing_the_stale_derived_resource_passes(packet_root):
     """Part 05 §15.2: an amendment may remove an analysis resource it does not derive again."""
     _analysis(packet_root)
-    held = pq.read_table(packet_root / TABLES / "trials.parquet")
-    manifest = _write_version(packet_root, _retain(packet_root), "trials", _new_trial(held))
-    manifest["resources"] = [e for e in manifest["resources"] if e["resource_id"] != "analysis.trial_summary"]
+    held = pq.read_table(packet_root / TABLES / "intervals.parquet")
+    manifest = _write_version(packet_root, _retain(packet_root), "intervals", _new_interval(held))
+    manifest["resources"] = [e for e in manifest["resources"] if e["resource_id"] != "analysis.interval_summary"]
     (packet_root / "packet.json").write_text(json.dumps(manifest, indent=2))
     report = validate(open_packet(packet_root))
     assert report.passed, [f"{f.check}: {f.message}" for f in report.findings if f.level == "error"]
@@ -197,10 +197,10 @@ def test_an_unreadable_retained_manifest_leaves_the_comparison_incomplete(packet
 
 
 def test_a_superseded_version_whose_files_were_removed_leaves_the_comparison_incomplete(packet_root):
-    held = pq.read_table(packet_root / TABLES / "trials.parquet")
-    manifest = _write_version(packet_root, _retain(packet_root), "trials", _new_trial(held))
+    held = pq.read_table(packet_root / TABLES / "intervals.parquet")
+    manifest = _write_version(packet_root, _retain(packet_root), "intervals", _new_interval(held))
     (packet_root / "packet.json").write_text(json.dumps(manifest, indent=2))
-    (packet_root / TABLES / "trials.parquet").unlink()
+    (packet_root / TABLES / "intervals.parquet").unlink()
     report = validate(open_packet(packet_root))
     assert not _checks(report)
     assert [(e.registry, e.status) for e in report.evaluations if e.rule == "amendment"] == [("core", "incomplete")]

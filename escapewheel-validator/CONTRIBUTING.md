@@ -155,6 +155,10 @@ Tests build their own minimal packet in `tmp_path` (`tests/conftest.py`) rather 
 near-copy of the reader's — **deliberate duplication, so both suites run standalone.** Keep it
 that way.
 
+The fixture's registry stands in for core: it declares only resources the core registry declares,
+each with fewer columns. A test that needs another resource adds the declaration itself.
+`tests/test_fixture_registry.py` holds the first half.
+
 `tests/test_cli.py` goes through `escapewheel_reader.scripts.cli.main`, so a pass proves the
 entry-point wiring rather than just the handler.
 

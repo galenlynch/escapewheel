@@ -61,7 +61,7 @@ class Check:
 
     @property
     def id(self) -> str:
-        """The check ID, e.g. ``core.trials.primary_key_unique``."""
+        """The check ID, e.g. ``core.intervals.primary_key_unique``."""
         return self.entry.id
 
     @property

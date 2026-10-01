@@ -23,10 +23,10 @@ def test_validate_reports_a_conforming_packet(packet_root, capsys):
 
 
 def test_validate_exits_nonzero_on_a_finding(packet_root, capsys):
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
     pq.write_table(
-        pa.concat_tables([trials, trials.slice(0, 1)]),
-        packet_root / "tables" / "core" / "trials.parquet",
+        pa.concat_tables([intervals, intervals.slice(0, 1)]),
+        packet_root / "tables" / "core" / "intervals.parquet",
         compression="zstd",
     )
     assert main(["validate", str(packet_root)]) == 1

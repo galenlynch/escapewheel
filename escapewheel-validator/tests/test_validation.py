@@ -25,19 +25,19 @@ def test_conforming_packet_passes(packet_root):
 
 
 def test_duplicate_primary_key(packet_root):
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    _rewrite(packet_root, "trials", pa.concat_tables([trials, trials.slice(0, 1)]))
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    _rewrite(packet_root, "intervals", pa.concat_tables([intervals, intervals.slice(0, 1)]))
     report = validate(open_packet(packet_root))
     assert not report.passed
-    assert any(f.check == "core.trials.primary_key_unique" for f in report.findings)
+    assert any(f.check == "core.intervals.primary_key_unique" for f in report.findings)
 
 
 def test_unresolved_foreign_key(packet_root):
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    broken = trials.set_column(0, "session_id", pa.array([999, 999], type=pa.int32()))
-    _rewrite(packet_root, "trials", broken)
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    broken = intervals.set_column(0, "session_id", pa.array([999, 999], type=pa.int32()))
+    _rewrite(packet_root, "intervals", broken)
     report = validate(open_packet(packet_root))
-    assert any(f.check == "core.trials.session_id_resolves" for f in report.findings)
+    assert any(f.check == "core.intervals.session_id_resolves" for f in report.findings)
 
 
 def test_closed_vocabulary(packet_root):
@@ -50,18 +50,18 @@ def test_closed_vocabulary(packet_root):
 
 
 def test_equal_varying_columns_are_reported_at_info_only(packet_root):
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    index = trials.schema.get_field_index("clock_id")
-    _rewrite(packet_root, "trials", trials.set_column(index, "clock_id", pa.array([1, 2], type=pa.int32())))
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    index = intervals.schema.get_field_index("clock_id")
+    _rewrite(packet_root, "intervals", intervals.set_column(index, "clock_id", pa.array([1, 2], type=pa.int32())))
     report = validate(open_packet(packet_root))
-    duplicated = [f for f in report.findings if f.check == "core.trials.columns_duplicated"]
+    duplicated = [f for f in report.findings if f.check == "core.intervals.columns_duplicated"]
     assert [f.level for f in duplicated] == ["info"]
-    assert "trial_id" in duplicated[0].message and "clock_id" in duplicated[0].message
+    assert "interval_id" in duplicated[0].message and "clock_id" in duplicated[0].message
     assert report.passed
 
 
 def test_equal_constant_columns_are_not_reported(packet_root):
-    """The fixture's `session_id` and `clock_id` both hold 1 in every trial."""
+    """The fixture's `session_id` and `clock_id` both hold 1 in every interval."""
     report = validate(open_packet(packet_root))
     assert not any(f.check.endswith(".columns_duplicated") for f in report.findings)
 
@@ -178,18 +178,18 @@ CUE_SIDE = {
     "vocabulary": "closed",
     "enum": ["left", "right"],
 }
-TRIAL_ID = {
-    "name": "trial_id",
+INTERVAL_ID = {
+    "name": "interval_id",
     "type": "int32",
     "presence": "optional",
     "role": "identifier",
     "identity": "assigned",
-    "description": "the trial an event fell in",
+    "description": "the interval an event fell in",
 }
-IN_TRIAL = {
-    "columns": ["session_id", "trial_id"],
-    "resource": "core.trials",
-    "resource_columns": ["session_id", "trial_id"],
+IN_INTERVAL = {
+    "columns": ["session_id", "interval_id"],
+    "resource": "core.intervals",
+    "resource_columns": ["session_id", "interval_id"],
 }
 
 
@@ -206,29 +206,29 @@ def test_a_present_optional_closed_vocabulary_column_is_checked(packet_root):
 
 
 def test_an_absent_optional_foreign_key_column_reports_nothing(packet_root):
-    report = _validate_optional_event_column(packet_root, TRIAL_ID, IN_TRIAL, None)
+    report = _validate_optional_event_column(packet_root, INTERVAL_ID, IN_INTERVAL, None)
     assert report.passed, [(f.check, f.message) for f in report.findings]
 
 
 def test_a_present_optional_foreign_key_column_is_checked(packet_root):
     """An optional column may be null where present (Part 02 §6), so only the 9 fails to resolve."""
-    report = _validate_optional_event_column(packet_root, TRIAL_ID, IN_TRIAL, pa.array([1, None, 9], pa.int32()))
-    finding = next(f for f in report.findings if f.check == "core.events.session_id_trial_id_resolves")
+    report = _validate_optional_event_column(packet_root, INTERVAL_ID, IN_INTERVAL, pa.array([1, None, 9], pa.int32()))
+    finding = next(f for f in report.findings if f.check == "core.events.session_id_interval_id_resolves")
     assert finding.rows == (("1", "9"),)
 
 
 def test_tier_two_rule(packet_root):
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    broken = trials.set_column(3, "stop_tick", pa.array([0, 10000], type=pa.int64()))
-    _rewrite(packet_root, "trials", broken)
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    broken = intervals.set_column(3, "stop_tick", pa.array([0, 10000], type=pa.int64()))
+    _rewrite(packet_root, "intervals", broken)
     report = validate(open_packet(packet_root))
-    assert any(f.check == "core.trials.interval_valid" for f in report.findings)
+    assert any(f.check == "core.intervals.interval_valid" for f in report.findings)
 
 
 def test_wrong_column_type_is_caught_before_any_query(packet_root):
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    narrowed = trials.set_column(2, "start_tick", trials.column("start_tick").cast(pa.int32()))
-    _rewrite(packet_root, "trials", narrowed)
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    narrowed = intervals.set_column(2, "start_tick", intervals.column("start_tick").cast(pa.int32()))
+    _rewrite(packet_root, "intervals", narrowed)
     report = validate(open_packet(packet_root))
     assert any(f.check == "schema.column_type" for f in report.findings)
 
@@ -289,7 +289,7 @@ def test_unsupported_registry_result_is_preserved_and_dependent_checks_are_skipp
     assert not report.passed
     assert report.registries[0].result.state == "unsupported"
     assert not report.registries[0].directs_checks
-    assert not any(f.check.startswith("core.trials.") for f in report.findings)
+    assert not any(f.check.startswith("core.intervals.") for f in report.findings)
 
 
 def test_invalid_json_registry_is_a_complete_result_not_a_crash(packet_root):
@@ -358,13 +358,13 @@ def _add_family_declaration(root, declaration_id, *, content_class="core"):
 def test_nullable_foreign_keys_are_guarded(packet_root):
     """Without an IS NOT NULL guard, every absent optional key reports as a violation."""
     registry = read_registry(packet_root)
-    registry["resources"]["core.trials"]["table"]["columns"].append(
+    registry["resources"]["core.intervals"]["table"]["columns"].append(
         {"name": "probe_id", "type": "string", "presence": "nullable", "description": "probe"}
     )
-    registry["resources"]["core.trials"]["table"]["references"].append(
+    registry["resources"]["core.intervals"]["table"]["references"].append(
         {"columns": ["probe_id"], "resource": "core.sessions", "resource_columns": ["session_id"]}
     )
-    check = next(c for c in generate(registry) if c.id == "core.trials.probe_id_resolves")
+    check = next(c for c in generate(registry) if c.id == "core.intervals.probe_id_resolves")
     assert "IS NOT NULL" in check.sql
 
 
@@ -372,7 +372,7 @@ def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
     """Part 05 §5.3, at `info`. The column may be absent from the file, so this can never fail."""
     report = validate(open_packet(packet_root))
     assert report.passed
-    finding = next(f for f in report.findings if f.check == "core.trials.metadata_unfilled")
+    finding = next(f for f in report.findings if f.check == "core.intervals.metadata_unfilled")
     assert finding.level == "info"
     # Part 05 §9.5: a finding about one resource belongs to the registry declaring it.
     assert finding.registry == "core"
@@ -380,11 +380,11 @@ def test_a_declared_metadata_column_no_row_fills_is_reported(packet_root):
 
 def test_a_filled_metadata_column_is_not_reported(packet_root):
     """The other side: one non-null value in the packet is enough, so the report cannot nag."""
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    filled = trials.append_column("metadata", pa.array(['{"a": 1}', None]))
-    _rewrite(packet_root, "trials", filled)
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    filled = intervals.append_column("metadata", pa.array(['{"a": 1}', None]))
+    _rewrite(packet_root, "intervals", filled)
     report = validate(open_packet(packet_root))
-    assert not [f for f in report.findings if f.check == "core.trials.metadata_unfilled"]
+    assert not [f for f in report.findings if f.check == "core.intervals.metadata_unfilled"]
 
 
 def test_retired_codec_summary_is_rejected_by_the_manifest_schema(packet_root):
@@ -430,33 +430,33 @@ def test_an_external_resource_with_no_floor_is_not_reported_unassessed(packet_ro
 def test_advisory_rules_are_off_by_default(packet_root):
     """An advisory rule does not run unless asked (Part 02 §10.2)."""
     registry = read_registry(packet_root)
-    registry["resources"]["core.trials"]["table"]["rules"].append(
+    registry["resources"]["core.intervals"]["table"]["rules"].append(
         {
-            "id": "core.trials.advice",
+            "id": "core.intervals.advice",
             "level": "info",
             "advisory": True,
             "message": "advice",
-            "sql": "SELECT session_id, trial_id FROM core.trials",
+            "sql": "SELECT session_id, interval_id FROM core.intervals",
         }
     )
     install_registry(packet_root, registry)
     quiet = validate(open_packet(packet_root))
-    assert not any(f.check == "core.trials.advice" for f in quiet.findings)
+    assert not any(f.check == "core.intervals.advice" for f in quiet.findings)
 
     loud = validate(open_packet(packet_root), advisory=True)
-    assert any(f.check == "core.trials.advice" for f in loud.findings)
+    assert any(f.check == "core.intervals.advice" for f in loud.findings)
 
 
 def test_advisory_cannot_change_the_verdict(packet_root):
     """`passed` is invariant under the flag, because advisory rules are never errors."""
     registry = read_registry(packet_root)
-    registry["resources"]["core.trials"]["table"]["rules"].append(
+    registry["resources"]["core.intervals"]["table"]["rules"].append(
         {
-            "id": "core.trials.advice",
+            "id": "core.intervals.advice",
             "level": "info",
             "advisory": True,
             "message": "advice",
-            "sql": "SELECT session_id, trial_id FROM core.trials",
+            "sql": "SELECT session_id, interval_id FROM core.intervals",
         }
     )
     install_registry(packet_root, registry)
@@ -510,7 +510,7 @@ def _declare(root, **overrides):
         "instances": {"mode": "singleton", "presence": "optional"},
         "requires": [],
         "lineage": "required",
-        "table": {**registry["resources"]["core.trials"]["table"], "rules": [], "amendment_groups": []},
+        "table": {**registry["resources"]["core.intervals"]["table"], "rules": [], "amendment_groups": []},
     }
     install_registry(root, registry)
     path = root / "packet.json"
@@ -518,10 +518,10 @@ def _declare(root, **overrides):
     entry = {
         "resource_id": "analysis.test_output",
         "declaration_id": "analysis.test_output",
-        "uri": "tables/core/trials.parquet",
-        "digest": owned_digest(root, "tables/core/trials.parquet"),
+        "uri": "tables/core/intervals.parquet",
+        "digest": owned_digest(root, "tables/core/intervals.parquet"),
         "validation_state": "passed",
-        "derived_from": ["core.trials"],
+        "derived_from": ["core.intervals"],
         **overrides,
     }
     manifest["resources"].append({key: value for key, value in entry.items() if value is not None})
@@ -550,12 +550,12 @@ def test_a_manifest_entry_naming_a_run_is_refused_by_its_schema(packet_root):
 
 
 def test_a_duplicate_beside_its_twin_is_caught_by_the_scan(packet_root):
-    """core.trials is sorted by its key, so duplicates are neighbours and no GROUP BY runs."""
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    _rewrite(packet_root, "trials", trials.take([0, 0, 1]))
+    """core.intervals is sorted by its key, so duplicates are neighbours and no GROUP BY runs."""
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    _rewrite(packet_root, "intervals", intervals.take([0, 0, 1]))
     report = validate(open_packet(packet_root))
     assert not report.passed
-    (finding,) = [f for f in report.findings if f.check == "core.trials.primary_key_unique"]
+    (finding,) = [f for f in report.findings if f.check == "core.intervals.primary_key_unique"]
     assert [row[0] for row in finding.rows] == ["row 2"]  # the second row repeats the first
 
 
@@ -565,11 +565,11 @@ def test_a_duplicate_out_of_order_still_fails(packet_root):
     Ordering stays a warning -- a packet in the wrong order still conforms -- so the fallback
     is what keeps the check from passing by omission.
     """
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    _rewrite(packet_root, "trials", trials.take([1, 0, 0]))
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    _rewrite(packet_root, "intervals", intervals.take([1, 0, 0]))
     report = validate(open_packet(packet_root))
     assert not report.passed
-    assert any(f.check == "core.trials.primary_key_unique" for f in report.findings)
+    assert any(f.check == "core.intervals.primary_key_unique" for f in report.findings)
 
 
 def test_validation_leaves_nothing_in_the_packet(packet_root):
@@ -922,11 +922,11 @@ def test_an_empty_batch_does_not_break_the_seam():
 
 def test_scanning_nothing_leaves_the_ordering_unchecked(packet_root):
     """What `commit` relies on: a caller that established the order elsewhere skips the read."""
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    _rewrite(packet_root, "trials", trials.sort_by([("trial_id", "descending")]))
-    assert any(f.check == "core.trials.physical_order" for f in validate(open_packet(packet_root)).findings)
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    _rewrite(packet_root, "intervals", intervals.sort_by([("interval_id", "descending")]))
+    assert any(f.check == "core.intervals.physical_order" for f in validate(open_packet(packet_root)).findings)
     assert not any(
-        f.check == "core.trials.physical_order" for f in validate(open_packet(packet_root), scan=set()).findings
+        f.check == "core.intervals.physical_order" for f in validate(open_packet(packet_root), scan=set()).findings
     )
 
 
@@ -1039,16 +1039,16 @@ def test_recheck_narrows_the_rules_that_run(packet_root):
         registry,
         only={name for name, declaration in registry["resources"].items() if declaration["kind"] == "table"},
     )
-    narrowed = [c for c in every if concerns(c, {"core.trials"})]
+    narrowed = [c for c in every if concerns(c, {"core.intervals"})]
     assert 0 < len(narrowed) < len(every)
-    assert validate(open_packet(packet_root), recheck={"core.trials"}).passed
+    assert validate(open_packet(packet_root), recheck={"core.intervals"}).passed
 
 
 def test_recheck_still_catches_a_break_in_what_was_written(packet_root):
     """Narrowing must not narrow away the resource the amendment actually wrote."""
-    duplicated = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    _rewrite(packet_root, "trials", pa.concat_tables([duplicated, duplicated.slice(0, 1)]))
-    report = validate(open_packet(packet_root), recheck={"core.trials"})
+    duplicated = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    _rewrite(packet_root, "intervals", pa.concat_tables([duplicated, duplicated.slice(0, 1)]))
+    report = validate(open_packet(packet_root), recheck={"core.intervals"})
     assert not report.passed
 
 
@@ -1598,21 +1598,21 @@ def test_a_packet_owned_file_one_byte_off_is_an_error(packet_root, algorithm):
     from escapewheel_validator.stores import hasher
 
     root = _record_owned_digests(packet_root, algorithm=algorithm)
-    body = bytearray((root / "tables" / "core" / "trials.parquet").read_bytes())
+    body = bytearray((root / "tables" / "core" / "intervals.parquet").read_bytes())
     body[len(body) // 2] ^= 0x01
     function = hasher(algorithm)
     function.update(bytes(body))
     manifest = json.loads((root / "packet.json").read_text())
-    trials = next(e for e in manifest["resources"] if e["resource_id"] == "core.trials")
-    trials["digest"]["value"] = function.hexdigest()
+    intervals = next(e for e in manifest["resources"] if e["resource_id"] == "core.intervals")
+    intervals["digest"]["value"] = function.hexdigest()
     (root / "packet.json").write_text(json.dumps(manifest))
     report = validate(open_packet(root), checksums=True)
     assert not report.passed
-    assert [f.message.split(":")[0] for f in report.findings if f.check == "owned.digest"] == ["core.trials"]
+    assert [f.message.split(":")[0] for f in report.findings if f.check == "owned.digest"] == ["core.intervals"]
 
 
 def test_a_recorded_digest_is_not_read_without_checksums(packet_root):
-    root = _record_owned_digests(packet_root, corrupt="core.trials")
+    root = _record_owned_digests(packet_root, corrupt="core.intervals")
     assert validate(open_packet(root)).passed, "not read without checksums"
     assert "owned.digest" in {f.check for f in validate(open_packet(root), checksums=True).findings}
 
@@ -1683,12 +1683,12 @@ def _extension(root, *, tables=None, mutate=None):
                             "description": "Session identity.",
                         },
                         {
-                            "name": "trial_id",
+                            "name": "interval_id",
                             "type": "int32",
                             "presence": "required",
                             "role": "identifier",
                             "identity": "assigned",
-                            "description": "Trial identity.",
+                            "description": "Interval identity.",
                         },
                         {
                             "name": "choice",
@@ -1700,13 +1700,13 @@ def _extension(root, *, tables=None, mutate=None):
                             "description": "Choice.",
                         },
                     ],
-                    "primary_key": ["session_id", "trial_id"],
-                    "amendment_groups": [["session_id", "trial_id"]],
+                    "primary_key": ["session_id", "interval_id"],
+                    "amendment_groups": [["session_id", "interval_id"]],
                     "references": [
                         {
-                            "columns": ["session_id", "trial_id"],
-                            "resource": "core.trials",
-                            "resource_columns": ["session_id", "trial_id"],
+                            "columns": ["session_id", "interval_id"],
+                            "resource": "core.intervals",
+                            "resource_columns": ["session_id", "interval_id"],
                         }
                     ],
                     "rules": [],
@@ -1714,16 +1714,16 @@ def _extension(root, *, tables=None, mutate=None):
             }
         },
     }
-    trials = pq.read_table(root / "tables" / "core" / "trials.parquet")
+    intervals = pq.read_table(root / "tables" / "core" / "intervals.parquet")
     rows = {
-        "session_id": trials["session_id"].to_pylist(),
-        "trial_id": trials["trial_id"].to_pylist(),
-        "choice": ["left"] * trials.num_rows,
+        "session_id": intervals["session_id"].to_pylist(),
+        "interval_id": intervals["interval_id"].to_pylist(),
+        "choice": ["left"] * intervals.num_rows,
     }
     if mutate is not None:
         mutate(rows)
     (root / "tables" / "task").mkdir(parents=True, exist_ok=True)
-    types = {"session_id": pa.int32(), "trial_id": pa.int32(), "choice": pa.string()}
+    types = {"session_id": pa.int32(), "interval_id": pa.int32(), "choice": pa.string()}
     table = pa.table({name: pa.array(values, type=types.get(name)) for name, values in rows.items()})
     pq.write_table(table, root / "tables" / "task" / "trials.parquet")
     install_registry(root, document)
@@ -1758,7 +1758,7 @@ def test_an_extensions_closed_vocabulary_is_enforced(packet_root):
 def test_an_extension_reference_into_core_resolves(packet_root):
     """Part 09 §6.1 lets an extension reference core. Without the cross-registry link the anti-join is
     never generated and an orphan validates clean -- the gap R46 closed for core."""
-    root = _extension(packet_root, mutate=lambda r: r["trial_id"].__setitem__(0, 999))
+    root = _extension(packet_root, mutate=lambda r: r["interval_id"].__setitem__(0, 999))
     report = validate(open_packet(root))
     assert any(f.check.endswith("_resolves") and f.registry == "task" for f in report.findings)
 
@@ -1909,7 +1909,7 @@ def _unparseable_extension(root):
 def test_an_unparseable_extension_fails_only_what_needs_it(packet_root):
     """Part 04 §10: a reader fails the operation that needs the registry, naming it."""
     packet = open_packet(_unparseable_extension(_extension(packet_root)))
-    assert packet.table("core.trials").num_rows == 2
+    assert packet.table("core.intervals").num_rows == 2
     with pytest.raises(RegistryUnavailable) as refused:
         packet.extensions()
     assert (refused.value.registry_id, refused.value.reason) == ("task", RegistryFault.INVALID)
@@ -2116,13 +2116,13 @@ def test_an_identifier_paired_value_joins_its_key_uncast():
 
 def test_a_key_an_identifier_value_cannot_hold_is_reported():
     """A kind whose key is another type, or not one column, can name no row through the value."""
-    keys = {"core.runs": {"name": "run_id", "type": "int32", "identity": "assigned"}, "core.trials": None}
+    keys = {"core.runs": {"name": "run_id", "type": "int32", "identity": "assigned"}, "core.intervals": None}
     checks = generate(
-        _identifier_paired(), only={"core.runs"}, kinds={"core.runs": None, "core.trials": None}, keys=keys
+        _identifier_paired(), only={"core.runs"}, kinds={"core.runs": None, "core.intervals": None}, keys=keys
     )
     shape = next(c for c in checks if c.id == "core.runs.k_kind.key_fits_paired_value")
-    assert shape.level == "error" and "'core.trials'" in shape.sql and "'core.runs'" not in shape.sql
-    optional = generate(_identifier_paired("optional"), only={"core.runs"}, kinds={"core.trials": None}, keys=keys)
+    assert shape.level == "error" and "'core.intervals'" in shape.sql and "'core.runs'" not in shape.sql
+    optional = generate(_identifier_paired("optional"), only={"core.runs"}, kinds={"core.intervals": None}, keys=keys)
     assert "core.runs.k_kind.key_fits_paired_value" not in {c.id for c in optional}
 
 
@@ -2266,14 +2266,14 @@ def test_an_unrecognized_codec_is_outside_the_floor_and_not_invalid(packet_root)
 
 def test_a_packet_owned_table_outside_the_parquet_floor_is_a_warning(packet_root):
     """Part 05 §5.3: the Parquet floor binds the packet's writer too, so exceeding it is `warning`."""
-    trials = pq.read_table(packet_root / "tables" / "core" / "trials.parquet")
-    pq.write_table(trials, packet_root / "tables" / "core" / "trials.parquet", compression="zstd", version="1.0")
+    intervals = pq.read_table(packet_root / "tables" / "core" / "intervals.parquet")
+    pq.write_table(intervals, packet_root / "tables" / "core" / "intervals.parquet", compression="zstd", version="1.0")
     report = validate(open_packet(packet_root))
     assert report.passed
     [finding] = _outside(report)
     assert (finding.level, finding.registry) == ("warning", "core")
     assert finding.rows == (("encoding", "PLAIN_DICTIONARY"),)
-    assert finding.message.startswith("core.trials: parquet encoding PLAIN_DICTIONARY")
+    assert finding.message.startswith("core.intervals: parquet encoding PLAIN_DICTIONARY")
 
 
 def test_an_extension_table_outside_the_floor_is_the_extensions_finding(packet_root):

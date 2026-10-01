@@ -65,7 +65,7 @@ gives its default level, its scope (`packet`, `registry`, `resource` or `column`
 numbered part of the specification names it. A fixed ID is a constant named after it, and an ID
 built from a resource or a column comes from its family's function, so
 `finding.check == check_table.OWNED_DIGEST.id` and
-`finding.check == check_table.physical_order("core.trials").id` compare against the table instead
+`finding.check == check_table.physical_order("core.intervals").id` compare against the table instead
 of a string. A Tier 2 rule's ID is the registry's and a registry result's outcome's is the registry
 contract's, and neither is in the table.
 

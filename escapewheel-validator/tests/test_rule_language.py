@@ -12,9 +12,9 @@ from .conftest import install_registry, read_registry
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _rule(registry, sql, *, rule_id="core.trials.profile_test"):
+def _rule(registry, sql, *, rule_id="core.intervals.profile_test"):
     changed = copy.deepcopy(registry)
-    changed["resources"]["core.trials"]["table"]["rules"].append(
+    changed["resources"]["core.intervals"]["table"]["rules"].append(
         {"id": rule_id, "level": "error", "message": "profile test", "sql": sql}
     )
     return changed
@@ -39,11 +39,11 @@ def test_the_transform_slope_rule_flags_every_slope_that_is_not_positive():
 
 
 def test_invalid_rule_is_not_executed_or_reported_as_a_packet_finding(packet_root):
-    install_registry(packet_root, _rule(read_registry(packet_root), "DELETE FROM core.trials"))
+    install_registry(packet_root, _rule(read_registry(packet_root), "DELETE FROM core.intervals"))
     report = validate(open_packet(packet_root))
     assert (report.verdict(), report.verdict("core")) == ("failed", "failed")
     assert report.registries[0].result.state == "invalid"
-    assert not any(f.check == "core.trials.profile_test" for f in report.findings)
+    assert not any(f.check == "core.intervals.profile_test" for f in report.findings)
 
 
 def test_unsupported_language_is_distinct_from_a_finding(packet_root):
@@ -58,13 +58,14 @@ def test_unsupported_language_is_distinct_from_a_finding(packet_root):
 
 def test_engine_failure_is_incomplete_not_a_packet_finding(packet_root):
     sql = (
-        "SELECT CAST(start_tick AS DECIMAL(38,0)) * 99999999999999999999999999999999999999 AS exploded FROM core.trials"
+        "SELECT CAST(start_tick AS DECIMAL(38,0)) * 99999999999999999999999999999999999999 AS exploded "
+        "FROM core.intervals"
     )
     install_registry(packet_root, _rule(read_registry(packet_root), sql))
     report = validate(open_packet(packet_root))
     assert (report.verdict(), report.verdict("core")) == ("incomplete", "incomplete")
-    assert any(e.status == "incomplete" and e.rule == "core.trials.profile_test" for e in report.evaluations)
-    assert not any(f.check == "core.trials.profile_test" for f in report.findings)
+    assert any(e.status == "incomplete" and e.rule == "core.intervals.profile_test" for e in report.evaluations)
+    assert not any(f.check == "core.intervals.profile_test" for f in report.findings)
 
 
 @pytest.mark.parametrize(

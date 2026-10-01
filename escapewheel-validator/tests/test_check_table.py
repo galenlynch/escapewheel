@@ -64,10 +64,10 @@ def test_each_family_has_one_function_building_its_ids():
 
 
 def test_a_family_function_writes_the_id_its_parts_give():
-    assert check_table.not_null("core.trials", "t_start_tick").id == "core.trials.t_start_tick.not_null"
-    assert check_table.primary_key_unique("core.trials").id == "core.trials.primary_key_unique"
-    assert check_table.reference_resolves("core.trials", ["session_id", "clock_id"]).id == (
-        "core.trials.session_id_clock_id_resolves"
+    assert check_table.not_null("core.intervals", "t_start_tick").id == "core.intervals.t_start_tick.not_null"
+    assert check_table.primary_key_unique("core.intervals").id == "core.intervals.primary_key_unique"
+    assert check_table.reference_resolves("core.intervals", ["session_id", "clock_id"]).id == (
+        "core.intervals.session_id_clock_id_resolves"
     )
     assert check_table.names_a_row_of_its_kind("core.spike_units", ["session_id", "unit_id"]).id == (
         "core.spike_units.session_id_unit_id.names_a_row_of_its_kind"
@@ -75,8 +75,8 @@ def test_a_family_function_writes_the_id_its_parts_give():
     assert check_table.is_specialised("core.units", "unit_kind", "ext.probe_units").id == (
         "core.units.unit_kind.ext_probe_units_is_specialised"
     )
-    assert check_table.paired_value_resolves("core.intervals", "interval_kind", "core.trials").id == (
-        "core.intervals.interval_kind.core_trials_resolves"
+    assert check_table.paired_value_resolves("core.intervals", "interval_kind", "core.units").id == (
+        "core.intervals.interval_kind.core_units_resolves"
     )
 
 
@@ -89,8 +89,8 @@ def test_an_entry_is_built_at_another_level_without_changing_the_table():
 
 
 def test_an_id_declared_elsewhere_carries_no_named_flag():
-    declared = check_table.rule("core.trials.stop_after_start", "warning")
-    assert (declared.id, declared.level, declared.named) == ("core.trials.stop_after_start", Level.WARNING, None)
+    declared = check_table.rule("core.intervals.stop_after_start", "warning")
+    assert (declared.id, declared.level, declared.named) == ("core.intervals.stop_after_start", Level.WARNING, None)
     outcome = check_table.registry_outcome("registry.json.invalid_syntax")
     assert (outcome.level, outcome.scope, outcome.named) == (Level.ERROR, Scope.REGISTRY, None)
     assert all(entry.named is not None for entry in TABLE)
@@ -99,7 +99,7 @@ def test_an_id_declared_elsewhere_carries_no_named_flag():
 def test_a_report_records_a_finding_under_an_entry():
     report = Report()
     report.add(check_table.OWNED_DIGEST, "a digest differs", [(1, "a")], registry="core")
-    report.add(check_table.physical_order("core.trials").at(Level.INFO), "out of order")
+    report.add(check_table.physical_order("core.intervals").at(Level.INFO), "out of order")
     first, second = report.findings
     assert (first.level, first.check, first.rows, first.registry) == (
         Level.ERROR,
@@ -107,7 +107,7 @@ def test_a_report_records_a_finding_under_an_entry():
         (("1", "a"),),
         "core",
     )
-    assert (second.level, second.check, second.registry) == (Level.INFO, "core.trials.physical_order", None)
+    assert (second.level, second.check, second.registry) == (Level.INFO, "core.intervals.physical_order", None)
     assert type(first.check) is str
 
 

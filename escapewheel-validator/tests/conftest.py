@@ -122,18 +122,18 @@ def _registry():
                 "references": [],
                 "rules": [],
             },
-            "core.trials": {
+            "core.intervals": {
                 "columns": [
                     _col("session_id", "int32", "required"),
-                    _col("trial_id", "int32", "required"),
-                    _col("trial_name", "string", "optional"),
+                    _col("interval_id", "int32", "required"),
+                    _col("interval_name", "string", "optional"),
                     _col("start_tick", "int64", "required", clock_from="clock_id"),
                     _col("stop_tick", "int64", "required", clock_from="clock_id"),
                     _col("clock_id", "int32", "required"),
                     _metadata(),
                 ],
-                "primary_key": ["session_id", "trial_id"],
-                "amendment_groups": [["session_id", "trial_id"]],
+                "primary_key": ["session_id", "interval_id"],
+                "amendment_groups": [["session_id", "interval_id"]],
                 "references": [
                     {
                         "columns": ["session_id"],
@@ -144,10 +144,10 @@ def _registry():
                 ],
                 "rules": [
                     {
-                        "id": "core.trials.interval_valid",
+                        "id": "core.intervals.interval_valid",
                         "level": "error",
                         "message": "stop_tick precedes start_tick",
-                        "sql": "SELECT session_id, trial_id FROM core.trials WHERE stop_tick < start_tick",
+                        "sql": "SELECT session_id, interval_id FROM core.intervals WHERE stop_tick < start_tick",
                     }
                 ],
             },
@@ -243,7 +243,7 @@ def _registry():
 
 @pytest.fixture
 def packet_root(tmp_path):
-    """A minimal two-table packet: one session, two trials referencing it."""
+    """A minimal two-table packet: one session, two intervals referencing it."""
     root = tmp_path / "session_001"
     root.mkdir()
 
@@ -255,10 +255,10 @@ def packet_root(tmp_path):
             "session_start_time": pa.array([1_756_000_000_000_000], type=TS),
         }
     )
-    trials = pa.table(
+    intervals = pa.table(
         {
             "session_id": pa.array([1, 1], type=pa.int32()),
-            "trial_id": pa.array([1, 2], type=pa.int32()),
+            "interval_id": pa.array([1, 2], type=pa.int32()),
             "start_tick": pa.array([1000, 6000], type=pa.int64()),
             "stop_tick": pa.array([5000, 10000], type=pa.int64()),
             "clock_id": pa.array([1, 1], type=pa.int32()),
@@ -299,7 +299,7 @@ def packet_root(tmp_path):
     )
     resources = [
         _resource("core.sessions", uri := _write(root, "sessions", sessions), digest=owned_digest(root, uri)),
-        _resource("core.trials", uri := _write(root, "trials", trials), digest=owned_digest(root, uri)),
+        _resource("core.intervals", uri := _write(root, "intervals", intervals), digest=owned_digest(root, uri)),
         _resource("core.units", uri := _write(root, "units", units), digest=owned_digest(root, uri)),
         _resource("core.events", uri := _write(root, "events", events), digest=owned_digest(root, uri)),
         _resource(
