@@ -25,7 +25,8 @@ A recipe names one of these as a `[[source]]`'s `kind`:
 ## It is built as though it were already external
 
 The package sits in the monorepo beside `escapewheel-writer` and depends on it, one direction only.
-Nothing in the writer imports this package.
+Nothing in the writer imports this package, and it has no importable tier: `escapewheel_aind`
+exports no name, and a build reaches each kind by the entry point that registers it.
 
 Its kinds register through the `escapewheel.sources` entry-point group, which
 `escapewheel_writer.adapter.discovered()` loads, rather than by being listed in that package's
