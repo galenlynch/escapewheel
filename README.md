@@ -55,6 +55,7 @@ partial reads expensive. Escapewheel keeps the science and changes the substrate
 | `integration/` | The writer, reader, and validator run against one another, and the generator of Part 08's example packet. |
 | `conformance/` | Mechanical probes producing the measured evidence revisions cite, and the registry checks needing more than the tree holds. |
 | `inventory/` | Source inventories from discovery (Part 05 §4.1), and the upstream defects found while writing adapters. |
+| `tools/` | The repository's maintenance scripts, which `verify.py` runs: the tree's self-containment check, the package copies, the documents' generated counts, and the runtime preflight. |
 
 ## A packet
 

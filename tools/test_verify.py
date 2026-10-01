@@ -10,7 +10,7 @@ import unittest
 from unittest import mock
 
 import verify
-from ci import runtime_capabilities
+from tools import runtime_capabilities
 
 
 class VerifierRuntimeGateTests(unittest.TestCase):

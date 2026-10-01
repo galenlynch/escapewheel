@@ -13,4 +13,4 @@ COPIES = tomllib.loads((PACKAGE / "pyproject.toml").read_text())["tool"]["escape
 @pytest.mark.skipif(not TREE.is_dir(), reason="the specification's tree is not beside this package")
 @pytest.mark.parametrize(("copy", "source"), COPIES.items(), ids=list(COPIES))
 def test_a_copy_matches_its_source(copy, source):
-    assert (PACKAGE / copy).read_bytes() == (TREE / source).read_bytes(), "run copies.py at the monorepo root"
+    assert (PACKAGE / copy).read_bytes() == (TREE / source).read_bytes(), "run tools/copies.py from the monorepo root"

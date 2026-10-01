@@ -90,7 +90,7 @@ docs = [
 
 [tool.escapewheel.copies]
 # What this package copies from the specification's tree, a wheel being unable to read a file
-# outside it: a path in this package = a path under `spec/`. `copies.py` at the
+# outside it: a path in this package = a path under `spec/`. `tools/copies.py` at the
 # monorepo root writes them, and `tests/test_copies.py` checks that they agree.
 "src/escapewheel_writer/schemas/adapter.schema.json" = "artifacts/adapter.schema.json"
 "src/escapewheel_writer/schemas/resources.schema.json" = "artifacts/resources.schema.json"

@@ -53,7 +53,7 @@ extensions/<id>/*.toml ───registries.py build──> extensions/<id>.json
 spec/artifacts/manifest.schema.json ─build.py─> spec/artifacts/resources.schema.json
                                     └─build.py─> Part 04 §§3, 4.1, 8 and 9 field tables
 
-spec/artifacts/*, spec/tools/checkers/* ──copies.py──> each package's copies
+spec/artifacts/*, spec/tools/checkers/* ──tools/copies.py──> each package's copies
 ```
 
 The registry documents, `tables.md`, the source guide's generated regions, the delivery schema,
@@ -71,7 +71,7 @@ source while allowing the pre-commit change that intentionally updates both to p
 ## 3. The tree's tools
 
 `spec/tools/` holds the software that produces and checks the tree, and nothing else in the tree
-is software. Four rules keep the tree whole, and `verify.py` checks each through `ci/tree.py`:
+is software. Four rules keep the tree whole, and `verify.py` checks each through `tools/tree.py`:
 
 - **The tree regenerates from itself alone.** A copy of `spec/` in an empty directory, running its
   own tools in the environment its own lock declares, reproduces every generated file and region
@@ -85,9 +85,9 @@ is software. Four rules keep the tree whole, and `verify.py` checks each through
   incorporated artifact is checked against the schema or contract its part names.
 - **A package copies what it uses and checks its copies.** A wheel cannot read a file outside it,
   so a package lists under `[tool.escapewheel.copies]` the artifacts and checkers it copies from
-  the tree. `copies.py` writes them, and the package's `tests/test_copies.py` fails where one
+  the tree. `tools/copies.py` writes them, and the package's `tests/test_copies.py` fails where one
   differs. A package copying a checker admits the tree's locked version of each library the
-  checker imports, which `copies.py --check` confirms.
+  checker imports, which `tools/copies.py --check` confirms.
 
 A checker locates its artifacts through the `artifacts` module beside it, which each place
 supplies for itself, so a copy matches its source byte for byte. Checks needing what the tree does
@@ -105,7 +105,7 @@ uv run --project escapewheel-writer python verify.py --stage-timeout 60
 Run it before committing anything that touches the registry, a rule, a fixture, or a generator.
 It prints each stage before entering it; every stage is bounded to 300 seconds by default, and
 `--stage-timeout 0` disables that bound for an intentionally long monitored run. A full run first
-executes `ci/runtime_capabilities.py`, which proves its runner can wake the asynchronous thread
+executes `tools/runtime_capabilities.py`, which proves its runner can wake the asynchronous thread
 bridge used by Zarr, round-trip a Zarr v3 array, and bind the Unix-domain socket used by Arrow
 Flight. Each healthy probe completes in well under a second; a blocked probe has a ten-second hard
 limit. A runner lacking those facilities is unsuitable for the full suite and fails before
@@ -187,8 +187,8 @@ the order matters.
 | add a Tier 2 rule | a `[[rules]]` entry in the table's file | `verify.py` |
 | change how Tier 1 is derived | `escapewheel-validator/.../generate.py` | `verify.py` |
 | add an extension | a directory `extensions/<id>/` holding `registry.toml` and one file per resource | `extensions/registries.py build extensions`; `verify.py` |
-| change the manifest or the meta-schema | the hand-written copy in `spec/artifacts/` | `spec/tools/build.py`, then `copies.py`; `verify.py` |
-| change a checker | `spec/tools/checkers/`, with its tests in `spec/tools/tests/` | `copies.py`; `verify.py` |
+| change the manifest or the meta-schema | the hand-written copy in `spec/artifacts/` | `spec/tools/build.py`, then `tools/copies.py`; `verify.py` |
+| change a checker | `spec/tools/checkers/`, with its tests in `spec/tools/tests/` | `tools/copies.py`; `verify.py` |
 | add a fixture variant | `fixtures/build.py` and `fixtures/corpus.py` | `verify.py` |
 | change the packet Part 08 shows | `integration/example.py`, then Part 08's text to match | `verify.py` |
 
@@ -210,7 +210,7 @@ comparison exists.
 **A stale package copy.** The schemas and checkers are copied into the packages because a wheel
 cannot read a file from another distribution. A stale copy has broken every packet three times —
 R48, R53 and R56 — and each time it surfaced as a hundred findings about the *data* rather than one
-about the copy. `copies.py` writes them and each package's `test_copies.py` compares them, so the
+about the copy. `tools/copies.py` writes them and each package's `test_copies.py` compares them, so the
 class is closed; do not edit a copy.
 
 **A maintained inventory going stale.** Three records cannot be fully derived from the generated
@@ -239,7 +239,7 @@ The incorporated registry-contract descriptor enumerates the invariants that app
 extension documents by class. Their algorithms are owned by Parts 02 and 09 and implemented once
 in `spec/tools/checkers/registry_document.py`; `escapewheel extension check`,
 `spec/tools/check.py` and `extensions/registries.py` consume that complete result. `check.py`
-separately adds checks of the tree's other artifacts. `facts.py` counts the descriptor inventory
+separately adds checks of the tree's other artifacts. `tools/facts.py` counts the descriptor inventory
 and those checks:
 
 <!-- BEGIN facts: checks -->
@@ -255,15 +255,15 @@ and those checks:
 | `revisions/impact.py` | working-tree files citing a changed or explicitly queried specification section or stable anchor |
 | `spec/tools/check.py` | a registry that contradicts itself, an artifact failing its schema, a naming convention broken without a declared reason |
 | `spec/tools/tests/` | a checker deciding a case differently from the contract it implements |
-| `ci/tree.py` | a tree that cannot regenerate itself alone, or a tree tool importing what the tree does not declare |
-| `copies.py --check` | a package copy differing from the tree, or a package not admitting the tree's locked library |
+| `tools/tree.py` | a tree that cannot regenerate itself alone, or a tree tool importing what the tree does not declare |
+| `tools/copies.py --check` | a package copy differing from the tree, or a package not admitting the tree's locked library |
 | `extensions/registries.py check` | an extension registry failing the contract or the conventions where it sits |
 | `conformance/registries/check.py` | a core table set departing from the Part 02 ledger, or a Tier 2 rule that does not execute |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
 | `revisions/ledger.py` | an accepted clause with no disposition or an unresolved current-owner or registry target |
 | `spec/tools/columns.py --check` | a column table in a part that no longer reproduces the registry |
 | `spec/tools/combine.py --check` | a single-file spec rendering that no longer matches its parts |
-| `facts.py` | a count in a root document that no longer matches what it counts |
+| `tools/facts.py` | a count in a root document that no longer matches what it counts |
 | `verify.py`'s candidate-state comparison | a stale or hand-edited artifact changed by regeneration |
 | the four package test suites | asserted reference-implementation behavior outside the checks above |
 | `integration/` | a writer, reader, and validator that disagree with one another, a Part 08 excerpt the writer no longer reproduces, or a Part 08 query that no longer runs |
@@ -271,7 +271,7 @@ and those checks:
 ## 9. Reading the result
 
 No derived count in this repository should be typed by hand. `spec/source/README.md`'s are filled
-by `render.py`, the root documents' by `facts.py`, and the clause ledger's undisposed high-water
+by `render.py`, the root documents' by `tools/facts.py`, and the clause ledger's undisposed high-water
 mark lowers itself. Provenance exceptions are exact identities, not a count. If you find yourself
 editing a number, check whether something can compute it instead: every number that was
 hand-maintained here went stale, several of them twice in one day.

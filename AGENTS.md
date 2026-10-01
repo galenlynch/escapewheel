@@ -23,6 +23,6 @@ These instructions apply throughout the monorepo. A nested `AGENTS.md` may add n
   a documented command says otherwise.
 - In a restricted agent sandbox, use `verify.py --quick` for the in-sandbox gate. A full run needs
   the thread wakeups, Zarr round trip, and Unix-domain socket checked by
-  `ci/runtime_capabilities.py`; if that preflight rejects the sandbox, rerun the unchanged full
+  `tools/runtime_capabilities.py`; if that preflight rejects the sandbox, rerun the unchanged full
   verifier with an unrestricted execution permission. Do not retry it in the same sandbox, skip
   the writer suite, or treat the capability failure as a writer defect.

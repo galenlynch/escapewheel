@@ -65,7 +65,7 @@ docs = [
 
 [tool.escapewheel.copies]
 # What this package copies from the specification's tree, a wheel being unable to read a file
-# outside it: a path in this package = a path under `spec/`. `copies.py` at the
+# outside it: a path in this package = a path under `spec/`. `tools/copies.py` at the
 # monorepo root writes them, and `tests/test_copies.py` checks that they agree.
 "src/escapewheel_validator/registry_document.py" = "tools/checkers/registry_document.py"
 "src/escapewheel_validator/rule_language.py" = "tools/checkers/rule_language.py"

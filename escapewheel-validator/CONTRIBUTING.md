@@ -11,7 +11,7 @@ governs that packet's declared tables and rules; the current core registry in
 
 The schemas under `src/escapewheel_validator/schemas/`, and `registry_document.py` and
 `rule_language.py`, are copies of files in the specification's tree, listed in `pyproject.toml`'s
-`[tool.escapewheel.copies]`. Change the tree's file, run `../copies.py` from the monorepo root, and
+`[tool.escapewheel.copies]`. Change the tree's file, run `tools/copies.py` from the monorepo root, and
 commit both; never edit a copy directly. `tests/test_copies.py` fails where a copy disagrees.
 
 `registry_document.py` returns the complete ordered Part 02 §9.4 result. Do not add a second

@@ -37,7 +37,7 @@ ROOT = Path(__file__).resolve().parent
 
 #: Packages whose venv `uv run --project` resolves. The writer's is used for anything needing
 #: pyarrow and duckdb outside a package, because it depends on all three.
-TOOLS = ROOT / "escapewheel-writer"
+WRITER = ROOT / "escapewheel-writer"
 #: The specification's tree, whose tools run in the environment it declares and locks.
 TREE = ROOT / "spec" / "tools"
 TREE_RUN = ["uv", "run", "--project", str(TREE), "python"]
@@ -51,7 +51,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ROOT,
         [*TREE_RUN, "extensions/registries.py", "build", *EXTENSIONS],
     ),
-    ("root: the documents' counts are current", ROOT, [sys.executable, "facts.py"]),
+    ("root: the documents' counts are current", ROOT, [sys.executable, "tools/facts.py"]),
     (
         "revisions: open stages are structurally complete",
         ROOT,
@@ -65,7 +65,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     (
         "root: verifier control-flow tests",
         ROOT,
-        [sys.executable, "-m", "unittest", "ci.test_verify"],
+        [sys.executable, "-m", "unittest", "tools.test_verify"],
     ),
     (
         "revisions: process semantics tests",
@@ -88,12 +88,12 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     (
         "spec: the tree regenerates and checks itself alone",
         ROOT,
-        [sys.executable, "ci/tree.py"],
+        [sys.executable, "tools/tree.py"],
     ),
     (
         "packages: copies from the tree agree",
         ROOT,
-        ["uv", "run", "--project", str(TOOLS), "python", "copies.py", "--check"],
+        ["uv", "run", "--project", str(WRITER), "python", "tools/copies.py", "--check"],
     ),
     (
         "extensions: each registry checked where it sits",
@@ -103,7 +103,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     (
         "registries: ledger and rule execution",
         ROOT,
-        ["uv", "run", "--project", str(TOOLS), "python", "conformance/registries/check.py"],
+        ["uv", "run", "--project", str(WRITER), "python", "conformance/registries/check.py"],
     ),
     (
         "registries: history cleanup preserves declarations",
@@ -125,7 +125,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     (
         "rules: portable language vectors and shipped rules",
         ROOT / "conformance/rule-language",
-        ["uv", "run", "--project", str(TOOLS), "python", "probe.py"],
+        ["uv", "run", "--project", str(WRITER), "python", "probe.py"],
     ),
     (
         "spec: unit identity declarations agree",
@@ -185,7 +185,7 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     (
         "spec: Part 08 shows the packet the writer builds",
         ROOT / "integration",
-        ["uv", "run", "--project", str(TOOLS), "python", "example.py"],
+        ["uv", "run", "--project", str(WRITER), "python", "example.py"],
     ),
     (
         "spec: the single-file rendering is current",
@@ -195,12 +195,12 @@ STAGES: list[tuple[str, Path, list[str]]] = [
     (
         "corpus: write every packet",
         ROOT / "fixtures",
-        ["uv", "run", "--project", str(TOOLS), "python", "build.py"],
+        ["uv", "run", "--project", str(WRITER), "python", "build.py"],
     ),
     (
         "corpus: every packet behaves as specified",
         ROOT / "fixtures",
-        ["uv", "run", "--project", str(TOOLS), "python", "corpus.py"],
+        ["uv", "run", "--project", str(WRITER), "python", "corpus.py"],
     ),
 ]
 
@@ -221,7 +221,7 @@ SUITES: list[tuple[str, Path, list[str]]] = [
     (
         "integration: tests",
         ROOT / "integration",
-        ["uv", "run", "--project", str(TOOLS), "pytest", "-vv"],
+        ["uv", "run", "--project", str(WRITER), "pytest", "-vv"],
     ),
 ]
 
@@ -231,7 +231,7 @@ SUITES: list[tuple[str, Path, list[str]]] = [
 RUNTIME_CAPABILITY_STAGE = (
     "runtime: full-suite capabilities",
     ROOT,
-    [sys.executable, "ci/runtime_capabilities.py"],
+    [sys.executable, "tools/runtime_capabilities.py"],
 )
 
 #: Directories whose tracked content must be unchanged once the generators have run. Only the
