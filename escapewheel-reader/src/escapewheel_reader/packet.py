@@ -35,6 +35,8 @@ if TYPE_CHECKING:  # pragma: no cover
     # `duckdb.DuckDBPyConnection` annotation after it resolves to the wrong thing.
     from duckdb import DuckDBPyConnection
 
+    from .protocols import PacketLike
+
 #: What a column constraint may be: a scalar for equality, a two-item tuple for a closed
 #: range, or None to leave the column unconstrained.
 Predicate = str | int | float | bool | tuple[Any, Any] | list[Any] | None
@@ -672,5 +674,9 @@ def open_packet(
         Manifest.load(root),
     )
 
+
+if TYPE_CHECKING:  # pragma: no cover
+    # Checked statically: a `Packet` is what `PacketLike` describes.
+    _PACKET_LIKE: type[PacketLike] = Packet
 
 __all__ = ["Packet", "open_packet"]

@@ -178,6 +178,7 @@ the module that defines it.
 .. autosummary::
    :toctree: generated
 
+   protocols.PacketLike
    clocks.anchors
    clocks.declared_bound
    clocks.extrapolation_error
@@ -233,6 +234,7 @@ A module's page carries its docstring; its public names are documented above.
    location
    errors
    sql
+   protocols
    profile
    ordering
    registries
