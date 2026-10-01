@@ -13,7 +13,7 @@ from escapewheel_reader import open_packet
 from escapewheel_validator.stores import listing_digest
 
 from escapewheel_writer import declaration, delivery, opaque
-from escapewheel_writer.errors import DeliveryFailed, PayloadFault, PayloadRefused, SourceFault
+from escapewheel_writer.errors import DeliveryFailed, PacketOccupied, PayloadFault, PayloadRefused, SourceFault
 from escapewheel_writer.opaque import Payload
 from escapewheel_writer.writer import ExternalMedia, PacketWriter
 from tests import opaquefixture
@@ -595,8 +595,9 @@ def test_an_occupied_opaque_directory_refuses_a_commit(tmp_path, registry, minim
     """Part 05 §6: an interrupted promotion may leave `opaque/` without a manifest."""
     root = tmp_path / "s001"
     (root / "opaque" / "core.clip").mkdir(parents=True)
-    with pytest.raises(FileExistsError, match="holds opaque but no committed"):
+    with pytest.raises(PacketOccupied) as refused:
         _writer(registry, minimal).commit(root)
+    assert refused.value.occupied == ["opaque"]
 
 
 # -- resource-document URIs and the external rule -------------------------------------------

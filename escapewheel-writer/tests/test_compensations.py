@@ -2,6 +2,7 @@
 
 import pytest
 
+from escapewheel_writer.errors import UnknownCompensation
 from escapewheel_writer.sources.compensations import COMPENSATIONS, Compensates, describe
 
 
@@ -17,8 +18,9 @@ def test_an_unregistered_compensation_is_refused():
         pass
 
     a = Adapter()
-    with pytest.raises(KeyError, match="not a registered compensation"):
+    with pytest.raises(UnknownCompensation) as refused:
         a.compensate("something.i.just.made.up")
+    assert refused.value.identifier == "something.i.just.made.up"
 
 
 def test_declaring_one_twice_records_it_once():

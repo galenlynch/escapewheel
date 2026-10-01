@@ -9,6 +9,8 @@ a new name takes the number after the largest held.
 
 from __future__ import annotations
 
+from .errors import UsageError, UsageFault
+
 
 class Keys:
     """Integer identifiers for the things one packet names, and what each stands for.
@@ -52,13 +54,15 @@ class Keys:
 
         Raises
         ------
-        ValueError
+        UsageError
             If the name already holds another number, or the number already names another thing.
         """
         within = self._assigned.setdefault(kind, {})
         named = self._named.setdefault(kind, {})
         if within.get(name, number) != number or named.get(number, name) != name:
-            raise ValueError(f"{kind} {name!r} and {number} each already name something else")
+            raise UsageError(
+                f"{kind} {name!r} and {number} each already name something else", code=UsageFault.KEY_TAKEN, where=name
+            )
         within[name] = number
         named[number] = name
         self._next[kind] = max(self._next.get(kind, 0), number + 1)

@@ -9,7 +9,7 @@ import pytest
 from escapewheel_reader import open_packet
 from escapewheel_validator import validate
 
-from escapewheel_writer.errors import RecipeFault, RecipeUnsound, ReplacementRefused
+from escapewheel_writer.errors import RecipeFault, RecipeUnsound, ReplacementRefused, UsageError, UsageFault
 from escapewheel_writer.recipe import Recipe
 from escapewheel_writer.replacing import read_replaced
 from escapewheel_writer.scripts.cli import register
@@ -91,8 +91,9 @@ def test_a_recipe_both_replacing_and_amending_is_refused(packet):  # noqa: F811
 def test_an_amendment_keeps_the_major_version(packet):  # noqa: F811
     root, sorted_root = packet
     recipe = Recipe.load(_amending(root, sorted_root))
-    with pytest.raises(ValueError, match="leaves the major version"):
+    with pytest.raises(UsageError) as refused:
         build(recipe, REGISTRY).amend(recipe.out, packet_version="1.0.0")
+    assert refused.value.code is UsageFault.VERSION_MAJOR_CHANGED
 
 
 def test_an_amendment_retains_the_exact_bytes_it_supersedes(packet):  # noqa: F811

@@ -16,7 +16,14 @@ from escapewheel_writer.encoding import (
     NO_DICTIONARY,
     inefficient,
 )
-from escapewheel_writer.errors import AmendmentRefused
+from escapewheel_writer.errors import (
+    AmendmentRefused,
+    FixedOffsetZone,
+    PacketOccupied,
+    UndeclaredResource,
+    UsageError,
+    UsageFault,
+)
 from escapewheel_writer.writer import _options
 
 
@@ -57,8 +64,9 @@ def test_stamp_reports_a_miss_rather_than_raising(registry, minimal):
 
 
 def test_stamp_refuses_a_resource_the_registry_does_not_define(registry):
-    with pytest.raises(KeyError):
+    with pytest.raises(UndeclaredResource) as refused:
         PacketWriter(registry, packet_id="s001").stamp("core.nope", "id", {})
+    assert refused.value.resource_id == "core.nope"
 
 
 def test_commits_a_valid_packet(tmp_path, registry, minimal):
@@ -101,8 +109,10 @@ def test_lineage_for_a_resource_the_packet_does_not_carry_is_refused(tmp_path, r
         writer.add(resource_id, records)
     writer.derives("analysis.unit_rates", ["core.sessions"])
     root = tmp_path / "s001"
-    with pytest.raises(ValueError, match=r"analysis\.unit_rates"):
+    with pytest.raises(UsageError) as refused:
         writer.commit(root)
+    assert refused.value.code is UsageFault.LINEAGE_UNSTAGED
+    assert refused.value.where == "analysis.unit_rates"
     assert not (root / "packet.json").exists()
 
 
@@ -146,8 +156,9 @@ def test_a_packet_without_sessions_is_refused(tmp_path, registry):
     """R1 §6: the manifest's session inventory may not be empty."""
     writer = PacketWriter(registry, packet_id="p")
     writer.add("core.subjects", [{"subject_id": "m001", "species": "Mus musculus", "sex": "male"}])
-    with pytest.raises(ValueError, match="at least one session"):
+    with pytest.raises(UsageError) as refused:
         writer.commit(tmp_path / "p")
+    assert refused.value.code is UsageFault.NO_SESSION
 
 
 def test_a_naive_timestamp_is_refused(tmp_path, registry, minimal):
@@ -178,16 +189,18 @@ def test_the_registry_travels_with_the_packet(tmp_path, registry, minimal):
 
 
 def test_an_unknown_resource_is_refused(registry):
-    with pytest.raises(KeyError, match="no registry defines a table"):
+    with pytest.raises(UndeclaredResource) as refused:
         PacketWriter(registry, packet_id="p").add("core.nonesuch", [])
+    assert refused.value.resource_id == "core.nonesuch"
 
 
 def test_committing_over_a_packet_is_refused(tmp_path, registry, minimal):
     """Immutability covers packet-owned bytes (Part 03 §8.1)."""
     root = tmp_path / "s001"
     _write(root, registry, minimal)
-    with pytest.raises(FileExistsError):
+    with pytest.raises(PacketOccupied) as refused:
         _write(root, registry, minimal)
+    assert refused.value.occupied == ["packet.json"]
 
 
 def test_committing_over_an_interrupted_promotion_is_refused(tmp_path, registry, minimal):
@@ -196,8 +209,9 @@ def test_committing_over_an_interrupted_promotion_is_refused(tmp_path, registry,
     root = tmp_path / "s001"
     _write(root, registry, minimal)
     (root / "packet.json").unlink()
-    with pytest.raises(FileExistsError, match="tables"):
+    with pytest.raises(PacketOccupied) as refused:
         _write(root, registry, minimal)
+    assert "tables" in refused.value.occupied
     assert not (root / "tables" / "tables").exists()
 
 
@@ -218,7 +232,7 @@ def test_localize_refuses_a_fixed_offset():
 
     from escapewheel_writer.arrow import localize
 
-    with pytest.raises(TypeError, match="IANA zone"):
+    with pytest.raises(FixedOffsetZone):
         localize("2025-04-09T17:25:12", timezone(timedelta(hours=-7)))
 
 
@@ -365,12 +379,15 @@ def test_a_generator_is_consumed_lazily(tmp_path, registry):
 def test_one_table_takes_one_path(registry):
     writer = PacketWriter(registry, packet_id="s001")
     writer.add("core.spike_events", [{"session_id": "s001"}])
-    with pytest.raises(ValueError, match="already has records"):
+    with pytest.raises(UsageError) as refused:
         writer.add_batches("core.spike_events", [])
+    assert refused.value.code is UsageFault.STAGED_TWICE
+    assert refused.value.where == "core.spike_events"
     writer2 = PacketWriter(registry, packet_id="s001")
     writer2.add_batches("core.spike_events", [])
-    with pytest.raises(ValueError, match="already has batches"):
+    with pytest.raises(UsageError) as refused:
         writer2.add_batches("core.spike_events", [])
+    assert refused.value.code is UsageFault.STAGED_TWICE
 
 
 def test_a_later_batch_may_omit_a_declared_column(tmp_path, registry, minimal):
@@ -402,14 +419,17 @@ def test_a_later_batch_may_not_introduce_a_column(tmp_path, registry, minimal):
         names=[*later.schema.names, "metadata"],
     )
     writer.add_batches("core.spike_events", iter([plain, extra]))
-    with pytest.raises(ValueError, match="dropped silently"):
+    with pytest.raises(UsageError) as refused:
         writer.commit(tmp_path / "pkt")
+    assert refused.value.code is UsageFault.UNDECLARED_COLUMN
+    assert refused.value.where == "core.spike_events"
 
 
 def test_an_unknown_resource_is_refused_on_the_batch_path_too(registry):
     writer = PacketWriter(registry, packet_id="s001")
-    with pytest.raises(KeyError, match="no registry defines a table"):
+    with pytest.raises(UndeclaredResource) as refused:
         writer.add_batches("core.not_a_table", [])
+    assert refused.value.resource_id == "core.not_a_table"
 
 
 # -- amending a committed packet (R32) --------------------------------------------------
@@ -648,8 +668,9 @@ def test_a_registry_that_changed_without_its_version_is_refused(tmp_path, regist
     altered["resources"]["core.sessions"]["table"]["columns"][0]["description"] = "changed, same version"
     writer = PacketWriter(altered, packet_id=root.name)
     writer.add("core.processing_runs", _runs())
-    with pytest.raises(ValueError, match="two digests under one"):
+    with pytest.raises(UsageError) as refused:
         writer.amend(root)
+    assert refused.value.code is UsageFault.REGISTRY_DIGEST_DIFFERS
 
 
 def test_a_registry_colliding_with_a_retained_copy_is_refused(tmp_path, registry, minimal):
@@ -670,8 +691,9 @@ def test_a_registry_colliding_with_a_retained_copy_is_refused(tmp_path, registry
     altered["resources"]["core.sessions"]["table"]["columns"][0]["description"] = "changed, same version"
     back = PacketWriter(altered, packet_id=root.name)
     back.add("core.source_files", [{"source_file_id": "f1", "uri": "file:///x"}])
-    with pytest.raises(ValueError, match="two digests under one"):
+    with pytest.raises(UsageError) as refused:
         back.amend(root)
+    assert refused.value.code is UsageFault.REGISTRY_DIGEST_DIFFERS
 
 
 # -- dense arrays (Phase 5) ---------------------------------------------------------------
@@ -900,8 +922,9 @@ def test_a_shard_that_is_not_whole_chunks_is_refused(tmp_path, registry, minimal
             shard=(4, 4, 10),
         ),
     )
-    with pytest.raises(ValueError, match="whole number of chunks"):
+    with pytest.raises(UsageError) as refused:
         writer.commit(root)
+    assert refused.value.code is UsageFault.SHARD_MISFIT
 
 
 def test_a_codec_outside_the_reader_floor_is_written(tmp_path):
@@ -1026,8 +1049,10 @@ def test_a_record_carrying_an_undeclared_column_is_refused(registry):
     nothing said so.
     """
     writer = PacketWriter(registry, packet_id="s001")
-    with pytest.raises(ValueError, match="declared by no registry"):
+    with pytest.raises(UsageError) as refused:
         writer.add("core.clocks", [{"clock_id": "c", "session_id": "s001", "name": "master"}])
+    assert refused.value.code is UsageFault.UNDECLARED_COLUMN
+    assert refused.value.where == "core.clocks"
 
 
 def test_a_batch_says_which_of_the_two_causes_it_hit(tmp_path, registry, minimal):
@@ -1045,8 +1070,10 @@ def test_a_batch_says_which_of_the_two_causes_it_hit(tmp_path, registry, minimal
         {**{n: batch.column(n) for n in batch.schema.names}, "nonsense": pa.array([1, 2, 3, 4], type=pa.int64())}
     )
     writer.add_batches("core.spike_events", iter([stray]))
-    with pytest.raises(ValueError, match=r"\['nonsense'\] is declared by no registry"):
+    with pytest.raises(UsageError) as refused:
         writer.commit(tmp_path / "pkt")
+    assert refused.value.code is UsageFault.UNDECLARED_COLUMN
+    assert "nonsense" in str(refused.value)
 
 
 def test_an_optional_column_absent_from_the_first_batch_says_so(tmp_path, registry, minimal):
@@ -1068,8 +1095,10 @@ def test_an_optional_column_absent_from_the_first_batch_says_so(tmp_path, regist
             ]
         ),
     )
-    with pytest.raises(ValueError, match=r"\['metadata'\] is optional and absent"):
+    with pytest.raises(UsageError) as refused:
         writer.commit(tmp_path / "pkt")
+    assert refused.value.code is UsageFault.COLUMN_AFTER_FIRST_BATCH
+    assert "metadata" in str(refused.value)
 
 
 def test_a_duplicate_across_batches_is_refused_while_staging(tmp_path, registry, minimal):
@@ -1173,11 +1202,13 @@ def test_a_reference_neither_absolute_nor_relative_is_refused(tmp_path, registry
     writer = PacketWriter(registry, packet_id="s001")
     for resource_id, records in _array_tables("probe.lfp").items():
         writer.add(resource_id, records)
-    with pytest.raises(ValueError, match="neither absolute nor a relative reference"):
+    with pytest.raises(UsageError) as refused:
         writer.reference_array(
             "core.probe.lfp",
             ExternalArray(array_asset_id="probe.lfp", declaration_id="core.array_asset_instances", uri=uri),
         )
+    assert refused.value.code is UsageFault.URI_UNRESOLVABLE
+    assert refused.value.where == "core.probe.lfp"
 
 
 def test_an_external_reference_may_resolve_under_the_packet_root(tmp_path, registry):
@@ -1526,6 +1557,7 @@ def test_a_retained_binding_elsewhere_still_fixes_its_digest(tmp_path, registry,
     altered["resources"]["core.sessions"]["table"]["columns"][0]["description"] = "changed, same version"
     writer = PacketWriter(altered, packet_id=root.name)
     writer.add("core.processing_runs", _runs())
-    with pytest.raises(ValueError, match="two digests under one"):
+    with pytest.raises(UsageError) as refused:
         writer.amend(root)
+    assert refused.value.code is UsageFault.REGISTRY_DIGEST_DIFFERS
     assert not (root / "registries" / "core" / f"{registry['registry_version']}.json.gz").exists()

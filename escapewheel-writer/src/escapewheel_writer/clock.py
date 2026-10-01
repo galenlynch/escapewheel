@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from numpy.typing import NDArray
 
-from .errors import NonFinite, OffGrid
+from .errors import FixedOffsetZone, NaiveTimestamp, NonFinite, OffGrid, TickOverflow, UsageError, UsageFault
 
 #: int64's range. A tick outside it is not representable in `core.*.t_tick`.
 TICK_MIN, TICK_MAX = -(2**63), 2**63 - 1
@@ -57,7 +57,11 @@ class TickGrid:
     def __post_init__(self) -> None:
         """Reject a rate that is not a positive rational."""
         if self.tick_rate_num <= 0 or self.tick_rate_den <= 0:
-            raise ValueError(f"{self.clock_id}: tick rate {self.tick_rate_num}/{self.tick_rate_den} is not positive")
+            raise UsageError(
+                f"{self.clock_id}: tick rate {self.tick_rate_num}/{self.tick_rate_den} is not positive",
+                code=UsageFault.TICK_RATE_NOT_POSITIVE,
+                where=self.clock_id,
+            )
 
     @classmethod
     def from_row(cls, row: Mapping[str, Any]) -> TickGrid:
@@ -96,7 +100,7 @@ class TickGrid:
             If any value is NaN or infinite.
         OffGrid
             If any value does not land on an integer tick.
-        OverflowError
+        TickOverflow
             If any tick falls outside int64.
         """
         values = np.asarray(seconds, dtype=np.float64)
@@ -117,7 +121,7 @@ class TickGrid:
                 worst=worst,
             )
         if rounded.min() < TICK_MIN or rounded.max() > TICK_MAX:
-            raise OverflowError(f"{self.clock_id}: ticks {rounded.min():.0f}..{rounded.max():.0f} exceed int64")
+            raise TickOverflow(f"{self.clock_id}: ticks {rounded.min():.0f}..{rounded.max():.0f} exceed int64")
         return rounded.astype(np.int64)
 
 
@@ -174,7 +178,11 @@ class Clock:
     def __post_init__(self) -> None:
         """Reject a rate that is not a positive rational."""
         if self.tick_rate_num <= 0 or self.tick_rate_den <= 0:
-            raise ValueError(f"{self.clock_id}: tick rate {self.tick_rate_num}/{self.tick_rate_den} is not positive")
+            raise UsageError(
+                f"{self.clock_id}: tick rate {self.tick_rate_num}/{self.tick_rate_den} is not positive",
+                code=UsageFault.TICK_RATE_NOT_POSITIVE,
+                where=self.clock_id,
+            )
 
     @property
     def grid(self) -> TickGrid:
@@ -212,20 +220,25 @@ class Clock:
 
         Raises
         ------
-        ValueError
-            If this clock has no `tick_zero_utc`, or `instant` carries no offset -- in either
-            case nothing locates the instant on this clock.
-        OverflowError
+        UsageError
+            If this clock has no `tick_zero_utc`, so nothing locates an instant on it.
+        NaiveTimestamp
+            If `instant` carries no offset, so it locates nothing.
+        TickOverflow
             If the tick falls outside int64.
         """
         if self.tick_zero_utc is None:
-            raise ValueError(f"{self.clock_id}: no tick_zero_utc, so a wall clock locates no tick on it")
+            raise UsageError(
+                f"{self.clock_id}: no tick_zero_utc, so a wall clock locates no tick on it",
+                code=UsageFault.NO_TICK_ZERO,
+                where=self.clock_id,
+            )
         if instant.tzinfo is None or instant.utcoffset() is None:
-            raise ValueError(f"{instant!r} carries no offset, so it locates no tick")
+            raise NaiveTimestamp(f"{instant!r} carries no offset, so it locates no tick")
         elapsed = (instant.astimezone(UTC) - self.tick_zero_utc).total_seconds()
         tick = round(elapsed * self.tick_rate_num / self.tick_rate_den)
         if tick < TICK_MIN or tick > TICK_MAX:
-            raise OverflowError(f"{self.clock_id}: tick {tick} exceeds int64")
+            raise TickOverflow(f"{self.clock_id}: tick {tick} exceeds int64")
         return tick
 
     def record(self) -> dict[str, Any]:
@@ -276,7 +289,7 @@ def zone_of(value: str | tzinfo) -> ZoneInfo:
     """
     resolved = ZoneInfo(value) if isinstance(value, str) else value
     if not isinstance(resolved, ZoneInfo):
-        raise TypeError(f"{value!r} is a fixed offset; pass an IANA zone so DST resolves per date")
+        raise FixedOffsetZone(f"{value!r} is a fixed offset; pass an IANA zone so DST resolves per date")
     return resolved
 
 
@@ -305,11 +318,11 @@ def epoch_from(instant: datetime, t_tick: int, tick_rate_num: int, tick_rate_den
 
     Raises
     ------
-    ValueError
+    NaiveTimestamp
         If `instant` carries no offset, since then it locates nothing.
     """
     if instant.tzinfo is None or instant.utcoffset() is None:
-        raise ValueError(f"{instant!r} carries no offset, so it does not locate tick 0")
+        raise NaiveTimestamp(f"{instant!r} carries no offset, so it does not locate tick 0")
     elapsed = timedelta(seconds=t_tick * tick_rate_den / tick_rate_num)
     return instant.astimezone(UTC) - elapsed
 

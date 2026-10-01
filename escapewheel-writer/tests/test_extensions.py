@@ -16,6 +16,8 @@ from escapewheel_writer.errors import (
     RecipeFault,
     RecipeUnsound,
     UnknownSourceKind,
+    UsageError,
+    UsageFault,
 )
 
 EXTENSION = {
@@ -614,8 +616,11 @@ def test_a_recipe_listing_two_extensions_builds_and_binds_both(tmp_path, registr
 
 def test_two_registries_for_one_extension_are_refused_given_directly(registry):
     """A writer given the documents rather than a recipe refuses too, instead of keeping the later."""
-    with pytest.raises(ValueError, match=r"two registries for extension 'task' \(versions 0.1.0 and 0.2.0\)"):
+    with pytest.raises(UsageError) as refused:
         PacketWriter(registry, packet_id="s001", extensions=[EXTENSION, _task_version("0.2.0")])
+    assert refused.value.code is UsageFault.EXTENSION_TWICE
+    assert refused.value.where == "task"
+    assert "versions 0.1.0 and 0.2.0" in str(refused.value)
 
 
 # -- an extension that is entirely data ------------------------------------------------------

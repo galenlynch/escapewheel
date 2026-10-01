@@ -16,7 +16,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-from ..errors import SourceDefect, SourceFault
+from ..errors import SourceDefect, SourceFault, UsageError, UsageFault
 from ..notes import Note, NoteCode
 from .compensations import Compensates
 from .nwb import contact_columns, contact_ids, ucum_code
@@ -135,7 +135,9 @@ class LFPSource(Compensates):
         self.prefix = prefix
         self.uri_base = uri_base.rstrip("/") if uri_base else None
         if verify not in {"none", "size", "members", "sha256"}:
-            raise ValueError(f"verify must be none, size, members or sha256, not {verify!r}")
+            raise UsageError(
+                f"verify must be none, size, members or sha256, not {verify!r}", code=UsageFault.UNKNOWN_VERIFY_MODE
+            )
         self.verify = verify
         Compensates.__init__(self)
         self.notes: list[str] = []

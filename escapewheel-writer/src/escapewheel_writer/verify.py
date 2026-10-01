@@ -20,7 +20,7 @@ from escapewheel_validator import Report, validate
 from escapewheel_validator.errors import StoreUnreachable
 from escapewheel_validator.stores import digest, digest_resource, listing
 
-from .errors import NotCommitted
+from .errors import NotCommitted, UsageError, UsageFault
 from .writer import MANIFEST, MANIFESTS, _bump, _version, retained, semver
 
 #: What to establish, each level including the one before it. `size` lists, `members` also
@@ -97,12 +97,12 @@ def verify(
     ------
     NotCommitted
         If `root` holds no committed manifest.
-    ValueError
+    UsageError
         If `level` is not one of :data:`LEVELS`, or `packet_version` does not sort after the
         packet's or has another major version (Part 05 §15.1).
     """
     if level not in LEVELS:
-        raise ValueError(f"level must be one of {', '.join(LEVELS)}, not {level!r}")
+        raise UsageError(f"level must be one of {', '.join(LEVELS)}, not {level!r}", code=UsageFault.UNKNOWN_LEVEL)
     root = Path(root)
     if not (root / MANIFEST).is_file():
         raise NotCommitted(f"{root} holds no committed {MANIFEST}; there is nothing to verify")
@@ -111,9 +111,10 @@ def verify(
     version = packet_version or _bump(superseded["packet_version"])
     before = semver(superseded["packet_version"])
     if semver(version) <= before or semver(version)[0] != before[0]:
-        raise ValueError(
+        raise UsageError(
             f"packet_version {version} does not sort after {superseded['packet_version']} within its major "
-            "version (Part 05 §15.1)"
+            "version (Part 05 §15.1)",
+            code=UsageFault.VERSION_NOT_AFTER if semver(version) <= before else UsageFault.VERSION_MAJOR_CHANGED,
         )
 
     notes: list[str] = []

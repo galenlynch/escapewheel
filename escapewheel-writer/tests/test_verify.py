@@ -5,7 +5,7 @@ import json
 import pytest
 
 from escapewheel_writer import PacketWriter
-from escapewheel_writer.errors import NotCommitted
+from escapewheel_writer.errors import NotCommitted, UsageError, UsageFault
 from escapewheel_writer.verify import verify
 
 from .conftest import read_registry, rebind_registry
@@ -224,8 +224,9 @@ def test_an_uncommitted_root_is_refused(tmp_path):
 def test_an_unknown_level_is_refused(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     _commit(root, registry, minimal)
-    with pytest.raises(ValueError, match="level must be"):
+    with pytest.raises(UsageError) as refused:
         verify(root, level="md5")
+    assert refused.value.code is UsageFault.UNKNOWN_LEVEL
 
 
 def test_verify_retains_the_exact_bytes_it_supersedes(tmp_path, registry, minimal):
@@ -240,10 +241,13 @@ def test_verify_retains_the_exact_bytes_it_supersedes(tmp_path, registry, minima
     assert (root / "manifests" / "0.1.1.json").read_bytes() == (root / "packet.json").read_bytes()
 
 
-@pytest.mark.parametrize("version", ["0.1.0", "1.0.0"])
-def test_verify_refuses_a_version_an_amendment_could_not_take(tmp_path, registry, minimal, version):
+@pytest.mark.parametrize(
+    ("version", "code"), [("0.1.0", UsageFault.VERSION_NOT_AFTER), ("1.0.0", UsageFault.VERSION_MAJOR_CHANGED)]
+)
+def test_verify_refuses_a_version_an_amendment_could_not_take(tmp_path, registry, minimal, version, code):
     """Part 05 §15.1: the new version sorts after the old one and keeps its major version."""
     root = tmp_path / "s001"
     _commit(root, registry, minimal)
-    with pytest.raises(ValueError, match="within its major version"):
+    with pytest.raises(UsageError) as refused:
         verify(root, packet_version=version)
+    assert refused.value.code is code

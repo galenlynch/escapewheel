@@ -15,7 +15,7 @@ import pytest
 
 from escapewheel_writer import Clock, declaration, delivery
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.errors import DeliveryFailed, RecipeFault, SourceDefect, SourceFault
+from escapewheel_writer.errors import DeliveryFailed, RecipeFault, SourceDefect, SourceFault, UsageError, UsageFault
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import TERMS
 from escapewheel_writer.sources import ADAPTERS, NWBSource
@@ -594,8 +594,11 @@ def test_a_delivered_array_no_catalog_row_names_is_refused(registry, tmp_path):
     delivered = StagedArray(
         values=None, resource_id="core.waveform_mean", declaration_id="", array_asset_id="", written=tmp_path
     )
-    with pytest.raises(ValueError, match="binds 0 catalog rows"):
+    with pytest.raises(UsageError) as refused:
         writer.add_array("core.waveform_mean", delivered)
+    assert refused.value.code is UsageFault.CATALOG_ROW_UNBOUND
+    assert refused.value.where == "core.waveform_mean"
+    assert "binds 0 catalog rows" in str(refused.value)
 
 
 def test_an_unknown_kind_names_what_this_build_ships():

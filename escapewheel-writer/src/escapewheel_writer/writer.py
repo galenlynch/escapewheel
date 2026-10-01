@@ -56,10 +56,14 @@ from .encoding import encodings, inefficient
 from .errors import (
     CommitRefused,
     NotCommitted,
+    PacketOccupied,
     PayloadFault,
     PayloadProblem,
     PayloadRefused,
     PromotionRecordUnreadable,
+    UndeclaredResource,
+    UsageError,
+    UsageFault,
 )
 from .keys import Keys
 
@@ -164,7 +168,11 @@ def _check_parquet_floor(path: Path) -> None:
             detail.append(f"compression {outside_compression}")
         if outside_encoding:
             detail.append(f"encoding {outside_encoding}")
-        raise ValueError(f"{path}: Parquet footer exceeds the portable writer floor: {', '.join(detail)}")
+        raise UsageError(
+            f"{path}: Parquet footer exceeds the portable writer floor: {', '.join(detail)}",
+            code=UsageFault.PARQUET_FLOOR,
+            where=str(path),
+        )
 
 
 #: Batches held ahead of the Parquet writer. Building a batch and encoding one cost about the
@@ -278,7 +286,11 @@ def _write_stream(
                     said.append(f"{undeclared} is declared by no registry this build loaded")
                 if late := [n for n in unexpected if n in declared]:
                     said.append(f"{late} is optional and absent from the first batch")
-                raise ValueError(f"{resource_id}: {'; '.join(said)}; the column would be dropped silently")
+                raise UsageError(
+                    f"{resource_id}: {'; '.join(said)}; the column would be dropped silently",
+                    code=UsageFault.UNDECLARED_COLUMN if undeclared else UsageFault.COLUMN_AFTER_FIRST_BATCH,
+                    where=resource_id,
+                )
             columns = [
                 batch.column(name) if name in batch.schema.names else pa.nulls(batch.num_rows, field.type)
                 for name, field in zip(out.names, out, strict=True)
@@ -402,7 +414,9 @@ def _act_on_promotion(root: Path) -> None:
 def _claim(root: Path, paths: Iterable[str]) -> None:
     """Refuse to promote onto a path that already exists, naming it (Part 05 §6)."""
     if taken := sorted(p for p in paths if (root / p).exists()):
-        raise FileExistsError(f"{root / taken[0]} already exists, so promotion would overwrite it")
+        raise PacketOccupied(
+            f"{root / taken[0]} already exists, so promotion would overwrite it", root=root, occupied=taken
+        )
 
 
 def _created(root: Path, relative: str) -> str:
@@ -521,13 +535,19 @@ def _check_reference(resource_id: str, uri: str, source: str | None) -> str:
     """
     if is_absolute(uri):
         if source is not None:
-            raise ValueError(f"{resource_id}: {uri!r} is absolute, so naming source {source!r} would have no effect")
+            raise UsageError(
+                f"{resource_id}: {uri!r} is absolute, so naming source {source!r} would have no effect",
+                code=UsageFault.SOURCE_ON_ABSOLUTE_URI,
+                where=resource_id,
+            )
         return uri
     try:
         return canonical(uri)
     except ValueError as exc:
-        raise ValueError(
-            f"{resource_id}: uri is neither absolute nor a relative reference: {exc} (Part 03 §4)"
+        raise UsageError(
+            f"{resource_id}: uri is neither absolute nor a relative reference: {exc} (Part 03 §4)",
+            code=UsageFault.URI_UNRESOLVABLE,
+            where=resource_id,
         ) from None
 
 
@@ -539,11 +559,13 @@ def _refuse_occupied(root: Path) -> None:
     the new one inside.
     """
     if (root / MANIFEST).exists():
-        raise FileExistsError(f"{root} already holds a committed {MANIFEST}")
+        raise PacketOccupied(f"{root} already holds a committed {MANIFEST}", root=root, occupied=[MANIFEST])
     if occupied := [name for name in PROMOTED if (root / name).exists()]:
-        raise FileExistsError(
+        raise PacketOccupied(
             f"{root} holds {', '.join(occupied)} but no committed {MANIFEST}, as an interrupted promotion "
-            "leaves it; remove them or commit elsewhere"
+            "leaves it; remove them or commit elsewhere",
+            root=root,
+            occupied=occupied,
         )
 
 
@@ -641,18 +663,26 @@ class PacketWriter:
             extension_id = str(document["extension_id"])
             if extension_id in self._extensions:
                 versions = (self._extensions[extension_id]["registry_version"], document["registry_version"])
-                raise ValueError(
+                raise UsageError(
                     f"two registries for extension {extension_id!r} (versions {versions[0]} and {versions[1]}); a "
-                    "packet binds one per extension (Part 04 §8, Part 05 §3.1), so the writer keeps neither"
+                    "packet binds one per extension (Part 04 §8, Part 05 §3.1), so the writer keeps neither",
+                    code=UsageFault.EXTENSION_TWICE,
+                    where=extension_id,
                 )
             for resource_id in document["resources"]:
                 if not resource_id.startswith(f"{extension_id}."):
-                    raise ValueError(
+                    raise UsageError(
                         f"{resource_id} is not namespaced by {extension_id!r}; Part 09 §5.2 requires it, "
-                        "and an extension MUST NOT define a table in core or analysis"
+                        "and an extension MUST NOT define a table in core or analysis",
+                        code=UsageFault.EXTENSION_NAMESPACE,
+                        where=resource_id,
                     )
                 if resource_id in checked_registry["resources"]:
-                    raise ValueError(f"{resource_id} redefines a core resource, which Part 09 forbids")
+                    raise UsageError(
+                        f"{resource_id} redefines a core resource, which Part 09 forbids",
+                        code=UsageFault.EXTENSION_REDEFINES_CORE,
+                        where=resource_id,
+                    )
             self._extensions[extension_id] = document
         #: Assigns the integer every identifier holds (Part 05 §4.3). One per packet, shared by every
         #: adapter, because two sources numbering the same probe differently is a defect no
@@ -753,14 +783,30 @@ class PacketWriter:
         """Resolve an explicit family declaration and check that it admits this instance."""
         declaration = self.declaration(declaration_id)
         if declaration is None:
-            raise ValueError(f"{resource_id}: unknown declaration {declaration_id!r}")
+            raise UsageError(
+                f"{resource_id}: unknown declaration {declaration_id!r}",
+                code=UsageFault.UNKNOWN_DECLARATION,
+                where=resource_id,
+            )
         if declaration["kind"] != kind:
-            raise ValueError(f"{resource_id}: {declaration_id} has kind {declaration['kind']!r}, not {kind!r}")
+            raise UsageError(
+                f"{resource_id}: {declaration_id} has kind {declaration['kind']!r}, not {kind!r}",
+                code=UsageFault.DECLARATION_KIND,
+                where=resource_id,
+            )
         if declaration["instances"]["mode"] not in {"catalog", "family"}:
-            raise ValueError(f"{resource_id}: {declaration_id} does not admit family instances")
+            raise UsageError(
+                f"{resource_id}: {declaration_id} does not admit family instances",
+                code=UsageFault.NOT_A_FAMILY,
+                where=resource_id,
+            )
         owner = declaration_id.split(".", 1)[0]
         if not resource_id.startswith(f"{owner}."):
-            raise ValueError(f"{resource_id}: namespace is not owned by declaration {declaration_id!r}")
+            raise UsageError(
+                f"{resource_id}: namespace is not owned by declaration {declaration_id!r}",
+                code=UsageFault.INSTANCE_NAMESPACE,
+                where=resource_id,
+            )
         return declaration
 
     def _bind_catalog_row(
@@ -777,12 +823,18 @@ class PacketWriter:
         rows = self._tables.get(catalog, [])
         matching = [row for row in rows if str(row.get(source_column)) == source_value]
         if len(matching) != 1:
-            raise ValueError(
-                f"{resource_id}: {catalog}.{source_column}={source_value!r} resolves {len(matching)} catalog rows"
+            raise UsageError(
+                f"{resource_id}: {catalog}.{source_column}={source_value!r} resolves {len(matching)} catalog rows",
+                code=UsageFault.CATALOG_ROW_UNBOUND,
+                where=resource_id,
             )
         current = matching[0].get(resource_column)
         if current is not None and current != resource_id:
-            raise ValueError(f"{catalog}.{resource_column} is {current!r}, not delivered resource {resource_id!r}")
+            raise UsageError(
+                f"{catalog}.{resource_column} is {current!r}, not delivered resource {resource_id!r}",
+                code=UsageFault.CATALOG_ROW_TAKEN,
+                where=resource_id,
+            )
         matching[0][resource_column] = resource_id
 
     def add(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> None:
@@ -800,23 +852,26 @@ class PacketWriter:
 
         Raises
         ------
-        KeyError
+        UndeclaredResource
             If the registry does not define this resource.
-        ValueError
+        UsageError
             If a record carries a key no column declares, as `add_batches` refuses one, so the
             same adapter defect fails a build through either entry point.
         """
         spec = self.spec(resource_id)
         if spec is None:
-            raise KeyError(
+            raise UndeclaredResource(
                 f"no registry defines a table named {resource_id}; core and "
-                f"{len(self._extensions)} extension(s) were consulted"
+                f"{len(self._extensions)} extension(s) were consulted",
+                resource_id=resource_id,
             )
         declared = {c["name"] for c in spec["columns"]}
         if undeclared := sorted({key for record in records for key in record} - declared):
-            raise ValueError(
+            raise UsageError(
                 f"{resource_id}: {undeclared} is declared by no registry this build loaded; "
-                f"the column would be dropped silently"
+                f"the column would be dropped silently",
+                code=UsageFault.UNDECLARED_COLUMN,
+                where=resource_id,
             )
         self._tables.setdefault(resource_id, []).extend(self._with_session(resource_id, records))
 
@@ -891,11 +946,11 @@ class PacketWriter:
 
         Raises
         ------
-        KeyError
+        UndeclaredResource
             If the registry does not define this resource.
         """
         if self.spec(resource_id) is None:
-            raise KeyError(f"no registry defines a table named {resource_id}")
+            raise UndeclaredResource(f"no registry defines a table named {resource_id}", resource_id=resource_id)
         changed = 0
         for index, row in enumerate(self._tables.get(resource_id, [])):
             if (setting := values.get(row.get(match))) is not None:
@@ -927,21 +982,30 @@ class PacketWriter:
 
         Raises
         ------
-        KeyError
+        UndeclaredResource
             If the registry does not define this resource.
-        ValueError
+        UsageError
             If this resource already has records, or already has batches. One table comes
             from one path; interleaving them would make the sort order unenforceable.
         """
         if self.spec(resource_id) is None:
-            raise KeyError(
+            raise UndeclaredResource(
                 f"no registry defines a table named {resource_id}; core and "
-                f"{len(self._extensions)} extension(s) were consulted"
+                f"{len(self._extensions)} extension(s) were consulted",
+                resource_id=resource_id,
             )
         if resource_id in self._tables:
-            raise ValueError(f"{resource_id} already has records; use one path per table")
+            raise UsageError(
+                f"{resource_id} already has records; use one path per table",
+                code=UsageFault.STAGED_TWICE,
+                where=resource_id,
+            )
         if resource_id in self._batches:
-            raise ValueError(f"{resource_id} already has batches; concatenate before adding")
+            raise UsageError(
+                f"{resource_id} already has batches; concatenate before adding",
+                code=UsageFault.STAGED_TWICE,
+                where=resource_id,
+            )
         spec = self.spec(resource_id)
         assert spec is not None
         self._batches[resource_id] = (number_batch(spec, self._session_batch(spec, b), self.keys) for b in batches)
@@ -985,7 +1049,11 @@ class PacketWriter:
     def _with_lineage(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Put each derived resource's `derived_from` on its manifest entry."""
         if missing := sorted(set(self._derived) - {e["resource_id"] for e in entries}):
-            raise ValueError(f"lineage was recorded for {missing}, which this packet does not carry")
+            raise UsageError(
+                f"lineage was recorded for {missing}, which this packet does not carry",
+                code=UsageFault.LINEAGE_UNSTAGED,
+                where=", ".join(missing),
+            )
         for entry in entries:
             if lineage := self._derived.get(entry["resource_id"]):
                 entry["derived_from"] = list(lineage)
@@ -1009,13 +1077,19 @@ class PacketWriter:
 
         Raises
         ------
-        ValueError
+        UsageError
             If this resource already has an array.
         """
         if resource_id in self._staged_arrays:
-            raise ValueError(f"{resource_id} already has an array staged")
+            raise UsageError(
+                f"{resource_id} already has an array staged", code=UsageFault.STAGED_TWICE, where=resource_id
+            )
         if array.resource_id != resource_id:
-            raise ValueError(f"{resource_id}: staged array declares resource_id {array.resource_id!r}")
+            raise UsageError(
+                f"{resource_id}: staged array declares resource_id {array.resource_id!r}",
+                code=UsageFault.RESOURCE_ID_DIFFERS,
+                where=resource_id,
+            )
         if not array.declaration_id:
             array = self._delivered_binding(resource_id, array)
         declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
@@ -1047,7 +1121,11 @@ class PacketWriter:
                 if row.get(column) == resource_id
             ]
         if len(matching) != 1:
-            raise ValueError(f"{resource_id}: a delivered array binds {len(matching)} catalog rows, not one")
+            raise UsageError(
+                f"{resource_id}: a delivered array binds {len(matching)} catalog rows, not one",
+                code=UsageFault.CATALOG_ROW_UNBOUND,
+                where=resource_id,
+            )
         declaration_id, row = matching[0]
         return replace(array, declaration_id=declaration_id, array_asset_id=str(row["array_asset_id"]))
 
@@ -1067,12 +1145,12 @@ class PacketWriter:
 
         Raises
         ------
-        ValueError
+        UsageError
             If this resource already has an array, or if the URI does not match how it resolves:
             absolute where no `source` is named, relative where one is (Part 04 §5.5).
         """
         if resource_id in self._staged_arrays or resource_id in self._referenced_arrays:
-            raise ValueError(f"{resource_id} already has an array")
+            raise UsageError(f"{resource_id} already has an array", code=UsageFault.STAGED_TWICE, where=resource_id)
         array = replace(array, uri=_check_reference(resource_id, array.uri, array.source))
         declaration = self._family_declaration(array.declaration_id, resource_id, "dense_array")
         self._bind_catalog_row(declaration, resource_id, "array_asset_id", array.array_asset_id)
@@ -1093,12 +1171,12 @@ class PacketWriter:
 
         Raises
         ------
-        ValueError
+        UsageError
             If this resource already has media, or if the URI does not match how it resolves
             (Part 04 §5.5).
         """
         if resource_id in self._referenced_media:
-            raise ValueError(f"{resource_id} already has media")
+            raise UsageError(f"{resource_id} already has media", code=UsageFault.STAGED_TWICE, where=resource_id)
         media = replace(media, uri=_check_reference(resource_id, media.uri, media.source))
         declaration = self._family_declaration(media.declaration_id, resource_id, "opaque")
         self._bind_catalog_row(declaration, resource_id, "media_asset_id", media.media_asset_id)
@@ -1660,7 +1738,7 @@ class PacketWriter:
 
         Raises
         ------
-        ValueError
+        UsageError
             If the document would not satisfy its schema, which a writer MUST NOT write (Part 04
             §5.5). Raised before anything is promoted.
         """
@@ -1678,7 +1756,10 @@ class PacketWriter:
             "sources": dict(sorted(located.items())),
         }
         if problems := check_sources(document):
-            raise ValueError(f"the source resolution document would not satisfy its schema: {'; '.join(problems)}")
+            raise UsageError(
+                f"the source resolution document would not satisfy its schema: {'; '.join(problems)}",
+                code=UsageFault.SOURCES_DOCUMENT,
+            )
         return document
 
     def stage_at(self, root: str | Path) -> Path:
@@ -1689,7 +1770,7 @@ class PacketWriter:
 
         Raises
         ------
-        FileExistsError
+        PacketOccupied
             If `root` already holds a committed manifest and this writer amends none.
         PromotionRecordUnreadable
             If the staging area holds a promotion record this writer cannot read.
@@ -1748,9 +1829,9 @@ class PacketWriter:
 
         Raises
         ------
-        FileExistsError
+        PacketOccupied
             If `root` already holds a committed manifest.
-        ValueError
+        UsageError
             If no `core.sessions` records were added.
         CommitRefused
             If validation found errors. Nothing is committed, and staging and the delivery
@@ -1765,7 +1846,9 @@ class PacketWriter:
         # non-empty. Refusing here beats letting the staged manifest fail its own schema,
         # which surfaces as an unhelpful error from a directory the caller never named.
         if not self._tables.get("core.sessions"):
-            raise ValueError("a packet declares at least one session; core.sessions is empty (R1 §6)")
+            raise UsageError(
+                "a packet declares at least one session; core.sessions is empty (R1 §6)", code=UsageFault.NO_SESSION
+            )
 
         # Before anything is written, since binding needs only the rows and refuses outright.
         payloads = self._bind_payloads()
@@ -1901,7 +1984,7 @@ class PacketWriter:
         AmendmentRefused
             If a delivered row would change or grow what the packet holds, which is a new packet
             rather than a new version of this one (Part 05 §15.2).
-        ValueError
+        UsageError
             If `packet_version` does not sort after the packet's, or has another major version.
         CommitRefused
             If validation found errors. The packet stays at its previous version, and nothing
@@ -1920,13 +2003,15 @@ class PacketWriter:
         superseded = dict(held.manifest)
         version = packet_version or _bump(str(superseded["packet_version"]))
         if semver(version) <= semver(str(superseded["packet_version"])):
-            raise ValueError(
-                f"packet_version {version} does not sort after {superseded['packet_version']} (Part 05 §15.1)"
+            raise UsageError(
+                f"packet_version {version} does not sort after {superseded['packet_version']} (Part 05 §15.1)",
+                code=UsageFault.VERSION_NOT_AFTER,
             )
         if semver(version)[0] != semver(str(superseded["packet_version"]))[0]:
-            raise ValueError(
+            raise UsageError(
                 f"packet_version {version} leaves the major version of {superseded['packet_version']}; "
-                "a greater major version is a replacement, not an amendment (Part 05 §15.1)"
+                "a greater major version is a replacement, not an amendment (Part 05 §15.1)",
+                code=UsageFault.VERSION_MAJOR_CHANGED,
             )
         self._amending = (root, version)
         try:
@@ -2158,9 +2243,11 @@ class PacketWriter:
             stored = hashlib.sha256(gzip_member(path.read_bytes())).hexdigest() if path.is_file() else None
             bound = relative
             if (earlier is not None and earlier["sha256"] != digest) or stored not in {None, digest}:
-                raise ValueError(
+                raise UsageError(
                     f"this packet already binds a different {registry_id} {version} at {relative}; two digests "
-                    "under one registry ID and version cannot both be retained (Part 05 §15.3). Bump registry_version."
+                    "under one registry ID and version cannot both be retained (Part 05 §15.3). Bump registry_version.",
+                    code=UsageFault.REGISTRY_DIGEST_DIFFERS,
+                    where=relative,
                 )
             if stored is None:
                 if staging is not None:

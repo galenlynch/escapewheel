@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo
 import pyarrow as pa
 from escapewheel_reader.ordering import stored_order
 
-from .errors import CarriedNotAnInteger, NaiveTimestamp
+from .errors import CarriedNotAnInteger, FixedOffsetZone, NaiveTimestamp, OutOfRange
 
 
 def localize(value: datetime | str, zone: ZoneInfo) -> datetime:
@@ -53,11 +53,11 @@ def localize(value: datetime | str, zone: ZoneInfo) -> datetime:
 
     Raises
     ------
-    TypeError
+    FixedOffsetZone
         If `zone` is a fixed offset rather than an IANA zone.
     """
     if not isinstance(zone, ZoneInfo):
-        raise TypeError(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
+        raise FixedOffsetZone(f"{zone!r} is a fixed offset; pass an IANA zone so DST resolves per date")
     if isinstance(value, str):
         value = datetime.fromisoformat(value)
     return value if value.tzinfo is not None else value.replace(tzinfo=zone)
@@ -144,7 +144,7 @@ def _bounded(low: int, high: int, kind: str) -> Any:
         except (TypeError, ValueError):
             return value
         if not low <= number <= high:
-            raise ValueError(
+            raise OutOfRange(
                 f"{column}: {number} does not fit {kind}; Part 02 §5.3 refuses the write rather than "
                 f"wrapping. Declare the wider type (Part 02 §5.3) or assign an identifier and record "
                 f"the source's own value as its name (R53 §2.3.1)"

@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from escapewheel_writer import Clock
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.errors import SourceDefect
+from escapewheel_writer.errors import FixedOffsetZone, NaiveTimestamp, SourceDefect, UsageError, UsageFault
 from escapewheel_writer.notes import coded, codes
 from escapewheel_writer.recipe import SourceSpec
 from escapewheel_writer.session import Context, _composed
@@ -130,7 +130,7 @@ def test_a_missing_session_json_is_a_defect(tmp_path):
 
 def test_a_fixed_offset_is_refused(asset):
     """PDT for the session and PST for the epoch it counts from; a constant is wrong half the year."""
-    with pytest.raises(TypeError, match="fixed offset"):
+    with pytest.raises(FixedOffsetZone):
         _session(asset, zone=timezone(timedelta(hours=-7)))
 
 
@@ -210,12 +210,14 @@ def test_the_clock_round_trips_its_own_anchor(harp):
 
 def test_a_clock_without_an_epoch_locates_nothing():
     bare = Clock("harp", session_id=SESSION, name="HARP", tick_rate_num=HARP_TICK_RATE_HZ, origin="epoch")
-    with pytest.raises(ValueError, match="no tick_zero_utc"):
+    with pytest.raises(UsageError) as refused:
         bare.tick_at(datetime.now(UTC))
+    assert refused.value.code is UsageFault.NO_TICK_ZERO
+    assert refused.value.where == "harp"
 
 
 def test_a_naive_instant_locates_nothing(harp):
-    with pytest.raises(ValueError, match="carries no offset"):
+    with pytest.raises(NaiveTimestamp):
         harp.tick_at(datetime(2025, 4, 9, 17, 25, 12))  # noqa: DTZ001 -- the point
 
 

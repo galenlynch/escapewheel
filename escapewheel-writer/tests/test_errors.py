@@ -1,6 +1,7 @@
 """The package's exceptions are one taxonomy, defined in one module."""
 
 import ast
+import builtins
 import importlib
 import inspect
 import pkgutil
@@ -35,21 +36,44 @@ def test_every_exception_is_defined_in_the_error_module_under_the_package_base()
         assert issubclass(cls, errors.WriterError), cls
 
 
+#: The built-in a caller may catch each class as.
+BUILT_IN = {
+    errors.RecipeUnreadable: ValueError,
+    errors.AmendmentRefused: ValueError,
+    errors.DeclarationUnreadable: ValueError,
+    errors.SourceDefect: ValueError,
+    errors.UnsupportedEncoding: ValueError,
+    errors.PayloadRefused: ValueError,
+    errors.UsageError: ValueError,
+    errors.UndeclaredResource: KeyError,
+    errors.UnknownCompensation: KeyError,
+    errors.CompensationsInvalid: ValueError,
+    errors.FixedOffsetZone: TypeError,
+    errors.OffGrid: ValueError,
+    errors.NonFinite: ValueError,
+    errors.NaiveTimestamp: ValueError,
+    errors.CarriedNotAnInteger: ValueError,
+    errors.OutOfRange: ValueError,
+    errors.TickOverflow: OverflowError,
+    errors.Collided: ValueError,
+    errors.PacketOccupied: FileExistsError,
+}
+
+
 def test_an_error_a_caller_catches_as_a_built_in_stays_one():
-    """Each of these was a `ValueError` before the package had a base class."""
-    for cls in (
-        errors.RecipeUnreadable,
-        errors.AmendmentRefused,
-        errors.SourceDefect,
-        errors.UnsupportedEncoding,
-        errors.PayloadRefused,
-        errors.OffGrid,
-        errors.NonFinite,
-        errors.NaiveTimestamp,
-        errors.CarriedNotAnInteger,
-        errors.Collided,
-    ):
-        assert issubclass(cls, ValueError), cls
+    for cls, built_in in BUILT_IN.items():
+        assert issubclass(cls, built_in), cls
+
+
+def test_an_error_that_is_a_key_error_prints_its_message_bare():
+    """A `KeyError` quotes its argument, which a refusal printed to a person should not be."""
+    assert str(errors.UndeclaredResource("no table named x", resource_id="x")) == "no table named x"
+    assert str(errors.UnknownCompensation("x is not registered", identifier="x")) == "x is not registered"
+
+
+def test_an_occupied_root_carries_what_is_in_the_way(tmp_path):
+    refused = errors.PacketOccupied("occupied", root=tmp_path, occupied=("tables",))
+    assert (str(refused), refused.root, refused.occupied) == ("occupied", tmp_path, ["tables"])
 
 
 def test_every_exception_is_documented_in_the_module_docstring():
@@ -73,3 +97,13 @@ def test_every_defect_this_package_raises_carries_a_code():
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.Call) and getattr(node.func, "id", None) in DEFECTS:
                 assert any(keyword.arg == "code" for keyword in node.keywords), f"{path.name}:{node.lineno}"
+
+
+def test_no_module_raises_a_built_in_exception():
+    """A caller catching the package base catches every deliberate refusal, so none is a bare built-in."""
+    built_in = {name for name, cls in vars(builtins).items() if isinstance(cls, type) and issubclass(cls, Exception)}
+    for path in sorted(Path(escapewheel_writer.__file__).parent.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Raise) and node.exc is not None:
+                raised = getattr(node.exc, "func", node.exc)
+                assert getattr(raised, "id", None) not in built_in, f"{path.name}:{node.lineno}"

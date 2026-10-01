@@ -27,7 +27,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..clock import TickGrid, zone_of
-from ..errors import SourceDefect, SourceFault, UnsupportedEncoding
+from ..errors import SourceDefect, SourceFault, UnsupportedEncoding, UsageError, UsageFault
 from ..notes import Note, NoteCode
 from .compensations import Compensates
 from .store import SourceStore, source_root
@@ -372,9 +372,11 @@ class NWBSource(Compensates):
         self._cache: dict[str, Any] = {}
         self.session_id = session_id or _one(self._array("general/session_id")) or self.root.stem
         if self.clock_row.get("session_id") != self.session_id:
-            raise ValueError(
+            raise UsageError(
                 f"clock {self.clock.clock_id!r} belongs to session "
-                f"{self.clock_row.get('session_id')!r}, not {self.session_id!r}"
+                f"{self.clock_row.get('session_id')!r}, not {self.session_id!r}",
+                code=UsageFault.CLOCK_OTHER_SESSION,
+                where=self.clock.clock_id,
             )
 
     # -- source access ----------------------------------------------------------------

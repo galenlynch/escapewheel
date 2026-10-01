@@ -17,6 +17,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .errors import UsageError, UsageFault
+
 if TYPE_CHECKING:  # pragma: no cover
     from .writer import StagedArray
 
@@ -153,7 +155,7 @@ def _codec(name: str, *, differenced: bool = False) -> Any:
         # zstd inside blosc: 11.4% smaller than plain zstd on real waveforms, matching the 11%
         # R3 §7.3 measured on synthetic ephys.
         return BloscCodec(cname="zstd", shuffle="bitshuffle" if differenced else "shuffle")
-    raise ValueError(f"{name} is not a bytes codec this writer emits")
+    raise UsageError(f"{name} is not a bytes codec this writer emits", code=UsageFault.UNKNOWN_CODEC, where=name)
 
 
 def _filter(name: str, dtype: Any) -> Any:
@@ -162,7 +164,7 @@ def _filter(name: str, dtype: Any) -> Any:
 
     if name == "numcodecs.delta":
         return Delta(dtype=str(dtype))
-    raise ValueError(f"{name} is not an array codec this writer emits")
+    raise UsageError(f"{name} is not an array codec this writer emits", code=UsageFault.UNKNOWN_CODEC, where=name)
 
 
 def write_zarr(path: Path, spec: StagedArray) -> int:
@@ -182,7 +184,7 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
 
     Raises
     ------
-    ValueError
+    UsageError
         If a declared codec is outside Part 03 §6.4's permitted set, or the shard is not a whole
         number of chunks in every axis -- a partial shard is not a regular grid.
     """
@@ -209,7 +211,11 @@ def write_zarr(path: Path, spec: StagedArray) -> int:
             if shard % chunk
         ]
         if misfit:
-            raise ValueError(f"shard is not a whole number of chunks on axes {[a for a, _, _ in misfit]}")
+            raise UsageError(
+                f"shard is not a whole number of chunks on axes {[a for a, _, _ in misfit]}",
+                code=UsageFault.SHARD_MISFIT,
+                where=spec.resource_id,
+            )
         # `compressors=None` is load-bearing: zarr applies a default compressor when none is named,
         # and an outer codec over a shard means inflating the whole shard to reach one chunk.
         serializer, grid, compressors = ShardingCodec(chunk_shape=spec.chunks, codecs=pipeline), spec.shard, None

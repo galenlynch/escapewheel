@@ -9,7 +9,7 @@ from escapewheel_validator import validate
 
 import escapewheel_writer.writer as module
 from escapewheel_writer import CommitRefused, PacketWriter
-from escapewheel_writer.errors import PromotionRecordUnreadable
+from escapewheel_writer.errors import PacketOccupied, PromotionRecordUnreadable
 from escapewheel_writer.writer import MANIFEST, PROMOTION, STAGING, read_promotion
 from tests.test_writer import _runs, _write
 
@@ -70,8 +70,9 @@ def test_a_promoted_directory_with_no_record_is_refused_and_kept(tmp_path, regis
     _write(root, registry, minimal)
     (root / MANIFEST).unlink()
     before = _outside_staging(root)
-    with pytest.raises(FileExistsError, match="tables"):
+    with pytest.raises(PacketOccupied) as refused:
         _write(root, registry, minimal)
+    assert "tables" in refused.value.occupied
     assert _outside_staging(root) == before
 
 

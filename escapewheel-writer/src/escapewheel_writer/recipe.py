@@ -48,7 +48,7 @@ from typing import Any, NamedTuple
 
 from upath import UPath
 
-from .errors import RecipeFault, RecipeUnreadable
+from .errors import DeclarationUnreadable, RecipeFault, RecipeUnreadable
 from .sources.store import source_root
 
 #: Source kinds that accept a `sample` cap, for the development flag that makes a round trip
@@ -449,7 +449,7 @@ def _delivery(block: Mapping[str, Any] | None, resolve: Any) -> DeliverySpec | N
     if (named := block.get("declaration")) is not None:
         try:
             document = declared_document.load(resolve(str(named)))
-        except ValueError as exc:
+        except DeclarationUnreadable as exc:
             document = {"unreadable": str(exc)}
     protocol = str(block.get("protocol") or "")
     command = block.get("command", ())

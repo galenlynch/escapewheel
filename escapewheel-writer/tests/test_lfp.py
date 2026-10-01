@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from escapewheel_writer.errors import SourceDefect, SourceFault
+from escapewheel_writer.errors import SourceDefect, SourceFault, UsageError, UsageFault
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.sources.lfp import LFPSource
 
@@ -215,8 +215,9 @@ def test_verify_none_records_nothing(nwb):
 
 
 def test_an_unknown_verify_mode_is_refused(nwb):
-    with pytest.raises(ValueError, match="verify must be"):
+    with pytest.raises(UsageError) as refused:
         _source(nwb, verify="md5")
+    assert refused.value.code is UsageFault.UNKNOWN_VERIFY_MODE
 
 
 def test_a_series_with_no_matching_clock_is_refused(nwb):

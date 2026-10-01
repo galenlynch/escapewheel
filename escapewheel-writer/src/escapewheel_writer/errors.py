@@ -1,7 +1,7 @@
 """Every exception this package raises on purpose; each derives from :exc:`WriterError`.
 
 The codes an error or a reported problem carries are declared beside the classes:
-:class:`RecipeFault`, :class:`SourceFault` and :class:`PayloadFault`.
+:class:`RecipeFault`, :class:`SourceFault`, :class:`PayloadFault` and :class:`UsageFault`.
 
 A recipe that cannot be built:
 
@@ -16,6 +16,7 @@ A recipe that cannot be built:
 - :exc:`ReplacementRefused` -- a `[packet].replaces` entry names something a build cannot replace.
 - :exc:`AmendmentRefused` -- the amendment would change a held row, or the packet cannot be amended.
 - :exc:`ExtensionNotFound` -- an entry names neither a file nor an installed distribution.
+- :exc:`DeclarationUnreadable` -- a file is no adapter declaration.
 
 A source that cannot supply what a build asked of it:
 
@@ -24,15 +25,26 @@ A source that cannot supply what a build asked of it:
 - :exc:`DeliveryFailed` -- an adapter run out of process did not deliver what was asked of it.
 - :exc:`PayloadRefused` -- a delivery holds something a packet cannot own.
 
+A call the writer will not carry out:
+
+- :exc:`UsageError` -- a call asks for something the writer will not stage, write or amend.
+- :exc:`UndeclaredResource` -- a call names a table no loaded registry defines.
+- :exc:`UnknownCompensation` -- an adapter declares a compensation nothing registers.
+- :exc:`CompensationsInvalid` -- a distribution registers something other than compensations.
+- :exc:`FixedOffsetZone` -- a zone was given as a fixed offset.
+
 Values a packet cannot hold:
 
 - :exc:`OffGrid`, :exc:`NonFinite` -- seconds that land on no tick, and NaN or infinite seconds.
 - :exc:`NaiveTimestamp` -- a wall-clock value carried no UTC offset.
 - :exc:`CarriedNotAnInteger` -- a carried identifier arrived as something other than a number.
+- :exc:`OutOfRange` -- a number does not fit the integer width its column declares.
+- :exc:`TickOverflow` -- a tick falls outside the 64-bit range.
 - :exc:`Collided` -- two spikes of one unit convert to the same reference tick.
 
 A packet root that cannot be committed to, or read back:
 
+- :exc:`PacketOccupied` -- a root already holds what a commit would write there.
 - :exc:`CommitRefused` -- validation's verdict was not ``passed``, so nothing was committed.
 - :exc:`NotCommitted` -- there is no committed packet at a root.
 - :exc:`PromotionRecordUnreadable` -- a staging area holds a promotion record this writer cannot
@@ -342,6 +354,10 @@ class ExtensionNotFound(WriterError):
     """A recipe names an extension that is neither a file nor an installed distribution."""
 
 
+class DeclarationUnreadable(WriterError, ValueError):
+    """A file is no adapter declaration: absent, not JSON, or off the published schema."""
+
+
 class SourceFault(StrEnum):
     """Why a source this package ships an adapter for cannot supply what a build asked of it."""
 
@@ -594,6 +610,135 @@ class PayloadRefused(WriterError, ValueError):
         self.source = source
 
 
+class UsageFault(StrEnum):
+    """What a call asked of the writer that it will not do, as the code a :exc:`UsageError` carries.
+
+    A fault raised from two places shares a member.
+    """
+
+    #: A written table's footer names a compression or an encoding outside the writer floor.
+    PARQUET_FLOOR = "parquet_floor"
+    #: A record or a batch carries a column no loaded registry declares.
+    UNDECLARED_COLUMN = "undeclared_column"
+    #: A later batch carries an optional column the first batch lacked.
+    COLUMN_AFTER_FIRST_BATCH = "column_after_first_batch"
+    #: A reference names a source beside an absolute URI, which no source resolves.
+    SOURCE_ON_ABSOLUTE_URI = "source_on_absolute_uri"
+    #: A reference's URI is neither absolute nor a relative reference.
+    URI_UNRESOLVABLE = "uri_unresolvable"
+    #: Two registries were given for one extension.
+    EXTENSION_TWICE = "extension_twice"
+    #: An extension defines a resource outside its own namespace.
+    EXTENSION_NAMESPACE = "extension_namespace"
+    #: An extension redefines a core resource.
+    EXTENSION_REDEFINES_CORE = "extension_redefines_core"
+    #: An array or media names a declaration no loaded registry holds.
+    UNKNOWN_DECLARATION = "unknown_declaration"
+    #: A declaration is of another kind than the resource staged against it.
+    DECLARATION_KIND = "declaration_kind"
+    #: A declaration admits no family instances.
+    NOT_A_FAMILY = "not_a_family"
+    #: A resource ID lies outside the namespace that owns its declaration.
+    INSTANCE_NAMESPACE = "instance_namespace"
+    #: An array or media matches no one catalog row.
+    CATALOG_ROW_UNBOUND = "catalog_row_unbound"
+    #: The catalog row an array or media matches already names another resource.
+    CATALOG_ROW_TAKEN = "catalog_row_taken"
+    #: A resource was staged a second time.
+    STAGED_TWICE = "staged_twice"
+    #: Lineage was recorded for a resource the packet does not carry.
+    LINEAGE_UNSTAGED = "lineage_unstaged"
+    #: A staged array declares another resource ID than the one it was added under.
+    RESOURCE_ID_DIFFERS = "resource_id_differs"
+    #: The source resolution document would not satisfy its schema.
+    SOURCES_DOCUMENT = "sources_document"
+    #: A packet was committed with no session.
+    NO_SESSION = "no_session"
+    #: An amendment's packet version does not sort after the one it supersedes.
+    VERSION_NOT_AFTER = "version_not_after"
+    #: An amendment's packet version leaves the major version it supersedes.
+    VERSION_MAJOR_CHANGED = "version_major_changed"
+    #: A registry differs from the one the packet retains under the same ID and version.
+    REGISTRY_DIGEST_DIFFERS = "registry_digest_differs"
+    #: An array names a codec this writer does not emit.
+    UNKNOWN_CODEC = "unknown_codec"
+    #: A shard is not a whole number of chunks on every axis.
+    SHARD_MISFIT = "shard_misfit"
+    #: A clock's tick rate is not positive.
+    TICK_RATE_NOT_POSITIVE = "tick_rate_not_positive"
+    #: A wall-clock instant was asked of a clock that declares no `tick_zero_utc`.
+    NO_TICK_ZERO = "no_tick_zero"
+    #: A verification level is not one this writer records.
+    UNKNOWN_LEVEL = "unknown_level"
+    #: A source was asked to verify in a mode it does not have.
+    UNKNOWN_VERIFY_MODE = "unknown_verify_mode"
+    #: A source was handed a clock that belongs to another session.
+    CLOCK_OTHER_SESSION = "clock_other_session"
+    #: A name or a number already stands for something else of its kind.
+    KEY_TAKEN = "key_taken"
+
+
+class UsageError(WriterError, ValueError):
+    """A call asks the writer for something it will not stage, write or amend as given.
+
+    Attributes
+    ----------
+    code : UsageFault
+        Which fault it is, whatever the names in the message.
+    where : str or None
+        The resource, clock, path or name the message is about, where it names one.
+    """
+
+    def __init__(self, message: str, *, code: UsageFault, where: str | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.where = where
+
+
+class UndeclaredResource(WriterError, KeyError):
+    """A call names a table no loaded registry defines.
+
+    Attributes
+    ----------
+    resource_id : str
+        The resource the call named.
+    """
+
+    def __init__(self, message: str, *, resource_id: str) -> None:
+        super().__init__(message)
+        self.resource_id = resource_id
+
+    def __str__(self) -> str:
+        """Return the message bare, where a `KeyError` would quote it."""
+        return str(self.args[0])
+
+
+class UnknownCompensation(WriterError, KeyError):
+    """An adapter declares a compensation nothing registers.
+
+    Attributes
+    ----------
+    identifier : str
+        The compensation the adapter named.
+    """
+
+    def __init__(self, message: str, *, identifier: str) -> None:
+        super().__init__(message)
+        self.identifier = identifier
+
+    def __str__(self) -> str:
+        """Return the message bare, where a `KeyError` would quote it."""
+        return str(self.args[0])
+
+
+class CompensationsInvalid(WriterError, ValueError):
+    """A distribution registers something other than a mapping of complete compensations."""
+
+
+class FixedOffsetZone(WriterError, TypeError):
+    """A zone was given as a fixed offset, which resolves daylight saving for no date."""
+
+
 class OffGrid(WriterError, ValueError):
     """Source seconds do not lie on this clock's tick grid, so no exact tick exists.
 
@@ -639,6 +784,14 @@ class CarriedNotAnInteger(WriterError, ValueError):
     """A carried identifier arrived as something other than the source's own number."""
 
 
+class OutOfRange(WriterError, ValueError):
+    """A number does not fit the integer width its column declares."""
+
+
+class TickOverflow(WriterError, OverflowError):
+    """A tick falls outside the 64-bit range a tick column holds."""
+
+
 class Collided(WriterError, NotAligned):
     """Two spikes of one unit convert to the same reference tick, so the table cannot be built.
 
@@ -648,6 +801,23 @@ class Collided(WriterError, NotAligned):
     undercounts them, so a clock that coarse makes this table the wrong instrument rather than a
     broken one, and Part 06 §2 makes not building it an ordinary outcome.
     """
+
+
+class PacketOccupied(WriterError, FileExistsError):
+    """A packet root already holds what a commit would write there.
+
+    Attributes
+    ----------
+    root : Path
+        The packet root.
+    occupied : list of str
+        The root-relative paths in the way.
+    """
+
+    def __init__(self, message: str, *, root: Path, occupied: Sequence[str]) -> None:
+        super().__init__(message)
+        self.root = root
+        self.occupied = list(occupied)
 
 
 class CommitRefused(WriterError):

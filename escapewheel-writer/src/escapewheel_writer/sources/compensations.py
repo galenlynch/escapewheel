@@ -21,6 +21,8 @@ from dataclasses import dataclass
 from importlib.metadata import entry_points
 from typing import Any
 
+from ..errors import CompensationsInvalid, UnknownCompensation
+
 #: Entry-point group a distribution registers its own compensations under. The value loads to a
 #: mapping of identifier to :class:`Compensation`, or to a callable returning one.
 #:
@@ -88,12 +90,14 @@ def _mapping(loaded: Any, source: str) -> dict[str, Compensation]:
     if callable(loaded) and not isinstance(loaded, type):
         loaded = loaded()
     if not isinstance(loaded, dict):
-        raise TypeError(f"{source} loaded {type(loaded).__name__}, not a mapping of compensations")
+        raise CompensationsInvalid(f"{source} loaded {type(loaded).__name__}, not a mapping of compensations")
     for identifier, entry in loaded.items():
         if not isinstance(entry, Compensation):
-            raise TypeError(f"{source} registered {identifier!r} as {type(entry).__name__}, not a Compensation")
+            raise CompensationsInvalid(
+                f"{source} registered {identifier!r} as {type(entry).__name__}, not a Compensation"
+            )
         if not (entry.defect and entry.action and entry.evidence):
-            raise ValueError(
+            raise CompensationsInvalid(
                 f"{source} registered {identifier!r} with no {'defect' if not entry.defect else ''}"
                 f"{'action' if not entry.action else ''}{'evidence' if not entry.evidence else ''}"
             )
@@ -142,7 +146,9 @@ class Compensates:
     def compensate(self, identifier: str) -> None:
         """Declare that a registered compensation was applied."""
         if identifier not in registered():
-            raise KeyError(f"{identifier!r} is not a registered compensation; add it with its evidence")
+            raise UnknownCompensation(
+                f"{identifier!r} is not a registered compensation; add it with its evidence", identifier=identifier
+            )
         if identifier not in self.compensations:
             self.compensations.append(identifier)
 

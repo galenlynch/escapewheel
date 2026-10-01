@@ -11,7 +11,7 @@ from escapewheel_reader import open_packet
 
 from escapewheel_writer import Clock, OffGrid, PacketWriter
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
-from escapewheel_writer.errors import SourceDefect, SourceFault
+from escapewheel_writer.errors import FixedOffsetZone, SourceDefect, SourceFault, UsageError, UsageFault
 from escapewheel_writer.notes import NoteCode, coded, codes
 from escapewheel_writer.sources import NWBSource
 from escapewheel_writer.sources.nwb import _sex, ucum_code
@@ -166,8 +166,10 @@ def test_a_clock_the_times_are_not_on_is_refused(tmp_path, harp):
 
 def test_a_clock_from_another_session_is_refused(nwb):
     stray = Clock("c", session_id="other", name="c", tick_rate_num=HARP_TICK_RATE_HZ, origin="e")
-    with pytest.raises(ValueError, match="belongs to session"):
+    with pytest.raises(UsageError) as refused:
         NWBSource(nwb, reference_clock=stray.record(), zone=PACIFIC, interval_kind=KIND)
+    assert refused.value.code is UsageFault.CLOCK_OTHER_SESSION
+    assert refused.value.where == "c"
 
 
 def test_the_session_start_is_converted_to_utc(source):
@@ -176,7 +178,7 @@ def test_the_session_start_is_converted_to_utc(source):
 
 
 def test_a_fixed_offset_is_not_a_zone(nwb, harp):
-    with pytest.raises(TypeError, match="IANA zone"):
+    with pytest.raises(FixedOffsetZone):
         NWBSource(nwb, reference_clock=harp.record(), zone=UTC, interval_kind=KIND)
 
 

@@ -1,6 +1,7 @@
 """An exception these adapters define is one a build already catches."""
 
 import ast
+import builtins
 import importlib
 import inspect
 import pkgutil
@@ -45,3 +46,13 @@ def test_every_defect_this_package_raises_carries_a_code():
         for node in ast.walk(ast.parse(path.read_text())):
             if isinstance(node, ast.Call) and getattr(node.func, "id", None) in DEFECTS:
                 assert any(keyword.arg == "code" for keyword in node.keywords), f"{path.name}:{node.lineno}"
+
+
+def test_no_module_raises_a_built_in_exception():
+    """A caller catching the package base catches every deliberate refusal, so none is a bare built-in."""
+    built_in = {name for name, cls in vars(builtins).items() if isinstance(cls, type) and issubclass(cls, Exception)}
+    for path in sorted(Path(escapewheel_aind.__file__).parent.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Raise) and node.exc is not None:
+                raised = getattr(node.exc, "func", node.exc)
+                assert getattr(raised, "id", None) not in built_in, f"{path.name}:{node.lineno}"

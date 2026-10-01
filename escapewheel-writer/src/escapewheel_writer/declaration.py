@@ -22,7 +22,7 @@ from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from .errors import RecipeFault
+from .errors import DeclarationUnreadable, RecipeFault
 
 #: Part 12 §3's group for `escapewheel-portable-v0.1`: the ways rows cross a process boundary.
 #: A build supports every one of them, so no negotiation can fail; an adapter released
@@ -128,7 +128,7 @@ def load(path: str | Path) -> dict[str, Any]:
 
     Raises
     ------
-    ValueError
+    DeclarationUnreadable
         If the file is absent, is not JSON, or does not satisfy `adapter.schema.json`,
         naming every place it fails. Shape only: what the declaration *says* is checked against
         the registry and the recipe by :func:`refusals`, which needs both.
@@ -137,11 +137,11 @@ def load(path: str | Path) -> dict[str, Any]:
     try:
         document = json.loads(where.read_text())
     except OSError as exc:
-        raise ValueError(f"{where}: no adapter declaration to read ({exc.strerror})") from None
+        raise DeclarationUnreadable(f"{where}: no adapter declaration to read ({exc.strerror})") from None
     except json.JSONDecodeError as exc:
-        raise ValueError(f"{where}: not JSON ({exc})") from None
+        raise DeclarationUnreadable(f"{where}: not JSON ({exc})") from None
     if problems := shape_problems(document):
-        raise ValueError(f"{where}: " + "; ".join(problems))
+        raise DeclarationUnreadable(f"{where}: " + "; ".join(problems))
     return dict(document)
 
 

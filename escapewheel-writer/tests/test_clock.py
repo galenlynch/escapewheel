@@ -7,6 +7,7 @@ import pytest
 
 from escapewheel_writer import Clock, NonFinite, OffGrid
 from escapewheel_writer.clock import HARP_TICK_RATE_HZ
+from escapewheel_writer.errors import NaiveTimestamp, UsageError, UsageFault
 
 
 def harp(**kwargs):
@@ -48,8 +49,10 @@ def test_an_empty_input_is_empty_not_an_error():
 
 
 def test_a_non_positive_rate_is_rejected_at_construction():
-    with pytest.raises(ValueError, match="not positive"):
+    with pytest.raises(UsageError) as refused:
         Clock("c", session_id="s1", name="c", tick_rate_num=0, origin="e")
+    assert refused.value.code is UsageFault.TICK_RATE_NOT_POSITIVE
+    assert refused.value.where == "c"
 
 
 def test_the_record_carries_one_rate_form():
@@ -93,5 +96,5 @@ def test_epoch_from_does_its_arithmetic_in_utc():
 def test_epoch_from_refuses_an_unlocated_instant():
     from escapewheel_writer.clock import epoch_from
 
-    with pytest.raises(ValueError, match="does not locate"):
+    with pytest.raises(NaiveTimestamp):
         epoch_from(datetime(2025, 4, 9, 17, 25, 12), 1, HARP_TICK_RATE_HZ)  # noqa: DTZ001 -- the point
