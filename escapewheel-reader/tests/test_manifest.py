@@ -3,6 +3,7 @@ import json
 import pytest
 
 from escapewheel_reader import Manifest, ManifestError, RegistryFault, RegistryUnavailable, open_packet
+from escapewheel_reader.manifest import MANIFESTS_DIRNAME
 
 from .conftest import SESSION_NAME, install_registry, read_registry
 
@@ -33,6 +34,11 @@ def test_unparsable_manifest_is_an_error(tmp_path):
     (tmp_path / "packet.json").write_text("{not json")
     with pytest.raises(ManifestError, match="not valid UTF-8 JSON"):
         Manifest.load(tmp_path)
+
+
+def test_the_retained_manifests_directory_keeps_its_name():
+    """No reader code uses the name, so nothing else here would notice it change."""
+    assert MANIFESTS_DIRNAME == "manifests"
 
 
 def _rewrite(packet_root, edit):

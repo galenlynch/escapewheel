@@ -4,6 +4,8 @@
 - :class:`Resource` -- one resource entry, resolving its declaration on demand.
 - :class:`RegistryBinding` -- one entry of the manifest's `registries` map (Part 04 §8).
 - :func:`decode_json` -- UTF-8 JSON, refusing a repeated object member.
+- :data:`MANIFEST_FILENAME`, :data:`MANIFESTS_DIRNAME` -- where a packet root keeps its manifest,
+  and the manifests that one superseded.
 """
 
 from __future__ import annotations
@@ -19,7 +21,12 @@ from .errors import ManifestError
 from .location import Location
 from .profile import interface_for
 
+#: The manifest's name under a packet root (Part 03 §3.1).
 MANIFEST_FILENAME = "packet.json"
+
+#: The directory under a packet root retaining each superseded manifest (Part 03 §9). Unused by
+#: the reader, which opens only the current manifest; the validator and the writer share it.
+MANIFESTS_DIRNAME = "manifests"
 
 #: The namespaces the core registry declares; every other namespace is its extension's own.
 CORE_NAMESPACES = frozenset({"core", "analysis"})

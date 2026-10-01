@@ -4,6 +4,7 @@
   it with DuckDB.
 - :class:`ArrayResource` -- an array's shape, chunking and codecs without Zarr, and its values with
   Zarr.
+- :data:`ZARR_METADATA_FILENAMES` -- the metadata document's name in each Zarr format.
 """
 
 from __future__ import annotations
@@ -27,10 +28,9 @@ if TYPE_CHECKING:  # pragma: no cover
     import polars as pl
 
 
-#: Where a Zarr array keeps its metadata. v3 names it `zarr.json`; v2, which Part 03 §6.1 permits
-#: an external array to use, names it `.zarray`. Both are JSON.
-#:
-_ZARR_METADATA: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
+#: Where a Zarr array keeps its metadata, by format version. v3 names it `zarr.json`; v2, which
+#: Part 03 §6.1 permits an external array to use, names it `.zarray`. Both are JSON.
+ZARR_METADATA_FILENAMES: dict[Literal[2, 3], str] = {3: "zarr.json", 2: ".zarray"}
 
 
 def _locate(resource: Resource, root: Location) -> Location:
@@ -385,7 +385,7 @@ class ArrayResource:
             If neither metadata document is present.
         """
         where = self.location
-        for version, name in _ZARR_METADATA.items():
+        for version, name in ZARR_METADATA_FILENAMES.items():
             if where.join(name).exists():
                 return version
         raise ResourceUnreadableError(
@@ -417,7 +417,7 @@ class ArrayResource:
 
     def _read_document(self) -> dict[str, Any] | None:
         """Parse the metadata document directly, or return None where only Zarr can reach it."""
-        document = self.location.join(_ZARR_METADATA[self.zarr_format])
+        document = self.location.join(ZARR_METADATA_FILENAMES[self.zarr_format])
         try:
             parsed: dict[str, Any] = json.loads(document.read_bytes())
         except Exception:  # noqa: BLE001 - a store this cannot read is Zarr's problem, not an error
