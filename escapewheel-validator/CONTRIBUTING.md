@@ -111,6 +111,11 @@ packet, which is worse than having no check.
   would never run.
 - **Tier 2 relation names are canonical resource IDs.** Use qualified names such as `core.units`;
   the validator installs exact packet-local schemas and rejects flattened aliases.
+- **Every exception raised on purpose is defined in `errors.py` under `ValidatorError`.** It carries
+  as attributes what a caller would otherwise read from its message, and keeps a built-in second
+  base only where a caller already catches that built-in. A test asserts the class and those
+  attributes, never the wording. `tests/test_errors.py` holds the rule; `RegistryRejected` and
+  `RuleProfileError` stand outside it, being defined in the copied checkers.
 
 ## An advisory rule is not a compromise
 
