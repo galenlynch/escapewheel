@@ -2,7 +2,6 @@ import importlib.metadata
 
 import numpy as np
 import tensorstore as ts
-
 from sets import arrays
 
 print("tensorstore", importlib.metadata.version("tensorstore"))

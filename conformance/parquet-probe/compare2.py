@@ -1,4 +1,8 @@
-import pyarrow.parquet as pq, pyarrow as pa, os, time, duckdb
+import os
+import time
+
+import duckdb
+import pyarrow.parquet as pq
 
 # can the list child get DELTA_BINARY_PACKED?
 tbl = pq.read_table("cmp_chunk1000.parquet")
@@ -46,9 +50,5 @@ for name, qs in Q.items():
         t0 = time.perf_counter()
         r = con.sql(q).fetchall()
         out[k] = (time.perf_counter() - t0, r)
-    same = sorted(str(x) for x in out["flat"][1]) == sorted(
-        str(x) for x in out["chunk"][1]
-    )
-    print(
-        f"{name:26s} {out['flat'][0] * 1000:>8.1f}ms {out['chunk'][0] * 1000:>8.1f}ms   {same}"
-    )
+    same = sorted(str(x) for x in out["flat"][1]) == sorted(str(x) for x in out["chunk"][1])
+    print(f"{name:26s} {out['flat'][0] * 1000:>8.1f}ms {out['chunk'][0] * 1000:>8.1f}ms   {same}")

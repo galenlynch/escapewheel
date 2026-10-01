@@ -36,9 +36,7 @@ def _ordered(value: dict[str, Any], kind: str, where: str) -> dict[str, Any]:
     """Return `value` with its keys in the meta-schema's order for `kind`."""
     order = ORDER[kind]
     if unknown := sorted(set(value) - set(order)):
-        raise SystemExit(
-            f"{where}: {kind} keys the meta-schema does not declare: {unknown}"
-        )
+        raise SystemExit(f"{where}: {kind} keys the meta-schema does not declare: {unknown}")
     return {key: value[key] for key in order if key in value}
 
 
@@ -61,13 +59,10 @@ def canonical(document: dict[str, Any]) -> dict[str, Any]:
         if table := resource.get("table"):
             table = dict(table)
             table["columns"] = [
-                _ordered(column, "column", f"{resource_id}.{column['name']}")
-                for column in table["columns"]
+                _ordered(column, "column", f"{resource_id}.{column['name']}") for column in table["columns"]
             ]
             if "references" in table:
-                table["references"] = [
-                    _ordered(r, "reference", resource_id) for r in _references(table)
-                ]
+                table["references"] = [_ordered(r, "reference", resource_id) for r in _references(table)]
             if "rules" in table:
                 table["rules"] = [_ordered(r, "rule", r["id"]) for r in table["rules"]]
             resource["table"] = _ordered(table, "table", resource_id)

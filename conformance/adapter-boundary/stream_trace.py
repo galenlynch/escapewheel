@@ -67,9 +67,7 @@ def walk(raw: bytes) -> None:
         at = handle.tell()
         if raw[at : at + 8] == END_OF_STREAM:
             handle.seek(at + 8)
-            print(
-                f"{at:>8}  {'end-of-stream':<15} {'-':>5} {'-':>7}  that resource is complete"
-            )
+            print(f"{at:>8}  {'end-of-stream':<15} {'-':>5} {'-':>7}  that resource is complete")
             schema = None
             continue
         message = pa.ipc.read_message(handle)
@@ -97,9 +95,7 @@ def main() -> int:
         held = {**context(root), "wanted": declares}
 
         # Which resources this session has rows for, so the trace can carry one that has none.
-        produced = serve_nwb.build(
-            build_side.supply(serve_nwb.NEEDS, held, OPTIONS)
-        ).records()
+        produced = serve_nwb.build(build_side.supply(serve_nwb.NEEDS, held, OPTIONS)).records()
         populated = [r for r in declares if produced.get(r)]
         empty = [r for r in declares if not produced.get(r)]
         held["wanted"] = [*populated[:2], empty[0]]
@@ -109,14 +105,10 @@ def main() -> int:
         print("1. what the build hands over\n")
         print(f"   argv[0] {sys.executable}")
         print(f"   argv[1] {HERE / 'serve_stream.py'}, and no argument beyond it")
-        print(
-            f"   stdin   {len(wire)} bytes of JSON, which is the whole of what crosses:"
-        )
+        print(f"   stdin   {len(wire)} bytes of JSON, which is the whole of what crosses:")
         for term, value in supplied.items():
             print(f"           {term} = {json.dumps(value)[:84]}")
-        print(
-            f"\n   {len(held['wanted'])} resources asked for: {', '.join(held['wanted'])}"
-        )
+        print(f"\n   {len(held['wanted'])} resources asked for: {', '.join(held['wanted'])}")
         print(f"   {empty[0]} is one this session has no rows for\n")
 
         print("2. what comes back on standard output\n")
@@ -139,9 +131,7 @@ def main() -> int:
             resource = reader.schema.metadata[b"resource_id"].decode()
             if resource == serve_stream.SENTINEL:
                 ended = True
-                print(
-                    f"   {resource:34s} the sentinel, at byte {handle.tell()} of {len(raw)}"
-                )
+                print(f"   {resource:34s} the sentinel, at byte {handle.tell()} of {len(raw)}")
                 break
             table = reader.read_all()
             got[resource] = table
@@ -155,9 +145,7 @@ def main() -> int:
             f"exit {child.returncode}: the run succeeded"
         )
 
-        print(
-            "\n4. the same delivery, from a command killed after the second resource\n"
-        )
+        print("\n4. the same delivery, from a command killed after the second resource\n")
         died = raw[: ends[1]]
         walk(died)
         print(

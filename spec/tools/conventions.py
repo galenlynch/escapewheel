@@ -33,8 +33,8 @@ RESERVED = {
 INTEGERS = {"int32", "int64"}
 
 NAMING: dict[str, Callable[[str, str, str | None], bool]] = {
-    "an identifier is named _id": lambda n, t, role: not (
-        role == "identifier" and not n.endswith(("_id", "_label", "_name"))
+    "an identifier is named _id": lambda n, t, role: (
+        not (role == "identifier" and not n.endswith(("_id", "_label", "_name")))
     ),
     "an _id column is an identifier": lambda n, t, role: not (n.endswith("_id") and role != "identifier"),
     # An identifier is an integer, and a string one is the defect.
@@ -42,11 +42,11 @@ NAMING: dict[str, Callable[[str, str, str | None], bool]] = {
     "a _name column is a string": lambda n, t, role: not (n.endswith("_name") and t != "string"),
     "a _tick column is a coordinate": lambda n, t, role: not (n.endswith("_tick") and role != "coordinate"),
     "a coordinate is named _tick": lambda n, t, role: not (role == "coordinate" and not n.endswith("_tick")),
-    "an _index column is an index": lambda n, t, role: not (
-        n.endswith("_index") and role not in {"structural_index", "sequence_position"}
+    "an _index column is an index": lambda n, t, role: (
+        not (n.endswith("_index") and role not in {"structural_index", "sequence_position"})
     ),
-    "a structural index is named _index": lambda n, t, role: not (
-        role == "structural_index" and not n.endswith("_index")
+    "a structural index is named _index": lambda n, t, role: (
+        not (role == "structural_index" and not n.endswith("_index"))
     ),
     "no column is a reserved word": lambda n, t, role: n not in RESERVED,
     # A plural integer reads as a coordinate and is a duration or a count, so it is flagged and a

@@ -95,9 +95,7 @@ check(
     check_physical_profile(
         _profile,
         _profile_schema,
-        logical_kinds=_registry_schema["$defs"]["resource"]["properties"]["kind"][
-            "enum"
-        ],
+        logical_kinds=_registry_schema["$defs"]["resource"]["properties"]["kind"]["enum"],
         logical_standard=REG["logical_standard_version"],
         part_text=(PARTS / "03_portable_physical_profile.md").read_text(),
     ),
@@ -140,9 +138,7 @@ check(
     ],
 )
 
-for _label, _bad in conventions.convention_failures(
-    T, conventions.NAMING_EXCEPTIONS, conventions.NAMES_A_KIND
-).items():
+for _label, _bad in conventions.convention_failures(T, conventions.NAMING_EXCEPTIONS, conventions.NAMES_A_KIND).items():
     check(_label, _bad)
 _named = conventions.name_columns(T)
 print(
@@ -157,18 +153,13 @@ print(
 # column. Reported rather than enforced -- the kind vocabulary is open (Part 02 §8.3), so what this can
 # say is which resources are namable at all, which is otherwise found by a check quietly matching
 # no branch.
-NAMABLE = {
-    _r: _t["primary_key"][0]
-    for _r, _t in T.items()
-    if _t.get("primary_key") and len(_t["primary_key"]) == 1
-}
+NAMABLE = {_r: _t["primary_key"][0] for _r, _t in T.items() if _t.get("primary_key") and len(_t["primary_key"]) == 1}
 # Part 02 §8.3: which column a paired value matches follows from the key's identity, so the split
 # is a property of the registry and is reported rather than rediscovered per consumer.
 _by_name = {
     _r
     for _r, _k in NAMABLE.items()
-    if next(c for c in T[_r]["columns"] if c["name"] == _k).get("identity")
-    == "assigned"
+    if next(c for c in T[_r]["columns"] if c["name"] == _k).get("identity") == "assigned"
     and any(c["name"] == _k.removesuffix("_id") + "_name" for c in T[_r]["columns"])
 }
 print(
@@ -181,14 +172,10 @@ print(
 _unnamable = sorted(
     _r
     for _r, _k in NAMABLE.items()
-    if _r not in _by_name
-    and next(c for c in T[_r]["columns"] if c["name"] == _k).get("identity")
-    == "assigned"
+    if _r not in _by_name and next(c for c in T[_r]["columns"] if c["name"] == _k).get("identity") == "assigned"
 )
 for _r in _unnamable:
-    print(
-        f"      note  {_r} has a single-column key but no name to match, so a scope cannot name it"
-    )
+    print(f"      note  {_r} has a single-column key but no name to match, so a scope cannot name it")
 
 
 # Part 04's field tables and Part 03's delivery schema are projections of the incorporated
@@ -204,8 +191,7 @@ check(
 check(
     "the delivery schema is the manifest entry without build-supplied members",
     []
-    if json.loads((ARTIFACTS / "resources.schema.json").read_text())
-    == delivery_schema(_manifest_schema)
+    if json.loads((ARTIFACTS / "resources.schema.json").read_text()) == delivery_schema(_manifest_schema)
     else ["resources.schema.json is stale; run build.py"],
 )
 
@@ -214,18 +200,14 @@ check(
 _readme = (TREE / "source/README.md").read_text()
 check(
     "the source guide's generated regions are current",
-    []
-    if render.fill(_readme, render.regions(REG)) == _readme
-    else ["source/README.md is stale; run build.py"],
+    [] if render.fill(_readme, render.regions(REG)) == _readme else ["source/README.md is stale; run build.py"],
 )
 
 # Part 02 §9.2: the registry validates against its published meta-schema.
 meta = json.loads((ARTIFACTS / "registry.schema.json").read_text())
 jsonschema.Draft202012Validator.check_schema(meta)
 _format = jsonschema.FormatChecker()
-errs = list(
-    jsonschema.Draft202012Validator(meta, format_checker=_format).iter_errors(REG)
-)
+errs = list(jsonschema.Draft202012Validator(meta, format_checker=_format).iter_errors(REG))
 check(
     "registry validates against its meta-schema",
     [f"{list(e.path)[:4]}: {e.message[:60]}" for e in errs],
@@ -235,21 +217,15 @@ _history_cases = []
 for _label, _mutate in (
     (
         "root derived_from",
-        lambda document: document.update(
-            {"derived_from": {"specification": "02", "revisions": []}}
-        ),
+        lambda document: document.update({"derived_from": {"specification": "02", "revisions": []}}),
     ),
     (
         "table since",
-        lambda document: next(iter(tables(document).values())).update(
-            {"since": "R1"}
-        ),
+        lambda document: next(iter(tables(document).values())).update({"since": "R1"}),
     ),
     (
         "column since",
-        lambda document: next(iter(tables(document).values()))["columns"][0].update(
-            {"since": "R1"}
-        ),
+        lambda document: next(iter(tables(document).values()))["columns"][0].update({"since": "R1"}),
     ),
 ):
     _case = json.loads(json.dumps(REG))
@@ -259,15 +235,9 @@ for _label, _mutate in (
 check("removed registry history fields are rejected", _history_cases)
 _contract_schema = json.loads((ARTIFACTS / "registry_contract.schema.json").read_text())
 jsonschema.Draft202012Validator.check_schema(_contract_schema)
-_contract = json.loads(
-    (
-        ARTIFACTS / "registry_contracts/escapewheel-registry-contract-v0.9.json"
-    ).read_text()
-)
+_contract = json.loads((ARTIFACTS / "registry_contracts/escapewheel-registry-contract-v0.9.json").read_text())
 _contract_errors = list(
-    jsonschema.Draft202012Validator(
-        _contract_schema, format_checker=_format
-    ).iter_errors(_contract)
+    jsonschema.Draft202012Validator(_contract_schema, format_checker=_format).iter_errors(_contract)
 )
 check(
     "the incorporated registry contract validates against its schema",
@@ -281,12 +251,7 @@ check(
 _parts = "\n".join(path.read_text() for path in sorted(PARTS.glob("[0-9][0-9]_*.md")))
 check(
     "every registry contract anchor resolves uniquely in the numbered specification",
-    [
-        anchor
-        for entry in _contract["invariants"]
-        for anchor in entry["anchors"]
-        if _parts.count(f'id="{anchor}"') != 1
-    ],
+    [anchor for entry in _contract["invariants"] for anchor in entry["anchors"] if _parts.count(f'id="{anchor}"') != 1],
 )
 manifest = json.loads((ARTIFACTS / "manifest.schema.json").read_text())
 jsonschema.Draft202012Validator.check_schema(manifest)
@@ -301,11 +266,9 @@ check(
     "the example resolution document validates against it",
     [
         f"{list(e.path)[:4]} {e.message[:60]}"
-        for e in jsonschema.Draft202012Validator(_sources).iter_errors(
-            json.loads(_example.read_text())
-        )
+        for e in jsonschema.Draft202012Validator(_sources).iter_errors(json.loads(_example.read_text()))
     ]
-            if _example.exists()
+    if _example.exists()
     else [],
 )
 # Part 04 §5.5 lets a source name be any string an entry's `source` can hold.
@@ -331,26 +294,21 @@ check(
     "the example adapter declaration validates against it",
     [
         f"{list(e.path)[:4]} {e.message[:60]}"
-        for e in jsonschema.Draft202012Validator(_adapter).iter_errors(
-            json.loads(_declared.read_text())
-        )
+        for e in jsonschema.Draft202012Validator(_adapter).iter_errors(json.loads(_declared.read_text()))
     ]
-            if _declared.exists()
+    if _declared.exists()
     else [],
 )
 # Every member is required and `protocols` names at least one, so each variant must fail.
 _complete = json.loads(_declared.read_text())
-_variants = {f"without {member}": {k: v for k, v in _complete.items() if k != member}
-             for member in _adapter["required"]}
+_variants = {
+    f"without {member}": {k: v for k, v in _complete.items() if k != member} for member in _adapter["required"]
+}
 _variants["with empty protocols"] = {**_complete, "protocols": []}
 _variants["with a repeated protocol"] = {**_complete, "protocols": ["stream-v0.1"] * 2}
 check(
     "an adapter declaration missing a member or naming no protocol fails",
-    [
-        name
-        for name, variant in _variants.items()
-        if jsonschema.Draft202012Validator(_adapter).is_valid(variant)
-    ],
+    [name for name, variant in _variants.items() if jsonschema.Draft202012Validator(_adapter).is_valid(variant)],
 )
 # Part 05 §3.1's recipe, checked as the three above are; the example is TOML, validated in
 # its decoded form as a build validates one.
@@ -362,9 +320,7 @@ check(
     "the example recipe validates against it",
     [
         f"{list(e.path)[:4]} {e.message[:60]}"
-        for e in jsonschema.Draft202012Validator(_recipe).iter_errors(
-            tomllib.loads(_recipe_example.read_text())
-        )
+        for e in jsonschema.Draft202012Validator(_recipe).iter_errors(tomllib.loads(_recipe_example.read_text()))
     ]
     if _recipe_example.exists()
     else [],
@@ -378,25 +334,19 @@ check(
     "the example resource document validates against it",
     [
         f"{list(e.path)[:4]} {e.message[:60]}"
-        for e in jsonschema.Draft202012Validator(_resources).iter_errors(
-            json.loads(_referenced.read_text())
-        )
+        for e in jsonschema.Draft202012Validator(_resources).iter_errors(json.loads(_referenced.read_text()))
     ]
     if _referenced.exists()
     else [],
 )
 _language_schema = json.loads((ARTIFACTS / "rule_language.schema.json").read_text())
 jsonschema.Draft202012Validator.check_schema(_language_schema)
-_language = json.loads(
-    (ARTIFACTS / "rule_languages/escapewheel-rule-sql-v0.2.json").read_text()
-)
+_language = json.loads((ARTIFACTS / "rule_languages/escapewheel-rule-sql-v0.2.json").read_text())
 check(
     "the incorporated rule-language profile validates against its schema",
     [
         f"{list(e.path)[:4]} {e.message[:60]}"
-        for e in jsonschema.Draft202012Validator(_language_schema).iter_errors(
-            _language
-        )
+        for e in jsonschema.Draft202012Validator(_language_schema).iter_errors(_language)
     ],
 )
 

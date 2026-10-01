@@ -52,9 +52,7 @@ class VerifierRuntimeGateTests(unittest.TestCase):
             mock.patch.object(verify, "STAGES", [stage]),
             mock.patch.object(verify, "SUITES", ()),
             mock.patch.object(verify, "GENERATED", ()),
-            mock.patch.object(
-                verify, "run", side_effect=[(True, "capable"), (True, "ordinary")]
-            ) as run,
+            mock.patch.object(verify, "run", side_effect=[(True, "capable"), (True, "ordinary")]) as run,
             contextlib.redirect_stdout(io.StringIO()),
         ):
             result = verify.main()
@@ -73,9 +71,7 @@ class CapabilitySupervisorTests(unittest.TestCase):
         timeout = subprocess.TimeoutExpired("probe", runtime_capabilities.PROBE_TIMEOUT)
         with (
             mock.patch.object(sys, "argv", ["runtime_capabilities.py"]),
-            mock.patch.object(
-                runtime_capabilities.subprocess, "run", side_effect=timeout
-            ) as run,
+            mock.patch.object(runtime_capabilities.subprocess, "run", side_effect=timeout) as run,
             contextlib.redirect_stdout(io.StringIO()),
         ):
             result = runtime_capabilities.main()

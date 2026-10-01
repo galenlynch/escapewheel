@@ -29,9 +29,7 @@ import nwbfixture
 from escapewheel_writer import arrow
 from escapewheel_writer.sources.nwb import NWBSource
 
-REGISTRY_DOCUMENT = json.loads(
-    (HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text()
-)
+REGISTRY_DOCUMENT = json.loads((HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text())
 REGISTRY = {
     name: declaration["table"]
     for name, declaration in REGISTRY_DOCUMENT["resources"].items()
@@ -109,15 +107,11 @@ def rendezvous(socket: str, child: subprocess.Popen) -> fl.FlightClient:
             return client
         except (fl.FlightUnavailableError, fl.FlightTimedOutError):
             if child.poll() is not None:
-                raise SystemExit(
-                    f"the adapter exited {child.returncode} before serving"
-                ) from None
+                raise SystemExit(f"the adapter exited {child.returncode} before serving") from None
             time.sleep(0.01)
 
 
-def over_flight(
-    tmp: str, supplied: dict, wanted: list[str]
-) -> tuple[dict, dict, float]:
+def over_flight(tmp: str, supplied: dict, wanted: list[str]) -> tuple[dict, dict, float]:
     """`flight-v0.1`: discovery from ListFlights, then one DoGet per resource."""
     socket = str(Path(tmp) / "adapter.sock")
     started = time.perf_counter()
@@ -130,9 +124,7 @@ def over_flight(
     child.stdin.write(json.dumps({**supplied, "socket": socket}).encode())
     child.stdin.close()
     client = rendezvous(socket, child)
-    stage1 = {
-        fi.descriptor.path[0].decode(): fi.total_records for fi in client.list_flights()
-    }
+    stage1 = {fi.descriptor.path[0].decode(): fi.total_records for fi in client.list_flights()}
     got = {n: client.do_get(fl.Ticket(n.encode())).read_all() for n in stage1}
     elapsed = 1000 * (time.perf_counter() - started)
     client.close()
@@ -154,17 +146,12 @@ def over_files(tmp: str, supplied: dict, wanted: list[str]) -> tuple[dict, dict,
     ).returncode
     if code:
         raise SystemExit(f"the adapter exited {code}")
-    stage1 = {
-        f.stem: pq.ParquetFile(f).metadata.num_rows
-        for f in sorted(root.glob("*.parquet"))
-    }
+    stage1 = {f.stem: pq.ParquetFile(f).metadata.num_rows for f in sorted(root.glob("*.parquet"))}
     got = {n: pq.read_table(root / f"{n}.parquet") for n in stage1}
     return stage1, got, 1000 * (time.perf_counter() - started)
 
 
-def over_stream(
-    tmp: str, supplied: dict, wanted: list[str]
-) -> tuple[dict, dict, float]:
+def over_stream(tmp: str, supplied: dict, wanted: list[str]) -> tuple[dict, dict, float]:
     """`stream-v0.1`: concatenated IPC on standard output, ended by the sentinel."""
     started = time.perf_counter()
     child = subprocess.Popen(
@@ -219,15 +206,10 @@ def main() -> int:
         # The recipe's options, which a declared name resolves against after the vocabulary.
         options = {"zone": "America/Los_Angeles", "interval_kind": "task.trials"}
         supplied = supply(serve_nwb.NEEDS, context, options)
-        wire = json.dumps(
-            supplied
-        )  # what crosses on standard input, before a protocol adds its own term
+        wire = json.dumps(supplied)  # what crosses on standard input, before a protocol adds its own term
         wanted = context["wanted"]
         print(f"a build supplies {sorted(serve_nwb.NEEDS)}")
-        print(
-            f"  as {len(wire)} bytes of JSON, naming all {len(wanted)} resources "
-            f"this adapter produces\n"
-        )
+        print(f"  as {len(wire)} bytes of JSON, naming all {len(wanted)} resources this adapter produces\n")
 
         here = serve_nwb.build({**supplied, "root": str(root)}).records()
         results = {}
@@ -249,10 +231,7 @@ def main() -> int:
                 f"{sum(1 for t in got.values() if t.num_rows == 0)} empty, "
                 f"complete={complete}, {elapsed:.0f} ms"
             )
-            print(
-                f"  identical to the adapter in process: {same}"
-                + (f", differing in {differ}" if differ else "")
-            )
+            print(f"  identical to the adapter in process: {same}" + (f", differing in {differ}" if differ else ""))
 
         agreed = len({tuple(sorted(s.items())) for s, _ in results.values()}) == 1
         print(f"\nall three protocols report the same discovery: {agreed}")

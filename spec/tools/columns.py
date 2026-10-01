@@ -46,24 +46,19 @@ def table(resource: str, tables: dict) -> str:
     if resource not in tables:
         raise SystemExit(f"columns.py: {resource} is not a resource of the registry")
     rows = "\n".join(
-        f"| `{c['name']}` | `{c['type']}` | {c['presence']} | {c['description']} |"
-        for c in tables[resource]["columns"]
+        f"| `{c['name']}` | `{c['type']}` | {c['presence']} | {c['description']} |" for c in tables[resource]["columns"]
     )
     return "| column | type | presence | |\n|---|---|---|---|\n" + rows + "\n"
 
 
 def render(text: str, tables: dict) -> str:
     """Return `text` with every marked block filled from the registry."""
-    return BLOCK.sub(
-        lambda m: m.group(1) + table(m.group(2), tables) + m.group(3), text
-    )
+    return BLOCK.sub(lambda m: m.group(1) + table(m.group(2), tables) + m.group(3), text)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument(
-        "--check", action="store_true", help="fail where a rendering is stale"
-    )
+    ap.add_argument("--check", action="store_true", help="fail where a rendering is stale")
     args = ap.parse_args()
 
     registry = json.loads(REGISTRY.read_text())

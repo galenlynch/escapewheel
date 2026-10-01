@@ -17,9 +17,7 @@ import pyarrow.parquet as pq
 SOURCE = (
     sys.argv[1]
     if len(sys.argv) > 1
-    else (
-        "/mnt/Data/escapewheel/packets/ecephys_837772_2026-06-27_experiment1/tables/core/spike_events.parquet"
-    )
+    else ("/mnt/Data/escapewheel/packets/ecephys_837772_2026-06-27_experiment1/tables/core/spike_events.parquet")
 )
 ROWS = 20_000_000
 STRINGS = ["session_id", "unit_id", "sorting_run_id", "curation_id", "clock_id"]
@@ -72,9 +70,7 @@ def main() -> None:
     import pyarrow as pa
 
     slice_ = pa.Table.from_batches(batches)
-    units = sorted({u for u in slice_.column("unit_id").slice(0, 200_000).to_pylist()})[
-        :24
-    ]
+    units = sorted({u for u in slice_.column("unit_id").slice(0, 200_000).to_pylist()})[:24]
     print(f"{slice_.num_rows:,d} rows from {os.path.basename(SOURCE)}")
     print(f"probing with {len(units)} units, as a region's would be\n")
     print(
@@ -92,14 +88,9 @@ def main() -> None:
         size = os.path.getsize(path)
         baseline = baseline or size
         meta = pq.ParquetFile(path).metadata
-        names = [
-            meta.row_group(0).column(i).path_in_schema for i in range(meta.num_columns)
-        ]
+        names = [meta.row_group(0).column(i).path_in_schema for i in range(meta.num_columns)]
         per = {
-            n: sum(
-                meta.row_group(g).column(i).total_compressed_size
-                for g in range(meta.num_row_groups)
-            )
+            n: sum(meta.row_group(g).column(i).total_compressed_size for g in range(meta.num_row_groups))
             for i, n in enumerate(names)
         }
 
@@ -107,13 +98,11 @@ def main() -> None:
         pq.read_table(path, columns=["t_tick"])
         scan = time.perf_counter() - start
 
-        import pyarrow.dataset as ds
         import pyarrow.compute as pc
+        import pyarrow.dataset as ds
 
         start = time.perf_counter()
-        ds.dataset(path).to_table(
-            filter=pc.field("unit_id").isin(units), columns=["unit_id", "t_tick"]
-        )
+        ds.dataset(path).to_table(filter=pc.field("unit_id").isin(units), columns=["unit_id", "t_tick"])
         filt = time.perf_counter() - start
 
         print(

@@ -79,9 +79,7 @@ def execute(vector: dict[str, Any], host_zone: str = "UTC") -> list[list[str]]:
         for resource, spec in vector["inputs"].items():
             namespace, _ = resource.split(".", 1)
             connection.sql(f"CREATE SCHEMA IF NOT EXISTS {namespace}")
-            columns = ", ".join(
-                f'"{c["name"]}" {DDL[c["type"]]}' for c in spec["columns"]
-            )
+            columns = ", ".join(f'"{c["name"]}" {DDL[c["type"]]}' for c in spec["columns"])
             connection.sql(f"CREATE TABLE {resource} ({columns})")
             rows = spec.get("rows", [])
             if rows:
@@ -89,10 +87,7 @@ def execute(vector: dict[str, Any], host_zone: str = "UTC") -> list[list[str]]:
                 connection.executemany(f"INSERT INTO {resource} VALUES ({marks})", rows)
         result = connection.sql(vector["query"]).arrow().read_all()
         return [
-            [
-                normalized(result.column(column)[row].as_py())
-                for column in range(result.num_columns)
-            ]
+            [normalized(result.column(column)[row].as_py()) for column in range(result.num_columns)]
             for row in range(result.num_rows)
         ]
     finally:
@@ -122,17 +117,11 @@ def vector_defects() -> list[str]:
         if list(checked.result_names) != vector["expected_result_names"]:
             defects.append(f"{name}: result names {checked.result_names!r}")
         if vector["mode"].startswith("execute"):
-            zones = (
-                ("UTC", "America/Los_Angeles")
-                if vector["mode"] == "execute-time-zones"
-                else ("UTC",)
-            )
+            zones = ("UTC", "America/Los_Angeles") if vector["mode"] == "execute-time-zones" else ("UTC",)
             # The evaluator fixes UTC; changing an inherited session zone must not change the result.
             for zone in zones:
                 actual = execute(vector, zone)
-                if Counter(map(tuple, actual)) != Counter(
-                    map(tuple, vector["expected_rows"])
-                ):
+                if Counter(map(tuple, actual)) != Counter(map(tuple, vector["expected_rows"])):
                     defects.append(f"{name}: result bag {actual!r}")
     return defects
 
@@ -140,13 +129,8 @@ def vector_defects() -> list[str]:
 def profile_defects() -> list[str]:
     """Validate the incorporated descriptor and its contract-anchor references."""
     schema = json.loads((ROOT / "spec/artifacts/rule_language.schema.json").read_text())
-    profile = json.loads(
-        (ROOT / "spec/artifacts/rule_languages/escapewheel-rule-sql-v0.2.json").read_text()
-    )
-    defects = [
-        error.message
-        for error in jsonschema.Draft202012Validator(schema).iter_errors(profile)
-    ]
+    profile = json.loads((ROOT / "spec/artifacts/rule_languages/escapewheel-rule-sql-v0.2.json").read_text())
+    defects = [error.message for error in jsonschema.Draft202012Validator(schema).iter_errors(profile)]
     if profile.get("id") != PROFILE_ID:
         defects.append("profile id disagrees")
     part = (ROOT / "spec/parts/11_tier_2_rule_language.md").read_text()
@@ -178,15 +162,11 @@ def shipped_rule_defects() -> list[str]:
         for document in documents
     ]
     try:
-        for namespace in sorted(
-            {name.split(".", 1)[0] for document in tables for name in document}
-        ):
+        for namespace in sorted({name.split(".", 1)[0] for document in tables for name in document}):
             connection.sql(f"CREATE SCHEMA {namespace}")
         for document in tables:
             for resource, table in document.items():
-                columns = ", ".join(
-                    f'"{c["name"]}" {DDL[c["type"]]}' for c in table["columns"]
-                )
+                columns = ", ".join(f'"{c["name"]}" {DDL[c["type"]]}' for c in table["columns"])
                 connection.sql(f"CREATE TABLE {resource} ({columns})")
         count = 0
         for source, document in zip(documents, tables, strict=True):
@@ -196,7 +176,7 @@ def shipped_rule_defects() -> list[str]:
                     try:
                         check_rule(rule["sql"], source, core_resources=core)
                         connection.sql(rule["sql"]).fetchall()
-                    except Exception as exc:  # noqa: BLE001 - each defect is reported together
+                    except Exception as exc:
                         defects.append(f"{rule['id']}: {str(exc).splitlines()[0]}")
         if count != 139:
             defects.append(f"shipped rule count is {count}, expected 139")
@@ -213,10 +193,7 @@ def main() -> int:
         "139 shipped rules statically check, bind, and execute empty": shipped_rule_defects(),
     }
     for label, defects in groups.items():
-        print(
-            f"{'FAIL' if defects else 'ok  '}  {label}"
-            + (f" ({len(defects)})" if defects else "")
-        )
+        print(f"{'FAIL' if defects else 'ok  '}  {label}" + (f" ({len(defects)})" if defects else ""))
         for defect in defects[:8]:
             print(f"          {defect}")
     return int(any(groups.values()))

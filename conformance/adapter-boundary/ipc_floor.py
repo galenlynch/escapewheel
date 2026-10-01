@@ -24,9 +24,7 @@ def stream(table: pa.Table, resource_id: str = "core.units", **options) -> bytes
     """One resource as a complete IPC stream, written with the options under test."""
     sink = pa.BufferOutputStream()
     table = table.replace_schema_metadata({"resource_id": resource_id})
-    with pa.ipc.new_stream(
-        sink, table.schema, options=pa.ipc.IpcWriteOptions(**options)
-    ) as writer:
+    with pa.ipc.new_stream(sink, table.schema, options=pa.ipc.IpcWriteOptions(**options)) as writer:
         writer.write_table(table)
     return sink.getvalue().to_pybytes()
 
@@ -58,9 +56,7 @@ def spikes() -> pa.Table:
     return pa.table(
         {
             "unit_id": pa.array(rng.integers(0, 700, SPIKES, dtype=np.int32)),
-            "t_tick": pa.array(
-                np.sort(rng.integers(0, 2**31, SPIKES)).astype(np.int64)
-            ),
+            "t_tick": pa.array(np.sort(rng.integers(0, 2**31, SPIKES)).astype(np.int64)),
         }
     )
 
@@ -79,9 +75,7 @@ def main() -> None:
         ("zstd", {"compression": "zstd"}),
     ):
         size = len(stream(table, **options))
-        print(
-            f"  {label:12s} {size / 1e6:6.1f} MB  {through_pipe(table, **options):5.0f} ms"
-        )
+        print(f"  {label:12s} {size / 1e6:6.1f} MB  {through_pipe(table, **options):5.0f} ms")
 
     print("\nconcatenation: where each stream leaves the handle")
     small = pa.table({"a": [1, 2, 3]})
@@ -90,15 +84,11 @@ def main() -> None:
     while handle.tell() < len(raw):
         reader = pa.ipc.open_stream(handle)
         rows = reader.read_all().num_rows
-        seen.append(
-            f"{reader.schema.metadata[b'resource_id'].decode()} ({rows} rows) → {handle.tell()}"
-        )
+        seen.append(f"{reader.schema.metadata[b'resource_id'].decode()} ({rows} rows) → {handle.tell()}")
     print(f"  {len(raw)} bytes: {'; '.join(seen)}")
 
     print("\nthe same bytes with one end-of-stream marker removed")
-    unterminated = stream(small)[:-8] + stream(
-        small.rename_columns(["b"]), "core.probes"
-    )
+    unterminated = stream(small)[:-8] + stream(small.rename_columns(["b"]), "core.probes")
     try:
         pa.ipc.open_stream(pa.py_buffer(unterminated)).read_all()
         print("  read clean, which would make a lost marker invisible")
@@ -110,12 +100,8 @@ def main() -> None:
     raw = stream(coded) + stream(small)
     handle = io.BytesIO(raw)
     first = pa.ipc.open_stream(handle)
-    print(
-        f"  {len(stream(coded))} bytes, type {first.schema.field(0).type}, {first.read_all().num_rows} rows"
-    )
-    print(
-        f"  the stream after it still opens: {pa.ipc.open_stream(handle).read_all().num_rows} rows"
-    )
+    print(f"  {len(stream(coded))} bytes, type {first.schema.field(0).type}, {first.read_all().num_rows} rows")
+    print(f"  the stream after it still opens: {pa.ipc.open_stream(handle).read_all().num_rows} rows")
 
 
 if __name__ == "__main__":

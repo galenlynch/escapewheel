@@ -16,6 +16,7 @@ TREE = HERE.parent
 ARTIFACTS = TREE / "artifacts"
 PARTS = TREE / "parts"
 
+
 def _replace_region(text: str, name: str, rows: list[str]) -> str:
     begin, end = f"<!-- BEGIN GENERATED {name} -->", f"<!-- END GENERATED {name} -->"
     before, remainder = text.split(begin, 1)
@@ -25,9 +26,7 @@ def _replace_region(text: str, name: str, rows: list[str]) -> str:
 
 def render_physical_profile() -> Path:
     """Refresh Part 03's kind-to-interface and overriding-order projections."""
-    descriptor = json.loads(
-        (ARTIFACTS / "physical_profiles/escapewheel-portable-v0.1.json").read_text()
-    )
+    descriptor = json.loads((ARTIFACTS / "physical_profiles/escapewheel-portable-v0.1.json").read_text())
     path = PARTS / "03_portable_physical_profile.md"
     text = _replace_region(
         path.read_text(),
@@ -101,11 +100,7 @@ def _json_type(schema: dict, node: dict) -> str:
     kind = node.get("type")
     if kind == "array":
         return f"array of {_json_type(schema, node['items'])}"
-    if (
-        kind == "object"
-        and "additionalProperties" in node
-        and node["additionalProperties"]
-    ):
+    if kind == "object" and "additionalProperties" in node and node["additionalProperties"]:
         return f"object of {_json_type(schema, node['additionalProperties'])}"
     return str(kind)
 
@@ -161,9 +156,7 @@ def fill_manifest_tables(text: str, schema: dict) -> str:
         end = f"<!-- END GENERATED MANIFEST FIELDS: {region} -->"
         before, remainder = text.split(begin, 1)
         _, after = remainder.split(end, 1)
-        text = (
-            before + begin + "\n" + manifest_table(schema, pointer) + "\n" + end + after
-        )
+        text = before + begin + "\n" + manifest_table(schema, pointer) + "\n" + end + after
     return text
 
 
@@ -180,9 +173,7 @@ def delivery_schema(manifest: dict) -> dict:
     entry = json.loads(json.dumps(manifest["$defs"]["resource"]))
     for name in BUILD_SUPPLIED:
         del entry["properties"][name]
-    entry["required"] = [
-        name for name in entry["required"] if name not in BUILD_SUPPLIED
-    ]
+    entry["required"] = [name for name in entry["required"] if name not in BUILD_SUPPLIED]
     defs: dict = {}
     pending = [entry]
     while pending:

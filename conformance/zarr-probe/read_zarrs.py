@@ -1,7 +1,6 @@
 import numpy as np
 import zarr
 import zarrs
-
 from sets import arrays
 
 # Strict: a codec zarrs cannot run fails rather than falling back to zarr-python's pipeline.

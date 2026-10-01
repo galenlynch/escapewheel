@@ -52,9 +52,7 @@ def build(supplied: dict) -> NWBSource:
 class Served(fl.FlightServerBase):
     """One adapter's resources, each a Flight descriptor."""
 
-    def __init__(
-        self, location: str, source: NWBSource, wanted: list[str] | None
-    ) -> None:
+    def __init__(self, location: str, source: NWBSource, wanted: list[str] | None) -> None:
         rows = source.records()
         asked = list(wanted) if wanted else list(rows)
         # A resource this source has nothing for arrives empty rather than not arriving, so a build
@@ -69,9 +67,7 @@ class Served(fl.FlightServerBase):
         """Discovery: what this source offers per resource, and how many rows (Part 05 §4.1)."""
         for name, table in self.tables.items():
             descriptor = fl.FlightDescriptor.for_path(name)
-            yield fl.FlightInfo(
-                table.schema, descriptor, [], table.num_rows, table.nbytes
-            )
+            yield fl.FlightInfo(table.schema, descriptor, [], table.num_rows, table.nbytes)
 
     def do_get(self, context, ticket):
         """One resource, by the descriptor a build asked for."""

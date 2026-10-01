@@ -1,4 +1,8 @@
-import numpy as np, pyarrow as pa, pyarrow.parquet as pq, os
+import os
+
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 rng = np.random.default_rng(0)
 # 500 units, ~5 Hz, 1 h at 30 kHz -> sorted ticks per unit, then sorted as the spec recommends

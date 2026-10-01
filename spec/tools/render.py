@@ -93,9 +93,7 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
         for rule in rules:
             level = rule.get("level", "error")
             advisory = " *(advisory)*" if rule.get("advisory") else ""
-            out.append(
-                f"- `{rule['id']}` — {level}{advisory}: {rule.get('message', '')}"
-            )
+            out.append(f"- `{rule['id']}` — {level}{advisory}: {rule.get('message', '')}")
         out.append("")
 
     return out
@@ -104,11 +102,7 @@ def _table(name: str, spec: dict[str, Any]) -> list[str]:
 def render(registry: dict[str, Any]) -> str:
     """Build the whole document."""
     resources = registry["resources"]
-    tables = {
-        name: declaration["table"]
-        for name, declaration in resources.items()
-        if declaration["kind"] == "table"
-    }
+    tables = {name: declaration["table"] for name, declaration in resources.items() if declaration["kind"] == "table"}
     columns = sum(len(t["columns"]) for t in tables.values())
     references = sum(len(t.get("references") or []) for t in tables.values())
     rules = sum(len(t.get("rules") or []) for t in tables.values())
@@ -126,10 +120,7 @@ def render(registry: dict[str, Any]) -> str:
             f"{len(resources)} resources, {len(tables)} tables, {columns} columns, "
             f"{references} references, {rules} Tier 2 rules"
         ),
-        (
-            f"registry {registry.get('registry_version')}   "
-            f"logical standard {registry.get('logical_standard_version')}"
-        ),
+        (f"registry {registry.get('registry_version')}   logical standard {registry.get('logical_standard_version')}"),
         "```",
         "",
     ]
@@ -155,9 +146,7 @@ README = HERE.parent / "source/README.md"
 
 #: Where the README's generated regions begin and end. A count stated in prose is a count that
 #: goes stale: the README once disagreed with the generated registry's table and rule counts.
-REGION = re.compile(
-    r"(<!-- BEGIN generated: (\w+) -->\n).*?(<!-- END generated: \2 -->)", re.DOTALL
-)
+REGION = re.compile(r"(<!-- BEGIN generated: (\w+) -->\n).*?(<!-- END generated: \2 -->)", re.DOTALL)
 
 
 def regions(registry: dict[str, Any]) -> dict[str, str]:
@@ -168,11 +157,7 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
     validator's judgement, and a second implementation of it would drift.
     """
     resources = registry["resources"]
-    tables = {
-        name: declaration["table"]
-        for name, declaration in resources.items()
-        if declaration["kind"] == "table"
-    }
+    tables = {name: declaration["table"] for name, declaration in resources.items() if declaration["kind"] == "table"}
     columns = [c for t in tables.values() for c in t["columns"]]
     rules = [r for t in tables.values() for r in t["rules"]]
     levels = Counter(r["level"] for r in rules)
@@ -200,16 +185,13 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
             f"{sum(len(t['references']) for t in tables.values())} references, "
             f"{len(rules)} Tier 2 rules\n```"
         ),
-        "structure": "```\n"
-        + "\n".join(f"{n:<4}{label}" for n, label in declared)
-        + "\n```",
+        "structure": "```\n" + "\n".join(f"{n:<4}{label}" for n, label in declared) + "\n```",
         "rules": (
             f"{len(rules)} rules over {len(by_table)} tables: {levels['error']} error, "
             f"{levels['warning']} warning, {levels['info']} info — the "
             f"{sum(1 for r in rules if r.get('advisory'))} at `info` being the advisory ones "
             f"(Part 02 §10.2), off unless asked for.\n\n"
-            "| Table | Rules |\n|---|---:|\n"
-            + "\n".join(f"| `{n}` | {len(t['rules'])} |" for n, t in by_table)
+            "| Table | Rules |\n|---|---:|\n" + "\n".join(f"| `{n}` | {len(t['rules'])} |" for n, t in by_table)
         ),
     }
 
@@ -218,10 +200,7 @@ def fill(text: str, filled: dict[str, str]) -> str:
     """Replace each generated region's body, leaving the prose around it untouched."""
     named = {name for _, name, _ in REGION.findall(text)}
     if named != set(filled):
-        raise SystemExit(
-            f"README regions {sorted(named)} do not match what render.py fills "
-            f"{sorted(filled)}"
-        )
+        raise SystemExit(f"README regions {sorted(named)} do not match what render.py fills {sorted(filled)}")
     return REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", text)
 
 

@@ -1,0 +1,14 @@
+# Scripts and tools outside the four packages, which carry their own configuration. Matches the
+# packages' layout and rules, less the docstring and annotation rules a published API needs.
+line-length = 120
+target-version = "py312"
+# Markdown is prose: a revision record is frozen once accepted, and its code blocks quote, not run.
+extend-exclude = ["nwb_lake_poc_docs", "conformance/zarr-probe/node_modules", "*.md"]
+# Directories whose modules their scripts import as local code.
+src = [".", "spec/tools", "revisions"]
+
+[lint]
+select = ["E", "W", "F", "I", "UP", "Q", "C90", "RUF100"]
+mccabe = { max-complexity = 14 }
+# A script puts a sibling directory on `sys.path` before importing from it.
+ignore = ["E402"]

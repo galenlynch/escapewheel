@@ -1,9 +1,10 @@
 """Check the specification framework and its informative projections.
 
 Part 00 owns artifact roles, numbered-part subjects and statuses, identifier ownership, and the
-normative-reference policy. Subject-owning parts own their local bibliographies. This checker verifies the representations that can be compared
-mechanically, including that Part 02 §13 links every authority an open column of the core registry
-names. It does not decide whether prose is well placed or semantically complete.
+normative-reference policy. Subject-owning parts own their local bibliographies. This checker
+verifies the representations that can be compared mechanically, including that Part 02 §13 links
+every authority an open column of the core registry names. It does not decide whether prose is well
+placed or semantically complete.
 """
 
 from __future__ import annotations
@@ -196,12 +197,22 @@ REFERENCE_ROWS = {
     ),
     "03": (
         (
-            "[Zarr v3 core](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html), [data types](https://zarr-specs.readthedocs.io/en/latest/v3/data-types/index.html), [regular chunk grid](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-grids/regular-grid/index.html), and [default chunk-key encoding](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-key-encodings/default/index.html)",
+            "[Zarr v3 core](https://zarr-specs.readthedocs.io/en/latest/v3/core/v3.0.html), "
+            "[data types](https://zarr-specs.readthedocs.io/en/latest/v3/data-types/index.html), "
+            "[regular chunk grid](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-grids/regular-grid/index.html), "
+            "and "
+            "[default chunk-key encoding](https://zarr-specs.readthedocs.io/en/latest/v3/chunk-key-encodings/default/index.html)",
             "core v3.0; other entries unversioned",
             "Zarr v3 arrays",
         ),
         (
-            "Zarr v3 [Bytes](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/bytes/), [Gzip](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/), [Blosc](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/blosc/), [CRC32C](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/), [transpose](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/), and [sharding-indexed](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/) codec specifications",
+            "Zarr v3 [Bytes](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/bytes/), "
+            "[Gzip](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/gzip/), "
+            "[Blosc](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/blosc/), "
+            "[CRC32C](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/crc32c/), "
+            "[transpose](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/transpose/), and "
+            "[sharding-indexed](https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/) "
+            "codec specifications",
             "unversioned",
             "permitted Zarr v3 codec pipeline components",
         ),
@@ -277,7 +288,10 @@ REFERENCE_ROWS = {
     ),
     "12": (
         (
-            "[Apache Arrow columnar format](https://arrow.apache.org/docs/format/Columnar.html), [IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc), and [Flight](https://arrow.apache.org/docs/format/Flight.html)",
+            "[Apache Arrow columnar format](https://arrow.apache.org/docs/format/Columnar.html), "
+            "[IPC](https://arrow.apache.org/docs/format/Columnar.html#serialization-and-interprocess-communication-ipc), "  # noqa: E501
+            "and "
+            "[Flight](https://arrow.apache.org/docs/format/Flight.html)",
             "unversioned",
             "Arrow data, IPC, and Flight",
         ),
@@ -292,9 +306,7 @@ REFERENCE_INVOCATIONS = {
     "12": "Its requirements directly invoke the shared JSON, URI, JSON Schema, and Parquet",
 }
 
-NORMATIVE_KEYWORD = re.compile(
-    r"\b(?:MUST|REQUIRED|SHALL|SHOULD|RECOMMENDED|MAY|OPTIONAL)\b"
-)
+NORMATIVE_KEYWORD = re.compile(r"\b(?:MUST|REQUIRED|SHALL|SHOULD|RECOMMENDED|MAY|OPTIONAL)\b")
 
 
 def _documents(overrides: Mapping[str, str] | None = None) -> dict[str, str]:
@@ -303,17 +315,13 @@ def _documents(overrides: Mapping[str, str] | None = None) -> dict[str, str]:
         **combine.SOURCES,
         combine.OUT.name: combine.OUT,
     }
-    documents = {
-        name: path.read_text() if path.is_file() else "" for name, path in paths.items()
-    }
+    documents = {name: path.read_text() if path.is_file() else "" for name, path in paths.items()}
     if overrides:
         documents.update(overrides)
     return documents
 
 
-def _table_after(
-    text: str, marker: str, header: tuple[str, ...]
-) -> list[tuple[str, ...]]:
+def _table_after(text: str, marker: str, header: tuple[str, ...]) -> list[tuple[str, ...]]:
     """Return rows of the first Markdown table with ``header`` following ``marker``."""
     start = text.find(marker)
     if start < 0:
@@ -395,9 +403,7 @@ def _render(documents: Mapping[str, str]) -> str:
 
 def _artifacts() -> dict[str, str]:
     return {
-        path.relative_to(TREE).as_posix(): path.read_text()
-        for path in sorted(ARTIFACTS.rglob("*"))
-        if path.is_file()
+        path.relative_to(TREE).as_posix(): path.read_text() for path in sorted(ARTIFACTS.rglob("*")) if path.is_file()
     }
 
 
@@ -418,9 +424,7 @@ def path_defects(
         artifacts = _artifacts()
     roots = sorted({path.name for path in TREE.iterdir() if path.is_dir()} - {".venv"})
     leaving = sorted(set(outside) - set(roots))
-    pattern = re.compile(
-        r"(?<![\w./:-])((?:\.\.|" + "|".join(map(re.escape, roots + leaving)) + r")/[\w./<>*-]*)"
-    )
+    pattern = re.compile(r"(?<![\w./:-])((?:\.\.|" + "|".join(map(re.escape, roots + leaving)) + r")/[\w./<>*-]*)")
     link = re.compile(r"\]\(([^)\s#]*)[^)\s]*\)")
     parts = {name: text for name, text in documents.items() if name in PARTS.values()}
     found: list[str] = []
@@ -441,7 +445,7 @@ def path_defects(
     return found
 
 
-def defects(
+def defects(  # noqa: C901
     overrides: Mapping[str, str] | None = None, registry: Mapping | None = None
 ) -> list[str]:
     """Return each mechanically observable framework disagreement.
@@ -478,13 +482,9 @@ def defects(
             continue
         local = _local_status(documents[name])
         if _status(local) != _status(expected):
-            found.append(
-                f"Part {number} local status disagrees: {local!r} != {expected!r}"
-            )
+            found.append(f"Part {number} local status disagrees: {local!r} != {expected!r}")
 
-    readme_rows = _table_after(
-        readme, "## 3. Numbered parts", ("part", "title", "status")
-    )
+    readme_rows = _table_after(readme, "## 3. Numbered parts", ("part", "title", "status"))
     readme_parts = [row[0] for row in readme_rows]
     if readme_parts != sorted(EXPECTED_PARTS):
         found.append("README part projection does not contain Parts 00–12 exactly once")
@@ -504,19 +504,11 @@ def defects(
                 found.append(f"{field} owner declaration is missing from Part {owner}")
         else:
             pattern = re.compile(rf"is identified by\s+`{re.escape(value)}`")
-            owners = [
-                number
-                for number, text in numbered_texts.items()
-                if pattern.search(text)
-            ]
+            owners = [number for number, text in numbered_texts.items() if pattern.search(text)]
             if owners != [owner]:
-                found.append(
-                    f"{field} owner declarations are {owners or 'missing'}, expected Part {owner}"
-                )
+                found.append(f"{field} owner declarations are {owners or 'missing'}, expected Part {owner}")
 
-    identifier_rows = _table_after(
-        readme, "## 4. Packet-recorded identifiers", ("field", "value", "owner")
-    )
+    identifier_rows = _table_after(readme, "## 4. Packet-recorded identifiers", ("field", "value", "owner"))
     projected = {row[0].strip("`"): row for row in identifier_rows}
     if set(projected) != set(IDENTIFIERS):
         found.append("README identifier projection has missing or unknown fields")
@@ -529,20 +521,15 @@ def defects(
         if PARTS[owner] not in row[2] or f"#{anchor}" not in row[2]:
             found.append(f"README identifier owner link disagrees for {field}")
 
-    if not readme.startswith(
-        "# Escapewheel Portable Data Packet Specification, v0.2\n\nInformational entry point."
-    ):
+    if not readme.startswith("# Escapewheel Portable Data Packet Specification, v0.2\n\nInformational entry point."):
         found.append("README is not explicitly informational")
-    if re.search(
-        r"^#{1,6}\s+.*normative references", readme, re.IGNORECASE | re.MULTILINE
-    ):
+    if re.search(r"^#{1,6}\s+.*normative references", readme, re.IGNORECASE | re.MULTILINE):
         found.append("README contains a normative-reference section")
     if match := NORMATIVE_KEYWORD.search(readme):
         found.append(f"README contains normative keyword {match.group(0)}")
 
     reference_sections = {
-        number: _anchored_section(numbered_texts[number], anchor)
-        for number, anchor in REFERENCE_ANCHORS.items()
+        number: _anchored_section(numbered_texts[number], anchor) for number, anchor in REFERENCE_ANCHORS.items()
     }
     # Every part's section, including those with no approved row allocation, so an authority
     # copied into one of them is still found out of place.
@@ -562,51 +549,32 @@ def defects(
             ("reference", "candidate edition", "application"),
         )
         if tuple(rows) != REFERENCE_ROWS[number]:
-            found.append(
-                f"Part {number} normative-reference rows disagree with the approved allocation"
-            )
+            found.append(f"Part {number} normative-reference rows disagree with the approved allocation")
     for name, marker in REFERENCE_MARKERS.items():
         expected = REFERENCE_OWNERS[name]
-        owners = [
-            number
-            for number, references in sorted(every_reference_section.items())
-            if marker in references
-        ]
+        owners = [number for number, references in sorted(every_reference_section.items()) if marker in references]
         if owners == [expected]:
             continue
         if not owners:
             found.append(f"Part {expected} normative references are missing {name}")
         elif expected not in owners and len(owners) == 1:
-            found.append(
-                f"{name} normative reference is in Part {owners[0]}, expected Part {expected}"
-            )
+            found.append(f"{name} normative reference is in Part {owners[0]}, expected Part {expected}")
         else:
             found.append(
                 f"{name} normative reference appears in Parts {', '.join(owners)}, expected only Part {expected}"
             )
     # Part 02 §13's consistency condition with the core registry: an exact URI match on an entry's
     # link, with no dereference.
-    part_02_links = {
-        target
-        for row in reference_rows.get("02", [])
-        for target in LINK_TARGET.findall(row[0])
-    }
+    part_02_links = {target for row in reference_rows.get("02", []) for target in LINK_TARGET.findall(row[0])}
     for column, uri in _open_authorities(registry):
         if uri not in part_02_links:
-            found.append(
-                f"open core column {column} names authority {uri}, which no Part 02 §13 entry links"
-            )
+            found.append(f"open core column {column} names authority {uri}, which no Part 02 §13 entry links")
     for number, marker in REFERENCE_INVOCATIONS.items():
         if marker not in numbered_texts[number]:
             found.append(f"Part {number} external-reference invocation is missing")
     for implementation in ("DuckDB", "zarr-python", "Numcodecs"):
-        if any(
-            implementation in references
-            for references in every_reference_section.values()
-        ):
-            found.append(
-                f"normative references promote implementation {implementation}"
-            )
+        if any(implementation in references for references in every_reference_section.values()):
+            found.append(f"normative references promote implementation {implementation}")
 
     combined = documents["Escapewheel_POC_v0.2_Implementation_Spec.md"]
     if combined != _render(documents):

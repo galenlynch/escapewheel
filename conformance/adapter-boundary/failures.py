@@ -70,11 +70,7 @@ class Adapter(fl.FlightServerBase):
 
     def list_actions(self, context):
         """The one action `flight-v0.1` would name, absent from an adapter with nothing to say."""
-        return (
-            []
-            if self.mode == "silent"
-            else [("report", "what this run says about itself")]
-        )
+        return [] if self.mode == "silent" else [("report", "what this run says about itself")]
 
     def do_action(self, context, action):
         """The whole run's report, asked for once, after the rows (Part 12 §9's shape)."""
@@ -110,9 +106,7 @@ def connect(socket: str, child: subprocess.Popen) -> fl.FlightClient:
             return client
         except (fl.FlightUnavailableError, fl.FlightTimedOutError):
             if child.poll() is not None:
-                raise SystemExit(
-                    f"the adapter exited {child.returncode} before serving"
-                )
+                raise SystemExit(f"the adapter exited {child.returncode} before serving")
             time.sleep(0.01)
 
 
@@ -157,28 +151,21 @@ def main() -> int:
     """Measure every mode and print what a build is left holding."""
     with tempfile.TemporaryDirectory() as tmp:
         died = run("dies", tmp)
-        print(
-            "**The adapter never binds.** A build retrying the socket sees the exit rather than"
-        )
-        print(
-            f"waiting on it: detected in {died['detected_ms']:.0f} ms, and standard error carries"
-        )
+        print("**The adapter never binds.** A build retrying the socket sees the exit rather than")
+        print(f"waiting on it: detected in {died['detected_ms']:.0f} ms, and standard error carries")
         print(f"  {died['stderr'].strip().splitlines()[-1]!r}\n")
 
         raised = run("raises", tmp)
         print("**A plain exception in `do_get`.** What crosses is a string:")
         print(
-            f"  {raised['error']}, message {len(raised['message'])} chars, "
-            f"extra_info {len(raised['extra_info'])} bytes"
+            f"  {raised['error']}, message {len(raised['message'])} chars, extra_info {len(raised['extra_info'])} bytes"
         )
         print(f"  {raised['message'].strip().splitlines()[0][:96]!r}")
         print(f"  standard error: {len(raised['stderr'])} bytes\n")
 
         structured = run("structured", tmp)
         info = json.loads(structured["extra_info"])
-        print(
-            "**A structured failure.** The same call, with the finding attached to it:"
-        )
+        print("**A structured failure.** The same call, with the finding attached to it:")
         print(
             f"  {structured['error']}, message {len(structured['message'])} chars, "
             f"extra_info {len(structured['extra_info'])} bytes of JSON"
@@ -187,20 +174,13 @@ def main() -> int:
         print(f"  standard error: {len(structured['stderr'])} bytes\n")
 
         mid = run("midstream", tmp)
-        print(
-            "**A failure partway through a stream.** Two batches had already crossed:"
-        )
+        print("**A failure partway through a stream.** Two batches had already crossed:")
         print(f"  {mid['error']}, rows delivered to the build: {mid.get('rows', 0)}\n")
 
         found = run("findings", tmp)
         meta = json.loads(found["app_metadata"])
-        print(
-            "**A run that succeeded and has something to say.** Two places carry it in band:"
-        )
-        print(
-            f"  discovery `app_metadata`, per resource: {len(found['app_metadata'])} bytes, "
-            f"level={meta['level']!r}"
-        )
+        print("**A run that succeeded and has something to say.** Two places carry it in band:")
+        print(f"  discovery `app_metadata`, per resource: {len(found['app_metadata'])} bytes, level={meta['level']!r}")
         print(
             f"  `DoAction('report')`, per run, after the rows: "
             f"{len(found['report']['problems'])} problem(s), read {found['report']['read']}"
@@ -208,12 +188,8 @@ def main() -> int:
         print(f"  rows still delivered: {found['rows']}")
 
         silent = run("silent", tmp)
-        print(
-            "\n**An adapter with nothing to say.** Asking costs a build one refused call:"
-        )
-        print(
-            f"  ListActions: {silent['actions']}, DoAction: {silent.get('report_error')}"
-        )
+        print("\n**An adapter with nothing to say.** Asking costs a build one refused call:")
+        print(f"  ListActions: {silent['actions']}, DoAction: {silent.get('report_error')}")
     return 0
 
 

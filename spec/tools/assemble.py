@@ -46,9 +46,7 @@ def extension_sources(directory: Path) -> dict[Path, Path]:
     }
 
 
-def expand(
-    template: str, resource: str, call: dict, key: list[str]
-) -> list[dict[str, str]]:
+def expand(template: str, resource: str, call: dict, key: list[str]) -> list[dict[str, str]]:
     """Expand one template invocation into the rules it stands for (Part 02 §10.2).
 
     Parameters
@@ -182,9 +180,7 @@ def _resource(path: Path) -> dict[str, Any]:
     if source.get("kind") == "table":
         resource["table"] = _table(path.stem, source)
     elif written := sorted(set(source) & set(TABLE)):
-        raise SystemExit(
-            f"{path.name}: a {source.get('kind')} resource declares {written}"
-        )
+        raise SystemExit(f"{path.name}: a {source.get('kind')} resource declares {written}")
     return resource
 
 
@@ -192,9 +188,7 @@ def assemble(directory: Path) -> dict[str, Any]:
     """Return the registry document one source directory declares, in canonical form."""
     document = tomllib.loads((directory / HEADER).read_text())
     document["resources"] = {
-        path.stem: _resource(path)
-        for path in sorted(directory.glob("*.toml"))
-        if path.name != HEADER
+        path.stem: _resource(path) for path in sorted(directory.glob("*.toml")) if path.name != HEADER
     }
     return canonical(document)
 

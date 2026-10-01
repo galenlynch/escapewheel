@@ -20,9 +20,7 @@ HERE = Path(__file__).resolve().parent
 SENTINEL = "end"
 TABLES = {
     "core.sessions": pa.table({"session_id": pa.array([0], "int32")}),
-    "core.units": pa.table(
-        {"unit_id": pa.array([1, 2, 3, 4], "int32"), "quality": pa.array(["sua"] * 4)}
-    ),
+    "core.units": pa.table({"unit_id": pa.array([1, 2, 3, 4], "int32"), "quality": pa.array(["sua"] * 4)}),
     "core.intervals": pa.table({"start_tick": pa.array([10, 20], "int64")}),
 }
 

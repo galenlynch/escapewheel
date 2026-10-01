@@ -2,7 +2,6 @@ import importlib.metadata
 
 import numpy as np
 import zarr
-
 from sets import arrays
 
 print("zarr-python", zarr.__version__, "numcodecs", importlib.metadata.version("numcodecs"))

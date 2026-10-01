@@ -41,9 +41,10 @@ Those are spelled out in prose rather than written as citations, because this fi
 files it reads.
 
 A part named by its number alone is an error in a part, a revision or a draft, as
-`revisions/CONTRIBUTING.md#ew-citation-context` requires and no other check can see: both spellings resolve to the same section. A source file is
-read for whether its citations resolve and never for how they are spelled, since a specification
-does not impose a comment style on code it does not own.
+`revisions/CONTRIBUTING.md#ew-citation-context` requires and no other check can see: both
+spellings resolve to the same section. A source file is read for whether its citations resolve and
+never for how they are spelled, since a specification does not impose a comment style on code it
+does not own.
 
 The parts are also checked for ascending, unique numbering. `headings` returns a set, which is
 what hid Part 05 carrying two sections numbered 11 through five accepted revisions -- a duplicate
@@ -90,9 +91,7 @@ ANY = re.compile(r"§(\d+(?:\.\d+)*)")
 NUMBERED = re.compile(r"`(\d\d)`")
 MARKDOWN_ANCHOR = re.compile(r"\[[^\]]+\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
 SOURCE_ANCHOR = re.compile(r"`([^`#]+\.md)#(ew-[a-z0-9-]+)`")
-LINKED_PART = re.compile(
-    r"\[Part (\d\d) §(\d+(?:\.\d+)*)\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)"
-)
+LINKED_PART = re.compile(r"\[Part (\d\d) §(\d+(?:\.\d+)*)\]\(([^)\s#]+)#(ew-[a-z0-9-]+)\)")
 
 #: Sites where a backticked two-digit number is not a part, or is a specimen of the spelling
 #: the former bare-part spelling replaced, each with why. Matched as a substring of the line, and checked to still
@@ -136,12 +135,8 @@ def numbering(text: str) -> tuple[list[str], list[tuple[str, str]]]:
     """
     found = HEADING.findall(text)
     keys = [tuple(int(part) for part in number.split(".")) for number in found]
-    repeated = sorted(
-        {n for n in found if found.count(n) > 1}, key=lambda n: keys[found.index(n)]
-    )
-    descending = [
-        (found[i], found[i + 1]) for i in range(len(keys) - 1) if keys[i + 1] <= keys[i]
-    ]
+    repeated = sorted({n for n in found if found.count(n) > 1}, key=lambda n: keys[found.index(n)])
+    descending = [(found[i], found[i + 1]) for i in range(len(keys) - 1) if keys[i + 1] <= keys[i]]
     return repeated, descending
 
 
@@ -164,24 +159,16 @@ def numbered(path: Path, text: str) -> tuple[list[str], set[str]]:
     for whether its citations resolve and never for how they are spelled.
     """
     found, used = [], set()
-    for number, line in (
-        (m, text[: m.start()].count("\n") + 1) for m in NUMBERED.finditer(text)
-    ):
+    for number, line in ((m, text[: m.start()].count("\n") + 1) for m in NUMBERED.finditer(text)):
         whole = text.splitlines()[line - 1]
         excuse = next(
-            (
-                reason
-                for site, marker, reason in NOT_A_PART
-                if path.name.startswith(site) and marker in whole
-            ),
+            (reason for site, marker, reason in NOT_A_PART if path.name.startswith(site) and marker in whole),
             None,
         )
         if excuse is not None:
             used.add(excuse)
             continue
-        found.append(
-            f"`{number.group(1)}` on line {line} — a part is named as Part {number.group(1)}"
-        )
+        found.append(f"`{number.group(1)}` on line {line} — a part is named as Part {number.group(1)}")
     return found, used
 
 
@@ -225,23 +212,15 @@ def anchored(path: Path, text: str) -> list[str]:
     if path.suffix == ".py":
         for relative, anchor in SOURCE_ANCHOR.findall(text):
             target = (root / relative).resolve()
-            if not target.is_file() or anchor not in canonical_anchors(
-                target.read_text()
-            ):
+            if not target.is_file() or anchor not in canonical_anchors(target.read_text()):
                 errors.append(f"source anchor {relative}#{anchor} does not resolve")
     for part_number, section, relative, anchor in LINKED_PART.findall(text):
         target = resolved.get((relative, anchor))
         if target is None:
             continue
         anchor_section = anchor_heading(target.read_text(), anchor)
-        if (
-            target.parent != PARTS
-            or target.name[:2] != part_number
-            or anchor_section != section
-        ):
-            errors.append(
-                f"linked Part {part_number} §{section} disagrees with #{anchor}'s current heading"
-            )
+        if target.parent != PARTS or target.name[:2] != part_number or anchor_section != section:
+            errors.append(f"linked Part {part_number} §{section} disagrees with #{anchor}'s current heading")
     return errors
 
 
@@ -260,13 +239,9 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
         claimed.add(match.span())
         target = document(match.group(1))
         if target is None:
-            errors.append(
-                f"R{match.group(1)} §{match.group(2)} — no such accepted revision"
-            )
+            errors.append(f"R{match.group(1)} §{match.group(2)} — no such accepted revision")
         elif match.group(2) not in headings(target.read_text()):
-            errors.append(
-                f"R{match.group(1)} §{match.group(2)} — {target.name} has no §{match.group(2)}"
-            )
+            errors.append(f"R{match.group(1)} §{match.group(2)} — {target.name} has no §{match.group(2)}")
     for match in PART.finditer(text):
         claimed.add(match.span())
         name, section = match.group(1) or match.group(2), match.group(3)
@@ -281,9 +256,7 @@ def check(path: Path) -> tuple[list[str], list[str], list[str]]:
         if any(a <= match.start() < b for a, b in spans):
             continue
         if match.group(1) not in own:
-            loose.append(
-                f"§{match.group(1)} — unprefixed, and this document has no such section"
-            )
+            loose.append(f"§{match.group(1)} — unprefixed, and this document has no such section")
     # An accepted record is immutable history. Its current-owner links are interpreted from its
     # baseline rather than made a gate on the working tree.
     if path.parent != ACCEPTED:
@@ -349,22 +322,18 @@ def elsewhere() -> list[Path]:
         if path.suffix not in {".py", ".md"} or not path.is_file():
             continue
         # The revisions and the drafts are read in their own pass.
-        if name.startswith(
-            ("revisions/accepted/", "revisions/drafts/", "revisions/proposals/")
-        ):
+        if name.startswith(("revisions/accepted/", "revisions/drafts/", "revisions/proposals/")):
             continue
         found.append(path)
     return found
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--quiet", action="store_true", help="errors only")
     args = ap.parse_args()
 
-    paths = sorted(
-        ACCEPTED.glob("R[0-9]*.md"), key=lambda p: int(NUMBER.match(p.name).group(1))
-    )
+    paths = sorted(ACCEPTED.glob("R[0-9]*.md"), key=lambda p: int(NUMBER.match(p.name).group(1)))
     paths += sorted((HERE / "proposals").glob("[!.]*.md"))
     paths += sorted((HERE / "drafts").glob("[!.]*.md"))
     # An editor's lock file is a symlink to a target that never existed -- Emacs writes
@@ -402,11 +371,7 @@ def main() -> int:
         # broken part citation in any of them is an error rather than history. The 428 citations
         # the parts carry were read for numbering alone until this included them, and one named a
         # section of R55 that revision has never had.
-        live = (
-            path.parent.name in {"proposals", "drafts"}
-            or path.suffix == ".py"
-            or path.parent == PARTS
-        )
+        live = path.parent.name in {"proposals", "drafts"} or path.suffix == ".py" or path.parent == PARTS
         errors, parts, loose = check(path)
         # The current citation rule binds prose spelling; a source file is read only for resolution.
         if path.suffix == ".md":

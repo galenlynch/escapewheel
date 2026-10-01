@@ -13,9 +13,8 @@ naming conventions the core registry follows.
 import argparse
 import json
 import sys
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TREE = ROOT / "spec"
@@ -61,9 +60,8 @@ def _check(directory: Path, core, meta_id: str) -> list[str]:
         if path not in targets.values()
     ]
     declared = tomllib.loads((directory / "conventions.toml").read_text())
-    tables = {
-        name: table for out in targets.values() if out.is_file() for name, table in _tables(json.loads(out.read_text())).items()
-    }
+    built = [json.loads(out.read_text()) for out in targets.values() if out.is_file()]
+    tables = {name: table for document in built for name, table in _tables(document).items()}
     for label, bad in conventions.convention_failures(
         tables, declared.get("naming_exceptions", {}), declared.get("names_a_kind", {})
     ).items():

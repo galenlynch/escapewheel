@@ -49,9 +49,7 @@ def flight_socket() -> None:
     from pyarrow import flight
 
     with tempfile.TemporaryDirectory(prefix="escapewheel-flight-") as temporary:
-        server = flight.FlightServerBase(
-            flight.Location.for_grpc_unix(str(Path(temporary) / "adapter.sock"))
-        )
+        server = flight.FlightServerBase(flight.Location.for_grpc_unix(str(Path(temporary) / "adapter.sock")))
         server.shutdown()
 
 

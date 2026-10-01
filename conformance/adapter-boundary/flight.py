@@ -5,9 +5,7 @@ import pyarrow.flight as fl
 
 TABLES = {
     "core.sessions": pa.table({"session_id": pa.array([0], "int32")}),
-    "core.units": pa.table(
-        {"unit_id": pa.array([1, 2], "int32"), "quality": pa.array(["sua", "mua"])}
-    ),
+    "core.units": pa.table({"unit_id": pa.array([1, 2], "int32"), "quality": pa.array(["sua", "mua"])}),
     "core.intervals": pa.table({"start_tick": pa.array([10, 20], "int64")}),
 }
 

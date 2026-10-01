@@ -48,9 +48,7 @@ def packet(tmp_path):
         ("0.2.0", [kept], "0.2.0"),
         ("0.3.0", [kept], "0.2.0"),
     ):
-        (root / MANIFESTS / f"{version}.json").write_text(
-            json.dumps(_manifest(version, resources, registry=registry))
-        )
+        (root / MANIFESTS / f"{version}.json").write_text(json.dumps(_manifest(version, resources, registry=registry)))
     return root
 
 

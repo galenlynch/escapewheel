@@ -17,9 +17,7 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REGISTRY = json.loads(
-    (HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text()
-)
+REGISTRY = json.loads((HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text())
 SESSION, N_TRIALS, N_PULSES = "ecephys_776259", 400, 120
 
 
@@ -277,9 +275,7 @@ def ask(root, *, based):
                 names = {c["name"] for c in spec["columns"]}
                 if {"start_tick", "stop_tick"} <= names:
                     found.append(resource)
-        for resource, declaration in (
-            (packet.registry or {}).get("resources", {}).items()
-        ):
+        for resource, declaration in (packet.registry or {}).get("resources", {}).items():
             if declaration["kind"] != "table":
                 continue
             spec = declaration["table"]
@@ -308,9 +304,7 @@ def ask(root, *, based):
         # The kind IS the resource id, and the registry gives the join. No extension named here.
         registry = packet.extensions()[kind.split(".")[0]]
         reference = next(
-            r
-            for r in registry["resources"][kind]["table"]["references"]
-            if r["resource"] == "core.intervals"
+            r for r in registry["resources"][kind]["table"]["references"] if r["resource"] == "core.intervals"
         )
         detail_table = packet.table(kind)
         joined = chosen.join(
@@ -343,18 +337,12 @@ def main():
         report = build(root, based=based)
         print(
             f"\n{shape}: committed={report.passed}"
-            + (
-                ""
-                if report.passed
-                else f" — {[f.check for f in report.findings if f.level == 'error'][:3]}"
-            )
+            + ("" if report.passed else f" — {[f.check for f in report.findings if f.level == 'error'][:3]}")
         )
         if not report.passed:
             continue
         for question, (rows_, how, seconds) in ask(root, based=based).items():
-            print(
-                f"  {question:24s} {rows_:>5} rows   {how:28s} {seconds * 1e3:6.2f} ms"
-            )
+            print(f"  {question:24s} {rows_:>5} rows   {how:28s} {seconds * 1e3:6.2f} ms")
 
 
 if __name__ == "__main__":

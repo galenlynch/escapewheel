@@ -33,9 +33,7 @@ HEADING = re.compile(r"^#{2,4} (\d+(?:\.\d+)*)\.? +(.+)$")
 #: `03` §5.4 it replaced: a citation
 #: written before that clause still resolves, so both are read here.
 CITATION = re.compile(r"(?:`(\d\d)`|Part (\d\d))\s+§(\d+(?:\.\d+)*)")
-ANCHOR = re.compile(
-    r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="(canonical|alias)"></a>$'
-)
+ANCHOR = re.compile(r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="(canonical|alias)"></a>$')
 
 #: Not searched. Everything else tracked is, because a citation is load-bearing wherever it is
 #: written: a test asserting `03` §5.5's rule and a contribution guide explaining it both go stale when
@@ -56,24 +54,14 @@ def sections(path: Path) -> list[tuple[int, str, str]]:
 
 def touched(ref: str | None) -> dict[str, set[str]]:
     """Which section of which part each changed line falls in."""
-    args = (
-        ["git", "diff", "--unified=0"]
-        + ([ref] if ref else [])
-        + ["--", "spec/parts"]
-    )
-    diff = subprocess.run(
-        args, cwd=ROOT, capture_output=True, text=True, check=False
-    ).stdout
+    args = ["git", "diff", "--unified=0"] + ([ref] if ref else []) + ["--", "spec/parts"]
+    diff = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=False).stdout
     changed: dict[str, set[str]] = defaultdict(set)
     part = None
     for line in diff.splitlines():
         if line.startswith("+++ b/"):
             name = Path(line[6:]).name
-            part = (
-                name
-                if re.match(r"\d\d_", name) and "Implementation_Spec" not in name
-                else None
-            )
+            part = name if re.match(r"\d\d_", name) and "Implementation_Spec" not in name else None
         elif line.startswith("@@") and part:
             if m := re.search(r"\+(\d+)(?:,(\d+))?", line):
                 start, count = int(m.group(1)), int(m.group(2) or 1)
@@ -156,10 +144,7 @@ def anchor_citers(anchor: str) -> list[str]:
         check=True,
     ).stdout.split()
     for name in listed:
-        if (
-            name.startswith(("revisions/accepted/", *SKIPPED))
-            or "Implementation_Spec" in name
-        ):
+        if name.startswith(("revisions/accepted/", *SKIPPED)) or "Implementation_Spec" in name:
             continue
         path = ROOT / name
         if path.suffix not in {".py", ".md", ".json", ".toml"} or not path.is_file():
@@ -172,9 +157,7 @@ def anchor_citers(anchor: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument(
-        "ref", nargs="?", help="Git revision or range to compare with the working tree"
-    )
+    parser.add_argument("ref", nargs="?", help="Git revision or range to compare with the working tree")
     parser.add_argument(
         "--anchor",
         action="append",
@@ -206,30 +189,18 @@ def main() -> int:
     anchor_reports = []
     for anchor in args.anchor:
         if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", anchor):
-            parser.error(
-                f"--anchor expects a lowercase hyphenated identifier, got {anchor!r}"
-            )
+            parser.error(f"--anchor expects a lowercase hyphenated identifier, got {anchor!r}")
         location = anchor_location(anchor)
         if location is None:
             parser.error(f"--anchor names no canonical numbered-part anchor: {anchor}")
         anchor_reports.append((anchor, location, anchor_citers(anchor)))
     if not changed and not anchor_reports:
-        print(
-            "no part changed"
-            + (f" since {args.ref}" if args.ref else " in the working tree")
-        )
+        print("no part changed" + (f" since {args.ref}" if args.ref else " in the working tree"))
         return 0
     total = 0
     for part in sorted(changed):
-        titles = {
-            n: t
-            for _, n, t in sections(
-                PARTS / next(p.name for p in PARTS.glob(f"{part}_*.md"))
-            )
-        }
-        for section in sorted(
-            changed[part], key=lambda s: [int(x) for x in s.split(".")]
-        ):
+        titles = {n: t for _, n, t in sections(PARTS / next(p.name for p in PARTS.glob(f"{part}_*.md")))}
+        for section in sorted(changed[part], key=lambda s: [int(x) for x in s.split(".")]):
             who = citers(part, section)
             total += len(who)
             head = f"`{part}` §{section}  {titles.get(section, '')}"
@@ -239,9 +210,7 @@ def main() -> int:
         total += len(who)
         head = f"#{anchor}  Part {part} §{section}  {title}"
         print(f"\n{head}\n{'-' * len(head)}")
-        print(
-            "  cited by nothing" if not who else "\n".join(f"  {site}" for site in who)
-        )
+        print("  cited by nothing" if not who else "\n".join(f"  {site}" for site in who))
     print(
         f"\n{sum(len(v) for v in changed.values())} section(s) changed, "
         f"{len(anchor_reports)} anchor(s) queried, {total} citation(s) to read"

@@ -137,8 +137,9 @@ STAGES: list[tuple[str, Path, list[str]]] = [
         ROOT / "revisions",
         [sys.executable, "check_citations.py", "--quiet"],
     ),
-    # The current-owner rule in `revisions/CONTRIBUTING.md#ew-citation-context`: a citation of a clause that landed in a part resolves
-    # perfectly while still sending a reader to the change record, so nothing else can see it.
+    # The current-owner rule in `revisions/CONTRIBUTING.md#ew-citation-context`: a citation of a clause
+    # that landed in a part resolves perfectly while still sending a reader to the change record, so
+    # nothing else can see it.
     (
         "citations: a requirement names its part",
         ROOT / "revisions",
@@ -262,9 +263,7 @@ def _last_output(output: str) -> str:
 def _failure_log(name: str, output: str) -> Path:
     """Preserve complete output for a failed stage outside the candidate tree."""
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "stage"
-    descriptor, filename = tempfile.mkstemp(
-        prefix=f"escapewheel-verify-{slug}-", suffix=".log"
-    )
+    descriptor, filename = tempfile.mkstemp(prefix=f"escapewheel-verify-{slug}-", suffix=".log")
     with os.fdopen(descriptor, "w") as stream:
         stream.write(output)
     return Path(filename)
@@ -335,8 +334,7 @@ def run(
                 output = _stop(process) or output
                 log = _failure_log(name, output)
                 return False, (
-                    f"timed out after {timeout:g}s; last output: {_last_output(output)[:160]}; "
-                    f"full log: {log}"
+                    f"timed out after {timeout:g}s; last output: {_last_output(output)[:160]}; full log: {log}"
                 )
             print(
                 f"wait {name:46s} {elapsed:5.1f}s  {_last_output(output)[:160]}",
@@ -387,15 +385,9 @@ def candidate_state(where: str) -> dict[str, tuple[int, str]]:
     return state
 
 
-def state_changes(
-    before: dict[str, tuple[int, str]], after: dict[str, tuple[int, str]]
-) -> list[str]:
+def state_changes(before: dict[str, tuple[int, str]], after: dict[str, tuple[int, str]]) -> list[str]:
     """Return paths whose candidate state changed between two snapshots."""
-    return sorted(
-        name
-        for name in before.keys() | after.keys()
-        if before.get(name) != after.get(name)
-    )
+    return sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
 
 
 def main() -> int:
@@ -429,15 +421,12 @@ def main() -> int:
         passed, tail = run(name, cwd, argv, timeout, heartbeat)
         detail = tail[:80] if passed else tail
         print(
-            f"{'ok  ' if passed else 'FAIL'} {name:46s} "
-            f"{time.perf_counter() - clock:5.1f}s  {detail}",
+            f"{'ok  ' if passed else 'FAIL'} {name:46s} {time.perf_counter() - clock:5.1f}s  {detail}",
             flush=True,
         )
         if not passed:
             print("\nfull verification stopped before generation and package tests")
-            print(
-                "use --quick for checks that do not require these runtime capabilities"
-            )
+            print("use --quick for checks that do not require these runtime capabilities")
             return 1
 
     stages = list(STAGES)
@@ -452,8 +441,7 @@ def main() -> int:
         passed, tail = run(name, cwd, argv, timeout, heartbeat)
         detail = tail[:80] if passed else tail
         print(
-            f"{'ok  ' if passed else 'FAIL'} {name:46s} "
-            f"{time.perf_counter() - clock:5.1f}s  {detail}",
+            f"{'ok  ' if passed else 'FAIL'} {name:46s} {time.perf_counter() - clock:5.1f}s  {detail}",
             flush=True,
         )
         if not passed:

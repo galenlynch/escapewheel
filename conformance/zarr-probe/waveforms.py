@@ -125,31 +125,20 @@ def read_patterns(path, picked):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    source = zarr.open_array(
-        str(NWB / "units" / "waveform_mean"), mode="r", zarr_format=2
-    )
+    source = zarr.open_array(str(NWB / "units" / "waveform_mean"), mode="r", zarr_format=2)
     data = np.asarray(source[:])
-    print(
-        f"source {data.shape} {data.dtype}  {data.nbytes / 1e9:.2f} GB raw, "
-        f"{(data == 0).mean() * 100:.1f}% zero\n"
-    )
+    print(f"source {data.shape} {data.dtype}  {data.nbytes / 1e9:.2f} GB raw, {(data == 0).mean() * 100:.1f}% zero\n")
     picked = np.arange(24) * 211  # spread over the array, not one chunk
     global SCALE
     SCALE = float(np.abs(data).max()) / 32767.0
-    print(
-        f"int16 scale {SCALE:.6f} uV/LSB, so the peak {np.abs(data).max():.1f} uV just fits\n"
-    )
+    print(f"int16 scale {SCALE:.6f} uV/LSB, so the peak {np.abs(data).max():.1f} uV just fits\n")
 
     header = f"{'layout':28s} {'MB':>8s} {'files':>7s} {'write':>7s}"
     for label in ("1 unit", "24 units", "1 channel, all units"):
         header += f" {label:>21s}"
     print(header)
     for label, dtype, chunks, codecs, shard in LAYOUTS:
-        payload = (
-            np.rint(data / SCALE).astype(dtype)
-            if dtype == "int16"
-            else data.astype(dtype)
-        )
+        payload = np.rint(data / SCALE).astype(dtype) if dtype == "int16" else data.astype(dtype)
         path, wrote = build(label, dtype, chunks, codecs, shard, payload)
         times = read_patterns(path, picked)
         row = f"{label:28s} {size(path) / 1e6:8.1f} {files(path):7,} {wrote:6.1f}s"

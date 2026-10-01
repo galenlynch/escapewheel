@@ -28,9 +28,7 @@ import nwbfixture
 import serve_nwb
 from escapewheel_writer.sources import ADAPTERS
 
-REGISTRY_DOCUMENT = json.loads(
-    (HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text()
-)
+REGISTRY_DOCUMENT = json.loads((HERE.parent.parent / "spec" / "artifacts" / "logical_schemas.json").read_text())
 REGISTRY = {
     name: declaration["table"]
     for name, declaration in REGISTRY_DOCUMENT["resources"].items()
@@ -96,10 +94,7 @@ def owners(docs: list[dict]) -> dict[str, str]:
 
 def main() -> int:
     options = {"zone": "America/Los_Angeles", "interval_kind": "task.trials"}
-    docs = [
-        declaration(kind, "stream-v0.1", serve_nwb.NEEDS if kind == "nwb" else ())
-        for kind in sorted(ADAPTERS)
-    ]
+    docs = [declaration(kind, "stream-v0.1", serve_nwb.NEEDS if kind == "nwb" else ()) for kind in sorted(ADAPTERS)]
 
     print("1. one document per shipped adapter\n")
     for doc in docs:
@@ -114,14 +109,9 @@ def main() -> int:
     print("2. ownership settled from the documents, with nothing imported\n")
     from_docs = owners(docs)
     contested = sorted({r for doc in docs for r in doc["produces"]} - set(from_docs))
-    print(
-        f"   {len(from_docs)} resources have one producer, {len(contested)} more than one"
-    )
+    print(f"   {len(from_docs)} resources have one producer, {len(contested)} more than one")
     from_classes = owners(
-        [
-            {"kind": k, "produces": sorted(getattr(c, "PRODUCES", ()))}
-            for k, c in sorted(ADAPTERS.items())
-        ]
+        [{"kind": k, "produces": sorted(getattr(c, "PRODUCES", ()))} for k, c in sorted(ADAPTERS.items())]
     )
     print(f"   same as reading the classes: {from_docs == from_classes}")
 
@@ -168,9 +158,7 @@ def main() -> int:
             check=True,
         )
         stated = json.loads(report.read_text())["stated"]
-        print(
-            f"   the report is {report.stat().st_size} bytes, exit {child.returncode}"
-        )
+        print(f"   the report is {report.stat().st_size} bytes, exit {child.returncode}")
         for field, value in stated.items():
             print(f"     {field:28s} {value!r}")
         declared = {"subject.subject_id": "786867"}
@@ -178,9 +166,7 @@ def main() -> int:
             verdict = "agrees" if stated.get(field) == value else "DIFFERS"
             print(f"\n   the recipe declares {field} = {value!r}: {verdict}")
             if verdict == "DIFFERS":
-                print(
-                    f"   the source states {stated.get(field)!r}, which Part 05 §3.6 refuses on"
-                )
+                print(f"   the source states {stated.get(field)!r}, which Part 05 §3.6 refuses on")
     return 0
 
 

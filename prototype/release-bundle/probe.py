@@ -20,9 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 #: What a consumer needs, and why each is in the bundle rather than assumed.
 PARTS: dict[str, tuple[str, ...]] = {
-    "specification": (
-        "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
-    ),
+    "specification": ("spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",),
     "registry": ("spec/artifacts/logical_schemas.json", "spec/informative/tables.md"),
     "schemas": ("spec/artifacts/registry.schema.json", "spec/artifacts/manifest.schema.json"),
     "extensions": tuple(
@@ -63,17 +61,14 @@ def described() -> dict[str, object]:
             "semantic": "escapewheel-semantic-v0.1",
             "logical": "escapewheel-logical-v0.1",
             "profile": "escapewheel-portable-v0.1",
-            "registry_version": json.loads(
-                (ROOT / "spec/artifacts/logical_schemas.json").read_text()
-            )["registry_version"],
+            "registry_version": json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())[
+                "registry_version"
+            ],
         },
         "commit": revision,
         # A release assembled from a dirty tree names files that are not what the commit holds.
         "clean": not dirty,
-        "parts": {
-            part: {name: digest(ROOT / name) for name in names}
-            for part, names in PARTS.items()
-        },
+        "parts": {part: {name: digest(ROOT / name) for name in names} for part, names in PARTS.items()},
     }
 
 

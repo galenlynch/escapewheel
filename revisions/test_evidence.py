@@ -79,17 +79,9 @@ class EvidenceTests(unittest.TestCase):
                             "anchor": "ew-decision-domains",
                         }
                     ],
-                    "projections": {
-                        "paths": [
-                            "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
-                        ]
-                    },
-                    "conformance": {
-                        "not_applicable": "publication ownership has no executable packet case"
-                    },
-                    "implementations": {
-                        "unchanged": "the clause assigns publication ownership, not behavior"
-                    },
+                    "projections": {"paths": ["spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"]},
+                    "conformance": {"not_applicable": "publication ownership has no executable packet case"},
+                    "implementations": {"unchanged": "the clause assigns publication ownership, not behavior"},
                     "documentation": {"paths": ["spec/README.md"]},
                 }
             },
@@ -98,9 +90,7 @@ class EvidenceTests(unittest.TestCase):
             path = Path(temporary) / f"{revision}.json"
             path.write_text(json.dumps(document))
             queued: list[tuple[str, str]] = []
-            self.assertEqual(
-                evidence.manifest_defects(path, revision, {clause}, queued), []
-            )
+            self.assertEqual(evidence.manifest_defects(path, revision, {clause}, queued), [])
             self.assertEqual(queued, [])
 
     def test_a_committed_record_is_not_resolved_against_the_working_tree(self) -> None:
@@ -130,23 +120,12 @@ class EvidenceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / f"{revision}.json"
             path.write_text(json.dumps(document))
-            resolved = evidence.manifest_defects(
-                path, revision, {clause}, [], resolve=True
-            )
-            historical = evidence.manifest_defects(
-                path, revision, {clause}, [], resolve=False
-            )
-        self.assertTrue(
-            any(
-                "does not exist" in defect and "retired" in defect
-                for defect in resolved
-            )
-        )
+            resolved = evidence.manifest_defects(path, revision, {clause}, [], resolve=True)
+            historical = evidence.manifest_defects(path, revision, {clause}, [], resolve=False)
+        self.assertTrue(any("does not exist" in defect and "retired" in defect for defect in resolved))
         self.assertFalse(any("retired" in defect for defect in historical))
         self.assertTrue(evidence.committed(next(evidence.ACCEPTED.glob("R130-*.md"))))
-        self.assertFalse(
-            evidence.committed(evidence.ACCEPTED / f"{revision}-not-accepted.md")
-        )
+        self.assertFalse(evidence.committed(evidence.ACCEPTED / f"{revision}-not-accepted.md"))
 
 
 if __name__ == "__main__":

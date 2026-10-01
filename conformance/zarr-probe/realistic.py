@@ -1,6 +1,9 @@
-import shutil, pathlib
-import numpy as np, zarr
-from zarr.codecs import GzipCodec, ZstdCodec, BloscCodec
+import pathlib
+import shutil
+
+import numpy as np
+import zarr
+from zarr.codecs import BloscCodec, GzipCodec, ZstdCodec
 
 root = pathlib.Path(__file__).parent / "realistic"
 if root.exists():

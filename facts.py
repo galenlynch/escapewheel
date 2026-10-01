@@ -28,9 +28,7 @@ ROOT = Path(__file__).resolve().parent
 REGISTRY = ROOT / "spec/artifacts/logical_schemas.json"
 EXTENSIONS = (ROOT / "extensions", ROOT / "escapewheel-aind/extensions")
 
-REGION = re.compile(
-    r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL
-)
+REGION = re.compile(r"(<!-- BEGIN facts: (\w+) -->\n).*?(<!-- END facts: \2 -->)", re.DOTALL)
 
 
 def documents() -> list[Path]:
@@ -58,9 +56,7 @@ def documents() -> list[Path]:
 #: The incorporated descriptor is the enumerable invariant inventory. Part 02 and Part 09 own
 #: their algorithms; the tree's checker implements them and `spec/tools/check.py` consumes one
 #: complete result.
-REGISTRY_CONTRACT = (
-    "spec/artifacts/registry_contracts/escapewheel-registry-contract-v0.9.json"
-)
+REGISTRY_CONTRACT = "spec/artifacts/registry_contracts/escapewheel-registry-contract-v0.9.json"
 
 
 def _check_counts() -> tuple[int, int]:
@@ -76,9 +72,7 @@ def _check_counts() -> tuple[int, int]:
         return sum(
             1
             for n in ast.walk(scope)
-            if isinstance(n, ast.Call)
-            and getattr(n.func, "id", None) == name
-            and id(n) not in exclude
+            if isinstance(n, ast.Call) and getattr(n.func, "id", None) == name and id(n) not in exclude
         )
 
     per_document = len(json.loads((ROOT / REGISTRY_CONTRACT).read_text())["invariants"])
@@ -111,14 +105,8 @@ def _corpus_count() -> int:
     tree = ast.parse((ROOT / "fixtures/corpus.py").read_text())
     for node in tree.body:
         # Annotated, so `ast.Assign` alone does not find it.
-        targets = (
-            node.targets
-            if isinstance(node, ast.Assign)
-            else [getattr(node, "target", None)]
-        )
-        if isinstance(node, ast.Assign | ast.AnnAssign) and any(
-            getattr(t, "id", None) == "EXPECTED" for t in targets
-        ):
+        targets = node.targets if isinstance(node, ast.Assign) else [getattr(node, "target", None)]
+        if isinstance(node, ast.Assign | ast.AnnAssign) and any(getattr(t, "id", None) == "EXPECTED" for t in targets):
             return len(node.value.keys)
     raise SystemExit("fixtures/corpus.py declares no EXPECTED mapping")
 
@@ -160,23 +148,11 @@ def facts() -> dict[str, str]:
     for path in (ROOT / "revisions/accepted").glob("R[0-9]*.md"):
         number = int(re.match(r"R(\d+)", path.name).group(1))
         head = path.read_text()[:400]
-        (
-            accepted
-            if "**Accepted**" in head
-            else withdrawn
-            if "withdrawn" in head.lower()
-            else proposed
-        ).add(number)
+        (accepted if "**Accepted**" in head else withdrawn if "withdrawn" in head.lower() else proposed).add(number)
     # Proposals and drafts carry no number; the numbered space reads in application order.
     # `revisions/drafts/README.md` holds the order of drafts awaiting acceptance.
-    proposals = [
-        p
-        for p in (ROOT / "revisions/proposals").glob("*.md")
-        if p.name not in {"README.md", "ROADMAP.md"}
-    ]
-    drafts = [
-        p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"
-    ]
+    proposals = [p for p in (ROOT / "revisions/proposals").glob("*.md") if p.name not in {"README.md", "ROADMAP.md"}]
+    drafts = [p for p in (ROOT / "revisions/drafts").glob("*.md") if p.name != "README.md"]
 
     extensions = sorted(p.stem for directory in EXTENSIONS for p in directory.glob("*.json"))
     per_document, whole = _check_counts()
@@ -191,11 +167,7 @@ def facts() -> dict[str, str]:
         "revisions": (
             f"{_revision_span(accepted)} accepted. "
             + (f"{_revision_span(withdrawn)} withdrawn. " if withdrawn else "")
-            + (
-                f"{_revision_span(proposed)} proposed and not binding. "
-                if proposed
-                else ""
-            )
+            + (f"{_revision_span(proposed)} proposed and not binding. " if proposed else "")
             + (
                 f"{len(proposals)} proposal{'s' if len(proposals) != 1 else ''} and "
                 f"{len(drafts)} draft{'s' if len(drafts) != 1 else ''} are open. "
@@ -216,10 +188,7 @@ def facts() -> dict[str, str]:
             f"{len(extensions)} extension registries, and {whole} further checks of the "
             f"specification's tree"
         ),
-        "clauses": (
-            f"`ledger.py` enumerates {decision_clauses} Decision clauses across the "
-            f"accepted revisions."
-        ),
+        "clauses": (f"`ledger.py` enumerates {decision_clauses} Decision clauses across the accepted revisions."),
     }
 
 
@@ -232,19 +201,12 @@ def main() -> int:
         before = path.read_text()
         named = {n for _, n, _ in REGION.findall(before)}
         if unknown := named - set(filled):
-            raise SystemExit(
-                f"{name} declares facts {sorted(unknown)} that facts.py does not compute"
-            )
-        after = REGION.sub(
-            lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", before
-        )
+            raise SystemExit(f"{name} declares facts {sorted(unknown)} that facts.py does not compute")
+        after = REGION.sub(lambda m: f"{m.group(1)}{filled[m.group(2)]}\n{m.group(3)}", before)
         if after != before:
             path.write_text(after)
             changed.append(name)
-    print(
-        f"filled {len(found)} document(s)"
-        + (f"; changed {', '.join(changed)}" if changed else "; no change")
-    )
+    print(f"filled {len(found)} document(s)" + (f"; changed {', '.join(changed)}" if changed else "; no change"))
     for key, value in sorted(filled.items()):
         print(f"  {key:<11} {value}")
     return 0

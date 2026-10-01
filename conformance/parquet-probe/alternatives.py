@@ -50,19 +50,11 @@ def chosen_of(encodings: set[str]) -> str:
 
 def candidates(kind: pa.DataType) -> tuple[str, ...]:
     """The encodings Part 03 §5.5 permits for a type: dictionary, plain, and whichever delta applies."""
-    if (
-        pa.types.is_integer(kind)
-        or pa.types.is_timestamp(kind)
-        or pa.types.is_date(kind)
-    ):
+    if pa.types.is_integer(kind) or pa.types.is_timestamp(kind) or pa.types.is_date(kind):
         return ("dict", "plain", "delta")
     if pa.types.is_floating(kind):
         return ("dict", "plain")
-    if (
-        pa.types.is_string(kind)
-        or pa.types.is_large_string(kind)
-        or pa.types.is_binary(kind)
-    ):
+    if pa.types.is_string(kind) or pa.types.is_large_string(kind) or pa.types.is_binary(kind):
         return ("dict", "plain", "delta_length", "delta_bytes")
     return ()
 
@@ -82,10 +74,7 @@ def cost(table: pa.Table, name: str, how: str) -> int | None:
     except (pa.ArrowInvalid, pa.ArrowNotImplementedError, OSError):
         return None
     metadata = pq.ParquetFile(pa.BufferReader(sink.getvalue())).metadata
-    return sum(
-        metadata.row_group(g).column(0).total_compressed_size
-        for g in range(metadata.num_row_groups)
-    )
+    return sum(metadata.row_group(g).column(0).total_compressed_size for g in range(metadata.num_row_groups))
 
 
 def measure(path: Path, table_name: str) -> list[dict[str, Any]]:
@@ -96,9 +85,7 @@ def measure(path: Path, table_name: str) -> list[dict[str, Any]]:
     sampled = list(every)
     if metadata.num_rows > TARGET:
         k = max(1, round(TARGET / (metadata.num_rows / len(sampled))))
-        sampled = sorted(
-            {round(i * (len(sampled) - 1) / max(k - 1, 1)) for i in range(k)}
-        )
+        sampled = sorted({round(i * (len(sampled) - 1) / max(k - 1, 1)) for i in range(k)})
     found = []
     for c in range(metadata.num_columns):
         field = f.schema_arrow.field(c)
@@ -106,12 +93,8 @@ def measure(path: Path, table_name: str) -> list[dict[str, Any]]:
             continue
         chunks = [metadata.row_group(g).column(c) for g in every]
         actual = sum(chunk.total_compressed_size for chunk in chunks)
-        chosen = chosen_of(
-            {str(e) for chunk in chunks for e in (chunk.encodings or ())}
-        )
-        actual_sampled = sum(
-            metadata.row_group(g).column(c).total_compressed_size for g in sampled
-        )
+        chosen = chosen_of({str(e) for chunk in chunks for e in (chunk.encodings or ())})
+        actual_sampled = sum(metadata.row_group(g).column(c).total_compressed_size for g in sampled)
         got = dict.fromkeys(options, 0)
         for g in sampled:
             part = f.read_row_group(g, columns=[field.name])
@@ -149,9 +132,7 @@ def report(root: Path) -> int:
     tables = root / "tables"
     found = []
     for path in sorted(tables.rglob("*.parquet")):
-        found.extend(
-            measure(path, ".".join(path.relative_to(tables).with_suffix("").parts))
-        )
+        found.extend(measure(path, ".".join(path.relative_to(tables).with_suffix("").parts)))
     print(
         f"{'column':56s} {'type':>10s} {'rows':>11s} {'chosen':>12s} {'bytes':>9s} "
         f"{'best':>12s} {'bytes':>9s} {'ratio':>6s}"
@@ -167,24 +148,16 @@ def report(root: Path) -> int:
         ("string", [e for e in found if _is_string(e)]),
         ("numeric", [e for e in found if not _is_string(e)]),
     ):
-        bands = [
-            sum(1 for e in part if e["ratio"] >= edge) for edge in (RATIO, 1.5, 2.0)
-        ]
+        bands = [sum(1 for e in part if e["ratio"] >= edge) for edge in (RATIO, 1.5, 2.0)]
         print(
             f"\n{kind}: {len(part)} columns; {bands[0]} at {RATIO}x their best or more, "
             f"{bands[1]} at 1.5x, {bands[2]} at 2x"
         )
-    print(
-        "\nthe chosen encoding rewritten, over the file's own bytes, for every column over 1 MB:"
-    )
+    print("\nthe chosen encoding rewritten, over the file's own bytes, for every column over 1 MB:")
     for entry in (e for e in found if e["actual"] > 1_000_000):
-        print(
-            f"  {entry['column']:54s} {entry['chosen']:>6s} {entry['reproduced']:.3f}  {entry['costs']}"
-        )
+        print(f"  {entry['column']:54s} {entry['chosen']:>6s} {entry['reproduced']:.3f}  {entry['costs']}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(
-        report(Path(sys.argv[1])) if len(sys.argv) > 1 else print(__doc__) or 2
-    )
+    raise SystemExit(report(Path(sys.argv[1])) if len(sys.argv) > 1 else print(__doc__) or 2)

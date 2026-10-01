@@ -14,7 +14,6 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "spec" / "tools"))
 
 import combine
-
 from revisions import check_citations, impact, ledger, process_rules, stages
 
 _release_spec = importlib.util.spec_from_file_location(
@@ -36,10 +35,7 @@ class ProcessSemanticsTests(unittest.TestCase):
     def test_decision_domain_legacy_cutoff(self) -> None:
         self.assertEqual(stages.accepted(Path("R119-legacy.md")), [])
         self.assertEqual(
-            stages.accepted(
-                ROOT
-                / "revisions/accepted/R120-allow-controlled-specification-reorganization.md"
-            ),
+            stages.accepted(ROOT / "revisions/accepted/R120-allow-controlled-specification-reorganization.md"),
             [],
         )
 
@@ -51,17 +47,13 @@ class ProcessSemanticsTests(unittest.TestCase):
         proposal = metadata(**{"Decision domain": "specification"})
         draft = metadata(**{"Decision domain": "specification"})
         self.assertEqual(
-            stages.lifecycle_metadata(
-                Path("proposal.md"), proposal, proposal_stage=True
-            ),
+            stages.lifecycle_metadata(Path("proposal.md"), proposal, proposal_stage=True),
             [],
         )
         self.assertTrue(
             any(
                 "Change form" in error
-                for error in stages.lifecycle_metadata(
-                    Path("draft.md"), draft, proposal_stage=False
-                )
+                for error in stages.lifecycle_metadata(Path("draft.md"), draft, proposal_stage=False)
             )
         )
 
@@ -101,16 +93,9 @@ class ProcessSemanticsTests(unittest.TestCase):
 
     def test_anchor_bootstrap_is_metadata_only(self) -> None:
         before = "## 1. Subject\nBody\n"
-        after = (
-            '<a id="ew-subject" data-spec-anchor="canonical"></a>\n'
-            "## 1. Subject\nBody\n"
-        )
+        after = '<a id="ew-subject" data-spec-anchor="canonical"></a>\n## 1. Subject\nBody\n'
         self.assertTrue(process_rules.anchor_bootstrap_only(before, after))
-        self.assertFalse(
-            process_rules.anchor_bootstrap_only(
-                before, after.replace("Body", "Changed")
-            )
-        )
+        self.assertFalse(process_rules.anchor_bootstrap_only(before, after.replace("Body", "Changed")))
 
     def test_linked_part_number_matches_anchor(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -118,8 +103,7 @@ class ProcessSemanticsTests(unittest.TestCase):
             parts = root / "spec"
             parts.mkdir()
             (parts / "02_subject.md").write_text(
-                '<a id="ew-subject" data-spec-anchor="canonical"></a>\n\n'
-                "## 7.1 Subject\n"
+                '<a id="ew-subject" data-spec-anchor="canonical"></a>\n\n## 7.1 Subject\n'
             )
             source = root / "guide.md"
             with (
@@ -145,31 +129,21 @@ class ProcessSemanticsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             parts = Path(directory)
             (parts / "02_subject.md").write_text(
-                '<a id="ew-subject" data-spec-anchor="canonical"></a>\n\n'
-                "## 7.1 Subject\n"
+                '<a id="ew-subject" data-spec-anchor="canonical"></a>\n\n## 7.1 Subject\n'
             )
             with mock.patch.object(impact, "PARTS", parts):
-                self.assertEqual(
-                    impact.anchor_location("ew-subject"), ("02", "7.1", "Subject")
-                )
+                self.assertEqual(impact.anchor_location("ew-subject"), ("02", "7.1", "Subject"))
 
     def test_combined_rendering_preserves_unique_anchors(self) -> None:
         self.assertEqual(combine.duplicate_ids('<a id="one"></a>'), [])
-        self.assertEqual(
-            combine.duplicate_ids('<a id="one"></a>\n<a id="one"></a>'), ["one"]
-        )
+        self.assertEqual(combine.duplicate_ids('<a id="one"></a>\n<a id="one"></a>'), ["one"])
 
     def test_part00_process_citations_are_repointed(self) -> None:
-        sites = [
-            site
-            for section in ("10.1", "10.2", "10.3", "10.4")
-            for site in impact.citers("00", section)
-        ]
+        sites = [site for section in ("10.1", "10.2", "10.3", "10.4") for site in impact.citers("00", section)]
         live_process = [
             site
             for site in sites
-            if not site.startswith("revisions/accepted/")
-            and not site.startswith("spec/parts/07_")
+            if not site.startswith("revisions/accepted/") and not site.startswith("spec/parts/07_")
         ]
         self.assertEqual(live_process, [])
         self.assertTrue(sites)

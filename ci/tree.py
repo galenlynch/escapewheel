@@ -41,9 +41,7 @@ def members() -> list[Path]:
         check=True,
     ).stdout.split(b"\0")
     return sorted(
-        path.relative_to(TREE)
-        for path in (ROOT / name.decode() for name in listed if name)
-        if path.is_file()
+        path.relative_to(TREE) for path in (ROOT / name.decode() for name in listed if name) if path.is_file()
     )
 
 

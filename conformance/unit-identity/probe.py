@@ -32,9 +32,7 @@ def defects(documents: list[dict]) -> list[str]:
             for reference in table.get("references", []):
                 if reference["resource"] != "core.units":
                     continue
-                if reference["columns"] != ["unit_id"] or reference[
-                    "resource_columns"
-                ] != ["unit_id"]:
+                if reference["columns"] != ["unit_id"] or reference["resource_columns"] != ["unit_id"]:
                     found.append(f"{resource} unit reference")
     return found
 
@@ -74,6 +72,4 @@ references = sum(
     for table in tables(document).values()
     for reference in table.get("references", [])
 )
-print(
-    f"core.units has primary key unit_id; {references} unit references use unit_id alone"
-)
+print(f"core.units has primary key unit_id; {references} unit references use unit_id alone")

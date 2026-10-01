@@ -87,9 +87,7 @@ STEPS = [
 ]
 
 if not PARSED.exists():
-    subprocess.run(
-        [sys.executable, str(HERE / "sweep.py")], check=True, stdout=subprocess.DEVNULL
-    )
+    subprocess.run([sys.executable, str(HERE / "sweep.py")], check=True, stdout=subprocess.DEVNULL)
 
 tables = set(json.loads(PARSED.read_text()))
 print(f"{'02 as written':47s}{len(tables):>4d}")

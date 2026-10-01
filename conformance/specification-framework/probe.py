@@ -22,9 +22,7 @@ def _replace(name: str, old: str, new: str) -> dict[str, str]:
     text = _text(name)
     count = text.count(old)
     if count != 1:
-        raise AssertionError(
-            f"mutation selector occurs {count} times in {name}: {old!r}"
-        )
+        raise AssertionError(f"mutation selector occurs {count} times in {name}: {old!r}")
     return {name: text.replace(old, new)}
 
 
@@ -175,9 +173,7 @@ def main() -> int:
         "Part 11 normative references are missing IEEE 754-2019",
     )
     parquet_marker = framework.REFERENCE_MARKERS["Parquet"]
-    misplaced_part_00 = _text("00_architecture.md").replace(
-        parquet_marker, "example.invalid/misplaced-parquet"
-    )
+    misplaced_part_00 = _text("00_architecture.md").replace(parquet_marker, "example.invalid/misplaced-parquet")
     misplaced_part_04 = _text("04_packet_catalog.md") + f"\n{parquet_marker}\n"
     _assert_rejected(
         "misplaced reference",
@@ -194,17 +190,13 @@ def main() -> int:
             "12_adapter_interface.md": _text("12_adapter_interface.md").replace(
                 arrow_marker, "example.invalid/misplaced-arrow"
             ),
-            "03_portable_physical_profile.md": _text("03_portable_physical_profile.md")
-            + f"\n{arrow_marker}\n",
+            "03_portable_physical_profile.md": _text("03_portable_physical_profile.md") + f"\n{arrow_marker}\n",
         },
         "Arrow columnar normative reference is in Part 03, expected Part 12",
     )
     _assert_rejected(
         "duplicate reference",
-        {
-            "04_packet_catalog.md": _text("04_packet_catalog.md")
-            + f"\n{parquet_marker}\n"
-        },
+        {"04_packet_catalog.md": _text("04_packet_catalog.md") + f"\n{parquet_marker}\n"},
         "Parquet normative reference appears in Parts 00, 04",
     )
     _assert_rejected(
@@ -220,17 +212,15 @@ def main() -> int:
         "removed Part 02 reference",
         _replace(
             "02_core_logical_schemas.md",
-            "| [Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |\n",
+            "| [Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/) | living registry | "
+            "the spelling of the names it registers, in open columns naming it (§9.3) |\n",
             "",
         ),
         "Part 02 normative references are missing MGI",
     )
     _assert_rejected(
         "Part 02 reference copied into another part",
-        {
-            "04_packet_catalog.md": _text("04_packet_catalog.md")
-            + f"\n{framework.REFERENCE_MARKERS['UCUM']}\n"
-        },
+        {"04_packet_catalog.md": _text("04_packet_catalog.md") + f"\n{framework.REFERENCE_MARKERS['UCUM']}\n"},
         "UCUM normative reference appears in Parts 02, 04",
     )
     _assert_rejected(
@@ -244,19 +234,14 @@ def main() -> int:
     )
     unlinked = json.loads(framework.CORE_REGISTRY.read_text())
     genotype = next(
-        column
-        for column in unlinked["resources"]["core.subjects"]["table"]["columns"]
-        if column["name"] == "genotype"
+        column for column in unlinked["resources"]["core.subjects"]["table"]["columns"] if column["name"] == "genotype"
     )
     assert genotype["vocabulary"] == "open" and "authority" not in genotype
-    genotype["authority"] = [
-        {"name": "Example", "uri": "https://example.invalid/allele-nomenclature"}
-    ]
+    genotype["authority"] = [{"name": "Example", "uri": "https://example.invalid/allele-nomenclature"}]
     _assert_rejected(
         "open core column authority with no Part 02 entry",
         {},
-        "open core column core.subjects.genotype names authority "
-        "https://example.invalid/allele-nomenclature",
+        "open core column core.subjects.genotype names authority https://example.invalid/allele-nomenclature",
         unlinked,
     )
     _assert_rejected(
@@ -333,12 +318,7 @@ def main() -> int:
     )
     _assert_rejected(
         "stale combined rendering",
-        {
-            "Escapewheel_POC_v0.2_Implementation_Spec.md": _text(
-                "Escapewheel_POC_v0.2_Implementation_Spec.md"
-            )
-            + "\n"
-        },
+        {"Escapewheel_POC_v0.2_Implementation_Spec.md": _text("Escapewheel_POC_v0.2_Implementation_Spec.md") + "\n"},
         "combined specification is stale",
     )
     _assert_rejected(

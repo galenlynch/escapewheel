@@ -31,9 +31,8 @@ import argparse
 import re
 import subprocess
 import sys
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LEDGER = ROOT / "revisions" / "applied.toml"
@@ -190,16 +189,12 @@ def exemption(name: str, line: str, key: str) -> str | None:
     return None
 
 
-def findings() -> tuple[
-    list[tuple[str, int, str, str, str]], dict[tuple[str, str], int]
-]:
+def findings() -> tuple[list[tuple[str, int, str, str, str]], dict[tuple[str, str], int]]:
     """Every citation that should name a part, and how often each exemption fired."""
     parts, used = ledger(), {(p, q): 0 for p, q, _ in EXEMPT + REASONING}
     out = []
     for name in tracked():
-        for number, line in enumerate(
-            (ROOT / name).read_text(errors="replace").splitlines(), 1
-        ):
+        for number, line in enumerate((ROOT / name).read_text(errors="replace").splitlines(), 1):
             for match in REVISION.finditer(line):
                 key = f"R{match.group(1)} §{match.group(2)}"
                 if key not in parts:
@@ -234,23 +229,15 @@ def main() -> int:
             mark = "     " if count else "STALE"
             print(f"  {mark} {prefix} · {pattern} — {count} site(s)\n        {reason}")
         stale = sum(1 for e in EXEMPT + REASONING if not used[e[0], e[1]])
-        print(
-            f"\n{len(EXEMPT) + len(REASONING)} exemption(s), {stale} matching nothing"
-        )
+        print(f"\n{len(EXEMPT) + len(REASONING)} exemption(s), {stale} matching nothing")
         return 1 if stale else 0
 
     if not args.quiet:
-        for name, number, key, targets in sorted(
-            {(n, ln, k, tuple(t)) for n, ln, k, t, _ in found}
-        ):
-            arrow = (
-                targets[0] if len(targets) == 1 else " or ".join(targets) + "  (choose)"
-            )
+        for name, number, key, targets in sorted({(n, ln, k, tuple(t)) for n, ln, k, t, _ in found}):
+            arrow = targets[0] if len(targets) == 1 else " or ".join(targets) + "  (choose)"
             print(f"  {name}:{number}  {key} → {arrow}")
     by_file = len({name for name, *_ in found})
-    print(
-        f"{len(found)} citation(s) of a requirement name a revision, across {by_file} file(s)"
-    )
+    print(f"{len(found)} citation(s) of a requirement name a revision, across {by_file} file(s)")
     return 1 if found else 0
 
 

@@ -28,9 +28,7 @@ EXTENSIONS = (
     "registry/extensions/vr_foraging.json",
 )
 
-_PARENTHETICAL_REVISION = re.compile(
-    r" \((?:R\d+(?: §?[0-9.]+)?(?:, §[0-9.]+)?(?:, )?)+\)"
-)
+_PARENTHETICAL_REVISION = re.compile(r" \((?:R\d+(?: §?[0-9.]+)?(?:, §[0-9.]+)?(?:, )?)+\)")
 
 
 def _at_baseline(path: str) -> Any:
@@ -61,9 +59,7 @@ def _text(value: str) -> str:
     """Remove revision-only wording while retaining the statement it annotated."""
     value = _PARENTHETICAL_REVISION.sub("", value)
     value = value.replace("R27 5.3's default", "the default")
-    value = value.replace(
-        "as part of R90 " + "§3.5's shared key", "as part of the shared key"
-    )
+    value = value.replace("as part of R90 " + "§3.5's shared key", "as part of the shared key")
     value = value.replace("A narrow exception to R9 " + "§4: the ", "The ")
     value = value.replace(", which is the reading R23 " + "§2 gives a stream", "")
     value = value.replace(
@@ -71,14 +67,10 @@ def _text(value: str) -> str:
         "; measured examples differ by 133 and 302 days",
     )
     value = value.replace(
-        ": an equality join on a float64 is not safe, which is why R47 could strike "
-        "`interval_index` and this stays",
-        ": an equality join on a float64 is not safe, so the key uses an explicit sequence "
-        "position",
+        ": an equality join on a float64 is not safe, which is why R47 could strike `interval_index` and this stays",
+        ": an equality join on a float64 is not safe, so the key uses an explicit sequence position",
     )
-    value = value.replace(
-        "Tier 2 validation rules (R2 7.2):", "Tier 2 validation rules:"
-    )
+    value = value.replace("Tier 2 validation rules (R2 7.2):", "Tier 2 validation rules:")
     value = value.replace("pass (R2 7.3)", "pass")
     return value
 
@@ -105,9 +97,7 @@ def _normalize(value: Any, *, core: bool = False, root: bool = True) -> Any:
 def defects() -> list[str]:
     """Return each declaration or rule set changed beyond the reviewed cleanup."""
     found = []
-    if _normalize(_at_baseline(CORE), core=True) != _normalize(
-        _incorporated(CORE), core=True
-    ):
+    if _normalize(_at_baseline(CORE), core=True) != _normalize(_incorporated(CORE), core=True):
         found.append(CORE)
     for path in EXTENSIONS:
         if _normalize(_at_baseline(path)) != _normalize(_incorporated(path)):

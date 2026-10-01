@@ -39,9 +39,5 @@ if __name__ == "__main__":
     if path := supplied.get("report_path"):
         # The one fact a declaration cannot carry: `states` names the recipe fields this source can
         # state, and every value needs the source read. Part 12 §9's report is the channel.
-        stated = {
-            field: getattr(source, attr) for field, attr in type(source).STATES.items()
-        }
-        Path(path).write_text(
-            json.dumps({"stated": stated}, indent=2, default=str) + "\n"
-        )
+        stated = {field: getattr(source, attr) for field, attr in type(source).STATES.items()}
+        Path(path).write_text(json.dumps({"stated": stated}, indent=2, default=str) + "\n")

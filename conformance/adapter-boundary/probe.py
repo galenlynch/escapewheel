@@ -18,7 +18,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from zoneinfo import ZoneInfo
 
-
 HERE = Path(__file__).resolve().parent
 #  imports `tests.nwbfixture`, so the package root goes on the path too.
 sys.path.insert(0, str(HERE.parent.parent / "escapewheel-writer"))
@@ -87,9 +86,7 @@ def main() -> int:
         same = mine == theirs
         rows = sum(len(v) for v in mine.values())
         print(f"inputs crossed as {len(wire)} bytes of JSON")
-        print(
-            f"records: {len(mine)} resources, {rows} rows, identical across the boundary: {same}"
-        )
+        print(f"records: {len(mine)} resources, {rows} rows, identical across the boundary: {same}")
         if not same:
             for key in sorted(set(mine) | set(theirs)):
                 if mine.get(key) != theirs.get(key):
@@ -131,10 +128,7 @@ def waveforms(tmp: Path) -> None:
 
     # So a build passes records carrying the key as columns, and the adapter keys them itself.
     supplied = {
-        "units": [
-            {"device_name": "probeA", "local_unit_label": str(u), "unit_id": u}
-            for u in range(fixture.UNITS)
-        ],
+        "units": [{"device_name": "probeA", "local_unit_label": str(u), "unit_id": u} for u in range(fixture.UNITS)],
     }
     wire = json.dumps(supplied)
     print(
@@ -144,9 +138,7 @@ def waveforms(tmp: Path) -> None:
 
     source = WaveformSource(root, session_id="s1", **supplied)
     staged = source.staged_arrays()
-    print(
-        f"\nstaged_arrays: {len(staged)} object(s), type {type(staged[0]).__name__ if staged else '—'}"
-    )
+    print(f"\nstaged_arrays: {len(staged)} object(s), type {type(staged[0]).__name__ if staged else '—'}")
     for item in staged:
         values = getattr(item, "values", None)
         print(f"    {item.array_asset_id}: fields {[f.name for f in fields(item)]}")
@@ -184,15 +176,11 @@ def streams() -> None:
     try:
         while True:
             reader = pa.ipc.open_stream(child.stdout)
-            got[reader.schema.metadata[b"resource_id"].decode()] = (
-                reader.read_all().num_rows
-            )
+            got[reader.schema.metadata[b"resource_id"].decode()] = reader.read_all().num_rows
     except pa.ArrowInvalid:
         pass
     child.wait()
-    print(
-        f"\nthree resources over one pipe, three schemas: {got}, exit {child.returncode}"
-    )
+    print(f"\nthree resources over one pipe, three schemas: {got}, exit {child.returncode}")
 
 
 if __name__ == "__main__":

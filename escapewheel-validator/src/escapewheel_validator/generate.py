@@ -194,12 +194,18 @@ def _discriminator(
             if found is None:
                 # A kind declaring no specialising reference naming this discriminator holds no
                 # counterpart, so every row naming it is reported.
-                message = f"a row names {kind}, which declares no specialising reference naming {resource}.{column['name']} (Part 02 §8.3)"
+                message = (
+                    f"a row names {kind}, which declares no specialising reference naming "
+                    f"{resource}.{column['name']} (Part 02 §8.3)"
+                )
                 sql = f"SELECT {key} FROM {name} d WHERE d.{col} = '{kind}'"
             else:
                 on = " AND ".join(f"s.{quote(a)} = d.{quote(b)}" for a, b in found.on)
                 message = f"a row names {kind} and has no counterpart there (Part 02 §8.3)"
-                sql = f"SELECT {key} FROM {name} d WHERE d.{col} = '{kind}' AND NOT EXISTS (SELECT 1 FROM {kind} s WHERE {on})"
+                sql = (
+                    f"SELECT {key} FROM {name} d WHERE d.{col} = '{kind}' "
+                    f"AND NOT EXISTS (SELECT 1 FROM {kind} s WHERE {on})"
+                )
             checks.append(
                 Check(
                     f"{resource}.{column['name']}.{sql_name(kind)}_is_specialised",
@@ -364,7 +370,7 @@ def _paired_value(
     return checks
 
 
-def _generate(
+def _generate(  # noqa: C901
     registry: Mapping[str, Any],
     *,
     only: set[str] | None = None,

@@ -9,9 +9,9 @@ tree's own tests ran it against.
 import argparse
 import ast
 import sys
+import tomllib
 from pathlib import Path
 
-import tomllib
 from packaging.requirements import Requirement
 
 ROOT = Path(__file__).resolve().parent

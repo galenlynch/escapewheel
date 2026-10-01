@@ -1,4 +1,10 @@
-import numpy as np, pyarrow as pa, pyarrow.parquet as pq, os, time, duckdb
+import os
+import time
+
+import duckdb
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 rng = np.random.default_rng(0)
 NU, RATE, DUR = 500, 30000, 3600
@@ -13,9 +19,7 @@ dic = ["unit_id"]
 
 # flat sorted by (unit, t)  -- as 03 recommends
 pq.write_table(
-    pa.table(
-        {"unit_id": pa.array(u_flat), "t_tick": pa.array(t_flat, type=pa.int64())}
-    ),
+    pa.table({"unit_id": pa.array(u_flat), "t_tick": pa.array(t_flat, type=pa.int64())}),
     "a_by_unit.parquet",
     compression="zstd",
     use_dictionary=dic,
@@ -24,9 +28,7 @@ pq.write_table(
 # flat sorted by t
 o = np.argsort(t_flat, kind="stable")
 pq.write_table(
-    pa.table(
-        {"unit_id": pa.array(u_flat[o]), "t_tick": pa.array(t_flat[o], type=pa.int64())}
-    ),
+    pa.table({"unit_id": pa.array(u_flat[o]), "t_tick": pa.array(t_flat[o], type=pa.int64())}),
     "a_by_time.parquet",
     compression="zstd",
     use_dictionary=dic,
@@ -82,7 +84,8 @@ Q = {
     "100 s window, all units": (
         f"SELECT t_tick FROM 'a_by_unit.parquet' WHERE {W}",
         f"SELECT t_tick FROM 'a_by_time.parquet' WHERE {W}",
-        f"SELECT t FROM (SELECT UNNEST(spike_ticks) t FROM 'a_chunk.parquet' WHERE {WC}) WHERE t BETWEEN 30000000 AND 33000000",
+        f"SELECT t FROM (SELECT UNNEST(spike_ticks) t FROM 'a_chunk.parquet' WHERE {WC}) "
+        "WHERE t BETWEEN 30000000 AND 33000000",
     ),
 }
 print(f"{'access pattern':28s} {'flat/unit':>10s} {'flat/time':>10s} {'chunked':>10s}")

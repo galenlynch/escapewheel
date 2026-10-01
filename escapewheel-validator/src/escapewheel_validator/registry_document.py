@@ -941,13 +941,19 @@ def _specialisations(
         for position, (r_index, reference) in enumerate(declared):
             pointer = _pointer(("tables", resource, "references", r_index, "specialises"))
             if position > 0:
-                outcomes.append(_invalid(invariant, pointer, resource, "the table declares specialises on another reference"))
+                outcomes.append(
+                    _invalid(invariant, pointer, resource, "the table declares specialises on another reference")
+                )
                 continue
             holder_name, column_name = str(reference["specialises"]).rsplit(".", 1)
             holder = universe.get(holder_name)
-            if holder is None and class_name == "extension" and not core_usable:
-                if holder_name.split(".", 1)[0] in {"core", "analysis"}:
-                    continue  # reported incomplete as core-dependent
+            if (
+                holder is None
+                and class_name == "extension"
+                and not core_usable
+                and holder_name.split(".", 1)[0] in {"core", "analysis"}
+            ):
+                continue  # reported incomplete as core-dependent
             column = None if holder is None else _one_column(holder, column_name)
             if column is None or column["role"] != "discriminator" or "discriminates" in column:
                 problem = (
@@ -962,14 +968,14 @@ def _specialisations(
             via = column.get("discriminates_via")
             specialised = holder_name if via is None else str(via).rsplit(".", 1)[0]
             if reference["resource"] != specialised:
+                target = reference["resource"]
                 outcomes.append(
-                    _invalid(invariant, pointer, resource, f"the reference targets {reference['resource']}, not {specialised}")
+                    _invalid(invariant, pointer, resource, f"the reference targets {target}, not {specialised}")
                 )
             columns = list(reference["columns"])
             if list(table.get("primary_key") or [])[: len(columns)] != columns:
-                outcomes.append(
-                    _invalid(invariant, pointer, resource, "the primary key does not begin with the reference's columns")
-                )
+                message = "the primary key does not begin with the reference's columns"
+                outcomes.append(_invalid(invariant, pointer, resource, message))
     return outcomes
 
 
@@ -1417,8 +1423,7 @@ def _discriminator_declarations(
             correct = (
                 companion is not None
                 and (
-                    (companion["type"] == "string" and companion["role"] == "data")
-                    or companion["role"] == "identifier"
+                    (companion["type"] == "string" and companion["role"] == "data") or companion["role"] == "identifier"
                 )
                 and companion["presence"] in allowed
             )

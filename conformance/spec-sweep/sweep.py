@@ -1,4 +1,6 @@
-import re, pathlib, json
+import json
+import pathlib
+import re
 
 D = pathlib.Path("nwb_lake_poc_docs")
 t02 = (D / "02_core_logical_schemas.md").read_text()
@@ -19,19 +21,13 @@ for line in t02.splitlines():
     if m and cur:
         tables[cur][m.group(1)] = (m.group(2).strip(), m.group(3).strip())
 # provenance subsections use ###
-for m in re.finditer(
-    r"^### `(core\.[a-z_]+)`\n(.*?)(?=\n#{2,3} |\Z)", t02, re.S | re.M
-):
+for m in re.finditer(r"^### `(core\.[a-z_]+)`\n(.*?)(?=\n#{2,3} |\Z)", t02, re.S | re.M):
     name, body = m.group(1), m.group(2)
     tables.setdefault(name, {})
-    for lm in re.finditer(
-        r"^\|\s*`([a-z_0-9]+)`\s*\|\s*([^|]+?)\s*\|\s*([a-z]+)\s*\|", body, re.M
-    ):
+    for lm in re.finditer(r"^\|\s*`([a-z_0-9]+)`\s*\|\s*([^|]+?)\s*\|\s*([a-z]+)\s*\|", body, re.M):
         tables[name][lm.group(1)] = (lm.group(2).strip(), lm.group(3).strip())
 
-print(
-    f"02 defines {len(tables)} tables, {sum(len(v) for v in tables.values())} columns\n"
-)
+print(f"02 defines {len(tables)} tables, {sum(len(v) for v in tables.values())} columns\n")
 
 # --- parse 09 section 4: `core.X` MUST/SHOULD/MAY include: ```text ... ``` ---
 claims = []
@@ -43,9 +39,7 @@ for m in re.finditer(
     tbl, lvl, body = m.group(1), m.group(2), m.group(3)
     for f in [x.strip() for x in body.splitlines() if x.strip()]:
         claims.append((tbl, lvl, f))
-print(
-    f"09 §4 makes {len(claims)} field claims across {len({c[0] for c in claims})} tables\n"
-)
+print(f"09 §4 makes {len(claims)} field claims across {len({c[0] for c in claims})} tables\n")
 
 print("=== DRIFT: field named in 09 but absent from 02 ===")
 drift = False

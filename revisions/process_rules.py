@@ -5,9 +5,7 @@ from __future__ import annotations
 import difflib
 import re
 
-CANONICAL_LINE = re.compile(
-    r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="canonical"></a>$'
-)
+CANONICAL_LINE = re.compile(r'^<a id="([a-z0-9]+(?:-[a-z0-9]+)*)" data-spec-anchor="canonical"></a>$')
 HEADING_LINE = re.compile(r"^#{1,4} \d+(?:\.\d+)*\.?(?:\s|$)")
 
 

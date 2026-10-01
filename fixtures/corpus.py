@@ -55,8 +55,7 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "clock_without_window": ("error", "core.clocks.observation_declared"),
     "frame_without_axes": (
         "error",
-        "core.electrode_coordinate_values."
-        "session_id_coordinate_frame_axis_index_resolves",
+        "core.electrode_coordinate_values.session_id_coordinate_frame_axis_index_resolves",
     ),
     "coordinate_omits_an_axis": None,
     "origin_through_transform": None,
@@ -230,9 +229,7 @@ def main() -> int:
             level, check = expect
             subject = EXTENSION_FINDINGS.get(name)
             fired = sum(
-                f.check == check
-                and f.level == level
-                and (subject is None or f.registry == subject)
+                f.check == check and f.level == level and (subject is None or f.registry == subject)
                 for f in report.findings
             )
             ok = fired == COUNTS[name] if name in COUNTS else fired > 0

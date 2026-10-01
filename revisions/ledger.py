@@ -18,9 +18,8 @@ import argparse
 import functools
 import json
 import re
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 try:
     from revisions.process_rules import canonical_anchors
@@ -40,9 +39,7 @@ DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
 
 #: `## 3.` and `### 3.1 ` alike, which is every section a part declares.
 HEADING = re.compile(r"^#{1,4} (\d+(?:\.\d+)*)\.?(?:\s|$)", re.MULTILINE)
-DECLARED = re.compile(
-    r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE
-)
+DECLARED = re.compile(r"^\|\s*\*\*Decision clauses\*\*\s*\|\s*(.*?)\s*\|$", re.MULTILINE)
 DECLARED_SECTION = re.compile(r"§(\d+(?:\.\d+)*)")
 
 
@@ -61,9 +58,7 @@ def targets(where: object) -> tuple[list[dict[str, str]], list[str]]:
             malformed.append(f"{target!r}, which has no recognized exact target shape")
             continue
         if not all(isinstance(target.get(key), str) and target[key] for key in keys):
-            malformed.append(
-                f"{target!r}, whose target fields are not nonempty strings"
-            )
+            malformed.append(f"{target!r}, whose target fields are not nonempty strings")
             continue
         if "note" in target and not isinstance(target["note"], str):
             malformed.append(f"{target!r}, whose optional note is not a string")
@@ -82,9 +77,7 @@ def sections(part: str) -> frozenset[str] | None:
 def pointer(document: object, value: str) -> object:
     """Resolve one RFC 6901 JSON Pointer, raising a useful lookup error."""
     if not isinstance(value, str) or not value.startswith("/"):
-        raise ValueError(
-            "pointer must be a nonempty RFC 6901 string beginning with `/`"
-        )
+        raise ValueError("pointer must be a nonempty RFC 6901 string beginning with `/`")
     current = document
     for raw in value[1:].split("/"):
         token = raw.replace("~1", "/").replace("~0", "~")
@@ -107,17 +100,9 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
         declared = tomllib.loads(REGISTRY_TARGETS.read_text()).get("target", {})
     except (OSError, tomllib.TOMLDecodeError) as exc:
         return [f"{REGISTRY_TARGETS.name}: {exc}"]
-    expected = {
-        key for key, entry in ledger.items() if entry.get("disposition") == "registry"
-    }
-    defects = [
-        f"{key}: registry disposition has no exact target"
-        for key in sorted(expected - set(declared))
-    ]
-    defects += [
-        f"{key}: target names no registry disposition"
-        for key in sorted(set(declared) - expected)
-    ]
+    expected = {key for key, entry in ledger.items() if entry.get("disposition") == "registry"}
+    defects = [f"{key}: registry disposition has no exact target" for key in sorted(expected - set(declared))]
+    defects += [f"{key}: target names no registry disposition" for key in sorted(set(declared) - expected)]
     defects += [
         f"{key}: registry disposition retains legacy `where`; use registry-targets.toml"
         for key in sorted(expected)
@@ -141,9 +126,7 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
             path, at = location.get("path"), location.get("pointer")
             pair = (path, at) if isinstance(path, str) and isinstance(at, str) else None
             if pair is None:
-                defects.append(
-                    f"{key}: target {location!r} needs string `path` and `pointer`"
-                )
+                defects.append(f"{key}: target {location!r} needs string `path` and `pointer`")
                 continue
             if pair in seen:
                 defects.append(f"{key}: repeats {path}#{at}")
@@ -160,16 +143,9 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
                 document = loaded.setdefault(artifact, json.loads(artifact.read_text()))
                 resolved = pointer(document, at)
                 if "equals" in location and resolved != location["equals"]:
-                    defects.append(
-                        f"{key}: {path}#{at} is {resolved!r}, expected {location['equals']!r}"
-                    )
-                elif (
-                    any(token.isdigit() for token in at.split("/")[1:])
-                    and "equals" not in location
-                ):
-                    defects.append(
-                        f"{key}: array target {path}#{at} needs an `equals` guard"
-                    )
+                    defects.append(f"{key}: {path}#{at} is {resolved!r}, expected {location['equals']!r}")
+                elif any(token.isdigit() for token in at.split("/")[1:]) and "equals" not in location:
+                    defects.append(f"{key}: array target {path}#{at} needs an `equals` guard")
             except (
                 json.JSONDecodeError,
                 KeyError,
@@ -181,7 +157,7 @@ def registry_target_defects(ledger: dict[str, dict]) -> list[str]:
     return defects
 
 
-def unresolved(
+def unresolved(  # noqa: C901
     ledger: dict[str, dict],
 ) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
     """Return every unresolved applied destination and every malformed target."""
@@ -203,9 +179,7 @@ def unresolved(
             domain = match.group(1) if match else ""
         for target in found:
             if domain == "process" and "path" not in target:
-                dangling.append(
-                    (key, "process clause does not use a path-plus-anchor owner")
-                )
+                dangling.append((key, "process clause does not use a path-plus-anchor owner"))
                 continue
             if "section" in target:
                 part, section = target["part"], target["section"]
@@ -225,9 +199,7 @@ def unresolved(
                 if not files:
                     dangling.append((key, f"`{part}` — no part has that number"))
                 elif target["anchor"] not in canonical_anchors(files[0].read_text()):
-                    dangling.append(
-                        (key, f"`{part}` has no canonical #{target['anchor']}")
-                    )
+                    dangling.append((key, f"`{part}` has no canonical #{target['anchor']}"))
             else:
                 path = (ROOT / target["path"]).resolve()
                 try:
@@ -236,19 +208,11 @@ def unresolved(
                     dangling.append((key, f"{target['path']!r} escapes the repository"))
                     continue
                 if domain != "process":
-                    dangling.append(
-                        (key, "path-plus-anchor target is reserved for process clauses")
-                    )
+                    dangling.append((key, "path-plus-anchor target is reserved for process clauses"))
                 elif path != HERE / "CONTRIBUTING.md":
-                    dangling.append(
-                        (key, f"{target['path']!r} is not a recognized process owner")
-                    )
-                elif not path.is_file() or target["anchor"] not in canonical_anchors(
-                    path.read_text()
-                ):
-                    dangling.append(
-                        (key, f"{target['path']} has no canonical #{target['anchor']}")
-                    )
+                    dangling.append((key, f"{target['path']!r} is not a recognized process owner"))
+                elif not path.is_file() or target["anchor"] not in canonical_anchors(path.read_text()):
+                    dangling.append((key, f"{target['path']} has no canonical #{target['anchor']}"))
     return dangling, unparsed
 
 
@@ -275,20 +239,14 @@ def clauses() -> dict[str, str]:
         if declared := DECLARED.search(text[:2000]):
             titles = {
                 m.group(1): m.group(2).strip()
-                for m in re.finditer(
-                    r"^#{2,4} (\d+(?:\.\d+)*)\.?\s+(.+)$", text, re.MULTILINE
-                )
+                for m in re.finditer(r"^#{2,4} (\d+(?:\.\d+)*)\.?\s+(.+)$", text, re.MULTILINE)
             }
             named = DECLARED_SECTION.findall(declared.group(1))
             if not named:
-                raise SystemExit(
-                    f"{path.name}: `Decision clauses` enumerates no section"
-                )
+                raise SystemExit(f"{path.name}: `Decision clauses` enumerates no section")
             for section in named:
                 if section not in titles:
-                    raise SystemExit(
-                        f"{path.name}: `Decision clauses` names absent §{section}"
-                    )
+                    raise SystemExit(f"{path.name}: `Decision clauses` names absent §{section}")
                 found[f"R{number} §{section}"] = titles[section]
             continue
         # Every section from 2 onward, at either depth. Section 1 is Motivation by convention;
@@ -297,9 +255,7 @@ def clauses() -> dict[str, str]:
         # A subsection supersedes its parent: `### 2.1` is disposed, `## 2.` then is not.
         matches = [
             m
-            for m in re.finditer(
-                r"^#{2,3} (\d+(?:\.[\d.]*\d)?)\.?\s+(.+)$", text, re.MULTILINE
-            )
+            for m in re.finditer(r"^#{2,3} (\d+(?:\.[\d.]*\d)?)\.?\s+(.+)$", text, re.MULTILINE)
             if int(m.group(1).split(".")[0]) >= 2
         ]
         parents = {m.group(1).split(".")[0] for m in matches if "." in m.group(1)}
@@ -343,34 +299,20 @@ def main() -> int:
     # The ratchet's high-water mark lives beside the data it describes, not as a number in
     # another file that someone has to remember to lower. Falling below it rewrites it, so
     # disposing a clause shows up as a diff and `verify.py`'s candidate-state comparison sees it.
-    baseline = (
-        tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("undisposed", 0)
-        if LEDGER.exists()
-        else 0
-    )
+    baseline = tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("undisposed", 0) if LEDGER.exists() else 0
     undisposed = {k: v for k, v in binding.items() if k not in ledger}
     # A disposition for a clause that no longer exists is as wrong as a missing one: the revision
     # was edited, or the clause was renumbered, and the ledger now vouches for nothing.
     stale = sorted(set(ledger) - set(binding))
-    bad = {
-        k: d.get("disposition")
-        for k, d in ledger.items()
-        if d.get("disposition") not in DISPOSITIONS
-    }
+    bad = {k: d.get("disposition") for k, d in ledger.items() if d.get("disposition") not in DISPOSITIONS}
     # An `applied` entry naming no part says the clause was written down and not where, which is
     # the state the withdrawn `implementation` disposition made permanent for 23 clauses.
-    placeless = sorted(
-        k
-        for k, d in ledger.items()
-        if d.get("disposition") == "applied" and not d.get("where")
-    )
+    placeless = sorted(k for k, d in ledger.items() if d.get("disposition") == "applied" and not d.get("where"))
     dangling, unparsed = unresolved(ledger)
     registry_defects = registry_target_defects(ledger)
     counts: dict[str, int] = {}
     for entry in ledger.values():
-        counts[entry.get("disposition", "?")] = (
-            counts.get(entry.get("disposition", "?"), 0) + 1
-        )
+        counts[entry.get("disposition", "?")] = counts.get(entry.get("disposition", "?"), 0) + 1
     print(f"{len(binding)} decision clauses across the accepted revisions")
     for name in sorted(counts):
         print(f"  {counts[name]:>4}  {name}")
@@ -380,18 +322,12 @@ def main() -> int:
     # The rest are defects in what the ledger already claims, and there is nothing to read
     # instead of them.
     if not args.summary:
-        for key, title in sorted(
-            undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])
-        ):
+        for key, title in sorted(undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
             print(f"    UNDISPOSED  {key:<12} {title[:62]}")
     for key in stale:
-        print(
-            f"    STALE       {key:<12} the ledger disposes a clause no revision states"
-        )
+        print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
     for key, value in sorted(bad.items()):
-        print(
-            f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}"
-        )
+        print(f"    BAD         {key:<12} disposition {value!r} is not one of {sorted(DISPOSITIONS)}")
     for key in placeless:
         print(f"    PLACELESS   {key:<12} applied, but `where` names no part")
     for key, target in dangling:
@@ -401,20 +337,10 @@ def main() -> int:
     for defect in registry_defects:
         print(f"    REGISTRY    {defect}")
     over = max(0, len(undisposed) - baseline)
-    failures = (
-        over
-        + len(stale)
-        + len(bad)
-        + len(placeless)
-        + len(dangling)
-        + len(unparsed)
-        + len(registry_defects)
-    )
+    failures = over + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed) + len(registry_defects)
     if len(undisposed) < baseline:
         text = LEDGER.read_text()
-        text = re.sub(
-            r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text
-        )
+        text = re.sub(r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text)
         print(f"ratchet lowered: undisposed {baseline} -> {len(undisposed)}")
         LEDGER.write_text(text)
         print("commit applied.toml")

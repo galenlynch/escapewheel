@@ -1,4 +1,8 @@
-import numpy as np, pyarrow as pa, pyarrow.parquet as pq, os, time, duckdb
+import os
+
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 rng = np.random.default_rng(0)
 NU, RATE, DUR = 500, 30000, 3600

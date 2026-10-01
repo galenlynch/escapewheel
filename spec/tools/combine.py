@@ -75,16 +75,13 @@ def duplicate_ids(rendered: str) -> list[str]:
 def main() -> int:
     """Write the rendering, or check that it is current."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--check", action="store_true", help="fail if the rendering is stale"
-    )
+    parser.add_argument("--check", action="store_true", help="fail if the rendering is stale")
     args = parser.parse_args()
 
     rendered = render()
     if duplicates := duplicate_ids(rendered):
         print(
-            "combined specification has duplicate HTML identifiers: "
-            + ", ".join(f"#{value}" for value in duplicates),
+            "combined specification has duplicate HTML identifiers: " + ", ".join(f"#{value}" for value in duplicates),
             file=sys.stderr,
         )
         return 1

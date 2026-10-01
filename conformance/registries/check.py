@@ -1,7 +1,8 @@
 """Check the registries against what lies outside the specification's tree.
 
 The tree's `check.py` decides everything the tree alone can. These need something it does not
-hold: the frozen v0.1 Part 02 and an engine to execute the Tier 2 rules of the core registry and every extension in the repository.
+hold: the frozen v0.1 Part 02, and an engine to execute the Tier 2 rules of the core registry and
+every extension in the repository.
 """
 
 import json
@@ -11,7 +12,6 @@ import sys
 from pathlib import Path
 
 import duckdb
-import jsonschema
 from escapewheel_validator.rule_language import RuleProfileError, check_rule
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -45,14 +45,16 @@ def tables(document):
 
 
 CORE = json.loads((ARTIFACTS / "logical_schemas.json").read_text())
-DOCUMENTS = [CORE, *(json.loads(path.read_text()) for directory in EXTENSIONS for path in sorted(directory.glob("*.json")))]
+EXTENSION_PATHS = [path for directory in EXTENSIONS for path in sorted(directory.glob("*.json"))]
+DOCUMENTS = [CORE, *(json.loads(path.read_text()) for path in EXTENSION_PATHS)]
 ALL = {name: table for document in DOCUMENTS for name, table in tables(document).items()}
 
 # The frozen v0.1 Part 02 and the accepted revisions derive the core table set independently.
 ledger = subprocess.run(
     [sys.executable, str(ROOT / "conformance/spec-sweep/tables.py")], capture_output=True, text=True, check=False
 ).stdout
-expected = {line.strip() for line in ledger.splitlines() if re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", line.strip())}
+RESOURCE_ID = re.compile(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*")
+expected = {line.strip() for line in ledger.splitlines() if RESOURCE_ID.fullmatch(line.strip())}
 check("the core table set matches the Part 02 ledger", expected ^ set(tables(CORE)))
 
 # Every rule is valid SQL naming real columns: empty tables built from the registries check syntax

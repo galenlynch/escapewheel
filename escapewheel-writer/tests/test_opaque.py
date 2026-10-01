@@ -689,9 +689,7 @@ def test_cleanup_finds_an_orphaned_payload_prefix(tmp_path):
 
     (root / MANIFEST).write_text(json.dumps(manifest("0.2.0", [])))
     (root / MANIFESTS).mkdir()
-    (root / MANIFESTS / "0.1.0.json").write_text(
-        json.dumps(manifest("0.1.0", ["opaque/core.frames/frames"]))
-    )
+    (root / MANIFESTS / "0.1.0.json").write_text(json.dumps(manifest("0.1.0", ["opaque/core.frames/frames"])))
     (root / MANIFESTS / "0.2.0.json").write_text(json.dumps(manifest("0.2.0", [])))
     plan = prune(root, keep_versions=0, keep_days=0)
     assert plan.orphans == (frames / "0.png", frames / "1.png")

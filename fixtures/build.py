@@ -9,7 +9,7 @@ import gzip
 import hashlib
 import json
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
@@ -29,9 +29,7 @@ OVERRIDING_ORDERS = _PROFILE["interfaces"][_PROFILE["kind_interfaces"]["table"]]
 #: the packet does not declare an error, and no core table specialises an interval -- so a packet
 #: with intervals carries an extension by construction, and the corpus has to as well.
 EXTENSION_ID = "dynamic_foraging"
-EXTENSION = json.loads(
-    (HERE.parent / "extensions" / f"{EXTENSION_ID}.json").read_text()
-)
+EXTENSION = json.loads((HERE.parent / "extensions" / f"{EXTENSION_ID}.json").read_text())
 
 #: Every table a fixture may write, core's and the extension's alike.
 SPECS = {
@@ -49,6 +47,7 @@ def trial(label: int) -> str:
     """Name a trial as a writer does: its session and kind, then its source's label."""
     return f"s001/{KIND}/{label}"
 
+
 ARROW = {
     "string": pa.string(),
     "int32": pa.int32(),
@@ -61,7 +60,7 @@ ARROW = {
     "json_string": pa.string(),
 }
 
-START = datetime(2026, 8, 20, 14, 0, 0, tzinfo=timezone.utc)
+START = datetime(2026, 8, 20, 14, 0, 0, tzinfo=UTC)
 AP_HZ, BEH_HZ = 30_000, 1_000
 
 
@@ -108,9 +107,7 @@ def number(spec, rows, readers=None):
     target = {
         column: referenced
         for ref in spec.get("references", [])
-        for column, referenced in zip(
-            ref["columns"], ref["resource_columns"], strict=True
-        )
+        for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
     }
     identifiers = [c for c in spec["columns"] if c.get("role") == "identifier"]
     # Read before anything is numbered: a row reaches its kind through its own references.
@@ -176,10 +173,7 @@ def paired_readers(tables: dict[str, list[dict]], resource: str) -> dict:
                 readers[column["discriminates"]] = lambda row, name=name: key_of(row.get(name))
                 continue
             back = next(r for r in SPECS[resource]["references"] if r["resource"] == owner)
-            kinds = {
-                tuple(str(r.get(c)) for c in back["resource_columns"]): r.get(name)
-                for r in tables.get(owner, [])
-            }
+            kinds = {tuple(str(r.get(c)) for c in back["resource_columns"]): r.get(name) for r in tables.get(owner, [])}
             readers[column["discriminates"]] = lambda row, kinds=kinds, ours=back["columns"]: key_of(
                 kinds.get(tuple(str(row.get(c)) for c in ours))
             )
@@ -203,9 +197,7 @@ def preassign(tables: dict[str, list[dict]]) -> None:
         target = {
             column: referenced
             for ref in spec.get("references", [])
-            for column, referenced in zip(
-                ref["columns"], ref["resource_columns"], strict=True
-            )
+            for column, referenced in zip(ref["columns"], ref["resource_columns"], strict=True)
         }
         readers = paired_readers(tables, resource)
         for column in spec["columns"]:
@@ -681,9 +673,7 @@ def content() -> dict[str, list[dict]]:
             )
             for i, (lo, hi) in enumerate(windows)
         ],
-        "core.spike_events": spikes(
-            1, "sort_ks4_001", "curation_001", "imec_ap_s001", u1
-        )
+        "core.spike_events": spikes(1, "sort_ks4_001", "curation_001", "imec_ap_s001", u1)
         + spikes(2, "sort_ks4_001", "curation_001", "imec_ap_s001", u2),
         "core.source_files": [
             {
@@ -807,10 +797,7 @@ def write_packet(
             }
         )
 
-    registries = {
-        document["registry_id"]: bind(out, document)
-        for document in (REGISTRY, EXTENSION, *extensions)
-    }
+    registries = {document["registry_id"]: bind(out, document) for document in (REGISTRY, EXTENSION, *extensions)}
 
     sessions = sorted({r["session_id"] for r in tables["core.sessions"]})
     (out / "packet.json").write_text(
@@ -842,9 +829,7 @@ def write_packet(
 def bind(out, document):
     """Store a registry as Part 03 §3.3 requires and return its manifest descriptor."""
     body = (json.dumps(document, indent=2) + "\n").encode()
-    relative = (
-        f"registries/{document['registry_id']}/{document['registry_version']}.json.gz"
-    )
+    relative = f"registries/{document['registry_id']}/{document['registry_version']}.json.gz"
     (out / relative).parent.mkdir(parents=True, exist_ok=True)
     (out / relative).write_bytes(gzip.compress(body, mtime=0))
     return {
@@ -880,7 +865,7 @@ def child(tables):
     return next(c for c in tables["core.clocks"] if c.get("parent_clock_id"))
 
 
-def variants():
+def variants():  # noqa: C901
     def dup_pk(c):
         c["core.intervals"].append(dict(c["core.intervals"][0]))
 
@@ -1017,9 +1002,7 @@ def variants():
         # Part 02 §12.5: the reference clock declares no observation interval, so nothing timestamped
         # on it has a window to inherit and the session's origin has nothing to be a minimum over.
         c["core.clock_observation_intervals"] = [
-            r
-            for r in c["core.clock_observation_intervals"]
-            if r["clock_id"] != "imec_ap_s001"
+            r for r in c["core.clock_observation_intervals"] if r["clock_id"] != "imec_ap_s001"
         ]
 
     # Part 05 §5.3: a declared origin is the session's earliest observation start on its reference.
@@ -1055,9 +1038,7 @@ def variants():
         # Part 01 §3.8: the frame declares two axes where its coordinates carry three, so every
         # `ccf_dv` value names an axis no frame declares and Tier 1's anti-join returns it.
         c["core.coordinate_frame_axes"] = [
-            r
-            for r in c["core.coordinate_frame_axes"]
-            if not (r["coordinate_frame"] == "ccf" and r["axis_index"] == 2)
+            r for r in c["core.coordinate_frame_axes"] if not (r["coordinate_frame"] == "ccf" and r["axis_index"] == 2)
         ]
 
     def coordinate_omits_an_axis(c):
@@ -1150,9 +1131,7 @@ def main():
     if root.exists():
         shutil.rmtree(root)
     write_packet(root / "valid", content())
-    print(
-        f"valid                     {sum(len(v) for v in content().values()):>5d} rows"
-    )
+    print(f"valid                     {sum(len(v) for v in content().values()):>5d} rows")
 
     for name, mutate in variants().items():
         c = content()
@@ -1192,9 +1171,7 @@ def main():
 
     c = content()
     t = table("core.intervals", c["core.intervals"])
-    write_packet(
-        root / "missing_column", c, raw={"core.intervals": t.drop_columns(["clock_id"])}
-    )
+    write_packet(root / "missing_column", c, raw={"core.intervals": t.drop_columns(["clock_id"])})
     print(f"{'missing_column':26s}written")
 
     # Part 00 §1: the packet mechanism confines no packet to extracellular data, so both conform.
@@ -1218,9 +1195,7 @@ def main():
     write_packet(root / "one_clock", c)
     print(f"{'one_clock':26s}written")
 
-    c = {
-        resource: content()[resource] for resource in ("core.sessions", "core.subjects")
-    }
+    c = {resource: content()[resource] for resource in ("core.sessions", "core.subjects")}
     for session in c["core.sessions"]:
         session["reference_clock_id"] = None  # a named clock would bring core.clocks
     write_packet(root / "sessions_only", c)
@@ -1252,9 +1227,7 @@ def listing(rows) -> bytes:
     """Part 04 §4.3's listing of `(key, size_bytes, digest)` rows: sorted by the key's UTF-8, and
     RFC 8785's JSON, which `ensure_ascii=False` matches and whose keys are therefore raw UTF-8."""
     ordered = sorted((list(row) for row in rows), key=lambda row: row[0].encode())
-    return json.dumps(ordered, separators=(",", ":"), ensure_ascii=False).encode(
-        "utf-8"
-    )
+    return json.dumps(ordered, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
 
 def prefix_entry(algorithm: str, members: list[dict]) -> dict:
@@ -1262,9 +1235,7 @@ def prefix_entry(algorithm: str, members: list[dict]) -> dict:
 
     Media is declared by catalog, so the entry needs no row; nothing reads the URI.
     """
-    body = listing(
-        (m["key"], m["size_bytes"], m["digest"]) for m in members if "digest" in m
-    )
+    body = listing((m["key"], m["size_bytes"], m["digest"]) for m in members if "digest" in m)
     return {
         "resource_id": "core.frames",
         "declaration_id": "core.media_asset_instances",
@@ -1281,10 +1252,7 @@ def prefix_entry(algorithm: str, members: list[dict]) -> dict:
 
 
 def framed(algorithm: str) -> list[dict]:
-    return [
-        {"key": key, "size_bytes": len(body), "digest": digest(algorithm, body)}
-        for key, body in FRAMES.items()
-    ]
+    return [{"key": key, "size_bytes": len(body), "digest": digest(algorithm, body)} for key, body in FRAMES.items()]
 
 
 def digest_variants(root: Path) -> None:
@@ -1297,9 +1265,7 @@ def digest_variants(root: Path) -> None:
         write_packet(root / name, content(), algorithm=algorithm)
 
         def one_byte_off(manifest, out=root / name, algorithm=algorithm):
-            entry = next(
-                e for e in manifest["resources"] if e["resource_id"] == "core.intervals"
-            )
+            entry = next(e for e in manifest["resources"] if e["resource_id"] == "core.intervals")
             body = bytearray((out / entry["uri"]).read_bytes())
             body[len(body) // 2] ^= 0x01
             entry["digest"]["value"] = digest(algorithm, bytes(body))
@@ -1382,9 +1348,7 @@ AXES = ("unit", "sample")
 ORDER_ONLY = {"origin_value": 0.0, "step_value": 1.0, "coordinate_unit": "1"}
 
 
-def zarr_metadata(
-    codecs: list[dict], shape: tuple = (2, 3), dimension_names: tuple | None = AXES
-) -> bytes:
+def zarr_metadata(codecs: list[dict], shape: tuple = (2, 3), dimension_names: tuple | None = AXES) -> bytes:
     """A Zarr v3 array with no chunk written, so every element is its fill value.
 
     Its metadata is all a floor assessment or an axis check reads, and the corpus needs no Zarr
@@ -1406,13 +1370,10 @@ def zarr_metadata(
     return (json.dumps(document, indent=2) + "\n").encode()
 
 
-def catalogue_arrays(
-    tables: dict[str, list[dict]], names: list[str], axes: tuple = AXES
-) -> None:
+def catalogue_arrays(tables: dict[str, list[dict]], names: list[str], axes: tuple = AXES) -> None:
     """Catalogue one array per name, as `core.<name>`, each axis only an order (Part 03 §6.3)."""
     tables["core.array_assets"] = [
-        {"session_id": "s001", "array_asset_id": name, "resource_id": f"core.{name}"}
-        for name in names
+        {"session_id": "s001", "array_asset_id": name, "resource_id": f"core.{name}"} for name in names
     ]
     tables["core.array_dimensions"] = [
         {
@@ -1427,9 +1388,7 @@ def catalogue_arrays(
     ]
 
 
-def array_entry(
-    out: Path | None, name: str, pipeline: str, shape: tuple = (2, 3), dimension_names=AXES
-) -> dict:
+def array_entry(out: Path | None, name: str, pipeline: str, shape: tuple = (2, 3), dimension_names=AXES) -> dict:
     """A manifest entry for `core.<name>`; packet-owned and written under `out`, or external where None."""
     entry = {
         "resource_id": f"core.{name}",
@@ -1470,8 +1429,7 @@ def floor_variants(root: Path) -> None:
     edit_manifest(
         root / "outside_array_floor",
         lambda m: m["resources"].extend(
-            array_entry(root / "outside_array_floor", name, pipeline)
-            for name, pipeline in arrays.items()
+            array_entry(root / "outside_array_floor", name, pipeline) for name, pipeline in arrays.items()
         ),
     )
     print(f"{'outside_array_floor':26s}written")
@@ -1501,9 +1459,7 @@ def floor_variants(root: Path) -> None:
     write_packet(root / "unresolved_externals", c)
     edit_manifest(
         root / "unresolved_externals",
-        lambda m: m["resources"].extend(
-            array_entry(None, name, "default") for name in names
-        ),
+        lambda m: m["resources"].extend(array_entry(None, name, "default") for name in names),
     )
     print(f"{'unresolved_externals':26s}written")
 
@@ -1540,15 +1496,11 @@ def labelled_array(tables: dict[str, list[dict]]) -> None:
     ]
 
 
-def axis_variants(root: Path) -> None:
+def axis_variants(root: Path) -> None:  # noqa: C901
     """Part 03 §6.3's labelled axes: one packet that pads, and one per rule a label or axis breaks."""
 
     def labels(c, axis, outer):
-        return [
-            r
-            for r in c["core.array_labels"]
-            if (r["axis_index"], r["depends_on_position_index"]) == (axis, outer)
-        ]
+        return [r for r in c["core.array_labels"] if (r["axis_index"], r["depends_on_position_index"]) == (axis, outer)]
 
     def axis_without_form(c):
         for field in ORDER_ONLY:
@@ -1744,7 +1696,7 @@ def device_detail_variants(root: Path) -> None:
         print(f"{name:26s}written")
 
 
-def interval_variants(root: Path) -> None:
+def interval_variants(root: Path) -> None:  # noqa: C901
     """Part 02 §12.9's numbering: packets numbering intervals in each admitted order, and one per defect."""
 
     def with_tone(c):
@@ -1820,13 +1772,21 @@ def interval_variants(root: Path) -> None:
         ("tone_names_a_trial", tone_names_a_trial, {"extensions": cue}),
         ("tone_in_place_of_its_own", tone_in_place_of_its_own, {"extensions": cue}),
         ("interval_of_a_session", interval_of_a_session, {}),
-        ("kinds_out_of_unicode_order", with_tone, {"extensions": cue, "numbers": {"interval_id": {first: 0, second: 1, tone: 2}}}),
+        (
+            "kinds_out_of_unicode_order",
+            with_tone,
+            {"extensions": cue, "numbers": {"interval_id": {first: 0, second: 1, tone: 2}}},
+        ),
         ("equal_bounds", equal_bounds, {}),
         ("equal_bounds_swapped", equal_bounds, {"numbers": {"interval_id": {second: 0, first: 1}}}),
         ("trial_labelled_axis", trial_labelled_axis, {}),
         ("trials_numbered_from_one", None, {"numbers": {"interval_id": {first: 1, second: 2}}}),
         ("trials_misordered", None, {"numbers": {"interval_id": {second: 0, first: 1}}}),
-        ("trials_numbered_by_tick", second_trial_on_the_probe_clock, {"numbers": {"interval_id": {second: 0, first: 1}}}),
+        (
+            "trials_numbered_by_tick",
+            second_trial_on_the_probe_clock,
+            {"numbers": {"interval_id": {second: 0, first: 1}}},
+        ),
         ("interval_numbering_gap", None, {"numbers": {"interval_id": {first: 0, second: 2}}}),
         ("repeated_interval_label", repeated_label, {}),
         ("orphan_trial", orphan_trial, {}),
@@ -1954,9 +1914,7 @@ def owned_opaque(
         for key, body in payload.items():
             (where / key).parent.mkdir(parents=True, exist_ok=True)
             (where / key).write_bytes(body)
-        rows = [
-            (key, len(body), digest(algorithm, body)) for key, body in payload.items()
-        ]
+        rows = [(key, len(body), digest(algorithm, body)) for key, body in payload.items()]
         value = hashlib.sha256(listing(rows)).hexdigest()
         size = sum(len(body) for body in payload.values())
     return {
@@ -1976,10 +1934,7 @@ def opaque_variants(root: Path) -> None:
         """Write `valid` plus each `(resource_id, name, payload, options)` payload."""
         out = root / name
         write_packet(out, content(), extensions=extensions)
-        entries = [
-            owned_opaque(out, rid, file, body, **options)
-            for rid, file, body, options in payloads
-        ]
+        entries = [owned_opaque(out, rid, file, body, **options) for rid, file, body, options in payloads]
         edit_manifest(out, lambda m: m["resources"].extend(entries))
         print(f"{name:26s}written")
         return entries
@@ -2011,9 +1966,7 @@ def opaque_variants(root: Path) -> None:
         "owned_opaque_encoded_name",
         ("core.qc_report", "QC report \u00e9.pdf", b"%PDF-1.7", {}),
     )
-    assert entry["uri"] == "opaque/core.qc_report/QC%20report%20%C3%A9.pdf", entry[
-        "uri"
-    ]
+    assert entry["uri"] == "opaque/core.qc_report/QC%20report%20%C3%A9.pdf", entry["uri"]
 
     (entry,) = owned(
         "owned_opaque_one_byte_off",
@@ -2021,9 +1974,7 @@ def opaque_variants(root: Path) -> None:
     )
     edit_manifest(
         root / "owned_opaque_one_byte_off",
-        lambda m: m["resources"][-1]["digest"].update(
-            value=digest("sha256", b"\x00\x00\x00\x18ftypmp43")
-        ),
+        lambda m: m["resources"][-1]["digest"].update(value=digest("sha256", b"\x00\x00\x00\x18ftypmp43")),
     )
 
     # `é` in NFC and `É` in NFD are one name folded; `12:00:00.png` is one Windows refuses.
@@ -2050,10 +2001,7 @@ def opaque_variants(root: Path) -> None:
         ("uri_dot_segment", "clip.mp4", "opaque/core.clip/../core.clip/clip.mp4"),
     ):
         (entry,) = owned(name, ("core.clip", file, b"clip", {}))
-        edit_manifest(
-            root / name, lambda m, uri=uri: m["resources"][-1].update(uri=uri)
-        )
-
+        edit_manifest(root / name, lambda m, uri=uri: m["resources"][-1].update(uri=uri))
 
 
 def amend(
@@ -2120,7 +2068,8 @@ def amend(
 def replaced(packet_id: str, packet_version: str = "0.1.0", **extra) -> dict:
     """A `replaces` item naming a version whose manifest bytes are the id and version (Part 04 §3)."""
     body = f"{packet_id} {packet_version}".encode()
-    return {"packet_id": packet_id, "packet_version": packet_version, "sha256": hashlib.sha256(body).hexdigest(), **extra}
+    digest = hashlib.sha256(body).hexdigest()
+    return {"packet_id": packet_id, "packet_version": packet_version, "sha256": digest, **extra}
 
 
 def replacement_variants(root: Path) -> None:
@@ -2130,10 +2079,17 @@ def replacement_variants(root: Path) -> None:
         ("replaces_another_packet", "0.1.0", [replaced("session_000", "3.0.0")]),
         ("replaces_same_major", "0.1.0", [replaced("replaces_same_major")]),
         ("replaces_item_with_location", "1.0.0", [replaced("replaces_item_with_location", uri="../old")]),
-        ("replaces_item_without_digest", "1.0.0", [{"packet_id": "replaces_item_without_digest", "packet_version": "0.1.0"}]),
+        (
+            "replaces_item_without_digest",
+            "1.0.0",
+            [{"packet_id": "replaces_item_without_digest", "packet_version": "0.1.0"}],
+        ),
     ):
         write_packet(root / name, content())
-        edit_manifest(root / name, lambda manifest, version=version, items=items: manifest.update(packet_version=version, replaces=items))
+        edit_manifest(
+            root / name,
+            lambda manifest, version=version, items=items: manifest.update(packet_version=version, replaces=items),
+        )
         print(f"{name:26s}written")
 
 
@@ -2189,7 +2145,7 @@ def derive_spikes(manifest: dict) -> None:
 SPIKE_BUCKET_TICKS = 100_000
 
 
-def amendment_variants(root: Path) -> None:
+def amendment_variants(root: Path) -> None:  # noqa: C901
     """Part 05 §15.2's amendments: each adds groups a packet lacks, or breaks one rule of adding."""
 
     def run(run_id, activity, scope_kind, scope, hours):
@@ -2257,9 +2213,7 @@ def amendment_variants(root: Path) -> None:
             "core.unit_quality_labels",
         ):
             c[table] += [{**r, "unit_id": by_unit[r["unit_id"]]} for r in c[table] if r["unit_id"] in by_unit]
-        c["core.processing_runs"].append(
-            run("run_curation_002", "curation", "core.sorting_runs", "sort_ks4_001", 29)
-        )
+        c["core.processing_runs"].append(run("run_curation_002", "curation", "core.sorting_runs", "sort_ks4_001", 29))
 
     def with_curation(c):
         add_curation(c)
@@ -2286,7 +2240,13 @@ def amendment_variants(root: Path) -> None:
 
     def another_trial(c):
         c["core.intervals"].append(
-            {**c["core.intervals"][1], "interval_id": trial(3), "local_interval_label": "3", "start_tick": 10500, "stop_tick": 11500}
+            {
+                **c["core.intervals"][1],
+                "interval_id": trial(3),
+                "local_interval_label": "3",
+                "start_tick": 10500,
+                "stop_tick": 11500,
+            }
         )
         c[KIND].append({**c[KIND][1], "trial_id": trial(3)})
         reimported(c)

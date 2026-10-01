@@ -54,9 +54,7 @@ def _git(*arguments: str) -> str:
 
 def _incorporation_commit() -> str | None:
     """Return the first commit that added R126, if acceptance is already committed."""
-    commits = _git(
-        "log", "--diff-filter=A", "--format=%H", "--reverse", "--", ACCEPTED
-    ).splitlines()
+    commits = _git("log", "--diff-filter=A", "--format=%H", "--reverse", "--", ACCEPTED).splitlines()
     return commits[0] if commits else None
 
 
@@ -89,12 +87,7 @@ def _declarations(document: dict[str, Any]) -> dict[str, Any]:
 
 
 def _rules(documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        rule
-        for document in documents
-        for table in _tables(document).values()
-        for rule in table["rules"]
-    ]
+    return [rule for document in documents for table in _tables(document).values() for rule in table["rules"]]
 
 
 def _references(documents: list[dict[str, Any]]) -> list[tuple[str, dict[str, Any]]]:
@@ -110,9 +103,7 @@ def _columns(table: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {column["name"]: column for column in table["columns"]}
 
 
-def _session_edge(
-    source: dict[str, Any], target: dict[str, Any], reference: dict[str, Any]
-) -> bool:
+def _session_edge(source: dict[str, Any], target: dict[str, Any], reference: dict[str, Any]) -> bool:
     """Apply the four Part 02 session-preserving edge conditions."""
     source_columns = _columns(source)
     target_columns = _columns(target)
@@ -125,11 +116,9 @@ def _session_edge(
             source_columns[left]["type"] == target_columns[right]["type"]
             and (
                 source_columns[left]["role"] == target_columns[right]["role"]
-                or (source_columns[left]["role"], target_columns[right]["role"])
-                == ("data", "discriminator")
+                or (source_columns[left]["role"], target_columns[right]["role"]) == ("data", "discriminator")
             )
-            and source_columns[left].get("identity")
-            == target_columns[right].get("identity")
+            and source_columns[left].get("identity") == target_columns[right].get("identity")
             for left, right in pairs
         )
     )
@@ -150,22 +139,16 @@ def _has_session_path(resource: str, tables: dict[str, Any]) -> bool:
         frontier.extend(
             reference["resource"]
             for reference in table["references"]
-            if reference["resource"] in tables
-            and _session_edge(table, tables[reference["resource"]], reference)
+            if reference["resource"] in tables and _session_edge(table, tables[reference["resource"]], reference)
         )
     return False
 
 
-def _assert_migration(
-    before: list[dict[str, Any]], after: list[dict[str, Any]]
-) -> None:
+def _assert_migration(before: list[dict[str, Any]], after: list[dict[str, Any]]) -> None:
     """Check declaration preservation and the exact measured populations."""
     assert sum(len(_tables(document)) for document in before) == 54
     assert sum(len(_tables(document)) for document in after) == 54
-    assert all(
-        _declarations(old) == _declarations(new)
-        for old, new in zip(before, after, strict=True)
-    )
+    assert all(_declarations(old) == _declarations(new) for old, new in zip(before, after, strict=True))
     print("ok    R126 migration preserves 54 table declarations")
 
     rules = _rules(after)
@@ -180,14 +163,9 @@ def _assert_migration(
         for resource, table in _tables(document).items()
         for rule in table["rules"]
     )
-    tables = {
-        resource: table
-        for document in after
-        for resource, table in _tables(document).items()
-    }
+    tables = {resource: table for document in after for resource, table in _tables(document).items()}
     assert all(
-        reference["resource_columns"] == tables[reference["resource"]]["primary_key"]
-        for _, reference in references
+        reference["resource_columns"] == tables[reference["resource"]]["primary_key"] for _, reference in references
     )
     print("ok    R126 migration preserves 121 rules and 128 complete references")
 
@@ -199,8 +177,7 @@ def _assert_migration(
     }
     assert all(_has_session_path(resource, tables) for resource in indirect)
     assert all(
-        _has_session_path(resource, tables) == ("session_id" in _columns(table))
-        for resource, table in tables.items()
+        _has_session_path(resource, tables) == ("session_id" in _columns(table)) for resource, table in tables.items()
     )
     print("ok    R126 session-preserving paths are valid")
 
@@ -219,9 +196,7 @@ def _assert_ucum(documents: list[dict[str, Any]]) -> None:
         if "unit" in column
     ]
     assert len(units) == 65
-    with patch(
-        "socket.socket", side_effect=AssertionError("network access is forbidden")
-    ):
+    with patch("socket.socket", side_effect=AssertionError("network access is forbidden")):
         parser = get_ucum_parser()
         for unit in units:
             parse_ucum(unit, parser=parser)
@@ -248,9 +223,7 @@ def main() -> int:
     current = [json.loads((ROOT / path).read_text()) for path in CURRENT]
     core = current[0]
     assert check_registry(core).state == "valid"
-    assert all(
-        check_registry(extension, core).state == "valid" for extension in current[1:]
-    )
+    assert all(check_registry(extension, core).state == "valid" for extension in current[1:])
     _assert_ucum(current)
     return 0
 
