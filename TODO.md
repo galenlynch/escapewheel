@@ -267,13 +267,13 @@ natural.
   `schema.column_absent` and `schema.column_type` are the reference validator's spellings, so those
   packets test this validator and not the specification. It matters only if the corpus is to judge
   a second validator.
-- **A delivered adapter's compensations are dropped.** Section 4 of REFACTOR.md lists the defect. If carrying
-  them needs a new key in the delivery report (Part 12 §9), that part is a revision.
-- **The ordering scan raises `KeyError` on a repeated key beside a constant determined column.**
-  `_scan_one_ordering` lists the `determined_by` columns before the scan drops a constant key
-  column from its batches, then reads the dropped column at each repeat. A single-clock
-  `analysis.spike_events` with a repeated key reaches it. A constant column agrees with itself, so
-  the repair leaves it out of the comparison. Not in REFACTOR.md's list, so it waits for a decision.
+- **A delivered adapter's compensations are dropped.** Section 4 of REFACTOR.md lists the defect.
+  Carrying them needs a new member of the run report (Part 12 §9) or a reserved delivery resource,
+  and either is a revision. A report is optional while Part 05 §4.3 requires every compensation
+  recorded, which favours the resource. Undecided.
+- **An in-process source that omits an empty table escapes a refusal a delivered one draws.**
+  `session.refuse_a_discarded_fact` skips a resource fewer than two source kinds stated.
+  REFACTOR.md §11.15 records it; changing it is behaviour the refactor does not list.
 - **Four corpus packets expected to warn are not checked to pass**, and `tone_in_place_of_its_own`
   names no registry. REFACTOR.md §11.6 lists them.
 - **The ledger cannot see whether a section states an applied clause.** Two clauses were recorded

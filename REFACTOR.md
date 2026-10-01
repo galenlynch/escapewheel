@@ -111,7 +111,7 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 - [x] Three fixture builders write `validator_name` as `escapewheel_validate`. Stage 2.
 - [x] The validator's test registry declares `core.trials`, which the core registry does not
       have. Stage 5.
-- [ ] `BATCH_ROWS` has three definitions and two values in the writer. Stage 2.
+- [x] `BATCH_ROWS` has three definitions and two values in the writer. Stage 2.
 - [ ] The ledger checks that an applied clause's target exists and never that its text is there,
       and nothing reads a superseded entry's `by`. §9.
 
@@ -173,11 +173,11 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 - [x] Settle `source.absolute_uri` against the three `sources.*` IDs: one prefix.
 - [x] Reader: the resource-ID module of §2, the packet file names, and the profile ID, each
       defined once.
-- [ ] Writer: a `SourceAdapter` protocol and one capability protocol for each optional member
+- [x] Writer: a `SourceAdapter` protocol and one capability protocol for each optional member
       (streaming, staged arrays, referenced arrays and media, payloads, compensations). The build
       is typed against them and stops reading attributes by name. One policy for empty tables and
       a derived `offers()`. One streaming surface.
-- [ ] Writer: the delivery module uses the protocol-name constants the declaration module already
+- [x] Writer: the delivery module uses the protocol-name constants the declaration module already
       defines.
 - [ ] Shared helpers defined once: `semver`, the provenance resource list, identifier quoting, the
       tables a registry declares, the manifest-entry builder, the adapter lookup with its
@@ -198,8 +198,8 @@ module declares `__all__`, and `api.rst` lists exactly the two tiers.
 
 - [x] Reader: decide the delegate policy for `Packet` methods that mirror free functions, then
       make `__all__`, `api.rst` and the imports agree.
-- [ ] Validator: likewise; remove the names that are public by accident.
-- [ ] Writer: add `escapewheel_writer.adapter`; publish the `NWBSource` class tables and the five
+- [x] Validator: likewise; remove the names that are public by accident.
+- [x] Writer: add `escapewheel_writer.adapter`; publish the `NWBSource` class tables and the five
       hooks that aind overrides, with the two accessors and the `clean` helper it calls; delete
       `into()`.
 - [ ] aind and `conformance/`: import only from the tiers.
@@ -246,12 +246,12 @@ Known obstacles:
       parameter in place of the `_amending` flag, then express both as the same phases. This is
       the riskiest item and lands alone.
 - [ ] Writer: `build` and the import command repeat the same preparation. One path.
-- [ ] Validator: `Finding` gains `resource` and `column`, summary findings carry their counts as
+- [x] Validator: `Finding` gains `resource` and `column`, summary findings carry their counts as
       data, and the row cap has one value. The report's JSON gains members; Part 05 §9.1 requires
       a level, a check and a message and forbids none of this.
-- [ ] Validator: one options object for the verification modes, so the API derives `external`
+- [x] Validator: one options object for the verification modes, so the API derives `external`
       from the other modes as the command line does.
-- [ ] Validator: `validate` becomes four phase calls over one context object.
+- [x] Validator: `validate` becomes four phase calls over one context object.
 - [x] Reader: functions that take a packet are typed against `PacketLike`, and the six memo
       caches they reach by `getattr` become one public memo.
 - [ ] Tests: split `test_validation.py` (2,336 lines), `test_writer.py` (1,530) and
@@ -680,3 +680,76 @@ Found and left as they were:
 - The split into `registry_result`, `registry_invariants` and `registry_phases` is written and
   waits on the validator's tests, three of which hard-code the two copied modules. It lands with
   those tests deriving the set from the copy map.
+
+### 11.14 Validator tiers, split and report
+
+- An underscore name is used by its own module and by the one test file named for that module. A
+  name two or more modules of the package share has no underscore and stays outside `__all__`; a
+  submodule's `__all__` is the support tier and the package's is the user tier.
+- Every exception class is user tier, since a caller of `validate` may catch any of them.
+  `generate`, `Check` and `verify_order` left the user tier: the writer is their only outside
+  caller, and `verify_order` is support tier at `escapewheel_validator.shim.ordering`.
+- `Report.complete(registry)` records a registry's evaluation complete unless a recorded outcome
+  says otherwise, and `_run_checks` has no `finalize` flag.
+- The shim reaches a store through the `stores` module, so `escapewheel_validator.stores.listing`
+  is the one patch point. `registry_types` holds `ARROW_TYPES`, `DDL`, `table_contracts`,
+  `visible_declarations` and `registry_meta_schema`, which ends the `DDL` import cycle.
+- `report.ROW_CAP` (5) is the one row cap: `Report.add` keeps the first rows of any iterable and
+  the checks hand it every row. The ordering scan's bound of 20 is where the scan stops reading a
+  table and is not a row cap, so it stays as `shim.ordering._SCAN_STOP`.
+- `Finding` carries `resource`, `column` and `counts`, and each finding in the report's JSON gains
+  the three members and loses none. `column` is the one column concerned and is None for none or
+  several. A summary finding's `counts` maps a name to an integer, and its message is unchanged.
+- `Report.add_about(resource_id, check, ...)` attributes a finding to the registry declaring the
+  resource. `Report.add` derives no registry from `resource`. A static test requires every call
+  naming a check-table entry of resource or column scope to name its resource, and its column
+  where the scope is a column.
+- `Verification` holds the four modes. `external=None` resolves external resources where
+  `checksums` or `store_digests` asks for a comparison that needs it, as the command line derived
+  it. The four old keywords of `validate` keep their old meaning, raise no warning, and are
+  refused with a `TypeError` beside `verification`.
+- `validate` is `_bind`, `_check_resources`, `_check_tables` and `_check_rules` over one private
+  `_Context`; the last three run only where a core registry directs the packet.
+- The ordering scan compares a determined column only where the scan kept it, which removes the
+  `KeyError` of §11.7.
+- The validator's tests sit in the file named for the module they exercise, and a builder two
+  files use is in `tests/builders.py`.
+- Found and left: the frozen ledger note for one clause names the validator function
+  `_check_unfilled_metadata` by its old path; the `owned.digest` and `sources.unresolved` messages
+  cite sections a reader of the message cannot act on.
+
+### 11.15 Writer protocols, tiers and the one import function
+
+- The adapter contract is nine protocols in `escapewheel_writer/protocols.py`: `SourceAdapter`,
+  which every adapter satisfies, and one runtime-checkable protocol for each capability, which a
+  build tests with `isinstance`. `notes` and `STATES` are required of an adapter a build opens.
+- A class-level declaration with a default (`CONTRIBUTES`, `NEEDS`, `ACCEPTS`, `CONSUMES`,
+  `PROTOCOLS`, `PRODUCES`) is still read by name, because a `Protocol` cannot give an optional
+  member a default. A `STATES` value is read by `getattr` because the attribute name is data the
+  adapter declares.
+- Every adapter omits an empty table from `records()`, `batches()` and `offers()`, and `offers()`
+  is derived from `records()` and `stream_rows()`. `LFPSource.offers()` counts from the file,
+  since `init` and `inspect` open it without the clocks `records()` needs. `delivery.Delivered`
+  still reports every table that arrived.
+- An adapter has one streaming surface, `batches()` and `stream_rows()`.
+- The support tier is one module, `escapewheel_writer.adapter`, which defines nothing and
+  re-exports 50 names. `Note`, `NoteCode`, `SourceDefect`, `SourceFault` and `UnsupportedEncoding`
+  sit in both tiers so an adapter imports from one module. `Clock` moved to the adapter tier.
+- Outside the two tiers a module's `__all__` holds the names the writer's own modules and tests
+  import from it, and a module other than `adapter` exports only names it defines. Two modules
+  may define one bare name, so the surface test identifies a tier name by object identity.
+- A test module may import an underscore name only from the module it is named for.
+- `import_packet(recipe, registry, ...)` runs a recipe through to a commit, amending where the
+  recipe amends, and `commit_arguments(recipe, memory_budget)` holds what a recipe passes a
+  commit. The command line still calls `build` and the commit itself, because a refusal before
+  the commit exits 2 and a refused commit exits 1, and takes its arguments from
+  `commit_arguments`.
+- `encoding.STREAMED_BATCH_ROWS` (1,000,000) and `encoding.MATERIALIZED_BATCH_ROWS` (131,072) are
+  both deliberate and each is defined once. aind's `video.BATCH_ROWS` stays as the default of
+  that adapter's own option.
+- Compensations are not carried across a delivery, and §4's item stays open. The run report of
+  Part 12 §9 has no member for them and a delivery reserves no resource for them, so either
+  route is a specification change and waits for a decision.
+- Found and left as behaviour §4 does not list: `session.refuse_a_discarded_fact` skips a
+  resource fewer than two source kinds stated, so a preferred in-process source that omits an
+  empty table is not refused where the same source delivered out of process is.
