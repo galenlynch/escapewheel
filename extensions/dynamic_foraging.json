@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.12.0",
   "registry_id": "dynamic_foraging",
-  "registry_version": "0.15.0",
+  "registry_version": "0.16.0",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.2",
   "extension_id": "dynamic_foraging",
@@ -31,39 +31,7 @@
             "presence": "required",
             "role": "identifier",
             "identity": "assigned",
-            "description": "The block."
-          },
-          {
-            "name": "block_name",
-            "type": "string",
-            "presence": "required",
-            "role": "data",
-            "description": "What `block_id` stands for: the identifier a source or an earlier packet used for this block.",
-            "vocabulary": "free"
-          },
-          {
-            "name": "clock_id",
-            "type": "int32",
-            "presence": "required",
-            "role": "identifier",
-            "identity": "assigned",
-            "description": "The clock the interval's ticks are on."
-          },
-          {
-            "name": "start_tick",
-            "type": "int64",
-            "presence": "required",
-            "role": "coordinate",
-            "description": "First tick of the block.",
-            "clock_from": "clock_id"
-          },
-          {
-            "name": "stop_tick",
-            "type": "int64",
-            "presence": "required",
-            "role": "coordinate",
-            "description": "Last tick of the block, inclusive.",
-            "clock_from": "clock_id"
+            "description": "The block, and the interval it occupies in core, which carries its clock, bounds and name."
           },
           {
             "name": "reward_probability_left",
@@ -82,17 +50,9 @@
             "finite": true,
             "description": "Right reward probability across the block.",
             "unit": "1"
-          },
-          {
-            "name": "metadata",
-            "type": "json_string",
-            "presence": "optional",
-            "role": "data",
-            "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
           }
         ],
         "primary_key": [
-          "session_id",
           "block_id"
         ],
         "references": [
@@ -107,35 +67,40 @@
           },
           {
             "columns": [
-              "clock_id"
+              "block_id"
             ],
-            "resource": "core.clocks",
+            "resource": "core.intervals",
             "resource_columns": [
-              "clock_id"
-            ]
+              "interval_id"
+            ],
+            "specialises": "core.intervals.interval_kind"
           }
         ],
         "rules": [
           {
-            "id": "dynamic_foraging.blocks.interval_valid",
+            "id": "dynamic_foraging.blocks.in_its_intervals_session",
             "level": "error",
-            "message": "stop_tick precedes start_tick",
-            "sql": "SELECT session_id, block_id\nFROM dynamic_foraging.blocks\nWHERE stop_tick < start_tick"
+            "message": "a block's session is not the session of the interval it occupies",
+            "sql": "SELECT b.session_id, b.block_id, c.session_id AS interval_session_id\nFROM dynamic_foraging.blocks AS b\nJOIN core.intervals AS c ON c.interval_id = b.block_id\nWHERE c.session_id <> b.session_id"
           },
           {
             "id": "dynamic_foraging.blocks.blocks_do_not_overlap",
             "level": "error",
             "message": "two blocks of one session overlap, so a trial falls in both",
-            "sql": "SELECT a.session_id, a.block_id, b.block_id AS other\nFROM dynamic_foraging.blocks AS a\nJOIN dynamic_foraging.blocks AS b ON a.session_id = b.session_id\n  AND a.block_id < b.block_id\nWHERE a.start_tick <= b.stop_tick\n  AND b.start_tick <= a.stop_tick"
+            "sql": "SELECT a.session_id, a.block_id, b.block_id AS other\nFROM dynamic_foraging.blocks AS a\nJOIN dynamic_foraging.blocks AS b ON a.session_id = b.session_id\n  AND a.block_id < b.block_id\nJOIN core.intervals AS ca ON ca.interval_id = a.block_id\nJOIN core.intervals AS cb ON cb.interval_id = b.block_id\nWHERE ca.start_tick <= cb.stop_tick\n  AND cb.start_tick <= ca.stop_tick"
           },
           {
             "id": "dynamic_foraging.blocks.contains_its_trials",
             "level": "error",
             "message": "a trial names a block whose interval does not contain it",
-            "sql": "SELECT t.session_id, t.trial_id\nFROM dynamic_foraging.trials AS t\nJOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id\n  AND b.block_id = t.block_id\nJOIN core.intervals AS c ON c.session_id = t.session_id\n  AND c.interval_id = t.trial_id\nWHERE c.start_tick < b.start_tick\n  OR c.stop_tick > b.stop_tick"
+            "sql": "SELECT t.session_id, t.trial_id\nFROM dynamic_foraging.trials AS t\nJOIN core.intervals AS cb ON cb.interval_id = t.block_id\nJOIN core.intervals AS c ON c.interval_id = t.trial_id\nWHERE c.start_tick < cb.start_tick\n  OR c.stop_tick > cb.stop_tick"
           }
         ],
-        "amendment_groups": []
+        "amendment_groups": [
+          [
+            "block_id"
+          ]
+        ]
       }
     },
     "dynamic_foraging.sessions": {
@@ -657,12 +622,10 @@
           },
           {
             "columns": [
-              "session_id",
               "block_id"
             ],
             "resource": "dynamic_foraging.blocks",
             "resource_columns": [
-              "session_id",
               "block_id"
             ]
           }
@@ -673,6 +636,12 @@
             "level": "error",
             "message": "a trial's session is not the session of the interval it occupies",
             "sql": "SELECT t.session_id, t.trial_id, c.session_id AS interval_session_id\nFROM dynamic_foraging.trials AS t\nJOIN core.intervals AS c ON c.interval_id = t.trial_id\nWHERE c.session_id <> t.session_id"
+          },
+          {
+            "id": "dynamic_foraging.trials.in_its_blocks_session",
+            "level": "error",
+            "message": "a trial names a block of another session",
+            "sql": "SELECT t.session_id, t.trial_id, b.session_id AS block_session_id\nFROM dynamic_foraging.trials AS t\nJOIN dynamic_foraging.blocks AS b ON b.block_id = t.block_id\nWHERE b.session_id <> t.session_id"
           },
           {
             "id": "dynamic_foraging.trials.the_cue_follows_the_delay",

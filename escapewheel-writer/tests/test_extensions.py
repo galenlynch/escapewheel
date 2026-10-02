@@ -494,6 +494,81 @@ def test_a_registry_registered_as_a_document_is_checked_as_a_mapping(registry, m
     assert (json_phase.state, json_phase.reason) == ("skipped", "registry.phase.mapping_input")
 
 
+def _foraging(root, registry, minimal, blocks, trials):
+    """A packet of the shipped `dynamic_foraging`, whose blocks and trials are both interval kinds."""
+    document = json.loads((Path(__file__).resolve().parents[2] / "extensions" / "dynamic_foraging.json").read_text())
+    writer = PacketWriter(registry, packet_id=root.name, extensions=[document])
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+
+    def interval(kind, index, bounds):
+        return {
+            "session_id": "s001",
+            "interval_kind": kind,
+            "interval_id": f"s001/{kind}/{index}",
+            "local_interval_label": str(index),
+            "clock_id": "harp_s001",
+            "start_tick": bounds[0],
+            "stop_tick": bounds[1],
+        }
+
+    writer.add(
+        "core.intervals",
+        [interval("dynamic_foraging.blocks", i, b) for i, b in enumerate(blocks)]
+        + [interval("dynamic_foraging.trials", i, t) for i, (t, _) in enumerate(trials)],
+    )
+    writer.add(
+        "dynamic_foraging.blocks",
+        [
+            {
+                "session_id": "s001",
+                "block_id": f"s001/dynamic_foraging.blocks/{i}",
+                "reward_probability_left": 0.8,
+                "reward_probability_right": 0.2,
+            }
+            for i in range(len(blocks))
+        ],
+    )
+    writer.add(
+        "dynamic_foraging.trials",
+        [
+            {
+                "session_id": "s001",
+                "trial_id": f"s001/dynamic_foraging.trials/{i}",
+                "block_id": f"s001/dynamic_foraging.blocks/{block}",
+            }
+            for i, (_, block) in enumerate(trials)
+        ],
+    )
+    return writer.commit(root)
+
+
+def test_a_block_is_an_interval_its_trials_fall_in(tmp_path, registry, minimal):
+    """The block's clock and bounds are its core interval's, so the trial and the block it names
+    are compared on one table's ticks."""
+    root = tmp_path / "s001"
+    report = _foraging(root, registry, minimal, [(0, 299), (300, 599)], [((0, 99), 0), ((300, 399), 1)])
+    assert report.passed, [f.check for f in report.findings]
+    intervals = open_packet(root).table("core.intervals")
+    assert intervals.column("interval_kind").to_pylist() == ["dynamic_foraging.blocks"] * 2 + [
+        "dynamic_foraging.trials"
+    ] * 2
+    assert open_packet(root).table("dynamic_foraging.trials").column("block_id").to_pylist() == [0, 1]
+
+
+@pytest.mark.parametrize(
+    ("blocks", "trials", "check"),
+    [
+        ([(0, 299), (300, 599)], [((250, 350), 0)], "dynamic_foraging.blocks.contains_its_trials"),
+        ([(0, 299), (200, 599)], [((0, 99), 0)], "dynamic_foraging.blocks.blocks_do_not_overlap"),
+    ],
+)
+def test_a_block_that_does_not_hold_its_trials_refuses_the_commit(tmp_path, registry, minimal, blocks, trials, check):
+    with pytest.raises(CommitRefused) as refused:
+        _foraging(tmp_path / "s001", registry, minimal, blocks, trials)
+    assert check in {f.check for f in refused.value.report.findings if f.registry == "dynamic_foraging"}
+
+
 def test_three_extensions_at_once(tmp_path, registry, minimal):
     """Nothing about carrying one is special-cased, so carrying three is carrying one thrice."""
 

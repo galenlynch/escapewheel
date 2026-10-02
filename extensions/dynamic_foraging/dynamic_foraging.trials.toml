@@ -30,6 +30,7 @@ type = "int32"
 presence = "nullable"
 role = "identifier"
 identity = "assigned"
+references = { resource = "dynamic_foraging.blocks", column = "block_id" }
 description = "The block this trial falls in. Blocks are derived from where the reward probabilities change, since the source records no boundary."
 
 [[columns]]
@@ -188,11 +189,6 @@ finite = true
 unit = "um"
 description = "Lickspout position."
 
-[[references]]
-columns = ["session_id", "block_id"]
-resource = "dynamic_foraging.blocks"
-resource_columns = ["session_id", "block_id"]
-
 [[rules]]
 id = "dynamic_foraging.trials.in_its_intervals_session"
 level = "error"
@@ -202,6 +198,16 @@ SELECT t.session_id, t.trial_id, c.session_id AS interval_session_id
 FROM dynamic_foraging.trials AS t
 JOIN core.intervals AS c ON c.interval_id = t.trial_id
 WHERE c.session_id <> t.session_id'''
+
+[[rules]]
+id = "dynamic_foraging.trials.in_its_blocks_session"
+level = "error"
+message = "a trial names a block of another session"
+sql = '''
+SELECT t.session_id, t.trial_id, b.session_id AS block_session_id
+FROM dynamic_foraging.trials AS t
+JOIN dynamic_foraging.blocks AS b ON b.block_id = t.block_id
+WHERE b.session_id <> t.session_id'''
 
 [[rules]]
 id = "dynamic_foraging.trials.the_cue_follows_the_delay"

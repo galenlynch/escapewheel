@@ -6,10 +6,10 @@ reading one of their tables needs nothing installed.
 
 | | tables | columns | drawn from |
 |---|---|---|---|
-| `dynamic_foraging` | `trials`, `blocks`, `sessions` | 62 | the 67 trial columns of two real sessions, split by which of them vary |
+| `dynamic_foraging` | `trials`, `blocks`, `sessions` | 56 | the 67 trial columns of two real sessions, split by which of them vary |
 | `aind_unit_qc` | `metrics`, `waveform_metrics`, `synchrony` | 42 | the 32 quality columns of a real NWB's 55, measured |
 | `aind_opto` | `stimulations`, `emissions` | 19 | the 17 `laser_*` columns the real NWB's `trials` table carries |
-| `vr_foraging` | `sites`, `site_odors`, `sessions` | 39 | the `Site` and `SessionMetadata` pydantic models the packaging library writes its parquet from |
+| `vr_foraging` | `sites`, `site_odors`, `sessions` | 38 | the `Site` and `SessionMetadata` pydantic models the packaging library writes its parquet from |
 
 An extension is not a member of the specification, so none lies in its tree. `dynamic_foraging`
 and `vr_foraging` lie here; `aind_unit_qc` and `aind_opto` lie in `../escapewheel-aind/extensions/`

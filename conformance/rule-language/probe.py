@@ -178,8 +178,8 @@ def shipped_rule_defects() -> list[str]:
                     check_rule(rule["sql"], document, core_resources=core)
                 except Exception as exc:
                     defects.append(f"{rule['id']}: {str(exc).splitlines()[0]}")
-    if count != 139:
-        defects.append(f"shipped rule count is {count}, expected 139")
+    if count != 140:
+        defects.append(f"shipped rule count is {count}, expected 140")
     return defects
 
 
@@ -188,7 +188,7 @@ def main() -> int:
     groups = {
         "incorporated profile and anchors": profile_defects(),
         "machine-readable rule-language vectors": vector_defects(),
-        "139 shipped rules statically check and bind": shipped_rule_defects(),
+        "140 shipped rules statically check and bind": shipped_rule_defects(),
     }
     for label, defects in groups.items():
         print(f"{'FAIL' if defects else 'ok  '}  {label}" + (f" ({len(defects)})" if defects else ""))

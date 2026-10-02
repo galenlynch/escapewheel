@@ -3,8 +3,8 @@ kind = "table"
 instances = { mode = "singleton", presence = "optional" }
 requires = []
 lineage = "optional"
-primary_key = ["session_id", "block_id"]
-amendment_groups = []
+primary_key = ["block_id"]
+amendment_groups = [["block_id"]]
 
 [[columns]]
 name = "session_id"
@@ -21,40 +21,8 @@ type = "int32"
 presence = "required"
 role = "identifier"
 identity = "assigned"
-description = "The block."
-
-[[columns]]
-name = "block_name"
-type = "string"
-presence = "required"
-role = "data"
-vocabulary = "free"
-description = "What `block_id` stands for: the identifier a source or an earlier packet used for this block."
-
-[[columns]]
-name = "clock_id"
-type = "int32"
-presence = "required"
-role = "identifier"
-identity = "assigned"
-references = "core.clocks"
-description = "The clock the interval's ticks are on."
-
-[[columns]]
-name = "start_tick"
-type = "int64"
-presence = "required"
-role = "coordinate"
-clock_from = "clock_id"
-description = "First tick of the block."
-
-[[columns]]
-name = "stop_tick"
-type = "int64"
-presence = "required"
-role = "coordinate"
-clock_from = "clock_id"
-description = "Last tick of the block, inclusive."
+references = { resource = "core.intervals", column = "interval_id", specialises = "core.intervals.interval_kind" }
+description = "The block, and the interval it occupies in core, which carries its clock, bounds and name."
 
 [[columns]]
 name = "reward_probability_left"
@@ -74,21 +42,15 @@ finite = true
 unit = "1"
 description = "Right reward probability across the block."
 
-[[columns]]
-name = "metadata"
-type = "json_string"
-presence = "optional"
-role = "data"
-description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
-
 [[rules]]
-id = "dynamic_foraging.blocks.interval_valid"
+id = "dynamic_foraging.blocks.in_its_intervals_session"
 level = "error"
-message = "stop_tick precedes start_tick"
+message = "a block's session is not the session of the interval it occupies"
 sql = '''
-SELECT session_id, block_id
-FROM dynamic_foraging.blocks
-WHERE stop_tick < start_tick'''
+SELECT b.session_id, b.block_id, c.session_id AS interval_session_id
+FROM dynamic_foraging.blocks AS b
+JOIN core.intervals AS c ON c.interval_id = b.block_id
+WHERE c.session_id <> b.session_id'''
 
 [[rules]]
 id = "dynamic_foraging.blocks.blocks_do_not_overlap"
@@ -99,8 +61,10 @@ SELECT a.session_id, a.block_id, b.block_id AS other
 FROM dynamic_foraging.blocks AS a
 JOIN dynamic_foraging.blocks AS b ON a.session_id = b.session_id
   AND a.block_id < b.block_id
-WHERE a.start_tick <= b.stop_tick
-  AND b.start_tick <= a.stop_tick'''
+JOIN core.intervals AS ca ON ca.interval_id = a.block_id
+JOIN core.intervals AS cb ON cb.interval_id = b.block_id
+WHERE ca.start_tick <= cb.stop_tick
+  AND cb.start_tick <= ca.stop_tick'''
 
 [[rules]]
 id = "dynamic_foraging.blocks.contains_its_trials"
@@ -109,9 +73,7 @@ message = "a trial names a block whose interval does not contain it"
 sql = '''
 SELECT t.session_id, t.trial_id
 FROM dynamic_foraging.trials AS t
-JOIN dynamic_foraging.blocks AS b ON b.session_id = t.session_id
-  AND b.block_id = t.block_id
-JOIN core.intervals AS c ON c.session_id = t.session_id
-  AND c.interval_id = t.trial_id
-WHERE c.start_tick < b.start_tick
-  OR c.stop_tick > b.stop_tick'''
+JOIN core.intervals AS cb ON cb.interval_id = t.block_id
+JOIN core.intervals AS c ON c.interval_id = t.trial_id
+WHERE c.start_tick < cb.start_tick
+  OR c.stop_tick > cb.stop_tick'''
