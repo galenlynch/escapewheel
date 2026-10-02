@@ -21,6 +21,12 @@ The physical-profile schema's `$id`, and the `$schema` value it requires of a de
 names it. `overriding_orders` is a member only of the interface the descriptor's `kind_interfaces`
 maps `table` to, and the generic cross-member checker MUST refuse it on any other interface.
 
+Each descriptor interface and variant lists `anchors`, which the schema requires to be a nonempty
+array of distinct canonical `ew-` identifiers. Each anchor MUST name a section of this part that
+defines the entry's meaning, and the generic cross-member checker MUST refuse a descriptor any of
+whose anchors does not resolve exactly once in this part. No checker verifies that the section an
+anchor names defines the entry's meaning.
+
 The portable physical profile defined by this part is identified by
 `escapewheel-portable-v0.1`.
 Its requirements directly invoke the shared JSON, URI, JSON Schema, Parquet, and RFC 1952
@@ -51,9 +57,10 @@ directory placement MUST NOT act as an alternative selector.
 
 The descriptor's mapping keys MUST equal the logical standard's complete kind vocabulary. Every
 non-null mapped interface MUST exist exactly once, and every declared interface MUST be mapped. An
-opaque resource has no generic value interface: a generic reader lists its identity and location but
-need not retrieve, parse, decode, or render it. Unknown opaque representations do not invalidate a
-packet. The descriptor states ownership per interface and maps `opaque` to none, so this section
+opaque resource has no generic value interface: a reader MUST list it with its identity and
+location, and need not retrieve, parse, decode, or render it. A validator MUST NOT report an opaque
+resource, or the packet holding it, as non-conforming solely because it does not recognize the
+payload's format or has no decoder for it. The descriptor states ownership per interface and maps `opaque` to none, so this section
 states it: an opaque resource MAY be packet-owned or external (§11 and
 [Part 12 §5](12_adapter_interface.md#ew-referenced-resource-delivery)). Every current interface is
 `materialized`; ownership is not a realization kind, and a view requires a separately specified
@@ -62,7 +69,9 @@ language and evaluation contract.
 An interface's `reader_floor` states what every conforming reader supports for logical-value
 access. `reader_and_packet_writer` also bounds packet-owned writer output; `reader_only` does not.
 A valid feature outside a reader-only floor is outside the portability guarantee, but that fact
-alone neither makes the upstream representation malformed nor decides packet conformance.
+alone neither makes the upstream representation malformed nor decides packet conformance. A reader
+MAY expose the logical values of a resource that uses a valid feature outside its interface's
+floor, and doing so changes neither the descriptor nor the packet.
 
 ## 3. Directory layout
 
@@ -316,7 +325,7 @@ one selected resource MUST fail that resource specifically and MUST NOT reject u
 
 Array axes are stored order, slowest-varying first. An array's codec chain MUST NOT include `transpose`.
 
-A column-major binding enumerates axes in reverse. The client adapts; the format does not.
+A reader MUST NOT treat the order in which its language enumerates an array's axes as the declared order: `axis_index` counts axes in stored order, and a column-major binding enumerates them in reverse. The client adapts; the format does not. No check observes this.
 
 <a id="ew-array-axis-coordinates" data-spec-anchor="canonical"></a>
 ### 6.3 Axis coordinates
@@ -419,7 +428,8 @@ the floor, because Zarr v3 admits extension codecs.
 
 The v2 reader floor is exactly `filters: null` with compressor null, compressor `id: zstd`, or
 compressor `id: blosc` and `cname: zstd`. In a v2 pattern, JSON null matches only null, every stated
-member compares equal, and unmentioned configuration members do not participate. The descriptor
+member compares equal, and unmentioned configuration members do not participate. A conforming
+reader MUST expose the logical values of every valid v2 array that the v2 reader floor admits. The descriptor
 declares the Zarr interface `materialized`, `logical_values`, and `prefix`, with floor role
 `reader_only`; v3 permits packet and external ownership, while v2 permits external ownership only.
 It does not enumerate optional codecs.

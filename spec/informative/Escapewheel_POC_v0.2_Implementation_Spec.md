@@ -2216,6 +2216,12 @@ The physical-profile schema's `$id`, and the `$schema` value it requires of a de
 names it. `overriding_orders` is a member only of the interface the descriptor's `kind_interfaces`
 maps `table` to, and the generic cross-member checker MUST refuse it on any other interface.
 
+Each descriptor interface and variant lists `anchors`, which the schema requires to be a nonempty
+array of distinct canonical `ew-` identifiers. Each anchor MUST name a section of this part that
+defines the entry's meaning, and the generic cross-member checker MUST refuse a descriptor any of
+whose anchors does not resolve exactly once in this part. No checker verifies that the section an
+anchor names defines the entry's meaning.
+
 The portable physical profile defined by this part is identified by
 `escapewheel-portable-v0.1`.
 Its requirements directly invoke the shared JSON, URI, JSON Schema, Parquet, and RFC 1952
@@ -2246,9 +2252,10 @@ directory placement MUST NOT act as an alternative selector.
 
 The descriptor's mapping keys MUST equal the logical standard's complete kind vocabulary. Every
 non-null mapped interface MUST exist exactly once, and every declared interface MUST be mapped. An
-opaque resource has no generic value interface: a generic reader lists its identity and location but
-need not retrieve, parse, decode, or render it. Unknown opaque representations do not invalidate a
-packet. The descriptor states ownership per interface and maps `opaque` to none, so this section
+opaque resource has no generic value interface: a reader MUST list it with its identity and
+location, and need not retrieve, parse, decode, or render it. A validator MUST NOT report an opaque
+resource, or the packet holding it, as non-conforming solely because it does not recognize the
+payload's format or has no decoder for it. The descriptor states ownership per interface and maps `opaque` to none, so this section
 states it: an opaque resource MAY be packet-owned or external (§11 and
 [Part 12 §5](../parts/12_adapter_interface.md#ew-referenced-resource-delivery)). Every current interface is
 `materialized`; ownership is not a realization kind, and a view requires a separately specified
@@ -2257,7 +2264,9 @@ language and evaluation contract.
 An interface's `reader_floor` states what every conforming reader supports for logical-value
 access. `reader_and_packet_writer` also bounds packet-owned writer output; `reader_only` does not.
 A valid feature outside a reader-only floor is outside the portability guarantee, but that fact
-alone neither makes the upstream representation malformed nor decides packet conformance.
+alone neither makes the upstream representation malformed nor decides packet conformance. A reader
+MAY expose the logical values of a resource that uses a valid feature outside its interface's
+floor, and doing so changes neither the descriptor nor the packet.
 
 ## 3. Directory layout
 
@@ -2511,7 +2520,7 @@ one selected resource MUST fail that resource specifically and MUST NOT reject u
 
 Array axes are stored order, slowest-varying first. An array's codec chain MUST NOT include `transpose`.
 
-A column-major binding enumerates axes in reverse. The client adapts; the format does not.
+A reader MUST NOT treat the order in which its language enumerates an array's axes as the declared order: `axis_index` counts axes in stored order, and a column-major binding enumerates them in reverse. The client adapts; the format does not. No check observes this.
 
 <a id="ew-array-axis-coordinates" data-spec-anchor="canonical"></a>
 ### 6.3 Axis coordinates
@@ -2614,7 +2623,8 @@ the floor, because Zarr v3 admits extension codecs.
 
 The v2 reader floor is exactly `filters: null` with compressor null, compressor `id: zstd`, or
 compressor `id: blosc` and `cname: zstd`. In a v2 pattern, JSON null matches only null, every stated
-member compares equal, and unmentioned configuration members do not participate. The descriptor
+member compares equal, and unmentioned configuration members do not participate. A conforming
+reader MUST expose the logical values of every valid v2 array that the v2 reader floor admits. The descriptor
 declares the Zarr interface `materialized`, `logical_values`, and `prefix`, with floor role
 `reader_only`; v3 permits packet and external ownership, while v2 permits external ownership only.
 It does not enumerate optional codecs.
@@ -4381,7 +4391,7 @@ Core keeps each spike on the clock of the probe that measured it, sorted unit-ma
 
 The bucket width cannot be recovered from the data, so it is a parameter of a recorded materialization run (§5).
 
-**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A writer that records the materialization's run MUST record among its parameters, for each clock from which it mapped spikes, how many of that clock's spikes it omitted, even when the count is zero: a derived table one row short otherwise looks exactly like a complete one, and a total does not say which clock's mapping fell short. No checker verifies this, since `parameters` names no key for the counts.
+**Rows are not preserved.** A spike whose tick falls outside the region where the mapping is defined MUST be omitted by the writer rather than given an extrapolated value, so this table MAY hold fewer rows than core's. A consumer MUST NOT pair a row of this table with a row of `core.spike_events` by position, and MUST NOT take a count of one table's rows as a count of the other's; no check observes this. A writer that records the materialization's run MUST record among its parameters, for each clock from which it mapped spikes, how many of that clock's spikes it omitted, even when the count is zero: a derived table one row short otherwise looks exactly like a complete one, and a total does not say which clock's mapping fell short. No checker verifies this, since `parameters` names no key for the counts.
 
 **A conversion that collides is not materialized.** This table is keyed on the converted tick, and a conversion preserves distinctness only where it expands. Where a writer finds two spikes of one unit landing on one reference tick, it MUST NOT materialize the table, and where it records the run, it MUST record the reason among the run's parameters as it does for omitted rows. A histogram built on collapsed spikes undercounts them, so a reference clock too coarse to separate one unit's spikes makes this table the wrong instrument rather than a broken one, and §2 makes not building it an ordinary outcome.
 

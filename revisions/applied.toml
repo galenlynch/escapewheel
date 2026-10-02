@@ -914,6 +914,7 @@ note = "core.units gains n_spikes, first_spike_tick, last_spike_tick"
 [clause."R3 §5.1"]
 disposition = "applied"
 where = [{ part = "03", section = "6.2" }]
+note = "restored 2026-10-01; the reader prohibition on taking its language's axis order as the declared order was indicative, and no check observes it"
 
 [clause."R3 §5.2"]
 disposition = "rationale"
@@ -1047,7 +1048,7 @@ where = [{ part = "06", section = "4" }]
 [clause."R30 §4"]
 disposition = "applied"
 where = [{ part = "06", section = "4" }]
-note = "restored 2026-09-04; the MUST survived only as its consequence"
+note = "restored 2026-09-04; the MUST survived only as its consequence. restored 2026-10-01; the consumer prohibition on pairing rows with core's by position or by count was absent, and no check observes it"
 
 [clause."R43 §2"]
 disposition = "rationale"
@@ -3232,7 +3233,7 @@ note = "incompatible registry, contract, manifest, and delivery identities advan
 [clause."R129 §3.1"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-portable-profile-scope" }]
-note = "Part 03 incorporates one closed physical-profile descriptor and generic checker"
+note = "Part 03 incorporates one closed physical-profile descriptor and generic checker. restored 2026-10-01; that each anchor names the section defining its entry and resolves exactly once was absent"
 
 [clause."R129 §3.2"]
 disposition = "applied"
@@ -3247,12 +3248,12 @@ note = "the Parquet interface is one materialized object with a reader-and-write
 [clause."R129 §3.4"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-array-version" }, { part = "03", anchor = "ew-array-codecs" }]
-note = "Zarr variants and actual codecs derive from format-owned metadata; R137 §3.1 extends the three v3 name sequences and restates the floor as codec patterns"
+note = "Zarr variants and actual codecs derive from format-owned metadata; R137 §3.1 extends the three v3 name sequences and restates the floor as codec patterns. restored 2026-10-01; the reader obligation to expose every valid v2 array the floor admits was indicative"
 
 [clause."R129 §3.5"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
-note = "floor role distinguishes reader minimums from packet-writer ceilings"
+note = "floor role distinguishes reader minimums from packet-writer ceilings. restored 2026-10-01; the permission to read a valid feature outside the floor was absent"
 
 [clause."R129 §3.6"]
 disposition = "applied"
@@ -3272,7 +3273,7 @@ note = "physical assessment uses available resource metadata and leaves unreacha
 [clause."R129 §3.9"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
-note = "opaque resources have no closed representation vocabulary or generic value interface"
+note = "opaque resources have no closed representation vocabulary or generic value interface. restored 2026-10-01; the reader obligation to list an opaque resource and the validator prohibition on failing an unrecognized one were indicative"
 
 [clause."R129 §3.10"]
 disposition = "applied"
