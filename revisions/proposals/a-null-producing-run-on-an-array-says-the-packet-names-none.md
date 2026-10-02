@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | 2026-10-02 |
-| **Based on** | `e60b54e064d98c4479cf58dc18ba831fdfa75ea4` |
+| **Based on** | `e557962759ff9f2016a16bd3e6426bd1e152543d` |
 | **Decision domain** | specification |
 | **Affects** | Part 01 §3.17's sentence on an array's producing run; the description of `processing_run_id` in `core.array_assets` and `analysis.array_assets`; the core registry version in Part 02 §9.2; possibly Part 01 §3.12 and the description of `core.event_streams.processing_run_id` |
 
@@ -28,7 +28,9 @@ consumer reading the registry a packet embeds takes a computed array for an acqu
 ## 2. Evidence
 
 Observed in the tracked files at the baseline commit, where the quick verifier passes all 37 stages.
-The reading of §2.6 is an inference from the parts it cites.
+Two observations come from elsewhere: the corpus count of §2.8 is taken from the corpus that the
+verifier generates, and §2.11 reports a scratch copy of `spec/`. The reading of §2.6 is an inference
+from the parts it cites.
 
 ### 2.1 The description entered with the column and reads a null as acquisition
 
@@ -101,7 +103,9 @@ to numbered prose and lets an incorporated artifact own only the structures or a
 incorporated for. Part 02 §3 forbids a description to contradict or override a machine declaration,
 which protects the declaration and says nothing of a description that disagrees with a part.
 R126 §3.8 calls a contradiction in descriptive prose an authoring defect to be corrected, and no
-part carries that sentence.
+part carries that sentence. Part 02 §1 calls the specification candidate internally inconsistent
+where Part 02 and its incorporated artifacts disagree. No sentence of Part 02 names the column, and
+the description here disagrees with sentences of Part 01, Part 05 and Part 06.
 
 Part 04 §5.5 says of another incorporated artifact that the schema's descriptions are informative.
 No part says so of a registry description.
@@ -128,9 +132,10 @@ The other five change the bytes under the ordinary workflow and leave the versio
 - `123ecb44` corrected the SQL of one rule;
 - `12140953`, `88b9bb34` and `776dd637` changed serialization, column order and SQL layout.
 
-No accepted revision in that range changed only a description of the core registry. R107 rewrote
-35 descriptions while the version stood at `0.1.0`. R155 §5 changed the description of
-`resources.schema.json` and records that this changes the schema's bytes and not its `$id`.
+No accepted revision in that range changed only a description of the core registry. Before that
+range, while the version stood at `0.1.0`, R107 changed 35 column descriptions, which R107 §5 counts
+as 26 in the core registry and 9 across three extension registries. R155 §5 changed the description
+of `resources.schema.json` and records that this changes the schema's bytes and not its `$id`.
 
 ### 2.8 Two digests under one registry version block an amendment
 
@@ -140,36 +145,65 @@ bind two different digests under one registry ID and version anywhere in a packe
 retained manifests. A core registry whose bytes change while its version stays `0.14.0` therefore
 cannot amend a packet built on the earlier bytes.
 
-All 120 corpus manifests under `fixtures/packets/` bind `registries/core/0.14.0.json.gz` and record
-its digest, counted by searching each `packet.json` for that path.
+The repository tracks no corpus packet. The verifier generates the corpus under
+`fixtures/packets/`, and the generated corpus holds 120 manifests. All 120 bind
+`registries/core/0.14.0.json.gz` and record its digest, counted by searching each `packet.json` for
+that path.
 
 Part 02 §9.2 forbids reusing a development identifier for an incompatible contract, and no part
 says whether a description belongs to that contract (§2.6).
 
 ### 2.9 The event stream column makes the same claim
 
-`core.event_streams.processing_run_id` is described "The run that produced it. Null means it came
-off the device as recorded." Part 01 §3.12 lets a stream name a processing run and does not require
-one, and §2.2's first rule applies to a stream as it does to an array, so a stream detected offline
-in a packet recording no provenance carries a null.
+The description of `core.event_streams.processing_run_id` opens "The run that produced it. Null
+means it came off the device as recorded." Part 01 §3.12 lets a stream name a processing run and
+does not require one, and §2.2's first rule applies to a stream as it does to an array, so a stream
+detected offline in a packet recording no provenance carries a null. The record that declared the
+table says as much: R23 §5 lets a packet leave every `processing_run_id` null.
 
 No reference packet shows the claim false. The one reference adapter that builds stream rows reads
-an NWB file's `acquisition` group.
+an NWB file's `acquisition` group, and its documentation repeats the description's reading of a
+null.
 
 Seven tables of the core registry declare a nullable `processing_run_id`. The descriptions in
 `core.sorting_runs` and `core.curation_versions` end "where provenance is recorded", and those in
 `core.electrode_coordinates` and `core.unit_coordinates` say nothing of a null. The two array tables
 and the stream table are the three that read a null as acquisition.
 
-### 2.10 One open draft changes the core registry and names no version
+### 2.10 Three other open documents change the core registry, in other declarations
 
-`revisions/proposals/` holds no other proposal. Of the five open drafts, none amends Part 01 §3.17
-or either array table, and a search of the five for `registry_version` finds no line.
-`core-declares-a-catalog-of-sidecars` adds two declarations to the core registry, so its
-incorporation changes the registry's bytes.
+`revisions/drafts/` holds two drafts, and `revisions/proposals/` holds three proposals beside this
+one.
 
-`core.clocks` still declares `transform_to_parent`, which the ledger's note on R3 §3.4 records as
-replaced and still declared. A revision removing that column changes the same registry.
+| document | what it changes | core registry |
+|---|---|---|
+| `core-declares-a-catalog-of-sidecars.md`, a draft | It adds the declarations `core.sidecars`, `core.sidecar_scopes` and `core.sidecar_instances`, and amends sections of Parts 02, 03, 05, 08 and 09. | Changed. Section 3.8 of the draft advances `registry_version` by one minor version from the version the registry carries at incorporation. |
+| `a-build-records-a-recipe-without-its-credentials.md`, a draft | It amends Part 05 §3.2, Part 05 §3.5 and Part 05 §7. | Unchanged. |
+| `core-declares-a-clocks-transform-in-typed-columns-alone.md` | It removes `core.clocks.transform_to_parent`, which the ledger's note on R3 §3.4 records as replaced and still declared. | Changed. It names `0.14.0` and `0.15.0`, and under its preferred answer it remeasures the version where another registry change is incorporated first. |
+| `a-unit-is-identified-outside-its-packet-by-its-name.md` | It makes `core.units.unit_name` required and adds one rule to `core.units` and one to `core.intervals`. Under its preferred answer the eight other nullable name columns of core become required too. | Changed. Its preferred answer advances the version. |
+| `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` | It amends Part 05 §3.1, Part 05 §3.4, Part 05 §3.5 and Part 05 §3.6, and the recipe schema. | Unchanged. |
+
+None of the five amends Part 01 §3.12 or Part 01 §3.17, and none changes a declaration of
+`core.array_assets`, `analysis.array_assets` or `core.event_streams`.
+
+Three of the five change the core registry, as this proposal does. Each of the four therefore
+advances `registry_version` and rewrites the sentence of Part 02 §9.2 that states it. The four
+change different declarations, so no one of them depends on another, and each one incorporated
+after another starts from the version the earlier one assigned.
+
+### 2.11 The registry change builds and checks in a scratch copy
+
+A copy of `spec/` was edited as the preferred direction of §4 would edit the registry. The three
+descriptions of §2.9 were reworded, and the version was set one minor step on, to `0.15.0`, in the
+registry source, in Part 02 §9.2 and in the two specification tools that state the expected version.
+
+The registry build regenerated `logical_schemas.json` and the rendered table listing. The registry
+check then passed, reporting 45 tables, 360 columns, 116 references and 91 rules. The framework
+check reported two failures, both of which follow from the version: the specification README's
+identifier table disagreed with Part 02 §9.2, and the combined specification was stale. No
+meta-schema, descriptor, rule or other artifact differed from the tree.
+
+The probe did not edit Part 01, regenerate the corpus or run a package suite.
 
 ## 3. Desired outcome and constraints
 
@@ -218,32 +252,33 @@ would break Part 01 §3.17 afterwards, so an implementation that conforms before
 conform after it. The citation rewrite of §2.7 left every description's meaning as it was, and this
 change does not.
 
-The core registry version advances, from `0.14.0` to the next value unassigned at acceptance.
-Advancing keeps one digest for each version (§2.8), lets a consumer tell from a packet's manifest
-which reading its embedded registry states, and follows the 13 revisions of §2.7. Question 1 asks
-whether a description alone warrants it.
+The core registry version advances by one minor version from the version the incorporated registry
+carries when the revision is incorporated. At the baseline that version is `0.14.0`. Advancing keeps
+one digest for each version (§2.8), lets a consumer tell from a packet's manifest which reading its
+embedded registry states, and follows the 13 revisions of §2.7. Question 1 asks whether a
+description alone warrants it.
 
-The version orders this change against any other that advances it. The revision accepted later
-takes the value the earlier one assigns as its starting value, as R149 §3.4, R150 §3.10, R151 §3.2
-and R152 §3.4 each did. This change shares no declaration with the removal of
-`core.clocks.transform_to_parent` or with the sidecar declarations of §2.10, so the three are
-independent in substance and each re-measures the version when another lands first.
+The direction states the step and names no target value, as section 3.8 of
+`core-declares-a-catalog-of-sidecars.md` does. Four open documents advance the same identifier
+(§2.10), and a named target would fix an order among them. The four change different declarations,
+so each one incorporated after another starts from the version the earlier one assigned, as
+R149 §3.4, R150 §3.10, R151 §3.2 and R152 §3.4 each started from its predecessor's.
 
 ## 5. Impact sketch
 
 | surface | effect |
 |---|---|
 | semantic prose | Affected. Part 01 §3.17 gains the reading of a null and the consumer's rule, labelled as unchecked. Part 01 §3.12 gains the same if question 2 is answered that way. |
-| logical prose, registry meta-schema, declarations and rules | Affected. The description of `processing_run_id` changes in `core.array_assets` and `analysis.array_assets`, and Part 02 §9.2 names the new core registry version. The meta-schema, the registry-contract descriptor, every other field of the two columns and every rule are unchanged. |
+| logical prose, registry meta-schema, declarations and rules | Affected. The description of `processing_run_id` changes in `core.array_assets` and `analysis.array_assets`, and Part 02 §9.2 names the new core registry version, as do the two specification tools that state the version they expect. The meta-schema, the registry-contract descriptor, every other field of the two columns and every rule are unchanged (§2.11). |
 | physical profiles | Unchanged. No storage property is involved, and Part 03 §3.3's path follows the version. |
 | packet manifest and other JSON Schemas | Unchanged. A manifest built afterwards records a new version, path and digest in members the schema already has. |
 | validation and import | Unchanged. No rule reads the column on an array table, and a validator cannot tell an acquired array from a computed one. |
 | extension registries | Unchanged. No extension registry under `extensions/` or `escapewheel-aind/extensions/` declares the column, and an extension's version advances independently (Part 09 §5.5). |
-| reader, writer, validator, adapters, code generation | Each package's copy of the registry regenerates, and the writer test that asserts version `0.14.0` and its path changes. No package reads a null run on an array as acquisition, so no behaviour changes, and the three adapters of §2.4 keep writing a null. |
+| reader, writer, validator, adapters, code generation | Affected in one test. No package holds a copy of the core registry: the files a package copies from `spec/` are schemas, descriptors and checkers, and a build reads the registry that its recipe names, which in this repository is `spec/artifacts/logical_schemas.json`. Changing a description therefore regenerates that artifact and the rendered table listing, and regenerates no package file. The version reaches one writer test, which asserts `0.14.0` and the registry's path. No package reads a null run on an array as acquisition, so no behaviour changes, and the three adapters of §2.4 keep writing a null. Under question 2's preferred answer the stream adapter's documentation, which repeats the description (§2.9), is reworded. |
 | existing packets | Unchanged in rows and in conformance. A packet binds the registry it was built with, so an earlier packet embeds the earlier description. The specification README says that development packets are regenerated. |
 | conformance fixtures and implementation tests | The 120 corpus packets regenerate for the new version and digest. No fixture is added: no packet fact distinguishes the cases, so the consumer's rule is evidenced by the part's text and by the regenerated registry and table listing. |
-| revision lifecycle, ledger, evidence and tooling | The ordinary ledger and evidence records, with a guarded registry target for each of the two columns. R102 §3.1 keeps its `applied` disposition at Part 01 §3.17, since its column and its writer obligation stand, and gains a note naming the clause that replaces its reading of a null. The ledger already records R101 §3.10 that way, with a note naming R139 §3.1. R152 §3.4 keeps its disposition for the meta-schema and descriptor it assigns and gains a note naming the clause that advances the version. |
-| generated publications and developer documentation | The rendered table listing, the combined specification and the specification README's identifier table regenerate. Part 08's example shows the new registry path. |
+| revision lifecycle, ledger, evidence and tooling | The ordinary ledger and evidence records, with a guarded registry target for each of the two columns. R102 §3.1 keeps its `applied` disposition at Part 01 §3.17, since its column and its writer obligation stand, and gains a note naming the clause that replaces its reading of a null, as R158 §3.2 requires of a clause replaced in part. The ledger already records R101 §3.10 that way, with a note naming R139 §3.1. The clause that assigns the version the registry carries at incorporation gains the same record. At the baseline that clause is R152 §3.4, which keeps its disposition for the meta-schema and descriptor it also assigns and gains a note naming the clause that advances the version. |
+| generated publications and developer documentation | Affected. The rendered table listing and the combined specification regenerate, and Part 08's generated example shows the new registry path. The specification README's identifier table and its sentence naming the development version are edited by hand, and the framework check compares the table with Part 02 §9.2 (§2.11). |
 
 ## 6. Open questions
 
