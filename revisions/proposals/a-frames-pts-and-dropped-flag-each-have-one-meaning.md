@@ -197,18 +197,18 @@ same registry declaration, and share one core version.
 
 ## 6. Open questions
 
-1. **Frames on more than one clock.** Each measured asset's frames lie on one clock, and `clock_id`
-   is a per-frame column. The preferred check compares only consecutive frames on one clock;
-   requiring an asset's frames to share one clock would let it compare every pair, and would be a
-   new restriction.
-2. **An edit list that presents one stored frame twice.** Under the preferred reading each
-   presentation is a frame the asset presents, so it gets its own row. No measured file has such a
-   list.
-3. **One proposal or two** (§4.4). The preferred direction keeps them together.
+1. **Frames on more than one clock.** **Answered 2026-10-02: the check compares only consecutive
+   frames on the same clock,** and an asset's frames are not required to share one clock. Each
+   measured asset's frames lie on one clock, and `clock_id` is a per-frame column.
+2. **An edit list that presents one stored frame twice.** **Answered 2026-10-02: each presentation
+   gets its own row,** since each is a frame the asset presents. No measured file has such a list.
+3. **One proposal or two** (§4.4). **Answered 2026-10-02: one.**
 
-No other proposal or draft changes Part 01 §3.18 or `core.media_frames`. A proposal giving a null
-in a nullable reference column a default reading is being written at the same time; `pts` and
-`dropped` are not references, so it does not reach them.
+No question that would change the decision is open.
+
+No other proposal or draft changes Part 01 §3.18 or `core.media_frames`. The open proposal giving a
+null in a nullable naming column a default reading does not reach `pts` or `dropped`, which are not
+naming columns.
 
 ## 7. Promotion criteria
 
@@ -218,7 +218,7 @@ in a nullable reference column a default reading is being written at the same ti
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The exact proposal and its final appraisal state are tracked in the current commit.
+- [x] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
