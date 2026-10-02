@@ -16,8 +16,24 @@ locations = [
 [target."R20 §2.3"]
 locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
+[target."R22 §4"]
+locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.unit_quality_labels/table/rules/0/id", equals = "core.unit_quality_labels.projection_is_consistent" }]
+
+[target."R27 §3"]
+locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.clocks/table/rules/7/id", equals = "core.clocks.parent_chain_well_founded" }]
+
+[target."R30 §3.1"]
+locations = [
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/analysis.spike_events/table/columns/4/name", equals = "time_bucket_tick" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/analysis.spike_events/table/rules/0/id", equals = "analysis.spike_events.bucket_contains_spike" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/analysis.spike_events/table/rules/1/id", equals = "analysis.spike_events.buckets_partition_time" },
+]
+
 [target."R33 §2.1"]
 locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
+
+[target."R41 §2.3"]
+locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.preferred_runs/table" }]
 
 [target."R44 §2.1"]
 locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.processing_runs/table" }]

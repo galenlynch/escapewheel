@@ -12,7 +12,7 @@ note = "a column, key or reference the registry declares"
 
 [clause."R6 §2"]
 disposition = "applied"
-where = [{ part = "01", section = "3.9" }]
+where = [{ part = "01", section = "3.9" }, { part = "03", anchor = "ew-parquet-reader-floor" }]
 note = "restored 2026-09-04; was dropped. restored 2026-10-01; how a bound clock's tick converts to wall-clock time was absent"
 
 [clause."R19 §2.1"]
@@ -66,12 +66,12 @@ note = "a column, key or reference the registry declares"
 
 [clause."R45 §2.1"]
 disposition = "applied"
-where = [{ part = "01", section = "2.3" }]
+where = [{ part = "01", section = "2.3" }, { part = "05", anchor = "ew-import-normalization" }]
 note = "restored 2026-10-01; the consumer prohibition on reading stop_tick as excluded was absent"
 
 [clause."R45 §2.5"]
 disposition = "applied"
-where = [{ part = "01", section = "3.9" }]
+where = [{ part = "01", section = "3.9" }, { part = "01", anchor = "ew-time-basis" }]
 note = "restored 2026-09-04 with R6"
 
 [clause."R46 §2.1"]
@@ -105,7 +105,7 @@ note = "restored 2026-09-04; compiled as MUST where R52 §2.1 says SHOULD, which
 
 [clause."R52 §2.3"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-owned-resource-digests" }, { part = "04", anchor = "ew-external-resource-verification" }]
+where = [{ part = "04", anchor = "ew-external-resource-verification" }]
 note = "level 2 of Part 04 §5.3 checks owned digests; the skip count lapses, since R136 §3.4 requires a digest of every packet-owned resource. restored 2026-10-01; that a validator reports an owned digest that does not hold at error was absent"
 
 [clause."R53 §2.1"]
@@ -114,7 +114,7 @@ note = "a column, key or reference the registry declares"
 
 [clause."R53 §2.3.1"]
 disposition = "registry"
-note = "a column, key or reference the registry declares"
+note = "a column, key or reference the registry declares. R126 §3.6 restates the name rules in Part 02 §8.2 and prohibits a same-base name column only beside an assigned identifier a table does not own; the prohibition for a carried identifier is stated there in the indicative and no invariant checks it"
 
 [clause."R53 §2.4"]
 disposition = "applied"
@@ -228,22 +228,22 @@ note = "restored 2026-09-04; the warning level had been lost"
 
 [clause."R14 §2.3"]
 disposition = "applied"
-where = [{ part = "04", section = "5.1" }]
+where = [{ part = "04", section = "5.1" }, { part = "04", anchor = "ew-packet-resource-entry-fields" }]
 note = "restored 2026-09-04; the converse had been compiled as an implication"
 
 [clause."R21 §3.3"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-codecs" }]
+where = [{ part = "03", anchor = "ew-array-codecs" }, { part = "03", anchor = "ew-array-version" }]
 note = "restored 2026-09-04; the reader floor table was absent entirely"
 
 [clause."R30 §3.2"]
 disposition = "applied"
-where = [{ part = "03", section = "5.4" }]
+where = [{ part = "03", section = "5.4" }, { part = "05", anchor = "ew-validation-shim" }]
 note = "the descriptor's table interface declares the order 03 §5.4 projects (R154 §3.1)"
 
 [clause."R30 §3.1"]
-disposition = "applied"
-where = [{ part = "03", section = "5.4" }]
+disposition = "registry"
+note = "time_bucket_tick on analysis.spike_events and the two rules that make buckets partition the tick axis; R130 §3.7 replaces the bucket-width rule, which Part 06 §4 states as a parameter of a recorded materialization run"
 
 [clause."R32 §2"]
 disposition = "applied"
@@ -264,6 +264,7 @@ where = [
   { part = "05", anchor = "ew-superseded-manifest-retention" },
   { part = "05", anchor = "ew-amendment-definition" },
   { part = "03", anchor = "ew-portable-amendment", note = "retained under manifests/" },
+  { part = "04", anchor = "ew-packet-catalog-scope" },
 ]
 note = "restored 2026-10-01; that an amended manifest carries created_at unchanged was absent, and no rule checks it"
 
@@ -273,11 +274,11 @@ where = [{ part = "05", anchor = "ew-superseded-manifest-retention" }]
 
 [clause."R71 §2.1"]
 disposition = "applied"
-where = [{ part = "00", anchor = "ew-packet-content-classes" }]
+where = [{ part = "00", anchor = "ew-packet-content-classes" }, { part = "06", anchor = "ew-analysis-rules" }]
 
 [clause."R71 §2.2"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-error-policy" }]
+where = [{ part = "00", anchor = "ew-core-content-requirements" }, { part = "09", anchor = "ew-core-inclusion-rule" }]
 note = "Part 00 §4.1 cites it; R132 §3.4 widened the obligation from core resources to the packet verdict"
 
 [clause."R71 §2.3"]
@@ -305,7 +306,7 @@ note = "restated whole in R90 §3; was a paired-value discriminator keeps R55 §
 
 [clause."R72 §2.4"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-verdict-composition" }]
+where = [{ part = "05", anchor = "ew-verdict-composition" }, { part = "09", anchor = "ew-extension-verdicts" }]
 note = "the packet verdict is the worst of the packet's own, core's, and every bound extension's; moved from Part 09 §5.4 by R132"
 
 [clause."R74 §2.1"]
@@ -357,18 +358,27 @@ where = [{ part = "02", section = "5.3" }]
 
 [clause."R1 §2"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-validation-shim" }]
+where = [{ part = "00", anchor = "ew-packet" }, { part = "03", anchor = "ew-portable-profile-scope" }]
 note = "R125 moved the manifest-to-session comparison from a hidden SQL relation to the validation shim while preserving its check identity."
 
 [clause."R2 §2"]
 disposition = "applied"
-where = [{ part = "02", section = "6" }]
+where = [{ part = "02", anchor = "ew-core-logical-schema-scope" }]
 note = "restored 2026-09-04; the third presence state, optional, had been dropped"
 
 [clause."R3 §2.1"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-parquet-reader-floor" }]
-note = "restored 2026-09-04; the Parquet compression floor and tick encoding were absent"
+where = [
+  { part = "03", anchor = "ew-parquet-reader-floor" },
+  { part = "02", section = "5.1" },
+  { part = "02", section = "5.2" },
+  { part = "02", section = "5.3" },
+  { part = "02", section = "6" },
+  { part = "02", anchor = "ew-logical-column-naming" },
+  { part = "01", anchor = "ew-time-basis" },
+  { part = "01", anchor = "ew-clock-concept" },
+]
+note = "restored 2026-09-04; the Parquet compression floor and tick encoding were absent. the general prohibition is not restated because it names no actor; the typed rules realise it: a `_tick` name is an int64 coordinate on a declared clock, a wall-clock column is `timestamp`, and ticks reach real time only through a tick-zero binding"
 
 [clause."R26 §2"]
 disposition = "applied"
@@ -382,7 +392,7 @@ note = "no analysis resource must name a producing run; R130 §3.7"
 
 [clause."R35 §2"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }, { part = "05", anchor = "ew-import-materialization" }]
 note = "restored 2026-09-04; only the second of the two re-run conditions had survived"
 
 [clause."R57 §2.2"]
@@ -470,12 +480,12 @@ where = [{ part = "03", section = "8" }]
 
 [clause."R15 §2"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-codecs" }]
+where = [{ part = "03", anchor = "ew-array-version" }]
 
 [clause."R15 §3"]
-disposition = "applied"
-where = [{ part = "04", section = "3" }]
-note = "required_codecs as the union, for a whole-packet capability answer"
+disposition = "superseded"
+by = "R129"
+note = "R129 §3.6 removes `required_codecs` and introduces no packet capability union; R129 §3.7 replaces the reader's SHOULD with a MUST to fail the unopenable resource specifically; was Part 04 §3"
 
 [clause."R21 §2"]
 disposition = "rationale"
@@ -492,12 +502,12 @@ note = "restored 2026-09-04; the prohibition and the reader's version check were
 
 [clause."R14 §2.2"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-codecs" }]
+where = [{ part = "03", anchor = "ew-array-codecs" }, { part = "05", anchor = "ew-validation-shim" }]
 
 [clause."R14 §2.3.2"]
 disposition = "applied"
 where = [{ part = "04", section = "5.1" }, { part = "04", anchor = "ew-external-resource-verification" }]
-note = "restored 2026-10-01; the recommendation that a writer own a core table was absent"
+note = "restored 2026-10-01; the recommendation that a writer own a core table was absent. the duty to offer the external mode stands as R36 §2.3 restated it, conditional on a validator offering an external level, with the digest level optional"
 
 [clause."R14 §2.4"]
 disposition = "rationale"
@@ -515,18 +525,18 @@ note = "restored 2026-09-04; the guarantee was present only as an explanation"
 
 [clause."R36 §2.1"]
 disposition = "applied"
-where = [{ part = "04", anchor = "ew-prefix-resources" }]
+where = [{ part = "04", anchor = "ew-prefix-resources" }, { part = "04", anchor = "ew-resource-digests" }]
 note = "size_bytes as the sum of member sizes, restored with R36 §2.2"
 
 [clause."R36 §2.3"]
 disposition = "applied"
-where = [{ part = "04", anchor = "ew-external-resource-verification" }]
+where = [{ part = "04", anchor = "ew-external-resource-verification" }, { part = "04", anchor = "ew-resource-digests" }]
 note = "restored 2026-10-01; that level 3a checks the recorded size, that a validator offering an external level offers 3a, and that 3c does not run unasked were absent"
 
 [clause."R51 §2.1"]
 disposition = "applied"
-where = [{ part = "04", anchor = "ew-prefix-resources" }]
-note = "restored 2026-09-04; the members-equal-the-digested-listing rule was absent"
+where = [{ part = "04", anchor = "ew-prefix-resources" }, { part = "04", anchor = "ew-resource-digests" }]
+note = "restored 2026-09-04; the members-equal-the-digested-listing rule was absent. restored 2026-10-02; that level 3a establishes each member's recorded size, and not only the entry's total, was absent"
 
 [clause."R51 §2.2"]
 disposition = "applied"
@@ -552,11 +562,15 @@ note = "states that the digest covers what R14 §2.3 already scopes"
 
 [clause."R52 §2.4"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
+where = [
+  { part = "05", anchor = "ew-incremental-revalidation" },
+  { part = "03", anchor = "ew-packet-owned-bytes" },
+  { part = "04", anchor = "ew-resource-digests" },
+]
 
 [clause."R32 §5"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-incremental-revalidation" }]
+where = [{ part = "05", anchor = "ew-incremental-revalidation" }, { part = "05", anchor = "ew-import-commit" }]
 note = "restored 2026-09-04; the whole-packet baseline R35 bounds was absent"
 
 [clause."R32 §6"]
@@ -612,8 +626,8 @@ disposition = "applied"
 where = [{ part = "01", section = "3.9" }]
 
 [clause."R27 §3"]
-disposition = "applied"
-where = [{ part = "01", section = "3.9" }]
+disposition = "registry"
+note = "a clock is not its own ancestor, checked by the Tier 2 rule core.clocks.parent_chain_well_founded; no part states it"
 
 [clause."R27 §5"]
 disposition = "rationale"
@@ -702,7 +716,7 @@ note = "its recording sentence narrowed by R145 §3.3 to the recommendation R99 
 
 [clause."R40 §2.2"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-clock-alignment-record" }]
+where = [{ part = "02", anchor = "ew-clock-alignment-record" }, { part = "01", anchor = "ew-clock-concept" }]
 
 [clause."R45 §2.2"]
 disposition = "applied"
@@ -866,15 +880,15 @@ note = "processing_run_id on core.sorting_runs and core.curation_versions"
 
 [clause."R41 §2.2"]
 disposition = "applied"
-where = [{ part = "01", section = "3.20" }]
+where = [{ part = "01", section = "2.6" }]
 
 [clause."R41 §2.3"]
-disposition = "applied"
-where = [{ part = "01", section = "2.4" }]
+disposition = "registry"
+note = "declared: core.preferred_runs; R49 §2.3 adds scope_kind to its key"
 
 [clause."R41 §2.4"]
 disposition = "applied"
-where = [{ part = "01", section = "2.4" }]
+where = [{ part = "01", section = "2.6" }]
 note = "restored 2026-09-04; the positive half -- use the preference -- was absent"
 
 [clause."R41 §2.5"]
@@ -883,11 +897,11 @@ note = "currency is not a version; R32 versions the bundle"
 
 [clause."R44 §2.2"]
 disposition = "applied"
-where = [{ part = "01", section = "2.4" }]
+where = [{ part = "01", section = "2.6" }]
 
 [clause."R44 §2.3"]
 disposition = "applied"
-where = [{ part = "01", section = "2.4" }]
+where = [{ part = "01", section = "2.6" }]
 note = "restored 2026-09-04; one unscoped run makes the whole group undeterminable"
 
 [clause."R44 §2.4"]
@@ -905,7 +919,8 @@ disposition = "rationale"
 
 [clause."R3 §3.0"]
 disposition = "applied"
-where = [{ part = "02", section = "6" }]
+where = [{ part = "02", section = "6" }, { part = "02", section = "5.2" }]
+note = "restored 2026-10-02; the rule that a repeated value is declared as a child table, and never as a delimited string or as JSON, was absent"
 
 [clause."R3 §3.4"]
 disposition = "applied"
@@ -917,7 +932,7 @@ note = "core.units gains n_spikes, first_spike_tick, last_spike_tick"
 
 [clause."R3 §5.1"]
 disposition = "applied"
-where = [{ part = "03", section = "6.2" }]
+where = [{ part = "03", section = "6.2" }, { part = "03", anchor = "ew-array-metadata-placement" }]
 note = "restored 2026-10-01; the reader prohibition on taking its language's axis order as the declared order was indicative, and no check observes it"
 
 [clause."R3 §5.2"]
@@ -934,7 +949,7 @@ note = "core.array_channels gains its axis binding"
 
 [clause."R3 §7.1"]
 disposition = "applied"
-where = [{ part = "03", section = "6.1" }]
+where = [{ part = "03", section = "6.1" }, { part = "03", section = "6.2" }]
 note = "restored 2026-09-04; the regular chunk grid was absent"
 
 [clause."R3 §7.3"]
@@ -996,7 +1011,7 @@ note = "core.event_stream_observation_intervals carries no clock_id"
 
 [clause."R25 §4"]
 disposition = "applied"
-where = [{ part = "01", section = "2.2" }]
+where = [{ part = "01", section = "2.3" }]
 note = "restored 2026-09-04; a session's extent is wall clock, not a tick hull"
 
 [clause."R47 §2.1"]
@@ -1077,7 +1092,7 @@ disposition = "rationale"
 
 [clause."R2 §3"]
 disposition = "applied"
-where = [{ part = "02", section = "9.1" }]
+where = [{ part = "02", section = "9.1" }, { part = "02", anchor = "ew-resource-kind" }]
 note = "an ordered list of columns; ordering is why an array and not an object"
 
 [clause."R2 §5"]
@@ -1088,9 +1103,10 @@ note = "restored 2026-09-04 with the third presence state"
 [clause."R2 §6"]
 disposition = "applied"
 where = [
-    { part = "02", section = "2" },
-    { part = "02", section = "7" },
-    { part = "03", section = "5.3" },
+  { part = "02", section = "2" },
+  { part = "02", section = "7" },
+  { part = "03", section = "5.3" },
+  { part = "02", anchor = "ew-tier-1-rules" },
 ]
 
 [clause."R2 §7.4"]
@@ -1099,11 +1115,15 @@ note = "why the rules are SQL rather than code"
 
 [clause."R2 §8"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-registry-self-description" }]
+where = [
+  { part = "02", anchor = "ew-registry-self-description" },
+  { part = "02", anchor = "ew-registry-document" },
+  { part = "04", anchor = "ew-packet-registry-bindings" },
+]
 
 [clause."R2 §9"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-registry-self-description" }]
+where = [{ part = "02", anchor = "ew-registry-self-description" }, { part = "02", anchor = "ew-registry-conformance" }]
 
 [clause."R7 §2"]
 disposition = "applied"
@@ -1115,7 +1135,11 @@ note = "the specific keys, including core.source_files keyed by id and not uri"
 
 [clause."R17 §2"]
 disposition = "applied"
-where = [{ part = "09", section = "5.1" }]
+where = [
+  { part = "09", section = "5.1" },
+  { part = "09", anchor = "ew-extension-namespacing" },
+  { part = "09", anchor = "ew-core-extension-reference-direction" },
+]
 
 [clause."R17 §4"]
 disposition = "applied"
@@ -1178,7 +1202,7 @@ note = "restored 2026-10-01; what each status value means was absent"
 
 [clause."R8 §4"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
+where = [{ part = "02", anchor = "ew-registry-vocabularies" }, { part = "01", anchor = "ew-array-asset-concept" }]
 note = "restored 2026-10-01; the prohibition on a value outside the reserved set was absent"
 
 [clause."R10 §6"]
@@ -1228,9 +1252,8 @@ where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
 note = "restored 2026-10-01; the writer obligations to keep the source's label verbatim and to leave an unprojectable label null were permissions, and no rule checks either"
 
 [clause."R22 §4"]
-disposition = "applied"
-where = [{ part = "05", section = "5.2" }]
-note = "the projection is a function, checked as a Tier 2 rule"
+disposition = "registry"
+note = "the projection is a function, checked by the Tier 2 rule core.unit_quality_labels.projection_is_consistent; no part states it"
 
 [clause."R23 §5"]
 disposition = "rationale"
@@ -1294,7 +1317,7 @@ note = "schemas/semantic_version.txt struck"
 
 [clause."R62 §2.2"]
 disposition = "applied"
-where = [{ part = "04", section = "3" }]
+where = [{ part = "04", section = "3" }, { part = "03", anchor = "ew-portable-bound-registries" }]
 
 [clause."R63 §2.1"]
 disposition = "applied"
@@ -1309,11 +1332,13 @@ disposition = "rationale"
 
 [clause."R65 §2.2"]
 disposition = "applied"
-where = [{ part = "01", section = "3.17" }]
+where = [{ part = "01", section = "3.17" }, { part = "02", anchor = "ew-discriminator-semantics" }]
+note = "stated in the indicative because it binds the specification, which no actor can fail (Part 00 §2.4); Part 02 §8.3 carries the checkable consequence"
 
 [clause."R65 §2.3"]
 disposition = "applied"
-where = [{ part = "01", section = "3.17" }]
+where = [{ part = "01", section = "3.17" }, { part = "04", anchor = "ew-packet-resource-entry-fields" }]
+note = "restored 2026-10-02; the prohibition on inferring an array's instrument from its entry's `uri` was absent"
 
 [clause."R65 §2.4"]
 disposition = "rationale"
@@ -1381,8 +1406,9 @@ disposition = "applied"
 where = [{ part = "05", section = "10" }]
 
 [clause."R79 §2.3"]
-disposition = "applied"
-where = [{ part = "05", section = "10" }]
+disposition = "superseded"
+by = "R130"
+note = "R130 §3.7 removes the resource-entry member `processing_run_id` and has Part 05 §10 not require an analysis resource to name a run, so the packet obligation this clause classified no longer exists; was Part 05 §10"
 
 [clause."R80 §2.1"]
 disposition = "applied"
@@ -1401,11 +1427,11 @@ note = "the document's shape is spec/artifacts/sources.schema.json, which Part 0
 [clause."R80 §2.3"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-source-resolution" }]
-note = "restored 2026-10-01; what the default resolution document names, and the reader prohibition on taking the packet to vouch for it, were absent; no check observes the prohibition"
+note = "restored 2026-10-01; what the default resolution document names, and the reader prohibition on taking the packet to vouch for it, were absent; no check observes the prohibition. the restoration also stated that the packet's recorded digests do not cover the default"
 
 [clause."R80 §2.4"]
 disposition = "applied"
-where = [{ part = "04", anchor = "ew-source-resolution" }]
+where = [{ part = "04", anchor = "ew-source-resolution" }, { part = "04", anchor = "ew-external-resource-verification" }]
 
 [clause."R80 §2.5"]
 disposition = "applied"
@@ -1433,7 +1459,7 @@ note = "also stated in 02_core_logical_schemas.md §12.1"
 
 [clause."R81 §2.2"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-unit-identity" }]
+where = [{ part = "02", anchor = "ew-unit-identity" }, { part = "05", anchor = "ew-writer-acceptance-criteria" }]
 note = "R149 §3.1 states its start and its label order, declares core.units.numbered_in_order, and lets units tying on their label be numbered in either order"
 
 [clause."R81 §2.3"]
@@ -1443,15 +1469,15 @@ note = "the six unit-keyed tables and their references narrowed to ['unit_id']"
 [clause."R81 §2.4"]
 disposition = "applied"
 where = [
-    { part = "03", section = "5.3" },
-    { part = "03", section = "5.4" },
-    { part = "02", section = "9" },
+  { part = "03", section = "5.3" },
+  { part = "03", section = "5.4" },
 ]
 note = "an amended packet is run-major within each build, so under R150 §3.6 it clusters each curation's spikes; the descriptor declares the order 03 §5.4 projects (R154 §3.1)"
 
 [clause."R81 §2.5"]
 disposition = "applied"
-where = [{ part = "02", section = "9" }]
+where = [{ part = "02", anchor = "ew-unit-identity" }]
+note = "restored 2026-10-02; the prohibition on identifying a unit by its `unit_id` outside the packet that assigned it was absent"
 
 [clause."R81 §2.6"]
 disposition = "rationale"
@@ -1513,10 +1539,12 @@ where = [
 [clause."R84 §2.2"]
 disposition = "applied"
 where = [
-    { part = "00", anchor = "ew-physical-profile", note = "the portable profile identifier" },
-    { part = "03", anchor = "ew-portable-profile-scope", note = "the same, as the `profile_id` a manifest declares" },
-    { part = "04", section = "3", note = "the two standard version fields" },
-    { part = "04", anchor = "ew-source-resolution", note = "the source resolution document's schema URI" },
+  { part = "00", anchor = "ew-physical-profile", note = "the portable profile identifier" },
+  { part = "03", anchor = "ew-portable-profile-scope", note = "the same, as the `profile_id` a manifest declares" },
+  { part = "04", section = "3", note = "the two standard version fields" },
+  { part = "04", anchor = "ew-source-resolution", note = "the source resolution document's schema URI" },
+  { part = "01", anchor = "ew-semantic-standard-scope" },
+  { part = "02", anchor = "ew-core-logical-schema-scope" },
 ]
 note = "an extension's `extends` value and the published $ids are the registry's, read from spec/artifacts/*.schema.json"
 
@@ -1554,17 +1582,17 @@ note = "restored 2026-10-01; the consumer prohibition on merging two devices tha
 
 [clause."R86 §2.1"]
 disposition = "applied"
-where = [{ part = "00", anchor = "ew-packet" }]
+where = [{ part = "02", anchor = "ew-session-scope" }]
 note = "spec/tools/check.py computes the scope and reports the 33 and the 2"
 
 [clause."R86 §2.2"]
 disposition = "applied"
-where = [{ part = "00", anchor = "ew-packet" }]
+where = [{ part = "05", anchor = "ew-reader-session-presentation" }]
 note = "escapewheel_reader.dataset.Dataset carries it; the projection is per-packet, never from a name"
 
 [clause."R86 §2.3"]
 disposition = "applied"
-where = [{ part = "00", anchor = "ew-packet" }]
+where = [{ part = "05", anchor = "ew-reader-session-presentation" }]
 
 [clause."R86 §2.4"]
 disposition = "applied"
@@ -1624,7 +1652,7 @@ note = "written there 2026-09-10; the prohibition on inferring a session from a 
 
 [clause."R88 §2.4"]
 disposition = "applied"
-where = [{ part = "02", section = "12.3" }]
+where = [{ part = "02", section = "12.3" }, { part = "02", anchor = "ew-identifier-semantics" }]
 
 [clause."R89 §2.1"]
 disposition = "registry"
@@ -1708,8 +1736,9 @@ note = "generated by escapewheel_validator.generate, forward and reverse; narrow
 [clause."R90 §3.9"]
 disposition = "applied"
 where = [
-    { part = "02", anchor = "ew-discriminator-semantics" },
-    { part = "00", anchor = "ew-packet-content-classes" },
+  { part = "02", anchor = "ew-discriminator-semantics" },
+  { part = "09", anchor = "ew-core-extension-reference-direction" },
+  { part = "09", anchor = "ew-core-extension-discrimination" },
 ]
 
 [clause."R91 §2.1"]
@@ -1756,7 +1785,7 @@ note = "uniqueness leaves the generated list and becomes an obligation about the
 
 [clause."R92 §2.2"]
 disposition = "applied"
-where = [{ part = "03", section = "5.3" }]
+where = [{ part = "03", section = "5.3" }, { part = "02", anchor = "ew-functional-dependence" }]
 note = "the adjacency rule, at error; determined_by is defined in 02 §8.5, which this clause introduces"
 
 [clause."R92 §2.3"]
@@ -1779,8 +1808,13 @@ note = "what the part leaves alone; its MUST is R30 §3.2's, restated as standin
 
 [clause."R93 §3.1"]
 disposition = "applied"
-where = [{ part = "02", section = "5.3" }]
-note = "Part 02 names no storage technology except to place a rule outside its own scope; its §13 is struck, ordering and partitioning go to 03, and INT96 was already in 03 §5.5"
+where = [
+  { part = "02", section = "5.3" },
+  { part = "00", anchor = "ew-later-physical-profiles" },
+  { part = "00", anchor = "ew-numbered-part-ownership" },
+  { part = "00", anchor = "ew-physical-profile" },
+]
+note = "Part 02 names no storage technology except to place a rule outside its own scope; its §13 is struck, ordering and partitioning go to 03, and INT96 was already in 03 §5.5. 'name' means 'make a rule depend on' (R93 §3.2), which Part 00 §8 states with a keyword; Part 02 §5.3 keeps the value-type sentences"
 
 [clause."R93 §3.2"]
 disposition = "applied"
@@ -1797,13 +1831,13 @@ note = "the physical-profile descriptor holds the machine-readable order (R154 �
 
 [clause."R93 §3.4"]
 disposition = "applied"
-where = [{ part = "10", section = "1" }]
+where = [{ part = "10", section = "1" }, { part = "00", anchor = "ew-numbered-part-ownership" }]
 note = "Part 10 added, informative, versioned; each measurement records its date and says where the toolchain was not kept"
 
 [clause."R93 §3.5"]
 disposition = "applied"
-where = [{ part = "07", anchor = "ew-reference-performance-notes" }]
-note = "the boundary with Part 10: a number that would change with this implementation stays in 07. Superseded in part by R146 §3.5, which withdraws the sentence keeping R43's query timings in Part 06"
+where = [{ part = "07", anchor = "ew-reference-performance-notes" }, { part = "10", anchor = "ew-performance-scope" }]
+note = "the boundary with Part 10: a number that would change with this implementation stays in 07. Superseded in part by R146 §3.5, which withdraws the sentence keeping R43's query timings in Part 06. the MUST NOT on repeating the division is an editing instruction carried by spec/CONTRIBUTING.md's one-place rule, not restated in a part"
 
 [clause."R93 §3.6"]
 disposition = "applied"
@@ -1849,7 +1883,6 @@ note = "core.clocks.tick_rate_one_form refuses both forms; the writer emits the 
 disposition = "applied"
 where = [
   { part = "05", anchor = "ew-validation-shim" },
-  { part = "07", anchor = "ew-reference-object-model" },
 ]
 note = "at info, bounded by row-group statistics"
 
@@ -1919,7 +1952,7 @@ note = "the key decides both bounds; build.py emits the column from it and check
 
 [clause."R97 §3.3"]
 disposition = "applied"
-where = [{ part = "02", section = "8.6" }]
+where = [{ part = "02", section = "8.6" }, { part = "07", anchor = "ew-reference-object-model" }]
 note = "no rule checks it; the writer-side comparison is 07 §4, and the two keys the NWB adapter restated and the one the Open Ephys adapter did are no longer written"
 
 [clause."R98 §2.1"]
@@ -2088,8 +2121,8 @@ note = "rig.json declares two camera assemblies with serials 23022730 and 230227
 
 [clause."R102 §3.1"]
 disposition = "applied"
-where = [{ part = "01", section = "3.17" }]
-note = "processing_run_id on core.array_assets and analysis.array_assets, int32 nullable, each with its declared reference to core.processing_runs; the manifest's field keeps R9 §4's meaning for resources that are not rows"
+where = [{ part = "01", anchor = "ew-array-asset-concept" }]
+note = "restored 2026-10-02; the writer's obligation to name the run that produced an array, where the packet records that run, was absent. The registry declares processing_run_id on core.array_assets and analysis.array_assets, int32 nullable, each referencing core.processing_runs. R130 §3.7 removes the manifest member this clause kept"
 
 [clause."R102 §3.2"]
 disposition = "applied"
@@ -2202,7 +2235,7 @@ note = "core.coordinate_frame_axes keyed (session_id, coordinate_frame, axis_ind
 
 [clause."R105 §3.3"]
 disposition = "applied"
-where = [{ part = "01", section = "3.8" }]
+where = [{ part = "01", section = "3.8" }, { part = "02", anchor = "ew-frame-axes" }]
 note = "core.electrode_coordinate_values and core.unit_coordinate_values, each keyed by its parent's key plus axis_index and referencing the axis row, so a value on an undeclared axis is an orphan; x_um, y_um and z_um struck from both parents, and axis_value declares unit_from of core.coordinate_frame_axes.unit through R56 §2.3's one hop"
 
 [clause."R105 §3.4"]
@@ -2270,9 +2303,9 @@ where = "R107 §2.6"
 note = "R56 §1 opens on the same defect one field over -- R48 gave a column a role and left the clock and the unit as prose -- with a live pipeline's every unit inside a Field(description=...) as its evidence"
 
 [clause."R107 §3.1"]
-disposition = "applied"
-where = [{ part = "02", anchor = "ew-column-declaration" }]
-note = "one MUST NOT replaces R101 §3.5's second and third sentences and R48 §2.5, enforced by one new check.py invariant taking the structural checks from 29 to 30 and reaching `vocabulary`, `resolves` and `enum` exactly; naming a declared value is not restating one where the description says what that value means, which is why core.array_assets.band keeps `wideband`, `ap` and `lfp` and core.processing_runs.status loses its three"
+disposition = "superseded"
+by = "R126"
+note = "R126 §3.8 makes non-duplicative wording a matter of style, removes prose-restatement heuristics from registry conformance, and forbids only a description that contradicts or overrides a declaration; was Part 02 ew-column-declaration"
 
 [clause."R107 §3.2"]
 disposition = "registry"
@@ -2286,7 +2319,7 @@ note = "authority becomes an array of {name, uri}, both required, on 12 columns 
 [clause."R107 §3.4"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
-note = "tables.md renders each field, generated so the two cannot disagree"
+note = "tables.md renders each field, generated so the two cannot disagree. restored 2026-10-02; which declarations of a column tables.md renders carried no requirement"
 
 [clause."R107 §3.5"]
 disposition = "superseded"
@@ -2360,7 +2393,11 @@ note = "a writer MUST be able to build from a registry document and rows as file
 
 [clause."R109 §3.2"]
 disposition = "applied"
-where = [{ part = "09", section = "5.7" }]
+where = [
+  { part = "09", section = "5.7" },
+  { part = "05", anchor = "ew-recipe-check" },
+  { part = "05", anchor = "ew-recipe-purpose" },
+]
 note = "an extension delivers a registry document and Parquet, with a command where a raw source needs converting; identifiers arrive as names (R53 §2.5). An extension MUST NOT derive the document from the rows it delivers -- aind_unit_qc.waveform_metrics declares 13 columns where the extraction delivers 10, and a derived document would assert the extension has no half_width"
 
 [clause."R109 §3.3"]
@@ -2456,54 +2493,49 @@ note = "45 clauses named neither an actor nor the part they constrain: 8 whose s
 [clause."R111 §3.3"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-specification-actors" }]
-note = "the roster itself -- writer, reader, checker, validator, consumer, and build/adapter/implementation resolving to them -- lands here as definitions carrying no modal, which is why only the rules that bind it are disposed. Every requirement binds an actor or states a property of an artifact, and an artifact predicate MUST name the part it constrains and put the constraint in an active verb -- a wall-clock column MUST NOT use INT96, over INT96 MUST NOT be used. Binds whoever writes this specification; a clause failing it is corrected rather than reported"
+note = "the roster itself -- writer, reader, checker, validator, consumer, and build/adapter/implementation resolving to them -- lands here as definitions carrying no modal, which is why only the rules that bind it are disposed. Every requirement binds an actor or states a property of an artifact, and an artifact predicate MUST name the part it constrains and put the constraint in an active verb -- a wall-clock column MUST NOT use INT96, over INT96 MUST NOT be used. Binds whoever writes this specification; a clause failing it is corrected rather than reported. Part 00 §2.4 states the rule in the indicative, and spec/CONTRIBUTING.md §4 and §10 carry the editor's duty"
 
 [clause."R111 §3.5"]
 disposition = "applied"
 where = [
-    { part = "00", anchor = "ew-core-content-requirements" },
-    { part = "00", anchor = "ew-analysis-content-requirements" },
-    { part = "00", anchor = "ew-later-physical-profiles" },
-    { part = "01", section = "3.5" },
-    { part = "01", section = "3.8" },
-    { part = "01", section = "3.9" },
-    { part = "02", section = "4" },
-    { part = "02", section = "5.2" },
-    { part = "02", section = "8.1.1" },
-    { part = "02", section = "8.2" },
-    { part = "02", anchor = "ew-discriminator-semantics" },
-    { part = "02", section = "8.6" },
-    { part = "02", section = "8.7" },
-    { part = "02", section = "10.3" },
-    { part = "03", section = "4" },
-    { part = "03", anchor = "ew-parquet-reader-floor" },
-    { part = "03", section = "6.2" },
-    { part = "03", section = "8.1" },
-    { part = "05", anchor = "ew-incremental-revalidation" },
-    { part = "05", anchor = "ew-packet-cleanup" },
-    { part = "05", anchor = "ew-amendment-definition" },
-    { part = "04", anchor = "ew-prefix-resources" },
-    { part = "04", anchor = "ew-source-resolution" },
-    { part = "05", section = "2" },
-    { part = "05", section = "3.2" },
-    { part = "05", anchor = "ew-source-declarations" },
-    { part = "05", anchor = "ew-recipe-check" },
-    { part = "05", anchor = "ew-import-delivery" },
-    { part = "05", section = "4.3" },
-    { part = "05", anchor = "ew-validation-shim" },
-    { part = "05", section = "5.4" },
-    { part = "05", section = "10" },
-    { part = "05", anchor = "ew-writer-acceptance-criteria" },
-    { part = "06", section = "2" },
-    { part = "06", section = "4" },
-    { part = "09", section = "5.2" },
-    { part = "09", section = "5.4" },
-    { part = "09", section = "5.7" },
-    { part = "12", anchor = "ew-adapter-run-report" },
-    { part = "09", section = "8" },
-    { part = "09", section = "8.1" },
+  { part = "00", anchor = "ew-core-content-requirements" },
+  { part = "00", anchor = "ew-later-physical-profiles" },
+  { part = "01", section = "3.5" },
+  { part = "02", section = "4" },
+  { part = "02", section = "5.2" },
+  { part = "02", section = "8.1.1" },
+  { part = "02", section = "8.2" },
+  { part = "02", section = "8.6" },
+  { part = "02", section = "8.7" },
+  { part = "02", section = "10.3" },
+  { part = "03", section = "4" },
+  { part = "03", anchor = "ew-parquet-reader-floor" },
+  { part = "03", section = "6.2" },
+  { part = "03", section = "8.1" },
+  { part = "05", anchor = "ew-incremental-revalidation" },
+  { part = "05", anchor = "ew-packet-cleanup" },
+  { part = "05", anchor = "ew-amendment-definition" },
+  { part = "04", anchor = "ew-prefix-resources" },
+  { part = "04", anchor = "ew-source-resolution" },
+  { part = "05", section = "3.2" },
+  { part = "05", anchor = "ew-source-declarations" },
+  { part = "05", anchor = "ew-recipe-check" },
+  { part = "05", anchor = "ew-import-delivery" },
+  { part = "05", section = "4.3" },
+  { part = "05", anchor = "ew-validation-shim" },
+  { part = "05", anchor = "ew-writer-acceptance-criteria" },
+  { part = "06", section = "2" },
+  { part = "06", section = "4" },
+  { part = "09", section = "5.2" },
+  { part = "09", section = "5.4" },
+  { part = "09", section = "5.7" },
+  { part = "09", section = "8" },
+  { part = "09", section = "8.1" },
+  { part = "02", anchor = "ew-coordinate-atlas-annotation" },
+  { part = "05", anchor = "ew-verdict-composition" },
+  { part = "05", anchor = "ew-error-policy" },
 ]
-note = "33 clauses gain an actor -- 13 a writer, 6 a validator, 4 a consumer, 3 a build, 1 a reader, and the 8 abstract-subject ones -- and 12 name the part of the artifact they constrain, actively. Three judgement calls settled in the revision: 00 §4.1 binds a writer, 03 §7's stray binds a writer, and 04 §5's unresolved source splits between a reader and a validator"
+note = "33 clauses gain an actor -- 13 a writer, 6 a validator, 4 a consumer, 3 a build, 1 a reader, and the 8 abstract-subject ones -- and 12 name the part of the artifact they constrain, actively. Three judgement calls settled in the revision: 00 §4.1 binds a writer, 03 §7's stray binds a writer, and 04 §5's unresolved source splits between a reader and a validator. the clause fixed the form of each sentence and decided no rule of its own: the carried-identifier name sentence in Part 02 §8.2 is R53 §2.3.1's, as R126 §3.6 restated it"
 
 
 [clause."R112 §2.1"]
@@ -2519,8 +2551,9 @@ disposition = "rationale"
 note = "05 carried two sections numbered 11 through five accepted revisions"
 
 [clause."R112 §3.1"]
-disposition = "applied"
-where = [{ part = "00", anchor = "ew-numbered-part-ownership" }]
+disposition = "superseded"
+by = "R120"
+note = "R120 §3.6 restates the citation rule as a process rule, which the revision guide's citation-context section carries; was Part 00 ew-numbered-part-ownership"
 
 [clause."R112 §3.2"]
 disposition = "superseded"
@@ -2593,18 +2626,24 @@ where = [
   { part = "12", anchor = "ew-build-supplied-values", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
   { part = "05", anchor = "ew-source-declarations", note = "the four facts an adapter declares, one of them the values a build supplies" },
   { part = "12", anchor = "ew-adapter-declaration-document", note = "what consumes names" },
+  { part = "05", anchor = "ew-recipe-check" },
 ]
 note = "restored 2026-10-01; what consumes names was absent. the supply contract; Part 07 §4 keeps the reference spelling. R116 §3.1 replaced the channel the object crosses by, and R134 §3.5 replaced declaring a protocol as what asks for its terms with the protocol a build reaches the adapter by; the rest of the clause stands"
 
 [clause."R115 §3.2"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-recipe-ownership", note = "a preference is declared in the recipe and a build holds none of its own" }]
+where = [
+  { part = "05", anchor = "ew-recipe-ownership", note = "a preference is declared in the recipe and a build holds none of its own" },
+  { part = "05", anchor = "ew-source-declarations" },
+]
 
 [clause."R115 §3.3"]
 disposition = "applied"
 where = [
   { part = "12", anchor = "ew-protocol-groups", note = "the group, its three protocols, the asymmetry, and versioning by name" },
   { part = "09", section = "5.7", note = "an extension may deliver over any protocol of the group" },
+  { part = "12", anchor = "ew-arrow-ipc-floor" },
+  { part = "12", anchor = "ew-adapter-declaration-document" },
 ]
 note = "restored 2026-10-01; that a build does not require an adapter to be importable in the writer's environment was absent. R134 §3.5 adds the build's choice among the protocols an adapter declares, and R134 §3.4 replaces files-v0.1 as Parquet the recipe names with Parquet under delivery_root named by resource identifier"
 
@@ -2647,6 +2686,7 @@ disposition = "applied"
 where = [
   { part = "05", section = "4.4", note = "the ownership set as the expectation, the empty delivery, and a non-zero exit" },
   { part = "12", anchor = "ew-arrow-ipc-floor", note = "the reserved `end` stream, since a reader treats end of file as end of stream" },
+  { part = "12", anchor = "ew-referenced-resource-delivery" },
 ]
 
 [clause."R115 §3.11"]
@@ -2655,6 +2695,7 @@ where = [
   { part = "05", section = "4.4", note = "what a build reports of a failure, per protocol, and every failure together" },
   { part = "05", section = "3.7", note = "standard error carries the diagnosis where rows have taken standard output" },
   { part = "12", anchor = "ew-adapter-run-report", note = "the connection as a carrier beside the file, and a report cleared before the run" },
+  { part = "12", anchor = "ew-reaching-a-running-adapter" },
 ]
 note = "restored 2026-10-01; that no finding travels in a listing and a build ignores app_metadata was absent, and no check observes it"
 
@@ -2831,28 +2872,32 @@ note = "a build MUST NOT supply an option the adapter names in neither list, inc
 
 [clause."R119 §3.4"]
 disposition = "applied"
-where = [{ part = "12", anchor = "ew-adapter-declaration-document" }, { part = "05", anchor = "ew-source-declarations" }, { part = "05", anchor = "ew-recipe-check" }]
+where = [
+  { part = "12", anchor = "ew-adapter-declaration-document" },
+  { part = "05", anchor = "ew-recipe-check" },
+  { part = "07", anchor = "ew-reference-object-model" },
+]
 note = "the declaration document carries accepts beside needs, and a build MUST refuse one whose accepts names a term, names an option its needs also names, or is not an array of names; an adapter declares five facts rather than four. R134 §3.1 requires the member, replacing the reading of a document without it. R142 §3.1 excepts source_cache from the refusal of a term in accepts and refuses a declaration whose needs names it"
 
 [clause."R120 §3.1"]
 disposition = "applied"
-where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }]
+where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }, { path = "revisions/CONTRIBUTING.md", anchor = "ew-current-owner-ledger" }]
 note = "decision domains and the revision process as the current owner of repository-change procedure"
 
 [clause."R120 §3.2"]
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }]
-note = "prospective domain and change-form metadata, process metadata, and exact legacy defaults"
+note = "prospective domain and change-form metadata, process metadata, and exact legacy defaults. restored 2026-10-02; that withdrawn records remain unedited was absent"
 
 [clause."R120 §3.3"]
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-structural-reorganization" }]
-note = "ordinary append-only amendments and reviewed structural revisions with a crosswalk"
+note = "ordinary append-only amendments and reviewed structural revisions with a crosswalk. the `Change form: structural` field that `stages.py` checks identifies a structural reorganization, and guide §5.4 keeps the duty that Scope explains why append-only placement would impair the specification"
 
 [clause."R120 §3.4"]
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-stable-section-anchors" }]
-note = "canonical stable anchors and honest aliases for structurally affected sections"
+note = "canonical stable anchors and honest aliases for structurally affected sections. the guide's 'one honest primary successor' of a replaced or split section says what an alias marks, and `ledger.py`, `evidence.py`, `check_citations.py` and `impact.py` accept only canonical anchors"
 
 [clause."R120 §3.5"]
 disposition = "applied"
@@ -2862,12 +2907,16 @@ note = "metadata-only anchor bootstrap, refreshed appraisal, and atomic structur
 [clause."R120 §3.6"]
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-citation-context" }]
-note = "current-owner citations and immutable historical accepted records"
+note = "current-owner citations and immutable historical accepted records. `revisions/check_citations.py` carries the checker's duty that a displayed number agrees with its anchor's heading; normalizing a citation is a method with no outcome beyond both forms resolving"
 
 [clause."R120 §3.7"]
 disposition = "applied"
-where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-current-owner-ledger" }]
-note = "one-way ledger destinations, anchored Markdown evidence owners, and current-owner resolution"
+where = [
+  { path = "revisions/CONTRIBUTING.md", anchor = "ew-current-owner-ledger" },
+  { path = "revisions/CONTRIBUTING.md", anchor = "ew-process-incorporation-boundary" },
+  { path = "revisions/CONTRIBUTING.md", anchor = "ew-stable-section-anchors" },
+]
+note = "one-way ledger destinations, anchored Markdown evidence owners, and current-owner resolution. guide §8.1, §11 and §12 state that every named owner resolves, and guide §8.4 the heading checker's four rejections"
 
 [clause."R120 §3.8"]
 disposition = "applied"
@@ -2928,7 +2977,6 @@ disposition = "applied"
 where = [
   { part = "01", anchor = "ew-unit-concept" },
   { part = "02", anchor = "ew-unit-identity" },
-  { part = "05", anchor = "ew-reader-unit-selection" },
 ]
 note = "Unit meaning remains semantic, while packet-local identity and reader unit selection have separate current owners. Under R149 §3.1 two writers may number units tying on their label differently."
 
@@ -2957,7 +3005,7 @@ note = "Public logical identifier types follow their registry declarations witho
 
 [clause."R123 §3.6"]
 disposition = "applied"
-where = [{ part = "00", anchor = "ew-numbered-part-ownership" }]
+where = [{ part = "00", anchor = "ew-numbered-part-ownership" }, { part = "00", anchor = "ew-specification-authority" }]
 note = "Part 00 assigns the semantic, logical, reader-operation, and informative projection subjects to their numbered owners."
 
 [clause."R124 §3.1"]
@@ -2981,9 +3029,7 @@ note = "candidate edition discipline and the missing-authority release block; R1
 disposition = "applied"
 where = [
   { part = "00", anchor = "ew-normative-references" },
-  { part = "03", anchor = "ew-portable-profile-scope" },
   { part = "03", anchor = "ew-portable-profile-normative-references" },
-  { part = "04", anchor = "ew-packet-catalog-scope" },
   { part = "04", anchor = "ew-packet-catalog-normative-references" },
 ]
 note = "exact current allocation and invocation of the eleven existing bibliographic rows; R140 §3.3 adds Part 02 §13's four rows to the allocation; R144 §3.5 moves the Parquet row to Part 00 and the Arrow row to Part 12"
@@ -2994,27 +3040,28 @@ where = [
   { part = "00", anchor = "ew-numbered-part-ownership" },
   { part = "02", anchor = "ew-registry-document" },
   { part = "11", anchor = "ew-tier-2-language-selection" },
+  { part = "11", anchor = "ew-rule-language-normative-references" },
 ]
 note = "Part 11 owns the selected language, Part 02 owns its registry-level selection, and Part 00 records the boundary. R149 §3.3 renames the language escapewheel-rule-sql-v0.2, and the selection carries to the new identifier."
 
 [clause."R125 §3.2"]
 disposition = "applied"
-where = [{ part = "11", anchor = "ew-tier-2-query-profile" }]
-note = "closed hybrid descriptor and admitted SQL query surface; R149 §3.3 renames the descriptor escapewheel-rule-sql-v0.2 and adds E021-04, and its exact data carries to the new identifier"
+where = [{ part = "11", anchor = "ew-tier-2-query-profile" }, { part = "11", anchor = "ew-tier-2-language-selection" }]
+note = "closed hybrid descriptor and admitted SQL query surface; R149 §3.3 renames the descriptor escapewheel-rule-sql-v0.2 and adds E021-04, and its exact data carries to the new identifier. restored 2026-10-02; what `iso_feature_dependencies` and `contract_clauses` mean was absent"
 
 [clause."R125 §3.3"]
 disposition = "applied"
-where = [{ part = "11", anchor = "ew-tier-2-relation-environment" }]
+where = [{ part = "11", anchor = "ew-tier-2-relation-environment" }, { part = "11", anchor = "ew-tier-2-query-profile" }]
 note = "qualified registry relations, exact names, visibility, typed absence, and parsed dependencies"
 
 [clause."R125 §3.4"]
 disposition = "applied"
-where = [{ part = "11", anchor = "ew-tier-2-type-binding" }]
-note = "logical-to-SQL type binding and common-type semantics"
+where = [{ part = "11", anchor = "ew-tier-2-type-binding" }, { part = "11", anchor = "ew-tier-2-query-profile" }]
+note = "logical-to-SQL type binding and common-type semantics. restored 2026-10-02; that an exact-decimal literal compares with an exact numeric without rounding was absent"
 
 [clause."R125 §3.5"]
 disposition = "applied"
-where = [{ part = "11", anchor = "ew-tier-2-deterministic-semantics" }]
+where = [{ part = "11", anchor = "ew-tier-2-deterministic-semantics" }, { part = "11", anchor = "ew-tier-2-query-profile" }]
 note = "deterministic numeric, timestamp, interval, and character semantics"
 
 [clause."R125 §3.6"]
@@ -3036,6 +3083,7 @@ where = [
   { part = "05", anchor = "ew-incomplete-validation" },
   { part = "09", anchor = "ew-extension-verdicts" },
   { part = "11", anchor = "ew-tier-2-evaluation-outcomes" },
+  { part = "05", anchor = "ew-verdict-composition" },
 ]
 note = "invalid, unsupported, incomplete, and completed findings remain distinct for core and each extension"
 
@@ -3051,16 +3099,24 @@ note = "each validation layer supplies its own dependency facts"
 
 [clause."R125 §3.11"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-registry-self-description" }]
-note = "registry identities and the document-wide language selection changed atomically with migrated rules; R149 §3.3 renames the language, and a validator's claim to support it carries to escapewheel-rule-sql-v0.2"
+where = [
+  { part = "02", anchor = "ew-registry-self-description" },
+  { part = "02", anchor = "ew-registry-document" },
+  { part = "11", anchor = "ew-tier-2-language-selection" },
+]
+note = "registry identities and the document-wide language selection changed atomically with migrated rules; R149 §3.3 renames the language, and a validator's claim to support it carries to escapewheel-rule-sql-v0.2. the closing validator list is carried by Part 11 §§2-5 and Part 05 §5.2; disabling a surface in the engine is a method no part states"
 
 [clause."R126 §3.1"]
 disposition = "applied"
 where = [
   { part = "02", anchor = "ew-core-logical-schema-scope" },
   { part = "09", anchor = "ew-extension-definition" },
+  { part = "02", anchor = "ew-table-resource-requirements" },
+  { part = "02", anchor = "ew-registry-conformance" },
+  { part = "09", anchor = "ew-extension-versioning" },
+  { part = "02", anchor = "ew-registry-self-description" },
 ]
-note = "language-neutral prose and four expressly incorporated JSON artifacts jointly own the complete contract"
+note = "language-neutral prose and four expressly incorporated JSON artifacts jointly own the complete contract. the non-incorporation and non-membership limbs are satisfied by composition under Part 00 §2.1, and the version limb by Part 02 §9.2 and Part 09 §5.5"
 
 [clause."R126 §3.2"]
 disposition = "applied"
@@ -3068,6 +3124,9 @@ where = [
   { part = "02", anchor = "ew-registry-document" },
   { part = "09", anchor = "ew-extension-namespacing" },
   { part = "09", anchor = "ew-core-extension-reference-direction" },
+  { part = "02", anchor = "ew-table-resource-requirements" },
+  { part = "02", anchor = "ew-registry-self-description" },
+  { part = "02", anchor = "ew-registry-conformance" },
 ]
 note = "disjoint core and extension classes, selectors, namespaces, versions, and reference direction"
 
@@ -3084,6 +3143,8 @@ disposition = "applied"
 where = [
   { part = "02", anchor = "ew-column-declaration" },
   { part = "02", anchor = "ew-registry-conformance" },
+  { part = "02", anchor = "ew-core-logical-schema-scope" },
+  { part = "02", anchor = "ew-registry-document" },
 ]
 note = "closed local shape and conditionals are carried exactly by the incorporated meta-schema"
 
@@ -3091,7 +3152,6 @@ note = "closed local shape and conditionals are carried exactly by the incorpora
 disposition = "applied"
 where = [
   { part = "02", anchor = "ew-registry-conformance" },
-  { part = "09", anchor = "ew-extension-definition" },
 ]
 note = "the incorporated descriptor enumerates the exact cross-declaration invariant inventory"
 
@@ -3102,6 +3162,10 @@ where = [
   { part = "02", anchor = "ew-logical-references" },
   { part = "02", anchor = "ew-identifier-semantics" },
   { part = "02", anchor = "ew-registry-conformance" },
+  { part = "02", anchor = "ew-discriminator-semantics" },
+  { part = "02", anchor = "ew-unit-and-clock-context" },
+  { part = "02", anchor = "ew-free-form-metadata" },
+  { part = "02", anchor = "ew-registry-vocabularies" },
 ]
 note = "resource identity, keys, references, semantics, context, and static-rule algorithms"
 
@@ -3114,7 +3178,7 @@ note = "session scope is proven by required, compatible, complete-key reference 
 disposition = "applied"
 where = [
   { part = "02", anchor = "ew-logical-column-naming" },
-  { part = "02", anchor = "ew-registry-conformance" },
+  { part = "02", anchor = "ew-column-declaration" },
 ]
 note = "declaration-backed naming is conformance; layout and prose heuristics remain authoring guidance"
 
@@ -3124,8 +3188,9 @@ where = [
   { part = "02", anchor = "ew-unit-and-clock-context" },
   { part = "02", anchor = "ew-registry-conformance" },
   { part = "02", anchor = "ew-logical-schema-normative-references" },
+  { part = "02", anchor = "ew-registry-vocabularies" },
 ]
-note = "offline exact UCUM syntax and canonical non-dereferenced authority identities"
+note = "offline exact UCUM syntax and canonical non-dereferenced authority identities. restored 2026-10-02; that a checker lacking the UCUM edition reports `external_domain` as `unsupported`, and judges no literal unit by an approximation, was absent"
 
 [clause."R126 §3.10"]
 disposition = "applied"
@@ -3173,6 +3238,8 @@ where = [
   { part = "02", anchor = "ew-resource-common-fields" },
   { part = "02", anchor = "ew-registry-document" },
   { part = "09", anchor = "ew-extension-definition" },
+  { part = "02", anchor = "ew-table-resource-requirements" },
+  { part = "09", anchor = "ew-extension-namespacing" },
 ]
 note = "registries have one closed resource-declaration map with exact namespace ownership"
 
@@ -3199,6 +3266,8 @@ disposition = "applied"
 where = [
   { part = "02", anchor = "ew-resource-instance-model" },
   { part = "02", anchor = "ew-resource-catalog-binding" },
+  { part = "04", anchor = "ew-packet-resource-entry-fields" },
+  { part = "04", anchor = "ew-packet-registry-bindings" },
 ]
 note = "singleton, catalog, and family declarations define packet-instance binding. restored 2026-10-01; what a catalog declaration names and what its identifier column is had lost their keywords"
 
@@ -3208,12 +3277,14 @@ where = [
   { part = "00", anchor = "ew-core-content-requirements" },
   { part = "02", anchor = "ew-resource-presence" },
   { part = "02", anchor = "ew-logical-references" },
+  { part = "02", anchor = "ew-registry-conformance" },
+  { part = "04", anchor = "ew-packet-manifest-conformance" },
 ]
 note = "declaration presence, dependencies, foreign keys, catalogs, and runs determine required instances. restored 2026-10-01; that an analysis, compatibility-projection or documentation singleton declares optional presence had become a pointer"
 
 [clause."R128 §3.6"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-resource-catalog-binding" }]
+where = [{ part = "02", anchor = "ew-resource-catalog-binding" }, { part = "04", anchor = "ew-packet-manifest-conformance" }]
 note = "catalog rows carry the packet resource ID and bind one-to-one to catalog-family instances"
 
 [clause."R128 §3.7"]
@@ -3221,6 +3292,9 @@ disposition = "applied"
 where = [
   { part = "02", anchor = "ew-resource-provenance-policy" },
   { part = "06", anchor = "ew-analysis-rules" },
+  { part = "02", anchor = "ew-resource-content-class" },
+  { part = "04", anchor = "ew-packet-manifest-conformance" },
+  { part = "06", anchor = "ew-analysis-materialization-provenance" },
 ]
 note = "lineage policy applies by declaration to every resource kind; R130 §3.7 removed the producing-run policy"
 
@@ -3231,6 +3305,13 @@ where = [
   { part = "04", anchor = "ew-packet-resource-entry-fields" },
   { part = "04", anchor = "ew-packet-validation-block" },
   { part = "12", anchor = "ew-referenced-resource-delivery" },
+  { part = "04", anchor = "ew-packet-catalog-scope" },
+  { part = "04", anchor = "ew-packet-identifiers" },
+  { part = "04", anchor = "ew-logical-resource-kinds" },
+  { part = "05", anchor = "ew-conformance-classes" },
+  { part = "05", anchor = "ew-import-pipeline" },
+  { part = "05", anchor = "ew-validation-shim" },
+  { part = "12", anchor = "ew-adapter-interface-scope" },
 ]
 note = "packet entries bind declaration IDs and no longer repeat logical classification. restored 2026-10-01; the prohibition on reading validation state as changing content class or canonicality, and the build's duties to preserve a delivered entry's declaration and refuse one that does not resolve or admit its resource, were indicative; no check observes the first"
 
@@ -3239,32 +3320,42 @@ disposition = "applied"
 where = [
   { part = "02", anchor = "ew-registry-self-description" },
   { part = "02", anchor = "ew-registry-conformance" },
+  { part = "05", anchor = "ew-reader-registry-independence" },
+  { part = "05", anchor = "ew-validation-shim" },
 ]
 note = "incompatible registry, contract, manifest, and delivery identities advance with their checks"
 
 [clause."R129 §3.1"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-portable-profile-scope" }]
-note = "Part 03 incorporates one closed physical-profile descriptor and generic checker. restored 2026-10-01; that each anchor names the section defining its entry and resolves exactly once was absent"
+note = "Part 03 incorporates one closed physical-profile descriptor and generic checker. restored 2026-10-01; that each anchor names the section defining its entry and resolves exactly once was absent. restored 2026-10-02; that the generic checker enforces the part's requirements without relying on this profile's identifiers or assignments was absent"
 
 [clause."R129 §3.2"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
-note = "profile and checked logical kind derive parquet, zarr, or no generic interface"
+note = "profile and checked logical kind derive parquet, zarr, or no generic interface. the exact vocabulary is carried by the incorporated descriptor under Part 03 §1"
 
 [clause."R129 §3.3"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-table-encoding" }, { part = "03", anchor = "ew-parquet-reader-floor" }]
+where = [
+  { part = "03", anchor = "ew-table-encoding" },
+  { part = "03", anchor = "ew-parquet-reader-floor" },
+  { part = "04", anchor = "ew-packet-codecs" },
+]
 note = "the Parquet interface is one materialized object with a reader-and-writer floor"
 
 [clause."R129 §3.4"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-array-version" }, { part = "03", anchor = "ew-array-codecs" }]
+where = [
+  { part = "03", anchor = "ew-array-version" },
+  { part = "03", anchor = "ew-array-codecs" },
+  { part = "03", anchor = "ew-portable-profile-normative-references" },
+]
 note = "Zarr variants and actual codecs derive from format-owned metadata; R137 §3.1 extends the three v3 name sequences and restates the floor as codec patterns. restored 2026-10-01; the reader obligation to expose every valid v2 array the floor admits was indicative"
 
 [clause."R129 §3.5"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
+where = [{ part = "03", anchor = "ew-portable-profile-technologies" }, { part = "03", anchor = "ew-array-codecs" }]
 note = "floor role distinguishes reader minimums from packet-writer ceilings. restored 2026-10-01; the permission to read a valid feature outside the floor was absent"
 
 [clause."R129 §3.6"]
@@ -3274,23 +3365,28 @@ note = "packet and delivery documents omit redundant physical selectors and summ
 
 [clause."R129 §3.7"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-reader-registry-independence" }]
+where = [{ part = "05", anchor = "ew-reader-registry-independence" }, { part = "03", anchor = "ew-array-version" }]
 note = "ordinary packet access is lazy and requires neither validation receipt nor whole-packet inspection. restored 2026-10-01; that a reader names the unsupported version or feature in its failure was absent, and no check observes it"
 
 [clause."R129 §3.8"]
 disposition = "applied"
-where = [{ part = "04", anchor = "ew-external-resource-verification" }, { part = "05", anchor = "ew-validation-shim" }]
-note = "physical assessment uses available resource metadata and leaves unreachable external state unassessed; R137 §§3.5 and 3.6 set the finding IDs and levels it deferred"
+where = [
+  { part = "04", anchor = "ew-external-resource-verification" },
+  { part = "05", anchor = "ew-validation-shim" },
+  { part = "03", anchor = "ew-array-codecs" },
+  { part = "03", anchor = "ew-parquet-reader-floor" },
+]
+note = "physical assessment uses available resource metadata and leaves unreachable external state unassessed; R137 §§3.5 and 3.6 set the finding IDs and levels it deferred. the comparison is against the floor the checked descriptor owns; 'not a local duplicate constant' is a property of an implementation's structure that no part states"
 
 [clause."R129 §3.9"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
+where = [{ part = "03", anchor = "ew-portable-profile-technologies" }, { part = "04", anchor = "ew-external-resource-verification" }]
 note = "opaque resources have no closed representation vocabulary or generic value interface. restored 2026-10-01; the reader obligation to list an opaque resource and the validator prohibition on failing an unrecognized one were indicative. the permission for a specialized implementation to expose representation-aware operations is not restated: Part 03 §2 and Part 02 §2.3 already say a reader need not parse, decode or render the payload"
 
 [clause."R129 §3.10"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
-note = "current interfaces are materialized; ownership is not a realization kind"
+where = [{ part = "03", anchor = "ew-portable-profile-technologies" }, { part = "04", anchor = "ew-packet-catalog-principles" }]
+note = "current interfaces are materialized; ownership is not a realization kind. a reader's view has no manifest entry and is therefore no packet resource"
 
 [clause."R129 §3.11"]
 disposition = "applied"
@@ -3304,7 +3400,12 @@ note = "Part 04 incorporates the manifest schema, projects its field tables, and
 
 [clause."R130 §3.2"]
 disposition = "applied"
-where = [{ part = "04", anchor = "ew-packet-identifiers" }, { part = "04", anchor = "ew-packet-resource-entry-fields" }, { part = "04", anchor = "ew-packet-validation-block" }]
+where = [
+  { part = "04", anchor = "ew-packet-identifiers" },
+  { part = "04", anchor = "ew-packet-resource-entry-fields" },
+  { part = "04", anchor = "ew-packet-validation-block" },
+  { part = "04", anchor = "ew-resource-lineage" },
+]
 note = "every manifest object is closed; closure replaces the retired-field list"
 
 [clause."R130 §3.3"]
@@ -3329,7 +3430,16 @@ note = "five ordered manifest phases with named check IDs"
 
 [clause."R130 §3.7"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-resource-provenance-policy" }, { part = "04", anchor = "ew-resource-lineage" }, { part = "06", anchor = "ew-analysis-rules" }, { part = "06", anchor = "ew-analysis-spike-events" }, { part = "06", anchor = "ew-analysis-materialization-provenance" }, { part = "05", anchor = "ew-conformance-classes" }, { part = "00", anchor = "ew-analysis-content-requirements" }]
+where = [
+  { part = "02", anchor = "ew-resource-provenance-policy" },
+  { part = "04", anchor = "ew-resource-lineage" },
+  { part = "06", anchor = "ew-analysis-rules" },
+  { part = "06", anchor = "ew-analysis-spike-events" },
+  { part = "06", anchor = "ew-analysis-materialization-provenance" },
+  { part = "05", anchor = "ew-conformance-classes" },
+  { part = "00", anchor = "ew-analysis-content-requirements" },
+  { part = "02", anchor = "ew-resource-content-class" },
+]
 note = "lineage stays required for analysis; a materialization's run is optional and no entry names one"
 
 [clause."R130 §3.8"]
@@ -3512,6 +3622,7 @@ where = [
   { part = "04", anchor = "ew-packet-resource-entry-fields" },
   { part = "04", anchor = "ew-prefix-resources" },
   { part = "04", anchor = "ew-packet-manifest-conformance" },
+  { part = "12", anchor = "ew-adapter-interface-scope" },
 ]
 note = "manifest/0.5.0 and resources/0.5.0 record `digest` objects and member `digest` strings, all or none; member_digest compares the listing value"
 
@@ -3645,7 +3756,6 @@ note = "another modality's vocabulary is an extension under Part 09 and reaches 
 [clause."R141 §3.4"]
 disposition = "applied"
 where = [
-  { part = "00", anchor = "ew-packet-content-classes" },
   { part = "02", anchor = "ew-resource-content-class" },
 ]
 note = "both core rows read normalized facts of the core vocabulary"
@@ -3655,7 +3765,6 @@ disposition = "applied"
 where = [
   { part = "12", anchor = "ew-build-supplied-values", note = "the source_cache term, the one term accepts may name and needs may not, supplied to every accepting adapter where a build has a location and to none where it has none, and exempt from the unfillable-term refusal" },
   { part = "12", anchor = "ew-adapter-declaration-document", note = "a declaration whose accepts names source_cache is not refused, and one whose needs names it is, naming the adapter" },
-  { part = "05", anchor = "ew-source-declarations", note = "the accepted options include the one term source_cache" },
   { part = "05", anchor = "ew-recipe-check", note = "the unfillable-term and accepted-term refusals except source_cache, and a declaration whose needs names it is refused" },
   { part = "07", anchor = "ew-reference-object-model", note = "ACCEPTS may carry source_cache" },
 ]
@@ -3735,6 +3844,7 @@ disposition = "applied"
 where = [
   { part = "12", anchor = "ew-adapter-interface-scope", note = "the part's subject, what it binds, and its incorporation of the resources schema" },
   { part = "12", anchor = "ew-adapter-declaration-document", note = "its incorporation of the adapter declaration schema" },
+  { part = "00", anchor = "ew-numbered-part-ownership" },
 ]
 note = "Part 12 specifies the portable profile's adapter interface in eleven sections"
 
@@ -3826,6 +3936,7 @@ where = [
   { part = "05", anchor = "ew-validation-import-scope", note = "the four actors and the sections binding each" },
   { part = "05", anchor = "ew-conformance-classes", note = "a writer's obligations only" },
   { part = "05", anchor = "ew-writer-acceptance-criteria", note = "the criteria are necessary" },
+  { part = "00", anchor = "ew-specification-actors" },
 ]
 
 [clause."R146 §3.2"]
@@ -3849,6 +3960,7 @@ disposition = "applied"
 where = [
   { part = "10", anchor = "ew-materialization-measurements", note = "the copy's size and the population window" },
   { part = "07", anchor = "ew-reference-performance-notes", note = "the alignment and trial-table timings" },
+  { part = "06", anchor = "ew-analysis-spike-events" },
 ]
 
 [clause."R146 §3.6"]
@@ -3865,7 +3977,10 @@ where = [
 
 [clause."R146 §3.8"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-validation-shim", note = "the unfilled-column report" }]
+where = [
+  { part = "05", anchor = "ew-validation-shim", note = "the unfilled-column report" },
+  { part = "02", anchor = "ew-free-form-metadata" },
+]
 
 [clause."R147 §3.1"]
 disposition = "registry"
@@ -3882,6 +3997,7 @@ where = [
   { part = "02", anchor = "ew-column-declaration", note = "the discriminator attributes" },
   { part = "02", anchor = "ew-registry-conformance", note = "how a discriminator selects its shape" },
 ]
+note = "restored 2026-10-02; the validator's obligation to generate each check was absent"
 
 [clause."R147 §3.4"]
 disposition = "applied"
@@ -3907,7 +4023,6 @@ disposition = "applied"
 where = [
   { part = "02", anchor = "ew-registry-self-description", note = "meta-schema 0.9.0 and core 0.9.0" },
   { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.6" },
-  { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
 ]
 
 [clause."R148 §3.1"]
@@ -3928,8 +4043,9 @@ disposition = "applied"
 where = [{ part = "02", anchor = "ew-discriminator-semantics", note = "the constant column, only where the discriminator is a key member" }]
 
 [clause."R148 §3.4"]
-disposition = "applied"
-where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.10.0" }]
+disposition = "superseded"
+by = "R149"
+note = "R149 §3.4 advances the core `registry_version` from 0.10.0 to 0.11.0, and R150 §3.10, R151 §3.2 and R152 §3.4 advance it again; was Part 02 ew-registry-self-description"
 
 [clause."R149 §3.1"]
 disposition = "applied"
@@ -3945,7 +4061,10 @@ where = [
 
 [clause."R149 §3.3"]
 disposition = "applied"
-where = [{ part = "11", anchor = "ew-tier-2-language-selection", note = "the language ID and the incorporated descriptor" }]
+where = [
+  { part = "11", anchor = "ew-tier-2-language-selection", note = "the language ID and the incorporated descriptor" },
+  { part = "02", anchor = "ew-registry-self-description" },
+]
 note = "core and every repository extension registry select escapewheel-rule-sql-v0.2"
 
 [clause."R149 §3.4"]
@@ -3953,7 +4072,6 @@ disposition = "applied"
 where = [
   { part = "02", anchor = "ew-registry-self-description", note = "core 0.11.0 and the migrated extension's version" },
   { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.7" },
-  { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
 ]
 
 [clause."R150 §3.1"]
@@ -4030,10 +4148,7 @@ where = [
 [clause."R150 §3.10"]
 disposition = "applied"
 where = [
-  { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
   { part = "02", anchor = "ew-registry-self-description", note = "meta-schema 0.10.0 and core 0.12.0" },
-  { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.8" },
-  { part = "05", anchor = "ew-recipe-purpose", note = "recipe schema 0.2.0" },
 ]
 
 [clause."R151 §3.1"]
@@ -4041,10 +4156,9 @@ disposition = "registry"
 note = "analysis.spike_events.on_reference_clock"
 
 [clause."R151 §3.2"]
-disposition = "applied"
-where = [
-  { part = "02", anchor = "ew-registry-self-description", note = "core 0.13.0" },
-]
+disposition = "superseded"
+by = "R152"
+note = "R152 §3.4 advances the core `registry_version` from 0.13.0 to 0.14.0; was Part 02 ew-registry-self-description"
 
 [clause."R152 §3.1"]
 disposition = "applied"
