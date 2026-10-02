@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 2 proposals and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 1 proposal and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -133,12 +133,13 @@ be fixed without a revision:
 
 - a delivered adapter's compensations are dropped, and either way of carrying them changes
   Part 12, which a draft of §3a covers; and
-- the ledger's two weak checks, which the two ledger proposals of §3a cover.
+- the ledger's two weak checks: the ledger draft of §3a covers a superseded entry's successor,
+  and an audit covers what a target states (§6).
 
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Four drafts await acceptance and two proposals await promotion
+## 3a. Four drafts await acceptance and one proposal awaits promotion
 
 The drafts are under `revisions/drafts/` and the proposals under `revisions/proposals/`.
 
@@ -158,14 +159,8 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
   pair, a file a result was computed from is recorded as a source file, and one file may be both.
   No rule in it is left for a writer to keep unchecked. One question is open, the form of the
   media type, and it does not block promotion.
-- **The ledger reads no text of the section a clause lands in.** A process-domain proposal: each
-  applied target quotes the passage that states its clause, and the check fails where the section
-  no longer contains it. A replay over 180 commits showed that a digest of each section would have
-  reported 61 of 68 incorporations. A hand reading of 40 of the 770 targets found 9 whose section does not fully
-  state the clause. Three questions are open in it, the first being whether to pay for the audit
-  that reading implies. No code waits on it.
 - **The ledger resolves a superseded entry's successor and keeps no ratchet.** A process-domain
-  draft, promoted 2026-10-01 and not accepted, split from the proposal above: `by` becomes a
+  draft, promoted 2026-10-01 and not accepted: `by` becomes a
   required field naming one later accepted revision, R107 §3.5's entry is corrected, and the
   ratchet that rewrites `applied.toml` is removed.
 - **A delivery carries the compensations its adapter applied.** A draft, promoted 2026-10-01 and
@@ -299,8 +294,11 @@ natural.
 - **Four corpus packets expected to warn are not checked to pass**, and `tone_in_place_of_its_own`
   names no registry. REFACTOR.md §11.6 lists them.
 - **The ledger cannot see whether a section states an applied clause.** Two clauses were recorded
-  at sections that never stated them and were found by hand. The first ledger proposal of §3a
-  addresses it.
+  at sections that never stated them and were found by hand, and a pilot reading of 40 of the 770
+  applied targets found 9 that do not fully state their clause. The proposal to record a quoted
+  passage for each target was withdrawn on 2026-10-01 as too heavy to maintain. Every target is
+  being read once instead, and `revisions/audit/applied-targets.md` holds the method and the
+  pilot's findings.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
