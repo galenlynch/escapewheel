@@ -102,7 +102,7 @@ An extension's registry document and Part 12 §7's declaration document are diff
 
 Rows arrive carrying identifiers as the names their source used, and a writer numbers them, so an extension neither knows nor needs the packet's numbering.
 
-How the registry document is produced is the extension's business, but an extension MUST NOT derive it from the rows it delivers for the packet being built. A declaration derived from one packet's data cannot disagree with that data, so it declares nothing, and two packets whose extensions each derived one no longer share a schema. Part 02 §5's three presence states are what carry the difference between a column this run did not compute and one the extension does not have.
+How the registry document is produced is the extension's business, but an extension MUST NOT derive it from the rows it delivers for the packet being built. A declaration derived from one packet's data cannot disagree with that data, so it declares nothing, and two packets whose extensions each derived one no longer share a schema. Part 02 §6's three presence states are what carry the difference between a column this run did not compute and one the extension does not have.
 
 An extension's command MUST produce the same rows from the same inputs, and MUST NOT let wall-clock time, an unfixed random seed, or iteration over an unordered collection reach a value it writes. Which program the command resolves to is the recipe author's: pinning library versions so two runs agree byte for byte is a build property, and a validator MUST NOT judge a packet non-conforming for lacking one. An extension that cannot be a function of its inputs delivers a file produced beforehand rather than a command the build runs.
 
