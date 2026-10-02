@@ -331,8 +331,9 @@ draft was.
   finding is not measured. The sidecar draft's inventory names the alignment.
 
 The same reading found four defects in the specification and the registry. Part 05 §1 and Part 11
-§3 are repaired. Two wait on a draft in `revisions/drafts/`. A fifth, found while the clock-transform
-draft was appraised, wants a proposal of its own.
+§3 are repaired. Two wait on drafts in `revisions/drafts/`. Two more were found while the drafts
+were appraised: one in Part 04 §7 with the null-run draft, and one in Part 05 §15.6 with the
+clock-transform draft, which wants a proposal of its own.
 
 - **The description of `processing_run_id` on both array-asset tables is false.** It says a null
   means the array was acquired, and a computed array whose run the packet does not record also
@@ -345,3 +346,6 @@ draft was appraised, wants a proposal of its own.
   a column therefore drops the column's values from a table it rewrites, and keeps them unreported
   in one it does not. Whether an amending build refuses, preserves or reports such a column is
   undecided.
+- **Part 04 §7 says the manifest records outputs at resource granularity.** The sentence before it
+  says an entry names no producing run, and the manifest schema has no member recording a
+  resource's outputs. Which of the provenance tables the clause meant is not stated.
