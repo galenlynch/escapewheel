@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `cf9e816a13575a419d6917d8285992d7cb09f2f3` |
+| **Based on** | `0815350e32f1a583964d51d7ec01d211de337747` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§1, 8.2, 9.2, 9.4, 10.1, 12.1 and 12.9; Part 05 §5.1; Part 08 §§2 and 3; the registry meta-schema; the registry-contract descriptor; the core registry |
-| **Depends on** | R85 §2.2 (the uniqueness of a name, which this checks); R152 §3.4 (the meta-schema, descriptor and core registry identifiers this advances from) |
+| **Depends on** | R85 §2.2 (the uniqueness of a name, which this checks); R152 §3.4 (the meta-schema and descriptor identifiers this advances from); R160 §3.8 (the core registry version at the baseline) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5 |
 
@@ -65,17 +65,18 @@ needed.
 
 ## 2. Background
 
-Section 2 is informative. Each count was rerun at the baseline. The registry counts read the five
-generated registry documents and the incorporated descriptor. The corpus counts read the 120
+Section 2 is informative. Each count of the tree and the corpus was rerun at the baseline, and §2.3
+reports a probe made at an earlier one. The registry counts read the five
+generated registry documents and the incorporated descriptor. The corpus counts read the 132
 packets `verify.py --quick` built, where all 37 stages passed, taking from each the tables its
 manifest lists and the declarations its embedded registries hold. Two packets held outside the tree
-were read the same way: the `packet-r153` builds of `ecephys_776259` and `ecephys_786867`, each of
+were read the same way at an earlier baseline: the `packet-r153` builds of `ecephys_776259` and `ecephys_786867`, each of
 one recorded session, binding core 0.14.0 and the four extension registries at the versions the
 repository carries.
 
 ### 2.1 The pair does not identify a unit, and the name does
 
-Of the 120 corpus packets, 117 carry `core.units`, with 238 unit rows between them.
+Of the 132 corpus packets, 128 carry `core.units`, with 260 unit rows between them.
 
 | measure over `core.units` | packets | unit rows |
 |---|---:|---:|
@@ -108,7 +109,7 @@ three in `aind_unit_qc`, is on `unit_id` alone, and no reader or validator sourc
 
 ### 2.2 Nine core names are nullable, and no check reports a shared name
 
-The core registry, at `registry_version` 0.14.0, declares 45 tables, and 17 own an assigned
+The core registry, at `registry_version` 0.15.0, declares 47 tables, and 17 own an assigned
 identifier as Part 02 §8.2 defines owning. Each of the 17 has a primary key of one column. The
 names of `analysis.array_assets`, `core.array_assets`, `core.calibrations`, `core.clocks`,
 `core.devices`, `core.event_streams`, `core.intervals` and `core.media_assets` are `required`. The
@@ -122,7 +123,7 @@ described as the block's own name "where the source has one". The other three ow
 
 | population | name columns it holds, of 18 | names | null names | names two rows of one table share |
 |---|---:|---:|---:|---:|
-| the 120 corpus packets | 14 | 2,777 | 0 | 1 |
+| the 132 corpus packets | 14 | 3,044 | 0 | 1 |
 | `ecephys_776259`, 6,781 units | 16 | 12,243 | 0 | 0 |
 | `ecephys_786867`, 4,505 units | 17 | 8,932 | 0 | 0 |
 
@@ -155,15 +156,15 @@ is a different contract. Part 02 §9.4 forbids reinterpreting a published descri
 therefore takes a new descriptor ID, selected by a new meta-schema `$id`; the meta-schema changes in
 nothing else. R145 §3.5 and R152 §3.4 each advanced the same three identifiers for a change of the
 invariants alone. The tree holds the meta-schema `$id` in 26 files, the descriptor ID in 11 and the
-core version in 10, outside the accepted records, their evidence, the audit notes, the open
+core version in 11, outside the accepted records, their evidence, the audit notes, the open
 proposals and drafts, and the built corpus; the `dynamic_foraging` registry also carries 0.14.0 as
 its own version.
 
-A probe ran on a copy of `spec/` at the baseline, with each of the nine names `required` and the
-copy's `registry.identity.name` also requiring a `required` name. The copy regenerated and passed
-the tree's own check at 45 tables and 360 columns, with 184 `required` columns where the baseline
-has 175. Under the probe checker the baseline core registry is invalid, with one
-`registry.identity.name` outcome for each of the nine tables, and the probe registry is valid.
+A probe ran on a copy of `spec/` at an earlier baseline, before R160 was incorporated, with each of
+the nine names `required` and the copy's `registry.identity.name` also requiring a `required` name.
+The copy regenerated and passed the tree's own check at 45 tables and 360 columns, with 184
+`required` columns where that baseline had 175; the baseline has 179. Under the probe checker that
+baseline's core registry is invalid, with one `registry.identity.name` outcome for each of the nine tables, and the probe registry is valid.
 Against the probe registry, `vr_foraging`, `aind_opto` and `aind_unit_qc` are valid and
 `dynamic_foraging` is invalid with one outcome, `registry.identity.name` on
 `dynamic_foraging.blocks`. The probe kept the v0.9 descriptor and meta-schema, so it shows the
@@ -342,10 +343,13 @@ The check has these limits:
 - a name is unique among the names of one identifier, and two names of different identifiers, such
   as a probe's and a device's, may be equal.
 
-R160, which declares the sidecar catalog, is being incorporated at the baseline. It advances the
-core registry to 0.15.0 and adds three tables, none of which owns an assigned identifier, so §2.2's
-count of 45 tables becomes 48 and the 17 owners and nine names are unaffected. §3.5 names no core
-target, so it takes the version after whichever advance lands before it.
+R159 and R160 are accepted and incorporated at the baseline. R160 advanced the core registry to
+0.15.0 and added two tables and a catalog, none of which owns an assigned identifier, so the 17
+owners and nine names of §2.2 are unaffected. Of the three other open drafts,
+`a-null-producing-run-on-an-array-says-the-packet-names-none.md` and
+`core-declares-a-clocks-transform-in-typed-columns-alone.md` advance the same core version, and
+`a-recipe-accepts-a-discarded-value-by-naming-its-column.md` changes no registry declaration. §3.5
+names no core target, so it takes the version after whichever advance lands before it.
 
 These accepted clauses change:
 
@@ -358,10 +362,12 @@ These accepted clauses change:
 - R85 §2.2's entry stays `applied` and gains a note that §3.3 restates what a check can report of a
   name's uniqueness.
 - R152 §3.4's entry stays `applied`, since its sentence on migrating to meta-schema 0.11.0 remains in
-  Part 02 §9.2, and gains a note that §3.5 advances the three identifiers it assigned, as the entries
-  for R145 §3.5 and R150 §3.10 record. Where another revision has advanced the core version first,
-  the entry for that revision's version clause becomes `superseded` by this one, as the entry for
-  R151 §3.2 did.
+  Part 02 §9.2, and gains a note that §3.5 advances the meta-schema and descriptor identifiers it
+  assigned, as the entries for R145 §3.5 and R150 §3.10 record.
+- R160 §3.8, which assigns only the core version, becomes `superseded` by this revision, as the
+  entry for R151 §3.2 did. Where another revision has advanced the core version first, the entry
+  for that revision's version clause is the one replaced: it becomes `superseded` where that clause
+  assigns only the version, and otherwise stays `applied` and gains a note.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|

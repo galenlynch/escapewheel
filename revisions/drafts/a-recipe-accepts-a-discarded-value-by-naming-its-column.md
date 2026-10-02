@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `cf9e816a13575a419d6917d8285992d7cb09f2f3` |
+| **Based on** | `0815350e32f1a583964d51d7ec01d211de337747` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 05 §§3.1, 3.4, 3.5 and 3.6; the recipe schema |
@@ -95,7 +95,7 @@ The incorporated recipe schema constrains each `[overrides]` key to
 `[session]` and `[subject]`, for `core.sessions` and `core.subjects`, and R87 §2.8 keeps
 `core.sessions` with the recipe. A preference can name any resource more than one listed source
 produces (Part 05 §3.3). A `block.field` key therefore reaches the columns of one table a
-preference can arbitrate, `core.subjects`, out of the 45 tables the core registry declares.
+preference can arbitrate, `core.subjects`, out of the 47 tables the core registry declares.
 
 Six keys were validated against the schema. It admits `subject.strain`,
 `session.session_start_time` and `core.probes`. It refuses `core.probes.probe_type`,
@@ -107,8 +107,8 @@ has two segments, although it names no block and no column.
 Part 05 §3.8 keys a recipe's `[encoding]` table `resource.column`, and the schema puts no pattern
 on those keys. The registry meta-schema spells a resource identifier as two segments and a column
 name as one, and spells a column of a resource as three segments in `discriminates_via` and
-`specialises`. Each of the core registry's 48 resource identifiers has exactly one dot, and each of
-its 360 column names is one segment. A three-segment key therefore names one column of one resource
+`specialises`. Each of the core registry's 51 resource identifiers has exactly one dot, and each of
+its 368 column names is one segment. A three-segment key therefore names one column of one resource
 and cannot be read as a `block.field` key.
 
 ### 2.4 The refusal has three shapes, and one of them names a column
@@ -119,7 +119,7 @@ produces no rows the limiting case. The comparison leaves out `metadata`. The se
 which row of the preferred source a passed-over row is compared with.
 
 The reference build pairs rows by the table's declared primary key, on the values the adapters
-delivered. Each of the 45 tables declares a primary key, and every key column is `required`.
+delivered. Each of the 47 tables declares a primary key, and every key column is `required`.
 Part 12 §5 has an adapter hand over an identifier as the name its source used, so an identifier in
 a delivered key is a name, and two rows pair only where both sources use the same name. Two edges
 are settled by the code and by no sentence: rows whose key columns are both null pair with each
@@ -189,7 +189,7 @@ override names no recipe field.
 
 ### 2.9 A source may omit a column that a writer fills
 
-Of the 245 columns the core registry declares outside a primary key and `metadata`, 78 are
+Of the 248 columns the core registry declares outside a primary key and `metadata`, 78 are
 `required`. Two kinds of them are columns a build fills:
 
 - 27 are a table's `session_id`. Part 02 §7.1 has a writer fill that column "from the parent row it
@@ -200,9 +200,11 @@ Of the 245 columns the core registry declares outside a primary key and `metadat
   its source used, and the reference writer fills the name from that text where the adapter
   delivers no name of its own. No part has a writer fill a name.
 
-At least 35 of the 78 are therefore columns a build fills. The open draft
-`a-unit-is-identified-outside-its-packet-by-its-name.md` makes the nine `nullable` names
-`required`, which makes 87 of 245 `required` and 44 of those columns a build fills.
+At least 35 of the 78 are therefore columns a build fills. R160's two tables contribute three of the
+248, all `nullable`; their `resource_id` is in each table's key and `carried`, so a build fills
+none of their columns. The open draft `a-unit-is-identified-outside-its-packet-by-its-name.md`
+makes the nine `nullable` names `required`, which makes 87 of 248 `required` and 44 of those
+columns a build fills.
 
 The comparison of Part 05 §3.4 is over the rows as the sources state them. In a third probe the
 preferred source delivers a `core.probes` row without `session_id` and the passed-over source
@@ -251,18 +253,21 @@ sentence R159 added. R159 left the recipe schema unchanged, and its recorded rec
 the recipe only where a build recognizes a credential, so a column override and its reason are
 recorded as stated.
 
-R160 amends Part 05 §4.3 by R160 §3.7, sections of four other parts and the core registry, and
-changes no recipe rule. It has two sources that each deliver sidecars name
-`core.sidecars` and `core.sidecar_scopes` under `contributes`. Part 05 §3.5 refuses a preference
+R160, accepted and incorporated at the baseline, amended Part 05 §4.3 by R160 §3.7, sections of
+four other parts and the core registry, and changed no recipe rule. It has two sources that each
+deliver sidecars name `core.sidecars` and `core.sidecar_scopes` under `contributes`. Part 05 §3.5
+refuses a preference
 for a resource an entry declares under `contributes`, and a column override needs a preference
 (§3.3), so no column override names either table in such a recipe.
 
-Other open work concerns a clock's transform, a null producing run on an array, and a unit's name.
-None amends Part 05 §3.1, Part 05 §3.4, Part 05 §3.5 or Part 05 §3.6, and none changes the recipe
-schema. The unit-name draft changes the count of §2.9, as that section says, and makes every owned
+The three other open drafts are
+`a-null-producing-run-on-an-array-says-the-packet-names-none.md`,
+`core-declares-a-clocks-transform-in-typed-columns-alone.md` and
+`a-unit-is-identified-outside-its-packet-by-its-name.md`. None amends Part 05 §3.1, Part 05 §3.4,
+Part 05 §3.5 or Part 05 §3.6, and none changes the recipe schema. The unit-name draft changes the count of §2.9, as that section says, and makes every owned
 name a column a source may omit and a build fills under the reference writer's practice.
 
-`revisions/impact.py` lists 288 citations of the four amended sections outside this document. Those
+`revisions/impact.py` lists 269 citations of the four amended sections outside this document. Those
 that concern an override lie in the reference build and its tests, which §5 has change, and in the
 records under `revisions/audit/`, which describe the parts as an audit found them and list
 R108 §3.3 as a rule Part 05 §3.4 weakened.

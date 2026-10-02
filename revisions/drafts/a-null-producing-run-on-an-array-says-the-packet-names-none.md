@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `cf9e816a13575a419d6917d8285992d7cb09f2f3` |
+| **Based on** | `0815350e32f1a583964d51d7ec01d211de337747` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 01 §3.12; Part 01 §3.17; Part 02 §9.2; Part 08 §2; Part 08 §3; the core registry |
-| **Depends on** | R102 §3.1 (the column on both array tables and the writer's obligation, whose reading of a null and whose clause on an acquired array this replaces); R23 §2 (the column on `core.event_streams`, whose reading of a null this replaces); R152 §3.4 (the core registry version at the baseline) |
+| **Depends on** | R102 §3.1 (the column on both array tables and the writer's obligation, whose reading of a null and whose clause on an acquired array this replaces); R23 §2 (the column on `core.event_streams`, whose reading of a null this replaces); R160 §3.8 (the core registry version at the baseline) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5 |
 
@@ -57,9 +57,8 @@ moves, splits, merges or retires.
 ## 2. Background
 
 The observations below were made in the tracked files at the baseline, where the quick verifier
-passes all 37 stages. §2.7 reports a scratch copy of `spec/`. The core registry artifact, Part 01,
-Part 02 and Part 08 are byte-identical to those of `9c180d6c`, the commit this draft was first
-appraised on, so the corpus measurement of §2.5, taken there, stands.
+passes all 37 stages. §2.7 reports a scratch copy of `spec/` made at an earlier baseline. The
+corpus measurement of §2.5 was taken at the baseline.
 
 ### 2.1 Three rules let a computed array carry a null
 
@@ -105,8 +104,8 @@ and no sentence of a part says what a null on the column means. A search of `spe
 `acquired` finds four lines, of which one concerns an array: the clause of Part 01 §3.17 saying that
 an acquired array names none.
 
-A description is nonetheless where the registry tells a consumer what a null means. Of the 360
-column descriptions in the core registry, 24 contain the word `null`, counted with a
+A description is nonetheless where the registry tells a consumer what a null means. Of the 368
+column descriptions in the core registry, 26 contain the word `null`, counted with a
 case-insensitive whole-word search, and 6 contain "Null means".
 
 ### 2.4 Seven columns state a producing run, three of them falsely
@@ -138,22 +137,22 @@ run only where the writer knows it.
 
 Part 05 §15.3 has a writer refuse an amendment that would bind two different digests under one
 registry ID and version anywhere in a packet's current and retained manifests. A core registry
-whose descriptions change while its version stays `0.14.0` therefore cannot amend a packet built on
+whose descriptions change while its version stays `0.15.0` therefore cannot amend a packet built on
 the earlier bytes, and a manifest does not show which reading its registry states. The generated
-corpus holds 120 manifests, and all 120 bind `registries/core/0.14.0.json.gz` under one digest.
+corpus holds 132 manifests, and all 132 bind `registries/core/0.15.0.json.gz` under one digest.
 
-The history of `spec/artifacts/logical_schemas.json`, followed across its rename, holds 19 commits
-from the one that first moved `registry_version` off `0.1.0`. Thirteen advance the version, from
-`0.2.0` to the `0.14.0` that R152 §3.4 assigns. Five change the bytes and leave the version, and
+The history of `spec/artifacts/logical_schemas.json`, followed across its rename, holds 20 commits
+from the one that first moved `registry_version` off `0.1.0`. Fourteen advance the version, from
+`0.2.0` to the `0.15.0` that R160 §3.8 assigns. Five change the bytes and leave the version, and
 none of the five changes the meaning a description states: one rewrote a cited section number in 15
 descriptions, one corrected a rule's SQL, and three changed serialization, column order and SQL
 layout. One moves the file.
 
 ### 2.6 Other open work advances the same version
 
-At the baseline R159 is accepted, four other drafts are open and no proposal is. R159 amends only
-Part 05. R160, accepted after this draft was revised, adds three declarations to the core registry
-and takes the next core version, `0.15.0`. Two of the three other drafts change the core registry:
+At the baseline R159 and R160 are accepted, three other drafts are open and no proposal is. R159
+amends only Part 05. R160 adds three declarations to the core registry and takes the core version
+`0.15.0`. Two of the three other drafts change the core registry:
 
 - `core-declares-a-clocks-transform-in-typed-columns-alone.md` removes one column of `core.clocks`;
   and
@@ -161,16 +160,16 @@ and takes the next core version, `0.15.0`. Two of the three other drafts change 
   advances the registry meta-schema and the registry-contract descriptor as well as the core
   version. It declares no rule.
 
-The fourth, `a-recipe-accepts-a-discarded-value-by-naming-its-column.md`, changes the recipe schema.
+The third, `a-recipe-accepts-a-discarded-value-by-naming-its-column.md`, changes the recipe schema.
 None of them amends Part 01 §3.12 or Part 01 §3.17 or changes a declaration of a
 `processing_run_id` column. The only shared text is the core version in Part 02 §9.2 and its
-projections in Part 08 §2 and Part 08 §3. Once the sidecar catalog is incorporated, the core
-registry holds 48 tables and its version is `0.15.0`, so this revision takes a later version than
-the probe of §2.7 used, and §3.5 names no target.
+projections in Part 08 §2 and Part 08 §3. At the baseline the core registry holds 47 tables and its
+version is `0.15.0`, the version the probe of §2.7 used, so this revision takes a later one, and
+§3.5 names no target.
 
 ### 2.7 The registry change builds and checks in a scratch copy
 
-A copy of `spec/` at the baseline was edited as §3.4 and §3.5 state: the seven descriptions took
+A copy of `spec/` from before R160 was incorporated was edited as §3.4 and §3.5 state: the seven descriptions took
 their new text, and the version was set to `0.15.0` in the registry source, in Part 02 §9.2, in the
 specification README and in the two specification tools that state the expected version. The
 registry build regenerated `logical_schemas.json` and the rendered table listing, and the registry
@@ -299,10 +298,12 @@ clauses that replace part of each, as R158 §3.2 requires of a clause replaced i
 The four other descriptions state what their declaring clauses already meant, so no other entry
 gains a note for §3.4.
 
-§3.5 replaces the version that the clause assigning the incorporated registry's version states. Where
-that clause assigns only the version, as R160 §3.8 does, its entry becomes `superseded` by this revision, as
-R151 §3.2's did. Where it also assigns other identifiers, as R152 §3.4 assigns the meta-schema and
-the descriptor, its entry keeps its disposition and gains a note.
+§3.5 replaces the version that the clause assigning the incorporated registry's version states. At
+the baseline that clause is R160 §3.8, which assigns only the version, so its entry becomes
+`superseded` by this revision, as R151 §3.2's did, and R152 §3.4 keeps its disposition. Where
+another revision advances the version first, the entry of its version clause is the one replaced:
+it becomes `superseded` where that clause assigns only the version, and otherwise keeps its
+disposition and gains a note.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
@@ -312,7 +313,7 @@ the descriptor, its entry keeps its disposition and gains a note.
 | packet manifest and JSON Schemas | Unchanged. A manifest built afterwards records a new version, path and digest in members the schema already has. | None required. |
 | validation and import | Unchanged. No rule reads the column on any of the seven tables, and a validator cannot tell an acquired array from a computed one. | None required. |
 | extensions | Unchanged. No extension registry in the repository declares the column, and an extension's version advances independently (Part 09 §5.5). | None required. |
-| reader, writer, validator, adapters | No package carries a copy of the core registry, so none regenerates. One writer test asserts the bound core registry's version and path and takes the new values. No package reads a null run as acquisition, so no behaviour changes, and the reference adapters keep writing a null on every array and stream. The stream adapter's documentation repeats the old reading and is reworded. | The writer suite. |
+| reader, writer, validator, adapters | No package carries a copy of the core registry, so none regenerates. Two writer tests assert the bound core registry's version, one of them with its path, and take the new values. No package reads a null run as acquisition, so no behaviour changes, and the reference adapters keep writing a null on every array and stream. The stream adapter's documentation repeats the old reading and is reworded. | The writer suite. |
 | conformance fixtures and tests | The corpus regenerates under the new version and digest. No fixture is added, since no packet fact distinguishes the cases. | The corpus build and its expected findings pass unchanged. |
 | revision process and tooling | The ordinary ledger and evidence records, the notes above, the version clause's entry as §5 states, and seven guarded registry targets. No process rule changes. | `ledger.py`, `evidence.py` and `verify.py` pass. |
 | generated publications and developer documentation | The rendered table listing and the combined specification regenerate. The specification README's identifier table and its sentence naming the development version are edited by hand, and Part 08 §2 and Part 08 §3 carry the new registry path as the informative example. | The framework check compares the README's table with Part 02 §9.2, and the example-packet check compares Part 08's text with the packet the writer builds. |
@@ -322,7 +323,7 @@ the descriptor, its entry keeps its disposition and gains a note.
 §§3.1 and 3.3 are `applied` at Part 01 §3.17 and §3.2 at Part 01 §3.12, each by canonical anchor.
 §3.4 is `registry`, with a target on each of the seven columns guarded by the column's name. §3.5 is
 `applied` at Part 02 §9.2 by its canonical anchor. Part 08 §2 and Part 08 §3 follow §3.5 as the
-informative example and are no ledger destination, as R152 §3.4's entry names none in Part 08.
+informative example and are no ledger destination, as R160 §3.8's entry names none in Part 08.
 
 No validator finding distinguishes the rule, and no packet is a negative case: a packet states
 nothing that separates an acquired array from a computed one whose run is unrecorded, which is what
@@ -337,8 +338,7 @@ These checks distinguish the incorporated state from the baseline:
   at the version it replaces;
 - the framework check finds the specification README's identifier table equal to Part 02 §9.2;
 - the example-packet check finds Part 08 §2 and Part 08 §3 equal to the packet the writer builds;
-- the writer test asserting the bound core registry's version and path passes at the new values;
-  and
+- the two writer tests asserting the bound core registry's version pass at the new values; and
 - every manifest of the regenerated corpus binds the core registry at the new version under one
   digest.
 

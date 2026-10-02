@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `cf9e816a13575a419d6917d8285992d7cb09f2f3` |
+| **Based on** | `0815350e32f1a583964d51d7ec01d211de337747` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§5.2 and 9.2; Part 08 §§2 and 3; the core registry |
-| **Depends on** | R3 §3.4 (the replacement of the column this removes); R152 §3.4 (the core registry version at the baseline) |
+| **Depends on** | R3 §3.4 (the replacement of the column this removes); R160 §3.8 (the core registry version at the baseline) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3 |
 
@@ -36,16 +36,16 @@ The change is structural because the two sentences it restates sit inside Part 0
 Part 02 §9.2. An appended section would leave the first miscounting and the second naming a version
 the registry no longer carries.
 
-R159 amends only sections of Part 05. R160, accepted after this draft was revised, adds three
-declarations to the core registry and takes `0.15.0`. Of the three other open drafts, two advance
-the same `registry_version`.
+R159, accepted, amends only sections of Part 05. R160, accepted, adds three declarations to the
+core registry and takes `0.15.0`. Of the three other open drafts, two advance the same
+`registry_version`.
 `a-null-producing-run-on-an-array-says-the-packet-names-none.md` rewords the description of
 `processing_run_id` on the core tables that declare it nullable.
 `a-unit-is-identified-outside-its-packet-by-its-name.md` makes the name of every owned assigned
 identifier `required` and has a validator report a name two rows of a table share; it also advances
 the registry meta-schema and the registry-contract descriptor. The fourth,
 `a-recipe-accepts-a-discarded-value-by-naming-its-column.md`, changes no registry declaration.
-None of the four changes a declaration of `core.clocks` or Part 02 §5.2, and §3.3 names no target
+None of them changes a declaration of `core.clocks` or Part 02 §5.2, and §3.3 names no target
 version, so this draft and those apply in any order.
 
 ### 1.1 Structural crosswalk
@@ -65,10 +65,11 @@ No section moves, splits, merges or retires.
 ## 2. Background
 
 Each observation below was made on the tracked files at the baseline. The draft was first
-appraised on the bootstrap `955c6d5043bd701816442784c8cd25a3142aa8f0`, and nothing incorporated
-since changes the core registry, Part 02 §5.2 or Part 02 §9.2. At the baseline
-`verify.py --quick` passes all 37 of its stages, and the registry check reports 45 tables, 360
-columns, 116 references and 91 rules for the core registry.
+appraised on the bootstrap `955c6d5043bd701816442784c8cd25a3142aa8f0`. Since then R160 has added
+three declarations to the core registry and advanced its version in Part 02 §9.2, and nothing
+incorporated changes `core.clocks` or Part 02 §5.2. At the baseline `verify.py --quick` passes all
+37 of its stages, and the registry check reports 47 tables, 368 columns, 117 references and 91
+rules for the core registry.
 
 ### 2.1 R3 replaced the column and the registry kept it
 
@@ -105,9 +106,9 @@ A search of the 13 files of `spec/parts/` for the column's name finds no line. P
 that what may go in "the two `json_string` columns core declares" is stated by Part 02 §8.6 for
 `metadata` and by Part 02 §12.6 for `core.processing_runs.parameters`.
 
-That count disagrees with the registry. Reading every column of the generated registry finds 22
+That count disagrees with the registry. Reading every column of the generated registry finds 23
 `json_string` columns, all optional and the only optional columns core declares, under four names:
-`metadata` in 18 tables, `parameters` in `core.processing_runs` and `core.sorting_runs`,
+`metadata` in 19 tables, `parameters` in `core.processing_runs` and `core.sorting_runs`,
 `core.events.payload`, and `core.clocks.transform_to_parent`.
 
 Part 02 §8.6 and Part 02 §12.6 are the only sections of Part 02 that state such a column's
@@ -126,14 +127,14 @@ in a key." Every alignment fact a part names has a typed home: the two transform
 
 ### 2.4 Nothing in the tree reads or writes the column
 
-A search of the 862 tracked files finds the name in 19.
+A search of the 870 tracked files finds the name in 19.
 
 | where | tracked files | lines naming the column |
 |---|---:|---:|
 | `spec/parts/` | 13 | 0 |
-| the four packages, source and tests, with the two extension registries one of them holds | 360 | 0 |
+| the four packages, source and tests, with the two extension registries one of them holds | 363 | 0 |
 | `extensions/`, the other two extension registries | 13 | 0 |
-| `fixtures/` and `integration/` | 32 | 0 |
+| `fixtures/` and `integration/` | 33 | 0 |
 | `conformance/` | 59 | 1 |
 | the registry source, the generated registry and the generated listing | 3 | 3 |
 
@@ -142,8 +143,8 @@ tables. The other 15 files are four accepted records, three frozen v0.1 document
 its note on R3 §3.4, this draft and the drafts README, and five working documents outside the
 specification.
 
-The built conformance corpus holds 120 packets and 3,629 Parquet files. Reading each file's schema
-finds 119 `core.clocks` files and the column in none of them, nor in any other table.
+The built conformance corpus holds 132 packets and 4,010 Parquet files. Reading each file's schema
+finds 131 `core.clocks` files and the column in none of them, nor in any other table.
 
 No package source names the column, so no adapter in the tree delivers it. That is an inference
 from the search and not a test. The session packets that R99 §2 measured are outside the tree and
@@ -151,9 +152,9 @@ were not inspected.
 
 ### 2.5 A column that no bound registry declares draws no finding
 
-A probe copied the corpus's valid packet twice, each time adding a `transform_to_parent` string
-column to the `core.clocks` file and restating that file's digest in the manifest. One copy bound
-the baseline registry. The other bound a registry with the declaration removed and
+A probe at an earlier baseline, before R160 was incorporated, copied the corpus's valid packet
+twice, each time adding a `transform_to_parent` string column to the `core.clocks` file and
+restating that file's digest in the manifest. One copy bound that baseline's registry. The other bound a registry with the declaration removed and
 `registry_version` set to `0.15.0`. The reference validator, verifying checksums, passed both with
 no error and no warning. It reported for each the 18 `info` findings it reports for the unchanged
 packet, none naming the column.
@@ -173,18 +174,18 @@ version and kept the held `core.clocks` file, column included.
 
 ### 2.6 The version is stated in a known set of places
 
-Part 02 §9.2 states the core `registry_version` as `0.14.0` and forbids reusing a development
-identifier "for an incompatible contract". R151 §3.2 and R152 §3.4 each advanced the version by one
-minor version. R151 added one rule to one table and changed nothing else in the registry, which is
-the nearest case to removing one column.
+Part 02 §9.2 states the core `registry_version` as `0.15.0` and forbids reusing a development
+identifier "for an incompatible contract". R151 §3.2, R152 §3.4 and R160 §3.8 each advanced the
+version by one minor version. R151 added one rule to one table and changed nothing else in the
+registry, which is the nearest case to removing one column.
 
 Outside `revisions/`, the version is stated in these tracked places: the registry source's
 `registry.toml`; the generated registry and listing; Part 02 §9.2; the specification README's
 identifier table and the sentence after it; the `core` lines of the layout in Part 08 §2 and of the
 manifest excerpt in Part 08 §3; five lines of the combined rendering; two constants in the tree's
-tools, one the registry check's expected version and one the README projection's; and two lines of
-one writer test. No package source states it, and no package carries a copy of the core registry.
-The column count of 360 appears in five generated lines.
+tools, one the registry check's expected version and one the README projection's; and three lines of
+two writer tests. No package source states it, and no package carries a copy of the core registry.
+The column count of 368 appears in four lines outside `revisions/`.
 
 `revisions/impact.py` lists the lines citing the sections this revision restates. Outside
 `revisions/` and working documents, Part 02 §5.2 is cited by Part 07 §2.2, by Part 09 §8.1 and by
@@ -198,12 +199,12 @@ Part 08 §2 by none.
 
 ### 2.7 The tree regenerates without the column
 
-A second probe copied `spec/`, deleted the column's entry, and set the version to `0.15.0` in the
-registry source, Part 02 §9.2, the README and the two tool constants. The tree's build regenerated
+A second probe, at the same earlier baseline, copied `spec/`, deleted the column's entry, and set
+the version to `0.15.0` in the registry source, Part 02 §9.2, the README and the two tool
+constants. The tree's build regenerated
 the registry, the listing and the source guide, and the tree's check passed at 45 tables, 359
 columns, 116 references and 91 rules. The generated registry lost the seven lines of the column's
-object and changed its version line. `0.15.0` is the value §3.3 gives only where this revision is
-the next to advance the version.
+object and changed its version line. R160 has since taken `0.15.0`, and §3.3 names no value.
 
 ### 2.8 No ledger pointer moves
 
@@ -226,7 +227,7 @@ three columns after it, which no pointer names, and removes no rule.
 | keep the column and forbid a writer to fill it | the declaration's only rule would be that it stays empty, which no declared rule can check, and every listing would still show the column |
 | remove the column and keep the version | two documents with different declarations would share one identifier, against Part 02 §9.2 |
 | remove the column as a correction with no revision | the change alters the incorporated registry's contract: a writer that fills the column writes a declared column before it and an undeclared one after |
-| name the new version as a value | three other open changes advance the same identifier (§1), so a named value is wrong once any of them is incorporated first, and changing a Decision clause after acceptance returns the draft for approval |
+| name the new version as a value | two other open drafts advance the same identifier (§1), so a named value is wrong once any of them is incorporated first, and changing a Decision clause after acceptance returns the draft for approval |
 | add a validator check for a file column that no bound registry declares | the property predates the removal and covers every table of every registry (§2.5). Such a check changes the validator, the corpus and each extension's packets, and the removal does not depend on it |
 
 ## 3. Decision
@@ -281,7 +282,7 @@ packets that bind its registry, since a declaration resolves in the registry a p
 
 No part defines a minor version of `registry_version`. Part 02 §9.2 forbids reusing an identifier
 for an incompatible contract and says nothing of which component advances; §3.3 takes one minor
-version as R151 §3.2 and R152 §3.4 did, and that step is precedent, not a rule a part states.
+version as R151 §3.2, R152 §3.4 and R160 §3.8 did, and that step is precedent, not a rule a part states.
 
 ## 5. Consequence
 
@@ -307,27 +308,28 @@ to every column a later version stops declaring, and it is left to a proposal of
 At incorporation R3 §3.4 stays `registry` in the ledger and keeps its four targets. Its note says
 that the replaced column is no longer declared and names §3.1.
 
-The ledger entry of the clause that last assigned the version follows R158. A clause that also
-states something that remains, as R152 §3.4 states the meta-schema and descriptor, stays `applied`
-and its note names §3.3 (R158 §3.2). A clause that states only the version becomes `superseded`
-and names this revision as the one that replaced it (R158 §3.1). If the sidecar catalog is
-incorporated first, as its authorized acceptance makes likely, the clause is its version clause.
+The ledger entry of the clause that last assigned the version follows R158. At the baseline that
+clause is R160 §3.8, which states only the version, so its entry becomes `superseded` and names
+this revision as the one that replaced it (R158 §3.1), and R152 §3.4 keeps its disposition. Where
+another revision advances the version first, its version clause is the one replaced: a clause that
+states only the version becomes `superseded`, and one that also states something that remains stays
+`applied` and its note names §3.3 (R158 §3.2).
 
-The registry's totals depend on the same order. This revision takes the columns from 360 to 359
+The registry's totals depend on the same order. This revision takes the columns from 368 to 367
 where it is incorporated first, and removes one from whatever total the changes before it leave.
 
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged. Part 01 §3.9 already admits two alignment models and neither is JSON. | None required. |
-| logical prose and registry | The core registry source drops the twelfth column of `core.clocks` and carries §3.3's version. Part 02 §5.2 restates one sentence and Part 02 §9.2 states the version. The meta-schema, the descriptor and every rule are unchanged. No citer of Part 02 §5.2 cites the restated sentence (§2.6). | `evidence/R<N>.json` names the registry pointer and the two anchors. `spec/tools/check.py` passes with one column fewer, 359 at the baseline, and `core.clocks` at 14. |
+| logical prose and registry | The core registry source drops the twelfth column of `core.clocks` and carries §3.3's version. Part 02 §5.2 restates one sentence and Part 02 §9.2 states the version. The meta-schema, the descriptor and every rule are unchanged. No citer of Part 02 §5.2 cites the restated sentence (§2.6). | `evidence/R<N>.json` names the registry pointer and the two anchors. `spec/tools/check.py` passes with one column fewer, 367 at the baseline, and `core.clocks` at 14. |
 | physical profiles | Unchanged. No stored order or encoding rule names the column. | None required. |
 | packet manifest and JSON Schemas | Unchanged. The manifest schema constrains a registry entry's `version` by a pattern and fixes no value. | None required. |
 | validation and import | Unchanged. No check names the column, and no check is added for an undeclared file column (§4). Under Part 05 §15.6 an amendment binding the new version compares `core.clocks` without the column, so rewriting the table drops a value the column held and nothing reports it; an amendment not writing the table binds the new version over a file that still holds the column (§5). | The corpus verdicts are unchanged. |
 | extensions | Unchanged. None of the four extension registries declares, references or reads the column, and each advances its own version independently. | The extension registry checks pass. |
-| reader, writer, validator, adapters | No package source changes (§2.4). The two lines of the writer test that pin the core version follow it. An adapter outside the tree that delivers the column is refused by the reference build until it stops. An amending build binding the new version rewrites held `core.clocks` rows without the column, leaving the value only in the superseded file (§5); no source changes for it. | The package suites pass, the writer's three tests of the undeclared-column refusal among them. A writer test in `tests/test_amending.py`, `test_an_amendment_binding_a_registry_without_a_held_column_rewrites_its_rows_without_it`, asserts the behaviour §5 states, so a change to it is seen. |
+| reader, writer, validator, adapters | No package source changes (§2.4). The three lines of two writer tests that pin the core version follow it. An adapter outside the tree that delivers the column is refused by the reference build until it stops. An amending build binding the new version rewrites held `core.clocks` rows without the column, leaving the value only in the superseded file (§5); no source changes for it. | The package suites pass, the writer's three tests of the undeclared-column refusal among them. A writer test in `tests/test_amending.py`, `test_an_amendment_binding_a_registry_without_a_held_column_rewrites_its_rows_without_it`, asserts the behaviour §5 states, so a change to it is seen. |
 | conformance fixtures and tests | The corpus regenerates under the new version with no verdict changed. No fixture is added, since no check distinguishes a file with the column from one without (§2.5). | `fixtures/corpus.py`. |
 | revision process and tooling | Three new ledger entries and one registry target; the note on R3 §3.4; the entry of the clause that last assigned the version. No existing pointer moves (§2.8). The expected version in `spec/tools/check.py` and in `spec/tools/framework_data.py` follows. No process rule changes. | `ledger.py`, `evidence.py` and `verify.py` pass. |
-| generated publications and developer documentation | The generated registry, listing, source guide and combined rendering regenerate, and the specification README's identifier table follows. Part 08 §2 and Part 08 §3 show the new version on their `core` lines alone, since an extension shown there carries its own version. The five generated count lines state one column fewer. The root work list drops its item on the column. | The generators leave the candidate state unchanged. |
+| generated publications and developer documentation | The generated registry, listing, source guide and combined rendering regenerate, and the specification README's identifier table follows. Part 08 §2 and Part 08 §3 show the new version on their `core` lines alone, since an extension shown there carries its own version. The four lines stating the column count state one fewer. The root work list drops its item on the column. | The generators leave the candidate state unchanged. |
 
 ## 6. Conformance and implementation evidence
 
@@ -337,7 +339,7 @@ so the guard fails if the column is declared again in its place, where a pointer
 resolve either way. No tool enforces §3.1's MUST NOT beyond that guard and the generated registry:
 no invariant or check rejects a core registry that declares the column elsewhere. §3.2 is `applied` at Part 02 §5.2 and §3.3 is `applied` at Part 02 §9.2, each placed
 by its canonical anchor. Part 08 §2 and Part 08 §3 follow §3.3 as the informative example, as they
-followed R152 §3.4, whose entry names no target in Part 08.
+followed R160 §3.8, whose entry names no target in Part 08.
 
 These cases distinguish the incorporated registry from the current one:
 
