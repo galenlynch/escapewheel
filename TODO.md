@@ -186,6 +186,21 @@ into `escapewheel-writer/docs/source/performance.md`, whose row-group and import
 stale, and port an S3 arm once a current packet is staged there. Nothing re-measures the
 validator's figures or an import.
 
+## 3d. A build runs its sources one after another
+
+A 776259 build takes 630 s (`build-r153.log`, 2026-09-30, sources and scratch on a rotational disk
+under ntfs-3g): sorter 149 s for 286,896,563 spikes, waveforms 218 s for two 6,781 × 26 × 150
+arrays and `core.unit_electrodes`, unit QC 63 s, staging 147 s, deriving `analysis.spike_events`
+41 s, and under 12 s for everything else. The log's timestamps show each source starting where
+the previous one ended, and the only concurrency in the writer is the sorter reading
+`STREAM_WORKERS` (4) streams at once. Still to do:
+
+- run independent sources concurrently, and stage independent resources in parallel;
+- profile each step's split between I/O and compute, the waveforms step first, since 218 s for
+  107 MB of arrays is more than its I/O explains;
+- time one build with sources and scratch on the NVMe, to separate the disk from the work;
+- add a build benchmark to `bench/`, so the import figure in `performance.md` has a script.
+
 ## 4. The repository directory is still `nwb-lake/`
 
 R84 §2.1 renamed the repository and everything inside it moved. The checkout directory did not,
