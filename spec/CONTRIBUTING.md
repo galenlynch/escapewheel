@@ -87,8 +87,9 @@ uppercase. Lowercase forms retain their ordinary English meaning. Prefer this sm
 synonyms such as `SHALL`, `REQUIRED`, `RECOMMENDED`, and `OPTIONAL`.
 
 Each behavioral requirement names an actor defined in Part 00 and puts that actor before the
-keyword: “a validator MUST report …”. A conformance predicate may instead name the artifact being
-tested: “a packet carrying X MUST carry Y”. Avoid passive or actorless obligations such as “the two
+keyword: “a validator MUST report …”. A conformance predicate instead names the part of
+the artifact it constrains and states the constraint in an active verb: “a wall-clock column MUST
+NOT use `INT96`”, not “`INT96` MUST NOT be used”. Avoid passive or actorless obligations such as “the two
 MUST agree”; name who compares them and what happens when they differ.
 
 A requirement should provide an observable outcome without prescribing an implementation method

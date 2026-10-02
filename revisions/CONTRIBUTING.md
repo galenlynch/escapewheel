@@ -47,7 +47,9 @@ repository-relative Markdown `path#anchor` values in `Amends`. A specification-d
 uses the existing profile and part-or-artifact forms. Accepted revisions below R120 that lack a
 domain are interpreted as `specification`, need no change form, and remain unedited; withdrawn
 records have no inferred domain and likewise remain unedited. Every open artifact and every
-artifact created or promoted from R120 onward declares its applicable fields.
+artifact created or promoted from R120 onward declares its applicable fields. `stages.py` rejects
+an absent or unknown domain or change form wherever the field applies, and accepts the legacy
+default only for an accepted record below R120.
 
 The lifecycle has three authored artifacts and three separate gates:
 
@@ -482,7 +484,9 @@ anchor immediately before its heading:
 An affected section is one whose prose, heading, level, number, or order changes, or which is
 added, split, merged, replaced, or retired. Untouched sections may remain unanchored. Anchor IDs
 use lowercase ASCII letters, digits, and hyphens. Canonical and alias IDs are unique in the
-combined specification; process anchors are unique in this document. A moved subject preserves
+combined specification. A section of this guide that an `Amends` target, ledger destination,
+evidence owner, or citation names carries an anchor of the same canonical form, and process
+anchors are unique in this document. A moved subject preserves
 its canonical ID even if its wording becomes less descriptive.
 
 A replaced or split section may put a former ID beside one honest primary successor as an alias:
