@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R164 accepted. R42 and R73 withdrawn. 1 proposal and 0 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R164 accepted. R42 and R73 withdrawn. 2 proposals and 0 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -136,9 +136,10 @@ already solves that this code solves again.
 
 ## 3a. No draft awaits acceptance
 
-No draft is open. One proposal is: a rule means what Part 11 defines on any engine.
-Part 11 §4 states the ISO meaning of `BETWEEN` and `IN`, and Part 11 §8 makes a valid rule that a
-validator cannot evaluate with Part 11's semantics incomplete.
+No draft is open. Two proposals are. A rule means what Part 11 defines on any engine: Part 11 §4
+states the ISO meaning of `BETWEEN` and `IN`, and Part 11 §8 makes a valid rule that a validator
+cannot evaluate with Part 11's semantics incomplete. An amendment drops a held column only where
+its recipe names it, and a validator reports a file column no bound registry declares.
 
 ## 3b. Sidecars are declared, and video is not yet packet-owned
 
@@ -314,8 +315,9 @@ Part 05 §15.6 with the draft R163 became, which wants a proposal of its own.
   over the columns the amended manifest's registry declares, and no validator check reports a file
   column the bound registry does not declare. An amendment binding a registry that stopped declaring
   a column therefore drops the column's values from a table it rewrites, and keeps them unreported
-  in one it does not. Whether an amending build refuses, preserves or reports such a column is
-  undecided.
+  in one it does not. The proposal in
+  `revisions/proposals/an-amendment-drops-a-held-column-only-where-its-recipe-names-it.md` prefers
+  refusing unless the recipe names the column.
 - **Part 04 §7 says the manifest records outputs at resource granularity.** The sentence before it
   says an entry names no producing run, and the manifest schema has no member recording a
   resource's outputs. Which of the provenance tables the clause meant is not stated.
