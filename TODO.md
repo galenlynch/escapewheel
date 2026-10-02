@@ -301,13 +301,35 @@ natural.
   targets that differ from the sections stating them. `revisions/audit/applied-targets.md` lists
   the findings by repair class. A third reading of the 72 plain restorations passed 56, most with
   new wording, referred 14 for a choice and rejected 2. The 56 were restored on 2026-10-01, one
-  commit per part, and the 2 are noted in the ledger. The other classes are unrepaired and
-  undecided.
+  commit per part, and the 2 are noted in the ledger. The other classes are unrepaired. Each has
+  had the same critical reading, recorded per entry under `revisions/audit/repairs/`: of the 22
+  class C, 17 class D and 21 disputed rules, 25 can be entered as that reading words them, 18 need
+  a decision and 17 are not owed. Three of the decisions need a revision: the relation a consumer
+  uses for a unit outside its packet, whether `[overrides]` resolves a discarded fact, and
+  removing `core.clocks.transform_to_parent`.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
 ## 7. Implementation follow-ups
 
-None open. `tables` sources deliver by `files-v0.1`, `aind_unit_qc` is an adapter in
-`escapewheel-aind`, every name-minting adapter accepts `prefix`, and every store-reading adapter
-accepts `source_cache` and keeps store objects as Part 12 §10 requires.
+`tables` sources deliver by `files-v0.1`, `aind_unit_qc` is an adapter in `escapewheel-aind`,
+every name-minting adapter accepts `prefix`, and every store-reading adapter accepts `source_cache`
+and keeps store objects as Part 12 §10 requires.
+
+The audit's critical reading found these, none fixed. `revisions/audit/applied-targets.md` lists
+them with the text findings beside them.
+
+- **An extension registry registered as a file path is checked as a mapping.** `load_checked` in
+  `escapewheel_writer/extensions.py` decodes the file and calls the mapping entry point, where
+  Part 05 §14.2 has an implementation that owns the bytes use the byte entry point.
+- **`escapewheel import` gives no machine-readable result for a rejected extension registry.** It
+  prints the state, and `--registry-result` writes the core registry's result alone.
+- **The validator's `PERCENTILE_CONT` keeps a decimal or `REAL` ordering domain.** Part 11 §2 gives
+  `DOUBLE PRECISION`, and `core.clock_anchors.gap_within_bound` takes the median of
+  `DECIMAL(38,0)` gaps, so its findings can differ from the part's.
+- **The validator's `DECIMAL` to `DOUBLE PRECISION` conversion is the engine's.** It is not always
+  rounded to nearest, ties to even, as Part 11 §4 requires of an explicit cast.
+- **`refuse_a_discarded_fact` never reads `[overrides]`,** and its message names that resolution.
+  The rule itself waits on a revision.
+- **`spec/tools/check.py` prints outcome lines for a non-valid core registry** and offers no
+  output of the complete result.

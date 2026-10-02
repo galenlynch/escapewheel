@@ -8,7 +8,8 @@ is repaired where it lies, in the part or in the ledger entry.
 
 Each table lists what the audit found at commit `072f3d8b`. The 56 class A and B rules were restored
 on 2026-10-01 and the two class F rules were noted in the ledger; nothing else below has been
-repaired.
+repaired. Every other class has since had a critical reading, summarised under
+"The remaining classes after a critical reading".
 
 ## Method
 
@@ -327,6 +328,102 @@ one either. Their disposition is wrong, and not only their target.
 
 The 217 rules stated elsewhere, and the 58 targets that state none of their clause, are listed by
 clause in [applied-target-pointers.md](applied-target-pointers.md).
+
+## The remaining classes after a critical reading
+
+The reading that passed the 56 restorations was then given to everything else: the 22 class C
+rules, the 17 rules first classed D, the 21 disputed rules, the six tool-enforced rules, the twelve
+dispositions and the 140 clauses with a target to change. The 14 rules referred from classes A and
+B had that reading already. Each item was read at commit `7eb8b9b7`, after the restorations.
+Nothing in this section has been applied.
+
+| class | items | restore, as proposed or reworded | needs a decision | not owed, or do not restore |
+|---|---:|---:|---:|---:|
+| C, indicative sections | 22 | 12 | 9 | 1 |
+| D, first classed as a choice | 17 | 8 | 8 | 1 |
+| disputed | 21 | 5 | 1 | 15 |
+| tool-enforced process rules | 6 | 2 | 0 | 4 |
+
+Of the twelve dispositions the reading confirms nine, corrects one, keeps one as `applied` and
+leaves one to a decision. Of the 173 proposed target additions it confirms 135 and rejects 34, with
+4 recorded since; of the 58 proposed drops it confirms 49 and keeps 9.
+
+**Class C.** Part 05 §14's indicative is an incorporation habit and no decision, and nothing gives
+it force, so the section is repaired one sentence per rule and all at once: eleven further
+sentences that no entry covers go in the same change, since a keyword beside an indicative neighbour makes
+the neighbour read as optional. Four choices come first: who §14.4's first paragraph binds, given
+that Part 05 §1 lists it under a writer (C5 to C7); the byte entry point, which the reference writer
+misses on one path (C2); machine-readable output when a command rejects an extension registry,
+which `escapewheel import` lacks (C12); and whether the label rule binds a validator's report or
+every exposed result, the second needing a revision (C15). Part 11 is the opposite case. Its
+indicative is a language definition's style, R125 wrote much of it that way, and the preferred
+repair is one sentence in §1 saying the contract is every statement of §§2 to 8, with no keyword on
+the five entries. Two Part 11 entries are owed in any mood: the missing rounding rule (C21) and a
+lowercase "may" that lets a validator decline a comparison (C22). One needs its wording chosen
+(C19) and one is stated and stays (C20).
+
+**Class D.** Eight choices dissolve on a closer reading, each into a sentence the reading gives:
+R102 §3.1 conditioned on the packet recording the run (D4), R3 §3.0 without its key shape (D7),
+R147 §3.3 as one lead-in over the table (D8), R57 §2.1 as a property of the registry document (D9),
+R107 §3.4 listing the five declarations the listing renders (D10), R126 §3.9 (D11), the `unit_id`
+prohibition of R81 §2.5 (D13) and R129 §3.1 as an observable outcome (D15). Eight remain choices.
+Three are text fixes once chosen: whether R111 §3.3's two drafting rules live in the style guide or
+in Part 00 with a sweep of a dozen passive predicates (D1, D2); MUST or SHOULD for naming a media
+asset's device (D5); and whether a reader owes the resolved content class and lineage policy, and
+in which part (D6). Three need a revision whichever way they go: the relation a consumer uses for
+a unit outside its packet, since `(sorting_run_id, local_unit_label)` holds a packet-assigned
+number, omits the curation and can be null or tied (D12, D14); whether an `[overrides]` entry
+releases a build from the discarded-fact refusal, which the reference build never consults and the
+recipe's key form cannot express for a resource column (D16); and removing
+`core.clocks.transform_to_parent`, which changes the registry and its version (D17). R91 §3.3 is
+not restored (D3): the clause keeps `core.events.payload` as a home for a mark, and Part 02 §8.3
+checks the scoped rule.
+
+The reading of the dispositions disagrees with D9 on R57 §2.1: it prefers recording the clause as
+superseded by R126 and not carrying the recommendation to emit `$schema` first. One of the two is
+chosen.
+
+**Disputed rules.** Fifteen are not owed: the parts state the rule in other words, a later
+revision restated it, or the clause's sentence is an instruction to the specification that no
+actor can fail. Each names the note or target its ledger entry takes. Five are owed, reworded: that
+level 3a compares each declared member's size (R51 §2.1, E4); that a consumer does not read an
+instrument from an entry's `uri` (R65 §2.3, E6); five words in the revision guide on withdrawn
+records (R120 §3.2, E12); the meaning of `iso_feature_dependencies` in Part 11 §1 (R125 §3.2, E16);
+and the validator's duty to evaluate each extension when core is non-valid, which rides with the
+class C repair (R127 §3.6, E18). The byte-order sentence (R3 §7.1, E2) is not restored by a fix on
+any reading, and the open byte-order draft settles it.
+
+**Process rules and dispositions.** The guide owes two sentences, one in §2 on what `stages.py`
+rejects and one in §8.4 on the anchor form of a named process section; the other four rules are
+stated as outcomes or describe a tool's method. Nine dispositions stand as proposed, with the
+entry text and registry pointers `ledger.py` accepts. R102 §3.1 stays `applied` at Part 01 §3.17
+once D4 is entered, R37 §3.1 stays `applied` since its restoration, and R57 §2.1 waits on the
+choice above. The reading of the targets adds a thirteenth clause that no target states, R112 §3.1,
+which R120 §3.6 superseded.
+
+**Defects the reading found outside the text.** Each was checked against the code or the registry
+source before it was written here.
+
+- The reference writer checks an extension registry registered as a file path through the mapping
+  entry point (`extensions.py`).
+- `escapewheel import` offers no machine-readable result for a rejected extension registry.
+- `spec/tools/check.py` prints outcome lines for a non-valid core registry and no complete result.
+- The reference validator's `PERCENTILE_CONT` keeps a `DECIMAL(38,0)` or `REAL` ordering domain,
+  so `core.clock_anchors.gap_within_bound` can report a gap the binary64 median would not.
+- The reference validator does not always round a `DECIMAL` to `DOUBLE PRECISION` conversion to
+  nearest, ties to even.
+- `refuse_a_discarded_fact` never reads `[overrides]`, and its message names that resolution.
+- The description of `processing_run_id` on both array-asset tables says a null means the array
+  was acquired, which is false of a computed array whose run the packet does not record.
+- Part 05 §1 says the part binds no checker, and §14.2 already binds an implementation performing
+  an extension-author registry check.
+- Part 11 §3 says a table exposes exactly its registry-declared columns, and Part 02 §10.2 keeps a
+  rule from naming an `optional` column because a packet's table may omit it.
+
+Each class file under `repairs/` now carries the reading per entry, with the text to enter or the
+choice; [repairs/G-process-and-dispositions.md](repairs/G-process-and-dispositions.md) holds the
+process rules and the dispositions, and
+[applied-target-pointers.md](applied-target-pointers.md) the targets.
 
 ## Pilot reading of 2026-10-01
 

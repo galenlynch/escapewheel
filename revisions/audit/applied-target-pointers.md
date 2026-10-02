@@ -1,152 +1,226 @@
 # Ledger targets the audit would change
 
-The [audit of the ledger's applied targets](applied-targets.md) found 140 `applied` clauses whose
-recorded targets differ from the sections that state them. Nothing here has been applied to
-`revisions/applied.toml`, and no row has had a second reading.
+The [audit of the ledger's applied targets](applied-targets.md) found 140 `applied` clauses whose recorded targets differ from the sections that state them. A second reader then read every proposed section and every target proposed for removal against the clause. Nothing here has been applied to `revisions/applied.toml`.
 
-The third column lists 167 sections, over 115 clauses, that state a rule of the clause and that the
-ledger does not name for it. The fourth lists 58 recorded targets, over 46 clauses, that state none
-of the clause. Twenty-one clauses appear in both columns.
+The first reading proposed 167 sections to add, over 115 clauses, and 58 recorded targets to drop, over 46 clauses. The second reader proposed 6 more sections. Of the 173 additions it confirms 135, over 95 clauses, rejects 34, and finds 4 recorded since by the restorations of 2026-10-01. Of the 58 drops it confirms 49, over 39 clauses, and keeps 9. 23 clauses are left with no confirmed change.
 
-| clause | recorded targets | sections that state it, unrecorded | recorded targets that state none of it |
-|---|---|---|---|
-| R1 §2 | Part 05 `ew-validation-shim` | Part 00 §3.3; Part 03 §1 | Part 05 `ew-validation-shim` |
-| R2 §2 | Part 02 §6 | Part 02 §1 | Part 02 §6 |
-| R2 §3 | Part 02 §9.1 | Part 02 §2.3 |  |
-| R2 §6 | Part 02 §2; Part 02 §7; Part 03 §5.3 | Part 02 §10.1 | Part 03 §5.3 |
-| R2 §8 | Part 02 `ew-registry-self-description` | Part 02 §9.1; Part 04 §8 |  |
-| R2 §9 | Part 02 `ew-registry-self-description` | Part 02 §9.4 |  |
-| R3 §2.1 | Part 03 `ew-parquet-reader-floor` | Part 02 §5.1; Part 02 §5.2; Part 02 §5.3; Part 02 §6 |  |
-| R3 §5.1 | Part 03 §6.2 | Part 03 §6.5 |  |
-| R3 §6 | Part 02 §8.1.1 | Part 05 §5.3 |  |
-| R3 §7.1 | Part 03 §6.1 | Part 03 §6.2 |  |
-| R6 §2 | Part 01 §3.9 | Part 03 §5.5 |  |
-| R8 §4 | Part 02 `ew-registry-vocabularies` | Part 01 §3.17 |  |
-| R14 §2.2 | Part 03 `ew-array-codecs` | Part 05 §5.3 |  |
-| R14 §2.3 | Part 04 §5.1 | Part 04 §4.1 |  |
-| R15 §2 | Part 03 `ew-array-codecs` | Part 03 §6.1 | Part 03 `ew-array-codecs` |
-| R15 §3 | Part 04 §3 |  | Part 04 §3 |
-| R17 §2 | Part 09 §5.1 | Part 09 §5.2; Part 09 §6.1 |  |
-| R21 §3.3 | Part 03 `ew-array-codecs` | Part 03 §6.1 |  |
-| R22 §4 | Part 05 §5.2 |  | Part 05 §5.2 |
-| R25 §4 | Part 01 §2.2 | Part 01 §2.3 | Part 01 §2.2 |
-| R27 §3 | Part 01 §3.9 |  | Part 01 §3.9 |
-| R27 §6 | Part 01 §3.9 | Part 01 §2.2 |  |
-| R30 §3.1 | Part 03 §5.4 |  | Part 03 §5.4 |
-| R30 §3.2 | Part 03 §5.4 | Part 05 §5.3 |  |
-| R32 §4 | Part 05 `ew-superseded-manifest-retention`; Part 03 `ew-portable-amendment` | Part 04 §1 |  |
-| R32 §5 | Part 05 `ew-incremental-revalidation` | Part 05 §6 |  |
-| R35 §2 | Part 05 `ew-incremental-revalidation` | Part 05 §8 |  |
-| R36 §2.1 | Part 04 `ew-prefix-resources` | Part 04 §4.3 | Part 04 `ew-prefix-resources` |
-| R36 §2.3 | Part 04 `ew-external-resource-verification` | Part 04 §4.3 |  |
-| R37 §3.1 | Part 01 §3.9 |  | Part 01 §3.9 |
-| R38 §2.3 | Part 01 §2.2 | Part 01 §2.3 | Part 01 §2.2 |
-| R40 §2.2 | Part 02 `ew-clock-alignment-record` | Part 01 §3.9 |  |
-| R41 §2.2 | Part 01 §3.20 | Part 01 §2.6 | Part 01 §3.20 |
-| R41 §2.3 | Part 01 §2.4 |  | Part 01 §2.4 |
-| R41 §2.4 | Part 01 §2.4 | Part 01 §2.6 | Part 01 §2.4 |
-| R44 §2.2 | Part 01 §2.4 | Part 01 §2.6 | Part 01 §2.4 |
-| R44 §2.3 | Part 01 §2.4 | Part 01 §2.6 | Part 01 §2.4 |
-| R45 §2.1 | Part 01 §2.3 | Part 05 §4.3 |  |
-| R45 §2.5 | Part 01 §3.9 | Part 01 §2.2 |  |
-| R51 §2.1 | Part 04 `ew-prefix-resources` | Part 04 §4.3 |  |
-| R52 §2.3 | Part 03 `ew-owned-resource-digests`; Part 04 `ew-external-resource-verification` |  | Part 03 `ew-owned-resource-digests` |
-| R52 §2.4 | Part 05 `ew-incremental-revalidation` | Part 03 §8.1; Part 04 §4.3 | Part 05 `ew-incremental-revalidation` |
-| R56 §2.5 | Part 02 §8.4 | Part 01 §2.2 |  |
-| R57 §2.1 | Part 02 `ew-registry-self-description` |  | Part 02 `ew-registry-self-description` |
-| R62 §2.2 | Part 04 §3 | Part 03 §3.3 |  |
-| R71 §2.1 | Part 00 `ew-packet-content-classes` | Part 06 §2 |  |
-| R71 §2.2 | Part 05 `ew-error-policy` | Part 00 §4.1; Part 09 §3 | Part 05 `ew-error-policy` |
-| R72 §2.4 | Part 05 `ew-verdict-composition` | Part 09 §5.4 |  |
-| R79 §2.3 | Part 05 §10 |  | Part 05 §10 |
-| R80 §2.4 | Part 04 `ew-source-resolution` | Part 04 §5.3 |  |
-| R81 §2.2 | Part 02 `ew-unit-identity` | Part 05 §11 |  |
-| R81 §2.4 | Part 03 §5.3; Part 03 §5.4; Part 02 §9 |  | Part 02 §9 |
-| R81 §2.5 | Part 02 §9 | Part 02 §12.1 | Part 02 §9 |
-| R84 §2.2 | Part 00 `ew-physical-profile`; Part 03 `ew-portable-profile-scope`; Part 04 §3; Part 04 `ew-source-resolution` | Part 01 §1; Part 02 §1 |  |
-| R86 §2.1 | Part 00 `ew-packet` | Part 02 §7.1 | Part 00 `ew-packet` |
-| R86 §2.2 | Part 00 `ew-packet` | Part 05 §13.1 | Part 00 `ew-packet` |
-| R86 §2.3 | Part 00 `ew-packet` | Part 05 §13.1 | Part 00 `ew-packet` |
-| R88 §2.4 | Part 02 §12.3 | Part 02 §8.2 |  |
-| R90 §3.9 | Part 02 `ew-discriminator-semantics`; Part 00 `ew-packet-content-classes` |  | Part 00 `ew-packet-content-classes` |
-| R92 §2.2 | Part 03 §5.3 | Part 02 §8.5 |  |
-| R93 §3.1 | Part 02 §5.3 | Part 00 §7.3 |  |
-| R93 §3.4 | Part 10 §1 | Part 00 §8 |  |
-| R95 §3.3 | Part 05 `ew-validation-shim`; Part 07 `ew-reference-object-model` |  | Part 07 `ew-reference-object-model` |
-| R97 §3.3 | Part 02 §8.6 | Part 07 §4 |  |
-| R102 §3.1 | Part 01 §3.17 |  | Part 01 §3.17 |
-| R105 §3.3 | Part 01 §3.8 | Part 02 §12.7 |  |
-| R107 §3.1 | Part 02 `ew-column-declaration` |  | Part 02 `ew-column-declaration` |
-| R109 §3.2 | Part 09 §5.7 | Part 05 §3.5 |  |
-| R111 §3.5 | Part 00 `ew-core-content-requirements`; Part 00 `ew-analysis-content-requirements`; Part 00 `ew-later-physical-profiles`; Part 01 §3.5; Part 01 §3.8; Part 01 §3.9; Part 02 §4; Part 02 §5.2; Part 02 §8.1.1; Part 02 §8.2; Part 02 `ew-discriminator-semantics`; Part 02 §8.6; Part 02 §8.7; Part 02 §10.3; Part 03 §4; Part 03 `ew-parquet-reader-floor`; Part 03 §6.2; Part 03 §8.1; Part 05 `ew-incremental-revalidation`; Part 05 `ew-packet-cleanup`; Part 05 `ew-amendment-definition`; Part 04 `ew-prefix-resources`; Part 04 `ew-source-resolution`; Part 05 §2; Part 05 §3.2; Part 05 `ew-source-declarations`; Part 05 `ew-recipe-check`; Part 05 `ew-import-delivery`; Part 05 §4.3; Part 05 `ew-validation-shim`; Part 05 §5.4; Part 05 §10; Part 05 `ew-writer-acceptance-criteria`; Part 06 §2; Part 06 §4; Part 09 §5.2; Part 09 §5.4; Part 09 §5.7; Part 12 `ew-adapter-run-report`; Part 09 §8; Part 09 §8.1 | Part 02 §12.8 | Part 00 `ew-analysis-content-requirements`; Part 00 `ew-core-content-requirements`; Part 01 §3.8; Part 01 §3.9; Part 02 `ew-discriminator-semantics`; Part 05 §10; Part 05 §2; Part 05 §5.4; Part 09 §5.4; Part 12 `ew-adapter-run-report` |
-| R112 §3.1 | Part 00 `ew-numbered-part-ownership` | the revision guide §5.3 | Part 00 `ew-numbered-part-ownership` |
-| R114 §3 | Part 02 §7 | Part 09 §5.1 |  |
-| R115 §3.1 | Part 12 `ew-build-supplied-values`; Part 05 `ew-source-declarations` | Part 05 §3.5 |  |
-| R115 §3.10 | Part 05 §4.4; Part 12 `ew-arrow-ipc-floor` | Part 12 §5 |  |
-| R115 §3.11 | Part 05 §4.4; Part 05 §3.7; Part 12 `ew-adapter-run-report` | Part 12 §8 |  |
-| R115 §3.2 | Part 05 `ew-recipe-ownership` | Part 05 §3.4 |  |
-| R115 §3.3 | Part 12 `ew-protocol-groups`; Part 09 §5.7 | Part 12 §4; Part 12 §6; Part 12 §7 |  |
-| R115 §3.8 | Part 12 `ew-referenced-resource-delivery` | Part 12 §2 |  |
-| R119 §3.4 | Part 12 `ew-adapter-declaration-document`; Part 05 `ew-source-declarations`; Part 05 `ew-recipe-check` | Part 07 §4 | Part 05 `ew-source-declarations` |
-| R120 §3.1 | the revision guide `ew-decision-domains` | the revision guide §1; the revision guide §8.1 |  |
-| R120 §3.6 | the revision guide `ew-citation-context` | Part 00 §2.1 |  |
-| R120 §3.7 | the revision guide `ew-current-owner-ledger` | the revision guide §11; the revision guide §12; the revision guide §8.4; the revision guide §9 |  |
-| R120 §3.8 | the revision guide `ew-process-incorporation-boundary` | the revision guide §5.3 |  |
-| R122 §3.5 | Part 00 `ew-architecture-classifications` | Part 00 §8 |  |
-| R122 §3.8 | Part 00 `ew-specification-candidate` | Part 00 §2.3; Part 00 §8 |  |
-| R123 §3.1 | Part 01 `ew-unit-concept`; Part 02 `ew-unit-identity`; Part 05 `ew-reader-unit-selection` |  | Part 05 `ew-reader-unit-selection` |
-| R123 §3.6 | Part 00 `ew-numbered-part-ownership` | Part 00 §2 |  |
-| R124 §3.3 | Part 00 `ew-normative-references`; Part 03 `ew-portable-profile-scope`; Part 03 `ew-portable-profile-normative-references`; Part 04 `ew-packet-catalog-scope`; Part 04 `ew-packet-catalog-normative-references` |  | Part 03 `ew-portable-profile-scope`; Part 04 `ew-packet-catalog-scope` |
-| R125 §3.1 | Part 00 `ew-numbered-part-ownership`; Part 02 `ew-registry-document`; Part 11 `ew-tier-2-language-selection` | Part 11 §9 |  |
-| R125 §3.11 | Part 02 `ew-registry-self-description` | Part 02 §9.1; Part 11 §1 |  |
-| R125 §3.2 | Part 11 `ew-tier-2-query-profile` | Part 11 §1; Part 11 §4 |  |
-| R125 §3.3 | Part 11 `ew-tier-2-relation-environment` | Part 11 §2 |  |
-| R125 §3.4 | Part 11 `ew-tier-2-type-binding` | Part 11 §2; Part 11 §3 |  |
-| R125 §3.5 | Part 11 `ew-tier-2-deterministic-semantics` | Part 11 §2 |  |
-| R125 §3.8 | Part 05 `ew-incomplete-validation`; Part 09 `ew-extension-verdicts`; Part 11 `ew-tier-2-evaluation-outcomes` | Part 05 §9.5 |  |
-| R125 §3.9 | Part 05 `ew-validation-shim` | Part 11 §3 |  |
-| R126 §3.1 | Part 02 `ew-core-logical-schema-scope`; Part 09 `ew-extension-definition` | Part 00 §2.1; Part 00 §2.2; Part 00 §8; Part 02 §2; Part 02 §9.4; Part 09 §5.5 |  |
-| R126 §3.2 | Part 02 `ew-registry-document`; Part 09 `ew-extension-namespacing`; Part 09 `ew-core-extension-reference-direction` | Part 02 §2; Part 02 §9.2; Part 02 §9.4 |  |
-| R126 §3.4 | Part 02 `ew-column-declaration`; Part 02 `ew-registry-conformance` | Part 02 §1; Part 02 §9.1 |  |
-| R126 §3.5 | Part 02 `ew-registry-conformance`; Part 09 `ew-extension-definition` |  | Part 09 `ew-extension-definition` |
-| R126 §3.6 | Part 02 `ew-table-resource-requirements`; Part 02 `ew-logical-references`; Part 02 `ew-identifier-semantics`; Part 02 `ew-registry-conformance` | Part 02 §8.3; Part 02 §8.4; Part 02 §8.6; Part 02 §9.3 |  |
-| R126 §3.8 | Part 02 `ew-logical-column-naming`; Part 02 `ew-registry-conformance` | Part 02 §3 | Part 02 `ew-registry-conformance` |
-| R126 §3.9 | Part 02 `ew-unit-and-clock-context`; Part 02 `ew-registry-conformance`; Part 02 `ew-logical-schema-normative-references` | Part 00 §2.2; Part 02 §9.3 |  |
-| R127 §3.3 | Part 05 `ew-registry-conformance-boundary` | Part 02 §9.4 |  |
-| R127 §3.5 | Part 05 `ew-registry-producer-boundary` | Part 05 §14.6 |  |
-| R127 §3.6 | Part 05 `ew-validator-registry-boundary` | Part 05 §9.4 |  |
-| R128 §3.1 | Part 02 `ew-resource-common-fields`; Part 02 `ew-registry-document`; Part 09 `ew-extension-definition` | Part 02 §2; Part 09 §5.2 |  |
-| R128 §3.3 | Part 00 `ew-logical-standard`; Part 01 `ew-array-asset-concept`; Part 01 `ew-media-asset-concept`; Part 02 `ew-resource-kind` | Part 00 §3.1 |  |
-| R128 §3.4 | Part 02 `ew-resource-instance-model` | Part 02 §2.3; Part 02 §2.6; Part 04 §4.1; Part 04 §8 |  |
-| R128 §3.5 | Part 00 `ew-core-content-requirements`; Part 02 `ew-resource-presence`; Part 02 `ew-logical-references` | Part 02 §9.4; Part 04 §10 |  |
-| R128 §3.6 | Part 02 `ew-resource-catalog-binding` | Part 04 §10 |  |
-| R128 §3.7 | Part 02 `ew-resource-provenance-policy`; Part 06 `ew-analysis-rules` | Part 02 §2.1; Part 02 §2.2; Part 04 §10; Part 04 §4.1; Part 05 §14.5; Part 06 §5 |  |
-| R128 §3.8 | Part 00 `ew-packet-catalog`; Part 04 `ew-packet-resource-entry-fields` | Part 04 §1; Part 04 §3; Part 04 §4.2; Part 04 §9; Part 05 §10; Part 05 §2; Part 05 §5.3; Part 12 §1; Part 12 §5 |  |
-| R128 §3.9 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance` | Part 04 §10; Part 05 §14.3; Part 05 §5.3 |  |
-| R129 §3.1 | Part 03 `ew-portable-profile-scope` | Part 00 §2.3 |  |
-| R129 §3.2 | Part 03 `ew-portable-profile-technologies` | Part 03 §1 |  |
-| R129 §3.3 | Part 03 `ew-table-encoding`; Part 03 `ew-parquet-reader-floor` | Part 04 §6 |  |
-| R129 §3.4 | Part 03 `ew-array-version`; Part 03 `ew-array-codecs` | Part 03 §12 |  |
-| R129 §3.5 | Part 03 `ew-portable-profile-technologies` | Part 03 §6.4 |  |
-| R129 §3.6 | Part 04 `ew-packet-identifiers`; Part 04 `ew-packet-resource-entry-fields`; Part 04 `ew-packet-codecs` | Part 05 §3.8 |  |
-| R129 §3.7 | Part 05 `ew-reader-registry-independence` | Part 03 §6.1 |  |
-| R129 §3.8 | Part 04 `ew-external-resource-verification`; Part 05 `ew-validation-shim` | Part 03 §6.4 |  |
-| R129 §3.9 | Part 03 `ew-portable-profile-technologies` | Part 04 §5.3 |  |
-| R130 §3.11 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance` | Part 04 §10 |  |
-| R130 §3.2 | Part 04 `ew-packet-identifiers`; Part 04 `ew-packet-resource-entry-fields`; Part 04 `ew-packet-validation-block` | Part 04 §7 |  |
-| R130 §3.7 | Part 02 `ew-resource-provenance-policy`; Part 04 `ew-resource-lineage`; Part 06 `ew-analysis-rules`; Part 06 `ew-analysis-spike-events`; Part 06 `ew-analysis-materialization-provenance`; Part 05 `ew-conformance-classes`; Part 00 `ew-analysis-content-requirements` | Part 02 §2.2 |  |
-| R134 §3.1 | Part 12 `ew-adapter-declaration-document`; Part 07 `ew-reference-object-model` |  | Part 07 `ew-reference-object-model` |
-| R136 §3.3 | Part 04 `ew-packet-catalog-scope`; Part 04 `ew-packet-resource-entry-fields`; Part 04 `ew-prefix-resources`; Part 04 `ew-packet-manifest-conformance` | Part 12 §1 |  |
-| R141 §3.4 | Part 00 `ew-packet-content-classes`; Part 02 `ew-resource-content-class` |  | Part 00 `ew-packet-content-classes` |
-| R142 §3.1 | Part 12 `ew-build-supplied-values`; Part 12 `ew-adapter-declaration-document`; Part 05 `ew-source-declarations`; Part 05 `ew-recipe-check`; Part 07 `ew-reference-object-model` |  | Part 05 `ew-source-declarations` |
-| R144 §3.1 | Part 12 `ew-adapter-interface-scope`; Part 12 `ew-adapter-declaration-document` | Part 00 §8; Part 12 §9 |  |
-| R144 §3.4 | Part 12 `ew-adapter-run-report` | Part 12 §1 |  |
-| R146 §3.1 | Part 05 `ew-validation-import-scope`; Part 05 `ew-conformance-classes`; Part 05 `ew-writer-acceptance-criteria` | Part 00 §2.4 |  |
-| R146 §3.5 | Part 10 `ew-materialization-measurements`; Part 07 `ew-reference-performance-notes` | Part 06 §4 |  |
-| R146 §3.8 | Part 05 `ew-validation-shim` | Part 02 §8.6 |  |
-| R147 §3.8 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance`; Part 02 `ew-core-logical-schema-scope` |  | Part 02 `ew-core-logical-schema-scope` |
-| R148 §3.4 | Part 02 `ew-registry-self-description` |  | Part 02 `ew-registry-self-description` |
-| R149 §3.3 | Part 11 `ew-tier-2-language-selection` | Part 02 §9.2 |  |
-| R149 §3.4 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance`; Part 02 `ew-core-logical-schema-scope` |  | Part 02 `ew-core-logical-schema-scope` |
-| R150 §3.10 | Part 02 `ew-core-logical-schema-scope`; Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance`; Part 05 `ew-recipe-purpose` |  | Part 02 `ew-core-logical-schema-scope`; Part 02 `ew-registry-conformance`; Part 05 `ew-recipe-purpose` |
-| R151 §3.2 | Part 02 `ew-registry-self-description` |  | Part 02 `ew-registry-self-description` |
+A section is confirmed where it states a rule the clause decided. It is rejected where the passage is another clause's rule, a fact the clause only cites, or a general rule that reaches the clause's subject without naming it.
+
+| clause | recorded targets | sections to add | recorded targets to drop | additions rejected | drops rejected |
+|---|---|---|---|---|---|
+| R1 §2 | Part 05 `ew-validation-shim` | Part 00 §3.3; Part 03 §1 | Part 05 `ew-validation-shim` |  |  |
+| R2 §2 | Part 02 §6 | Part 02 §1 | Part 02 §6 |  |  |
+| R2 §3 | Part 02 §9.1 | Part 02 §2.3 |  |  |  |
+| R2 §6 | Part 02 §2; Part 02 §7; Part 03 §5.3 | Part 02 §10.1 |  |  | Part 03 §5.3 |
+| R2 §8 | Part 02 `ew-registry-self-description` | Part 02 §9.1; Part 04 §8 |  |  |  |
+| R2 §9 | Part 02 `ew-registry-self-description` | Part 02 §9.4 |  |  |  |
+| R3 §2.1 | Part 03 `ew-parquet-reader-floor` | Part 02 §5.1; Part 02 §5.2; Part 02 §5.3; Part 02 §6 |  |  |  |
+| R3 §5.1 | Part 03 §6.2 | Part 03 §6.5 |  |  |  |
+| R3 §6 | Part 02 §8.1.1 |  |  | Part 05 §5.3 |  |
+| R3 §7.1 | Part 03 §6.1 | Part 03 §6.2 |  |  |  |
+| R6 §2 | Part 01 §3.9 | Part 03 §5.5 |  |  |  |
+| R8 §4 | Part 02 `ew-registry-vocabularies` | Part 01 §3.17 |  |  |  |
+| R14 §2.2 | Part 03 `ew-array-codecs` | Part 05 §5.3 |  |  |  |
+| R14 §2.3 | Part 04 §5.1 | Part 04 §4.1 |  |  |  |
+| R15 §2 | Part 03 `ew-array-codecs` | Part 03 §6.1 | Part 03 `ew-array-codecs` |  |  |
+| R15 §3 | Part 04 §3 |  | Part 04 §3 |  |  |
+| R17 §2 | Part 09 §5.1 | Part 09 §5.2; Part 09 §6.1 |  |  |  |
+| R21 §3.3 | Part 03 `ew-array-codecs` | Part 03 §6.1 |  |  |  |
+| R22 §4 | Part 05 §5.2 |  | Part 05 §5.2 |  |  |
+| R25 §4 | Part 01 §2.2 | Part 01 §2.3 | Part 01 §2.2 |  |  |
+| R27 §3 | Part 01 §3.9 |  | Part 01 §3.9 |  |  |
+| R27 §6 | Part 01 §3.9 |  |  | Part 01 §2.2 |  |
+| R30 §3.1 | Part 03 §5.4 |  | Part 03 §5.4 |  |  |
+| R30 §3.2 | Part 03 §5.4 | Part 05 §5.3 |  |  |  |
+| R32 §4 | Part 05 `ew-superseded-manifest-retention`; Part 03 `ew-portable-amendment` | Part 04 §1 |  |  |  |
+| R32 §5 | Part 05 `ew-incremental-revalidation` | Part 05 §6 |  |  |  |
+| R35 §2 | Part 05 `ew-incremental-revalidation` | Part 05 §8 |  |  |  |
+| R36 §2.1 | Part 04 `ew-prefix-resources` | Part 04 §4.3 |  |  | Part 04 `ew-prefix-resources` |
+| R36 §2.3 | Part 04 `ew-external-resource-verification` | Part 04 §4.3 |  |  |  |
+| R37 §3.1 | Part 01 §3.9 |  |  |  | Part 01 §3.9 |
+| R38 §2.3 | Part 01 §2.2 |  | Part 01 §2.2 | (recorded since) Part 01 §2.3 |  |
+| R40 §2.2 | Part 02 `ew-clock-alignment-record` | Part 01 §3.9 |  |  |  |
+| R41 §2.2 | Part 01 §3.20 | Part 01 §2.6 | Part 01 §3.20 |  |  |
+| R41 §2.3 | Part 01 §2.4 |  | Part 01 §2.4 |  |  |
+| R41 §2.4 | Part 01 §2.4 | Part 01 §2.6 | Part 01 §2.4 |  |  |
+| R44 §2.2 | Part 01 §2.4 | Part 01 §2.6 | Part 01 §2.4 |  |  |
+| R44 §2.3 | Part 01 §2.4 | Part 01 §2.6 | Part 01 §2.4 |  |  |
+| R45 §2.1 | Part 01 §2.3 | Part 05 §4.3 |  |  |  |
+| R45 §2.5 | Part 01 §3.9 | Part 01 §2.2 |  |  |  |
+| R51 §2.1 | Part 04 `ew-prefix-resources` | Part 04 §4.3 |  |  |  |
+| R52 §2.3 | Part 03 `ew-owned-resource-digests`; Part 04 `ew-external-resource-verification` |  | Part 03 `ew-owned-resource-digests` |  |  |
+| R52 §2.4 | Part 05 `ew-incremental-revalidation` | Part 03 §8.1; Part 04 §4.3 |  |  | Part 05 `ew-incremental-revalidation` |
+| R56 §2.5 | Part 02 §8.4 |  |  | Part 01 §2.2 |  |
+| R57 §2.1 | Part 02 `ew-registry-self-description` |  |  |  | Part 02 `ew-registry-self-description` |
+| R62 §2.2 | Part 04 §3 | Part 03 §3.3 |  |  |  |
+| R71 §2.1 | Part 00 `ew-packet-content-classes` | Part 06 §2 |  |  |  |
+| R71 §2.2 | Part 05 `ew-error-policy` | Part 00 §4.1; Part 09 §3 | Part 05 `ew-error-policy` |  |  |
+| R72 §2.4 | Part 05 `ew-verdict-composition` | Part 09 §5.4 |  |  |  |
+| R79 §2.3 | Part 05 §10 |  | Part 05 §10 |  |  |
+| R80 §2.4 | Part 04 `ew-source-resolution` | Part 04 §5.3 |  |  |  |
+| R81 §2.2 | Part 02 `ew-unit-identity` | Part 05 §11 |  |  |  |
+| R81 §2.4 | Part 03 §5.3; Part 03 §5.4; Part 02 §9 |  | Part 02 §9 |  |  |
+| R81 §2.5 | Part 02 §9 | Part 02 §12.1 | Part 02 §9 |  |  |
+| R84 §2.2 | Part 00 `ew-physical-profile`; Part 03 `ew-portable-profile-scope`; Part 04 §3; Part 04 `ew-source-resolution` | Part 01 §1; Part 02 §1 |  |  |  |
+| R86 §2.1 | Part 00 `ew-packet` | Part 02 §7.1 | Part 00 `ew-packet` |  |  |
+| R86 §2.2 | Part 00 `ew-packet` | Part 05 §13.1 | Part 00 `ew-packet` |  |  |
+| R86 §2.3 | Part 00 `ew-packet` | Part 05 §13.1 | Part 00 `ew-packet` |  |  |
+| R88 §2.4 | Part 02 §12.3 | Part 02 §8.2 |  |  |  |
+| R90 §3.9 | Part 02 `ew-discriminator-semantics`; Part 00 `ew-packet-content-classes` | Part 09 §6.1; Part 09 §6.2 | Part 00 `ew-packet-content-classes` |  |  |
+| R92 §2.2 | Part 03 §5.3 | Part 02 §8.5 |  |  |  |
+| R93 §3.1 | Part 02 §5.3 | Part 00 §7.3; Part 00 §8 |  |  |  |
+| R93 §3.4 | Part 10 §1 | Part 00 §8 |  |  |  |
+| R95 §3.3 | Part 05 `ew-validation-shim`; Part 07 `ew-reference-object-model` |  | Part 07 `ew-reference-object-model` |  |  |
+| R97 §3.3 | Part 02 §8.6 | Part 07 §4 |  |  |  |
+| R102 §3.1 | Part 01 §3.17 |  | Part 01 §3.17 |  |  |
+| R105 §3.3 | Part 01 §3.8 | Part 02 §12.7 |  |  |  |
+| R107 §3.1 | Part 02 `ew-column-declaration` |  |  |  | Part 02 `ew-column-declaration` |
+| R109 §3.2 | Part 09 §5.7 | Part 05 §3.5; Part 05 §3.1 |  |  |  |
+| R111 §3.5 | Part 00 `ew-core-content-requirements`; Part 00 `ew-analysis-content-requirements`; Part 00 `ew-later-physical-profiles`; Part 01 §3.5; Part 01 §3.8; Part 01 §3.9; Part 02 §4; Part 02 §5.2; Part 02 §8.1.1; Part 02 §8.2; Part 02 `ew-discriminator-semantics`; Part 02 §8.6; Part 02 §8.7; Part 02 §10.3; Part 03 §4; Part 03 `ew-parquet-reader-floor`; Part 03 §6.2; Part 03 §8.1; Part 05 `ew-incremental-revalidation`; Part 05 `ew-packet-cleanup`; Part 05 `ew-amendment-definition`; Part 04 `ew-prefix-resources`; Part 04 `ew-source-resolution`; Part 05 §2; Part 05 §3.2; Part 05 `ew-source-declarations`; Part 05 `ew-recipe-check`; Part 05 `ew-import-delivery`; Part 05 §4.3; Part 05 `ew-validation-shim`; Part 05 §5.4; Part 05 §10; Part 05 `ew-writer-acceptance-criteria`; Part 06 §2; Part 06 §4; Part 09 §5.2; Part 09 §5.4; Part 09 §5.7; Part 12 `ew-adapter-run-report`; Part 09 §8; Part 09 §8.1 | Part 02 §12.8; Part 05 §9.5; Part 05 §9.2 | Part 00 `ew-analysis-content-requirements`; Part 01 §3.8; Part 01 §3.9; Part 02 `ew-discriminator-semantics`; Part 05 §10; Part 05 §2; Part 05 §5.4; Part 12 `ew-adapter-run-report` |  | Part 00 `ew-core-content-requirements`; Part 09 §5.4 |
+| R112 §3.1 | Part 00 `ew-numbered-part-ownership` |  | Part 00 `ew-numbered-part-ownership` | the revision guide §5.3 |  |
+| R114 §3 | Part 02 §7 |  |  | Part 09 §5.1 |  |
+| R115 §3.1 | Part 12 `ew-build-supplied-values`; Part 05 `ew-source-declarations` | Part 05 §3.5 |  |  |  |
+| R115 §3.10 | Part 05 §4.4; Part 12 `ew-arrow-ipc-floor` | Part 12 §5 |  |  |  |
+| R115 §3.11 | Part 05 §4.4; Part 05 §3.7; Part 12 `ew-adapter-run-report` | Part 12 §8 |  |  |  |
+| R115 §3.2 | Part 05 `ew-recipe-ownership` | Part 05 §3.4 |  |  |  |
+| R115 §3.3 | Part 12 `ew-protocol-groups`; Part 09 §5.7 | Part 12 §6; Part 12 §7 |  | Part 12 §4 |  |
+| R115 §3.8 | Part 12 `ew-referenced-resource-delivery` |  |  | Part 12 §2 |  |
+| R119 §3.4 | Part 12 `ew-adapter-declaration-document`; Part 05 `ew-source-declarations`; Part 05 `ew-recipe-check` | Part 07 §4 | Part 05 `ew-source-declarations` |  |  |
+| R120 §3.1 | `revisions/CONTRIBUTING.md` `ew-decision-domains` | the revision guide §1; the revision guide §8.1 |  |  |  |
+| R120 §3.6 | `revisions/CONTRIBUTING.md` `ew-citation-context` |  |  | Part 00 §2.1 |  |
+| R120 §3.7 | `revisions/CONTRIBUTING.md` `ew-current-owner-ledger` | the revision guide §11; the revision guide §12; the revision guide §8.4; the revision guide §9 |  |  |  |
+| R120 §3.8 | `revisions/CONTRIBUTING.md` `ew-process-incorporation-boundary` |  |  | the revision guide §5.3 |  |
+| R122 §3.5 | Part 00 `ew-architecture-classifications` |  |  | Part 00 §8 |  |
+| R122 §3.8 | Part 00 `ew-specification-candidate` |  |  | Part 00 §2.3; Part 00 §8 |  |
+| R123 §3.1 | Part 01 `ew-unit-concept`; Part 02 `ew-unit-identity`; Part 05 `ew-reader-unit-selection` |  | Part 05 `ew-reader-unit-selection` |  |  |
+| R123 §3.6 | Part 00 `ew-numbered-part-ownership` | Part 00 §2 |  |  |  |
+| R124 §3.3 | Part 00 `ew-normative-references`; Part 03 `ew-portable-profile-scope`; Part 03 `ew-portable-profile-normative-references`; Part 04 `ew-packet-catalog-scope`; Part 04 `ew-packet-catalog-normative-references` |  | Part 03 `ew-portable-profile-scope`; Part 04 `ew-packet-catalog-scope` |  |  |
+| R125 §3.1 | Part 00 `ew-numbered-part-ownership`; Part 02 `ew-registry-document`; Part 11 `ew-tier-2-language-selection` | Part 11 §9 |  |  |  |
+| R125 §3.11 | Part 02 `ew-registry-self-description` | Part 02 §9.1; Part 11 §1 |  |  |  |
+| R125 §3.2 | Part 11 `ew-tier-2-query-profile` | Part 11 §1 |  | Part 11 §4 |  |
+| R125 §3.3 | Part 11 `ew-tier-2-relation-environment` | Part 11 §2 |  |  |  |
+| R125 §3.4 | Part 11 `ew-tier-2-type-binding` | Part 11 §2 |  | Part 11 §3 |  |
+| R125 §3.5 | Part 11 `ew-tier-2-deterministic-semantics` | Part 11 §2 |  |  |  |
+| R125 §3.8 | Part 05 `ew-incomplete-validation`; Part 09 `ew-extension-verdicts`; Part 11 `ew-tier-2-evaluation-outcomes` | Part 05 §9.5 |  |  |  |
+| R125 §3.9 | Part 05 `ew-validation-shim` |  |  | Part 11 §3 |  |
+| R126 §3.1 | Part 02 `ew-core-logical-schema-scope`; Part 09 `ew-extension-definition` | Part 02 §2; Part 02 §9.4; Part 09 §5.5 |  | Part 00 §2.1; Part 00 §2.2; Part 00 §8 |  |
+| R126 §3.2 | Part 02 `ew-registry-document`; Part 09 `ew-extension-namespacing`; Part 09 `ew-core-extension-reference-direction` | Part 02 §2; Part 02 §9.2; Part 02 §9.4 |  |  |  |
+| R126 §3.4 | Part 02 `ew-column-declaration`; Part 02 `ew-registry-conformance` | Part 02 §1; Part 02 §9.1 |  |  |  |
+| R126 §3.5 | Part 02 `ew-registry-conformance`; Part 09 `ew-extension-definition` |  | Part 09 `ew-extension-definition` |  |  |
+| R126 §3.6 | Part 02 `ew-table-resource-requirements`; Part 02 `ew-logical-references`; Part 02 `ew-identifier-semantics`; Part 02 `ew-registry-conformance` | Part 02 §8.3; Part 02 §8.4; Part 02 §8.6; Part 02 §9.3 |  |  |  |
+| R126 §3.8 | Part 02 `ew-logical-column-naming`; Part 02 `ew-registry-conformance` | Part 02 §3 | Part 02 `ew-registry-conformance` |  |  |
+| R126 §3.9 | Part 02 `ew-unit-and-clock-context`; Part 02 `ew-registry-conformance`; Part 02 `ew-logical-schema-normative-references` | Part 02 §9.3 |  | Part 00 §2.2 |  |
+| R127 §3.3 | Part 05 `ew-registry-conformance-boundary` |  |  | Part 02 §9.4 |  |
+| R127 §3.5 | Part 05 `ew-registry-producer-boundary` |  |  | Part 05 §14.6 |  |
+| R127 §3.6 | Part 05 `ew-validator-registry-boundary` |  |  | Part 05 §9.4 |  |
+| R128 §3.1 | Part 02 `ew-resource-common-fields`; Part 02 `ew-registry-document`; Part 09 `ew-extension-definition` | Part 02 §2; Part 09 §5.2 |  |  |  |
+| R128 §3.3 | Part 00 `ew-logical-standard`; Part 01 `ew-array-asset-concept`; Part 01 `ew-media-asset-concept`; Part 02 `ew-resource-kind` |  |  | Part 00 §3.1 |  |
+| R128 §3.4 | Part 02 `ew-resource-instance-model` | Part 04 §4.1; Part 04 §8 |  | Part 02 §2.3; (recorded since) Part 02 §2.6 |  |
+| R128 §3.5 | Part 00 `ew-core-content-requirements`; Part 02 `ew-resource-presence`; Part 02 `ew-logical-references` | Part 02 §9.4; Part 04 §10 |  |  |  |
+| R128 §3.6 | Part 02 `ew-resource-catalog-binding` | Part 04 §10 |  |  |  |
+| R128 §3.7 | Part 02 `ew-resource-provenance-policy`; Part 06 `ew-analysis-rules` | Part 02 §2.2; Part 04 §10; Part 06 §5 |  | Part 02 §2.1; Part 04 §4.1; Part 05 §14.5 |  |
+| R128 §3.8 | Part 00 `ew-packet-catalog`; Part 04 `ew-packet-resource-entry-fields` | Part 04 §1; Part 04 §3; Part 04 §4.2; Part 05 §10; Part 05 §2; Part 05 §5.3; Part 12 §1 |  | (recorded since) Part 04 §9; (recorded since) Part 12 §5 |  |
+| R128 §3.9 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance` | Part 05 §14.3; Part 05 §5.3 |  | Part 04 §10 |  |
+| R129 §3.1 | Part 03 `ew-portable-profile-scope` |  |  | Part 00 §2.3 |  |
+| R129 §3.2 | Part 03 `ew-portable-profile-technologies` |  |  | Part 03 §1 |  |
+| R129 §3.3 | Part 03 `ew-table-encoding`; Part 03 `ew-parquet-reader-floor` | Part 04 §6 |  |  |  |
+| R129 §3.4 | Part 03 `ew-array-version`; Part 03 `ew-array-codecs` | Part 03 §12 |  |  |  |
+| R129 §3.5 | Part 03 `ew-portable-profile-technologies` | Part 03 §6.4 |  |  |  |
+| R129 §3.6 | Part 04 `ew-packet-identifiers`; Part 04 `ew-packet-resource-entry-fields`; Part 04 `ew-packet-codecs` |  |  | Part 05 §3.8 |  |
+| R129 §3.7 | Part 05 `ew-reader-registry-independence` | Part 03 §6.1 |  |  |  |
+| R129 §3.8 | Part 04 `ew-external-resource-verification`; Part 05 `ew-validation-shim` | Part 03 §6.4 |  |  |  |
+| R129 §3.9 | Part 03 `ew-portable-profile-technologies` | Part 04 §5.3 |  |  |  |
+| R130 §3.11 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance` |  |  | Part 04 §10 |  |
+| R130 §3.2 | Part 04 `ew-packet-identifiers`; Part 04 `ew-packet-resource-entry-fields`; Part 04 `ew-packet-validation-block` | Part 04 §7 |  |  |  |
+| R130 §3.7 | Part 02 `ew-resource-provenance-policy`; Part 04 `ew-resource-lineage`; Part 06 `ew-analysis-rules`; Part 06 `ew-analysis-spike-events`; Part 06 `ew-analysis-materialization-provenance`; Part 05 `ew-conformance-classes`; Part 00 `ew-analysis-content-requirements` | Part 02 §2.2 |  |  |  |
+| R134 §3.1 | Part 12 `ew-adapter-declaration-document`; Part 07 `ew-reference-object-model` |  |  |  | Part 07 `ew-reference-object-model` |
+| R136 §3.3 | Part 04 `ew-packet-catalog-scope`; Part 04 `ew-packet-resource-entry-fields`; Part 04 `ew-prefix-resources`; Part 04 `ew-packet-manifest-conformance` | Part 12 §1 |  |  |  |
+| R141 §3.4 | Part 00 `ew-packet-content-classes`; Part 02 `ew-resource-content-class` |  | Part 00 `ew-packet-content-classes` |  |  |
+| R142 §3.1 | Part 12 `ew-build-supplied-values`; Part 12 `ew-adapter-declaration-document`; Part 05 `ew-source-declarations`; Part 05 `ew-recipe-check`; Part 07 `ew-reference-object-model` |  | Part 05 `ew-source-declarations` |  |  |
+| R144 §3.1 | Part 12 `ew-adapter-interface-scope`; Part 12 `ew-adapter-declaration-document` | Part 00 §8 |  | Part 12 §9 |  |
+| R144 §3.4 | Part 12 `ew-adapter-run-report` |  |  | Part 12 §1 |  |
+| R146 §3.1 | Part 05 `ew-validation-import-scope`; Part 05 `ew-conformance-classes`; Part 05 `ew-writer-acceptance-criteria` | Part 00 §2.4 |  |  |  |
+| R146 §3.5 | Part 10 `ew-materialization-measurements`; Part 07 `ew-reference-performance-notes` | Part 06 §4 |  |  |  |
+| R146 §3.8 | Part 05 `ew-validation-shim` | Part 02 §8.6 |  |  |  |
+| R147 §3.8 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance`; Part 02 `ew-core-logical-schema-scope` |  | Part 02 `ew-core-logical-schema-scope` |  |  |
+| R148 §3.4 | Part 02 `ew-registry-self-description` |  | Part 02 `ew-registry-self-description` |  |  |
+| R149 §3.3 | Part 11 `ew-tier-2-language-selection` | Part 02 §9.2 |  |  |  |
+| R149 §3.4 | Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance`; Part 02 `ew-core-logical-schema-scope` |  | Part 02 `ew-core-logical-schema-scope` |  |  |
+| R150 §3.10 | Part 02 `ew-core-logical-schema-scope`; Part 02 `ew-registry-self-description`; Part 02 `ew-registry-conformance`; Part 05 `ew-recipe-purpose` |  | Part 02 `ew-core-logical-schema-scope`; Part 02 `ew-registry-conformance`; Part 05 `ew-recipe-purpose` |  |  |
+| R151 §3.2 | Part 02 `ew-registry-self-description` |  | Part 02 `ew-registry-self-description` |  |  |
+
+## Additions the second reading rejected
+
+- **R3 §6, Part 05 §5.3.** The passage is still in Part 05 §5.3 (a validator reports at error 'a core.array_channels row whose channel_index is negative or not less than the length of the axis its axis_index names'), but the rule it states is R3 §6.1's 'Validation' sentence, and R3 §6.1 is its own ledger clause (applied.toml: disposition registry, 'core.array_channels gains its axis binding'). The body of R3 §6 itself decides the index base and the source-label rule, which §5.3 does not state; the bound check presupposes a 0-based offset and never says so.
+- **R27 §6, Part 01 §2.2.** Part 01 §2.2 still says every timing record 'MUST declare a time basis: an integer tick and a clock_id', but that is the base rule that a timed record names a clock, with no mention of a reset or an epoch. The clause's rule is that the row carries the clock_id of the epoch it was recorded on, and what gives it that meaning is §3.9's 'two clocks, one per epoch, each with its own identifier', which the entry already records.
+- **R56 §2.5, Part 01 §2.2.** 'Seconds MAY be derived: a tick's seconds are its distance in ticks from the origin on the reference clock ...' is R39 §2.3's permission and formula, which the ledger already records at Part 01 §2.2. What R56 §2.5 decides is that the permission reaches every `coordinate` column of any table, core or extension, without the reader knowing what the column means, and that comes from a declaration: Part 02 §8.4's 'For a coordinate, the clock source is its explicit `clock_from` target where present and otherwise the same table's `clock_id`' and 'A consumer resolves the source rather than guessing'. Part 01 names no column, role or declaration, so §2.2 mentions the subject and does not state this clause's rule.
+- **R112 §3.1, the revision guide §5.3.** The guide's §5.3 does state the rule ('Cite the current owner for a current rule and an accepted revision only for rationale or provenance the owner does not carry'), and R120 §3.6 is the decision behind it. It cannot be this entry's target: `ledger.py` admits a `path` plus `anchor` target only for a clause whose revision declares `Decision domain: process`, treats every revision before R120 as `specification`, and would report 'path-plus-anchor target is reserved for process clauses'. A later revision's text in another document is what `superseded` records.
+- **R114 §3, Part 09 §5.1.** Part 09 §5.1 defines an extension as a registry document that declares references 'on the same applicable terms as core'. That is the existing fact the clause cites as its reason ('because an extension is a registry document in the same format (Part 09 §5.1)'); R114 decided nothing there and the section says nothing of the type of a paired column. The clause's one rule, equal type on both sides and the int64 escape on both or neither, is stated in Part 02 §7, which binds every registry document.
+- **R115 §3.3, Part 12 §4.** The clause mentions the wanted set only to say '§3.1 carries it as one more thing an adapter may declare it needs', with no keyword. The rule Part 12 §4 states ('The wanted set is a term a build supplies and an adapter MAY act on') is R115 §3.1's own, and the ledger already records Part 12 §4 under that clause.
+- **R115 §3.8, Part 12 §2.** The sentence relied on, 'A clause binding an adapter binds one it does not ship identically', is Part 12's definition of the word adapter and gives every adapter clause of the part its reach; it says nothing of arrays, and an extension is not named in it. The clause's array rules and their actor are stated in the recorded Part 12 §5, where 'an adapter' takes that definition by ordinary reading. Part 12 §2's route list does mention `array_location`, but as a summary pointing to §5. Naming a definition as a target of every clause that uses the defined term is not what a target records.
+- **R120 §3.6, Part 00 §2.1.** Part 00 §2.1 says a specification release is an immutable publication. That is the 'owning publication rule' the clause's third paragraph is conditioned on, a specification-domain rule; the clause's own rule binds a maintainer not to reorganize an immutable edition's bytes in place, and Part 00 §2.1 does not state it. `ledger.py` also reports a process-domain clause's target without `path` as dangling, so a numbered part cannot be recorded for R120.
+- **R120 §3.8, the revision guide §5.3.** The clause's sentence is a one-time instruction to the maintainer incorporating R120: leave accepted R113 and R120's accepted form unchanged while repointing citations. Guide §5.3's 'Committed accepted revisions are immutable historical records' is the standing rule R120 §3.6 decided ('A revision already committed with Accepted status MUST remain unchanged'), and the ledger already records `ew-citation-context` under R120 §3.6. §5.3 states nothing of the repointing, the remeasurement, the release selector or the incorporation boundary.
+- **R122 §3.5, Part 00 §8.** The passage relied on, 'A part MUST NOT state a second version of a rule another part owns', is the specification-wide rule R122 §3.6 decided and the ledger records under that clause; it names neither Part 00 nor a vocabulary. What this clause decided about the vocabularies is stated in the recorded Part 00 §3 (its §3.2: 'Part 02 §2.2 defines the five classes, their serialized values' and 'Part 02 owns the exact serialized content-class and kind vocabularies'). A rule of general application is not a destination of each clause it happens to cover.
+- **R122 §3.8, Part 00 §2.3.** Part 00 §2.3's list ('an explicitly informative explanation that links to its owner') is R122 §3.3's rule for any artifact that presents a fact another owns, recorded under that clause, and does not name the README. The README's own rules are in the recorded §2.1: it is an informational entry point, MAY provide summaries and links to owning artifacts, and MUST NOT be the sole statement of a requirement.
+- **R122 §3.8, Part 00 §8.** Part 00 §8's table assigns each numbered part its subject in general terms (R122 §3.6) and does not state the clause's allocation of the subjects the README then held, such as the semantic-standard identifier to Part 01 or `registry_version` semantics to Part 02. That allocation was a migration instruction discharged when the text moved; the sentence quoted, 'Part 00 MUST assign the subject and normative status of every numbered part', is R122 §3.7's.
+- **R125 §3.2, Part 11 §4.** The sentence relied on, 'ISO SQL null and three-valued Boolean semantics apply except where this part narrows them', is R125 §3.4's rule and is recorded under it. The clause's own remark, that nullability follows the ISO operation and creates no further domain, carries no keyword and qualifies the routines' return domains, which Part 11 §2 states; §4 does not say it.
+- **R125 §3.4, Part 11 §3.** 'Each visible table exposes exactly its registry-declared columns under §4' is R125 §3.3's rule on what a table exposes and says nothing of the decimal domains. The clause's point, that admitting a literal's decimal domain and the `DECIMAL(38,0)` cast target changes no stored column's declared type, is not stated in §3.
+- **R125 §3.9, Part 11 §3.** 'Every other base relation, including a system catalog or validator-created relation, makes the registry invalid' is R125 §3.3's rule on what a rule's text may name, and it is recorded under that clause. The clause here binds the shim not to supply the catalog to SQL as a hidden relation; Part 11 §3 forbids a rule to name such a relation and does not forbid a validator to create one. Part 05 §5.3, the recorded target, carries the shim's side: it declares the manifest and `core.sessions` as its inputs and says no Tier 2 rule may depend on its mechanism.
+- **R126 §3.1, Part 00 §2.1.** Part 00 §2.1 states the general rule of what a candidate comprises and when a version identifier names a release. It names no extension registry, conformance vector or descriptor; a different clause of a different revision decided it, and it gives the clause's subject only general reach.
+- **R126 §3.1, Part 00 §2.2.** 'Implementations and evidence MUST NOT acquire an independent normative subject' is the specification-wide rule on evidence, decided by the revision that organised authority by concern. It does not name conformance vectors or say they cannot add a clause, so it mentions the subject without stating this clause's rule.
+- **R126 §3.1, Part 00 §8.** The Part 09 row lists 'extension boundaries, namespace ownership, extension declarations, and extension independence' as that part's subject. That is the ownership table decided before this revision, which amended nothing in Part 00; the row assigns a subject and states neither that an extension registry is the sole declaration authority for its namespace nor the direction of reference.
+- **R126 §3.9, Part 00 §2.2.** Part 00 §2.2 states the general rule that implementations and evidence acquire no independent normative subject. It says nothing of a unit parser or a library's behaviour, and another revision decided it. The specific rule against promoting a library's observed behaviour is a different clause's sentence in Part 00 §9.
+- **R127 §3.3, Part 02 §9.4.** 'A mapping-oriented entry point begins after `json` and MUST NOT claim that the source bytes had unique members' is the rule about the entry point that the earlier registry-conformance revision decided, and it is recorded under that revision's clause on phases. This clause binds a boundary to use that entry point, and the recorded Part 05 §14.2 states it: 'A boundary given only a decoded mapping uses the mapping entry point and does not claim byte-level JSON checks'.
+- **R127 §3.5, Part 05 §14.6.** 'Human rendering may differ' is the sentence of the same revision's clause on reports, which reads 'Human rendering MAY differ between implementations' and is recorded there. It permits renderings to differ; it does not say that a command-line tool may add a rendering for a person beside its machine-readable output. The section's anchor is `ew-registry-result-reporting`, which the proposal left empty.
+- **R127 §3.6, Part 05 §9.4.** 'A validator MUST NOT turn its inability to evaluate into an error-level packet finding' is an earlier revision's rule on incomplete validation and is recorded under that revision. The recorded Part 05 §14.5 states this clause's own rule for registry states: the validator 'does not fabricate packet findings for unsupported, incomplete, or skipped work'.
+- **R128 §3.3, Part 00 §3.1.** The quoted sentence in Part 00 §3.1's own body ('A physical profile MAY map a logical resource to a storage technology and MUST NOT change that resource's logical identity or semantic meaning') is R122's rule (R122 line 230) and predates R128; R128's crosswalk amends only §3.1.2. It speaks of logical identity and semantic meaning, not of logical kind, and says nothing of a later declaration constraining whether a kind is stored, referenced or presented as a view. The clause's own statement on this subject, that a view or materialization is a realization and not a kind, sits in the recorded §3.1.2 (ew-logical-standard) and in the recorded Part 02 §2.3.
+- **R128 §3.4, Part 02 §2.3.** The clause states this rule only by reference: 'a dense-array catalog MUST also satisfy the axes-resource contract in §3.3'. The contract is R128 §3.3's decision, Part 02 §2.3 states it, and the ledger records this anchor under R128 §3.3. The clause adds nothing to it, so a second pointer from §3.4 would record a rule the clause cites, not one it decides. The passage quoted is present and correct; the objection is to which clause owns it.
+- **R128 §3.7, Part 02 §2.1.** Part 02 §2.1 only lists `lineage` and its three values among the common fields, which is R128 §3.1's rule and is recorded under that clause. It does not say that a `core` or `extension` declaration may select any policy; that permission is nowhere stated and follows only from §2.2 restricting the other three classes. The section mentions the field and states no rule of this clause.
+- **R128 §3.7, Part 04 §4.1.** The quoted `derived_from` row is part of the generated field table, which Part 04 §1 calls an informative projection of the schema, and §4.1's one prose sentence on the member only points onward: '`derived_from` follows the declaration's lineage policy (§7)'. The rule the reader relied on, that a present `derived_from` is a nonempty array of distinct existing packet resource IDs, is stated in prose in Part 04 §7 and Part 02 §2.7; 'existing' is not in the table at all.
+- **R128 §3.7, Part 05 §14.5.** The quoted sentence of Part 05 §14.5 decides which registry bytes may direct packet checks (the bound registries that passed `registry_binding`, never a caller-supplied, bundled or remote one). It names neither lineage nor a serialized layer or namespace, and it is a rule of the registry-boundary revisions, not of this clause. The clause's validator rule survives in Part 04 §10's `declaration` phase, which itself cites §14.5. Note that the section has the canonical anchor `ew-validator-registry-boundary`; the batch input's empty anchor is wrong.
+- **R128 §3.9, Part 04 §10.** The quoted sentence ('A writer MUST NOT publish a manifest with a finding in the `json`, `shape`, `entries`, or `registry_binding` phase') is R130's publication gate on conformance findings. It says nothing of superseded registry, manifest or delivery shapes, of deliveries, or of what an implementation need not accept. The clause's sentence is a migration statement about one identifier advance, which the parts do not restate (R121 removed history from them); what survives of it is the current identifiers.
+- **R129 §3.1, Part 00 §2.3.** Part 00 §2.3 ('Each normative fact MUST have one owner. Another artifact that presents the same fact MUST be one of: a mechanically checked projection ...') is R122's general ownership rule and the ledger records it for that revision. It names no descriptor and no rendered table. The clause's sentence is one instance of that rule; the instance itself is carried by Part 03 §1, the recorded target ('The descriptor owns the profile's exact identifiers, kind-to-interface mapping, ...'), and by the generated-block markers around Part 03's tables. Pointing this clause at the general rule would record a section that states the genus, not the clause.
+- **R129 §3.2, Part 03 §1.** The quoted sentence of Part 03 §1 ('A conforming distributed copy MUST pass the schema and the generic cross-member checker at a packaging or equivalent conformance boundary') is R129 §3.1's distribution rule, recorded under that clause at this anchor. It says when a copy is checked, not what the checker enforces. The three mapping requirements of this clause are stated with MUST in Part 03 §2, the recorded target, as properties of the descriptor; that a checker decides conformance to them follows from Part 00 §2.4's definition of a checker, not from a sentence of §1. §1 does give the checker two explicit duties (refusing `overriding_orders` elsewhere, refusing an unresolved anchor), and neither is this clause's.
+- **R129 §3.6, Part 05 §3.8.** Part 05 §3.8 ('A recipe MAY declare a column's Parquet encoding, in an `[encoding]` table ...') is R110's rule and predates this clause; it is the existing build input the clause says 'MAY remain'. It does not say that a codec or encoding setting is not a packet claim, which is the clause's operative rule, and it covers Parquet encoding only, not codec selection. The prohibition is carried by the recorded Part 04 §6 ('The manifest carries no replacement capability union or per-resource selector') and Part 04 §3's closure. §3.8 has no canonical anchor, so a pointer would be the section form `{ part = "05", section = "3.8" }`.
+- **R130 §3.11, Part 04 §10.** The quoted sentence ('A writer MUST NOT publish a manifest with a finding in the `json`, `shape`, `entries`, or `registry_binding` phase') is the publication gate of R130's manifest-conformance clause. It binds a writer only, covers the manifest only, and says nothing of an adapter, of the registry or delivery shapes, or of what a reader or validator need not accept. The clause's sentence is a migration statement tied to one identifier advance; the parts restate no such history, and what survives of the clause is the current identifiers in the two recorded targets.
+- **R144 §3.1, Part 12 §9.** The passage relied on is a heading ('## 9. What an adapter may state about its own run'). The clause's table fixes the number, title and anchor of all eleven sections; a section's heading satisfies that structure and does not state it, and naming one of the eleven would be arbitrary while naming all eleven would record the whole part. §9's content is R144 §3.4's and is recorded there. The entry's note ('in eleven sections') already carries the structural fact.
+- **R144 §3.4, Part 12 §1.** The clause states the binding only by reference: Part 12 section 9's rules 'bind as §3.1 binds Part 12'. The sentence quoted from Part 12 §1 ('Its rules bind a build writing a packet whose manifest declares `profile_id: escapewheel-portable-v0.1` and each adapter such a build reaches') is R144 §3.1's decision and the ledger records this anchor for that clause with the note 'what it binds'. Section 9 is inside Part 12, so §1's scope reaches it without a second pointer.
+
+## Additions recorded since the first reading
+
+- **R38 §2.3, Part 01 §2.3.** The ledger entry was changed on 2026-10-01 and now records Part 01 §2.3 itself, so there is nothing to add. The section does state the clause: 'Anything timed by a clock inherits that clock's window and MAY refine it, but MUST NOT assert a window derived from its own timestamps', and the restored sentence on a clock's own interval.
+- **R128 §3.4, Part 02 §2.6.** The ledger entry was changed on 2026-10-01 and now records `{ part = "02", anchor = "ew-resource-catalog-binding" }` itself. The section does state the clause (catalog_resource MUST name a visible singleton table, the column MUST be a required string identifier with carried identity and free vocabulary, a core catalog MUST NOT name an extension table, no two catalog declarations name one pair), so the recorded target is right and nothing remains to add.
+- **R128 §3.8, Part 04 §9.** The ledger entry was changed on 2026-10-01 and now records `{ part = "04", anchor = "ew-packet-validation-block" }` itself. The section states the clause's fifth paragraph, with the restored 'An implementation MUST NOT treat a resource's validation state as changing its declaration-derived content class or canonicality. No checker verifies this.'
+- **R128 §3.8, Part 12 §5.** The ledger entry was changed on 2026-10-01 and now records `{ part = "12", anchor = "ew-referenced-resource-delivery" }` itself. The section states the clause's third paragraph: the build uses the row's `resource_id` as packet identity and MUST NOT substitute an assigned row ID or source label, MUST preserve each entry's `declaration_id`, and MUST refuse a document whose binding does not resolve or admit the resource ID.
+
+## Recorded targets the second reading keeps
+
+- **R2 §6, Part 03 §5.3.** Part 03 §5.3 is where the clause's third paragraph went: R2 §6 says sort 'records the physical ordering a writer SHOULD apply, from Part 03' with a generated check, and §5.3 states the stored order every table takes and the validator's report on a departure. Later revisions raised the force from warning to error and removed the sort key from the registry (logical_schemas.json has no sort member), but the ordering rule and its check live here, and §5.3 also states that the order scan settles the primary key's uniqueness, the clause's second sentence.
+- **R36 §2.1, Part 04 `ew-prefix-resources`.** Part 04 §5.4 still opens by saying a prefix resource's 'digest and size_bytes are defined over its objects by §4.3'. It no longer states the sum, but it does state the clause's point that a prefix's size is taken over its objects, and it is where a reader of prefix resources is sent to §4.3; it states something of the clause, so the first reader's 'none' is too strong.
+- **R37 §3.1, Part 01 §3.9.** The drop is stale. Since commit 96c0bbcd on 2026-10-01, Part 01 §3.9 reads 'Beyond the terminal anchors a consumer MUST compute the mapping as parent(t) = parent(a) + rate * (t - a), where a is the nearest terminal anchor and rate is fitted over the clock's full anchor sequence. A consumer ... MUST NOT use the intercept of a fit over the whole anchor sequence', which is the clause in full, and the ledger note records the restoration.
+- **R52 §2.4, Part 05 `ew-incremental-revalidation`.** Part 05 §15.4 does not mention a digest, but it states the deduction the clause's permission rests on and calls unchanged: 'the resources an amendment did not write are immutable, so their verdict is determined rather than assumed, and re-establishing it costs nothing'. 'R35 §2's bound is unchanged' is the clause's first statement, and this section is that bound. Dropping it would leave the MAY with no statement of what an amendment is excused from.
+- **R57 §2.1, Part 02 `ew-registry-self-description`.** Part 02 §9.2 states the clause's subject at greater force: 'The incorporated registry meta-schema has `$id` ... Every registry document conforming to that schema MUST carry that value in `$schema`' (§9.1 likewise lists `$schema` among the members every registry document MUST carry). The clause's MAY and first SHOULD became a MUST in a later revision; that is a rule moved, not a rule absent. Only 'SHOULD emit it first' has no statement in §9.1 or §9.2.
+- **R107 §3.1, Part 02 `ew-column-declaration`.** Part 02 §3 ends with the clause's subject as a later revision left it: 'A description MUST NOT contradict or override a machine declaration. Concise, non-duplicative wording remains authoring style rather than a registry-conformance comparison of English text.' R126 §3.8 decided that wording (prose-restatement heuristics 'MUST NOT be registry conformance requirements'; 'concise and non-duplicative wording remains specification style'). The section therefore states what became of the rule, a prohibition on restating narrowed to one on contradicting, and is where a reader of the clause must be sent.
+- **R111 §3.5, Part 00 `ew-core-content-requirements`.** The clause names this section: 'Part 00 §4.1's "Core resources MUST be validated before they are committed" binds a writer'. The sentence still stands there with the actor the clause chose, 'A writer publishes a packet, core resources included, only as Part 05 §9.2 permits', its force having moved to Part 05 §9.2 under R132. That is the clause's decision in other words.
+- **R111 §3.5, Part 09 §5.4.** Part 09 §5.4 still states the content of the clause's extension-verdict requirement, 'an extension's findings never change core's verdict and core's findings never change an extension's', though in the indicative and without naming the validator, citing Part 05 §9.5. The clause names Part 09 as one of the two places, and the section states the concept in other words.
+- **R134 §3.1, Part 07 `ew-reference-object-model`.** Part 07 §4 is informative and does not state the eight-member rule, but it does not state nothing of the clause. R134's crosswalk revises Part 07 §4 for §§3.1 and 3.4 ('an independently released adapter names its protocols by constants'), and R134's own ledger section disposes §3.1 'at Part 03's former section 11.5 and Part 07 §4'. That text is still there: 'An adapter released independently of the writer declares its protocols by naming constants ... An adapter the writer ships declares none', beside the six other static declarations and 'Part 12 §7's document is the same facts'. This is the clause's `protocols` member, plural and replacing `protocol`, as the reference implementation carries it. The target should stay and gain a note saying what it holds, since it is informative and not the owner of the MUST.
+
+## Clauses left with no target
+
+A clause whose every target is dropped cannot stay `applied`. Four of these are among the twelve in [repairs/G-process-and-dispositions.md](repairs/G-process-and-dispositions.md); R112 §3.1 is new.
+
+- **R79 §2.3.** No target remains, so the entry cannot stay `applied`. It should be `disposition = "superseded"`, `by = "R130"`, `note = "R130 §3.7 removed the producing-run requirement this clause classified as a packet obligation; Part 05 §10 MUST NOT require an analysis resource to name a run"`. That matches R31 §3 (superseded by R130) rather than R31 §4 (rationale), because this clause decides which conformance class the MUST fell under; `rationale` is the defensible alternative if the clause is read as explaining R79 §2.1.
+- **R102 §3.1.** No part target remains, so `applied` cannot stand. The entry should be `disposition = "registry"` with the existing note, and `revisions/registry-targets.toml` needs `[target."R102 §3.1"]` with `locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.array_assets/table/columns/8/name", equals = "processing_run_id" }, { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/analysis.array_assets/table/columns/8/name", equals = "processing_run_id" }]` (index 8 in both tables today; `ledger.py` requires the `equals` guard on a pointer through an array and rejects a `where` on a registry entry).
+- **R112 §3.1.** No part states the clause, so `applied` cannot stand, and the guide cannot be a target for a pre-R120 clause. The entry should be `disposition = "superseded"`, `by = "R120"`, `note = "R120 §3.6 has a citation offered as authority for a current rule resolve to the current owner, and an accepted revision cited only for rationale or provenance; revisions/CONTRIBUTING.md §5.3 and spec/CONTRIBUTING.md §7 state it"`. That matches R112 §3.4 and §3.5, already superseded by R120, and satisfies the open ledger draft, which requires `by` to name one later accepted revision.
+- **R148 §3.4.** superseded. The entry should read: [clause."R148 §3.4"] disposition = "superseded" by = "R149" note = "R149 §3.4 advances the core registry_version from the 0.10.0 this clause assigned" `revisions/ledger.py` accepts this today (it checks only that the disposition is one of the four and reads `where` for `applied` alone), and the open draft's §3.1 would accept it: `by` names one later accepted revision and the entry carries no `where`.
+- **R151 §3.2.** superseded. The entry should read: [clause."R151 §3.2"] disposition = "superseded" by = "R152" note = "R152 §3.4 advances the core registry_version from the 0.13.0 this clause assigned" `revisions/ledger.py` accepts this today, and the open draft's §3.1 would accept it: `by` names one later accepted revision and the entry carries no `where`.
+
+## Sections the second reader saw and did not propose
+
+- **R128 §3.4.** Not proposed, so not put in final_where: Part 04 §4.2 (ew-logical-resource-kinds) states the clause's singleton rule ('A singleton entry's `resource_id` equals its declaration ID'), its family rule and the consequence of an inadmissible binding, and Part 04 §10 carries the checks `singleton_identity` and `family_namespace`.
+- **R128 §3.7.** Not proposed, so not put in final_where: Part 04 §7 (ew-resource-lineage) states in prose that the lineage policy 'governs `derived_from` for every logical kind' and that a present `derived_from` is a nonempty array of distinct existing packet resource IDs. It is the section the rejected §4.1 points to and is a better target than §4.1 for that rule.
+- **R128 §3.8.** Not proposed, so not put in final_where: Part 00 §3.2 (ew-packet-content-classes) ends 'A packet entry names a declaration and MUST NOT repeat content class, kind, or canonicality', the clause's title rule with MUST.
+- **R128 §3.9.** Not proposed, so not put in final_where: the clause also advanced the manifest and delivery schema identifiers, whose current values are stated in Part 04 §1 (ew-packet-catalog-scope) and Part 12 §1 (ew-adapter-interface-scope); neither is recorded for this clause.
+- **R129 §3.3.** Not proposed, so not put in final_where: Part 03 §5.2 (ew-table-partitioning) states 'Partitioned tables are not part of this profile ... the present `parquet` interface is one object', the profile half of the same sentence.
+- **R130 §3.11.** Not proposed, so not put in final_where: the clause also advanced the manifest and delivery schema identifiers, whose current values are stated in Part 04 §1 (ew-packet-catalog-scope) and Part 12 §1 (ew-adapter-interface-scope). Every value the clause assigned has since advanced again (R136 §3.3, R152 §3.4 and others).
+- **R146 §3.5.** Not proposed, so not put in final_where: Part 06 §3 (ew-analysis-layout-criterion) carries the other citation the clause requires, 'Part 10 §6 records what a materialized copy of aligned spikes costs, and Part 07 §6 what aligning them and returning a trial table as a view cost'. The entry is complete for 'Part 06 §§3 and 4' only with both.
