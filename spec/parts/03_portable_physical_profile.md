@@ -14,7 +14,11 @@ forms, ownership compatibility, variants, reader floors, floor roles, overriding
 anchors. This prose owns their meaning and actor obligations. A conforming distributed copy MUST
 pass the schema and the generic cross-member checker at a packaging or equivalent conformance
 boundary; an implementation MAY cache that result and MUST NOT revalidate an unchanged bundled
-descriptor for each packet.
+descriptor for each packet. The generic cross-member checker MUST enforce the requirements this
+part places on a descriptor's members, and MUST NOT rely on this profile's identifiers or
+assignments to do so: a descriptor that satisfies the schema and differs from the incorporated one
+only in those is judged by the same requirements. No check verifies the second obligation, since
+this specification incorporates one descriptor.
 
 The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
 `https://escapewheel.org/schemas/physical-profile/0.3.0`, and the portable descriptor's `$schema`

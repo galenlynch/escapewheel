@@ -114,6 +114,10 @@ writer records one, and
 [Part 03 §10](03_portable_physical_profile.md#ew-owned-resource-digests) states what a portable
 resource's digest covers.
 
+A consumer MUST NOT infer the instrument that produced an array from its entry's `uri`: a location
+is a label, and the array's device is the reference
+([Part 01 §3.17](01_semantic_standard.md#ew-array-asset-concept)). No checker verifies this.
+
 <a id="ew-logical-resource-kinds" data-spec-anchor="canonical"></a>
 ### 4.2 Resolved logical facts
 
@@ -231,6 +235,8 @@ Where a resource is a prefix rather than a single object — an external store, 
 Such a resource MAY additionally declare a `members` array recording what was seen, one member per object. A member records its object's single-object value as `digest`, a string under its entry's algorithm, and MAY carry a `store_digest`. The incorporated schema requires every member to record `digest` where its entry records one, and forbids a member recording one where its entry does not. Carrying each member's own value is what lets a consumer that fetched three chunks verify those three without the other two hundred.
 
 A member array is a record, not a resolution rule: a reader hands the prefix to the array library and does not enumerate it.
+
+Where an external entry declares `members`, level 3a ([§5.3](#ew-external-resource-verification)) establishes that each member's recorded `size_bytes` holds, and not only the entry's total: two members changing in opposite directions leave a total correct.
 
 Where `members` accompanies `digest`, the listing digested MUST be the declared one, so the enumeration and the digest cannot disagree.
 

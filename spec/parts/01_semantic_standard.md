@@ -291,6 +291,10 @@ and MUST NOT infer an instrument from an asset's `semantic_type` or name: those 
 device is a reference. Parts 02 and 06 own logical declaration and resource-level provenance;
 Parts 03 and 04 own physical encoding, location, and packet binding.
 
+Where a packet records the processing run that produced an array and the writer knows which run
+that is, the writer MUST name that run on the array asset; an acquired array names none. No checker
+verifies this.
+
 <a id="ew-media-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.18 Media asset
 

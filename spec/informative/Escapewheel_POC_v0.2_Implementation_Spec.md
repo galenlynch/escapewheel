@@ -884,6 +884,10 @@ and MUST NOT infer an instrument from an asset's `semantic_type` or name: those 
 device is a reference. Parts 02 and 06 own logical declaration and resource-level provenance;
 Parts 03 and 04 own physical encoding, location, and packet binding.
 
+Where a packet records the processing run that produced an array and the writer knows which run
+that is, the writer MUST name that run on the array asset; an acquired array names none. No checker
+verifies this.
+
 <a id="ew-media-asset-concept" data-spec-anchor="canonical"></a>
 ### 3.18 Media asset
 
@@ -1255,7 +1259,7 @@ string  int32  int64  float32  float64  bool  timestamp  date  json_string
 
 ### 5.2 No nested types
 
-A column's type MUST NOT be `list`, `struct`, or `map`. A repeated value becomes a child table; a semi-structured value becomes a `json_string` in an optional column.
+A column's type MUST NOT be `list`, `struct`, or `map`. A registry document MUST declare a repeated value, a fact holding zero or more values for one row, as a child table, and MUST NOT declare it as a delimited string or as JSON. No checker verifies this beyond the type prohibition above. A semi-structured value becomes a `json_string` in an optional column.
 
 This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
 
@@ -1478,8 +1482,8 @@ from the discriminator's row, so a null paired value is not undeterminable: the 
 names no row of that kind. A packet MUST NOT hold a specialised row whose discriminator value is
 null, since that row would pair a value with no kind.
 
-**Discriminators generate checks.** Each check below is at **error**, and a per-kind check is
-generated for each kind a packet's rows name:
+**Discriminators generate checks.** A validator MUST generate each check below for what its row
+names, at **error**, and MUST generate a per-kind check once for each kind a packet's rows name:
 
 | check | generated for | returns |
 |---|---|---|
@@ -1671,7 +1675,7 @@ in this way, and the edition that applies.
 A closed column's `enum` is its whole value set and spells every value it admits. On a closed
 column, `authority` records where the `enum`'s spelling came from and invokes no nomenclature.
 
-A column's declarations are rendered in `informative/tables.md` from the fields holding them — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
+`informative/tables.md` MUST render these declarations of a column from the fields holding them: its vocabulary, the closed set itself where the vocabulary is `closed`, its reserved values, its authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is.
 
 <a id="ew-registry-conformance" data-spec-anchor="canonical"></a>
 ### 9.4 Registry-document conformance
@@ -1727,7 +1731,9 @@ extension phases incomplete, not invalid. Shape and available extension-local in
 run, and an independent invalid result dominates incompleteness.
 
 Applicable semantic invariants run in descriptor order. Tier 2 rules then receive Part 11 static
-validation. External lexical-domain validation runs last and offline.
+validation. External lexical-domain validation runs last and offline. A checker that lacks the UCUM
+edition §13 identifies MUST report the `external_domain` phase as `unsupported`, and MUST NOT judge
+a literal `unit` by an approximation of that syntax.
 
 The complete result contains the selected descriptor ID where selection succeeded, exactly one
 overall state from `valid`, `invalid`, `unsupported`, and `incomplete`, and one record for every
@@ -2052,6 +2058,8 @@ A packet carrying `core.units` MUST carry `core.sorting_runs` and `core.curation
 
 A table keyed on a unit carries `unit_id` and not the run or the curation, and a
 consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`.
+A consumer MUST NOT identify a unit by its `unit_id` outside the packet that assigned it, where the
+number means nothing. No checker verifies this.
 
 `core.units` also declares what its spikes are counted on and measured in: `clock_id`, required,
 and `amplitude_unit`, nullable and open. Both are facts of the sorting run, and a
@@ -2209,7 +2217,11 @@ forms, ownership compatibility, variants, reader floors, floor roles, overriding
 anchors. This prose owns their meaning and actor obligations. A conforming distributed copy MUST
 pass the schema and the generic cross-member checker at a packaging or equivalent conformance
 boundary; an implementation MAY cache that result and MUST NOT revalidate an unchanged bundled
-descriptor for each packet.
+descriptor for each packet. The generic cross-member checker MUST enforce the requirements this
+part places on a descriptor's members, and MUST NOT rely on this profile's identifiers or
+assignments to do so: a descriptor that satisfies the schema and differs from the incorporated one
+only in those is judged by the same requirements. No check verifies the second obligation, since
+this specification incorporates one descriptor.
 
 The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
 `https://escapewheel.org/schemas/physical-profile/0.3.0`, and the portable descriptor's `$schema`
@@ -2879,6 +2891,10 @@ writer records one, and
 [Part 03 §10](../parts/03_portable_physical_profile.md#ew-owned-resource-digests) states what a portable
 resource's digest covers.
 
+A consumer MUST NOT infer the instrument that produced an array from its entry's `uri`: a location
+is a label, and the array's device is the reference
+([Part 01 §3.17](../parts/01_semantic_standard.md#ew-array-asset-concept)). No checker verifies this.
+
 <a id="ew-logical-resource-kinds" data-spec-anchor="canonical"></a>
 ### 4.2 Resolved logical facts
 
@@ -2996,6 +3012,8 @@ Where a resource is a prefix rather than a single object — an external store, 
 Such a resource MAY additionally declare a `members` array recording what was seen, one member per object. A member records its object's single-object value as `digest`, a string under its entry's algorithm, and MAY carry a `store_digest`. The incorporated schema requires every member to record `digest` where its entry records one, and forbids a member recording one where its entry does not. Carrying each member's own value is what lets a consumer that fetched three chunks verify those three without the other two hundred.
 
 A member array is a record, not a resolution rule: a reader hands the prefix to the array library and does not enumerate it.
+
+Where an external entry declares `members`, level 3a ([§5.3](#ew-external-resource-verification)) establishes that each member's recorded `size_bytes` holds, and not only the entry's total: two members changing in opposite directions leave a total correct.
 
 Where `members` accompanies `digest`, the listing digested MUST be the declared one, so the enumeration and the digest cannot disagree.
 
@@ -5134,6 +5152,11 @@ language. The JSON artifacts MUST conform to the incorporated profile schema. Th
 the meanings defined here; neither artifact makes a parser, abstract syntax tree, database engine,
 or validator implementation authoritative.
 
+An identifier in the descriptor's `iso_feature_dependencies` names an ISO feature or subfeature
+whose definition this language depends on. It is not a claim of full ISO conformance, and it admits
+neither every form that feature covers nor any syntax by itself. The sections that
+`contract_clauses` names state the complete permission and semantic boundary of the language.
+
 A validator claiming support for this language MUST support the identified contract as a whole.
 It MUST NOT construct a different language by independently toggling profile dependencies or
 settings. A changed language contract MUST receive a new language ID. A registry may change its
@@ -5263,7 +5286,8 @@ domains retain that domain. `INTEGER` with `BIGINT` yields `BIGINT`; an integer 
 `DOUBLE PRECISION`; and an exact with an approximate numeric yields the approximate domain,
 widened to `DOUBLE PRECISION` if either operand has it. No other pair has an implicit common type.
 These rules govern comparisons, `CASE`, `COALESCE`, set operations, and routine arguments. An
-exact-decimal literal may instead compare with an exact numeric by mathematical value.
+exact-decimal literal instead compares with an exact numeric by mathematical value, without
+rounding.
 
 <a id="ew-tier-2-deterministic-semantics" data-spec-anchor="canonical"></a>
 ## 5. Numeric, timestamp, and character semantics

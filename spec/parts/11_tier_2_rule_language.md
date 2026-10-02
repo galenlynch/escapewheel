@@ -24,6 +24,11 @@ language. The JSON artifacts MUST conform to the incorporated profile schema. Th
 the meanings defined here; neither artifact makes a parser, abstract syntax tree, database engine,
 or validator implementation authoritative.
 
+An identifier in the descriptor's `iso_feature_dependencies` names an ISO feature or subfeature
+whose definition this language depends on. It is not a claim of full ISO conformance, and it admits
+neither every form that feature covers nor any syntax by itself. The sections that
+`contract_clauses` names state the complete permission and semantic boundary of the language.
+
 A validator claiming support for this language MUST support the identified contract as a whole.
 It MUST NOT construct a different language by independently toggling profile dependencies or
 settings. A changed language contract MUST receive a new language ID. A registry may change its
@@ -153,7 +158,8 @@ domains retain that domain. `INTEGER` with `BIGINT` yields `BIGINT`; an integer 
 `DOUBLE PRECISION`; and an exact with an approximate numeric yields the approximate domain,
 widened to `DOUBLE PRECISION` if either operand has it. No other pair has an implicit common type.
 These rules govern comparisons, `CASE`, `COALESCE`, set operations, and routine arguments. An
-exact-decimal literal may instead compare with an exact numeric by mathematical value.
+exact-decimal literal instead compares with an exact numeric by mathematical value, without
+rounding.
 
 <a id="ew-tier-2-deterministic-semantics" data-spec-anchor="canonical"></a>
 ## 5. Numeric, timestamp, and character semantics

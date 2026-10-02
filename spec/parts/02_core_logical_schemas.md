@@ -287,7 +287,7 @@ string  int32  int64  float32  float64  bool  timestamp  date  json_string
 
 ### 5.2 No nested types
 
-A column's type MUST NOT be `list`, `struct`, or `map`. A repeated value becomes a child table; a semi-structured value becomes a `json_string` in an optional column.
+A column's type MUST NOT be `list`, `struct`, or `map`. A registry document MUST declare a repeated value, a fact holding zero or more values for one row, as a child table, and MUST NOT declare it as a delimited string or as JSON. No checker verifies this beyond the type prohibition above. A semi-structured value becomes a `json_string` in an optional column.
 
 This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
 
@@ -510,8 +510,8 @@ from the discriminator's row, so a null paired value is not undeterminable: the 
 names no row of that kind. A packet MUST NOT hold a specialised row whose discriminator value is
 null, since that row would pair a value with no kind.
 
-**Discriminators generate checks.** Each check below is at **error**, and a per-kind check is
-generated for each kind a packet's rows name:
+**Discriminators generate checks.** A validator MUST generate each check below for what its row
+names, at **error**, and MUST generate a per-kind check once for each kind a packet's rows name:
 
 | check | generated for | returns |
 |---|---|---|
@@ -703,7 +703,7 @@ in this way, and the edition that applies.
 A closed column's `enum` is its whole value set and spells every value it admits. On a closed
 column, `authority` records where the `enum`'s spelling came from and invokes no nomenclature.
 
-A column's declarations are rendered in `informative/tables.md` from the fields holding them — the vocabulary, the closed set itself, the reserved values, the authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is, and it showed none of them, which is why 35 descriptions had come to say them in prose.
+`informative/tables.md` MUST render these declarations of a column from the fields holding them: its vocabulary, the closed set itself where the vocabulary is `closed`, its reserved values, its authorities by name, and a discriminator's `resolves`. That document is what a person reads to learn what a column is.
 
 <a id="ew-registry-conformance" data-spec-anchor="canonical"></a>
 ### 9.4 Registry-document conformance
@@ -759,7 +759,9 @@ extension phases incomplete, not invalid. Shape and available extension-local in
 run, and an independent invalid result dominates incompleteness.
 
 Applicable semantic invariants run in descriptor order. Tier 2 rules then receive Part 11 static
-validation. External lexical-domain validation runs last and offline.
+validation. External lexical-domain validation runs last and offline. A checker that lacks the UCUM
+edition §13 identifies MUST report the `external_domain` phase as `unsupported`, and MUST NOT judge
+a literal `unit` by an approximation of that syntax.
 
 The complete result contains the selected descriptor ID where selection succeeded, exactly one
 overall state from `valid`, `invalid`, `unsupported`, and `incomplete`, and one record for every
@@ -1084,6 +1086,8 @@ A packet carrying `core.units` MUST carry `core.sorting_runs` and `core.curation
 
 A table keyed on a unit carries `unit_id` and not the run or the curation, and a
 consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`.
+A consumer MUST NOT identify a unit by its `unit_id` outside the packet that assigned it, where the
+number means nothing. No checker verifies this.
 
 `core.units` also declares what its spikes are counted on and measured in: `clock_id`, required,
 and `amplitude_unit`, nullable and open. Both are facts of the sorting run, and a
