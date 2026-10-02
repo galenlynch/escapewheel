@@ -8,6 +8,8 @@
   manifest that can be read.
 - :class:`FormatCheckUnavailable` -- the installation cannot assert a format the manifest schema
   requires.
+- :class:`LoweringFailed` -- a Tier 2 query cannot be given to the engine so that it evaluates as
+  its language defines it.
 - :class:`OrderViolation` -- a stream of batches leaves its declared order or repeats a key, as
   one :class:`OrderFault`.
 - :class:`_Unmappable` -- a tick reaches no value on another clock; raised and caught inside the
@@ -88,6 +90,23 @@ class FormatCheckUnavailable(ValidatorError):
     """
 
 
+class LoweringFailed(ValidatorError):
+    """A Tier 2 query cannot be given to the engine so that it evaluates as its language defines it.
+
+    A limit of the lowering and no defect of the rule, whose evaluation is then incomplete
+    (Part 11 §8).
+
+    Attributes
+    ----------
+    expression : str or None
+        The expression the lowering stops at, or None where it is the whole query.
+    """
+
+    def __init__(self, message: str, *, expression: str | None = None) -> None:
+        super().__init__(message if expression is None else f"{message}: {expression}")
+        self.expression = expression
+
+
 class OrderFault(StrEnum):
     """How a row departs from the order its table declares."""
 
@@ -129,6 +148,7 @@ class _Unmappable(ValidatorError):
 
 __all__ = [
     "FormatCheckUnavailable",
+    "LoweringFailed",
     "OrderFault",
     "OrderViolation",
     "ReplacedPacketUnreadable",

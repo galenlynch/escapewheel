@@ -93,7 +93,7 @@ def execute(vector: dict[str, Any], host_zone: str = "UTC") -> tuple[list[str], 
             if rows:
                 marks = ", ".join("?" for _ in spec["columns"])
                 connection.executemany(f"INSERT INTO {resource} VALUES ({marks})", rows)
-        relation = connection.sql(lower(vector["query"]))
+        relation = connection.sql(lower(vector["query"], vector["inputs"]))
         domains = [DOMAINS.get(str(engine_type), str(engine_type)) for engine_type in relation.types]
         result = relation.arrow().read_all()
         return domains, [

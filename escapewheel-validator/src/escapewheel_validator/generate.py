@@ -24,6 +24,7 @@ from escapewheel_reader.registries import declared_tables
 
 from . import check_table
 from .check_table import CheckEntry
+from .errors import LoweringFailed
 from .lowering import lower
 from .registry_document import CheckedRegistryContext, RegistryRejected
 from .vocabulary import Level, RegistryState
@@ -49,6 +50,10 @@ class Check:
     optional_columns : frozenset of str
         The `optional` columns the query reads. A table omitting one leaves nothing to check, so the
         runner skips the check rather than reporting a query that cannot bind (Part 02 §§6, 10.1).
+    incomplete : str or None
+        Why a rule's query cannot be given to the engine so that it evaluates as Part 11 defines it,
+        or None. `sql` is then the authored query, and the runner reports the rule as incomplete
+        (Part 11 §8) without running it.
     """
 
     entry: CheckEntry
@@ -59,6 +64,7 @@ class Check:
     dependencies: frozenset[str] = frozenset()
     optional_columns: frozenset[str] = frozenset()
     column: str | None = None
+    incomplete: str | None = None
 
     def __post_init__(self) -> None:
         """Default a generated check's inputs to its attached resource."""
@@ -74,6 +80,27 @@ class Check:
     def level(self) -> Level:
         """The level of a finding of this check."""
         return self.entry.level
+
+
+def rule_check(
+    entry: CheckEntry,
+    message: str,
+    sql: str,
+    resource: str,
+    tables: Mapping[str, Mapping[str, Any]],
+    dependencies: frozenset[str] = frozenset(),
+) -> Check:
+    """Return a Tier 2 rule's check over its lowered query, marked incomplete where it has none.
+
+    Parameters
+    ----------
+    tables : Mapping
+        The declaration of each table the rule may name, by resource ID.
+    """
+    try:
+        return Check(entry, message, lower(sql, tables), resource, tier=2, dependencies=dependencies)
+    except LoweringFailed as failure:
+        return Check(entry, message, sql, resource, tier=2, dependencies=dependencies, incomplete=str(failure))
 
 
 def _only(columns: Sequence[str]) -> str | None:
@@ -545,7 +572,7 @@ def _generate(  # noqa: C901
             if rule.get("advisory") and not advisory:
                 continue
             entry = check_table.rule(rule["id"], rule["level"])
-            checks.append(Check(entry, rule["message"], lower(rule["sql"]), resource, tier=2))
+            checks.append(rule_check(entry, rule["message"], rule["sql"], resource, tables))
 
     return checks
 

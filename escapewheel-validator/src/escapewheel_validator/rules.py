@@ -27,8 +27,7 @@ from escapewheel_reader.resource_ids import (
 )
 
 from . import check_table
-from .generate import Check, Specialisation, concerns, generate
-from .lowering import lower
+from .generate import Check, Specialisation, concerns, generate, rule_check
 from .registry_document import (
     CheckedRegistryContext,
 )
@@ -207,7 +206,10 @@ def _tier2(context: CheckedRegistryContext, core_context: CheckedRegistryContext
     language = document.get("rule_language")
     checked: list[Check] = []
     invalid: list[tuple[Any, str]] = []
-    for resource, table in declared_tables(document).items() if language == PROFILE_ID else ():
+    supported = language == PROFILE_ID
+    # What a rule may name: an extension's rule reaches core's tables beside its own (Part 11 §3).
+    visible = {**declared_tables(core_registry), **declared_tables(document)} if supported else {}
+    for resource, table in declared_tables(document).items() if supported else ():
         for rule in table.get("rules", []):
             if rule.get("advisory") and not advisory:
                 continue
@@ -216,16 +218,8 @@ def _tier2(context: CheckedRegistryContext, core_context: CheckedRegistryContext
             except RuleProfileError as exc:
                 invalid.append((rule.get("id"), str(exc)))
                 continue
-            checked.append(
-                Check(
-                    check_table.rule(rule["id"], rule["level"]),
-                    rule["message"],
-                    lower(parsed.sql),
-                    resource,
-                    tier=2,
-                    dependencies=parsed.resources,
-                )
-            )
+            entry = check_table.rule(rule["id"], rule["level"])
+            checked.append(rule_check(entry, rule["message"], parsed.sql, resource, visible, parsed.resources))
     found = _Tier2(language, tuple(checked), tuple(invalid))
     if from_bytes:
         if len(_TIER2) >= _TIER2_KEPT:
@@ -270,6 +264,11 @@ def _run_checks(
                 EvaluationStatus.INCOMPLETE,
                 rule=check.id,
                 detail=f"unreadable input(s): {', '.join(missing)}",
+            )
+            continue
+        if check.incomplete is not None:
+            report.record_evaluation(
+                registry_id, EvaluationStatus.INCOMPLETE, rule=check.id, detail=check.incomplete[:160]
             )
             continue
         if check.optional_columns and not check.optional_columns <= set(_relation_columns(connection, check.resource)):

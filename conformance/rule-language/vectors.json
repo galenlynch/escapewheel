@@ -214,6 +214,139 @@
       "row_order_ignored": true
     },
     {
+      "id": "exact-to-approximate-comparison-of-a-wide-decimal-rounds-to-nearest",
+      "mode": "execute",
+      "inputs": {
+        "core.products": {
+          "primary_key": ["left_factor"],
+          "columns": [{"name": "left_factor", "type": "int64"}, {"name": "right_factor", "type": "int64"}, {"name": "stored", "type": "float64"}],
+          "rows": [[7353365817, 4496161461, 3.306191999503018e+19], [8239944662, 6115947713, 5.0395070710805455e+19], [4096, 9007199254740993, 3.6893488147419103e+19], [8192, 9007199254740995, 7.378697629483824e+19], [5021767633, 6455580697, 3.2418426196414177e+19]]
+        }
+      },
+      "query": "SELECT left_factor FROM core.products WHERE CAST(left_factor AS DECIMAL(38,0)) * CAST(right_factor AS DECIMAL(38,0)) = stored",
+      "expected_resources": ["core.products"],
+      "expected_result_names": ["left_factor"],
+      "expected_rows": [["7353365817"], ["8239944662"], ["4096"], ["8192"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "exact-to-approximate-cast-of-a-wide-decimal-rounds-to-nearest",
+      "mode": "execute",
+      "inputs": {
+        "core.products": {
+          "primary_key": ["left_factor"],
+          "columns": [{"name": "left_factor", "type": "int64"}, {"name": "right_factor", "type": "int64"}, {"name": "stored", "type": "float64"}],
+          "rows": [[7353365817, 4496161461, 3.306191999503018e+19], [8239944662, 6115947713, 5.0395070710805455e+19], [4096, 9007199254740993, 3.6893488147419103e+19], [8192, 9007199254740995, 7.378697629483824e+19]]
+        }
+      },
+      "query": "SELECT CAST(CAST(left_factor AS DECIMAL(38,0)) * CAST(right_factor AS DECIMAL(38,0)) AS DOUBLE PRECISION) AS converted FROM core.products",
+      "expected_resources": ["core.products"],
+      "expected_result_names": ["converted"],
+      "expected_result_domains": ["DOUBLE PRECISION"],
+      "expected_rows": [["3.306191999503018e+19"], ["5.0395070710805455e+19"], ["3.6893488147419103e+19"], ["7.378697629483824e+19"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "exact-to-approximate-decimal-literal-rounds-to-nearest",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {
+          "primary_key": ["value"],
+          "columns": [{"name": "value", "type": "float64"}],
+          "rows": [[9.76184805349107], [9185068664893502.0], [12.285513465530402], [9.761848053491068], [9185068664893500.0], [12.285513465530403]]
+        }
+      },
+      "query": "SELECT value FROM core.measurements WHERE value = 9.761848053491069 OR value = 9185068664893501.9 OR value = 12.28551346553040255",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["value"],
+      "expected_rows": [["9.76184805349107"], ["9185068664893502.0"], ["12.285513465530402"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "exact-to-approximate-decimal-literal-to-real-rounds-to-nearest",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {
+          "primary_key": ["value"],
+          "columns": [{"name": "value", "type": "float32"}],
+          "rows": [[7.603494167327881], [32138962.0], [7.603494644165039], [32138960.0]]
+        }
+      },
+      "query": "SELECT value FROM core.measurements WHERE value = 7.6034944 OR value = 32138961.3",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["value"],
+      "expected_result_domains": ["REAL"],
+      "expected_rows": [["7.603494167327881"], ["32138962.0"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "exact-to-approximate-integer-literal-beyond-bigint-rounds-to-nearest",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {
+          "primary_key": ["value"],
+          "columns": [{"name": "value", "type": "float64"}],
+          "rows": [[2.1249824117375504e+19], [2.12498241173755e+19]]
+        }
+      },
+      "query": "SELECT value FROM core.measurements WHERE value = 21249824117375502558",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["value"],
+      "expected_rows": [["2.1249824117375504e+19"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "exact-to-approximate-ordering-value-rounds-to-nearest",
+      "mode": "execute",
+      "inputs": {
+        "core.products": {
+          "primary_key": ["left_factor"],
+          "columns": [{"name": "left_factor", "type": "int64"}, {"name": "right_factor", "type": "int64"}, {"name": "stored", "type": "float64"}],
+          "rows": [[7353365817, 4496161461, 3.306191999503018e+19]]
+        }
+      },
+      "query": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY CAST(left_factor AS DECIMAL(38,0)) * CAST(right_factor AS DECIMAL(38,0))) AS median_value FROM core.products",
+      "expected_resources": ["core.products"],
+      "expected_result_names": ["median_value"],
+      "expected_result_domains": ["DOUBLE PRECISION"],
+      "expected_rows": [["3.306191999503018e+19"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "exact-to-approximate-coalesce-and-case-round-to-nearest",
+      "mode": "execute",
+      "inputs": {
+        "core.products": {
+          "primary_key": ["left_factor"],
+          "columns": [{"name": "left_factor", "type": "int64"}, {"name": "right_factor", "type": "int64"}, {"name": "stored", "type": "float64"}],
+          "rows": [[7353365817, 4496161461, 3.306191999503018e+19], [8239944662, 6115947713, 5.0395070710805455e+19]]
+        }
+      },
+      "query": "SELECT COALESCE(CAST(left_factor AS DECIMAL(38,0)) * CAST(right_factor AS DECIMAL(38,0)), stored) AS coalesced, CASE WHEN left_factor > 0 THEN CAST(left_factor AS DECIMAL(38,0)) * CAST(right_factor AS DECIMAL(38,0)) ELSE stored END AS chosen FROM core.products",
+      "expected_resources": ["core.products"],
+      "expected_result_names": ["coalesced", "chosen"],
+      "expected_result_domains": ["DOUBLE PRECISION", "DOUBLE PRECISION"],
+      "expected_rows": [["3.306191999503018e+19", "3.306191999503018e+19"], ["5.0395070710805455e+19", "5.0395070710805455e+19"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "exact-to-approximate-set-operation-rounds-to-nearest",
+      "mode": "execute",
+      "inputs": {
+        "core.products": {
+          "primary_key": ["left_factor"],
+          "columns": [{"name": "left_factor", "type": "int64"}, {"name": "right_factor", "type": "int64"}, {"name": "stored", "type": "float64"}],
+          "rows": [[7353365817, 4496161461, 0.5]]
+        }
+      },
+      "query": "SELECT CAST(left_factor AS DECIMAL(38,0)) * CAST(right_factor AS DECIMAL(38,0)) AS converted FROM core.products UNION ALL SELECT stored AS converted FROM core.products",
+      "expected_resources": ["core.products"],
+      "expected_result_names": ["converted"],
+      "expected_result_domains": ["DOUBLE PRECISION"],
+      "expected_rows": [["3.306191999503018e+19"], ["0.5"]],
+      "row_order_ignored": true
+    },
+    {
       "id": "ddl-is-rejected",
       "mode": "reject",
       "inputs": {},

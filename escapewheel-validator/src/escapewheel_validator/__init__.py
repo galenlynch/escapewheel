@@ -64,6 +64,7 @@ from . import check_table
 from .check_table import CheckEntry, Scope
 from .errors import (
     FormatCheckUnavailable,
+    LoweringFailed,
     OrderFault,
     OrderViolation,
     ReplacedPacketUnreadable,
@@ -99,6 +100,7 @@ __all__ = [
     "Finding",
     "FormatCheckUnavailable",
     "Level",
+    "LoweringFailed",
     "OrderFault",
     "OrderViolation",
     "RegistryEvaluation",

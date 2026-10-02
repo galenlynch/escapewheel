@@ -82,6 +82,7 @@ Errors
    UnknownAlgorithm
    ReplacedPacketUnreadable
    FormatCheckUnavailable
+   LoweringFailed
    OrderViolation
    OrderFault
 

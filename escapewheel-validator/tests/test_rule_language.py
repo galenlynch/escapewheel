@@ -78,6 +78,32 @@ def test_a_median_over_an_exact_value_is_evaluated_in_binary64(packet_root):
     assert [f.rows for f in report.findings if f.check == "core.intervals.profile_test"] == [(("0.5",),)]
 
 
+def test_an_exact_value_converts_to_the_nearest_binary64(packet_root):
+    """Part 11 §4: the engine alone converts this product, which exceeds 2^64, to a binary64 one place off."""
+    sql = (
+        "SELECT interval_id FROM core.intervals "
+        "WHERE CAST(7353365817 AS DECIMAL(38,0)) * CAST(4496161461 AS DECIMAL(38,0)) = 3.306191999503018E19"
+    )
+    assert float(7353365817 * 4496161461) == 3.306191999503018e19
+    install_registry(packet_root, _rule(read_registry(packet_root), sql))
+    report = validate(open_packet(packet_root))
+    assert [bool(f.rows) for f in report.findings if f.check == "core.intervals.profile_test"] == [True]
+
+
+def test_a_conversion_the_validator_cannot_round_is_incomplete_not_a_packet_finding(packet_root):
+    """Part 11 §8: a `USING` join converts its exact column where no authored expression stands."""
+    sql = (
+        "WITH wide AS (SELECT CAST(start_tick AS DECIMAL(38,0)) AS tick FROM core.intervals), "
+        "narrow AS (SELECT CAST(start_tick AS DOUBLE PRECISION) AS tick FROM core.intervals) "
+        "SELECT wide.tick FROM wide INNER JOIN narrow USING (tick)"
+    )
+    install_registry(packet_root, _rule(read_registry(packet_root), sql))
+    report = validate(open_packet(packet_root))
+    assert (report.verdict(), report.verdict("core")) == ("incomplete", "incomplete")
+    assert any(e.status == "incomplete" and e.rule == "core.intervals.profile_test" for e in report.evaluations)
+    assert not any(f.check == "core.intervals.profile_test" for f in report.findings)
+
+
 @pytest.mark.parametrize(
     ("units", "conforming"),
     [

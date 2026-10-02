@@ -13,6 +13,7 @@ from escapewheel_validator.rule_language import check_rule
 
 ROOT = Path(__file__).resolve().parents[2]
 CORE = json.loads((ROOT / "spec/artifacts/logical_schemas.json").read_text())
+TABLES = {name: declared["table"] for name, declared in CORE["resources"].items() if declared["kind"] == "table"}
 
 
 def _flagged(rule_id, rows):
@@ -29,7 +30,7 @@ def _flagged(rule_id, rows):
         names = ", ".join(f'"{name}"' for name in row)
         values = ", ".join("?" * len(row))
         connection.execute(f"INSERT INTO {resource_id} ({names}) VALUES ({values})", list(row.values()))
-    return len(connection.sql(lower(check_rule(rule["sql"], CORE).sql)).fetchall())
+    return len(connection.sql(lower(check_rule(rule["sql"], CORE).sql, TABLES)).fetchall())
 
 
 RATE_FORMS = {
