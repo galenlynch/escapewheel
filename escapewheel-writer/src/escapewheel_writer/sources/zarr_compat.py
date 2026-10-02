@@ -2,6 +2,7 @@
 
 - :func:`read_array` -- a one-dimensional array's values, or its first few.
 - :class:`DenseV2` -- a multi-dimensional array, read a slab of rows at a time.
+- :data:`CHUNK_WORKERS` -- how many of a slab's chunks are read at once.
 - :func:`members` -- a group's children by name.
 - :func:`attrs`, :func:`attrs_at` -- a node's attributes, from its `.zattrs` or the `.zmetadata`.
 
@@ -15,6 +16,7 @@ from __future__ import annotations
 
 import itertools
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +25,10 @@ from escapewheel_reader.resources import ZARR_METADATA_FILENAMES
 from numpy.typing import NDArray
 
 from ..errors import SourceFault, UnsupportedEncoding
+
+#: A chunk on a store is an object, and reading one is mostly waiting on the round trips that
+#: confirm and fetch it, so a slab's chunks are read this many at a time.
+CHUNK_WORKERS = 8
 
 
 def _meta(path: Path) -> dict[str, Any] | None:
@@ -232,8 +238,10 @@ class DenseV2:
         first, last = start // self.chunks[0], (stop - 1) // self.chunks[0]
         grid = [range(first, last + 1)]
         grid += [range((n + c - 1) // c) for n, c in zip(self.shape[1:], self.chunks[1:], strict=True)]
-        for index in itertools.product(*grid):
-            block = self._chunk(index)
+        indices = list(itertools.product(*grid))
+        with ThreadPoolExecutor(max_workers=min(len(indices), CHUNK_WORKERS)) as pool:
+            blocks = list(pool.map(self._chunk, indices))
+        for index, block in zip(indices, blocks, strict=True):
             if block is None:
                 continue
             # Where this chunk sits in the array, and the part of it the caller asked for.
@@ -256,9 +264,11 @@ class DenseV2:
         import numcodecs
 
         chunk = self.path / self._separator.join(str(i) for i in index)
-        if not chunk.is_file():
+        # Read rather than asked about first: on a store, asking is a round trip of its own.
+        try:
+            buffer: Any = chunk.read_bytes()
+        except FileNotFoundError:
             return None
-        buffer: Any = chunk.read_bytes()
         if self._meta.get("compressor"):
             buffer = numcodecs.get_codec(self._meta["compressor"]).decode(buffer)
         for codec in reversed([numcodecs.get_codec(f) for f in self._filters]):
@@ -266,4 +276,4 @@ class DenseV2:
         return np.frombuffer(buffer, dtype=self.dtype).reshape(self.chunks, order=self._order)
 
 
-__all__ = ["DenseV2", "attrs", "attrs_at", "members", "read_array"]
+__all__ = ["CHUNK_WORKERS", "DenseV2", "attrs", "attrs_at", "members", "read_array"]
