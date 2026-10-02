@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R164 accepted. R42 and R73 withdrawn. 1 proposal and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R164 accepted. R42 and R73 withdrawn. 2 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -136,8 +136,10 @@ already solves that this code solves again.
 
 ## 3a. One draft awaits acceptance
 
-The draft is under `revisions/drafts/`. One proposal is open: an amendment drops a held column only
-where its recipe names it, and a validator reports a file column no bound registry declares.
+The draft is under `revisions/drafts/`. Two proposals are open: an amendment drops a held column
+only where its recipe names it, and a validator reports a file column no bound registry declares;
+and a null identifier says only that a row names nothing, as the default reading of every nullable
+naming column, with `label_id` padding and the axis-form columns as the exceptions.
 
 - **A rule means what Part 11 defines on any engine.** A draft, promoted 2026-10-02 and not
   appraised. Part 11 §4 states the ISO meaning of `BETWEEN` and `IN`, Part 11 §8 makes a valid
