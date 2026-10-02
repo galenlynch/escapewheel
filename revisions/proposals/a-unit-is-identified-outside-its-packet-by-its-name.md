@@ -726,7 +726,8 @@ no check sees two things merged under one name (§4).
 
 ## 6. Open questions
 
-1. Which relation Part 02 §12.1 names for a unit, and what the sentence covers. The options are
+1. Which relation Part 02 §12.1 names for a unit, and what the sentence covers.
+   **Answered 2026-10-02: `unit_name`.** The options are
    `unit_name` (preferred direction); the triple
    `(sorting_run_name, curation_name, local_unit_label)`; stating the relation once in
    Part 02 §8.2 for every owned assigned identifier; striking the positive sentence; and keeping
@@ -741,7 +742,8 @@ no check sees two things merged under one name (§4).
    triple withdraws the permission of R149 §3.1 and fails two passing fixtures, and keeping the
    pair leaves a sentence that four passing packets contradict. Questions 2, 6 and 7 depend on
    this one.
-2. Which form Part 02 §12.9's interval sentence takes. The options are to name `interval_name`
+2. Which form Part 02 §12.9's interval sentence takes. **Answered 2026-10-02: it names
+   `interval_name`.** The options are to name `interval_name`
    (preferred direction); to keep the triple with `session_name` in place of `session_id`; and to
    keep the triple as it is. Naming `interval_name` gives the two sections one form, covers an
    interval whose label is null, and changes no declaration, since the name is already `required`.
@@ -769,7 +771,8 @@ no check sees two things merged under one name (§4).
    validator generates one more kind (§2.14). Part 02 §8.2's sentence that no rule can check
    uniqueness is replaced as §4 describes. `dup_pk` is the one measured packet that draws the
    check, and it keeps its verdict. The answer raises questions 10 and 11.
-5. Whether the specification says what a unit's name is composed from. The options are to leave it
+5. Whether the specification says what a unit's name is composed from. **Answered 2026-10-02: it
+   does not.** The options are to leave it
    to whatever composes the name, as R85 §2.2 does (preferred direction); to state that a unit's
    name distinguishes its run, its curation and the unit, without fixing a spelling; and to fix a
    spelling. Leaving it open keeps the name opaque and makes agreement between two packets a
@@ -780,21 +783,24 @@ no check sees two things merged under one name (§4).
    holds. The generated check reports a composer whose names collide in two rows and none whose
    names merge two units into one row (§4), so under the preferred direction the merge stays the
    composer's obligation alone.
-6. Whether the `units` term of Part 12 §4 states a unit's run and curation. The options are to
+6. Whether the `units` term of Part 12 §4 states a unit's run and curation. **Answered 2026-10-02: the
+   term stays as it is.** The options are to
    leave the term as it is (preferred direction), and to have each record carry the names of the
    unit's run and curation beside its label. The second widens the change to the adapter interface
    and to three adapters. The first leaves a build unable to tell two curations of one run apart
    when a later source names a unit by its label (§2.9), which is a defect of the same kind in
    another part and wants a proposal of its own. The answers to questions 3 and 4 do not touch the
    term.
-7. Whether the positive sentence carries a keyword. The options are the indicative in both
+7. Whether the positive sentence carries a keyword. **Answered 2026-10-02: the indicative in both
+   sections, with the prohibition kept for a unit.** The options are the indicative in both
    sections, with the keyworded prohibition kept for a unit as it is (preferred direction); a
    keyworded duty in both, stated as unchecked; and either of those with the prohibition added for
    `interval_id`, which Part 02 §12.9 lacks. No tool can check what a consumer does outside a
    packet, and a prohibition for an interval is a new duty on a consumer. Under the answers to
    questions 3 and 4 the checked requirements sit on the name itself, in Part 02 §8.2, so the
    sentence for a consumer adds nothing a tool could check. No packet is affected under any option.
-8. How the clause states the three advances. The options are to name the targets of the
+8. How the clause states the three advances. **Answered 2026-10-02: two named targets and one
+   minor step for the core version.** The options are to name the targets of the
    meta-schema `$id` and the descriptor ID, 0.12.0 and v0.10, and to advance the core
    `registry_version` by one minor version from the one the registry carries at incorporation,
    naming no target (preferred direction); to name all three targets; and to name none. R145 §3.5
@@ -807,7 +813,8 @@ no check sees two things merged under one name (§4).
    a migrated extension registry carries a different version and that no checker verifies it. A
    packet built afterwards binds the new identifiers, and an earlier packet keeps the ones it
    binds.
-9. Under which invariant the contract reports a name that is not `required`. The options are to
+9. Under which invariant the contract reports a name that is not `required`. **Answered 2026-10-02:
+   `registry.identity.name`.** The options are to
    have `registry.identity.name` report it (preferred direction), and to add an invariant. The
    first keeps one invariant for the one statement of Part 02 §8.2, which already reports the
    name's type, role and `identity` together. The new descriptor then differs from v0.9 in its ID
@@ -817,7 +824,8 @@ no check sees two things merged under one name (§4).
    added an invariant for a new requirement, and no accepted clause that was read widens one. Both
    options need the new descriptor and `$id`, and a registry is valid under one exactly where it
    is valid under the other.
-10. What the generated check reports, at which level, under which ID, and for which packets. The
+10. What the generated check reports, at which level, under which ID, and for which packets.
+    **Answered 2026-10-02: the five parts of the preferred direction.** The
     preferred direction has five parts. The check reports each row whose name another row of the
     same table holds. It does not count a null name, which the non-null check reports where the
     name is `required`. Its level is `error`. Its ID has the form of the `finite` check's,
@@ -842,10 +850,9 @@ no check sees two things merged under one name (§4).
     check a shape that depends on the key. No core table is affected under either, and no measured
     packet holds two sessions.
 
-Questions 3 and 4 are answered. Each of the other nine fixes a Decision clause or a declaration,
-so all nine are needed before a draft is appraised. Questions 2, 6 and 7 depend on question 1.
-Questions 8 to 11 do not: with the answers to questions 3 and 4 they fix what the structural form
-states in Part 02 §8.2, Part 02 §9.4 and Part 02 §10.1.
+Questions 1 to 10 are answered: 3 and 4 as the structural form, and each of the other eight as its
+preferred direction. Question 11 remains. It fixes what the generated check of Part 02 §10.1
+groups on, so it is needed before a draft is appraised.
 
 ## 7. Promotion criteria
 
