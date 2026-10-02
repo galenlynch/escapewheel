@@ -44,7 +44,7 @@ A session's extent is stated as **wall-clock time**, not as a tick range. A hull
 
 A clock is observing during declared intervals, in that clock's own ticks. Anything timed by a clock inherits that clock's window and MAY refine it, but MUST NOT assert a window derived from its own timestamps. A clock's own interval is not derived from what was timed on it either: it is the extent of the acquisition, so for a sample clock whose origin is sample 0 of a recording it runs from tick 0 to the last sample's index, one less than the recording's length.
 
-An interval is **closed**: `start_tick` and `stop_tick` both name observed ticks, so an interval covers `stop - start + 1` ticks and a one-tick interval has `start == stop`. A consumer MUST NOT treat a `stop_tick` as excluded.
+An interval is **closed**: `start_tick` and `stop_tick` both name observed ticks, so an interval covers `stop - start + 1` ticks and a one-tick interval has `start == stop`. A consumer MUST NOT treat a `stop_tick` as excluded. No checker verifies this.
 
 ### 2.4 Provenance
 
@@ -113,7 +113,7 @@ A serial number identifies the object; its firmware determines what the object d
 
 A consumer MAY walk from a probe to the hardware that acquired it, and MAY group probes by any element of the chain they share — which is the question the chain exists to answer. It MUST NOT infer attachment from a device's name: a name is unconstrained by this standard, and the reference is the statement.
 
-Attachment names a device, and which place on that device a child occupied is a second fact. A device SHOULD declare the port, dock or slot of its parent it attached to, where a source states one. Where it declares none the coordinate is **unrecorded**, and a consumer MUST report it as such rather than parse it out of a name. Two devices sharing a parent and a port are not one device, and nothing declares that they are: the four bases of a quad-base probe occupy a single dock, so a port says where something was plugged in and not what it was. A consumer MUST NOT conclude from a shared parent and port that two devices are one.
+Attachment names a device, and which place on that device a child occupied is a second fact. A device SHOULD declare the port, dock or slot of its parent it attached to, where a source states one. Where it declares none the coordinate is **unrecorded**, and a consumer MUST report it as such rather than parse it out of a name. Two devices sharing a parent and a port are not one device, and nothing declares that they are: the four bases of a quad-base probe occupy a single dock, so a port says where something was plugged in and not what it was. A consumer MUST NOT conclude from a shared parent and port that two devices are one. No checker verifies this.
 
 A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT record a second device for one instrument. Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor.
 
@@ -196,7 +196,7 @@ prohibition is what makes a tick exact.
 
 A clock's **median anchor interval** is the median interval between its consecutive anchors, in ticks on that clock. Between two anchors separated by at most two median anchor intervals, the mapping onto the parent clock is linear interpolation on the bracketing pair.
 
-Beyond the terminal anchors a consumer MUST compute the mapping as `parent(t) = parent(a) + rate * (t - a)`, where `a` is the nearest terminal anchor and `rate` is fitted over the clock's full anchor sequence. A consumer MUST NOT extend the terminal segment's slope, and MUST NOT use the intercept of a fit over the whole anchor sequence.
+Beyond the terminal anchors a consumer MUST compute the mapping as `parent(t) = parent(a) + rate * (t - a)`, where `a` is the nearest terminal anchor and `rate` is fitted over the clock's full anchor sequence. A consumer MUST NOT extend the terminal segment's slope, and MUST NOT use the intercept of a fit over the whole anchor sequence. No checker verifies any of the three.
 
 Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default. A profile or a recipe MAY state a different tolerance.
 
@@ -301,9 +301,9 @@ An image or video, and the timing of its frames.
 
 A frame is indexed by **presentation order**: index *n* is the frame the asset presents nth, counting from 0. A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
 
-The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing is not recorded and reserves no index; what went missing is recorded in the frames' timing, not as a gap in the numbering. A consumer MUST NOT read a frame's index as a count of exposures, as a camera's own frame counter, or as an offset into anything but this asset.
+The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing is not recorded and reserves no index; what went missing is recorded in the frames' timing, not as a gap in the numbering. A consumer MUST NOT read a frame's index as a count of exposures, as a camera's own frame counter, or as an offset into anything but this asset. No checker verifies this.
 
-A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim. A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets, use it to measure elapsed time, or use it to align a frame to anything else in the packet; what it locates is the frame inside the file.
+A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim. A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets, use it to measure elapsed time, or use it to align a frame to anything else in the packet; what it locates is the frame inside the file. No checker verifies what a consumer does with it.
 
 A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame it was recorded for, which is the exact route and assumes nothing about ordering.
 

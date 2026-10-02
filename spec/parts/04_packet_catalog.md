@@ -204,7 +204,7 @@ Verification of an external resource is layered, and a report MUST state which l
 | 3b | its recorded per-member store digests still match |
 | 3c | its recorded `digest` holds |
 
-Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a requested mode. A validator that offers any of levels 3a to 3c MUST offer level 3a and MAY offer level 3c. A validator MUST NOT run level 3c on a request for level 3a or 3b alone.
+Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a requested mode. A validator that offers any of levels 3a to 3c MUST offer level 3a and MAY offer level 3c. A validator MUST NOT run level 3c on a request for level 3a or 3b alone. No checker verifies either validator rule.
 
 A validator establishes that a recorded digest holds by computing it from the bytes under §4.3. A
 validator MAY instead establish it by comparing it with checksums the store reports, object by

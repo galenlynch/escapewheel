@@ -80,8 +80,8 @@ The specification README, `README.md`, MUST be an informational entry point. It 
 navigation, candidate status, architectural summaries, build guidance, informative references,
 checked status and identifier summaries, and links to owning artifacts. It MUST NOT be the sole
 statement of a requirement or supply a normative preamble through its position in a rendering. The
-numbered parts MUST remain intelligible without repository-specific developer documentation. The
-combined-document generator MAY place the README first for orientation, but that ordering MUST NOT
+numbered parts MUST remain intelligible without repository-specific developer documentation, which
+no checker verifies. The combined-document generator MAY place the README first for orientation, but that ordering MUST NOT
 supply normative force.
 
 `informative/Escapewheel_POC_v0.2_Implementation_Spec.md` MUST be a reproducible convenience
