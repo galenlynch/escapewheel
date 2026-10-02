@@ -138,8 +138,9 @@ value the recipe stated.
 ### 3.3 A source root is written without a credential
 
 Where a build recognizes a credential in a component of a source `root`, it MUST write the root
-without that component wherever it writes the root or a URI derived from it. A `core.source_files`
-row's `uri` (Part 05 §7) is then the root as the recipe states it, less each such component.
+without that component wherever it writes the root or a URI derived from it, other than in the
+recorded recipe, where §3.2 puts the marker in the component's place. A `core.source_files` row's
+`uri` (Part 05 §7) is then the root as the recipe states it, less each such component.
 
 Two roots that are equal once such components are removed are one root for Part 05 §7, and an
 amending build compares a root with the rows a packet holds after removing them.
@@ -184,7 +185,7 @@ that §3.3 qualifies a source-file row's `uri` and an amending build's compariso
 | packet manifest and JSON Schemas | Unchanged. The recipe schema keeps `storage_options` unconstrained. A manifest entry's `uri` and a resolution document's `uri` keep their shapes. | None required. |
 | validation and import | Part 05 §3.2 takes §§3.1 and 3.2, Part 05 §3.5 takes §3.4, and Part 05 §7 takes §3.3. No validator check is added. | `evidence/R<N>.json` names the three anchors. |
 | extensions | Unchanged. An extension declares no recipe member. | None required. |
-| reader, writer, validator, adapters | The reference build already replaces with `[redacted]` and refuses. It gains recognition of a credential in a root's userinfo and applies §3.3 at the four places of §2.2. Its guide lists the values it recognizes. The reader and validator are unchanged. An adapter is unchanged: the build writes what an adapter returns. | The writer suite's cases of §6. |
+| reader, writer, validator, adapters | The reference build already replaces with `[redacted]` and refuses. It gains recognition of a credential in a root's userinfo and applies §3.3 at the three places of §2.2 other than the recorded recipe, where the marker stands in the userinfo's place. Its guide lists the values it recognizes. The reader and validator are unchanged. An adapter is unchanged: the build writes what an adapter returns. | The writer suite's cases of §6. |
 | conformance fixtures and tests | No packet fixture distinguishes the rule, since a validator cannot decide it. Build tests cover §6's cases. | The writer suite. |
 | revision process and tooling | The ordinary ledger and evidence records, and the notes on R111 §3.5, R135 §3.4 and R150 §3.7. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | The combined specification regenerates. The writer's guide documents the recognized values and the marker. | `verify.py`. |
@@ -202,6 +203,7 @@ No validator finding distinguishes the rule. These build cases do:
 - the same for a recognized credential in another option of a source entry;
 - `storage_options.token = "anon"`, which names a way to authenticate, is recorded as stated;
 - a root with userinfo the build recognizes yields a `core.source_files` row, a manifest entry and
-  a resolution document entry whose URIs carry no userinfo;
+  a resolution document entry whose URIs carry no userinfo, and a recorded recipe whose root holds
+  `[redacted]` in the userinfo's place;
 - two roots differing only in recognized userinfo yield one `core.source_files` row; and
 - in each case `code_uri` is the digest of the recipe file as read.
