@@ -16,6 +16,7 @@ import jsonschema
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "escapewheel-validator/src"))
 
+from escapewheel_validator.lowering import lower
 from escapewheel_validator.rule_language import (
     PROFILE_ID,
     RuleProfileError,
@@ -23,6 +24,13 @@ from escapewheel_validator.rule_language import (
 )
 
 HERE = Path(__file__).resolve().parent
+#: The engine's name for a result type -> Part 11 §4's SQL domain, where the two differ.
+DOMAINS = {
+    "FLOAT": "REAL",
+    "DOUBLE": "DOUBLE PRECISION",
+    "VARCHAR": "CHARACTER VARYING",
+    "TIMESTAMP WITH TIME ZONE": "TIMESTAMP(6) WITH TIME ZONE",
+}
 DDL = {
     "string": "VARCHAR",
     "int32": "INTEGER",
@@ -69,8 +77,8 @@ def normalized(value: Any) -> str | None:
     return str(value)
 
 
-def execute(vector: dict[str, Any], host_zone: str = "UTC") -> list[list[str]]:
-    """Execute one checked vector under the deterministic session settings."""
+def execute(vector: dict[str, Any], host_zone: str = "UTC") -> tuple[list[str], list[list[str | None]]]:
+    """Execute one checked vector as the validator does, and return its result's domains and rows."""
     connection = duckdb.connect()
     connection.sql(f"SET TimeZone = '{host_zone}'")
     # Rule evaluation is required to override, rather than inherit, this setting.
@@ -85,8 +93,10 @@ def execute(vector: dict[str, Any], host_zone: str = "UTC") -> list[list[str]]:
             if rows:
                 marks = ", ".join("?" for _ in spec["columns"])
                 connection.executemany(f"INSERT INTO {resource} VALUES ({marks})", rows)
-        result = connection.sql(vector["query"]).arrow().read_all()
-        return [
+        relation = connection.sql(lower(vector["query"]))
+        domains = [DOMAINS.get(str(engine_type), str(engine_type)) for engine_type in relation.types]
+        result = relation.arrow().read_all()
+        return domains, [
             [normalized(result.column(column)[row].as_py()) for column in range(result.num_columns)]
             for row in range(result.num_rows)
         ]
@@ -120,9 +130,11 @@ def vector_defects() -> list[str]:
             zones = ("UTC", "America/Los_Angeles") if vector["mode"] == "execute-time-zones" else ("UTC",)
             # The evaluator fixes UTC; changing an inherited session zone must not change the result.
             for zone in zones:
-                actual = execute(vector, zone)
+                domains, actual = execute(vector, zone)
                 if Counter(map(tuple, actual)) != Counter(map(tuple, vector["expected_rows"])):
                     defects.append(f"{name}: result bag {actual!r}")
+                if domains != vector.get("expected_result_domains", domains):
+                    defects.append(f"{name}: result domains {domains!r}")
     return defects
 
 

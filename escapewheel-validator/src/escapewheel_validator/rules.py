@@ -28,6 +28,7 @@ from escapewheel_reader.resource_ids import (
 
 from . import check_table
 from .generate import Check, Specialisation, concerns, generate
+from .lowering import lower
 from .registry_document import (
     CheckedRegistryContext,
 )
@@ -219,7 +220,7 @@ def _tier2(context: CheckedRegistryContext, core_context: CheckedRegistryContext
                 Check(
                     check_table.rule(rule["id"], rule["level"]),
                     rule["message"],
-                    parsed.sql,
+                    lower(parsed.sql),
                     resource,
                     tier=2,
                     dependencies=parsed.resources,

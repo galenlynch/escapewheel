@@ -96,6 +96,7 @@ that defines it.
 
    shim.ordering.verify_order
    generate.adjacency_settles_uniqueness
+   lowering.lower
    amendment.IDENTITY
    amendment.PREFERENCES
    amendment.DERIVED
@@ -140,6 +141,7 @@ Each module's page lists what it holds beyond the names above.
    registry_types
    manifest
    generate
+   lowering
    amendment
    errors
    stores

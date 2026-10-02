@@ -67,6 +67,17 @@ def test_engine_failure_is_incomplete_not_a_packet_finding(packet_root):
     assert not any(f.check == "core.intervals.profile_test" for f in report.findings)
 
 
+def test_a_median_over_an_exact_value_is_evaluated_in_binary64(packet_root):
+    """Part 11 §5: the engine alone returns the median of 0 and 1 in the ordering value's exact domain."""
+    sql = (
+        "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY CAST(interval_id AS DECIMAL(38,0))) AS median_id "
+        "FROM core.intervals"
+    )
+    install_registry(packet_root, _rule(read_registry(packet_root), sql))
+    report = validate(open_packet(packet_root))
+    assert [f.rows for f in report.findings if f.check == "core.intervals.profile_test"] == [(("0.5",),)]
+
+
 @pytest.mark.parametrize(
     ("units", "conforming"),
     [

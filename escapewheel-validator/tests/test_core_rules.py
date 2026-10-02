@@ -1,11 +1,13 @@
 """Shipped core Tier 2 rules, run on hand-built rows of the tables they read."""
 
 import json
+from itertools import accumulate
 from pathlib import Path
 
 import duckdb
 import pytest
 
+from escapewheel_validator.lowering import lower
 from escapewheel_validator.registry_types import DDL
 from escapewheel_validator.rule_language import check_rule
 
@@ -27,7 +29,7 @@ def _flagged(rule_id, rows):
         names = ", ".join(f'"{name}"' for name in row)
         values = ", ".join("?" * len(row))
         connection.execute(f"INSERT INTO {resource_id} ({names}) VALUES ({values})", list(row.values()))
-    return len(connection.sql(check_rule(rule["sql"], CORE).sql).fetchall())
+    return len(connection.sql(lower(check_rule(rule["sql"], CORE).sql)).fetchall())
 
 
 RATE_FORMS = {
@@ -73,3 +75,19 @@ def test_any_other_rate_is_flagged(form, num, den, wrong):
 
 def test_a_nan_sample_rate_is_flagged():
     assert _flagged("core.array_assets.sample_rate_matches_axis", _array(float("nan"), RATE_FORMS["hz"], 1, 1)) == 1
+
+
+def _anchors(gaps):
+    return [
+        (
+            "core.clock_anchors",
+            {"session_id": 1, "clock_id": 1, "anchor_index": index, "t_tick": tick, "parent_tick": tick},
+        )
+        for index, tick in enumerate(accumulate(gaps, initial=0))
+    ]
+
+
+# Part 11 §5 interpolates the median in binary64, so both sets of gaps have a median of 2.5 and a bound of 5.
+@pytest.mark.parametrize(("gaps", "flagged"), [([1, 2, 3, 5], 0), ([1, 2, 3, 6], 1)], ids=["at-bound", "beyond"])
+def test_an_anchor_gap_is_flagged_only_beyond_twice_the_binary64_median(gaps, flagged):
+    assert _flagged("core.clock_anchors.gap_within_bound", _anchors(gaps)) == flagged

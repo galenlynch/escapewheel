@@ -75,7 +75,60 @@
       "query": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY value) AS median_value FROM core.measurements",
       "expected_resources": ["core.measurements"],
       "expected_result_names": ["median_value"],
+      "expected_result_domains": ["DOUBLE PRECISION"],
       "expected_rows": [["5.5"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "ordered-set-median-of-integer-is-binary64",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int32"}], "rows": [[1], [2]]}
+      },
+      "query": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY value) AS median_value FROM core.measurements",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["median_value"],
+      "expected_result_domains": ["DOUBLE PRECISION"],
+      "expected_rows": [["1.5"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "ordered-set-median-of-decimal-is-binary64",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "int64"}], "rows": [[1], [2], [3], [5]]}
+      },
+      "query": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY CAST(value AS DECIMAL(38,0))) AS median_value FROM core.measurements",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["median_value"],
+      "expected_result_domains": ["DOUBLE PRECISION"],
+      "expected_rows": [["2.5"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "ordered-set-median-of-real-is-binary64",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "float32"}], "rows": [[0.1], [0.2]]}
+      },
+      "query": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY value) AS median_value FROM core.measurements",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["median_value"],
+      "expected_result_domains": ["DOUBLE PRECISION"],
+      "expected_rows": [["0.15000000223517418"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "ordered-set-median-of-double-is-binary64",
+      "mode": "execute",
+      "inputs": {
+        "core.measurements": {"primary_key": ["value"], "columns": [{"name": "value", "type": "float64"}], "rows": [[0.1], [0.2]]}
+      },
+      "query": "SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY value) AS median_value FROM core.measurements",
+      "expected_resources": ["core.measurements"],
+      "expected_result_names": ["median_value"],
+      "expected_result_domains": ["DOUBLE PRECISION"],
+      "expected_rows": [["0.15000000000000002"]],
       "row_order_ignored": true
     },
     {

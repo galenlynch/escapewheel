@@ -29,6 +29,8 @@ generate
     Tier 1 checks generated from a registry's structure.
 rules
     Running the generated checks and a registry's Tier 2 rules over the packet's tables.
+lowering
+    A Tier 2 query as the engine must be given it (Part 11 §4).
 registry_document, rule_language
     A registry document's own conformance, and the static check of its Tier 2 SQL.
 registry_result, registry_invariants, registry_phases

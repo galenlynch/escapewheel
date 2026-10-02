@@ -9,7 +9,7 @@
 
 No check is written by hand for a table. The checks for required columns, primary keys, foreign
 keys, closed vocabularies and finite values follow from a registry's structure, and its Tier 2
-rules pass through unchanged.
+rules pass through as :func:`.lowering.lower` gives them to the engine.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from escapewheel_reader.registries import declared_tables
 
 from . import check_table
 from .check_table import CheckEntry
+from .lowering import lower
 from .registry_document import CheckedRegistryContext, RegistryRejected
 from .vocabulary import Level, RegistryState
 
@@ -543,9 +544,8 @@ def _generate(  # noqa: C901
         for rule in table.get("rules", []) if declared else []:
             if rule.get("advisory") and not advisory:
                 continue
-            checks.append(
-                Check(check_table.rule(rule["id"], rule["level"]), rule["message"], rule["sql"], resource, tier=2)
-            )
+            entry = check_table.rule(rule["id"], rule["level"])
+            checks.append(Check(entry, rule["message"], lower(rule["sql"]), resource, tier=2))
 
     return checks
 

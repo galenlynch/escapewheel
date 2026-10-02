@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 
 import duckdb
+from escapewheel_validator.lowering import lower
 from escapewheel_validator.rule_language import RuleProfileError, check_rule
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,7 +73,7 @@ for document in DOCUMENTS:
         for rule in table["rules"]:
             try:
                 check_rule(rule["sql"], document, core_resources=CORE)
-                connection.sql(rule["sql"]).fetchall()
+                connection.sql(lower(rule["sql"])).fetchall()
             except (RuleProfileError, duckdb.Error) as error:
                 broken.append((rule["id"], str(error).splitlines()[0][:70]))
 check("every Tier 2 rule conforms and executes against empty tables", broken)

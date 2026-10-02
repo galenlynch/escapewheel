@@ -149,7 +149,9 @@ check, but one SQL could express only through a UCUM function the rule language 
 Tier 2 SQL is not DuckDB's full dialect. The validator parses each rule against the versioned
 portable profile before execution, derives its base-resource dependencies from that parse, exposes
 canonical schema-qualified relations, and reports unsupported, invalid, or incomplete evaluation
-separately from packet findings.
+separately from packet findings. A rule runs as authored except where DuckDB's semantics differ
+from Part 11's: `PERCENTILE_CONT`'s ordering value is cast to `DOUBLE PRECISION`, since DuckDB
+otherwise interpolates a `DECIMAL` or `REAL` value in its own domain (Part 11 §5).
 
 The two halves cooperate: the ordering scan compares neighbours, so where a table's sort begins
 with its primary key, duplicates must be adjacent and the same pass settles uniqueness. On 287
