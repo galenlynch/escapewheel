@@ -5430,11 +5430,11 @@ A profile names a **group** for each way rows cross a process boundary, and the 
 | `stream-v0.1` | a sequence of Arrow IPC streams on standard output, each schema naming its resource | standard error |
 | `flight-v0.1` | Arrow Flight over a Unix socket the build names, one descriptor per resource | the error's message and detail, on the connection the adapter was asked over; a failing adapter writes nothing to standard error |
 
-An adapter **released independently of a build** MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names. The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting such an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
+A build MUST NOT require an adapter to be importable in the writer's environment, except one its recipe opts into the writer's process (Part 05 §3.9), and MUST be able to reach an adapter that is not. An adapter **released independently of a build** MUST declare and support at least one protocol in a group, and a build MUST support every protocol in every group this profile names. The asymmetry is deliberate: there is one build and there will be many adapters, so no negotiation can fail. A build meeting such an adapter that declares no protocol of the group MUST refuse it, naming the group, before any source is opened.
 
 An adapter a build ships with need not declare one, and a build reaches it directly. The test is the release boundary rather than who wrote the code: an adapter inside a build's distribution is upgraded in the commit that changes a dependency, where one released apart is on the far side of a version boundary the build moves without asking, and the protocol is what keeps that move from being an outage. A build MAY serve an adapter it ships over any protocol of the group, which is how one becomes reachable out of process without declaring anything.
 
-A build reaching out of process an adapter that declares its protocols MUST reach it by one of them: the protocol the recipe entry names, or any the adapter declares where the entry names none. A build MUST refuse a recipe entry naming a protocol its adapter does not declare, naming the source and the protocol, before it opens any source. A build reaches an adapter it ships that declares no protocol, where it runs that adapter out of process, over the protocol the entry names or any of the group. A build runs an adapter in the writer's process only as Part 05 §3.9 says, and reaches it there by no protocol, whatever the adapter declares.
+A build reaching out of process an adapter that declares its protocols MUST reach it by one of them: the protocol the recipe entry names, or any the adapter declares where the entry names none. A build MUST refuse a recipe entry naming a protocol its adapter does not declare, naming the source and the protocol, before it opens any source. A build reaches an adapter it ships that declares no protocol, where it runs that adapter out of process, over the protocol the entry names or any of the group. A build runs an adapter in the writer's process only as Part 05 §3.9 says, and reaches it there by no protocol, whatever the adapter declares. Nothing in this profile makes using an implementation a writer ships a condition of an adapter's conformance, and a build MUST NOT refuse an adapter for speaking a protocol without one.
 
 A protocol carries its version in its name, semantically versioned from `v0.1`. A profile MUST NOT change what a named protocol means; a protocol that changes how rows cross is a new member of the group, and a build MUST NOT read support for one version as support for another. Retiring a protocol is a change to this profile and not a decision a build makes.
 
@@ -5560,9 +5560,11 @@ that document with it, under the reserved resource identifier `resources` (§6),
 `files-v0.1` is the file `resources.json` in `delivery_root`: a JSON object carrying `resources`, an
 array with one entry per such resource. Each entry is a manifest resource entry as
 [Part 04 §4.1](../parts/04_packet_catalog.md#ew-packet-resource-entry-fields) declares one, without the members a
-build supplies, so it MUST NOT carry `validation_state` or `derived_from`. A build preserves that
-binding, rejects one that does not resolve or admit the resource ID, and merges the entry into the
-manifest. Its shape is the delivery schema §1 incorporates. A build MUST refuse a document that does
+build supplies, so it MUST NOT carry `validation_state` or `derived_from`. A build MUST preserve each
+entry's `declaration_id` in the packet resource entry it creates from it, and MUST refuse a document
+holding an entry whose `declaration_id` resolves to no declaration of a loaded registry or does not
+admit the entry's `resource_id`. It merges each entry it accepts into the manifest. The document's
+shape is the delivery schema §1 incorporates. A build MUST refuse a document that does
 not satisfy it before writing a manifest, naming what is wrong.
 
 A build MUST record every resource-document entry as external, and MUST refuse one that declares
@@ -5594,7 +5596,7 @@ A build reads what an adapter declares before it opens any source, and for a cla
 
 The document carries what belongs to the adapter and nothing that belongs to the machine: `kind`, `protocols`, `produces`, `contributes`, `states`, `needs`, `accepts` and `consumes`. The command, the root and the options stay in the recipe, because which interpreter is installed where is the recipe author's fact and the resources an adapter can supply is not. This section incorporates `artifacts/adapter.schema.json`, whose `$id` is `https://escapewheel.org/schemas/adapter/0.1.0`, as the exact shape of the document. The schema owns member names, JSON types, required members, closure, and patterns; this prose owns what each member means and every refusal. The schema's descriptions are informative.
 
-A document MUST carry all eight members, and each member listing names is an array. `protocols` names every protocol the adapter supports, at least one and none twice (§3); in any other member, an empty array declares none. `accepts` names options, and the one term §4 lets it name, in the same form as `needs` (§4), and `contributes` names, as dotted resource identifiers, the resources the adapter supplies only in part (Part 05 §3.4).
+A document MUST carry all eight members, and each member listing names is an array. `protocols` names every protocol the adapter supports, at least one and none twice (§3); in any other member, an empty array declares none. `accepts` names options, and the one term §4 lets it name, in the same form as `needs` (§4), and `contributes` names, as dotted resource identifiers, the resources the adapter supplies only in part (Part 05 §3.4). `consumes` names the kinds of the sources whose output the adapter reads, which is what orders a build (Part 05 §3.4).
 
 A build MUST treat a document and an importable declaration of the same facts as one declaration, and MUST NOT prefer either where both are present. An implementation shipping both MUST generate the document rather than maintain it.
 
@@ -5623,6 +5625,8 @@ An adapter MAY write a report of its run at a path the recipe names, and a build
 Where the report is a file, a build MUST remove that path before it runs the command and MUST treat a report it did not see appear as absent. A file at a path the recipe names is present after any run that ever wrote one, so last week's findings are otherwise reported as this run's with nothing to distinguish them.
 
 Which channel carries a report is the protocol's. Under `files-v0.1` and `stream-v0.1` it is a file at the path the recipe names, supplied to the adapter as `report_path` (§4), because rows have taken standard output and a file is the channel left. Under `flight-v0.1` it is `DoAction("report")`, because the connection is that channel and no file outlives the run; an adapter with a report MUST name `report` among its actions, and a build MUST NOT ask one that did not.
+
+No finding travels in a listing. `flight-v0.1` gives no meaning to the `app_metadata` field of a `FlightInfo`, the entry `ListFlights` returns for each resource, and a build MUST ignore that field. No checker verifies this.
 
 A report carries what a build cannot derive, and a build SHOULD ignore what it can: rows per table, which tables exist, and whether their schemas conform are each established without asking. What no artifact holds is what the command read, what it skipped and why, and whether a table that is short is legitimately short.
 

@@ -2592,8 +2592,9 @@ disposition = "applied"
 where = [
   { part = "12", anchor = "ew-build-supplied-values", note = "the closed vocabulary, how a declared name resolves, what a build refuses, and the one JSON object" },
   { part = "05", anchor = "ew-source-declarations", note = "the four facts an adapter declares, one of them the values a build supplies" },
+  { part = "12", anchor = "ew-adapter-declaration-document", note = "what consumes names" },
 ]
-note = "the supply contract; Part 07 §4 keeps the reference spelling. R116 §3.1 replaced the channel the object crosses by, and R134 §3.5 replaced declaring a protocol as what asks for its terms with the protocol a build reaches the adapter by; the rest of the clause stands"
+note = "restored 2026-10-01; what consumes names was absent. the supply contract; Part 07 §4 keeps the reference spelling. R116 §3.1 replaced the channel the object crosses by, and R134 §3.5 replaced declaring a protocol as what asks for its terms with the protocol a build reaches the adapter by; the rest of the clause stands"
 
 [clause."R115 §3.2"]
 disposition = "applied"
@@ -2605,7 +2606,7 @@ where = [
   { part = "12", anchor = "ew-protocol-groups", note = "the group, its three protocols, the asymmetry, and versioning by name" },
   { part = "09", section = "5.7", note = "an extension may deliver over any protocol of the group" },
 ]
-note = "R134 §3.5 adds the build's choice among the protocols an adapter declares, and R134 §3.4 replaces files-v0.1 as Parquet the recipe names with Parquet under delivery_root named by resource identifier"
+note = "restored 2026-10-01; that a build does not require an adapter to be importable in the writer's environment was absent. R134 §3.5 adds the build's choice among the protocols an adapter declares, and R134 §3.4 replaces files-v0.1 as Parquet the recipe names with Parquet under delivery_root named by resource identifier"
 
 [clause."R115 §3.4"]
 disposition = "applied"
@@ -2637,8 +2638,9 @@ disposition = "applied"
 where = [
   { part = "12", anchor = "ew-reaching-a-running-adapter", note = "the retry rendezvous, and that an adapter binds only when it can answer" },
   { part = "07", anchor = "ew-reference-object-model", note = "a protocol is named by a constant the implementation exports" },
+  { part = "12", anchor = "ew-protocol-groups", note = "a build does not refuse an adapter for speaking a protocol without a shipped implementation" },
 ]
-note = "that a writer ships each end and that using it is nobody's condition of conformance is Part 03 §11.1's group plus this"
+note = "that a writer ships each end and that using it is nobody's condition of conformance is Part 03 §11.1's group plus this. restored 2026-10-01; the prohibition on refusing an adapter that speaks a protocol without a shipped implementation was absent"
 
 [clause."R115 §3.10"]
 disposition = "applied"
@@ -2654,6 +2656,7 @@ where = [
   { part = "05", section = "3.7", note = "standard error carries the diagnosis where rows have taken standard output" },
   { part = "12", anchor = "ew-adapter-run-report", note = "the connection as a carrier beside the file, and a report cleared before the run" },
 ]
+note = "restored 2026-10-01; that no finding travels in a listing and a build ignores app_metadata was absent, and no check observes it"
 
 [clause."R115 §3.12"]
 disposition = "applied"
@@ -3227,8 +3230,9 @@ where = [
   { part = "00", anchor = "ew-packet-catalog" },
   { part = "04", anchor = "ew-packet-resource-entry-fields" },
   { part = "04", anchor = "ew-packet-validation-block" },
+  { part = "12", anchor = "ew-referenced-resource-delivery" },
 ]
-note = "packet entries bind declaration IDs and no longer repeat logical classification. restored 2026-10-01; the prohibition on reading validation state as changing content class or canonicality was indicative, and no check observes it"
+note = "packet entries bind declaration IDs and no longer repeat logical classification. restored 2026-10-01; the prohibition on reading validation state as changing content class or canonicality, and the build's duties to preserve a delivered entry's declaration and refuse one that does not resolve or admit its resource, were indicative; no check observes the first"
 
 [clause."R128 §3.9"]
 disposition = "applied"
