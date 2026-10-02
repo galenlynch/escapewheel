@@ -340,7 +340,7 @@ ROW_PACKETS = (
     Packet(
         "spike_outside_window",
         variant(spike_outside_window),
-        Expected("warning", "core.spike_events.within_observation"),
+        Expected("warning", "core.spike_events.within_observation", conforming=True),
     ),
     Packet(
         "orphan_manifest_session",
@@ -363,8 +363,16 @@ ROW_PACKETS = (
         variant(unaligned_clock),
         Expected("error", "core.clocks.alignment_declared_for_conversion"),
     ),
-    Packet("wide_anchor_gap", variant(wide_anchor_gap), Expected("warning", "core.clock_anchors.gap_within_bound")),
-    Packet("two_primaries", variant(two_primaries), Expected("warning", "core.unit_electrodes.one_primary")),
+    Packet(
+        "wide_anchor_gap",
+        variant(wide_anchor_gap),
+        Expected("warning", "core.clock_anchors.gap_within_bound", conforming=True),
+    ),
+    Packet(
+        "two_primaries",
+        variant(two_primaries),
+        Expected("warning", "core.unit_electrodes.one_primary", conforming=True),
+    ),
     Packet(
         "unit_off_the_run",
         variant(unit_off_the_run),

@@ -57,6 +57,10 @@ def unresolved_externals(out: Path) -> None:
 #: Part 05 §5.3's outside-floor and unassessed findings, one resource at a time.
 FLOOR_PACKETS = (
     Packet("outside_array_floor", outside_array_floor, Expected("info", "physical.outside_reader_floor", count=1)),
-    Packet("outside_table_floor", outside_table_floor, Expected("warning", "physical.outside_reader_floor")),
+    Packet(
+        "outside_table_floor",
+        outside_table_floor,
+        Expected("warning", "physical.outside_reader_floor", conforming=True),
+    ),
     Packet("unresolved_externals", unresolved_externals, Expected("info", "external.physical_unassessed", count=2)),
 )
