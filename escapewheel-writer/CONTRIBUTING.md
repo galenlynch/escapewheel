@@ -259,6 +259,25 @@ resources in the manifest, and a commit writes a candidate manifest and renames 
 `packet.json` **last**. If you are adding a path that produces files, make sure a failure
 part-way leaves a packet that is absent rather than one that is half-declared.
 
+## A recipe's credential is withheld in one place
+
+Part 05 §3.2 forbids a build to write a credential it recognizes into the staging area, the packet
+or `sources.json`, and has it document what it recognizes. `secrets.py` holds the recognition: the
+member names in `SECRETS`, the `token` values in `TOKEN_MODES` that are not credentials, and the
+userinfo of a URI. The README's "A credential is not recorded" lists them and what is not
+recognized, so a change to either changes that list in the same commit.
+
+Code that writes a value of the recipe goes through that module and holds no rule of its own:
+
+- `redacted` for the recorded recipe, and for the members `Recipe.load` reads into the fields a
+  build writes to the manifest or to a row itself;
+- `without_userinfo` for a source root and for a URI given to `PacketWriter.declare_source`; and
+- `as_returned`, with `stated_userinfo`, for a URI an adapter returned.
+
+Nothing writes a marker inside a URI, because no URI parser reads the result. An adapter is handed
+what the recipe states, since it opens the source with it, so `SourceSpec` and `MaterializeSpec` are
+read from the recipe as stated.
+
 ## Two tiers of public names
 
 Every module declares `__all__`.

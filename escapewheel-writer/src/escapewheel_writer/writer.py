@@ -55,6 +55,7 @@ from .numbering import paired_kinds, preassign
 from .promotion import act_on_promotion, claim, record_promotion, refuse_occupied
 from .publication import CANDIDATE, Amendment, NewPacket
 from .registries import Declarations
+from .secrets import without_userinfo
 from .staging import check_parquet_floor, parquet_options, write_stream
 
 
@@ -661,9 +662,9 @@ class PacketWriter:
         name : str
             The source's identifier, as resource entries will spell it.
         uri : str
-            Where this writer read it.
+            Where this writer read it. Its userinfo, where it states any, is not written (Part 05 §7).
         """
-        self._sources[name] = uri
+        self._sources[name] = without_userinfo(uri)
 
     def stage_at(self, root: str | Path) -> Path:
         """Prepare, empty, the staging area `commit` or `amend` will use at `root`, and return it.

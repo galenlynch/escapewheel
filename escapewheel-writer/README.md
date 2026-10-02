@@ -77,6 +77,47 @@ begins; `--registry-result PATH` writes for automation the complete portable res
 that stopped it, core or extension, and the core registry's result where none did. The public
 `PacketWriter` constructor provides the same boundary for callers supplying mappings.
 
+## A credential is not recorded
+
+A build writes no credential it recognizes in a recipe (Part 05 §3.2), and it recognizes two kinds
+of value, wherever the recipe states them:
+
+- A member named `account_key`, `api_key`, `aws_access_key_id`, `aws_secret_access_key`,
+  `aws_session_token`, `client_secret`, `connection_string`, `credential`, `credentials`, `key`,
+  `passwd`, `password`, `private_key`, `sas_token`, `secret`, `secret_key`, `session_token` or
+  `token`, in any table at any depth. A `token` of `anon`, `browser`, `cache`, `cloud` or
+  `google_default` names a way to authenticate and is not a credential.
+- The userinfo of a URI: whatever stands between `://` and the `@` that ends the authority, in a
+  member's value or an array's element that opens with a scheme. It is recognized whole, a user name
+  alone included, because a store takes a token in that place.
+
+`escapewheel import` refuses, before it opens any source, a recipe whose `storage_options` hold a
+member of the first kind, naming the source and the member and not the value (Part 05 §3.5). The
+file itself holds the secret, so name a profile or leave the credential to the environment. Every
+other recognized value is withheld and the build goes ahead.
+
+The recipe a packet records in `core.processing_runs.parameters` holds the string `[redacted]`
+under the name of each such member, and each such URI without its userinfo. Nothing marks where
+userinfo stood: `s3://key:secret@bucket/prefix` is recorded as `s3://bucket/prefix`, which parses as
+a URI and shows no sign that anything was withheld. The run's `code_uri` is the digest of the file
+as read.
+
+The build writes the same values wherever else it writes them (Part 05 §7):
+
+- A source `root` reaches its `core.source_files` row without its userinfo. Two roots differing only
+  in userinfo are one source file. An amending build compares a root with the packet's rows after
+  removing the userinfo of both, and leaves a held row's `uri` as recorded.
+- What `[packet]`, `[session]`, `[subject]`, `[[clock]]` and `[[preferred_run]]` state reaches the
+  manifest and the rows the build composes from them as the record holds it.
+- A URI an adapter returns for a referenced resource is written without its userinfo where a URI of
+  the recipe states the same userinfo, and as returned otherwise.
+- `PacketWriter.declare_source` writes `sources.json` without the userinfo of the URI it is given.
+
+Nothing else is recognized, so each of these is recorded as written: a signed query string, a
+credential under a name not listed above, and a token inside a string that does not open as a URI,
+a command's argument among them. An adapter is handed the root and every option as the recipe states
+them.
+
 ## An importer is not one step
 
 Part 05 is explicit: *"do not combine source parsing, normalization, validation, and writing into

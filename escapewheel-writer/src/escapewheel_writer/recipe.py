@@ -21,8 +21,8 @@ What a source declares:
 - :func:`reached_by` -- the protocol a build reaches a source by.
 - :func:`payloads` -- the loaded registries' opaque singleton declarations.
 
-`kinds` reads what an adapter class declares, `secrets` names the storage options a recipe must
-not carry, and `recipe_check` holds what `Recipe.check` reports.
+`kinds` reads what an adapter class declares, `secrets` holds what a build recognizes as a
+credential, and `recipe_check` holds what `Recipe.check` reports.
 
 Nothing here opens a source or writes anything, so a wrong recipe is refused before a build
 spends anything on it.
@@ -45,6 +45,7 @@ from upath import UPath
 
 from .errors import DeclarationUnreadable, RecipeFault, RecipeUnreadable, RecipeUnsound
 from .kinds import accepts, consumes, contributes, declares_states, needs, produces, protocols, states
+from .secrets import redacted
 from .sources.store import source_root
 
 #: Source kinds that accept a `sample` cap, for the development flag that makes a round trip
@@ -440,7 +441,10 @@ class Recipe:
         the packet bind the registry it was written against -- so which one that is belongs in
         the parameters, not in whichever copy the tool happened to find.
     document : Mapping
-        The parsed file, carried whole so it can go into `core.processing_runs.parameters`.
+        The parsed file as stated, carried whole so it can go into `core.processing_runs.parameters`.
+    packet_id, description, session, subject, clocks, preferred_runs
+        What a build writes into the manifest or a row itself, each less a credential the build
+        recognizes (Part 05 §3.2).
     """
 
     path: Path
@@ -518,6 +522,9 @@ class Recipe:
             )
 
         here = path.parent
+        # A member the build writes into a row or the manifest itself is read less a credential it
+        # recognizes (Part 05 §3.2). What it opens or hands an adapter is read as stated.
+        written = redacted(document)
 
         def resolve(value: str) -> Path:
             """Resolve one declared path against the recipe's own directory."""
@@ -561,16 +568,16 @@ class Recipe:
             path=path,
             digest=hashlib.sha256(raw).hexdigest(),
             document=document,
-            packet_id=str(packet["id"]),
+            packet_id=str(written["packet"]["id"]),
             out=destination,
             registry=resolve(str(packet["registry"])) if packet.get("registry") else None,
             extensions=tuple(str(e) for e in packet.get("extensions", [])),
-            description=packet.get("description"),
-            session=document.get("session", {}),
-            subject=document.get("subject", {}),
+            description=written["packet"].get("description"),
+            session=written.get("session", {}),
+            subject=written.get("subject", {}),
             overrides=document.get("overrides", {}),
             encoding=document.get("encoding", {}),
-            clocks=tuple(ClockSpec(**c) for c in document.get("clock", [])),
+            clocks=tuple(ClockSpec(**c) for c in written.get("clock", [])),
             sources=_resolve_ownership(
                 tuple(
                     SourceSpec(
@@ -603,7 +610,7 @@ class Recipe:
             preferences=document.get("preference", {}),
             amends=packet.get("amends"),
             replaces=tuple(str(entry) for entry in packet.get("replaces", ())),
-            preferred_runs=tuple(document.get("preferred_run", ())),
+            preferred_runs=tuple(written.get("preferred_run", ())),
         )
 
     def with_sample(self, sample: int) -> Recipe:

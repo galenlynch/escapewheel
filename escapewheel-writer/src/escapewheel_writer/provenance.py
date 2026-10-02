@@ -19,7 +19,7 @@ from .alignment import alignment_parameters
 from .amending import Held
 from .errors import RecipeFault
 from .recipe import Problem, Recipe, normalized_chosen_at, refusal
-from .secrets import redacted
+from .secrets import redacted, without_userinfo
 from .sources.compensations import recordable
 from .writer import PacketWriter
 
@@ -84,14 +84,15 @@ def preferred_runs(recipe: Recipe, writer: PacketWriter, held: Held | None, sess
 
 
 def source_roots(recipe: Recipe) -> list[str]:
-    """Return each distinct `root` the recipe's sources state, as written (Part 05 §7).
+    """Return each distinct `root` the recipe's sources state, as written less a credential (Part 05 §7).
 
     As written rather than as this build resolved it: a relative root resolves against wherever
     the recipe sits, and recording that would make two builds of one recipe over the same bytes
-    differ (Part 05 §11). A source stating no root states none to record.
+    differ (Part 05 §11). Roots differing only in a credential are one, and a source stating no
+    root states none to record.
     """
     stated = (entry.get("root") for entry in recipe.document.get("source", []))
-    return list(dict.fromkeys(str(root) for root in stated if root is not None))
+    return list(dict.fromkeys(without_userinfo(str(root)) for root in stated if root is not None))
 
 
 def import_run(
@@ -122,8 +123,8 @@ def import_run(
         "code_uri": f"sha256:{recipe.digest}",
         "parameters": json.dumps(
             {
-                # Redacted, because this lands in the packet: a recipe written before the
-                # refusal existed carries a credential into every copy of it otherwise.
+                # Less each credential this build recognizes, because this lands in every copy
+                # of the packet (Part 05 §3.2).
                 "recipe": redacted(recipe.document),
                 "compensations": recordable(compensations),
                 # Part 02 §12.6: what the terminal-anchor test withheld, and the measurement

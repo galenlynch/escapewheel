@@ -387,12 +387,11 @@ def _amending_problems(recipe: Recipe) -> list[_Found]:
 
 
 def _storage_problems(recipe: Recipe) -> list[_Found]:
-    """Storage options that carry a credential, which a recipe must not (Part 05 §3.1).
+    """Storage options carrying a credential this build recognizes, each refused (Part 05 §3.5).
 
-    Refused rather than redacted on the way in, because the recipe file is the author's and
-    the value is in it: replacing it here would leave the packet clean and the file leaking,
-    and the author would not learn. What a build records is redacted as well, since a recipe
-    written before this check ran is already inside a packet.
+    Refused and not only withheld from the record, because the recipe file is the author's and
+    the value is in it: withholding alone would leave the packet clean and the file leaking, and
+    the author would not learn.
     """
     return [
         _Found(

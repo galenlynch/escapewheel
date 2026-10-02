@@ -24,7 +24,7 @@ references, and filters a source's rows to the resources the recipe leaves it ow
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -81,6 +81,7 @@ from .provenance import import_run, preferred_runs, source_roots
 from .reading import Delivered
 from .recipe import RECIPE_SUPPLIES, Problem, Recipe, SourceSpec, payloads, refusal
 from .replacing import Replaced, read_replaced
+from .secrets import as_returned, stated_userinfo
 from .sources.compensations import describe, recordable
 from .sourcing import build_source, harvest, order, reference_clock, resolved_source_cache, rows_reader
 from .writer import PacketWriter
@@ -494,6 +495,8 @@ def build(  # noqa: C901
     compensated: list[Mapping[str, str | None]] = []
     #: Notes each source had said by the time it was run, so a later one can be told apart.
     drained: dict[str, int] = {}
+    #: Userinfo this build recognizes as a credential, which a returned URI is written without (Part 05 §7).
+    withheld = stated_userinfo(recipe.document)
     for spec in order(recipe):
         say(f"{spec.kind} -> {', '.join(spec.owns) or 'nothing it owns'}")
         source = build_source(spec, recipe, context)
@@ -520,10 +523,10 @@ def build(  # noqa: C901
                 )
             writer.add_array(staged.resource_id, staged)
         for resource_id, array in (source.external_arrays() if isinstance(source, ReferencesArrays) else {}).items():
-            writer.reference_array(resource_id, array)
+            writer.reference_array(resource_id, replace(array, uri=as_returned(array.uri, withheld)))
             say(f"  referenced {resource_id}")
         for resource_id, media in (source.external_media() if isinstance(source, ReferencesMedia) else {}).items():
-            writer.reference_media(resource_id, media)
+            writer.reference_media(resource_id, replace(media, uri=as_returned(media.uri, withheld)))
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
             say(f"  referenced {resource_id}{size}")
         # An adapter in this process may hand its payloads over as bytes, which the build writes where

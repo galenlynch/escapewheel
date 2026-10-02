@@ -39,7 +39,7 @@ The change is structural because the rules it restates sit in the middle of Part
 Part 03 §§3 and 7, Part 05 §4.3 and Part 09 §§2 and 3, and an appended section would leave each of
 them contradicting it.
 
-The other open draft, `a-build-records-a-recipe-without-its-credentials.md`, amends Part 05 §§3.2,
+R159, accepted after this draft was appraised, amends Part 05 §§3.2,
 3.5 and 7 and touches no section this one amends. Three open proposals change the core registry
 and so advance the same `registry_version`: one removes a column of `core.clocks`, one rewords the
 description of `processing_run_id` on the array tables, and one makes name columns required and

@@ -2533,7 +2533,7 @@ where = [
   { part = "05", anchor = "ew-verdict-composition" },
   { part = "05", anchor = "ew-error-policy" },
 ]
-note = "33 clauses gain an actor -- 13 a writer, 6 a validator, 4 a consumer, 3 a build, 1 a reader, and the 8 abstract-subject ones -- and 12 name the part of the artifact they constrain, actively. Three judgement calls settled in the revision: 00 §4.1 binds a writer, 03 §7's stray binds a writer, and 04 §5's unresolved source splits between a reader and a validator. the clause fixed the form of each sentence and decided no rule of its own: the carried-identifier name sentence in Part 02 §8.2 is R53 §2.3.1's, as R126 §3.6 restated it. R156 §§3.1 and 3.2 restate in Part 05 §4.3 its sentence on a compensation: what a compensation states, that an adapter states each one it applies, and that a writer records each one stated to it"
+note = "33 clauses gain an actor -- 13 a writer, 6 a validator, 4 a consumer, 3 a build, 1 a reader, and the 8 abstract-subject ones -- and 12 name the part of the artifact they constrain, actively. Three judgement calls settled in the revision: 00 §4.1 binds a writer, 03 §7's stray binds a writer, and 04 §5's unresolved source splits between a reader and a validator. the clause fixed the form of each sentence and decided no rule of its own: the carried-identifier name sentence in Part 02 §8.2 is R53 §2.3.1's, as R126 §3.6 restated it. R156 §§3.1 and 3.2 restate in Part 05 §4.3 its sentence on a compensation: what a compensation states, that an adapter states each one it applies, and that a writer records each one stated to it. R159 §3.1 has a build withhold from what it composes each value of the recipe it recognizes as a credential"
 
 
 [clause."R112 §2.1"]
@@ -3608,7 +3608,7 @@ note = "commit is promotion then publication of a packet that passed, under a pr
 [clause."R135 §3.4"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-import-provenance" }]
-note = "one core.source_files row per distinct recipe root, as the recipe states it, linked to the import run"
+note = "one core.source_files row per distinct recipe root, as the recipe states it, linked to the import run. R159 §3.3 writes the root less each component the build recognizes as a credential, and counts roots equal once removed as one"
 
 [clause."R135 §3.5"]
 disposition = "applied"
@@ -4145,7 +4145,7 @@ where = [
   { part = "05", anchor = "ew-import-provenance", note = "an amending build's import run and source files" },
   { part = "05", anchor = "ew-alternatives-resolved", note = "an import run is no alternative, and an added run is preferred" },
 ]
-note = "the registry's core.processing_runs.undeclared_currency exempts import runs"
+note = "the registry's core.processing_runs.undeclared_currency exempts import runs. R159 §3.3 has an amending build compare a root with a held row's uri after removing recognized components from both"
 
 [clause."R150 §3.8"]
 disposition = "applied"
@@ -4338,3 +4338,19 @@ where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-current-owner-ledger
 [clause."R158 §3.3"]
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-current-owner-ledger", note = "the ledger records no count of undisposed clauses, and the check writes no file" }]
+
+[clause."R159 §3.1"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-provenance-record", note = "a build documents the values it recognizes as credentials and includes none in what it composes; unchecked" }]
+
+[clause."R159 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-provenance-record", note = "the recorded recipe holds `[redacted]` for a whole value and a URI without the component, and a consumer does not take the marker for the value used" }]
+
+[clause."R159 §3.3"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-import-provenance", note = "a stated or returned URI without the recognized component, roots equal once removed, and an amending build's comparison" }]
+
+[clause."R159 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-check", note = "a build may refuse a recipe carrying a recognized credential, naming the member and not the value" }]

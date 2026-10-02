@@ -36,8 +36,8 @@ The change is structural because the two sentences it restates sit inside Part 0
 Part 02 §9.2. An appended section would leave the first miscounting and the second naming a version
 the registry no longer carries.
 
-Of the two other open drafts, `a-build-records-a-recipe-without-its-credentials.md` amends only
-sections of Part 05, and `core-declares-a-catalog-of-sidecars.md` adds three declarations to the
+R159, accepted after this draft was appraised, amends only
+sections of Part 05, and the open draft `core-declares-a-catalog-of-sidecars.md` adds three declarations to the
 core registry and advances the same `registry_version`. Two further open changes, not yet drafts at
 the baseline, advance it too: one rewords the description of `processing_run_id` on the two
 array-asset tables, and one makes name columns required and adds a rule to `core.units` and one to

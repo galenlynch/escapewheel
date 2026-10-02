@@ -225,8 +225,7 @@ check that record against the recipe schema, and the reference validator and rea
 
 ### 2.12 Other open work
 
-One other draft amends a section this revision amends.
-`a-build-records-a-recipe-without-its-credentials.md` amends Part 05 §3.2, Part 05 §3.5 and
+One accepted revision, R159, amends a section this revision amends. It amends Part 05 §3.2, Part 05 §3.5 and
 Part 05 §7. To Part 05 §3.5 it adds one permission, that a build may refuse a recipe carrying a
 value it recognizes as a credential, and it changes no item the section already lists. This
 revision changes other items of that section. Neither edits a sentence the other edits or depends

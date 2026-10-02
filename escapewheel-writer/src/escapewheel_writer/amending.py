@@ -31,6 +31,7 @@ from escapewheel_validator.amendment import DERIVED, PREFERENCES, PROVENANCE, Ve
 from .arrow import sort_key
 from .errors import AmendmentFault, AmendmentRefused
 from .promotion import act_on_promotion
+from .secrets import without_userinfo
 
 #: Tables the packet identifies itself by, whose held rows prevail over every source in an amending
 #: build (Part 05 §3.5).
@@ -183,8 +184,13 @@ class Held:
         return [str(name) for name in table.column("clock_name").to_pylist() if name is not None]
 
     def source_files(self, keys: Any) -> dict[str, str]:
-        """Return each `uri` the packet's `core.source_files` rows record, to that row's name (Part 05 §7)."""
-        return {str(row["uri"]): str(row["source_file_id"]) for row in self.named_rows(CORE_SOURCE_FILES, keys)}
+        """Return each `uri` the packet's `core.source_files` rows record, to that row's name (Part 05 §7).
+
+        Less its userinfo, since a build compares a root with these after removing a credential from
+        both. Of two rows then alike, the one recording no userinfo names the root.
+        """
+        held = {str(row["uri"]): str(row["source_file_id"]) for row in self.named_rows(CORE_SOURCE_FILES, keys)}
+        return {without_userinfo(uri): held.get(without_userinfo(uri), name) for uri, name in held.items()}
 
     # -- numbering --------------------------------------------------------------------
 

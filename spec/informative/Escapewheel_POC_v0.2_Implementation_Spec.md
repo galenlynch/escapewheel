@@ -3442,6 +3442,35 @@ each entry.
 
 A writer MUST record the recipe in the import run's parameters, and its digest as the run's `code_uri`. A committed packet therefore states what produced it.
 
+A build decides which values of a recipe it recognizes as credentials. A value is the value of any
+member the recipe states, an element of any array, or a component of either where it is a URI. A
+build MUST document which values it recognizes. No checker verifies that it does.
+
+A build MUST NOT include a value it recognizes as a credential in anything it composes and writes
+to the staging area, to the packet, or to a source resolution document
+([Part 04 §5.5](../parts/04_packet_catalog.md#ew-source-resolution)). A build composes the manifest, the
+recipe it records, each other row it records for itself, the `core.source_files` rows among them
+(§7), and the source resolution document. It does not compose what an adapter delivers, what a
+command prints, or a row or resource the packet held before the build, and the rule reaches none of
+these. Within the manifest, the `uri` of a referenced resource is one an adapter returned
+([Part 12 §5](../parts/12_adapter_interface.md#ew-referenced-resource-delivery)), and §7 states what a build
+owes there.
+
+No validator checks this rule. Whether a string a packet holds is a credential cannot be decided
+from the packet, so the rule binds the build, which alone knows what it recognized.
+
+The recipe a writer records is the recipe the build read, differing from it in two ways and no
+other. Where the build recognizes as a credential the whole value of a member or of an array
+element, the record holds the string `[redacted]` under that member's name or at that element's
+position. Where the build recognizes as a credential a component of a URI, the record holds the URI
+without that component, as §7 has a build write it, and no marker stands in the component's place.
+
+The run's `code_uri` is the digest of the recipe as the build read it, whatever the record
+withholds.
+
+A consumer MUST NOT take `[redacted]` in a recorded recipe for the value the build used. No checker
+verifies this.
+
 <a id="ew-recipe-ownership" data-spec-anchor="canonical"></a>
 ### 3.3 Ownership
 
@@ -3525,6 +3554,10 @@ A build MUST refuse, before it opens any source, a recipe with two `preferred_ru
 refuse, naming the entry, a `preferred_run` entry whose `processing_run_name` names no run the
 packet holds or the build records, or names a run whose `activity_type`, `scope_kind` or `scope`
 differs from the entry's.
+
+A build MAY refuse, before it opens any source, a recipe carrying a value it recognizes as a
+credential (§3.2), naming the member that holds the value, and the source where a source entry
+holds it, and not the value. A build that does not refuse proceeds under §3.2 and §7.
 
 An amending build (§15.1) MUST also refuse, before it opens any source:
 
@@ -3894,16 +3927,26 @@ A writer MUST record, in the staging area at step 4 of §2:
 - one `core.processing_runs` row for the import, whose `activity_type` is `import`, declaring its
   `scope` and `scope_kind`;
 - one `core.source_files` row for each distinct `root` among the recipe's sources (§3.1), whose
-  `uri` is that root as the recipe states it; and
+  `uri` is that root as the recipe states it, less each component in which the build recognizes a
+  credential (§3.2); and
 - one `core.processing_run_inputs` row linking each of those `core.source_files` rows to the import
   run.
 
 A writer need not read a source to fill `sha256`, `size_bytes`, `format`, or `modified_at`, each of
 which may be null.
 
+Where a build recognizes a credential (§3.2) in a component of a URI the recipe states, it MUST
+write that URI without the component wherever it writes it. Where an adapter returns for a
+referenced resource ([Part 12 §5](../parts/12_adapter_interface.md#ew-referenced-resource-delivery)) a URI
+carrying the same component, a build MUST write that URI without the component too. No validator
+checks either rule, for the reason §3.2 gives. Two roots that are equal once such components are
+removed are one root for this section.
+
 An amending build (§15.1) records a `core.source_files` row only for a root among its recipe's
 sources whose `uri` no `core.source_files` row of the packet carries, and links its import run to the
-`core.source_files` row of every root among the recipe's sources, held or added.
+`core.source_files` row of every root among the recipe's sources, held or added. It compares a root
+with the `uri` of each row the packet holds after removing from both every component it would
+recognize as a credential.
 
 <a id="ew-import-materialization" data-spec-anchor="canonical"></a>
 ## 8. Materialize
