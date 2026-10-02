@@ -228,11 +228,6 @@ natural.
 - **A second trials table from another paradigm** would settle whether an interval's task columns
   belong in core. R54 struck the four Part 02 defined and nothing wrote, so the question is now about
   what an extension carries rather than what core does.
-- **Part 02 §5.2's exclusion of `list` has lost its Julia argument.** R3 §2.3 excluded `list`, which
-  it calls core Parquet, because Parquet2.jl cannot read one. Every Julia read of a packet now goes
-  through DuckDB.jl, which reads lists (R3 §7.3), so what still supports the exclusion is the lower
-  implementation floor R3 §2.3 also argues. Worth re-deciding before a table next wants a repeated
-  value inline.
 - **A nullable identifier's null has no stated meaning.** Nothing obliges an adapter to report a
   value it could not fill, since Part 12 §9's report is a MAY. So a consumer cannot tell
   `core.array_channels.electrode_id` null meaning *this channel maps to no contact* from null

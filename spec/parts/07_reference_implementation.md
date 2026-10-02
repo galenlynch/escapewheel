@@ -27,8 +27,6 @@ The split is not cosmetic. The validator's correctness is pinned to a registry v
 
 Validation requires an embedded SQL engine, because the rules are SQL. Reading does not: a complete read path goes through the columnar library alone, so the SQL engine is an optional extra.
 
-This is what Part 02 §5.2's ban on nested types exists to preserve — a native reader stays viable in a language without an embedded SQL engine.
-
 ## 3. Command line
 
 ```text

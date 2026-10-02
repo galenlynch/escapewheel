@@ -306,7 +306,7 @@ string  int32  int64  float32  float64  bool  timestamp  date  json_string
 
 A column's type MUST NOT be `list`, `struct`, or `map`. A registry document MUST declare a repeated value, a fact holding zero or more values for one row, as a child table, and MUST NOT declare it as a delimited string or as JSON. No checker verifies this beyond the type prohibition above. A semi-structured value becomes a `json_string` in an optional column.
 
-This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
+This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps every value within reach of a rule: Part 11 binds no collection type and admits no routine that reads inside one, so a rule can check a repeated value, a reference included, only where each value is its own row.
 
 A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole. §8.6 states what a `metadata` column may hold, and §12.6 what `core.processing_runs.parameters` may hold. Part 05 §3.2 and Part 05 §4.3 state what a build records in an import run's `parameters`, and Part 06 §5 what a writer records in a materialization run's. Part 01 §3.11 permits an event a structured payload. No part states what `core.events.payload` or `core.sorting_runs.parameters` holds. The core registry declares which of its columns are `json_string`, as the declaration authority for the `core` and `analysis` namespaces (§2).
 

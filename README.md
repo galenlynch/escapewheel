@@ -33,8 +33,8 @@ NWB stores an ecephys session as one HDF5 or Zarr hierarchy whose semantics are 
 mainly through PyNWB. That makes columnar analytics awkward, cross-language reading hard, and
 partial reads expensive. Escapewheel keeps the science and changes the substrate:
 
-- **Tables are Parquet**, every column a primitive — no nested types, so a native reader stays
-  viable in a language with no embedded SQL engine.
+- **Tables are Parquet**, every column a primitive — no nested types, so every value is a row a
+  rule can check.
 - **Arrays are Zarr v3**, chunked for the question and sharded for the object store.
 - **Time is integer ticks on a declared clock.** Float seconds are derived, never stored.
 - **Validation is data.** Most checks are generated from the registry's
