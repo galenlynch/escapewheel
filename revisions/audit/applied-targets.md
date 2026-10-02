@@ -62,6 +62,9 @@ R100 to R124, 42 from R125 to R129, and 1 from R130 onward.
 Each row is one rule of an accepted revision that no part states with the revision's force. The
 class says what kind of repair the rule needs.
 
+The `repairs/` directory beside this file holds one file per class, with each rule's current
+text, proposed text, placement and risk, and a fifth file for the disputed rules.
+
 | class | rules | meaning |
 |---|---:|---|
 | A | 35 | The sentence is absent. Restoring it contradicts nothing a part or a later revision says. |
