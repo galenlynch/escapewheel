@@ -255,9 +255,16 @@ def test_a_query_converting_no_decimal_to_an_approximate_domain_runs_as_authored
             ),
             None,
         ),
+        (
+            (
+                f"SELECT q.v FROM (SELECT * FROM (SELECT {PRODUCT} AS v FROM core.products) AS s "
+                "UNION ALL SELECT stored FROM core.products) AS q"
+            ),
+            "s.v",
+        ),
         ("SELECT v FROM a.b WHERE", None),
     ],
-    ids=["undeclared-table", "using", "set-operation-removing-duplicates", "unparsed"],
+    ids=["undeclared-table", "using", "set-operation-removing-duplicates", "set-operation-member-star", "unparsed"],
 )
 def test_a_conversion_that_cannot_be_lowered_is_refused(query, expression):
     """A query is never run with a conversion left to the engine: Part 11 §8 makes the rule incomplete."""
