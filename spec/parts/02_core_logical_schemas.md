@@ -993,6 +993,7 @@ common declaration fields are in the registry.
 | `core.clocks` | declared counters, their rates, origins, and parents |
 | `core.clock_anchors` | anchor pairs mapping a clock onto its parent |
 | `core.clock_observation_intervals` | when each clock was observing |
+| `core.clock_phase_steps` | the steps in a clock's alignment to its parent |
 
 ### 11.4 Structure
 
