@@ -6,7 +6,7 @@ Part 05 §14 and Part 11 state every rule below without a keyword, as they state
 
 A third reading then tried to show each restoration to be a mistake: whether a later revision changed the rule, whether the text contradicts or exceeds anything, whether it names an actor who can comply, whether a check observes it, whether it sits in the part that owns it, and whether the reference implementation and the corpus comply. It also read each section as a whole, and the last section of this file gives that reading. Its verdicts: restore, reworded (10), needs a decision (9), restore as first proposed (2), do not restore (1). Entries are cited across these files by class letter and entry number: C7 is entry 7 of class C, D3 of class D, and E18 of the disputed rules.
 
-Nothing here has been applied. The audit record is [applied-targets.md](../applied-targets.md).
+C22 was entered on 2026-10-02. Every other entry waits on decisions 1 to 10 of [decisions.md](decisions.md): Part 05 §14 is repaired in one change, and Part 11 through its §1. The audit record is [applied-targets.md](../applied-targets.md).
 
 ## Part 05
 

@@ -335,7 +335,7 @@ The reading that passed the 56 restorations was then given to everything else: t
 rules, the 17 rules first classed D, the 21 disputed rules, the six tool-enforced rules, the twelve
 dispositions and the 140 clauses with a target to change. The 14 rules referred from classes A and
 B had that reading already. Each item was read at commit `7eb8b9b7`, after the restorations.
-Nothing in this section has been applied.
+[What was applied on 2026-10-02](#what-was-applied-on-2026-10-02) says which of these have since been entered.
 
 | class | items | restore, as proposed or reworded | needs a decision | not owed, or do not restore |
 |---|---:|---:|---:|---:|
@@ -424,6 +424,29 @@ Each class file under `repairs/` now carries the reading per entry, with the tex
 choice; [repairs/G-process-and-dispositions.md](repairs/G-process-and-dispositions.md) holds the
 process rules and the dispositions, and
 [applied-target-pointers.md](applied-target-pointers.md) the targets.
+
+## What was applied on 2026-10-02
+
+Everything the critical reading left without a choice was entered, and
+[repairs/decisions.md](repairs/decisions.md) lists every choice that remains, numbered, with its
+options and what each changes.
+
+- **Parts.** Eleven reworded restorations in Parts 01, 02, 03, 04 and 11 (D4, D7, D8, D10, D11,
+  D13, D15, E4, E6, E16, C22), and ten labels on requirements restored the day before that no check
+  observes.
+- **Revision guide.** §2 says that a withdrawn record remains unedited (E12).
+- **Ledger targets.** 132 sections added and 43 dropped.
+- **Dispositions.** Six clauses became `superseded` (R15 §3, R79 §2.3, R107 §3.1, R112 §3.1,
+  R148 §3.4, R151 §3.2) and five `registry` with guarded pointers (R3 §3.4, R22 §4, R27 §3,
+  R30 §3.1, R41 §2.3).
+- **Notes.** One on each restored clause, on the fifteen disputed clauses not owed, and on the
+  four tool-enforced rules not owed.
+
+Thirteen of the 25 reworded restorations are held. Twelve are sentences of Part 05 §14 (C1, C3,
+C4, C8, C9, C10, C11, C13, C14, C16, C17, E18): the section is repaired in one change, since a
+keyworded sentence beside an indicative one reads as making the second optional, and four of its
+rules need a choice first. The thirteenth, D9, is the rule on `$schema` coming first, where the
+reading of the clause and the reading of its disposition disagree.
 
 ## Pilot reading of 2026-10-01
 

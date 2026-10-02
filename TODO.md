@@ -301,12 +301,14 @@ natural.
   targets that differ from the sections stating them. `revisions/audit/applied-targets.md` lists
   the findings by repair class. A third reading of the 72 plain restorations passed 56, most with
   new wording, referred 14 for a choice and rejected 2. The 56 were restored on 2026-10-01, one
-  commit per part, and the 2 are noted in the ledger. The other classes are unrepaired. Each has
-  had the same critical reading, recorded per entry under `revisions/audit/repairs/`: of the 22
-  class C, 17 class D and 21 disputed rules, 25 can be entered as that reading words them, 18 need
-  a decision and 17 are not owed. Three of the decisions need a revision: the relation a consumer
-  uses for a unit outside its packet, whether `[overrides]` resolves a discarded fact, and
-  removing `core.clocks.transform_to_parent`.
+  commit per part, and the 2 are noted in the ledger. The other classes had the same critical
+  reading, recorded per entry under `revisions/audit/repairs/`: of the 22 class C, 17 class D and
+  21 disputed rules, 25 can be entered as that reading words them, 18 need a decision and 17 are
+  not owed. On 2026-10-02 twelve of the 25 were entered, with the confirmed ledger targets,
+  dispositions and notes. The other thirteen, twelve of them in Part 05 §14, wait on the choices
+  in `revisions/audit/repairs/decisions.md`. Three of those need a revision: the relation a
+  consumer uses for a unit outside its packet, whether `[overrides]` resolves a discarded fact,
+  and removing `core.clocks.transform_to_parent`.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
@@ -333,3 +335,16 @@ them with the text findings beside them.
   The rule itself waits on a revision.
 - **`spec/tools/check.py` prints outcome lines for a non-valid core registry** and offers no
   output of the complete result.
+
+The same reading found four defects in the specification and the registry. Each waits on a
+decision in `revisions/audit/repairs/decisions.md`.
+
+- **The description of `processing_run_id` on both array-asset tables is false.** It says a null
+  means the array was acquired, and a computed array whose run the packet does not record also
+  carries null (decision 15).
+- **Part 05 §1 says the part binds no checker and that §14.4 binds a writer.** §14.2 and §14.4
+  bind an implementation that checks a registry for an extension author (decision 1).
+- **Part 11 §3 says a table exposes exactly its registry-declared columns.** Part 02 §10.2 and the
+  validator do not expose an `optional` column a packet's table omits (decision 10).
+- **`core.clocks.transform_to_parent` is still declared.** R3 §3.4 replaced it with the two typed
+  columns; removing it needs a revision (decision 19).

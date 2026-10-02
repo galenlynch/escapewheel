@@ -4,7 +4,7 @@ Two careful readings of each clause below disagree on whether a part still owes 
 
 21 rules, in revision order. A third reading then adjudicated each dispute and, where the rule is owed, tried to show the restoration to be a mistake. Its verdicts: not owed (15), owed, reworded (5), owed, and needs a decision (1). "Not owed" means no part changes and the entry names what the ledger entry should record instead. Entries are cited across these files by class letter and entry number: C7 is entry 7 of class C, D3 of class D, and E18 of the disputed rules.
 
-Nothing here has been applied. The audit record is [applied-targets.md](../applied-targets.md).
+E4, E6, E12 and E16 were entered on 2026-10-02, and the ledger carries a note for each of the fifteen entries not owed. E18 waits with Part 05 §14 and E2 on the open byte-order draft; [decisions.md](decisions.md) lists both. The audit record is [applied-targets.md](../applied-targets.md).
 
 ### 1. R3 §2.1
 

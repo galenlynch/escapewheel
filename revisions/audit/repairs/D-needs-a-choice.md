@@ -6,7 +6,7 @@ Restoring the words of each rule below would meet a later text, an unanswered qu
 
 A third reading then tried to show each restoration to be a mistake: whether a later revision changed the rule, whether the text contradicts or exceeds anything, whether it names an actor who can comply, whether a check observes it, whether it sits in the part that owns it, and whether the reference implementation and the corpus comply. Its verdicts: needs a decision (8), restore, reworded (8), do not restore (1). A verdict of "restore, reworded" means the reading dissolved the choice and gives the sentence to enter. Entries are cited across these files by class letter and entry number: C7 is entry 7 of class C, D3 of class D, and E18 of the disputed rules.
 
-Nothing here has been applied. The audit record is [applied-targets.md](../applied-targets.md).
+D4, D7, D8, D10, D11, D13 and D15 were entered on 2026-10-02, and the ledger records R3 §3.4 (D17) as `registry`. The rest wait on decisions 11 to 19 of [decisions.md](decisions.md). The audit record is [applied-targets.md](../applied-targets.md).
 
 ## Part 00
 

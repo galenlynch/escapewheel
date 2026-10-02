@@ -923,8 +923,8 @@ where = [{ part = "02", section = "6" }, { part = "02", section = "5.2" }]
 note = "restored 2026-10-02; the rule that a repeated value is declared as a child table, and never as a delimited string or as JSON, was absent"
 
 [clause."R3 §3.4"]
-disposition = "applied"
-where = [{ part = "01", section = "3.9" }]
+disposition = "registry"
+note = "core.clocks gains transform_slope and transform_offset; the replaced transform_to_parent is still declared"
 
 [clause."R3 §4"]
 disposition = "registry"
@@ -1477,7 +1477,7 @@ note = "an amended packet is run-major within each build, so under R150 §3.6 it
 [clause."R81 §2.5"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-unit-identity" }]
-note = "restored 2026-10-02; the prohibition on identifying a unit by its `unit_id` outside the packet that assigned it was absent"
+note = "restored 2026-10-02; the prohibition on identifying a unit by its `unit_id` outside the packet that assigned it was absent. The relation a consumer uses outside the packet is stated without a keyword, since the pair it names no longer identifies a unit"
 
 [clause."R81 §2.6"]
 disposition = "rationale"
@@ -2978,7 +2978,7 @@ where = [
   { part = "01", anchor = "ew-unit-concept" },
   { part = "02", anchor = "ew-unit-identity" },
 ]
-note = "Unit meaning remains semantic, while packet-local identity and reader unit selection have separate current owners. Under R149 §3.1 two writers may number units tying on their label differently."
+note = "Unit meaning remains semantic, while packet-local identity and reader unit selection have separate current owners. Under R149 §3.1 two writers may number units tying on their label differently. restored 2026-10-02; the prohibition on identifying a unit by its `unit_id` outside the packet that assigned it was absent, and the relation a consumer uses there is stated without a keyword"
 
 [clause."R123 §3.2"]
 disposition = "applied"

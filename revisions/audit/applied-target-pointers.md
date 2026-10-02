@@ -1,6 +1,6 @@
 # Ledger targets the audit would change
 
-The [audit of the ledger's applied targets](applied-targets.md) found 140 `applied` clauses whose recorded targets differ from the sections that state them. A second reader then read every proposed section and every target proposed for removal against the clause. Nothing here has been applied to `revisions/applied.toml`.
+The [audit of the ledger's applied targets](applied-targets.md) found 140 `applied` clauses whose recorded targets differ from the sections that state them. A second reader then read every proposed section and every target proposed for removal against the clause. The confirmed changes were applied to `revisions/applied.toml` on 2026-10-02, with these exceptions. Three confirmed additions name a guide section that has no anchor and cannot be recorded: R120 §3.1 at guide §1, and R120 §3.7 at guide §9 and §12. One confirmed drop, R38 §2.3, had already been made. Of the five clauses left with no target, four took the disposition `superseded` and R102 §3.1 took the section its restored rule now stands in.
 
 The first reading proposed 167 sections to add, over 115 clauses, and 58 recorded targets to drop, over 46 clauses. The second reader proposed 6 more sections. Of the 173 additions it confirms 135, over 95 clauses, rejects 34, and finds 4 recorded since by the restorations of 2026-10-01. Of the 58 drops it confirms 49, over 39 clauses, and keeps 9. 23 clauses are left with no confirmed change.
 

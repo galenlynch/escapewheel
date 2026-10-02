@@ -16,6 +16,14 @@ locations = [
 [target."R20 §2.3"]
 locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.array_dimensions/table" }]
 
+[target."R3 §3.4"]
+locations = [
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.clocks/table/columns/9/name", equals = "transform_slope" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.clocks/table/columns/10/name", equals = "transform_offset" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.clocks/table/rules/3/id", equals = "core.clocks.transform_pair_complete" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.clocks/table/rules/4/id", equals = "core.clocks.transform_requires_parent" },
+]
+
 [target."R22 §4"]
 locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.unit_quality_labels/table/rules/0/id", equals = "core.unit_quality_labels.projection_is_consistent" }]
 
