@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import warnings
+from collections.abc import Callable
 from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
@@ -27,15 +28,32 @@ from .errors import ExtensionNotFound
 EXTENSION_GROUP = "escapewheel.extensions"
 
 
-def _document(loaded: Any, source: str) -> dict[str, Any]:
-    """Coerce whatever an entry point loaded into a registry document."""
+def _registered(loaded: Any, source: str) -> dict[str, Any] | bytes:
+    """Coerce whatever an entry point loaded into a registry document, or the exact bytes of the file it names."""
     if callable(loaded) and not isinstance(loaded, type):
         loaded = loaded()
     if isinstance(loaded, dict):
         return loaded
     if isinstance(loaded, (str, Path)):
-        return dict(json.loads(Path(loaded).read_text()))
+        return Path(loaded).read_bytes()
     raise ExtensionNotFound(f"{source} loaded {type(loaded).__name__}, not a document or a path to one", named=source)
+
+
+def _document(loaded: Any, source: str) -> dict[str, Any]:
+    """Coerce whatever an entry point loaded into a registry document."""
+    registered = _registered(loaded, source)
+    return dict(json.loads(registered)) if isinstance(registered, bytes) else registered
+
+
+def _installed[T](coerce: Callable[[Any, str], T]) -> dict[str, T]:
+    """Return what each installed distribution registers, as `coerce` reads it, by the name it claims."""
+    found: dict[str, T] = {}
+    for entry in entry_points(group=EXTENSION_GROUP):
+        try:
+            found[entry.name] = coerce(entry.load(), f"extension {entry.name!r}")
+        except Exception as exc:  # noqa: BLE001 - one broken package is one extension, not all
+            warnings.warn(f"extension {entry.name!r} could not be loaded: {exc}", stacklevel=3)
+    return found
 
 
 def installed() -> dict[str, dict[str, Any]]:
@@ -45,13 +63,7 @@ def installed() -> dict[str, dict[str, Any]]:
     package must not make every other extension unavailable, which is the failure mode that makes
     a plugin system worse than no plugin system.
     """
-    found: dict[str, dict[str, Any]] = {}
-    for entry in entry_points(group=EXTENSION_GROUP):
-        try:
-            found[entry.name] = _document(entry.load(), f"extension {entry.name!r}")
-        except Exception as exc:  # noqa: BLE001 - one broken package is one extension, not all
-            warnings.warn(f"extension {entry.name!r} could not be loaded: {exc}", stacklevel=2)
-    return found
+    return _installed(_document)
 
 
 def load(named: str, *, base: Path | None = None) -> dict[str, Any]:
@@ -77,14 +89,22 @@ def load(named: str, *, base: Path | None = None) -> dict[str, Any]:
 
 
 def load_checked(named: str, core: CheckedRegistryContext, *, base: Path | None = None) -> CheckedRegistryContext:
-    """Load and check one extension, preserving exact bytes whenever this process owns them."""
+    """Load and check one extension, preserving exact bytes whenever this process owns them.
+
+    A file, whether the entry names it or an installed distribution registers its path, is checked
+    through the byte entry point, and a document a distribution registers through the mapping one
+    (Part 05 §14.2).
+    """
     candidates = [Path(named)] + ([base / named] if base is not None else [])
     for candidate in candidates:
         if candidate.is_file():
             return check_registry_context_bytes(candidate.read_bytes(), core=core)
-    available = installed()
+    available = _installed(_registered)
     if named in available:
-        return check_registry_context(available[named], core=core)
+        registered = available[named]
+        if isinstance(registered, bytes):
+            return check_registry_context_bytes(registered, core=core)
+        return check_registry_context(registered, core=core)
     known = ", ".join(sorted(available)) or "none installed"
     raise ExtensionNotFound(
         f"{named!r} is neither a file nor an installed extension; registered under {EXTENSION_GROUP}: {known}",

@@ -445,6 +445,55 @@ def test_a_broken_extension_package_is_skipped(monkeypatch):
     assert "rotten" in str(caught[0].message)
 
 
+class _EntryPoint:
+    """An entry point of the extension group loading to `value`."""
+
+    def __init__(self, name, value):
+        self.name = name
+        self._value = value
+
+    def load(self):
+        return self._value
+
+
+def test_a_registry_registered_as_a_path_is_checked_from_its_bytes(tmp_path, registry, monkeypatch):
+    """Part 05 §14.2: the file a distribution registers is checked through the byte entry point, which
+    alone sees a repeated object member (Part 02 §9.4). Decoded first, the later `registry_version`
+    replaces the earlier and the mapping is valid."""
+    from escapewheel_validator import check_registry_context
+
+    from escapewheel_writer import extensions as ext
+
+    version = '"registry_version": "0.1.0"'
+    repeated = json.dumps(EXTENSION).replace(version, f'"registry_version": "0.0.9", {version}')
+    assert check_registry_context(json.loads(repeated), core=registry).result.state == "valid"
+    path = tmp_path / "task.json"
+    path.write_text(repeated)
+    monkeypatch.setattr(ext, "entry_points", lambda group: [_EntryPoint("task", str(path))])
+
+    context = ext.load_checked("task", registry)
+
+    assert (context.input_kind, context.exact_input) == ("bytes", repeated.encode())
+    assert context.result.state == "invalid"
+    json_phase = context.result.phases[0]
+    assert [(outcome.id, outcome.instance) for outcome in json_phase.outcomes] == [
+        ("registry.json.duplicate_member", "")
+    ]
+
+
+def test_a_registry_registered_as_a_document_is_checked_as_a_mapping(registry, monkeypatch):
+    """Part 05 §14.2: a boundary given only a decoded mapping claims no byte-level JSON check."""
+    from escapewheel_writer import extensions as ext
+
+    monkeypatch.setattr(ext, "entry_points", lambda group: [_EntryPoint("task", EXTENSION)])
+
+    context = ext.load_checked("task", registry)
+
+    assert (context.input_kind, context.result.state) == ("mapping", "valid")
+    json_phase = context.result.phases[0]
+    assert (json_phase.state, json_phase.reason) == ("skipped", "registry.phase.mapping_input")
+
+
 def test_three_extensions_at_once(tmp_path, registry, minimal):
     """Nothing about carrying one is special-cased, so carrying three is carrying one thrice."""
 
@@ -581,7 +630,8 @@ def test_a_recipe_listing_one_extension_twice_is_refused(
     from escapewheel_writer import extensions as ext
     from escapewheel_writer.recipe import Recipe
 
-    monkeypatch.setattr(ext, "installed", lambda: installed)
+    registered = [_EntryPoint(name, document) for name, document in installed.items()]
+    monkeypatch.setattr(ext, "entry_points", lambda group: registered)
     recipe = Recipe.load(_extensions_recipe(tmp_path, entries, documents, SORTER))
     refusal = _build_refuses(recipe, registry, monkeypatch)
     named = ", ".join(repr(entry) for entry in entries)
