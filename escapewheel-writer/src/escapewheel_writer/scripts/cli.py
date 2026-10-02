@@ -20,8 +20,6 @@ import time
 from pathlib import Path
 
 from escapewheel_reader.errors import EscapewheelError
-from escapewheel_reader.manifest import MANIFEST_FILENAME
-from escapewheel_reader.registries import gunzip_member
 from escapewheel_validator import (
     EvaluationStatus,
     Level,
@@ -32,8 +30,8 @@ from escapewheel_validator import (
 )
 
 from .. import compare
+from ..amending import Held
 from ..errors import CommitRefused, ReplacementRefused, SourceDefect, UnknownSourceKind
-from ..extensions import load_checked as load_extension_context
 from ..kinds import contributes, produces, required_adapter
 from ..protocols import SourceAdapter
 from ..recipe import RECIPE_SUPPLIES, Recipe
@@ -222,38 +220,30 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
     # delivery lands from where the packet is going.
     recipe = Recipe.load(args.recipe, out=args.out)
     registry_path = args.registry or recipe.registry
-    # Part 05 §15.1: an amending build binds, under an ID its recipe names nothing for, the
-    # registry the packet binds.
-    bound = _bound_registries(recipe.out) if recipe.amends is not None else {}
-    if registry_path is None and "core" not in bound:
+    if registry_path is not None:
+        core_bytes = Path(registry_path).read_bytes()
+    elif recipe.amends is not None:
+        # Part 05 §15.1: an amending build binds the core the packet binds where it names none, and
+        # `prepare` binds the packet's other registries the same way.
+        held = Held.open(recipe.out)
+        core_bytes = held.registry_bytes()["core"]
+        held.close()
+    else:
         print("error: no registry; declare [packet].registry or pass --registry", file=sys.stderr)
         return 2
-    core_context = check_registry_context_bytes(
-        Path(registry_path).read_bytes() if registry_path is not None else bound["core"]
-    )
+    core_context = check_registry_context_bytes(core_bytes)
     # Part 05 §14.4: the path holds the result of the registry that stops the build, and core's
     # where none does.
     _write_result(args.registry_result, core_context.result)
     if core_context.result.state != RegistryState.VALID:
         print(f"error: core registry is {core_context.result.state}", file=sys.stderr)
         return 2
-    extension_contexts = [
-        load_extension_context(named, core_context, base=recipe.path.parent) for named in recipe.extensions
-    ]
-    named_ids = {
-        str(context.document.get("registry_id")) for context in extension_contexts if isinstance(context.document, dict)
-    }
-    extension_contexts += [
-        check_registry_context_bytes(body, core=core_context)
-        for registry_id, body in sorted(bound.items())
-        if registry_id != "core" and registry_id not in named_ids
-    ]
     if args.sample:
         recipe = recipe.with_sample(args.sample)
 
     # Prepared once: every problem is printed here, and the build takes the result.
     try:
-        prepared = prepare(recipe, core_context, extension_contexts=extension_contexts)
+        prepared = prepare(recipe, core_context)
     except RegistryRejected as exc:
         _write_result(args.registry_result, exc.result)
         named = "" if exc.subject == "extension" else f" {exc.subject}"
@@ -336,15 +326,6 @@ def _write_result(path: Path | None, result: RegistryResult) -> None:
     """Write a registry's complete portable result (Part 02 §9.5) to `path`, where one is given."""
     if path is not None:
         path.write_text(json.dumps(result.to_dict(), indent=2) + "\n")
-
-
-def _bound_registries(root: Path) -> dict[str, bytes]:
-    """Return the exact bytes of each registry the packet at `root` binds, by registry ID."""
-    manifest = root / MANIFEST_FILENAME
-    if not manifest.is_file():
-        return {}
-    registries = json.loads(manifest.read_text()).get("registries", {})
-    return {name: gunzip_member((root / bound["path"]).read_bytes()) for name, bound in registries.items()}
 
 
 def import_source_cache(args: argparse.Namespace, out: Path) -> Path | None:

@@ -51,6 +51,7 @@ from escapewheel_validator import (
     RegistryState,
     Report,
     check_registry_context,
+    check_registry_context_bytes,
 )
 
 from . import opaque
@@ -354,7 +355,8 @@ def prepare(
     registry : Mapping or CheckedRegistryContext
         The core registry to write against.
     extension_contexts : collection of CheckedRegistryContext, optional
-        The extension registries to bind. Those the recipe names are loaded where absent.
+        The extension registries to bind, in place of those the recipe names, which are loaded
+        where absent. An amending build adds each the amended packet binds under another ID.
 
     Raises
     ------
@@ -369,15 +371,28 @@ def prepare(
     checked_registry = registry_context.document
     assert isinstance(checked_registry, Mapping)
     if extension_contexts is None:
-        extension_contexts = tuple(
+        extension_contexts = [
             load_extension_context(named, registry_context, base=recipe.path.parent) for named in recipe.extensions
-        )
+        ]
+    extension_contexts = list(extension_contexts)
+    held = Held.open(recipe.out) if recipe.amends is not None else None
+    if held is not None:
+        # Part 05 §15.1: the build also binds each registry the packet binds under an ID it names none.
+        named = {"core"} | {
+            str(context.document.get("registry_id"))
+            for context in extension_contexts
+            if isinstance(context.document, Mapping)
+        }
+        extension_contexts += [
+            check_registry_context_bytes(body, core=registry_context)
+            for registry_id, body in sorted(held.registry_bytes().items())
+            if registry_id not in named
+        ]
     for extension_context in extension_contexts:
         if extension_context.result.state != RegistryState.VALID:
             document = extension_context.document
             subject = str(document.get("extension_id", "extension")) if isinstance(document, Mapping) else "extension"
             raise RegistryRejected(subject, extension_context)
-    held = Held.open(recipe.out) if recipe.amends is not None else None
     problems = recipe.check(
         checked_registry,
         [extension.document for extension in extension_contexts],

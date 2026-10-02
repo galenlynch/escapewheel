@@ -133,6 +133,10 @@ class Held:
         """Return each registry the manifest binds, by registry ID."""
         return {name: self.packet.registry_document(name) for name in self.manifest.get("registries", {})}
 
+    def registry_bytes(self) -> dict[str, bytes]:
+        """Return the exact bytes of each registry the manifest binds, by registry ID."""
+        return {name: self.packet.registry_bytes(name) for name in self.manifest.get("registries", {})}
+
     def bind(self, tables: Mapping[str, Mapping[str, Any]], classes: Mapping[str, str]) -> None:
         """Take the declarations the amendment binds, which name every column compared (Part 05 §15.6)."""
         self.tables = tables

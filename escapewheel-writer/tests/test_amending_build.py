@@ -1,20 +1,23 @@
 """An amending build: a recipe whose `[packet].amends` names the packet it adds to (Part 05 §15.1)."""
 
 import json
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from escapewheel_reader import open_packet
+from escapewheel_reader.scripts.cli import main
 from escapewheel_validator import Level
 
 from escapewheel_writer.errors import RecipeFault, RecipeUnsound, SourceDefect, SourceFault
 from escapewheel_writer.facts import compare_held_facts
 from escapewheel_writer.notes import NoteCode, codes
 from escapewheel_writer.recipe import Recipe, SourceSpec
-from escapewheel_writer.session import build
+from escapewheel_writer.session import build, import_packet
 from tests.builders import CLOCK_NAME, amending_recipe
 from tests.conftest import REGISTRY
+from tests.test_extensions import EXTENSION
 
 
 def _rows(root: Path, resource_id: str) -> list[dict]:
@@ -135,3 +138,33 @@ def test_a_source_naming_another_subject_refuses_the_amendment():
         )
     assert refused.value.code is SourceFault.HELD_FACT_DIFFERS
     assert refused.value.where == "subject.subject_id"
+
+
+def _binding_the_task_extension(root: Path, sorted_root: Path) -> None:
+    """Amend the packet with a recipe naming the task extension, so the packet then binds it."""
+    (root / "task.json").write_text(json.dumps(EXTENSION))
+    path = amending_recipe(root, sorted_root)
+    path.write_text(path.read_text().replace('amends = "0.1.0"\n', 'amends = "0.1.0"\nextensions = ["task.json"]\n'))
+    recipe = Recipe.load(path)
+    assert build(recipe, REGISTRY).amend(recipe.out).passed
+
+
+def test_every_entry_point_binds_the_registries_the_packet_binds(packet):
+    """Part 05 §15.1: a recipe naming no extension still binds the one the packet binds."""
+    root, sorted_root = packet
+    _binding_the_task_extension(root, sorted_root)
+    bound = {}
+    for entry in ("command", "build", "import_packet"):
+        shutil.copytree(root / "packet", root / entry / "packet")
+        path = amending_recipe(root / entry, sorted_root, amends="0.1.1")
+        if entry == "command":
+            # The recipe names no core either, so the command binds the packet's.
+            assert main(["import", str(path)]) == 0
+        elif entry == "build":
+            recipe = Recipe.load(path)
+            assert build(recipe, REGISTRY).amend(recipe.out).passed
+        else:
+            assert import_packet(Recipe.load(path), REGISTRY).passed
+        bound[entry] = json.loads((root / entry / "packet" / "packet.json").read_text())["registries"]
+    assert set(bound["command"]) == {"core", "task"}
+    assert bound["build"] == bound["command"] == bound["import_packet"]
