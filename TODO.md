@@ -254,15 +254,12 @@ natural.
 - **An in-process source that omits an empty table escapes a refusal a delivered one draws.**
   `facts.refuse_a_discarded_fact` skips a resource fewer than two source kinds stated.
   REFACTOR.md §11.15 records it; changing it is behaviour the refactor does not list.
-- **An amendment writes no `sources.json`**, so a source an amendment adds has no entry in the
-  resolution document Part 04 §5.5 recommends. REFACTOR.md §11.17 records it.
-- **The import command and `import_packet` bind different registries on an amendment.** The
-  command binds a registry the amended packet binds and the recipe does not name; `build` and
-  `import_packet` called directly do not. REFACTOR.md §11.17 records it.
-- **No test amends a packet with a materializer.** The pipeline change of REFACTOR.md §11.17 was
-  compared by bytes over eight such scenarios held outside the repository.
-- **Four corpus packets expected to warn are not checked to pass**, and `tone_in_place_of_its_own`
-  names no registry. REFACTOR.md §11.6 lists them.
+- **An amendment leaves a `sources.json` the root holds as it is**, so a source it adds has no
+  entry there. Part 05 §6 refuses a promotion onto a path that exists, and Part 04 §5.5 asks a
+  writer to name every source; whether an amendment may rewrite the document is a specification
+  question.
+- **`tone_in_place_of_its_own` names no registry.** It draws a core error beside the `cue` one,
+  and the corpus's per-registry check requires core to pass. REFACTOR.md §11.6 records it.
 - **The ledger cannot see whether a section states an applied clause.** Two clauses were recorded
   at sections that never stated them and were found by hand, and a pilot reading of 40 of the 770
   applied targets found 9 that do not fully state their clause. The proposal to record a quoted

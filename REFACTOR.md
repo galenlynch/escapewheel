@@ -439,9 +439,11 @@ Found and left as they were, since each changes what the corpus asserts or is ou
 
 - Four of the six packets expected to draw a warning are not marked `conforming`, so the corpus
   does not check that they pass: `spike_outside_window`, `wide_anchor_gap`, `two_primaries` and
-  `outside_table_floor`.
+  `outside_table_floor`. Closed: each is marked `conforming`, and each passes.
 - `tone_in_place_of_its_own` expects an extension's check and names no `registry`, so the
-  per-registry verdicts are not checked for it.
+  per-registry verdicts are not checked for it. Naming `cue` makes the corpus miss it: the packet
+  also draws `core.intervals.interval_kind.cue_tones_is_specialised`, so core fails as well, and
+  the per-registry check requires core to pass.
 - `fixtures/README.md`'s table of variants is incomplete and stale in places.
 - `writing.sql_name` is defined and never called.
 
@@ -822,7 +824,9 @@ Found and left as they were:
 - Found and left as behaviour §4 does not list: an amendment writes no `sources.json`; the import
   command binds a registry an amended packet binds and the recipe does not name, where `build`
   and `import_packet` called directly do not; and no test in the repository amends with a
-  materializer.
+  materializer. Closed: an amendment writes `sources.json` where the root holds none,
+  `session.prepare` binds an amended packet's registries for every entry point, and
+  `test_amending_materialize.py` holds the scenarios.
 
 ### 11.18 The sync split, the shared helpers and the vocabularies
 
