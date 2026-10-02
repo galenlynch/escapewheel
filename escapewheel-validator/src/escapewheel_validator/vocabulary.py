@@ -41,7 +41,7 @@ class EvaluationStatus(StrEnum):
     """What became of an evaluation a registry requires, kept apart from packet findings (Part 05 §9.4)."""
 
     COMPLETE = "complete"
-    #: An input could not be read, or the engine could not finish.
+    #: An input could not be read, the engine could not finish, or it could not evaluate a rule as Part 11 defines it.
     INCOMPLETE = "incomplete"
     #: A rule is outside the rule language its registry selects.
     INVALID = "invalid"

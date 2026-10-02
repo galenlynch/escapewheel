@@ -49,8 +49,15 @@ def check_schemas(packet: Packet, tables: Mapping[str, Any], report: Report) -> 
         path, filesystem = (handle.path, None) if handle.is_local else handle.location.store()
         try:
             footer = pq.read_metadata(path, filesystem=filesystem)
-        except (OSError, pa.ArrowException):
-            continue  # an unreadable footer leaves the floor unassessed, not failed (Part 05 §9.4)
+        except (OSError, pa.ArrowException) as exc:
+            # An unreadable footer leaves the floor unassessed, which is incomplete rather than failed (Part 05 §9.4).
+            report.record_evaluation(
+                report.resource_owner(resource_id) or "core",
+                EvaluationStatus.INCOMPLETE,
+                rule=check_table.PHYSICAL_OUTSIDE_READER_FLOOR.id,
+                detail=str(exc).splitlines()[0][:160],
+            )
+            continue
         check_parquet_floor(handle.resource, footer, report)
     return present
 

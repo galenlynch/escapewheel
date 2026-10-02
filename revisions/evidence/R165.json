@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "revision": "R165",
+  "based_on": "5a1c47b7d496d3856e993551c66bdfe4491f85e3",
+  "clauses": {
+    "R165 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/11_tier_2_rule_language.md",
+          "anchor": "ew-tier-2-language-selection"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "machine-readable rule-language vectors"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_a_conversion_the_validator_cannot_round_is_incomplete_not_a_packet_finding"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "conformance/rule-language/README.md"
+        ]
+      }
+    },
+    "R165 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/11_tier_2_rule_language.md",
+          "anchor": "ew-tier-2-type-binding"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "machine-readable rule-language vectors"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_a_between_whose_comparisons_take_different_domains_is_written_as_both[exact-pair]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_a_between_whose_comparisons_take_different_domains_is_written_as_both[not-between]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_a_between_whose_comparisons_take_different_domains_is_written_as_both[not-before]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_a_between_whose_comparisons_take_different_domains_is_written_as_both[decimal-literal]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_a_between_whose_comparisons_take_different_domains_is_written_as_both[expression]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_a_between_whose_comparisons_take_different_domains_is_written_as_both[nested]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_a_between_whose_operands_share_one_domain_runs_as_authored"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/lowering.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R165 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/11_tier_2_rule_language.md",
+          "anchor": "ew-tier-2-type-binding"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "machine-readable rule-language vectors"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_an_in_list_takes_its_members_domain_before_its_left_operand_meets_it[real-list]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_an_in_list_takes_its_members_domain_before_its_left_operand_meets_it[real-list-negated]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_an_in_list_takes_its_members_domain_before_its_left_operand_meets_it[double-list]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_an_in_list_takes_its_members_domain_before_its_left_operand_meets_it[decimal]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_an_in_list_takes_its_members_domain_before_its_left_operand_meets_it[integer-and-decimal]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_lowering.py::test_an_in_list_takes_its_members_domain_before_its_left_operand_meets_it[decimal-equal]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/lowering.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md"
+        ]
+      }
+    },
+    "R165 §3.4": {
+      "owners": [
+        {
+          "path": "spec/parts/11_tier_2_rule_language.md",
+          "anchor": "ew-tier-2-evaluation-outcomes"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "rules: portable language vectors and shipped rules",
+            "id": "machine-readable rule-language vectors"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_a_conversion_the_validator_cannot_round_is_incomplete_not_a_packet_finding"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/lowering.py",
+          "conformance/rule-language/probe.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "conformance/rule-language/README.md"
+        ]
+      }
+    },
+    "R165 §3.5": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-incomplete-validation"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_an_unreadable_footer_leaves_the_floor_incomplete_rather_than_failed"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_an_unreadable_retained_manifest_leaves_the_comparison_incomplete"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_amendment.py::test_a_superseded_version_whose_files_were_removed_leaves_the_comparison_incomplete"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_rule_language.py::test_engine_failure_is_incomplete_not_a_packet_finding"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/shim/tables.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification lists the causes of an incomplete evaluation"
+      }
+    }
+  }
+}

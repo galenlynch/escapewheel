@@ -16,6 +16,7 @@ import jsonschema
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "escapewheel-validator/src"))
 
+from escapewheel_validator.errors import LoweringFailed
 from escapewheel_validator.lowering import lower
 from escapewheel_validator.rule_language import (
     PROFILE_ID,
@@ -130,7 +131,13 @@ def vector_defects() -> list[str]:
             zones = ("UTC", "America/Los_Angeles") if vector["mode"] == "execute-time-zones" else ("UTC",)
             # The evaluator fixes UTC; changing an inherited session zone must not change the result.
             for zone in zones:
-                domains, actual = execute(vector, zone)
+                try:
+                    domains, actual = execute(vector, zone)
+                except LoweringFailed:
+                    # Part 11 §8 admits an incomplete evaluation where the stated result is not reached.
+                    if vector["mode"] != "execute-or-incomplete":
+                        defects.append(f"{name}: unexpectedly incomplete")
+                    continue
                 if Counter(map(tuple, actual)) != Counter(map(tuple, vector["expected_rows"])):
                     defects.append(f"{name}: result bag {actual!r}")
                 if domains != vector.get("expected_result_domains", domains):

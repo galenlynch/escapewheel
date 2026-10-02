@@ -4140,9 +4140,10 @@ resource that is simply absent.
 ### 9.4 Incomplete validation
 
 A report MUST distinguish an invalid registry rule, an unsupported selected language, an
-incomplete valid evaluation, and a completed query that produced packet findings. An unreadable
-input, engine failure, exact overflow, out-of-range timestamp, timeout, or resource limit makes the
-affected required evaluation incomplete. A validator MUST NOT turn its inability to evaluate into
+incomplete valid evaluation, and a completed query that produced packet findings. A Tier 2
+rule's evaluation is incomplete for a cause Part 11 §8 states. Any other evaluation a subject
+requires is incomplete where an input it needs is unreadable, the engine evaluating it fails, or a
+timeout or resource limit is reached. A validator MUST NOT turn its inability to evaluate into
 an error-level packet finding. Core and every extension retain separate evaluation state.
 
 <a id="ew-verdict-composition" data-spec-anchor="canonical"></a>
@@ -5443,8 +5444,9 @@ neither every form that feature covers nor any syntax by itself. The sections th
 
 A validator claiming support for this language MUST support the identified contract as a whole.
 The contract is every statement of §§2–8, whether or not it carries a keyword: those sections
-define the language in the indicative, and a validator claiming support MUST give a rule the
-meaning they define. It MUST NOT construct a different language by independently toggling profile dependencies or
+define the language in the indicative. In every evaluation of a rule that it completes, a validator
+claiming support MUST give the rule the meaning those sections define; §8 states when an evaluation
+ends incomplete instead. It MUST NOT construct a different language by independently toggling profile dependencies or
 settings. A changed language contract MUST receive a new language ID. A registry may change its
 rules without changing the language ID only when the registry version changes and the rules retain
 this contract's meaning.
@@ -5577,6 +5579,23 @@ These rules govern comparisons, `CASE`, `COALESCE`, set operations, and routine 
 exact-to-approximate conversion rounds to nearest, ties to even. An exact-decimal literal instead
 compares with an exact numeric by mathematical value, without rounding.
 
+`x BETWEEN y AND z` means `x >= y AND x <= z`, and `x NOT BETWEEN y AND z` means
+`NOT (x BETWEEN y AND z)`. Each of the two comparisons takes the common type of its own two
+operands under these rules, and no third operand enters it. A comparison between two exact operands
+therefore rounds neither, and an exact-decimal literal bound compares with an exact numeric `x` by
+mathematical value.
+
+An `IN` value list `(v1, …, vn)` is the table value constructor `VALUES (v1), …, (vn)`. Its one
+column takes the common type of its members under the rule for set operations, and each member
+converts to that type, except that a list whose members are all exact numerics takes no common
+type: no member converts, and `x` compares with each member under the rule for comparisons, so an
+exact `x` compares with each by mathematical value and `x IN (2.5)` means `x = 2.5`.
+`x IN (v1, …, vn)` means `x = ANY` over that column, comparing `x` with the column under the rule
+for comparisons, and `x NOT IN (v1, …, vn)` means `NOT (x IN (v1, …, vn))`. `x IN (subquery)` means
+`x = ANY (subquery)`, comparing `x` with the subquery's one column under the same rule. A member
+converted to the list's type is compared with `x` in that type's value, so an exact member that an
+approximate member makes approximate is rounded before the comparison.
+
 <a id="ew-tier-2-deterministic-semantics" data-spec-anchor="canonical"></a>
 ## 5. Numeric, timestamp, and character semantics
 
@@ -5664,8 +5683,12 @@ execution and MUST NOT report that language defect as an offending packet row.
 A validator lacking the exact selected language reports the registry's Tier 2 evaluation as
 **unsupported**. A validator that supports the language but cannot complete a valid rule because
 an input is unreadable, the engine fails, exact arithmetic overflows, a timestamp exceeds the
-supported range, or a resource or timeout limit is reached reports that evaluation as
-**incomplete**. It MUST NOT fabricate a packet finding from its inability to evaluate.
+supported range, a resource or timeout limit is reached, or it cannot evaluate the rule with the
+semantics §§2–7 define reports that evaluation as **incomplete**. It MUST NOT evaluate a rule with
+semantics that differ from those §§2–7 define, and MUST NOT fabricate a packet finding from its
+inability to evaluate. No tool checks whether a validator could have evaluated a rule it reports
+incomplete for the last cause. Execution vectors check the prohibition for the cases they hold; no
+tool checks it in general.
 
 Only a completed query returning rows produces the rule's declared finding. An invalid,
 unsupported, or incomplete required evaluation cannot support a claim that the affected core or

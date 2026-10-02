@@ -749,9 +749,10 @@ resource that is simply absent.
 ### 9.4 Incomplete validation
 
 A report MUST distinguish an invalid registry rule, an unsupported selected language, an
-incomplete valid evaluation, and a completed query that produced packet findings. An unreadable
-input, engine failure, exact overflow, out-of-range timestamp, timeout, or resource limit makes the
-affected required evaluation incomplete. A validator MUST NOT turn its inability to evaluate into
+incomplete valid evaluation, and a completed query that produced packet findings. A Tier 2
+rule's evaluation is incomplete for a cause Part 11 §8 states. Any other evaluation a subject
+requires is incomplete where an input it needs is unreadable, the engine evaluating it fails, or a
+timeout or resource limit is reached. A validator MUST NOT turn its inability to evaluate into
 an error-level packet finding. Core and every extension retain separate evaluation state.
 
 <a id="ew-verdict-composition" data-spec-anchor="canonical"></a>

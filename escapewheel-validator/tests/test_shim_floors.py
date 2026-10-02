@@ -134,6 +134,23 @@ def test_a_packet_owned_table_outside_the_parquet_floor_is_a_warning(packet_root
     assert finding.message.startswith("core.intervals: parquet encoding PLAIN_DICTIONARY")
 
 
+def test_an_unreadable_footer_leaves_the_floor_incomplete_rather_than_failed(packet_root, monkeypatch):
+    """Part 05 §9.4: an input the floor comparison needs is unreadable, so that evaluation is incomplete."""
+    read_metadata = pq.read_metadata
+
+    def unreadable(path, *args, **kwargs):
+        if str(path).endswith("intervals.parquet"):
+            raise OSError("footer unreadable")
+        return read_metadata(path, *args, **kwargs)
+
+    monkeypatch.setattr(pq, "read_metadata", unreadable)
+    report = validate(open_packet(packet_root))
+    incomplete = [(e.registry, e.rule, e.detail) for e in report.evaluations if e.status == "incomplete"]
+    assert incomplete == [("core", "physical.outside_reader_floor", "footer unreadable")]
+    assert _outside(report) == []
+    assert verdicts_of(report, "core")[0] != "passed"
+
+
 def test_an_extension_table_outside_the_floor_is_the_extensions_finding(packet_root):
     """Part 05 §9.5: the finding concerns one resource, so the registry declaring it owns it."""
     root = add_extension(packet_root)

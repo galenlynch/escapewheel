@@ -156,7 +156,11 @@ from Part 11's. `PERCENTILE_CONT`'s ordering value is cast to `DOUBLE PRECISION`
 otherwise interpolates a `DECIMAL` or `REAL` value in its own domain (Part 11 §5). A `DECIMAL`
 value, a decimal literal, or an integer literal beyond `BIGINT` that converts to `REAL` or
 `DOUBLE PRECISION` is converted through its text, since DuckDB's own conversion does not always
-round to nearest, ties to even (Part 11 §4). Where the validator cannot place such a conversion
+round to nearest, ties to even (Part 11 §4). DuckDB gives every operand of a `BETWEEN` one
+common type, so a `BETWEEN` whose two comparisons would take different domains is written as the
+two comparisons; and it gives an `IN` list's members and its left operand one common type, so an
+exact member of a `REAL` list compared with a `DOUBLE PRECISION` operand is converted to `REAL`
+first (Part 11 §4). Where the validator cannot place such a conversion
 in a rule's text, it reports the rule's evaluation as incomplete and does not run it (Part 11 §8).
 A `USING` join whose columns convert reaches it, as does a set operation whose exact result
 converts where a `UNION` sits under a `UNION ALL` or a member selects `*`. A registry's author

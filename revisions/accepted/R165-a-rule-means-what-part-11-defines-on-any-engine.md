@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-10-02 |
 | **Based on** | `5a1c47b7d496d3856e993551c66bdfe4491f85e3` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -256,18 +256,9 @@ A validator that ran a rule with its engine's differing semantics was already no
 Part 11 §1 and still is. A validator that reported such a rule incomplete now conforms where §8 did
 not list the cause.
 
-These accepted clauses change:
-
-- R125 §3.4's ledger entry stays `applied` at `ew-tier-2-type-binding` and gains a note that §§3.2
-  and 3.3 state there the meaning of `BETWEEN` and `IN`. Its note that Part 11 §1 gives every
-  statement of §§2–8 its force gains "in every evaluation the validator completes", as §3.1 has it.
-- R125 §3.2's and R125 §3.3's entries stay `applied`, and the same note gains the same words.
-- R149 §3.2's entry stays `applied`, and its note that Part 11 §1 gives the statements their force
-  on a validator claiming support gains "in every evaluation the validator completes".
-- R125 §3.8's entry stays `applied` at its four targets and gains a note that §3.4 adds a cause to
-  Part 11 §8 and §3.5 makes Part 05 §9.4 take a rule's causes from it.
-
-No clause is superseded. R125 §3.1's language-ID rule, R125 §3.11 and R149 §3.3 land at
+R125 §§3.2, 3.3, 3.4 and 3.8 and R149 §3.2 keep their ledger entries unchanged: each stays
+`applied` at the destinations it names, where this revision's text now stands beside it. No clause
+is superseded. R125 §3.1's language-ID rule, R125 §3.11 and R149 §3.3 land at
 `ew-tier-2-language-selection` and are unchanged.
 
 | surface | required change or reason unchanged | evidence after incorporation |
@@ -280,7 +271,7 @@ No clause is superseded. R125 §3.1's language-ID rule, R125 §3.11 and R149 §3
 | extensions | Unchanged. No repository extension uses `BETWEEN` with mixed exact and approximate operands, and none uses `IN`. | The registry check over every extension registry. |
 | reader, writer, validator, adapters | The reference validator's lowering gives `BETWEEN` two comparisons, each converting its own operands, and types an `IN` value list or `IN` subquery from its members before comparing `x` with it, comparing an all-exact list member by member. Its reporting of an unplaceable conversion as incomplete is unchanged. The reader, writer and adapters evaluate no rule. | The validator suite, with tests for both lowerings and for the unreadable footer. |
 | conformance fixtures and tests | The rule-language vectors gain §6's execution vectors and an `execute-or-incomplete` mode whose admissible outcomes are a stated result or an incomplete evaluation, and the probe runs it. | The rule-language probe in `verify.py`. |
-| revision process and tooling | The ordinary ledger and evidence records and the notes above. | `ledger.py`, `evidence.py` and `verify.py`. |
+| revision process and tooling | The ordinary ledger and evidence records. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | The combined specification regenerates. The validator's README, which lists where it gives the engine a rule other than as authored, adds both lowerings; the rule-language vectors' README describes the new form. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
@@ -310,5 +301,6 @@ These cases distinguish the new rules from the current reference behaviour:
 
 At acceptance, each clause needs its ledger entry and evidence record; §§3.2 and 3.3 also need
 either a reading of ISO/IEC 9075-2:2023 Subclauses 8.3, 8.4 and the table value constructor's
-Syntax Rules, or the record that the 2023 basis stays unverified (§2.3). The null-member, subquery
+Syntax Rules, or the record that the 2023 basis stays unverified (§2.3). The revision was accepted
+with the 2023 basis unverified: §§3.2 and 3.3 rest on the 1992 and 1999 texts. The null-member, subquery
 and all-exact `IN` vectors were derived from ISO's quantified comparison and agree with the engine.

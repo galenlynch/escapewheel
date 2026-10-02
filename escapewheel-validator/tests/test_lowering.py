@@ -282,3 +282,75 @@ def test_a_shipped_rule_is_changed_only_where_it_takes_a_median_or_converts_a_de
     exact = re.compile(r"DECIMAL|\d\.\d+(?![\dEe])")
     assert {rule["id"] for rule in rules if "PERCENTILE_CONT" in rule["sql"]} <= changed
     assert changed <= {rule["id"] for rule in rules if "PERCENTILE_CONT" in rule["sql"] or exact.search(rule["sql"])}
+
+
+#: Operands whose two `BETWEEN` comparisons would take different domains under one common domain.
+MIXED = {
+    "core.mixed": {
+        "columns": [
+            {"name": "x", "type": "int64"},
+            {"name": "y", "type": "int64"},
+            {"name": "z", "type": "float64"},
+            {"name": "r", "type": "float32"},
+            {"name": "i", "type": "int32"},
+        ]
+    }
+}
+
+
+def _mixed():
+    connection = duckdb.connect()
+    connection.sql("CREATE SCHEMA core")
+    connection.sql("CREATE TABLE core.mixed (x BIGINT, y BIGINT, z DOUBLE, r FLOAT, i INTEGER)")
+    connection.execute("INSERT INTO core.mixed VALUES (?, ?, ?, ?, ?)", [2**53, 2**53 + 1, 1e300, 0.0, 2])
+    return connection
+
+
+@pytest.mark.parametrize(
+    ("predicate", "lowered", "holds"),
+    [
+        ("x BETWEEN y AND z", "(x >= y AND x <= z)", False),
+        ("x NOT BETWEEN y AND z", "NOT (x >= y AND x <= z)", True),
+        ("NOT x BETWEEN y AND z", "NOT (x >= y AND x <= z)", True),
+        ("x BETWEEN 9007199254740992.5 AND 1e300", "(x >= 9007199254740992.5 AND x <= 1e300)", False),
+        ("x + 1 BETWEEN y AND z", "((x + 1) >= y AND (x + 1) <= z)", True),
+        (
+            "CASE WHEN x BETWEEN y AND z THEN 1 ELSE 0 END BETWEEN 0 AND z",
+            (
+                "(CASE WHEN (x >= y AND x <= z) THEN 1 ELSE 0 END >= 0"
+                " AND CASE WHEN (x >= y AND x <= z) THEN 1 ELSE 0 END <= z)"
+            ),
+            True,
+        ),
+    ],
+    ids=["exact-pair", "not-between", "not-before", "decimal-literal", "expression", "nested"],
+)
+def test_a_between_whose_comparisons_take_different_domains_is_written_as_both(predicate, lowered, holds):
+    """Part 11 §4: each comparison converts only its own operands, so two exact operands stay exact."""
+    query = "SELECT x FROM core.mixed WHERE {}"
+    assert lower(query.format(predicate), MIXED) == query.format(lowered)
+    assert _mixed().sql(lower(query.format(predicate), MIXED)).fetchall() == ([(2**53,)] if holds else [])
+
+
+def test_a_between_whose_operands_share_one_domain_runs_as_authored():
+    query = "SELECT x FROM core.mixed WHERE x BETWEEN 0 AND 2 * y"
+    assert lower(query, MIXED) == query
+
+
+@pytest.mark.parametrize(
+    ("predicate", "lowered", "holds"),
+    [
+        ("z - z + 16777217 IN (16777217, r)", "z - z + 16777217 IN (CAST(16777217 AS REAL), r)", False),
+        ("z - z + 16777217 NOT IN (16777217, r)", "z - z + 16777217 NOT IN (CAST(16777217 AS REAL), r)", True),
+        ("x IN (9007199254740993, 1e300)", "x IN (9007199254740993, 1e300)", True),
+        ("i IN (2.5)", "i IN (2.5)", False),
+        ("i IN (1, 2.5)", "i IN (1, 2.5)", False),
+        ("i IN (2.0, 3)", "i IN (2.0, 3)", True),
+    ],
+    ids=["real-list", "real-list-negated", "double-list", "decimal", "integer-and-decimal", "decimal-equal"],
+)
+def test_an_in_list_takes_its_members_domain_before_its_left_operand_meets_it(predicate, lowered, holds):
+    """Part 11 §4: the list is typed first, and a list of exact members compares by mathematical value."""
+    query = "SELECT x FROM core.mixed WHERE {}"
+    assert lower(query.format(predicate), MIXED) == query.format(lowered)
+    assert _mixed().sql(lower(query.format(predicate), MIXED)).fetchall() == ([(2**53,)] if holds else [])

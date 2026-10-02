@@ -535,6 +535,285 @@
       "query": "WITH RECURSIVE up(depth) AS (SELECT 0 UNION ALL SELECT depth + 1 FROM up) SELECT depth FROM up",
       "expected_failure": "invalid",
       "row_order_ignored": true
+    },
+    {
+      "id": "between-is-two-comparisons-exact-pair-with-double",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "y", "type": "int64"}, {"name": "z", "type": "float64"}], "rows": [[9007199254740992, 9007199254740993, 1e+300]]}
+      },
+      "query": "SELECT x BETWEEN y AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "not-between-is-the-negation-of-two-comparisons",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "y", "type": "int64"}, {"name": "z", "type": "float64"}], "rows": [[9007199254740992, 9007199254740993, 1e+300]]}
+      },
+      "query": "SELECT x NOT BETWEEN y AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-is-two-comparisons-exact-pair-with-real-bound",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int32"}, {"name": "y", "type": "float32"}, {"name": "z", "type": "int32"}], "rows": [[16777217, 16777216.0, 16777216]]}
+      },
+      "query": "SELECT x BETWEEN y AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-compares-a-decimal-literal-bound-by-value",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}], "rows": [[9007199254740992]]}
+      },
+      "query": "SELECT x BETWEEN 9007199254740992.5 AND 1e300 AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-keeps-a-decimal-operand-exact-against-an-integer-bound",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "z", "type": "float64"}], "rows": [[9007199254740992, 1e+300]]}
+      },
+      "query": "SELECT CAST(x AS DECIMAL(38,0)) BETWEEN 9007199254740993 AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-with-a-null-lower-bound-fails-where-the-upper-bound-fails",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "y", "type": "int64"}, {"name": "z", "type": "int64"}], "rows": [[5, null, 3]]}
+      },
+      "query": "SELECT x BETWEEN y AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-with-a-null-lower-bound-is-unknown-where-the-upper-bound-holds",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "y", "type": "int64"}, {"name": "z", "type": "int64"}], "rows": [[2, null, 3]]}
+      },
+      "query": "SELECT x BETWEEN y AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [[null]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-with-a-null-value-is-unknown",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "y", "type": "int64"}, {"name": "z", "type": "int64"}], "rows": [[null, 1, 3]]}
+      },
+      "query": "SELECT x BETWEEN y AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [[null]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-with-reversed-bounds-fails",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "y", "type": "int64"}, {"name": "z", "type": "int64"}], "rows": [[2, 3, 1]]}
+      },
+      "query": "SELECT x BETWEEN y AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-over-approximate-operands-agrees-with-both-readings",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "float32"}, {"name": "y", "type": "float64"}, {"name": "z", "type": "float64"}], "rows": [[0.5, 0.25, 0.75]]}
+      },
+      "query": "SELECT x BETWEEN y AND z AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-list-of-an-integer-and-a-double-is-double",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}], "rows": [[9007199254740992]]}
+      },
+      "query": "SELECT x IN (9007199254740993, 1e300) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-list-of-integers-meets-a-real-value-as-real",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "float32"}], "rows": [[16777216.0]]}
+      },
+      "query": "SELECT x IN (16777217, 1) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-list-of-a-bigint-and-a-double-is-double",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "a", "type": "int64"}, {"name": "b", "type": "float64"}], "rows": [[9007199254740992, 9007199254740993, 0.0]]}
+      },
+      "query": "SELECT x IN (a, b) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-list-of-an-integer-and-a-real-is-real-before-a-double-meets-it",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "float64"}, {"name": "r", "type": "float32"}], "rows": [[16777217.0, 0.0]]}
+      },
+      "query": "SELECT x IN (16777217, r) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-list-of-exact-members-compares-by-value",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int32"}], "rows": [[2]]}
+      },
+      "query": "SELECT x IN (1, 2.5) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-list-of-exact-members-matches-an-equal-decimal",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int32"}], "rows": [[2]]}
+      },
+      "query": "SELECT x IN (2.0, 3) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-list-with-a-null-member-and-no-match-is-unknown",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "n", "type": "int64"}], "rows": [[1, null]]}
+      },
+      "query": "SELECT x IN (2, n) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [[null]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-list-with-a-null-member-and-a-match-holds",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "n", "type": "int64"}], "rows": [[1, null]]}
+      },
+      "query": "SELECT x IN (1, n) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "not-in-list-with-a-null-member-and-no-match-is-unknown",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}, {"name": "n", "type": "int64"}], "rows": [[1, null]]}
+      },
+      "query": "SELECT x NOT IN (2, n) AS outcome FROM core.operands",
+      "expected_resources": ["core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [[null]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-subquery-compares-with-its-column",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}], "rows": [[9007199254740992]]},
+        "core.candidates": {"primary_key": null, "columns": [{"name": "v", "type": "float64"}], "rows": [[9007199254740992.0]]}
+      },
+      "query": "SELECT x IN (SELECT v FROM core.candidates) AS outcome FROM core.operands",
+      "expected_resources": ["core.candidates", "core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "in-an-empty-subquery-fails-for-a-null-value",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}], "rows": [[null]]},
+        "core.candidates": {"primary_key": null, "columns": [{"name": "v", "type": "int64"}], "rows": []}
+      },
+      "query": "SELECT x IN (SELECT v FROM core.candidates) AS outcome FROM core.operands",
+      "expected_resources": ["core.candidates", "core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["False"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "not-in-an-empty-subquery-holds-for-a-null-value",
+      "mode": "execute",
+      "inputs": {
+        "core.operands": {"primary_key": null, "columns": [{"name": "x", "type": "int64"}], "rows": [[null]]},
+        "core.candidates": {"primary_key": null, "columns": [{"name": "v", "type": "int64"}], "rows": []}
+      },
+      "query": "SELECT x NOT IN (SELECT v FROM core.candidates) AS outcome FROM core.operands",
+      "expected_resources": ["core.candidates", "core.operands"],
+      "expected_result_names": ["outcome"],
+      "expected_rows": [["True"]],
+      "row_order_ignored": true
+    },
+    {
+      "id": "using-join-of-a-deep-decimal-matches-its-nearest-double-or-is-incomplete",
+      "mode": "execute-or-incomplete",
+      "inputs": {
+        "core.candidates": {"primary_key": null, "columns": [{"name": "k", "type": "float64"}], "rows": [[2.3736939956406247e+35]]}
+      },
+      "query": "WITH exact AS (SELECT CAST(237369399564062458235467982671442745 AS DECIMAL(38,0)) AS k) SELECT COUNT(*) AS matched FROM exact INNER JOIN core.candidates USING (k)",
+      "expected_resources": ["core.candidates"],
+      "expected_result_names": ["matched"],
+      "expected_rows": [["1"]],
+      "row_order_ignored": true
     }
   ]
 }

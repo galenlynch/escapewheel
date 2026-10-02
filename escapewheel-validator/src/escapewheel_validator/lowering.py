@@ -6,11 +6,15 @@ A rule runs as authored except where DuckDB's own semantics differ from the lang
 difference is spliced into the authored text at token boundaries: regenerating a query from its
 parse tree would respell its routines and its null ordering, and change what the engine is asked.
 
-Two differences are lowered. DuckDB interpolates `PERCENTILE_CONT` in its ordering value's own
-domain, where Part 11 §5 converts the value to binary64 first. And it converts a `DECIMAL` or a
+Four differences are lowered. DuckDB interpolates `PERCENTILE_CONT` in its ordering value's own
+domain, where Part 11 §5 converts the value to binary64 first. It converts a `DECIMAL` or a
 `HUGEINT` to an approximate domain through an intermediate that is itself rounded, where Part 11 §4
-rounds every exact-to-approximate conversion once, to nearest with ties to even. Its conversion from
-text rounds once, so each such conversion is made through text.
+rounds every exact-to-approximate conversion once, to nearest with ties to even; its conversion from
+text rounds once, so each such conversion is made through text. It gives the three operands of
+`BETWEEN` one common domain, where Part 11 §4 makes `BETWEEN` two comparisons, so a `BETWEEN` whose
+comparisons would take different domains is written as the two. And it brings an `IN` list's members
+into the domain they share with the left operand, where Part 11 §4 types the list first, so an exact
+member of a `REAL` list compared with a `DOUBLE PRECISION` operand is converted to `REAL` first.
 """
 
 from __future__ import annotations
@@ -69,6 +73,10 @@ _ABSENT = object()
 _AUTHORED = "authored"
 #: How many tokens beyond its outermost positioned leaves an expression's text is searched for.
 _REACH = 12
+#: How many `BETWEEN`s one query may need written as two comparisons, counting each copy made.
+_BETWEEN_LIMIT = 64
+#: Operands whose text stays one operand beside a comparison operator without parentheses.
+_ATOMIC = (exp.Column, exp.Literal, exp.Null, exp.Func, exp.Paren)
 
 if TYPE_CHECKING:
     _Member = tuple[exp.Expr | None, _Domain | None]
@@ -252,20 +260,38 @@ class _Binding:
             suffix = f" AS VARCHAR) AS {_APPROXIMATE[common]})"
             yield value, "CAST(CAST(", suffix + (f" AS {node.alias}" if named else "")
 
+    def _in(self, node: exp.In) -> Iterator[tuple[exp.Expr, str, str]]:
+        """Yield the conversions of an `IN`, whose list is typed before its left operand meets it."""
+        compared: _Member = (node.this, self.domain(node.this))
+        query = node.args.get("query")
+        if query is not None:
+            listed = self.projected(query, 0)
+            # A set operation in the subquery converts its own members to the list's domain.
+            members = [] if listed in _APPROXIMATE else self._operands(query, 0, True)
+        else:
+            members = [(value, self.domain(value)) for value in node.expressions]
+            listed = _common(domain for _, domain in members)
+        if listed not in _APPROXIMATE:
+            yield from self._convert([compared, *members])
+            return
+        yield from self._convert(members)
+        if listed is _Domain.REAL and _common([compared[1], listed]) is _Domain.DOUBLE:
+            for member, domain in members:
+                if member is not None and domain is _Domain.INTEGER:
+                    yield member.unalias(), "CAST(", " AS REAL)"
+        yield from self._convert([compared, (None, listed)])
+
     def conversions(self, qualified: exp.Expr) -> Iterator[tuple[exp.Expr, str, str]]:  # noqa: C901
         """Yield each expression the lowering wraps, with the text put before and after it."""
         for node in qualified.walk():
             if isinstance(node, (*_PAIRS, *_ARITHMETIC)):
                 yield from self._convert([(side, self.domain(side)) for side in (node.this, node.expression)])
             elif isinstance(node, exp.Between):
-                # The engine binds the three operands to one common domain.
+                # One remains only where its two comparisons share the domain of all three operands.
                 operands = (node.this, node.args["low"], node.args["high"])
                 yield from self._convert([(operand, self.domain(operand)) for operand in operands])
             elif isinstance(node, exp.In):
-                members: list[_Member] = [(value, self.domain(value)) for value in (node.this, *node.expressions)]
-                if node.args.get("query") is not None:
-                    members += self._operands(node.args["query"], 0, True)
-                yield from self._convert(members)
+                yield from self._in(node)
             elif isinstance(node, exp.Coalesce):
                 yield from self._convert([(value, self.domain(value)) for value in (node.this, *node.expressions)])
             elif isinstance(node, exp.Case):
@@ -342,6 +368,82 @@ def _span(node: exp.Expr, sql: str, tokens: Sequence[Token]) -> tuple[int, int] 
     return None
 
 
+def _parsed(sql: str) -> exp.Expr:
+    """Return the parse tree of `sql`, each node keyed by its position in the authored tree."""
+    try:
+        parsed = parse_one(sql)
+    except SqlglotError as error:
+        raise LoweringFailed(f"the query does not parse: {str(error).splitlines()[0]}") from error
+    for index, node in enumerate(parsed.walk()):
+        node.meta[_AUTHORED] = index
+    return parsed
+
+
+def _qualified(parsed: exp.Expr, tables: Mapping[str, Mapping[str, Any]]) -> exp.Expr:
+    """Return a copy of the parse tree with every column bound to the source it names."""
+    schema: dict[str, dict[str, dict[str, str]]] = {}
+    for table in parsed.find_all(exp.Table):
+        declared = tables.get(f"{table.db}.{table.name}")
+        if declared is not None:
+            schema.setdefault(table.db, {})[table.name] = {c["name"]: c["type"] for c in declared["columns"]}
+    try:
+        return qualify(
+            parsed.copy(),
+            schema=cast(dict[str, object], schema),
+            # A reference to a result name stays where it was authored.
+            expand_alias_refs=False,
+            validate_qualify_columns=False,
+            identify=False,
+            quote_identifiers=False,
+        )
+    except SqlglotError as error:
+        raise LoweringFailed(f"the query does not bind: {str(error).splitlines()[0]}") from error
+
+
+def _text(node: exp.Expr, sql: str, tokens: Sequence[Token]) -> str:
+    """Return an authored operand's text, parenthesized where an operator beside it could take part of it."""
+    span = _span(node, sql, tokens)
+    if span is None:
+        raise LoweringFailed("a BETWEEN cannot be written as two comparisons", expression=node.sql())
+    text = sql[span[0] : span[1]]
+    return text if isinstance(node, _ATOMIC) else f"({text})"
+
+
+def _two_comparisons(sql: str, tables: Mapping[str, Mapping[str, Any]]) -> str:
+    """Return `sql` with each `BETWEEN` whose two comparisons take different domains written as both.
+
+    The engine converts the three operands of a `BETWEEN` to one common domain, which equals each
+    comparison's own only where all three agree; elsewhere it would convert an operand Part 11 §4
+    compares without converting.
+    """
+    for _ in range(_BETWEEN_LIMIT):
+        parsed = _parsed(sql)
+        authored = list(parsed.walk())
+        qualified = _qualified(parsed, tables)
+        binding = _Binding(qualified, tables)
+        for node in qualified.find_all(exp.Between):
+            domains = [binding.domain(node.args[name]) for name in ("this", "low", "high")]
+            joint = _common(domains)
+            if joint is not None and _common(domains[:2]) == joint == _common(domains[::2]):
+                continue
+            original = _authored(node, authored)
+            if original is None:
+                raise LoweringFailed("a BETWEEN cannot be written as two comparisons", expression=node.sql())
+            negated = isinstance(original.parent, exp.Not)
+            replaced = original.parent if negated else original
+            tokens = Tokenizer().tokenize(sql)
+            span = _span(replaced, sql, tokens) if replaced is not None else None
+            if span is None:
+                raise LoweringFailed("a BETWEEN cannot be written as two comparisons", expression=node.sql())
+            value, low, high = (_text(original.args[name], sql, tokens) for name in ("this", "low", "high"))
+            comparisons = f"{'NOT ' if negated else ''}({value} >= {low} AND {value} <= {high})"
+            sql = sql[: span[0]] + comparisons + sql[span[1] :]
+            break
+        else:
+            return sql
+    raise LoweringFailed("the query nests more BETWEENs than can be written as comparisons")
+
+
 def lower(sql: str, tables: Mapping[str, Mapping[str, Any]]) -> str:
     """Return `sql` as DuckDB must be given it to evaluate it as Part 11 defines it.
 
@@ -349,6 +451,8 @@ def lower(sql: str, tables: Mapping[str, Mapping[str, Any]]) -> str:
     exact value the engine holds as `DECIMAL` or `HUGEINT` is cast to text before it converts to an
     approximate domain, whether a cast, an operator, a routine or a set operation converts it, so
     that it is rounded once (Part 11 §4). `INTEGER` and `BIGINT` convert as the engine converts them.
+    A `BETWEEN` whose comparisons take different domains is written as the two comparisons, and an
+    exact member of an `IN` list is converted to the list's domain before the left operand meets it.
 
     Parameters
     ----------
@@ -363,30 +467,10 @@ def lower(sql: str, tables: Mapping[str, Mapping[str, Any]]) -> str:
         Where a conversion cannot be placed in the authored text, or a domain it depends on cannot
         be told. The rule is then incomplete (Part 11 §8).
     """
-    try:
-        parsed = parse_one(sql)
-    except SqlglotError as error:
-        raise LoweringFailed(f"the query does not parse: {str(error).splitlines()[0]}") from error
+    sql = _two_comparisons(sql, tables)
+    parsed = _parsed(sql)
     authored = list(parsed.walk())
-    for index, node in enumerate(authored):
-        node.meta[_AUTHORED] = index
-    schema: dict[str, dict[str, dict[str, str]]] = {}
-    for table in parsed.find_all(exp.Table):
-        declared = tables.get(f"{table.db}.{table.name}")
-        if declared is not None:
-            schema.setdefault(table.db, {})[table.name] = {c["name"]: c["type"] for c in declared["columns"]}
-    try:
-        qualified = qualify(
-            parsed.copy(),
-            schema=cast(dict[str, object], schema),
-            # A reference to a result name stays where it was authored.
-            expand_alias_refs=False,
-            validate_qualify_columns=False,
-            identify=False,
-            quote_identifiers=False,
-        )
-    except SqlglotError as error:
-        raise LoweringFailed(f"the query does not bind: {str(error).splitlines()[0]}") from error
+    qualified = _qualified(parsed, tables)
     tokens = Tokenizer().tokenize(sql)
     wraps: dict[tuple[int, int], tuple[str, str]] = {}
     for node, before, after in _Binding(qualified, tables).conversions(qualified):
