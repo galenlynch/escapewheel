@@ -35,8 +35,7 @@ join, so `git log -- revisions/` and `git blame` reach back through it.
 ### What stands between here and a v0.2 release
 
 1. **Close the pre-release refactor.** [REFACTOR.md](REFACTOR.md) holds the audit's findings, the
-   settled decisions and five stages of work, all landed. Two of its listed defects wait on a
-   revision each (§3).
+   settled decisions and five stages of work, all landed, and every defect it lists is closed (§3).
 2. **Field-test the release candidate** (roadmap P10.2). Packets are built and used from the
    current contract with every identifier still a development identifier (Part 02 §9.2). A defect
    in a part, registry or schema it finds is a revision; an implementation defect is maintenance.
