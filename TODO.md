@@ -305,8 +305,14 @@ The audit's critical reading found six implementation defects, and
 fixed: the writer checks an extension registry registered as a file path from its bytes,
 `escapewheel import` writes the result of the registry it rejects, and the validator interpolates
 `PERCENTILE_CONT` in binary64. Three remain, with a fourth found while the sidecar draft was
-appraised.
+appraised and a fifth while the credential draft was.
 
+- **A sampled run's `code_uri` is not the recipe file's digest.** `Recipe.with_sample` recomputes
+  the digest over a serialization of the decoded recipe with the cap added, so a sampled run and a
+  full one differ in `processing_run_id`. Part 05 §3.2 has a writer record the recipe's digest and
+  says nothing of a sampled run. Where the recorded recipe withholds a value, that digest also
+  covers a form a reader can nearly rebuild from `parameters`. Whether a sampled run should digest
+  the file is undecided.
 - **The validator's `DECIMAL` to `DOUBLE PRECISION` conversion is the engine's.** It is not always
   rounded to nearest, ties to even, as Part 11 §4 requires of an explicit cast. Decision 8 of
   `revisions/audit/repairs/decisions.md` records where the engine departs and that a conversion
