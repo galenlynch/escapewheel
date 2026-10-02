@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 1 proposal and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R155 accepted. R42 and R73 withdrawn. 0 proposals and 5 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -139,9 +139,9 @@ be fixed without a revision:
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Four drafts await acceptance and one proposal awaits promotion
+## 3a. Five drafts await acceptance
 
-The drafts are under `revisions/drafts/` and the proposals under `revisions/proposals/`.
+The drafts are under `revisions/drafts/`. No proposal is open.
 
 - **The reader floor bounds an array's byte order.** A draft, promoted 2026-10-01 and not
   accepted. It supersedes R3 §7.1's little-endian and
@@ -154,11 +154,10 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
   recorded recipe, and may refuse the recipe instead. It also covers a credential inside a source
   root wherever the build writes that root, which is wider than the request that prompted it. The
   writer waits on it for root recognition and for the docstring of `recipe._storage_problems`.
-- **Core declares a catalog of sidecars.** §3b describes it. Revised 2026-10-01: a sidecar is a
-  file the packet asserts nothing through, its row states what it is about in a nullable scope
-  pair, a file a result was computed from is recorded as a source file, and one file may be both.
-  No rule in it is left for a writer to keep unchecked. One question is open, the form of the
-  media type, and it does not block promotion.
+- **Core declares a catalog of sidecars.** A draft, promoted 2026-10-01 and not accepted; §3b
+  describes it. A sidecar is a file the packet asserts nothing through, its row states what it is
+  about in a nullable scope pair, a file a result was computed from is recorded as a source file,
+  and one file may be both. Its media type is an open column naming the IANA registry.
 - **The ledger resolves a superseded entry's successor and keeps no ratchet.** A process-domain
   draft, promoted 2026-10-01 and not accepted: `by` becomes a
   required field naming one later accepted revision, R107 §3.5's entry is corrected, and the
@@ -172,10 +171,10 @@ The drafts are under `revisions/drafts/` and the proposals under `revisions/prop
 
 ## 3b. A file the packet only indexes has no declaration
 
-**Proposed, 2026-10-01**, as `revisions/proposals/core-declares-a-catalog-of-sidecars.md`. A PDF, a
+**Drafted, 2026-10-01**, as `revisions/drafts/core-declares-a-catalog-of-sidecars.md`. A PDF, a
 README, a viewer's saved state or an image in an unmodelled format has a class in Part 02 §2.2
 (`documentation`) and a directory in Part 03 §3.1 (`docs/`), and no declaration, so a manifest
-cannot list one. Listing one today takes an extension registry and an adapter. The proposal has
+cannot list one. Listing one today takes an extension registry and an adapter. The draft has
 core declare a catalog table and an opaque catalog of that class; Part 12 §5 already delivers an
 opaque catalog, packet-owned or referenced.
 
@@ -186,7 +185,7 @@ Implementation that follows it, none of it a specification change:
 - **A packet-owned option for video.** The specification and the writer already admit a
   packet-owned media payload; the aind video adapter only references external files.
 
-Left open and outside the proposal:
+Left open and outside the draft:
 
 - Part 12 §5 binds a payload to a catalog row or a singleton and gives a family-mode payload no
   rule. No declaration uses family mode. Whether it gains a rule or is removed is undecided.
