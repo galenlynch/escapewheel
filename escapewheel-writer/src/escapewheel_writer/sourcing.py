@@ -1,6 +1,7 @@
 """Open a recipe's sources and pass each what earlier ones produced (Part 05 §3.4).
 
 - :func:`order` -- the recipe's sources, each after the sources it consumes.
+- :func:`waits_for` -- whether one source can be opened only after another has been harvested.
 - :func:`build_source`, :func:`supplied_to`, :func:`filled_terms` -- one source opened or
   delivered, what the build supplies it, and the terms the build can fill for it.
 - :func:`resolved_source_cache` -- the source cache a build supplies.
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import threading
 from collections.abc import Callable, Collection, Mapping
 from dataclasses import replace
 from pathlib import Path
@@ -83,6 +85,26 @@ def order(recipe: Recipe) -> list[SourceSpec]:
         done.update(s.kind for s in ready)
         remaining = [s for s in remaining if s not in ready]
     return ordered
+
+
+def waits_for(earlier: SourceSpec, later: SourceSpec) -> bool:
+    """Whether `later` may be opened only once `earlier` has run and been harvested.
+
+    What a build supplies a source is filled from what the sources before it were harvested of,
+    so a source opened alongside an earlier one must be handed exactly what it would have been
+    handed after it. Beyond the kinds it consumes, that is any earlier source able to supply a
+    term it needs: `units` from whoever states `core.units`, and `clocks` and `reference_clock`
+    from whoever states `core.clocks`, since the reference clock's `tick_zero_utc` is read off a
+    harvested clock row.
+    """
+    wanting = declared(later)
+    if earlier.kind in wanting["consumes"]:
+        return True
+    supplied = set(declared(earlier)["produces"]) | set(declared(earlier)["contributes"])
+    needs = set(wanting["needs"])
+    if "units" in needs and CORE_UNITS in supplied:
+        return True
+    return bool(needs & {"clocks", "reference_clock"}) and CORE_CLOCKS in supplied
 
 
 def filled_terms(spec: SourceSpec, recipe: Recipe, context: Context, needed: Collection[str]) -> dict[str, Any]:
@@ -175,6 +197,9 @@ def supplied_to(spec: SourceSpec, recipe: Recipe, context: Context) -> dict[str,
     return {**supplied, "options": dict(spec.options)}
 
 
+_STORES_OPENING = threading.Lock()
+
+
 def build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAdapter:
     """Construct one adapter, or run it and read what it delivered (Part 05 §3.9).
 
@@ -216,7 +241,9 @@ def build_source(spec: SourceSpec, recipe: Recipe, context: Context) -> SourceAd
     # declare, so it is supplied where the class accepts one rather than from a
     # table of kinds -- and an adapter out of process is handed none and opens its own.
     if "store" in inspect.signature(adapter).parameters:
-        options.setdefault("store", store_for(spec.root, context.stores, cache=supplied.get(SOURCE_CACHE)))
+        # Held across the lookup and the open, so two sources opened at once share one store.
+        with _STORES_OPENING:
+            options.setdefault("store", store_for(spec.root, context.stores, cache=supplied.get(SOURCE_CACHE)))
     return adapter(supplied.pop("root"), **supplied, **options)
 
 
@@ -351,4 +378,5 @@ __all__ = [
     "resolved_source_cache",
     "rows_reader",
     "supplied_to",
+    "waits_for",
 ]

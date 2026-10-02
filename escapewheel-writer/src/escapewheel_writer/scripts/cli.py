@@ -36,7 +36,7 @@ from ..kinds import contributes, produces, required_adapter
 from ..protocols import SourceAdapter
 from ..recipe import RECIPE_SUPPLIES, Recipe
 from ..replacing import read_replaced
-from ..session import build, commit_arguments, prepare
+from ..session import SOURCE_WORKERS, build, commit_arguments, prepare
 
 
 def declaration_protocols() -> tuple[str, ...]:
@@ -287,6 +287,7 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
             source_cache=import_source_cache(args, recipe.out),
             replaced=replaced,
             prepared=prepared,
+            workers=args.source_workers,
         )
     except RegistryRejected as exc:
         _write_result(args.registry_result, exc.result)
@@ -664,6 +665,14 @@ def _import_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentPars
         help="what the build may hold before spilling, as bytes or '20GB'; overrides "
         "[commit].memory_budget, and bounds validation too. Bucketing a spike table is a "
         "transpose, so its partition either fits in memory or goes to disk",
+    )
+    importer.add_argument(
+        "--source-workers",
+        type=int,
+        default=SOURCE_WORKERS,
+        metavar="N",
+        help=f"sources opened at once (default: {SOURCE_WORKERS}); each is still handled in recipe "
+        "order, so the packet is the same at any count, and 1 opens one at a time",
     )
     importer.add_argument(
         "--sample",

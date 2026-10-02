@@ -25,6 +25,7 @@ references, and filters a source's rows to the resources the recipe leaves it ow
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, Mapping, Sequence
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from functools import partial
 from pathlib import Path
@@ -87,7 +88,15 @@ from .recipe import RECIPE_SUPPLIES, Problem, Recipe, SourceSpec, payloads, refu
 from .replacing import Replaced, read_replaced
 from .secrets import as_returned, stated_userinfo
 from .sources.compensations import describe, recordable
-from .sourcing import build_source, harvest, order, reference_clock, resolved_source_cache, rows_reader
+from .sourcing import (
+    build_source,
+    harvest,
+    order,
+    reference_clock,
+    resolved_source_cache,
+    rows_reader,
+    waits_for,
+)
 from .writer import PacketWriter
 
 #: Analysis resources a recipe may ask for by name, and the function that derives each from a
@@ -261,6 +270,74 @@ def composed(spec: SourceSpec, context: Context) -> dict[str, list[dict[str, Any
             for event_stream_id in context.event_streams
         ]
     }
+
+
+#: Sources a build opens at once by default. A source's time goes on a store's round trips, a
+#: delivering process or numpy that releases the GIL, so threads overlap it; the bound is what
+#: the sources opened together may hold in memory at once.
+SOURCE_WORKERS = 4
+
+
+@dataclass
+class _Opened:
+    """One source opened and read, with what it said while it was, held for its turn."""
+
+    source: SourceAdapter
+    records: Mapping[str, list[dict[str, Any]]]
+    said: list[str]
+    reference: Any
+
+
+def _open(spec: SourceSpec, recipe: Recipe, context: Context) -> _Opened:
+    """Open one source and read its records, on a context of its own.
+
+    The copy shares every collection, which a source only reads from, and holds its own reference
+    clock and reporter, the two it replaces: what it says is replayed at its turn, and the clock
+    it located is the build's from then on.
+    """
+    own = replace(context, say=(said := []).append)
+    source = build_source(spec, recipe, own)
+    return _Opened(source, source.records(), said, own.reference)
+
+
+class _Opening:
+    """Open a recipe's sources ahead of their turn, each once what it waits for is harvested.
+
+    The build still handles each source in `order`, so every row, note and identifier lands as a
+    serial build would put it; only the opening and reading overlap. A source is submitted once
+    every earlier source it `waits_for` has been harvested, which is what makes what it is supplied
+    the same as at its turn.
+    """
+
+    def __init__(self, specs: Sequence[SourceSpec], recipe: Recipe, context: Context, workers: int) -> None:
+        self._specs = list(specs)
+        self._recipe = recipe
+        self._context = context
+        self._awaits = [{j for j in range(k) if waits_for(self._specs[j], spec)} for k, spec in enumerate(self._specs)]
+        self._harvested: set[int] = set()
+        self._pending: dict[int, Future[_Opened]] = {}
+        self._submitted: set[int] = set()
+        self._pool = ThreadPoolExecutor(max_workers=max(workers, 1), thread_name_prefix="source")
+        self._submit()
+
+    def _submit(self) -> None:
+        for k in range(len(self._specs)):
+            if k not in self._submitted and self._awaits[k] <= self._harvested:
+                self._submitted.add(k)
+                self._pending[k] = self._pool.submit(_open, self._specs[k], self._recipe, self._context)
+
+    def take(self, index: int) -> _Opened:
+        """Return source `index` opened, raising whatever opening it raised."""
+        return self._pending.pop(index).result()
+
+    def harvested(self, index: int) -> None:
+        """Record that source `index` has been harvested, and open what was waiting for it."""
+        self._harvested.add(index)
+        self._submit()
+
+    def close(self) -> None:
+        """Drop what has not started, and wait for what has, so no source outlives the build."""
+        self._pool.shutdown(wait=True, cancel_futures=True)
 
 
 def _derive(options: Mapping[str, Any], packet: Any, writer: Any) -> None:
@@ -487,6 +564,7 @@ def build(  # noqa: C901
     source_cache: str | Path | None = None,
     replaced: Sequence[Replaced] | None = None,
     prepared: Prepared | None = None,
+    workers: int = SOURCE_WORKERS,
 ) -> PacketWriter:
     """Run every source and return a writer holding the packet, uncommitted.
 
@@ -514,6 +592,9 @@ def build(  # noqa: C901
     prepared : Prepared, optional
         What :func:`prepare` returned for this recipe, from a caller that reported its problems.
         Its registries are the ones written against. Prepared here where absent.
+    workers : int, default SOURCE_WORKERS
+        Sources opened at once. Each is still handled in `order`, so the packet is the same at
+        any count; 1 opens one at a time.
 
     Returns
     -------
@@ -588,56 +669,67 @@ def build(  # noqa: C901
     drained: dict[str, int] = {}
     #: Userinfo this build recognizes as a credential, which a returned URI is written without (Part 05 §7).
     withheld = stated_userinfo(recipe.document)
-    for spec in order(recipe):
-        say(f"{spec.kind} -> {', '.join(spec.owns) or 'nothing it owns'}")
-        source = build_source(spec, recipe, context)
-        context.sources[spec.kind] = source
-        # Once, and used twice: an adapter's records are expensive to build, and the harvest and
-        # the staging are two readings of one set of rows.
-        records = source.records()
-        harvest(spec, source, context, recipe, rows_reader(source, records))
+    specs = order(recipe)
+    opening = _Opening(specs, recipe, context, workers)
+    try:
+        for index, spec in enumerate(specs):
+            say(f"{spec.kind} -> {', '.join(spec.owns) or 'nothing it owns'}")
+            # Once, and used twice: an adapter's records are expensive to build, and the harvest
+            # and the staging are two readings of one set of rows.
+            opened = opening.take(index)
+            for line in opened.said:
+                say(line)
+            source, records = opened.source, opened.records
+            context.reference = opened.reference
+            context.sources[spec.kind] = source
+            harvest(spec, source, context, recipe, rows_reader(source, records))
+            opening.harvested(index)
 
-        produced = _add_records(writer, spec, records, context, counts, arbitrated=frozenset(recipe.preferred))
-        produced.update(_add_batches(writer, spec, source, counts, staged=set(produced)))
-        note_unclaimed(spec, source, produced, frozenset(recipe.preferred))
-        for staged in source.staged_arrays() if isinstance(source, StagesArrays) else ():
-            # A delivered array is bytes an adapter already wrote (Part 12 §5), so what there
-            # is to say about it is what is on disk; one staged in process is values, and its
-            # shape is what a reader of the log wants before it costs anything to write.
-            if staged.values is None and staged.written is not None:
-                stored = sum(f.stat().st_size for f in staged.written.rglob("*") if f.is_file())
-                say(f"  array {staged.resource_id} delivered, {stored / 1e6:.1f} MB written")
-            else:
-                say(
-                    f"  array {staged.array_asset_id} {staged.values.shape} {staged.values.dtype}, "
-                    f"{staged.values.nbytes / 1e6:.1f} MB raw"
-                )
-            writer.add_array(staged.resource_id, staged)
-        for resource_id, array in (source.external_arrays() if isinstance(source, ReferencesArrays) else {}).items():
-            writer.reference_array(resource_id, replace(array, uri=as_returned(array.uri, withheld)))
-            say(f"  referenced {resource_id}")
-        for resource_id, media in (source.external_media() if isinstance(source, ReferencesMedia) else {}).items():
-            writer.reference_media(resource_id, replace(media, uri=as_returned(media.uri, withheld)))
-            size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
-            say(f"  referenced {resource_id}{size}")
-        for resource_id, resource in (
-            source.external_resources() if isinstance(source, ReferencesResources) else {}
-        ).items():
-            writer.reference_resource(resource_id, resource)
-            say(f"  referenced {resource_id}")
-        # An adapter in this process may hand its payloads over as bytes, which the build writes where
-        # a protocol adapter would have, so both are read back and refused the same way.
-        location = context.opaque_locations.get(spec.kind)
-        opaque.write(source.staged_payloads() if isinstance(source, StagesPayloads) else (), location, spec.kind)
-        if location is not None:
-            for payload in writer.add_payloads(spec.kind, location, owned=spec.owns):
-                say(f"  payload {payload.resource_id}: {opaque.shown(Path(payload.path.name))}")
+            produced = _add_records(writer, spec, records, context, counts, arbitrated=frozenset(recipe.preferred))
+            produced.update(_add_batches(writer, spec, source, counts, staged=set(produced)))
+            note_unclaimed(spec, source, produced, frozenset(recipe.preferred))
+            for staged in source.staged_arrays() if isinstance(source, StagesArrays) else ():
+                # A delivered array is bytes an adapter already wrote (Part 12 §5), so what there
+                # is to say about it is what is on disk; one staged in process is values, and its
+                # shape is what a reader of the log wants before it costs anything to write.
+                if staged.values is None and staged.written is not None:
+                    stored = sum(f.stat().st_size for f in staged.written.rglob("*") if f.is_file())
+                    say(f"  array {staged.resource_id} delivered, {stored / 1e6:.1f} MB written")
+                else:
+                    say(
+                        f"  array {staged.array_asset_id} {staged.values.shape} {staged.values.dtype}, "
+                        f"{staged.values.nbytes / 1e6:.1f} MB raw"
+                    )
+                writer.add_array(staged.resource_id, staged)
+            for resource_id, array in (
+                source.external_arrays() if isinstance(source, ReferencesArrays) else {}
+            ).items():
+                writer.reference_array(resource_id, replace(array, uri=as_returned(array.uri, withheld)))
+                say(f"  referenced {resource_id}")
+            for resource_id, media in (source.external_media() if isinstance(source, ReferencesMedia) else {}).items():
+                writer.reference_media(resource_id, replace(media, uri=as_returned(media.uri, withheld)))
+                size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
+                say(f"  referenced {resource_id}{size}")
+            for resource_id, resource in (
+                source.external_resources() if isinstance(source, ReferencesResources) else {}
+            ).items():
+                writer.reference_resource(resource_id, resource)
+                say(f"  referenced {resource_id}")
+            # An adapter in this process may hand its payloads over as bytes, which the build writes where
+            # a protocol adapter would have, so both are read back and refused the same way.
+            location = context.opaque_locations.get(spec.kind)
+            opaque.write(source.staged_payloads() if isinstance(source, StagesPayloads) else (), location, spec.kind)
+            if location is not None:
+                for payload in writer.add_payloads(spec.kind, location, owned=spec.owns):
+                    say(f"  payload {payload.resource_id}: {opaque.shown(Path(payload.path.name))}")
 
-        drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
-        if isinstance(source, Delivered):
-            compensated.extend(source.compensated)
-        elif isinstance(source, DeclaresCompensations):
-            compensated.extend(describe(source.compensations))
+            drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
+            if isinstance(source, Delivered):
+                compensated.extend(source.compensated)
+            elif isinstance(source, DeclaresCompensations):
+                compensated.extend(describe(source.compensations))
+    finally:
+        opening.close()
 
     refuse_a_discarded_fact(writer, context, recipe)
     declare_withheld(context, writer, say)
@@ -721,6 +813,7 @@ def import_packet(
     replaced: Sequence[Replaced] | None = None,
     prepared: Prepared | None = None,
     memory_budget: int | str = 0,
+    workers: int = SOURCE_WORKERS,
 ) -> Report:
     """Build the packet a recipe describes and commit it at `recipe.out` (Part 05 §2).
 
@@ -746,6 +839,7 @@ def import_packet(
         source_cache=source_cache,
         replaced=replaced,
         prepared=prepared,
+        workers=workers,
     )
     publish = writer.amend if recipe.amends is not None else writer.commit
     return publish(recipe.out, say=say, **commit_arguments(recipe, memory_budget))
@@ -952,6 +1046,7 @@ def note_unclaimed(
 
 __all__ = [
     "MATERIALIZERS",
+    "SOURCE_WORKERS",
     "Context",
     "Prepared",
     "build",
