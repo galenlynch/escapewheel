@@ -1,0 +1,228 @@
+{
+  "environment": {
+    "date": "2026-10-02",
+    "commit": "786d6d7c+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r153/776259/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/r153/rowgroups",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "core_version": "0.14.0",
+  "plan": {
+    "window_s": [
+      100.0,
+      101.0
+    ],
+    "window_tick": [
+      361749256863,
+      361749288113
+    ],
+    "unit_id": 1475
+  },
+  "cells": [
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.10608547099400312,
+      "peak_mib": 1434.5625,
+      "value": "42826"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.038026245980290696,
+      "peak_mib": 1434.5625,
+      "value": "42826"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.08472388598602265,
+      "peak_mib": 1434.5625,
+      "value": "1789113"
+    },
+    {
+      "layout": "as stored",
+      "row_groups": 2197,
+      "bytes": 493897124,
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.033694229990942404,
+      "peak_mib": 1434.5625,
+      "value": "1789113"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.05662774498341605,
+      "peak_mib": 1434.5625,
+      "value": "42826"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.032060257013654336,
+      "peak_mib": 1434.5625,
+      "value": "42826"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.054109541000798345,
+      "peak_mib": 1434.5625,
+      "value": "1789113"
+    },
+    {
+      "layout": "131,072 rows",
+      "row_groups": 2189,
+      "bytes": 493871660,
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.03089454199653119,
+      "peak_mib": 1434.5625,
+      "value": "1789113"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.03310116197098978,
+      "peak_mib": 1434.5625,
+      "value": "42826"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.014898129011271521,
+      "peak_mib": 1434.5625,
+      "value": "42826"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.06507984700147063,
+      "peak_mib": 1434.5625,
+      "value": "1789113"
+    },
+    {
+      "layout": "1,048,576 rows",
+      "row_groups": 274,
+      "bytes": 492364436,
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.01549553801305592,
+      "peak_mib": 1434.5625,
+      "value": "1789113"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "query": "window",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.04495969400159083,
+      "peak_mib": 1434.5625,
+      "value": "42826"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "query": "window",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.017241594003280625,
+      "peak_mib": 1434.5625,
+      "value": "42826"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "query": "one unit",
+      "engine": "pyarrow",
+      "runs": 3,
+      "seconds": 0.2328309710137546,
+      "peak_mib": 1434.5625,
+      "value": "1789113"
+    },
+    {
+      "layout": "4,194,304 rows",
+      "row_groups": 69,
+      "bytes": 492177607,
+      "query": "one unit",
+      "engine": "duckdb",
+      "runs": 3,
+      "seconds": 0.056173938006395474,
+      "peak_mib": 1434.5625,
+      "value": "1789113"
+    }
+  ]
+}

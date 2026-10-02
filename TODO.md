@@ -170,14 +170,14 @@ Left open and outside R160:
   the scan a registration read. Part 05 §7 requires rows only for a recipe's roots and forbids no
   other.
 
-## 3c. `bench/` is untracked and holds no script yet
+## 3c. `bench/` results are not yet in Part 10 or the writer's performance guide
 
-`bench/` has a `pyproject.toml` and a lock file and nothing else. Still to do: port the benchmark
-scripts to the current packet shape, re-measure the cold-read figures on the NVMe, write its
-README, fold in the older measurements, fix the probes' default paths, move the results into
-Part 10, and add a `bench/` row to the root README's layout table. The figures in
-`escapewheel-writer/docs/source/performance.md` are stale, and those removed from the validator's
-design page have no home until this lands.
+`bench/` holds the cold-read, row-group and containment benchmarks against the current packet
+shape, and `bench/results/history.md` dates every reading the repository quotes, the validator's
+removed figures among them. Still to do: move the 2026-10-02 readings into Part 10 §§3 and 6 and
+into `escapewheel-writer/docs/source/performance.md`, whose row-group and import figures are
+stale, and port an S3 arm once a current packet is staged there. Nothing re-measures the
+validator's figures or an import.
 
 ## 4. The repository directory is still `nwb-lake/`
 

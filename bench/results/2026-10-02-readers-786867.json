@@ -1,0 +1,291 @@
+{
+  "environment": {
+    "date": "2026-10-02",
+    "commit": "786d6d7c+dirty",
+    "cpu": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cores": 24,
+    "memory_gib": 126,
+    "kernel": "7.2.7-200.fc44.x86_64",
+    "python": "3.14.7",
+    "disks": [
+      {
+        "path": "/home/galen.lynch/bench-cold/r153/786867/packet",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      },
+      {
+        "path": "/home/galen.lynch/bench-cold/r153/786867/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb",
+        "filesystem": "btrfs",
+        "device": "/dev/nvme0n1p6",
+        "model": "WDS200T1X0E-00AFY0",
+        "rotational": false
+      }
+    ],
+    "versions": {
+      "escapewheel-reader": "0.1.0",
+      "duckdb": "1.5.6",
+      "pyarrow": "25.0.1",
+      "polars": "1.44.2",
+      "numpy": "2.5.3",
+      "zarr": "3.4.0",
+      "pynwb": "4.2.0",
+      "hdmf-zarr": "0.14.0",
+      "lazynwb": "1.0.0.dev5"
+    }
+  },
+  "plan": {
+    "packet": "/home/galen.lynch/bench-cold/r153/786867/packet",
+    "nwb": "/home/galen.lynch/bench-cold/r153/786867/ecephys_786867_2025-09-25_12-43-56_experiment1_recording1.nwb",
+    "window_tick": [
+      450807531692,
+      450807844192
+    ],
+    "window_s": [
+      14425841.014144,
+      14425851.014144
+    ],
+    "unit_id": 5,
+    "unit_label": "5",
+    "probe_name": "46101",
+    "unit_spikes": 518291,
+    "unit_tables": [
+      "core.units",
+      "aind_unit_qc.metrics"
+    ],
+    "trial_tables": [
+      "core.intervals",
+      "dynamic_foraging.trials"
+    ]
+  },
+  "core_version": "0.14.0",
+  "packet_bytes": 604649431,
+  "nwb_bytes": 4735714418,
+  "cells": [
+    {
+      "reader": "packet",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.0008258400193881243,
+      "peak_mib": 168.28515625,
+      "value": "58"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.014708116999827325,
+      "peak_mib": 168.28515625,
+      "value": "1"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.31466384799568914,
+      "peak_mib": 184.3359375,
+      "value": "74"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "open",
+      "runs": 3,
+      "seconds": 0.009698630019556731,
+      "peak_mib": 186.43359375,
+      "value": "78"
+    },
+    {
+      "reader": "packet",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.003580125980079174,
+      "peak_mib": 168.28515625,
+      "value": "4505"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.015496265987167135,
+      "peak_mib": 168.28515625,
+      "value": "4505"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.3534226799965836,
+      "peak_mib": 182.671875,
+      "value": "4505"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "units 5 cols",
+      "runs": 3,
+      "seconds": 0.031287603022065014,
+      "peak_mib": 199.98046875,
+      "value": "4505"
+    },
+    {
+      "reader": "packet",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.007992826023837551,
+      "peak_mib": 173.515625,
+      "value": "39"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.031028596014948562,
+      "peak_mib": 168.28515625,
+      "value": "39"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.3999924309900962,
+      "peak_mib": 181.92578125,
+      "value": "69"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "units all meta",
+      "runs": 3,
+      "seconds": 0.11382242501713336,
+      "peak_mib": 205.375,
+      "value": "71"
+    },
+    {
+      "reader": "packet",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.0048173310060519725,
+      "peak_mib": 168.28515625,
+      "value": "[450, 450]"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.026781605003634468,
+      "peak_mib": 168.28515625,
+      "value": "[450, 450]"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.3646611350122839,
+      "peak_mib": 180.4453125,
+      "value": "450"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "trials",
+      "runs": 3,
+      "seconds": 0.10847246699267998,
+      "peak_mib": 200.78125,
+      "value": "450"
+    },
+    {
+      "reader": "packet",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 16.75369555701036,
+      "peak_mib": 1468.203125,
+      "value": "8407061691180272"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 0.07676504101254977,
+      "peak_mib": 203.1484375,
+      "value": "8407061691180272"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 11.40569313900778,
+      "peak_mib": 1219.4765625,
+      "value": "1895772623540943.5"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "every spike",
+      "runs": 3,
+      "seconds": 22.570588915987173,
+      "peak_mib": 8400.19140625,
+      "value": "1895772623540943.0"
+    },
+    {
+      "reader": "packet",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 0.04198435999569483,
+      "peak_mib": 283.0,
+      "value": "294526"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 0.04075876600109041,
+      "peak_mib": 182.91015625,
+      "value": "294526"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 16.54134183199494,
+      "peak_mib": 1599.33203125,
+      "value": "294524"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "10 s window",
+      "runs": 3,
+      "seconds": 14.54767067899229,
+      "peak_mib": 7972.890625,
+      "value": "294524"
+    },
+    {
+      "reader": "packet",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.07806216899189167,
+      "peak_mib": 233.015625,
+      "value": "518291"
+    },
+    {
+      "reader": "packet-sql",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.023488371982239187,
+      "peak_mib": 174.31640625,
+      "value": "518291"
+    },
+    {
+      "reader": "pynwb",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.334445013984805,
+      "peak_mib": 182.91015625,
+      "value": "518291"
+    },
+    {
+      "reader": "lazynwb",
+      "operation": "one train",
+      "runs": 3,
+      "seconds": 0.09108243798254989,
+      "peak_mib": 278.80078125,
+      "value": "518291"
+    }
+  ]
+}
