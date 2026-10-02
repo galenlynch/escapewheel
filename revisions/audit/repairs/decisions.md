@@ -44,7 +44,7 @@ same day once its entry stated the options again with what was measured.
 | 16 | nothing is owed: the ledger note on R53 §2.3.1 already records it | — |
 | 17 | proposed | draft `a-unit-is-identified-outside-its-packet-by-its-name.md` |
 | 18 | proposed | draft `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` |
-| 19 | proposed | draft `core-declares-a-clocks-transform-in-typed-columns-alone.md` |
+| 19 | the replaced column is removed and the core version advances, so it is proposed as a revision | R163 |
 | 20 | the draft was accepted as R157 | `bb3cae24` |
 | 21 | the guide states both sentences | `5f558363` |
 

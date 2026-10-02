@@ -115,6 +115,39 @@ def test_an_amendment_may_not_change_a_held_row(tmp_path, registry, minimal):
     assert (refused.value.code, refused.value.resource_id) == (AmendmentFault.CHANGES_HELD, "core.clocks")
 
 
+def test_an_amendment_binding_a_registry_without_a_held_column_rewrites_its_rows_without_it(
+    tmp_path, registry, minimal
+):
+    """Part 05 §15.6 compares held rows over the columns the amended manifest's registry declares, so
+    a value in a column that registry no longer declares survives only in the superseded file."""
+    import copy
+
+    import pyarrow.parquet as pq
+
+    earlier = copy.deepcopy(dict(registry))
+    earlier["registry_version"] = "0.0.1"
+    columns = earlier["resources"]["core.source_files"]["table"]["columns"]
+    columns.insert(
+        next(i for i, c in enumerate(columns) if c["name"] == "metadata"),
+        {"name": "dropped_json", "type": "json_string", "presence": "optional", "role": "data", "description": "x"},
+    )
+    held = {"source_file_id": "f1", "uri": "file:///x", "dropped_json": '{"slope":2.0,"offset":5.0}'}
+    root = tmp_path / "s001"
+    commit_tables(root, earlier, {**minimal, "core.source_files": [held]})
+
+    def source_files():
+        entries = json.loads((root / "packet.json").read_text())["resources"]
+        return root / next(e["uri"] for e in entries if e["resource_id"] == "core.source_files")
+
+    superseded = source_files()
+    rows = [{"source_file_id": "f1", "uri": "file:///x"}, {"source_file_id": "f2", "uri": "file:///y"}]
+    assert _amend(root, registry, {"core.source_files": rows}).passed
+    rewritten = pq.read_table(source_files())
+    assert "dropped_json" not in rewritten.column_names
+    assert sorted(rewritten.column("uri").to_pylist()) == ["file:///x", "file:///y"]
+    assert pq.read_table(superseded).column("dropped_json").to_pylist() == ['{"slope":2.0,"offset":5.0}']
+
+
 def test_an_amendment_drops_a_row_the_packet_holds(tmp_path, registry, minimal):
     """Part 05 §4.3: a row equal to a held row is dropped, and a table gaining none is not written."""
     root = tmp_path / "s001"

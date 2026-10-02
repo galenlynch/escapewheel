@@ -95,13 +95,6 @@ finite = true
 description = "Parent-clock tick at this clock's tick 0."
 
 [[columns]]
-name = "transform_to_parent"
-type = "json_string"
-presence = "optional"
-role = "data"
-description = "Clock alignment transform."
-
-[[columns]]
 name = "withheld_first_anchor"
 type = "bool"
 presence = "nullable"

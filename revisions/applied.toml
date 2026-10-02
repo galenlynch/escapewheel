@@ -920,7 +920,7 @@ note = "restored 2026-10-02; the rule that a repeated value is declared as a chi
 
 [clause."R3 §3.4"]
 disposition = "registry"
-note = "core.clocks gains transform_slope and transform_offset; the replaced transform_to_parent is still declared"
+note = "core.clocks gains transform_slope and transform_offset; R163 §3.1 removes the replaced transform_to_parent"
 
 [clause."R3 §4"]
 disposition = "registry"
@@ -2012,7 +2012,7 @@ note = "parent_tick declares clock_from inline, CONTEXT being consumed before a 
 [clause."R99 §3.4"]
 disposition = "applied"
 where = [{ part = "02", section = "12.6" }]
-note = "parameters keeps the evidence and none of the three facts; 02 §5.2 now names both json_string columns"
+note = "parameters keeps the evidence and none of the three facts; 02 §5.2 names §12.6 for it among the sections R163 §3.2 lists, and counts no json_string columns"
 
 [clause."R100 §2.1"]
 disposition = "superseded"
@@ -4432,8 +4432,21 @@ disposition = "registry"
 note = "the processing_run_id descriptions of seven core tables"
 
 [clause."R161 §3.5"]
+disposition = "superseded"
+by = "R163"
+note = "R163 §3.3 advances the core `registry_version` from 0.16.0 to 0.17.0; was Part 02 ew-registry-self-description"
+
+[clause."R163 §3.1"]
+disposition = "registry"
+note = "core.clocks declares no transform_to_parent, so withheld_first_anchor follows transform_offset; no invariant or check rejects the name declared elsewhere"
+
+[clause."R163 §3.2"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.16.0" }]
+where = [{ part = "02", anchor = "ew-no-nested-types", note = "names each section stating a core json_string column's content and the two no part describes, and counts no columns" }]
+
+[clause."R163 §3.3"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.17.0" }]
 note = "the registry source carries the value; Part 08 §§2 and 3 project it and are checked against the built example"
 
 [clause."R162 §3.1"]

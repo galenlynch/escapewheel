@@ -7,7 +7,7 @@ registry `core`, stored at `registries/core/<version>.json.gz` (Part 04 §8, Par
 
 <!-- BEGIN generated: counts -->
 ```
-51 resources, 47 tables, 368 columns, 117 references, 91 Tier 2 rules
+51 resources, 47 tables, 367 columns, 117 references, 91 Tier 2 rules
 ```
 <!-- END generated: counts -->
 

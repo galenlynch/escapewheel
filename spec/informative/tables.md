@@ -7,8 +7,8 @@ This generated rendering is not a standalone specification. See
 [Part 00 §2](../parts/00_architecture.md#ew-specification-authority) for the sources that bind.
 
 ```text
-51 resources, 47 tables, 368 columns, 117 references, 91 Tier 2 rules
-registry 0.16.0   logical standard escapewheel-logical-v0.1
+51 resources, 47 tables, 367 columns, 117 references, 91 Tier 2 rules
+registry 0.17.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
@@ -427,7 +427,6 @@ registry 0.16.0   logical standard escapewheel-logical-v0.1
 | `parent_clock_id` | int32 | nullable | — | Parent/reference clock. |
 | `transform_slope` | float64 | nullable | finite | Parent ticks per this clock's tick, as measured. |
 | `transform_offset` | float64 | nullable | finite | Parent-clock tick at this clock's tick 0. |
-| `transform_to_parent` | json_string | optional | — | Clock alignment transform. |
 | `withheld_first_anchor` | bool | nullable | — | Whether Part 02 §12.6's terminal-anchor test withheld this clock's first anchor. Null means the test did not run. |
 | `withheld_last_anchor` | bool | nullable | — | Whether Part 02 §12.6's terminal-anchor test withheld this clock's last anchor. Null means the test did not run. |
 | `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |

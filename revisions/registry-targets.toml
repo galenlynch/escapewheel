@@ -635,3 +635,6 @@ locations = [
   { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.electrode_coordinates/table/columns/6/name", equals = "processing_run_id" },
   { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.unit_coordinates/table/columns/6/name", equals = "processing_run_id" },
 ]
+
+[target."R163 §3.1"]
+locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.clocks/table/columns/11/name", equals = "withheld_first_anchor" }]

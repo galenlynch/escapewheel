@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "revision": "R163",
+  "based_on": "0815350e32f1a583964d51d7ec01d211de337747",
+  "clauses": {
+    "R163 §3.1": {
+      "owners": [
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.clocks/table/columns"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_core_clocks.py::test_a_clock_states_its_transform_in_typed_columns_alone"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_amending.py::test_an_amendment_binding_a_registry_without_a_held_column_rewrites_its_rows_without_it"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.clocks.toml"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification names the removed column, apart from the conformance sweep of the frozen v0.1 tables"
+      }
+    },
+    "R163 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-no-nested-types"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "the clause names the sections that state a json_string column's content and states no requirement a packet or a tool could fail"
+      },
+      "implementations": {
+        "unchanged": "no reference package reads the sentence or counts core's json_string columns"
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification repeats the sentence"
+      }
+    },
+    "R163 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/parts/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "core registry version is 0.17.0"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_an_amending_build_adds_sidecars_to_a_packet_bound_to_the_earlier_registry"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/registry.toml",
+          "spec/tools/check.py",
+          "spec/tools/framework_data.py",
+          "escapewheel-writer/tests/test_writer.py",
+          "escapewheel-writer/tests/test_sidecars.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "spec/README.md"
+        ]
+      }
+    }
+  }
+}

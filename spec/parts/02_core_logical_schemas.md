@@ -308,7 +308,7 @@ A column's type MUST NOT be `list`, `struct`, or `map`. A registry document MUST
 
 This keeps a conforming reader able to satisfy every required column without a JSON parser, and keeps a native reader viable in a language without an embedded SQL engine.
 
-A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole. What may go in the two `json_string` columns core declares is §8.6 for `metadata` and §12.6 for `core.processing_runs.parameters`.
+A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole. §8.6 states what a `metadata` column may hold, and §12.6 what `core.processing_runs.parameters` may hold. Part 05 §3.2 and Part 05 §4.3 state what a build records in an import run's `parameters`, and Part 06 §5 what a writer records in a materialization run's. Part 01 §3.11 permits an event a structured payload. No part states what `core.events.payload` or `core.sorting_runs.parameters` holds. The core registry declares which of its columns are `json_string`, as the declaration authority for the `core` and `analysis` namespaces (§2).
 
 <a id="ew-fixed-representations" data-spec-anchor="canonical"></a>
 ### 5.3 Fixed representations
@@ -654,7 +654,7 @@ The incorporated registry meta-schema has `$id`
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.16.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.17.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 

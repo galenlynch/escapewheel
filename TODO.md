@@ -9,10 +9,10 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R162 accepted. R42 and R73 withdrawn. 0 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R163 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
-47 tables, 368 columns, 117 references, 91 Tier 2 rules (2 advisory)
+47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
 132 conformance packets
@@ -135,13 +135,11 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Two drafts await acceptance
+## 3a. One draft awaits acceptance
 
 The drafts are under `revisions/drafts/`, and `revisions/drafts/README.md` gives their order and
 each one's appraisal. No proposal is open.
 
-- **Core declares a clock's transform in typed columns alone.** `core.clocks` drops
-  `transform_to_parent`, and Part 02 §5.2 stops counting core's `json_string` columns.
 - **A unit is identified outside its packet by its name.** The name of every owned assigned
   identifier is `required` and a generated check reports one two rows share; Part 02 §12.1 and
   Part 02 §12.9 name `unit_name` and `interval_name`. The meta-schema `$id`, the descriptor and
@@ -312,13 +310,11 @@ remains, with a second found while the credential draft was appraised.
   output of the complete result.
 
 The same reading found four defects in the specification and the registry. Part 05 §1 and Part 11
-§3 are repaired, and R161 rewords the false `processing_run_id` description of both array-asset
-tables. One waits on a draft in `revisions/drafts/`. Two more were found while the drafts
-were appraised: one in Part 04 §7 with the draft R161 became, and one in Part 05 §15.6 with the
-clock-transform draft, which wants a proposal of its own.
+§3 are repaired, R161 rewords the false `processing_run_id` description of both array-asset
+tables, and R163 removes `core.clocks.transform_to_parent`, which R3 §3.4 replaced. Two more were
+found while the drafts were appraised: one in Part 04 §7 with the draft R161 became, and one in
+Part 05 §15.6 with the draft R163 became, which wants a proposal of its own.
 
-- **`core.clocks.transform_to_parent` is still declared.** R3 §3.4 replaced it with the two typed
-  columns.
 - **A held file's undeclared column is invisible to an amendment.** Part 05 §15.6 compares rows
   over the columns the amended manifest's registry declares, and no validator check reports a file
   column the bound registry does not declare. An amendment binding a registry that stopped declaring
