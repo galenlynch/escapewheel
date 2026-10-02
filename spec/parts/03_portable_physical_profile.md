@@ -449,6 +449,7 @@ validation MUST also be represented in their logical resources or packet fields.
 physical facts—version, shape, dtype, chunking, and codec configuration—MUST be obtained from the
 resource and need not be copied into a table or the manifest.
 
+<a id="ew-metadata-placement" data-spec-anchor="canonical"></a>
 ## 7. Metadata placement
 
 | kind | location |

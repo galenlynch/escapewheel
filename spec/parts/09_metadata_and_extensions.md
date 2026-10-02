@@ -6,6 +6,7 @@ Normative.
 
 This part defines how much metadata core requires, where richer metadata belongs, and how an extension declares it.
 
+<a id="ew-metadata-tiers" data-spec-anchor="canonical"></a>
 ## 2. Tiers
 
 | tier | contents | location |
@@ -16,6 +17,7 @@ This part defines how much metadata core requires, where richer metadata belongs
 | 4 | human-readable context | `docs/` sidecars |
 | 3-4 | such facts stated about one row, in the source's own vocabulary | that table's `metadata` column |
 
+<a id="ew-core-inclusion-rule" data-spec-anchor="canonical"></a>
 ## 3. Core inclusion rule
 
 A field belongs in core only if common interpretation, validation, joining, or analysis would break without it.
