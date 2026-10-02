@@ -42,9 +42,9 @@ A tick is a coordinate, not a label and not a quantity. A writer MUST NOT re-bas
 
 A session's extent is stated as **wall-clock time**, not as a tick range. A hull over every clock's ticks would need those ticks converted to one clock, and alignment may be anchor-based — outside the first and last anchor the mapping is undefined, which is exactly where a hull reaches. A session therefore declares when it started and MAY declare when it ended, both as instants.
 
-A clock is observing during declared intervals, in that clock's own ticks. Anything timed by a clock inherits that clock's window and MAY refine it, but MUST NOT assert a window derived from its own timestamps.
+A clock is observing during declared intervals, in that clock's own ticks. Anything timed by a clock inherits that clock's window and MAY refine it, but MUST NOT assert a window derived from its own timestamps. A clock's own interval is not derived from what was timed on it either: it is the extent of the acquisition, so for a sample clock whose origin is sample 0 of a recording it runs from tick 0 to the last sample's index, one less than the recording's length.
 
-An interval is **closed**: `start_tick` and `stop_tick` both name observed ticks, so an interval covers `stop - start + 1` ticks and a one-tick interval has `start == stop`.
+An interval is **closed**: `start_tick` and `stop_tick` both name observed ticks, so an interval covers `stop - start + 1` ticks and a one-tick interval has `start == stop`. A consumer MUST NOT treat a `stop_tick` as excluded.
 
 ### 2.4 Provenance
 
@@ -113,7 +113,7 @@ A serial number identifies the object; its firmware determines what the object d
 
 A consumer MAY walk from a probe to the hardware that acquired it, and MAY group probes by any element of the chain they share — which is the question the chain exists to answer. It MUST NOT infer attachment from a device's name: a name is unconstrained by this standard, and the reference is the statement.
 
-Attachment names a device, and which place on that device a child occupied is a second fact. A device SHOULD declare the port, dock or slot of its parent it attached to, where a source states one. Where it declares none the coordinate is **unrecorded**, and a consumer MUST report it as such rather than parse it out of a name. Two devices sharing a parent and a port are not one device, and nothing declares that they are: the four bases of a quad-base probe occupy a single dock, so a port says where something was plugged in and not what it was.
+Attachment names a device, and which place on that device a child occupied is a second fact. A device SHOULD declare the port, dock or slot of its parent it attached to, where a source states one. Where it declares none the coordinate is **unrecorded**, and a consumer MUST report it as such rather than parse it out of a name. Two devices sharing a parent and a port are not one device, and nothing declares that they are: the four bases of a quad-base probe occupy a single dock, so a port says where something was plugged in and not what it was. A consumer MUST NOT conclude from a shared parent and port that two devices are one.
 
 A device is the **physical object**. Where a source presents several recording entities from one object — the bases of a quad-base probe — each is a Probe and all name the same Device; a writer MUST NOT record a second device for one instrument. Attachment is stated, never inferred from a name, and the chain MUST terminate: a device MUST NOT be its own ancestor.
 
@@ -180,6 +180,9 @@ A monotonic counter with a declared rate and origin.
   discontinuity within one clock: an anchor sequence requires both sides to increase, so there
   is no way to express it and no way to read it.
 
+Where a clock binds its tick 0 to a wall-clock instant, the wall-clock time of a tick on that clock
+is that instant plus the tick divided by the clock's declared tick rate, in seconds.
+
 A clock's tick-zero binding and a session's start time are **independent and MUST NOT be
 conflated**. One is a property of a counter, the other a fact about when work began.
 Where a wall-clock binding is derived rather than declared, the tick it is anchored on MUST lie
@@ -191,9 +194,13 @@ sample 0 of a recording, tick 0 **is** that sample. A writer MUST NOT re-base a 
 index and a consumer MUST NOT assume any base beyond what the origin declares; that
 prohibition is what makes a tick exact.
 
+A clock's **median anchor interval** is the median interval between its consecutive anchors, in ticks on that clock. Between two anchors separated by at most two median anchor intervals, the mapping onto the parent clock is linear interpolation on the bracketing pair.
+
+Beyond the terminal anchors a consumer MUST compute the mapping as `parent(t) = parent(a) + rate * (t - a)`, where `a` is the nearest terminal anchor and `rate` is fitted over the clock's full anchor sequence. A consumer MUST NOT extend the terminal segment's slope, and MUST NOT use the intercept of a fit over the whole anchor sequence.
+
 Alignment beyond the terminal anchors is defined only while the estimator's error stays within tolerance, 3 ms at p95 by default. A profile or a recipe MAY state a different tolerance.
 
-A writer reaching past one median anchor interval MUST measure its error; no checker verifies that it did. Part 02 §12.6 owns what the writer records of the tolerance and the measurement.
+A writer reaching past one median anchor interval MUST measure its error; no checker verifies that it did. Part 02 §12.6 owns what the writer records of the tolerance and the measurement. Where a tick is mapped through a chain of parent clocks, how far each clock's mapping reaches is counted in that clock's own median anchor interval.
 
 A consumer MUST **report** ticks it cannot map rather than omitting them, so a conversion returns a result for every tick it is given, marked undefined where the mapping is. A tick that vanishes in conversion is indistinguishable from one that was never there. It MUST record how many ticks it dropped for falling outside the bound **even when that count is zero**: silence is what lets a reader and a writer disagree about which values exist.
 
@@ -294,13 +301,13 @@ An image or video, and the timing of its frames.
 
 A frame is indexed by **presentation order**: index *n* is the frame the asset presents nth, counting from 0. A writer MUST NOT number frames in the order the container stores them, which differs wherever a codec reorders — a stream with bidirectional frames displaces one by several positions, and the resulting misattribution of time is monotonic and therefore invisible.
 
-The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing is not recorded and reserves no index; what went missing is recorded in the frames' timing, not as a gap in the numbering.
+The index counts the frames the asset **holds**, not the exposures the capture produced. A frame lost before or during writing is not recorded and reserves no index; what went missing is recorded in the frames' timing, not as a gap in the numbering. A consumer MUST NOT read a frame's index as a count of exposures, as a camera's own frame counter, or as an offset into anything but this asset.
 
-A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim. A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets or use it to measure elapsed time; what it locates is the frame inside the file.
+A frame's time is a tick on a declared clock, like every other time in a packet (§2.1). A container's own **presentation timestamp** is a different quantity and is carried separately: an integer in the container's own time base, verbatim. A writer MUST NOT rescale it to seconds, to a clock's ticks, or to a frame number, and MUST leave it absent where it did not read the container. It is not a time on any clock the packet declares, so a consumer MUST NOT compare it between assets, use it to measure elapsed time, or use it to align a frame to anything else in the packet; what it locates is the frame inside the file.
 
 A consumer MAY pass a presentation timestamp verbatim to a container library to seek the frame it was recorded for, which is the exact route and assumes nothing about ordering.
 
-The asset declares the **rate** those timestamps count at, as an exact rational — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have.
+The asset declares the **rate** those timestamps count at, as an exact rational — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have. A writer that carries no presentation timestamps for an asset MUST NOT declare a rate for it, and no checker verifies this.
 
 A media asset SHOULD name the device that recorded it where its source states one, as an array
 asset does. Nothing else separates two such assets: a behaviour video and a movie from a
@@ -353,6 +360,8 @@ The space a coordinate is a position in, together with its axes.
 - MAY declare which way an axis's values increase, and MUST leave that undeclared where the source does not state it.
 
 A frame has as many axes as it has: two for a shank, five for a rendering space.
+
+A writer MUST declare each axis's unit, which it knows because it wrote the values. No checker verifies this.
 
 An axis's name is the source's word for the field its values came from, carried verbatim — `ccf_ml` where the source's electrodes table has a column of that name. It records where the value came from and not what the quantity is conventionally taken to be, so a consumer needing to know which way an axis runs, where no direction is declared, MUST report the coordinate unusable for that purpose rather than assume a convention.
 

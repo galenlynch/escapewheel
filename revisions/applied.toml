@@ -13,7 +13,7 @@ note = "a column, key or reference the registry declares"
 [clause."R6 §2"]
 disposition = "applied"
 where = [{ part = "01", section = "3.9" }]
-note = "restored 2026-09-04; was dropped"
+note = "restored 2026-09-04; was dropped. restored 2026-10-01; how a bound clock's tick converts to wall-clock time was absent"
 
 [clause."R19 §2.1"]
 disposition = "registry"
@@ -48,7 +48,8 @@ where = [{ part = "04", anchor = "ew-external-resource-record" }]
 
 [clause."R38 §2.3"]
 disposition = "applied"
-where = [{ part = "01", section = "2.2" }]
+where = [{ part = "01", section = "2.3" }]
+note = "restored 2026-10-01; that a clock's own interval is the extent of the acquisition was absent"
 
 [clause."R39 §2.3"]
 disposition = "applied"
@@ -66,6 +67,7 @@ note = "a column, key or reference the registry declares"
 [clause."R45 §2.1"]
 disposition = "applied"
 where = [{ part = "01", section = "2.3" }]
+note = "restored 2026-10-01; the consumer prohibition on reading stop_tick as excluded was absent"
 
 [clause."R45 §2.5"]
 disposition = "applied"
@@ -195,6 +197,7 @@ where = [{ part = "01", section = "3.18" }]
 [clause."R69 §2.2"]
 disposition = "applied"
 where = [{ part = "01", section = "3.18" }]
+note = "restored 2026-10-01; the consumer prohibition on reading a frame index as an exposure count was indicative"
 
 [clause."R69 §2.3"]
 disposition = "registry"
@@ -207,6 +210,7 @@ where = [{ part = "01", section = "3.18" }]
 [clause."R70 §2.2"]
 disposition = "applied"
 where = [{ part = "01", section = "3.18" }]
+note = "restored 2026-10-01; the prohibition on declaring a rate where no presentation timestamp is carried was absent, and no rule checks it"
 
 [clause."R70 §2.3"]
 disposition = "applied"
@@ -613,7 +617,7 @@ note = "superseded in substance by R37 §3 and R40 §2, which the spec states"
 [clause."R27 §5.3"]
 disposition = "applied"
 where = [{ part = "01", section = "3.9" }]
-note = "restored 2026-09-04; an unmappable tick is reported, not dropped"
+note = "restored 2026-09-04; an unmappable tick is reported, not dropped. restored 2026-10-01; the median anchor interval, interpolation between anchors, the extrapolation formula and the per-clock reach through a chain were absent"
 
 [clause."R27 §6"]
 disposition = "applied"
@@ -640,6 +644,7 @@ note = "the measurement; §3 is the rule"
 [clause."R37 §3.1"]
 disposition = "applied"
 where = [{ part = "01", section = "3.9" }]
+note = "restored 2026-10-01; the extrapolation from the nearest terminal anchor at the fitted rate, and the prohibition on the whole-sequence intercept, were absent"
 
 [clause."R37 §3.2"]
 disposition = "applied"
@@ -1328,7 +1333,7 @@ note = "R70 §2.4 reverses it; the base is carried in core"
 [clause."R68 §2.5"]
 disposition = "applied"
 where = [{ part = "01", section = "3.18" }]
-note = "restored 2026-09-04; seeking by pts was absent"
+note = "restored 2026-09-04; seeking by pts was absent. restored 2026-10-01; the prohibition on aligning a frame by its presentation timestamp was absent"
 
 [clause."R68 §4"]
 disposition = "rationale"
@@ -1535,6 +1540,7 @@ where = [
 [clause."R85 §2.3"]
 disposition = "applied"
 where = [{ part = "01", section = "3.5" }]
+note = "restored 2026-10-01; the consumer prohibition on merging two devices that share a parent and a port was indicative"
 
 [clause."R86 §2.1"]
 disposition = "applied"
@@ -2191,7 +2197,7 @@ note = "core.electrode_coordinate_values and core.unit_coordinate_values, each k
 [clause."R105 §3.4"]
 disposition = "applied"
 where = [{ part = "01", section = "3.24" }]
-note = "axis_name is whatever the source called the field, verbatim (R22 §3), so the source's column name becomes a value in the packet; unit is known by construction, and axis_direction MUST be left null where the source does not state it, which binds the writer and no validator (R67 §2.4)"
+note = "axis_name is whatever the source called the field, verbatim (R22 §3), so the source's column name becomes a value in the packet; unit is known by construction, and axis_direction MUST be left null where the source does not state it, which binds the writer and no validator (R67 §2.4). restored 2026-10-01; the writer obligation to declare an axis's unit was absent"
 
 [clause."R105 §3.5"]
 disposition = "applied"
@@ -2895,6 +2901,7 @@ where = [{ part = "00", anchor = "ew-numbered-part-ownership" }]
 [clause."R122 §3.8"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-specification-candidate" }]
+note = "restored 2026-10-01; that the parts remain intelligible without developer documentation had lost its keyword"
 
 [clause."R122 §3.9"]
 disposition = "superseded"
