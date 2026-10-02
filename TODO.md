@@ -136,9 +136,9 @@ already solves that this code solves again.
 
 ## 3a. No draft awaits acceptance
 
-No draft is open. One proposal is: a rule means what Part 11 defines, not what its engine does.
-`BETWEEN` compares its operand with each bound as ISO SQL defines, and Part 11 §8 makes a valid rule
-that a validator cannot evaluate with Part 11's semantics incomplete.
+No draft is open. One proposal is: a rule means what Part 11 defines on any engine.
+Part 11 §4 states the ISO meaning of `BETWEEN` and `IN`, and Part 11 §8 makes a valid rule that a
+validator cannot evaluate with Part 11's semantics incomplete.
 
 ## 3b. Sidecars are declared, and video is not yet packet-owned
 
