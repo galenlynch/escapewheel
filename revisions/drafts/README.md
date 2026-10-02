@@ -19,5 +19,8 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-No draft is open. When one is written, it goes here with the reason it sits where it does, and the
-order is dependency first and readiness second.
+Dependencies run downward, so a draft may depend on the ones above it and on nothing below.
+
+| order | draft | words | appraisal | placement |
+|---:|---|---:|---|---|
+| 1 | [A rule means what Part 11 defines on any engine](a-rule-means-what-part-11-defines-on-any-engine.md) | 3662 | Promoted 2026-10-02, not yet appraised. | structural: in place at Part 11 §§1, 4 and 8 and Part 05 §9.4; notes on R125 §§3.2, 3.3, 3.4 and 3.8 |
