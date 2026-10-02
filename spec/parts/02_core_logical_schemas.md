@@ -198,8 +198,8 @@ Lineage edges obey this relation:
 
 The lineage graph contains no self-edge or cycle. Because every analysis resource has nonempty
 lineage, every finite analysis chain terminates in canonical core or extension resources. A writer
-and validator apply this policy without regard to kind. A reader may expose the resolved facts
-without validating the registry or possessing a validation receipt for ordinary access.
+and validator apply this policy without regard to kind. [Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance) has a reader expose the
+resolved facts.
 
 <a id="ew-amendment-groups" data-spec-anchor="canonical"></a>
 ### 2.8 Amendment groups
@@ -633,7 +633,9 @@ profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
 `https://escapewheel.org/schemas/registry/0.11.0`. Every registry document conforming to that
-schema MUST carry that value in `$schema`. The incorporated core registry has `registry_id: core`,
+schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
+member, so that the head of the file shows which meta-schema governs it; member order carries no
+other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
 `registry_version: 0.14.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
@@ -900,8 +902,9 @@ outcomes. An `invalid`, `unsupported`, or `incomplete` phase has at least one ou
 
 Each outcome contains its state, stable ID, and instance JSON Pointer. It may contain its owner,
 reason, schema-location JSON Pointer, and informative diagnostic detail. A skipped outcome contains
-a stable reason. The `instance` and `schema_location` fields conform to RFC 6901. Diagnostic
-`detail` does not affect conformance, equality, or ordering.
+a stable reason. The `instance` and `schema_location` fields conform to RFC 6901. An implementation
+MUST NOT let diagnostic `detail` determine conformance, equality, or ordering; no checker verifies
+this.
 
 The incorporated schema owns this representation's structure. Section 9.4 owns phase algorithms,
 state precedence, applicability and ordering of outcomes, reason and outcome semantics, and when

@@ -17,7 +17,7 @@ each as follows:
 | a consumer | §12 |
 
 §3 also constrains a recipe, §6 what a reader observes of a commit, §12 a packet, and §§14.1, 14.2
-and 14.6 every implementation. §10 defines the two conformance claims.
+and 14.6 and the first paragraph of §14.4 every implementation. §10 defines the two conformance claims.
 
 <a id="ew-import-validation-principle" data-spec-anchor="alias"></a>
 <a id="ew-import-pipeline" data-spec-anchor="canonical"></a>
@@ -820,6 +820,9 @@ with extra steps, which is the observed fate of the mechanism it replaces.
 
 ## 14. Registry-document conformance boundaries
 
+This section binds an implementation wherever it interprets a registry document. No checker
+verifies a requirement of this section.
+
 <a id="ew-checked-registry-context" data-spec-anchor="canonical"></a>
 
 ### 14.1 Checked registry context
@@ -829,13 +832,16 @@ registry input; its decoded JSON value when decoding succeeded; its complete Par
 immutable representations of the local descriptor set and external-domain capabilities used; and,
 for an extension, the exact checked core context supplied to its evaluation.
 
-For a byte input, the context retains the exact bytes. For a mapping input, it retains an immutable
-structural copy made before checking and records the skipped JSON phase required by Part 02 §9.4.
-A valid context authorizes production or registry-derived checks only from the decoded document in
-that same context. Another state authorizes no such interpretation. A context may be reused only
-while all its associated elements remain identical. A path, declared version, mutable object
-identity, or digest under an unspecified canonicalization does not prove that identity. This
-specification defines neither a portable result cache nor a transferable validation receipt.
+For a byte input, the context MUST retain the exact bytes. For a mapping input, it MUST retain an
+immutable structural copy made before checking and MUST record the skipped JSON phase that
+Part 02 §9.4 requires. An implementation that a valid context authorizes to produce packet bytes or
+registry-derived checks MUST use the decoded document in that same context, and MUST NOT reread the
+source or use the caller's original mapping. A context in another state authorizes neither.
+
+An implementation MAY reuse a context only while all its associated elements remain identical. It
+MUST NOT take a path, declared version, mutable object identity, or digest under an unspecified
+canonicalization as proof of that identity. This specification defines neither a portable result
+cache nor a transferable validation receipt.
 
 <a id="ew-registry-conformance-boundary" data-spec-anchor="canonical"></a>
 
@@ -850,10 +856,14 @@ An implementation MUST obtain one complete Part 02 result before it interprets a
 - perform an extension-author registry check; or
 - generate Tier 1, Tier 2, or another conformance check from registry declarations.
 
-A boundary that owns source bytes uses the byte entry point. A boundary given only a decoded
-mapping uses the mapping entry point and does not claim byte-level JSON checks. A low-level
-generator either establishes the checked context or requires one; a mapping accompanied by a
-result, Boolean, or caller assertion is insufficient.
+To obtain that result, an implementation that owns the registry's source bytes MUST use the
+byte-oriented entry point of
+[Part 02 §9.4](02_core_logical_schemas.md#ew-registry-conformance). An implementation given only a
+decoded mapping MUST use the mapping-oriented entry point, which Part 02 §9.4 forbids to claim the
+byte-level JSON checks. An implementation that generates conformance checks from a registry
+document handed to it directly MUST either establish the checked registry context itself or require
+one from its caller; a mapping accompanied by a result, a Boolean, or a caller's assertion does not
+establish one.
 
 <a id="ew-reader-registry-independence" data-spec-anchor="canonical"></a>
 
@@ -862,9 +872,9 @@ result, Boolean, or caller assertion is insufficient.
 A reader MUST NOT require a registry result, checked context, or validation receipt to open a
 packet, access its manifest or raw resources, present or correlate sessions, resolve
 discriminators, references, or session scope, provide extension-aware access, or analyze one or
-more packets. It may interpret declarations for those operations without making a conformance
+more packets. It MAY interpret declarations for those operations without making a conformance
 claim, and the reference reader does not depend on the validator package to do so. An explicit
-validation operation may evaluate the same input separately.
+validation operation MAY evaluate the same input separately.
 
 An unusable declaration need not produce a result for a reader operation. Its local failure or
 partial-access behavior is not defined here, but ordinary analysis MUST NOT acquire a general
@@ -874,33 +884,38 @@ A reader MUST NOT require a validation receipt or physical inspection of every r
 packet's manifest, resolve its declarations, list its resources or select a session. Before exposing
 a resource's logical values it inspects only the metadata that resource needs, and fails that
 resource alone where it lacks support. Where the resource uses a format version or feature the
-reader does not support, the reader MUST identify that version or feature in the failure. No
-checker verifies this.
+reader does not support, the reader MUST identify that version or feature in the failure.
 
 <a id="ew-registry-producer-boundary" data-spec-anchor="canonical"></a>
 
 ### 14.4 Producer and authoring reactions
 
-Registry publication, release, and generation of registry-derived conformance checks complete only
-from a `valid` context. An extension-author check reports success only for `valid`. For another
-state, the operation stops and exposes the complete result.
+An implementation MUST complete the publication or release of a registry, or the generation of
+registry-derived conformance checks, only from a `valid` context. An implementation performing an
+extension-author registry check MUST report success only where the result is `valid`. For any other
+state, the implementation MUST stop the publication, release, or generation, and in each case MUST
+expose the complete result to its caller.
 
-A writer rejects a non-valid registry before opening a source or staging output. A public mapping
-constructor copies and checks the mapping before retaining or interpreting it. Rejection does not
-open an adapter. A structured rejection exception makes the complete portable result retrievable;
-a command-line boundary offers machine-readable output containing the same result. Authoring may
+A writer MUST reject a non-valid registry before opening a source or staging output. A writer
+whose public constructor accepts a registry as a mapping MUST copy and check that mapping before it
+retains or interprets it. A writer that rejects a registry MUST NOT open an adapter for that build.
+A writer that reports rejection by raising an exception MUST make the complete portable result
+retrievable from it as structured data. A writer invoked from a command line MUST offer
+machine-readable output containing the rejected registry's complete portable result. Authoring may
 create an explicitly unfinished draft when it makes no conformance or publication claim.
 
 <a id="ew-validator-registry-boundary" data-spec-anchor="canonical"></a>
 
 ### 14.5 Validator reactions
 
-A packet validator obtains a complete result for every bound registry whose decoded bytes match
+A validator MUST obtain a complete result for every bound registry whose decoded bytes match
 their digest under [Part 04 §10](04_packet_catalog.md#ew-packet-manifest-conformance). For a
-bound registry that cannot be acquired, `packet.registry.missing`, `packet.registry.unreadable`,
-or `packet.registry.digest` is the packet-level outcome. The validator identifies the checked core
-context directing packet checks and supplies that exact context to every extension evaluation. If
-it is non-valid, each acquired extension is still evaluated as far as Part 02 permits.
+bound registry that cannot be acquired, Part 04 §10 makes `packet.registry.missing`,
+`packet.registry.unreadable`, or `packet.registry.digest` the packet-level outcome. A validator
+MUST supply the checked context it obtained for the bound core registry, and no other, to every
+extension evaluation. Where it obtained none, Part 02 §9.4 gives the extension's result without a
+usable core context. Where the core context is non-valid, the validator MUST still evaluate each
+acquired extension as far as Part 02 §9.4 permits.
 
 A validator MUST direct packet checks only from the checked contexts of bound registries that
 passed the `registry_binding` phase. It MUST NOT substitute a caller-supplied, bundled, or remotely
@@ -909,9 +924,10 @@ own under Part 02 but MUST NOT use it to direct packet checks or report its resu
 packet's.
 
 Only a `valid` context directs generation or execution of registry-derived packet checks. For a
-non-valid result, the validator retains the complete result, skips every dependent packet check,
-preserves invalid outcomes as registry-document findings, and does not fabricate packet findings
-for unsupported, incomplete, or skipped work. Independent checks may continue.
+non-valid result, the validator MUST retain the complete result in its report, MUST skip every
+dependent packet check, MUST preserve invalid outcomes as registry-document findings, and MUST NOT
+fabricate packet findings for unsupported, incomplete, or skipped work. The validator MAY continue
+checks independent of that registry.
 [§5.4](#ew-validation-extensions) extends the packet checks to extension resources, and
 [§9.5](#ew-verdict-composition) composes the verdicts. A non-valid required evaluation remains
 insufficient to support a conformance claim.
@@ -920,15 +936,17 @@ insufficient to support a conformance claim.
 
 ### 14.6 Portable reporting
 
-Each reported result has an external subject label. A bound registry's label is its registry ID,
-and a registry checked outside a packet receives a source-distinguishing label. A label does not replace or manufacture the document's own identity.
+A validator's report MUST pair each registry result with an external subject label. A bound
+registry's label MUST be its registry ID, and the label of a registry the validator checked outside
+the packet MUST distinguish its source. A validator MUST NOT let a subject label replace or
+manufacture the registry document's own identity.
 
-Public checking APIs, machine-readable command output, validation reports, and structured
-exceptions expose the same Part 02 §9.5 representation rather than reducing it to a Boolean or
-invalid-finding list. Human rendering may differ. Diagnostic `detail` is not interoperable
-identity. The result schema begins at version 0.1.0; this boundary and reporting change does not by
-itself change a registry meta-schema, core registry, extension registry, packet manifest, or their
-version identifiers.
+An implementation MUST expose a registry result through its public checking APIs, machine-readable
+command output, validation reports, and structured exceptions in the same
+[Part 02 §9.5](02_core_logical_schemas.md#ew-registry-result-serialization) representation, without
+reducing it to a Boolean or an invalid-finding list. An implementation MAY render a result
+differently for a person. Part 02 §9.5 keeps diagnostic `detail` out of conformance, equality, and
+ordering.
 
 <a id="ew-packet-amendment" data-spec-anchor="canonical"></a>
 ## 15. Amendment

@@ -30,7 +30,9 @@ neither every form that feature covers nor any syntax by itself. The sections th
 `contract_clauses` names state the complete permission and semantic boundary of the language.
 
 A validator claiming support for this language MUST support the identified contract as a whole.
-It MUST NOT construct a different language by independently toggling profile dependencies or
+The contract is every statement of §§2–8, whether or not it carries a keyword: those sections
+define the language in the indicative, and a validator claiming support MUST give a rule the
+meaning they define. It MUST NOT construct a different language by independently toggling profile dependencies or
 settings. A changed language contract MUST receive a new language ID. A registry may change its
 rules without changing the language ID only when the registry version changes and the rules retain
 this contract's meaning.
@@ -109,7 +111,9 @@ MUST match `^[a-z][a-z0-9_]*$`, be unique in its resolution scope, and compare c
 point. Delimiting an identifier does not admit another spelling or a keyword. Every other base
 relation, including a system catalog or validator-created relation, makes the registry invalid.
 
-Each visible table exposes exactly its registry-declared columns under §4. A resource absent from
+Each visible table exposes its registry-declared columns under §4 and no others; an `optional`
+column the packet's table omits is not exposed, and
+[Part 02 §10.2](02_core_logical_schemas.md#ew-tier-2-rules) keeps a rule from naming one. A resource absent from
 the packet binds as an empty relation of that shape. A declared resource that cannot be read MUST
 NOT be substituted with an empty relation for a rule that depends on it; that rule is incomplete
 under §8.

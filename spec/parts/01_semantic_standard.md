@@ -313,8 +313,8 @@ A consumer MAY pass a presentation timestamp verbatim to a container library to 
 
 The asset declares the **rate** those timestamps count at, as an exact rational — a container time base of 1/16000 s is 16000 over 1, in the shape a clock's tick rate already uses. A writer that carries presentation timestamps MUST declare it and MUST NOT declare half of it. A consumer MAY then convert a timestamp to seconds of the asset's own timeline without opening the media, which is the case a referenced asset makes ordinary: the file is the part a packet is least likely to have. A writer that carries no presentation timestamps for an asset MUST NOT declare a rate for it, and no checker verifies this.
 
-A media asset SHOULD name the device that recorded it where its source states one, as an array
-asset does. Nothing else separates two such assets: a behaviour video and a movie from a
+A writer MUST name the device that recorded a media asset where its source states one, and MUST
+NOT infer it from a file name. No checker verifies either. Nothing else separates two such assets: a behaviour video and a movie from a
 head-mounted microscope may both be written by a camera, and `semantic_type` and the asset's name
 are labels rather than references. Where the source states no device, none is recorded, and a
 consumer MUST report the instrument as unrecorded rather than read one out of the asset's name.
