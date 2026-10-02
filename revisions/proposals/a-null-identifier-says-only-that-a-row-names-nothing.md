@@ -6,7 +6,7 @@
 | **Opened** | 2026-10-02 |
 | **Based on** | `c0f9214b88a2b134bf130a37abde0c396fb0b932` |
 | **Decision domain** | specification |
-| **Affects** | Part 02 §6, which gives each presence state and no meaning to a null; Part 01 §§3.12 and 3.17, which give that meaning for one column family; Part 03 §§5.6 and 6.3; the descriptions of `core.devices.parent_device_id`, `core.sessions.source_session_id` and `core.processing_runs.supersedes_run_id`; the core registry version |
+| **Affects** | a new subsection of Part 02 §6, which gives each presence state and no meaning to a null; Part 01 §§3.12 and 3.17, which give that meaning for one column family; Part 03 §§5.6 and 6.3; the descriptions of `core.devices.parent_device_id`, `core.sessions.source_session_id` and `core.processing_runs.supersedes_run_id`; the core registry version |
 
 ## 1. Problem
 
@@ -172,7 +172,7 @@ otherwise in its description. The default needs no extension change. The corpus 
 - **"None exists" as the default.** This is the literal reading of a null as no such thing. It
   contradicts R161's consumer clauses and Part 01 §3.18. It would also oblige a writer to refuse
   whenever a source is silent, so a packet from an NWB file stating no device attachment could not
-  be built. Section 6 asks the reviewer to confirm this reading is not the one meant.
+  be built. The reviewer confirmed it is not the reading meant (§6).
 - **A `null_means` attribute on each column.** It would put a meaning into the registry
   meta-schema that Part 00 §2.2 assigns to prose. It would cost a meta-schema version and a version
   of every extension, and it still could not separate an ambiguous column's two cases.
@@ -187,12 +187,12 @@ otherwise in its description. The default needs no extension change. The corpus 
 ### 4.3 Placement
 
 The reading is a logical fact about a column's values, so it belongs in Part 02 beside presence,
-not in Part 03's encoding section or in each Part 01 concept. Part 02 §6 has no subsections, so an
-ordinary change appends one. Part 01 §§3.12 and 3.17 keep their concept-specific conclusions
+not in Part 03's encoding section or in each Part 01 concept. An ordinary change appends it as a
+subsection at the end of Part 02 §6, which takes its own anchor when created. Part 01 §§3.12 and 3.17 keep their concept-specific conclusions
 ("came off a device as recorded", "was acquired"), which the general rule does not state.
 
-The open amendment-column proposal also adds a rule to Part 02 §6, so the two changes need an order
-before either is drafted. Neither depends on the other's content.
+The open amendment-column proposal also adds a subsection to Part 02 §6. It goes first, and this
+rule's subsection follows its. Neither depends on the other's content.
 
 ## 5. Impact sketch
 
@@ -212,17 +212,18 @@ before either is drafted. Neither depends on the other's content.
 
 ## 6. Open questions
 
-1. **Which reading did the reviewer approve?** The reviewer approved the direction as "null means
-   no such thing", after it was described as the reading R161 gave the null producing run. Those
-   are two readings, and §2.3 shows R161 chose the agnostic one. This proposal takes the agnostic
-   reading as its preferred direction. If the reviewer meant that a null asserts the referent does
-   not exist, §4.2 lists what that would supersede and which sources it would make unbuildable.
-2. **Do the sixteen silent descriptions restate the default?** R161 restated its reading in seven
-   descriptions. Restating it in sixteen more would let a reader of the registry alone find it, at
-   the cost of a second owner for one rule. The preferred direction does not restate it.
-3. **Does the default cover every nullable column, or only naming ones?** For a data column, "names
-   nothing" becomes "records no value", which Part 03 §5.6 already implies. The preferred direction
-   limits the rule to `identifier` and `discriminator` columns.
+1. **Which reading does the default take?** **Answered 2026-10-02: the agnostic one,** that a null
+   says only that the row names nothing (§4.1). The reviewer's earlier approval of "null means no
+   such thing" was given on a description of it as the reading R161 gave the null producing run,
+   which §2.3 shows is the agnostic reading; this answer replaces it.
+2. **Do the sixteen silent descriptions restate the default?** **Answered 2026-10-02: no.** Part 02
+   owns the rule once, and a reader of the registry alone does not find it there. R161's seven
+   descriptions, which already agree with it, stay.
+3. **Does the default cover every nullable column, or only naming ones?** **Answered 2026-10-02:
+   naming ones only,** the `identifier` and `discriminator` columns. For a data column Part 03 §5.6
+   already implies that a null records no value.
+
+No question that would change the decision is open.
 
 ## 7. Promotion criteria
 
@@ -232,7 +233,7 @@ before either is drafted. Neither depends on the other's content.
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
-- [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The exact proposal and its final appraisal state are tracked in the current commit.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
+- [x] The exact proposal and its final appraisal state are tracked in the current commit.
 - [ ] The proposal has explicit approval to advance to a revision draft.
