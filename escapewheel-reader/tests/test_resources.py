@@ -494,9 +494,50 @@ def test_a_v2_compressor_this_reader_lacks_fails_that_array(tmp_path):
 
     handle = _array_resource(store.resolve().as_uri(), tmp_path)
     assert handle.codecs == ("example_unimplemented",)
-    with pytest.raises(UnsupportedCodecError) as raised:
+    with pytest.raises(UnsupportedCodecError, match="example_unimplemented") as raised:
         handle.read()
     assert raised.value.outside_floor
+
+
+def test_a_zarr_version_this_reader_lacks_fails_that_array_naming_the_version(array_packet):
+    """Part 05 §14.3: the failure identifies the version, and the rest of the packet still reads."""
+    import json
+
+    store = array_packet / "arrays" / "lfp.zarr"
+    metadata = _zarr_json(store)
+    metadata["zarr_format"] = 4
+    (store / "zarr.json").write_text(json.dumps(metadata))
+
+    packet = open_packet(array_packet)
+    with pytest.raises(ValueError, match="zarr_format: 4"):
+        packet.array("core.lfp")
+    assert packet.table("core.intervals").num_rows == 2
+
+
+def test_a_parquet_compression_this_reader_lacks_fails_that_table_naming_it(packet_root):
+    """Part 05 §14.3: the failure identifies the feature, and the rest of the packet still reads."""
+    import struct
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    # No writer here emits LZO, so a zstd file's footer is edited to declare it: in the column's
+    # Thrift metadata the codec is field 4, an i32, whose zstd value 6 becomes LZO's 3. One
+    # column, so those two bytes occur once.
+    path = packet_root / "tables" / "core" / "intervals.parquet"
+    pq.write_table(pa.table({"session_id": pa.array(range(100), pa.int64())}), path, compression="zstd")
+    raw = path.read_bytes()
+    (length,) = struct.unpack("<I", raw[-8:-4])
+    footer = raw[-8 - length : -8]
+    assert footer.count(b"\x15\x0c") == 1
+    path.write_bytes(raw[: -8 - length] + footer.replace(b"\x15\x0c", b"\x15\x06") + raw[-8:])
+
+    packet = open_packet(packet_root)
+    handle = packet.table_resource("core.intervals")
+    assert handle.schema().names, "the footer still parses, so only the values are out of reach"
+    with pytest.raises(OSError, match="LZO"):
+        handle.to_arrow()
+    assert packet.table("core.sessions").num_rows == 1
 
 
 def test_a_floor_codec_this_installation_lacks_is_marked_within_the_floor(array_packet, monkeypatch):

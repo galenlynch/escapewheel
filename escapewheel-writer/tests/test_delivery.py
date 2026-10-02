@@ -308,6 +308,49 @@ def test_what_the_report_says_is_reported(supplied, tmp_path):
     assert set(codes(got.notes)) == {NoteCode.REPORTED}
 
 
+#: An adapter whose listing carries a report-shaped finding in `app_metadata`, where no finding travels.
+LISTING_ADAPTER = """
+import json, sys
+import pyarrow as pa
+import pyarrow.flight as fl
+
+socket = json.load(sys.stdin)["socket"]
+table = pa.table({"probe_id": [1]})
+finding = json.dumps({"problems": [{"level": "error", "message": "said in the listing"}], "stated": {"a.b": 1}})
+
+
+class Served(fl.FlightServerBase):
+    def list_flights(self, context, criteria):
+        descriptor = fl.FlightDescriptor.for_path("core.probes")
+        yield fl.FlightInfo(table.schema, descriptor, [], 1, -1, app_metadata=finding)
+
+    def do_get(self, context, ticket):
+        return fl.RecordBatchStream(table)
+
+
+Served(fl.Location.for_grpc_unix(socket)).serve()
+"""
+
+
+def test_a_listings_app_metadata_is_ignored(tmp_path):
+    """Part 12 §9: no finding travels in a listing, so what an adapter puts there changes nothing."""
+    pytest.importorskip("pyarrow.flight")
+    adapter = tmp_path / "adapter.py"
+    adapter.write_text(LISTING_ADAPTER)
+    got = reading.fetch(
+        "listing",
+        [sys.executable, str(adapter)],
+        {},
+        protocol="flight-v0.1",
+        wanted=["core.probes"],
+        states=["a.b"],
+        workspace=tmp_path / "work",
+    )
+    assert got.rows("core.probes") == [{"probe_id": 1}]
+    assert list(got.notes) == []
+    assert got.stated_a_b is None
+
+
 def test_a_report_is_not_required(supplied, tmp_path):
     """A build must not require one, and must read a field absent from it as unstated."""
     got = reading.fetch(
