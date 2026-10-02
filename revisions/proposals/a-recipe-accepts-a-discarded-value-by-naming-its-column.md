@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Proposal** |
 | **Opened** | 2026-10-02 |
-| **Based on** | `e60b54e064d98c4479cf58dc18ba831fdfa75ea4` |
+| **Based on** | `e557962759ff9f2016a16bd3e6426bd1e152543d` |
 | **Decision domain** | specification |
 | **Affects** | Part 05 §3.4's sentence on resolving a discarded value; Part 05 §3.1's `overrides` row and the recipe schema it incorporates; Part 05 §3.5's refusals and reports; Part 05 §3.6's report of an idle override |
 
@@ -64,7 +64,9 @@ The incorporated recipe schema constrains each `[overrides]` key to
 `[session]` and `[subject]`, for `core.sessions` and `core.subjects`, and R87 §2.8 keeps
 `core.sessions` with the recipe. A preference can name any resource more than one listed source
 produces (Part 05 §3.3). A `block.field` key therefore reaches the columns of one table a
-preference can arbitrate, `core.subjects`, out of the 45 tables the core registry declares.
+preference can arbitrate, `core.subjects`, out of the 45 tables the core registry declares. Two
+tracked adapters declare that they can supply `core.subjects`, the reference writer's NWB adapter
+and the AIND package's session adapter, so a recipe listing both can declare that preference.
 
 Six keys were validated against the schema. It admits `subject.strain`,
 `session.session_start_time` and `core.probes`. It refuses `core.probes.probe_type`,
@@ -88,7 +90,10 @@ produces no rows the limiting case. The comparison leaves out `metadata`. The se
 which row of the preferred source a passed-over row is compared with.
 
 The reference build pairs rows by the table's declared primary key, on the values the adapters
-delivered. It reports three shapes of loss:
+delivered. Each of the 45 tables declares a primary key, and every key column is `required`.
+Part 12 §5 has an adapter hand over an identifier as the name its source used, so an identifier in
+a delivered key is a name, and two rows pair only where both sources use the same name. The build
+reports three shapes of loss:
 
 | shape | what the reference build reports |
 |---|---|
@@ -146,6 +151,10 @@ Part 05 §3.3 says of an amending build that its "preferences arbitrate among th
 only". An amending build can therefore meet the refusal of Part 05 §3.4, and the reference build
 runs the comparison in an amending build as in any other.
 
+The same list refuses every `[subject]` member and every `[session]` member but `session_id`, so an
+amending recipe declares no field that a field override could supersede a source with. A column
+override names no recipe field.
+
 ### 2.10 The recipe schema's identifier has advanced with each change of its shape
 
 Part 05 §3.1 incorporates the schema under the `$id`
@@ -153,6 +162,9 @@ Part 05 §3.1 incorporates the schema under the `$id`
 R153 §3.7 set 0.3.0, each in a revision that added members to the schema. R138 §5 kept the `$id`
 because it left the shape unchanged. No part states when the identifier advances. The writer's
 packaged copy of the schema equals the incorporated artifact.
+
+Part 05 §3.2 has a writer record the recipe in the import run's parameters. No part has a validator
+check that record against the recipe schema, and the reference validator and reader read no recipe.
 
 ## 3. Desired outcome and constraints
 
@@ -174,6 +186,7 @@ Every resolution Part 05 §3.4 names is one a recipe can write and a build honou
 | give the sentence force and keep the `block.field` key | reaches `core.subjects` alone (§2.3); `subject.strain` then says either that the recipe's value stands or that the preferred source's null stands, and the report of §2.8 cannot tell which |
 | an entry names a whole resource | releases a dropped row and an empty preferred source along with a null column, which leaves the preference unchecked for that resource, the state R108 §3.1 closed |
 | a `[preference]` entry lists the columns it may discard | the acceptance sits beside the preference it qualifies and needs no second key form; Part 05 §3.3's entry gains a member, and the table that Part 05 §3.4 and R108 §3.3 name is not the one a recipe uses |
+| a new top-level table keyed `resource.column` | `[overrides]` keeps one key form and Part 05 §3.6 its text; the recipe gains a table, the resolution Part 05 §3.4 and R108 §3.3 name is renamed, and the schema changes as it does under the preferred direction |
 | `[overrides]` admits a `resource.column` key (preferred direction) | the key spells what the refusal names (§2.5), and one table lists every statement of a source the recipe sets aside; Part 05 §3.5 and Part 05 §3.6 then tell the two kinds of entry apart |
 
 The preferred direction is described below. It calls an entry keyed `block.field` a field override
@@ -205,6 +218,10 @@ every passed-over source. It covers no other column.
 A row the preferred source does not produce and a preferred source that produces no rows stay
 refused. Neither loss names a column (§2.5), and a recipe that drops a whole row says that its two
 sources disagree about what exists, which a statement about one column does not answer.
+
+Two rows correspond where they hold the same values in the table's primary key as the sources
+delivered them (§2.5). Two sources that name one probe differently therefore deliver rows that do
+not correspond. That loss is of the second shape, and no column override releases it.
 
 Two finer units were weighed. An entry for one row's column needs the recipe to name the row. A
 recipe names an assigned row by its `*_name`, as a `preferred_run` entry's `scope` does, since the
@@ -238,19 +255,35 @@ The idle report of Part 05 §3.6 and the two reports of Part 05 §3.5 apply to f
 A column override is idle where it released no value in the build. A build reports it and does not
 refuse, for the reason R87 §2.5 gives: an entry that stopped applying leaves the packet correct. An
 entry that can release nothing in any build of the recipe is refused before a source is opened, by
-the discipline of Part 05 §3.3, which forbids a preference that arbitrates nothing. Two cases are
-of that kind: the resource carries no preference in the recipe, and the column is `metadata` or one
-the resource does not declare.
+the discipline of Part 05 §3.3, which forbids a preference that arbitrates nothing. Three cases are
+of that kind:
+
+- the resource carries no preference in the recipe;
+- the column is `metadata` or one the resource does not declare, which covers a resource that is
+  not a table; and
+- the column belongs to the table's primary key, on which corresponding rows agree (§4.2).
+
+Each is decided from the recipe and the registries it binds, which Part 05 §3.5 already has a build
+check the recipe against before it opens any source. Whether an entry is idle in one build is known
+only once the sources are read.
+
+A `required` column outside the key is a fourth candidate. An entry naming one can release a
+refusal, but only for a preferred row that leaves a required column null, and Part 02 §6 forbids
+that null, so the build cannot end in a conforming packet. Of the 245 columns the core registry
+declares outside a primary key and `metadata`, 78 are `required`.
 
 ### 4.6 The recipe schema's identifier advances
 
 The schema's `overrides` member admits a three-segment key beside the two-segment one, and the
 value's constraint is unchanged. A JSON Schema pattern expresses both forms, as the registry
 meta-schema's patterns show (§2.4). The shape changes, so the `$id` advances as it did at each
-earlier change of shape (§2.10), and Part 05 §3.1 names the new identifier and both key forms.
+earlier change of shape (§2.10), to 0.4.0 by that practice, and Part 05 §3.1 names the new
+identifier and both key forms. No other open draft or proposal changes the recipe schema (§5).
 
 Every recipe the 0.3.0 schema admits stays admitted. A build written to the 0.3.0 schema refuses a
-recipe carrying a column override and names the key.
+recipe carrying a column override and names the key. A packet built from such a recipe records it
+in the import run's parameters, which no validator check reads (§2.10), so the packet conforms as
+any other does.
 
 A build already holds each passed-over source's rows for a preferred resource in order to compare
 them (Part 05 §3.4), so honouring an entry needs no input the build lacks.
@@ -258,13 +291,15 @@ them (Part 05 §3.4), so honouring an entry needs no input the build lacks.
 ### 4.7 The ledger records R108 §3.3 as superseded
 
 The revision restates the rule of R108 §3.3 whole, with a different key and a stated scope, so the
-entry of R108 §3.3 changes from `applied` at Part 05 §3.4 to `superseded`, naming that revision in
-`by`. The ledger records R20 §2.4 the same way, as restated by R147 with a different key. The
-revision's own clauses are `applied` at the four sections of Part 05 they amend.
+entry of R108 §3.3 changes from `applied` at Part 05 §3.4 to `superseded`. R158 §3.1 requires such
+an entry to name the replacing revision in `by` and to carry no `where`. The ledger records
+R20 §2.4 the same way, as restated by R147 with a different key. The revision's own clauses are
+`applied` at the four sections of Part 05 they amend.
 
-Four entries stay `applied` and gain a note naming the later clause: R87 §2.5, whose table gains a
-second key form; R133 §3.4, whose schema changes; R153 §3.7, whose recipe `$id` is replaced; and
-R150 §3.5, if an amending recipe admits a column override.
+Four clauses are replaced in part. R158 §3.2 has each entry keep its disposition, `applied`, and
+name the later clause in its note: R87 §2.5, whose table gains a second key form; R133 §3.4, whose
+schema changes; R153 §3.7, whose recipe `$id` is replaced; and R150 §3.5, if an amending recipe
+admits a column override.
 
 Under the withdrawal option the entry of R108 §3.3 is `superseded` by the revision that withdraws
 it. Under the current text it stays `applied` at a sentence that does not state its rule.
@@ -277,20 +312,38 @@ it. Under the current text it stays `applied` at a sentence that does not state 
 | logical prose, registry meta-schema, declarations and rules | Unchanged. No resource, column or rule changes, and the meta-schema's three-segment spelling is reused and not altered. |
 | physical profiles | Unchanged. Part 12 §7's `states` names recipe fields, which a field override still answers, and no delivery changes. |
 | packet manifest and other JSON Schemas | The recipe schema's `overrides` key pattern, its description and its `$id` change. The manifest, adapter and resource-document schemas are unchanged. |
-| validation and import | Part 05 §3.1's row and `$id`; Part 05 §3.4's resolution sentence, which gains the release and names a column; Part 05 §3.5's two static refusals, the amending refusal and the wording of its two reports; Part 05 §3.6's idle report. No validator check is added: a packet does not show whether a build refused. |
+| validation and import | Part 05 §3.1's row and `$id`; Part 05 §3.4's resolution sentence, which gains the release and names a column; Part 05 §3.5's static refusals (§4.5), the amending refusal and the wording of its two reports; Part 05 §3.6's idle report. No validator check is added: a packet does not show whether a build refused. |
 | extension registries | Unchanged. A column override names an extension table's column as it names a core one, where a recipe prefers a source for that table. |
-| reader, writer, validator, adapters, code generation | The reference build honours a column override, refuses the two static cases, reports a release and an idle entry, and keeps its message. Its packaged copy of the schema regenerates. Adapters, the reader and the validator are unchanged. |
+| reader, writer, validator, adapters, code generation | The reference build honours a column override, refuses the static cases of §4.5, reports a release and an idle entry, and keeps its message. Its packaged copy of the schema regenerates. Adapters, the reader and the validator are unchanged. |
 | existing packets | Unchanged. No packet is rebuilt, and no tracked recipe changes meaning: the one tracked recipe file, the example under `spec/informative/`, carries one field override. |
-| conformance fixtures and implementation tests | No packet fixture, since a packet does not show whether a build refused. Build tests: the recipe of §2.6 builds with a column override and stages a null; an entry for another column, a field override, a dropped row and an empty preferred source each still refuse; the recipe of §2.7 builds under either preference with one entry; the two static cases refuse before a source opens; an idle entry is reported. Schema tests: a three-segment key is admitted and a four-segment key refused. The example recipe gains a column override. |
+| conformance fixtures and implementation tests | No packet fixture, since a packet does not show whether a build refused. Build tests: the recipe of §2.6 builds with a column override and stages a null; an entry for another column, a field override, a dropped row and an empty preferred source each still refuse; the recipe of §2.7 builds under either preference with one entry; each static case of §4.5 refuses before a source opens; an idle entry is reported. Schema tests: a three-segment key is admitted and a four-segment key refused. The example recipe gains a column override. |
 | revision lifecycle, ledger, evidence and tooling | The ledger changes of §4.7 and the ordinary evidence record. No tool changes. |
 | generated publications and developer documentation | The combined specification regenerates. The writer's guide documents both kinds of entry; a search of the tracked Markdown outside `spec/` and `revisions/` finds `overrides` in no package document. |
 
-Of the five open drafts, one amends a section this proposal touches. The draft on recording a
-recipe without its credentials extends the refusals of Part 05 §3.5, as §4.5 does, so whichever is
-incorporated second rereads that list. It keeps the recipe schema unchanged and changes only values
-a build recognizes as credentials in the recorded recipe, so a recorded `[overrides]` entry is
-unaffected. The draft on the ledger's superseded entries requires the `by` field that §4.7 uses.
-The other three touch no section named here. No other proposal is open.
+Two drafts are open, and one amends a section this proposal touches. The draft on recording a
+recipe without its credentials, revised on 2026-10-02, amends Part 05 §3.2, Part 05 §3.5 and
+Part 05 §7. To Part 05 §3.5 it adds one refusal, permitting a build to refuse a recipe that carries
+a value it recognizes as a credential, and it changes no item the section already lists. This
+proposal changes other items of that section: it adds the static refusals of §4.5, narrows the
+amending build's refusal of an `[overrides]` member, and rewords the two reports of a declared
+field. Neither change edits a sentence the other edits or depends on the other's text, so either
+order incorporates, and the second is applied to the section as the first left it. That draft keeps
+the recipe schema unchanged. Its recorded recipe differs from the recipe only by a marker in place
+of a value a source entry carries, so a recorded `[overrides]` entry and its reason stay as the
+recipe wrote them (§4.4).
+
+The draft on a catalog of sidecars, redrafted on 2026-10-02, amends Part 05 §4.3, sections of four
+other parts and the core registry, and changes no recipe rule. It has two sources that each deliver
+sidecars name `core.sidecars` and `core.sidecar_scopes` under `contributes`. Part 05 §3.5 refuses a
+preference for a resource an entry declares under `contributes`, and a column override needs a
+preference (§4.5), so no column override names either table in such a recipe.
+
+Four proposals are open, this one among them. The other three concern a clock's transform, a null
+producing run on an array, and a unit's name. None amends Part 05 §3.5 or changes the recipe
+schema. The proposal on a unit's name cites the amending build's refusal of a null `*_name` in
+Part 05 §3.5 as evidence and leaves it as it is.
+
+R158 states the two ledger rules that §4.7 follows.
 
 ## 6. Open questions
 
@@ -299,30 +352,45 @@ The other three touch no section named here. No other proposal is open.
    recipe sets aside; it costs a second key form and changes to Part 05 §3.5 and Part 05 §3.6. A
    member of the `[preference]` entry cannot name a resource without a preference, is already
    admitted in an amending recipe, and leaves Part 05 §3.6 untouched; it changes Part 05 §3.3's
-   entry and renames the published resolution. Preferred: `[overrides]`.
+   entry and renames the published resolution. A new top-level table leaves both `[overrides]` and
+   the `[preference]` entry as they are, and it renames the resolution and adds a table to the
+   recipe. Each form changes the schema's shape, so the `$id` advances under any of them (§4.6).
+   Preferred: `[overrides]`.
 2. Whether a field override also releases a `core.subjects` column, as R108 §3.3 literally has it.
    If it does, `subject.strain` carries two meanings (§4). If it does not, a recipe writes
-   `core.subjects.strain` for the preference and `subject.strain` for its own value. Preferred: it
-   does not.
+   `core.subjects.strain` for the preference and `subject.strain` for its own value. The comparison
+   of Part 05 §3.4 is between two sources' rows and reads no value the recipe declares, so a recipe
+   that declares `strain`, prefers a source leaving it null and lists another stating it meets both
+   that refusal and the report of Part 05 §3.6, and answers each with its own entry. The case is
+   reachable with tracked adapters (§2.3). Preferred: it does not.
 3. Whether a column override reaches a row the preferred source does not produce. Reaching it lets
    a recipe drop a row by naming each of its non-null columns. Not reaching it leaves that loss with
    two resolutions. Either answer needs Part 05 §3.4 to say which rows correspond, which it does not
-   say today (§2.5). Preferred: it does not reach the row, and rows correspond by the table's
-   primary key as delivered.
+   say today (§2.5). Every table declares a primary key, and a build holds both sources' delivered
+   rows when it compares them, so the key as delivered is a correspondence a build can always
+   compute. It pairs no rows of two sources that name one thing differently, and a column override
+   then releases nothing (§4.2). Preferred: it does not reach the row, and rows correspond by the
+   table's primary key as delivered.
 4. What a packet records beyond the recipe. With nothing more, a packet shows that a column's
    discard was accepted and not whether the build discarded anything. A list in the import run's
    parameters of each column released, with the passed-over source and the number of rows, would
-   show it, under a key no checker verifies. Preferred: nothing more.
+   show it, under a key no checker verifies. Neither answer changes a schema or what a validator
+   checks. Preferred: nothing more.
 5. Whether an amending recipe admits a column override. Admitting it narrows the refusal of
-   Part 05 §3.5 to field overrides. Refusing it leaves an amending build with two resolutions
-   (§2.9).
-   Preferred: admit it.
+   Part 05 §3.5 to field overrides, and the reason an amending recipe has no use for a field
+   override does not reach a column override (§2.9). Refusing it leaves an amending build with two
+   resolutions. Under either answer no amending recipe a build accepts today is refused. Preferred:
+   admit it.
 6. Whether an entry that can release nothing in any build is refused or reported (§4.5). Refusing
-   adds two refusals to Part 05 §3.5 and stops a misspelled key before a source is read. Reporting
-   adds none, and a misspelled key then fails at the refusal it was written to release. Preferred:
-   refuse.
+   adds refusals to Part 05 §3.5 and stops a misspelled key before a source is read. It also
+   refuses a recipe whose preference was removed while its column override stayed, where a stale
+   field override is only reported. Reporting adds none, and a misspelled key then fails at the
+   refusal it was written to release. The answer also fixes which columns count: an undeclared
+   column, `metadata` and a primary-key column can release nothing, and a `required` column can
+   release a refusal only for a row no conforming packet holds. Preferred: refuse, for the three
+   cases of §4.5 and for a `required` column.
 
-Each answer fixes a Decision clause. The first selects between two forms of the same direction, and
+Each answer fixes a Decision clause. The first selects among three forms of the same direction, and
 none reopens the choice between completing the rule and withdrawing it.
 
 ## 7. Promotion criteria
