@@ -286,7 +286,7 @@ These incorporated identifiers MUST advance:
 
 The core registry's `registry_version` MUST advance by one minor version from the version the
 incorporated registry carries when this revision is incorporated. At the baseline that version is
-`0.14.0`, which R152 §3.4 assigns. Other open work advances the same identifier, so this revision
+`0.15.0`, which R160 §3.8 assigns. Other open work advances the same identifier, so this revision
 takes the next free version at incorporation and fixes no order among them.
 
 The meta-schema changes only its `$id`. The v0.10 descriptor selects meta-schema 0.12.0, lists
