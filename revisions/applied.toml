@@ -106,7 +106,7 @@ note = "restored 2026-09-04; compiled as MUST where R52 §2.1 says SHOULD, which
 [clause."R52 §2.3"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-owned-resource-digests" }, { part = "04", anchor = "ew-external-resource-verification" }]
-note = "level 2 of Part 04 §5.3 checks owned digests; the skip count lapses, since R136 §3.4 requires a digest of every packet-owned resource"
+note = "level 2 of Part 04 §5.3 checks owned digests; the skip count lapses, since R136 §3.4 requires a digest of every packet-owned resource. restored 2026-10-01; that a validator reports an owned digest that does not hold at error was absent"
 
 [clause."R53 §2.1"]
 disposition = "registry"
@@ -494,7 +494,8 @@ where = [{ part = "03", anchor = "ew-array-codecs" }]
 
 [clause."R14 §2.3.2"]
 disposition = "applied"
-where = [{ part = "04", anchor = "ew-external-resource-verification" }]
+where = [{ part = "04", section = "5.1" }, { part = "04", anchor = "ew-external-resource-verification" }]
+note = "restored 2026-10-01; the recommendation that a writer own a core table was absent"
 
 [clause."R14 §2.4"]
 disposition = "rationale"
@@ -518,6 +519,7 @@ note = "size_bytes as the sum of member sizes, restored with R36 §2.2"
 [clause."R36 §2.3"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-external-resource-verification" }]
+note = "restored 2026-10-01; that level 3a checks the recorded size, that a validator offering an external level offers 3a, and that 3c does not run unasked were absent"
 
 [clause."R51 §2.1"]
 disposition = "applied"
@@ -537,7 +539,7 @@ note = "restored 2026-09-04; the third verification level was absent"
 [clause."R51 §2.4"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-prefix-resources" }]
-note = "restored 2026-09-04; a store-digest pass must not be called a checksum verification"
+note = "restored 2026-09-04; a store-digest pass must not be called a checksum verification. restored 2026-10-01; that a comparison skipping every member verified nothing was absent"
 
 [clause."R51 §4"]
 disposition = "rationale"
@@ -1387,16 +1389,17 @@ where = [
     { part = "04", anchor = "ew-source-resolution" },
     { part = "03", anchor = "ew-portable-uri-rules" },
 ]
-note = "R143 §3.4 makes a source-relative `uri` a relative reference, resolved by appending its decoded names to the source's location"
+note = "R143 §3.4 makes a source-relative `uri` a relative reference, resolved by appending its decoded names to the source's location. restored 2026-10-01; that an entry carrying source carries a relative uri had lost its keyword, and the recommendation of a name unique beyond the packet was absent"
 
 [clause."R80 §2.2"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-source-resolution" }]
-note = "the document's shape is spec/artifacts/sources.schema.json, which Part 04 §5.5 incorporates, and a reader MUST NOT resolve through a document of a version it does not know (R134 §3.3)"
+note = "the document's shape is spec/artifacts/sources.schema.json, which Part 04 §5.5 incorporates, and a reader MUST NOT resolve through a document of a version it does not know (R134 §3.3). restored 2026-10-01; the reader prohibition on dereferencing a resolution document's $schema was absent, and no check observes it"
 
 [clause."R80 §2.3"]
 disposition = "applied"
 where = [{ part = "04", anchor = "ew-source-resolution" }]
+note = "restored 2026-10-01; what the default resolution document names, and the reader prohibition on taking the packet to vouch for it, were absent; no check observes the prohibition"
 
 [clause."R80 §2.4"]
 disposition = "applied"
@@ -3219,8 +3222,9 @@ disposition = "applied"
 where = [
   { part = "00", anchor = "ew-packet-catalog" },
   { part = "04", anchor = "ew-packet-resource-entry-fields" },
+  { part = "04", anchor = "ew-packet-validation-block" },
 ]
-note = "packet entries bind declaration IDs and no longer repeat logical classification"
+note = "packet entries bind declaration IDs and no longer repeat logical classification. restored 2026-10-01; the prohibition on reading validation state as changing content class or canonicality was indicative, and no check observes it"
 
 [clause."R128 §3.9"]
 disposition = "applied"

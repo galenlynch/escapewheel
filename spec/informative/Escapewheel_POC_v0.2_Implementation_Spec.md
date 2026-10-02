@@ -2947,7 +2947,7 @@ each entry that does not declare `external: true` and records no `digest`.
 
 A resource the packet does not own MUST set `external: true`. A resource whose `uri` is absolute MUST declare `external: true`; **the converse does not hold**, so a packet MAY declare a resource external and still resolve it relatively, which is how a packet published beside its data records that it does not own it.
 
-Referencing is expected for large resources. Externalizing a table costs more than externalizing an array: its validation rules cannot run at all while it is unreachable.
+Referencing is expected for large resources. Externalizing a table costs more than externalizing an array: its validation rules cannot run at all while it is unreachable. A writer SHOULD therefore own a core table unless its size prevents it.
 
 <a id="ew-external-resource-record" data-spec-anchor="canonical"></a>
 ### 5.2 What is recorded
@@ -2965,11 +2965,11 @@ Verification of an external resource is layered, and a report MUST state which l
 |---|---|
 | 1 | the manifest is internally consistent |
 | 2 | packet-owned resources' recorded digests hold |
-| 3a | the external resource exists and lists |
+| 3a | the external resource exists and lists, and its recorded `size_bytes` holds |
 | 3b | its recorded per-member store digests still match |
 | 3c | its recorded `digest` holds |
 
-Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a requested mode.
+Structural validation MUST NOT reach the network. Levels 3a to 3c run only in a requested mode. A validator that offers any of levels 3a to 3c MUST offer level 3a and MAY offer level 3c. A validator MUST NOT run level 3c on a request for level 3a or 3b alone.
 
 A validator establishes that a recorded digest holds by computing it from the bytes under §4.3. A
 validator MAY instead establish it by comparing it with checksums the store reports, object by
@@ -2982,7 +2982,8 @@ values and compares its SHA-256.
 A report MUST state, for each digest it establishes, whether the validator computed it, matched the
 store's checksums, or combined the two. Level 2 establishes that packet-owned resources' recorded
 digests hold, and level 3c that an external resource's recorded digest holds, each reached by
-either route. Level 3b remains the comparison of recorded store digests (§5.4).
+either route. Level 3b remains the comparison of recorded store digests (§5.4). A validator MUST
+report at `error` each packet-owned resource whose recorded `digest` it finds does not hold.
 When an external resource is unavailable, its physical version, codec pipeline, compression,
 encoding, dtype, shape, and chunking are unassessed; a validator MUST NOT infer them from its URI,
 the packet, an adapter claim, or a stand-in.
@@ -3000,17 +3001,17 @@ Where `members` accompanies `digest`, the listing digested MUST be the declared 
 
 A member's `store_digest` records evidence that an object changed in place. A writer MUST record a store's entity tag, where it records one, verbatim under the algorithm `etag`, whether the object was uploaded in one part or several and whatever its encryption. A writer MUST NOT record an entity tag under any other algorithm name, and a validator MUST NOT read one as a digest of the object's bytes.
 
-Where a validator is asked to verify content **without reading**, it compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading. A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped.
+Where a validator is asked to verify content **without reading**, it compares each member's recorded `store_digest` against the value the store reports now — a third level between listing and reading. A member whose value differs has changed; a member with no recorded `store_digest`, or whose store reports none, is **not checked**, and the report MUST say how many were skipped. A validator that skipped every member because none recorded a `store_digest` reports that the comparison verified nothing, not that it passed.
 
 A store digest answers whether anything changed in place. It never establishes that a `digest` holds, and it is unstable across a copy. A validator MUST report what a verification pass skipped, and **MUST NOT** report a store-digest pass as a checksum verification: it establishes something weaker and store-specific, so it gets its own finding.
 
 <a id="ew-source-resolution" data-spec-anchor="canonical"></a>
 ### 5.5 Source resolution
 
-An external resource entry MAY carry `source`, an identifier naming the body of data it belongs to;
-its `uri` is then a relative reference resolved against wherever that source is
-([Part 03 §4](../parts/03_portable_physical_profile.md#ew-portable-uri-rules)), and neither field is a
-location. An
+An external resource entry MAY carry `source`, an identifier naming the body of data it belongs to.
+An entry carrying `source` MUST carry a `uri` that is a relative reference
+([Part 03 §4](../parts/03_portable_physical_profile.md#ew-portable-uri-rules)), which resolves against
+wherever that source is. Neither field is a location. An
 entry carrying no `source` keeps the meaning §5.1 gives it.
 
 Where a source is, is stated by a **source resolution document**: a JSON document, conventionally
@@ -3019,17 +3020,24 @@ to an entry with a required `uri`. This section incorporates `artifacts/sources.
 `$id` is `https://escapewheel.org/schemas/sources/0.1.0`, as the exact shape of a source resolution
 document. The schema owns member names, JSON types, required members, closure, patterns, and the
 version constant; this prose owns what each member means. The schema's descriptions are
-informative. A source name is any string an external resource entry's `source` can hold.
+informative. A source name is any string an external resource entry's `source` can hold. A writer
+SHOULD choose a source name that is unique beyond the packet, so that one resolution document
+serves many packets.
 
 A resolution document MUST NOT be a packet resource. Immutability (§5.1) does not reach
 it, which is what lets a location be corrected when a mirror moves without rebuilding the packet.
 
 A reader MUST accept one or more resolution documents from its caller, and resolves a `source` in
 this order: the documents the caller supplied, in the order supplied; then `sources.json` at the
-packet root if it is there; then the source is unresolved. A writer SHOULD write that default.
+packet root if it is there; then the source is unresolved. A writer SHOULD write that default, naming every source the packet
+references and where the writer read each one. The packet's recorded digests do not cover the
+default, and a reader MUST NOT infer that the packet vouches for what it says. No checker verifies
+this.
 
 A writer that writes a resolution document MUST write one that satisfies the schema. A reader MAY
-validate a resolution document against the schema, and need not. A reader MUST NOT resolve a source
+validate a resolution document against the schema, and need not. A resolution document's
+`$schema`, where present, names its meta-schema by `$id`: it is identity, not a fetch instruction,
+and a reader MUST NOT dereference it. A reader MUST NOT resolve a source
 through a document whose `sources_standard_version` it does not know.
 
 A reader MUST report an unresolved `source` as unresolved, and a validator MUST NOT fail structural validation for one:
@@ -3111,8 +3119,9 @@ only in the bound registries.
 | `validator_version` | string | yes | — |
 <!-- END GENERATED MANIFEST FIELDS: validation -->
 
-A failed or incomplete validation result cannot support a conformance claim. It does not alter a
-resource's declaration-derived content class or canonicality.
+A failed or incomplete validation result cannot support a conformance claim. An implementation MUST
+NOT treat a resource's validation state as changing its declaration-derived content class or
+canonicality. No checker verifies this.
 [Part 05 §9.2](../parts/05_validation_and_import.md#ew-error-policy) permits only `passed` as the `status` of
 a published manifest. A writer keeps staged resources out
 of a committed manifest until the applicable publication gate passes rather than representing
