@@ -1,0 +1,299 @@
+{
+  "version": 1,
+  "revision": "R157",
+  "based_on": "5117217baf235beab19700e9b945b673b4bd41eb",
+  "clauses": {
+    "R157 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-array-codecs"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_v3_floor_does_not_bound_the_bytes_codecs_byte_order"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_refuses_byte_orders_on_the_v3_floor"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_arrays.py::test_an_array_without_a_fill_value_is_caught"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/shim/arrays.py",
+          "escapewheel-writer/src/escapewheel_writer/arrays.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no guide states a byte order or a `fill_value` requirement; the writer's module docstring, which did, is listed as an implementation"
+      }
+    },
+    "R157 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-array-codecs"
+        },
+        {
+          "path": "spec/artifacts/physical_profiles/escapewheel-portable-v0.1.json",
+          "pointer": "/interfaces/zarr/variants/v2/reader_floor"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v2_metadata[big_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v2_metadata[little_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v2_metadata[byte_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v2_metadata[one_big_field_zstd]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v2_metadata[big_lz4]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_the_descriptor_floor_classifies_written_v2_metadata[little_lz4]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_a_structured_v2_dtype_is_compared_through_its_nested_fields"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_resources.py::test_a_v2_document_without_a_usable_dtype_is_not_classified"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_accepts_the_v2_floor_of_patterns_and_byte_orders"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "physical profile satisfies its schema and generic invariants"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-reader/src/escapewheel_reader/profile.py",
+          "escapewheel-validator/src/escapewheel_validator/shim/floors.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-reader/docs/source/api.rst",
+          "escapewheel-validator/CONTRIBUTING.md"
+        ]
+      }
+    },
+    "R157 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-portable-profile-scope"
+        },
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-array-codecs"
+        },
+        {
+          "path": "spec/artifacts/physical_profile.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "spec/artifacts/physical_profile.schema.json",
+          "pointer": "/properties/$schema/const"
+        },
+        {
+          "path": "spec/artifacts/physical_profile.schema.json",
+          "pointer": "/$defs/zarr_v2_floor/required"
+        },
+        {
+          "path": "spec/artifacts/physical_profile.schema.json",
+          "pointer": "/$defs/zarr_v2_floor/properties/dtype_byte_orders"
+        },
+        {
+          "path": "spec/artifacts/physical_profiles/escapewheel-portable-v0.1.json",
+          "pointer": "/$schema"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-reader/src/escapewheel_reader/schemas/physical_profile.schema.json",
+          "escapewheel-reader/src/escapewheel_reader/schemas/physical_profiles/escapewheel-portable-v0.1.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_identifier_is_0_4_0_and_a_0_3_0_descriptor_fails"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_requires_a_v2_floor_to_list_byte_order_characters[absent]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_requires_a_v2_floor_to_list_byte_order_characters[empty]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_requires_a_v2_floor_to_list_byte_order_characters[unknown-character]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_requires_a_v2_floor_to_list_byte_order_characters[repeated]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_admits_every_byte_order_character"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_descriptor.py::test_the_schema_refuses_byte_orders_on_the_v3_floor"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "physical profile satisfies its schema and generic invariants"
+          },
+          {
+            "kind": "check",
+            "stage": "packages: copies from the tree agree",
+            "id": "differs from"
+          }
+        ]
+      },
+      "implementations": {
+        "unchanged": "the schema is the declaration, and the reader checks its descriptor against the vendored copy it already loads"
+      },
+      "documentation": {
+        "unchanged": "no guide states the schema identifier; Part 03 §1 does"
+      }
+    },
+    "R157 §3.4": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-validation-shim"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_orders[little]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_orders[single_byte]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_orders[big]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_orders[one_big_field]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_orders[little_lz4]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_orders[big_lz4]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_whose_dtype_cannot_be_compared_draws_no_floor_finding[null]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_whose_dtype_cannot_be_compared_draws_no_floor_finding[number]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_shim_floors.py::test_a_referenced_v2_array_whose_dtype_cannot_be_compared_draws_no_floor_finding[field_without_a_type]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/shim/floors.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel-validator/CONTRIBUTING.md"
+        ]
+      }
+    }
+  }
+}

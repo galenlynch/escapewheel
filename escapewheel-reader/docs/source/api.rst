@@ -189,6 +189,7 @@ the module that defines it.
    profile.physical_profile
    profile.parquet_floor
    profile.zarr_floor_admits
+   profile.zarr_floor_outside
    registries.acquire
    registries.declared_tables
    registries.gunzip_member

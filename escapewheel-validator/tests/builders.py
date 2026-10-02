@@ -273,8 +273,11 @@ def checks_under(report, prefix="array."):
     return {f.check for f in report.findings if f.check.startswith(prefix)}
 
 
-def external_array(root, **overrides):
-    """Point a packet at a Zarr v2 array beside it, the way an LFP reference does."""
+def external_array(root, *, zarray=None, **overrides):
+    """Point a packet at a Zarr v2 array beside it, the way an LFP reference does.
+
+    `zarray` replaces members of the array's `.zarray`; `overrides` replaces members of its entry.
+    """
     array = root.parent / "external.zarr"
     array.mkdir(exist_ok=True)
     (array / ".zarray").write_text(
@@ -288,6 +291,7 @@ def external_array(root, **overrides):
                 "filters": None,
                 "order": "C",
                 "fill_value": 0,
+                **(zarray or {}),
             }
         )
     )

@@ -162,3 +162,48 @@ def test_a_resolved_external_array_is_assessed_against_its_variant(packet_root):
     assert "zarr v2" in finding.message
     assert [row[0] for row in finding.rows] == ["filters", "compressor"]
     assert "external.physical_unassessed" not in {f.check for f in report.findings}
+
+
+_ZSTD = {"id": "zstd", "level": 0}
+
+
+_LZ4 = {"id": "lz4", "acceleration": 1}
+
+
+@pytest.mark.parametrize(
+    ("dtype", "compressor", "outside"),
+    [
+        ("<i2", _ZSTD, []),
+        ("|u1", _ZSTD, []),
+        (">i2", _ZSTD, [("dtype", '">i2"')]),
+        ([["count", "<i2"], ["gain", ">f4"]], _ZSTD, [("dtype", '[["count","<i2"],["gain",">f4"]]')]),
+        ("<i2", _LZ4, [("filters", "null"), ("compressor", '{"id":"lz4","acceleration":1}')]),
+        (">i2", _LZ4, [("filters", "null"), ("compressor", '{"id":"lz4","acceleration":1}'), ("dtype", '">i2"')]),
+    ],
+    ids=["little", "single_byte", "big", "one_big_field", "little_lz4", "big_lz4"],
+)
+def test_a_referenced_v2_array_is_compared_with_the_floors_patterns_and_byte_orders(
+    packet_root, dtype, compressor, outside
+):
+    """Part 05 §5.3: one `info` finding names `filters` and `compressor`, `dtype`, or all three."""
+    root = external_array(packet_root, zarray={"dtype": dtype, "compressor": compressor})
+    report = validate(open_packet(root), verification=Verification(external=True))
+    assert report.passed and report.errors == 0 and report.warnings == 0
+    findings = _outside(report)
+    assert [(f.level, f.registry, list(f.rows)) for f in findings] == ([("info", "core", outside)] if outside else [])
+    if outside:
+        observed = "; ".join(f"{member} {value}" for member, value in outside)
+        assert findings[0].message == (
+            f"core.waveform_mean: zarr v2 {observed} is outside the reader floor of Part 03 §6.4"
+        )
+    assert "external.physical_unassessed" not in {f.check for f in report.findings}
+
+
+@pytest.mark.parametrize(
+    "zarray", [{"dtype": None}, {"dtype": 2}, {"dtype": [["count"]]}], ids=["null", "number", "field_without_a_type"]
+)
+def test_a_referenced_v2_array_whose_dtype_cannot_be_compared_draws_no_floor_finding(packet_root, zarray):
+    """Part 03 §6.4: the floor classifies a valid array, and metadata that is not one is upstream invalidity."""
+    root = external_array(packet_root, zarray={"compressor": _ZSTD, **zarray})
+    report = validate(open_packet(root), verification=Verification(external=True))
+    assert _outside(report) == []

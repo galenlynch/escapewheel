@@ -571,8 +571,84 @@ def test_the_v2_floor_compares_only_the_members_a_pattern_states(filters, compre
     """Part 03 §6.4: null matches only null, and unmentioned configuration does not participate."""
     from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_admits
 
-    metadata = {"zarr_format": 2, "shape": [4], "filters": filters, "compressor": compressor}
+    metadata = {"zarr_format": 2, "shape": [4], "dtype": "<i2", "filters": filters, "compressor": compressor}
     assert zarr_floor_admits(metadata, variant_for_zarr_format(2)["reader_floor"]) is admitted
+
+
+def _v2_array(tmp_path, name, dtype, compressor):
+    """A two-chunk Zarr v2 array written by zarr-python, with its `.zarray` and its resource."""
+    import json
+
+    zarr = pytest.importorskip("zarr")
+    store = tmp_path / name
+    zarr.create_array(store=str(store), shape=(4,), chunks=(2,), dtype=dtype, compressors=compressor, zarr_format=2)
+    return json.loads((store / ".zarray").read_text()), _array_resource(store.resolve().as_uri(), tmp_path)
+
+
+def _v2_vectors():
+    numcodecs = pytest.importorskip("numcodecs")
+    zstd, structured = numcodecs.Zstd(), [("count", "<i2"), ("gain", ">f4")]
+    return {
+        "big_zstd": (">i2", zstd, ">i2", ("dtype",)),
+        "little_zstd": ("<i2", zstd, "<i2", ()),
+        "byte_zstd": ("|u1", zstd, "|u1", ()),
+        "one_big_field_zstd": (structured, zstd, [["count", "<i2"], ["gain", ">f4"]], ("dtype",)),
+        "big_lz4": (">i2", numcodecs.LZ4(), ">i2", ("filters", "compressor", "dtype")),
+        "little_lz4": ("<i2", numcodecs.LZ4(), "<i2", ("filters", "compressor")),
+    }
+
+
+@pytest.mark.parametrize(
+    "name", ["big_zstd", "little_zstd", "byte_zstd", "one_big_field_zstd", "big_lz4", "little_lz4"]
+)
+def test_the_descriptor_floor_classifies_written_v2_metadata(tmp_path, name):
+    """Part 03 §6.4 against zarr-python's own `.zarray`: every type string's byte order is compared."""
+    from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_outside
+
+    dtype, compressor, stored_dtype, outside = _v2_vectors()[name]
+    metadata, handle = _v2_array(tmp_path, f"{name}.zarr", dtype, compressor)
+    assert metadata["dtype"] == stored_dtype
+    assert zarr_floor_outside(metadata, variant_for_zarr_format(2)["reader_floor"]) == outside
+    assert handle.within_reader_floor is (not outside)
+
+
+def test_a_structured_v2_dtype_is_compared_through_its_nested_fields():
+    """Part 03 §6.4: a field's data type may itself be structured, and a field may carry a shape."""
+    from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_outside
+
+    floor = variant_for_zarr_format(2)["reader_floor"]
+    metadata = {"zarr_format": 2, "filters": None, "compressor": None}
+    nested = [["count", "<i2"], ["pose", [["flag", "|b1"], ["xy", "<f4", [2]]]]]
+    assert zarr_floor_outside({**metadata, "dtype": nested}, floor) == ()
+    nested[1][1][1][1] = ">f4"
+    assert zarr_floor_outside({**metadata, "dtype": nested}, floor) == ("dtype",)
+
+
+def test_a_v2_document_without_a_usable_dtype_is_not_classified():
+    """The floor is defined for a valid array, so a document that is not one raises instead."""
+    from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_outside
+
+    floor = variant_for_zarr_format(2)["reader_floor"]
+    metadata = {"zarr_format": 2, "filters": None, "compressor": None}
+    with pytest.raises(KeyError, match="dtype"):
+        zarr_floor_outside(metadata, floor)
+    for malformed in (None, 2, [["count"]], ["<i2"]):
+        with pytest.raises(TypeError, match="type string"):
+            zarr_floor_outside({**metadata, "dtype": malformed}, floor)
+
+
+def test_the_v3_floor_does_not_bound_the_bytes_codecs_byte_order(tmp_path):
+    """Part 03 §6.4: a floor sequence names `bytes` alone, so either `endian` matches it."""
+    from zarr.codecs import BytesCodec
+
+    from escapewheel_reader.profile import variant_for_zarr_format, zarr_floor_outside
+
+    store, handle = _v3_array(tmp_path, "big.zarr", serializer=BytesCodec(endian="big"))
+    metadata = _zarr_json(store)
+    assert metadata["codecs"][0] == {"name": "bytes", "configuration": {"endian": "big"}}
+    assert zarr_floor_outside(metadata, variant_for_zarr_format(3)["reader_floor"]) == ()
+    assert handle.within_reader_floor
+    assert handle.read((slice(3, 4), slice(2, 3)))[0, 0] == 11
 
 
 def test_a_store_only_zarr_can_reach_leaves_the_floor_unassessed(array_packet, monkeypatch):

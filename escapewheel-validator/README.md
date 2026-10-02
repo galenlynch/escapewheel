@@ -135,11 +135,12 @@ relation has no row order, no file layout, no Parquet physical type and no Zarr 
 a storage check written as SQL agrees with itself rather than failing. The shim covers physical
 order (R10), column presence and physical type, manifest-internal consistency, and every
 packet-owned array against its own Zarr metadata (R15 §4 level 2) — the last needing no Zarr,
-because that metadata is JSON. It compares each array's pipeline and each Parquet footer's
-compressions and encodings with the portable profile's reader floors (Part 03 §§5.5 and 6.4), and
-reports a resource outside one as `physical.outside_reader_floor`: `warning` for a packet-owned
-table, `info` for everything else, never an error. Parquet data-page types are not assessed, and the
-report says so. An external resource whose metadata was not read is reported, one finding each, as
+because that metadata is JSON. It compares each Zarr v3 array's pipeline, each Zarr v2 array's
+filters, compressor and byte order, and each Parquet footer's compressions and encodings with the
+portable profile's reader floors (Part 03 §§5.5 and 6.4), and reports a resource outside one as
+`physical.outside_reader_floor`: `warning` for a packet-owned table, `info` for everything else,
+never an error. Parquet data-page types are not assessed, and the report says so. An external
+resource whose metadata was not read is reported, one finding each, as
 `external.physical_unassessed`. A packet-owned opaque payload's names, and the decoded segments of
 its `uri`, draw `physical.opaque_name_portability` at `warning` for each set a filesystem folding
 case or normalization would merge and each name Windows cannot hold (Part 05 §5.3); the packet

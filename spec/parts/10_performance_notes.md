@@ -203,11 +203,17 @@ member. No session has yet had a second sorting.
 
 Measured by the Zarr conformance probe against **zarr-python 3.4.0 with numcodecs 0.17.0, Zarr.jl
 0.10.2 on Julia 1.12.7, TensorStore 0.1.85, zarrs-python 0.2.3 and zarrita 0.7.5 on Node 22.22.2**
-(2026-09-24) — the one measurement here whose toolchain was kept, and the one that shows why the
-others should be. Each reader checks the int64 element sum of arrays zarr-python and the reference
-writer wrote; zarrs reads through a strict codec pipeline, so no read falls back to Python.
+(2026-09-24, and the big-endian arrays on 2026-10-01 with the same versions) — the one measurement
+here whose toolchain was kept, and the one that shows why the others should be. Each reader checks
+the int64 element sum of arrays zarr-python and the reference writer wrote; zarrs reads through a
+strict codec pipeline, so no read falls back to Python. The bytes of a big-endian array, read
+without swapping, sum to another number than its values do, so a reader that ignores the declared
+byte order reports a wrong sum.
 
-| stored v3 pipeline | zarr-python | Zarr.jl | TensorStore | zarrs | zarrita |
+A row names a Zarr v3 array by its pipeline, whose `bytes` codec is little-endian unless the row
+says otherwise. The last row is a Zarr v2 array.
+
+| stored array | zarr-python | Zarr.jl | TensorStore | zarrs | zarrita |
 |---|---|---|---|---|---|
 | `bytes`; `bytes`, `gzip`; `bytes`, `zstd` | reads | reads | reads | reads | reads |
 | `bytes`, `blosc` (`zstd`), each of `noshuffle`, `shuffle`, `bitshuffle` | reads | reads | reads | reads | reads |
@@ -216,11 +222,18 @@ writer wrote; zarrs reads through a strict codec pipeline, so no read falls back
 | `sharding_indexed` with index at `start` | reads | reads | reads | reads | fails |
 | `bytes`, `blosc` (`lz4`) | reads | reads | reads | reads | reads |
 | the reference writer's `numcodecs.delta`, `bytes`, `blosc` (`zstd`) | reads | fails | fails | fails | reads |
+| `bytes` big-endian, `int16` | reads | reads | reads | reads | reads |
+| `bytes` big-endian, `zstd`, `int16` | reads | reads | reads | reads | reads |
+| `sharding_indexed` around `bytes` big-endian, `zstd`, `int16` | reads | reads | reads | reads | reads |
+| `bytes` big-endian, `float32` | reads | reads | reads | reads | reads |
+| v2, `dtype` `>i2`, compressor `zstd` | reads | wrong values | reads | fails | reads |
 
-All five also read Zarr v2 zstd and Blosc-Zstd. zarrita fails an index at `start` with
-`RangeError [ERR_OUT_OF_RANGE]`; on the delta pipeline Zarr.jl reports that it does not support the
-delta codec, TensorStore that `numcodecs.delta` is not registered, and zarrs that the metadata is
-unsupported.
+All five also read little-endian Zarr v2 arrays, of `dtype` `<i2`, compressed with zstd and with
+Blosc-Zstd. zarrita fails an index at `start` with `RangeError [ERR_OUT_OF_RANGE]`; on the delta
+pipeline Zarr.jl reports that it does not support the delta codec, TensorStore that
+`numcodecs.delta` is not registered, and zarrs that the metadata is unsupported. On the big-endian
+v2 array zarrs reports "Non-native byte order not supported", and Zarr.jl raises no error and
+returns values summing to -2,964,480 where the array's sum to -365,664.
 
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
 changing to show it. That is what Part 03 §6.4's per-version reader floor exists to state as a rule,

@@ -29,9 +29,15 @@ def test_a_packet_owned_array_must_be_zarr_v3(packet_root):
 
 
 def test_an_array_without_a_fill_value_is_caught(packet_root):
-    """Part 03 §6.1 requires one: without it an unwritten chunk has no defined value."""
+    """Zarr v3 requires one, and Part 03 §6.1 requires a packet-owned array to be Zarr v3."""
     add_array(packet_root, declared=["sharding_indexed", "blosc"], document=zarr_v3_metadata(fill_value=None))
-    assert "array.no_fill_value" in checks_under(validate(open_packet(packet_root)))
+    report = validate(open_packet(packet_root))
+    assert checks_under(report) == {"array.no_fill_value"}
+    (finding,) = [f for f in report.findings if f.check == "array.no_fill_value"]
+    assert finding.message == (
+        "core.waveform_mean declares no fill_value, which Zarr v3 requires of array metadata; "
+        "Part 03 §6.1 requires a packet-owned array to be Zarr v3"
+    )
 
 
 def test_an_irregular_chunk_grid_is_caught(packet_root):

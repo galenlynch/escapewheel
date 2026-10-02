@@ -1,5 +1,5 @@
 {
-  "$schema": "https://escapewheel.org/schemas/physical-profile/0.3.0",
+  "$schema": "https://escapewheel.org/schemas/physical-profile/0.4.0",
   "id": "escapewheel-portable-v0.1",
   "logical_standard": "escapewheel-logical-v0.1",
   "kind_interfaces": {"table": "parquet", "dense_array": "zarr", "opaque": null},
@@ -39,11 +39,14 @@
         },
         "v2": {
           "format_version": 2, "ownership": ["external"],
-          "reader_floor": {"metadata_patterns": [
-            {"filters": null, "compressor": null},
-            {"filters": null, "compressor": {"id": "zstd"}},
-            {"filters": null, "compressor": {"id": "blosc", "cname": "zstd"}}
-          ]},
+          "reader_floor": {
+            "metadata_patterns": [
+              {"filters": null, "compressor": null},
+              {"filters": null, "compressor": {"id": "zstd"}},
+              {"filters": null, "compressor": {"id": "blosc", "cname": "zstd"}}
+            ],
+            "dtype_byte_orders": ["<", "|"]
+          },
           "anchors": ["ew-array-version", "ew-array-codecs"]
         }
       },

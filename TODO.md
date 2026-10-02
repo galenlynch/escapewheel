@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R156 accepted. R42 and R73 withdrawn. 0 proposals and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R157 accepted. R42 and R73 withdrawn. 0 proposals and 3 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -135,16 +135,10 @@ superseded entry's successor, and an audit covers what a target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Four drafts await acceptance
+## 3a. Three drafts await acceptance
 
 The drafts are under `revisions/drafts/`. No proposal is open.
 
-- **The reader floor bounds an array's byte order.** A draft, promoted 2026-10-01 and not
-  accepted. It supersedes R3 §7.1's little-endian and
-  `fill_value` sentences, which the ledger records as applied and no part states, and narrows the
-  Zarr v2 reader floor to little-endian and single-byte data types. Three code sites wait on it:
-  the first paragraph of `arrays.py`'s module docstring, the validator's `array.no_fill_value`
-  message with its test, and the citation of Part 03 §6.1 beside them.
 - **A build records a recipe without its credentials.** A draft, promoted 2026-10-01 and not
   accepted. A build writes no credential it recognizes, records `[redacted]` in its place in the
   recorded recipe, and may refuse the recipe instead. It also covers a credential inside a source

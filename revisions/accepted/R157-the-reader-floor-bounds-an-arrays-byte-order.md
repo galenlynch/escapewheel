@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-10-02 |
 | **Based on** | `5117217baf235beab19700e9b945b673b4bd41eb` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -230,9 +230,9 @@ identifier.
 |---|---|---|
 | semantic prose | Unchanged. Part 01 states no storage property. | None required. |
 | logical prose and registry | Unchanged. The registry declares no byte order, and no rule reads array metadata. | None required. |
-| physical profiles | Part 03 §6.4 takes §§3.1 and 3.2 and the `zarr_v2_floor` row of §3.3; Part 03 §1 takes §3.3's identifier. The schema requires `dtype_byte_orders` at 0.4.0, and the portable descriptor's v2 floor declares it. Part 03 §6.1 is unchanged. | The registry checker over the descriptor; `evidence/R<N>.json` names the anchors and the schema and descriptor pointers. |
+| physical profiles | Part 03 §6.4 takes §§3.1 and 3.2 and the `zarr_v2_floor` row of §3.3; Part 03 §1 takes §3.3's identifier. The schema requires `dtype_byte_orders` at 0.4.0, and the portable descriptor's v2 floor declares it. Part 03 §6.1 is unchanged. | The registry checker over the descriptor; `evidence/R157.json` names the anchors and the schema and descriptor pointers. |
 | packet manifest and JSON Schemas | Unchanged. No manifest member states a byte order or a fill value. | None required. |
-| validation and import | Part 05 §5.3 takes §3.4. No import rule changes: a build writes v3 arrays. | `evidence/R<N>.json` names the anchor; the cases of §6. |
+| validation and import | Part 05 §5.3 takes §3.4. No import rule changes: a build writes v3 arrays. | `evidence/R157.json` names the anchor; the cases of §6. |
 | extensions | Unchanged. An extension declares no storage property, and its referenced arrays are assessed as core's are. | None required. |
 | reader, writer, validator, adapters | The reader's floor test compares a v2 array's type strings with `dtype_byte_orders`, and its vendored schema and descriptor regenerate. The validator reports a big-endian v2 array under the floor finding and names `dtype`; its finding for a packet-owned array without `fill_value` cites the Zarr v3 requirement of Part 03 §6.1 and no rule of this profile about `fill_value`. The writer's output is unchanged, and its documentation stops citing Part 03 §6.1 for byte order and `fill_value`. Adapters are unchanged. | The reader and validator suites; the writer suite unchanged. |
 | conformance fixtures and tests | Descriptor-schema cases for §3.3. Matcher vectors for §3.2 from real `.zarray` documents. A referenced v2 array of each byte order in the corpus or the validator's suite. | `fixtures/corpus.py`, the reader and validator suites, and the registry checker. |

@@ -3,7 +3,7 @@
 - :func:`physical_profile` -- the checked descriptor.
 - :func:`interface_for` -- the physical interface for one logical kind.
 - :func:`variant_for_zarr_format` -- the descriptor variant a Zarr format version selects.
-- :func:`parquet_floor`, :func:`zarr_floor_admits` -- the reader floors.
+- :func:`parquet_floor`, :func:`zarr_floor_admits`, :func:`zarr_floor_outside` -- the reader floors.
 - :func:`physical_profile_schema` -- the schema the descriptor is checked against.
 - :data:`PROFILE_ID` -- the profile's identifier.
 """
@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from functools import cache
 from importlib import resources as importlib_resources
 from typing import Any
@@ -66,13 +66,6 @@ def parquet_floor() -> Mapping[str, Any]:
 def zarr_floor_admits(metadata: Mapping[str, Any], reader_floor: Mapping[str, Any]) -> bool:
     """Whether a Zarr array's own metadata lies within a variant's reader floor (Part 03 §6.4).
 
-    The floor's members drive the comparison, so a restated floor needs no code. A v2 floor lists
-    `metadata_patterns`; a v3 floor lists ordered `codec_sequences`, compared with the stored
-    pipeline codec by codec, each codec a name or a pattern of name and configuration. The
-    pipeline is not flattened: a sharded one is the sharding codec alone, which only a floor with a
-    `sharding` member admits. In a pattern null matches only null and an unstated member does not
-    participate.
-
     Parameters
     ----------
     metadata : Mapping
@@ -83,11 +76,55 @@ def zarr_floor_admits(metadata: Mapping[str, Any], reader_floor: Mapping[str, An
     Returns
     -------
     bool
-        True where some floor entry admits the array.
+        True where :func:`zarr_floor_outside` names no member.
+    """
+    return not zarr_floor_outside(metadata, reader_floor)
+
+
+def zarr_floor_outside(metadata: Mapping[str, Any], reader_floor: Mapping[str, Any]) -> tuple[str, ...]:
+    """Name the metadata members that place a Zarr array outside a variant's reader floor (Part 03 §6.4).
+
+    The floor's members drive the comparison, so a restated floor needs no code. A v2 floor lists
+    `metadata_patterns`, compared with `filters` and `compressor`, and `dtype_byte_orders`,
+    compared with the first character of every type string of `dtype`. A v3 floor lists ordered
+    `codec_sequences`, compared with the stored pipeline codec by codec, each codec a name or a
+    pattern of name and configuration. The pipeline is not flattened: a sharded one is the
+    sharding codec alone, which only a floor with a `sharding` member admits. In a pattern null
+    matches only null and an unstated member does not participate.
+
+    Parameters
+    ----------
+    metadata : Mapping
+        The parsed `zarr.json` or `.zarray`.
+    reader_floor : Mapping
+        The `reader_floor` of the variant the metadata's format selects.
+
+    Returns
+    -------
+    tuple of str
+        `codecs` for a v3 array outside its floor. For a v2 array, `filters` and `compressor`
+        where they match no pattern and `dtype` where a byte order is outside the floor. Empty
+        where the floor admits the array.
+
+    Raises
+    ------
+    KeyError
+        If a v2 document has no `dtype`.
+    TypeError
+        If a v2 `dtype` is neither a type string nor a list of fields.
     """
     if "metadata_patterns" in reader_floor:
-        return any(_matches(metadata, pattern) for pattern in reader_floor["metadata_patterns"])
-    pipeline = metadata.get("codecs", ())
+        outside: tuple[str, ...] = ()
+        if not any(_matches(metadata, pattern) for pattern in reader_floor["metadata_patterns"]):
+            outside += ("filters", "compressor")
+        if any(string[:1] not in reader_floor["dtype_byte_orders"] for string in _type_strings(metadata["dtype"])):
+            outside += ("dtype",)
+        return outside
+    return () if _pipeline_admitted(metadata.get("codecs", ()), reader_floor) else ("codecs",)
+
+
+def _pipeline_admitted(pipeline: Sequence[Any], reader_floor: Mapping[str, Any]) -> bool:
+    """Whether a v3 floor admits a stored pipeline, unsharded or as one sharding codec."""
     sequences = reader_floor["codec_sequences"]
     if any(_sequence_matches(pipeline, sequence) for sequence in sequences):
         return True
@@ -101,6 +138,18 @@ def zarr_floor_admits(metadata: Mapping[str, Any], reader_floor: Mapping[str, An
         # `end` is the sharding codec's own default, so an absent location is not a different one.
         and shard.get("index_location", "end") == sharding["index_location"]
     )
+
+
+def _type_strings(dtype: Any) -> Iterator[str]:
+    """Yield a v2 `dtype`'s type strings, through the fields of a structured type (Part 03 §6.4)."""
+    if isinstance(dtype, str):
+        yield dtype
+    elif isinstance(dtype, list) and all(isinstance(field, list) and len(field) >= 2 for field in dtype):
+        # A field is its name, its data type, and optionally a shape.
+        for field in dtype:
+            yield from _type_strings(field[1])
+    else:
+        raise TypeError(f"a Zarr v2 dtype is a type string or a list of fields, not {dtype!r}")
 
 
 def _codec(entry: str | Mapping[str, Any]) -> Mapping[str, Any]:
@@ -128,4 +177,4 @@ def _matches(observed: Any, pattern: Any) -> bool:
     return bool(observed == pattern)
 
 
-__all__ = ["PROFILE_ID", "parquet_floor", "physical_profile", "zarr_floor_admits"]
+__all__ = ["PROFILE_ID", "parquet_floor", "physical_profile", "zarr_floor_admits", "zarr_floor_outside"]

@@ -103,14 +103,17 @@ packet, which is worse than having no check.
   6.83 GB, and a bill as well as a wait against an object store. A store's full-object checksums
   cost one request per object instead, and a composite one never counts (Part 04 §5.3).
 - **Reader floors come from the descriptor, never from a constant here** (R137). Zarr metadata is
-  matched with the reader's `zarr_floor_admits` against the variant its `zarr_format` selects, and
+  matched with the reader's `zarr_floor_outside` against the variant its `zarr_format` selects, and
   a Parquet footer's compressions and encodings against `parquet_floor()`, so a restated floor needs
-  no validator change. `physical.outside_reader_floor` is one finding per resource: `warning` for a
-  packet-owned table, whose writer the Parquet floor also binds, and `info` otherwise, since a
-  reader-only floor leaves a packet conforming and only less portable. An unrecognized codec is
-  valid metadata outside the floor, not invalid metadata. Each external resource with a floor whose
-  metadata no check read draws its own `external.physical_unassessed`, attributed like any
-  resource finding, and `physical.page_types_unassessed` states that page headers were not read.
+  no validator change. The finding names the members `zarr_floor_outside` returns: the pipeline of
+  a v3 array, and of a v2 array its `filters` and `compressor`, its `dtype` where a byte order is
+  outside the floor, or all three. `physical.outside_reader_floor` is one finding per resource:
+  `warning` for a packet-owned table, whose writer the Parquet floor also binds, and `info`
+  otherwise, since a reader-only floor leaves a packet conforming and only less portable. An
+  unrecognized codec is valid metadata outside the floor, not invalid metadata. Each external
+  resource with a floor whose metadata no check read draws its own `external.physical_unassessed`,
+  attributed like any resource finding, and `physical.page_types_unassessed` states that page
+  headers were not read.
 - **What the manifest JSON Schema already refuses is not re-checked here.** A packet breaking
   R14 §2.3's "absolute URI implies external" cannot be opened at all, so a second copy in Python
   would never run.

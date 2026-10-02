@@ -89,7 +89,8 @@ def _check_one_array(resource: Any, handle: Any, declared: Mapping[str, ArrayAxe
         report.add_about(
             resource.resource_id,
             check_table.ARRAY_NO_FILL_VALUE,
-            f"{resource.resource_id} declares no fill_value, which Part 03 §6.1 requires",
+            f"{resource.resource_id} declares no fill_value, which Zarr v3 requires of array metadata; "
+            "Part 03 §6.1 requires a packet-owned array to be Zarr v3",
         )
 
     if (axes := declared.get(resource.resource_id)) is None:

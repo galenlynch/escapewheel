@@ -452,8 +452,13 @@ using a feature outside its floor, it MUST report one finding under the check ID
 
 - the resource;
 - its interface and, for Zarr, its variant; and
-- the observed features that matched no floor entry: each outside compression or encoding for
-  Parquet, the whole observed pipeline for Zarr v3, and `filters` and `compressor` for Zarr v2.
+- the observed features that place it outside its floor: each outside compression or encoding for
+  Parquet; the whole observed pipeline for Zarr v3; and for Zarr v2, `filters` and `compressor`
+  where they match no metadata pattern, and `dtype` where the first character of one of its type
+  strings is not a member of the floor's `dtype_byte_orders`.
+
+Where a Zarr v2 array is outside its floor on both counts, a validator MUST name `filters`,
+`compressor`, and `dtype` in the one finding it reports for the resource.
 
 The finding's level is `warning` for a packet-owned resource whose interface's floor role is
 `reader_and_packet_writer`, and `info` for every other resource. A validator MUST NOT report it at

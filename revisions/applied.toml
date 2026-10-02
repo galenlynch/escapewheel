@@ -950,7 +950,7 @@ note = "core.array_channels gains its axis binding"
 [clause."R3 §7.1"]
 disposition = "applied"
 where = [{ part = "03", section = "6.1" }, { part = "03", section = "6.2" }]
-note = "restored 2026-09-04; the regular chunk grid was absent"
+note = "restored 2026-09-04; the regular chunk grid was absent. R157 §3.1 supersedes its sentences requiring an array to be little-endian and to set `fill_value` explicitly; its version, chunk-grid and `transpose` sentences stand"
 
 [clause."R3 §7.3"]
 disposition = "rationale"
@@ -3366,7 +3366,7 @@ where = [
   { part = "03", anchor = "ew-array-codecs" },
   { part = "03", anchor = "ew-portable-profile-normative-references" },
 ]
-note = "Zarr variants and actual codecs derive from format-owned metadata; R137 §3.1 extends the three v3 name sequences and restates the floor as codec patterns. restored 2026-10-01; the reader obligation to expose every valid v2 array the floor admits was indicative"
+note = "Zarr variants and actual codecs derive from format-owned metadata; R137 §3.1 extends the three v3 name sequences and restates the floor as codec patterns. restored 2026-10-01; the reader obligation to expose every valid v2 array the floor admits was indicative. R157 §§3.2 and 3.3 add the byte-order bound `dtype_byte_orders` to the v2 reader floor"
 
 [clause."R129 §3.5"]
 disposition = "applied"
@@ -3678,7 +3678,7 @@ note = "a codec matches a pattern by name and stated configuration members; a sh
 [clause."R137 §3.3"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-array-codecs" }]
-note = "the schema defines codec_pattern, codec_sequence, sharding_floor and zarr_v3_floor; R154 §3.5 supersedes the 0.2.0 identifier, now stated at 03 §1"
+note = "the schema defines codec_pattern, codec_sequence, sharding_floor and zarr_v3_floor; R154 §3.5 supersedes the 0.2.0 identifier, now stated at 03 §1. R157 §§3.2 and 3.3 add the byte-order bound `dtype_byte_orders` to the v2 reader floor, whose schema definition `zarr_v2_floor` the table now lists"
 
 [clause."R137 §3.4"]
 disposition = "applied"
@@ -3688,7 +3688,7 @@ note = "a validator compares footer-reported compressions and encodings, and sta
 [clause."R137 §3.5"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-validation-shim" }]
-note = "physical.outside_reader_floor per assessed resource, warning for a packet-owned resource under a reader_and_packet_writer floor and info otherwise, never error, attributed to the declaring registry"
+note = "physical.outside_reader_floor per assessed resource, warning for a packet-owned resource under a reader_and_packet_writer floor and info otherwise, never error, attributed to the declaring registry. R157 §3.4 extends the features a Zarr v2 finding names with `dtype`"
 
 [clause."R137 §3.6"]
 disposition = "applied"
@@ -4276,7 +4276,8 @@ where = [{ part = "03", anchor = "ew-overriding-orders" }]
 
 [clause."R154 §3.5"]
 disposition = "applied"
-where = [{ part = "03", anchor = "ew-portable-profile-scope", note = "physical-profile/0.3.0" }]
+where = [{ part = "03", anchor = "ew-portable-profile-scope" }]
+note = "R157 §3.3 supersedes the 0.3.0 identifier; Part 03 §1 still states the identifier, and the profile identifier is unchanged"
 
 [clause."R155 §3.1"]
 disposition = "applied"
@@ -4309,3 +4310,22 @@ where = [{ part = "12", anchor = "ew-referenced-resource-delivery", note = "the 
 [clause."R156 §3.4"]
 disposition = "applied"
 where = [{ part = "12", anchor = "ew-arrow-ipc-floor", note = "`compensations` as the third reserved resource identifier" }]
+
+[clause."R157 §3.1"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-codecs", note = "a writer may store either byte order, and a metadata document lacking a member the Zarr specification requires is upstream invalidity" }]
+
+[clause."R157 §3.2"]
+disposition = "applied"
+where = [{ part = "03", anchor = "ew-array-codecs", note = "a type string, the two conditions of the v2 reader floor, and the descriptor's floor" }]
+
+[clause."R157 §3.3"]
+disposition = "applied"
+where = [
+  { part = "03", anchor = "ew-portable-profile-scope", note = "physical-profile/0.4.0" },
+  { part = "03", anchor = "ew-array-codecs", note = "the `zarr_v2_floor` definition and its required `dtype_byte_orders`" },
+]
+
+[clause."R157 §3.4"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-validation-shim", note = "a Zarr v2 finding names `filters` and `compressor`, `dtype`, or all three" }]

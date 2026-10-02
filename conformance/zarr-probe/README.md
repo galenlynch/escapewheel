@@ -4,7 +4,9 @@ Produces the evidence cited in
 [R3 §7.3](../../revisions/accepted/R3-cross-language-physical-floor.md) and the reader matrix of
 [Part 10 §5](../../spec/parts/10_performance_notes.md#ew-zarr-codec-floor-evidence),
 which [R137](../../revisions/accepted/R137-the-zarr-floor-admits-blosc-zstd-and-sharding-and-a-feature-outside-a-floor-is-a-resource-finding.md)
-raised the v3 reader floor on.
+raised the v3 reader floor on and
+[R157](../../revisions/accepted/R157-the-reader-floor-bounds-an-arrays-byte-order.md) bounded
+the v2 floor's byte order on.
 
 Four writers produce array sets, each with an `expected.json` of element sums:
 
@@ -86,4 +88,5 @@ silently produces that -- and measured on 6,781 unit waveforms it costs **188 ms
 and put the compression inside the shard's own `codecs`.
 
 The floor probes last ran (2026-09-24) on zarr-python 3.4.0, numcodecs 0.17.0, Zarr.jl 0.10.2 on Julia 1.12.7,
-TensorStore 0.1.85, zarrs-python 0.2.3, zarrita 0.7.5 on Node 22.22.2.
+TensorStore 0.1.85, zarrs-python 0.2.3, zarrita 0.7.5 on Node 22.22.2. The big-endian set ran on
+2026-10-01 with the same versions.

@@ -2227,7 +2227,7 @@ only in those is judged by the same requirements. No check verifies the second o
 this specification incorporates one descriptor.
 
 The physical-profile schema's `$id`, and the `$schema` value it requires of a descriptor, are
-`https://escapewheel.org/schemas/physical-profile/0.3.0`, and the portable descriptor's `$schema`
+`https://escapewheel.org/schemas/physical-profile/0.4.0`, and the portable descriptor's `$schema`
 names it. `overriding_orders` is a member only of the interface the descriptor's `kind_interfaces`
 maps `table` to, and the generic cross-member checker MUST refuse it on any other interface.
 
@@ -2596,6 +2596,15 @@ A writer MAY use any codec permitted by the applicable Zarr specification, subje
 `transpose` prohibition and the regular-grid rule. The resource's own metadata is the sole owner of
 the actual pipeline; the manifest does not repeat it.
 
+A writer MAY store an array in either byte order. In Zarr v3 the byte order is the `bytes` codec's
+`endian` configuration, and in Zarr v2 it is the first character of each type string of `dtype`, a
+term this section defines with the v2 reader floor.
+
+The applicable Zarr specification alone decides which members an array's metadata document requires.
+A metadata document lacking a member that specification requires, `fill_value` among them, is
+upstream invalidity under this section, and this profile states no separate requirement of that
+member.
+
 The v3 reader floor admits exactly these unsharded codec sequences, in pipeline order: `bytes`;
 `bytes` then `gzip`; `bytes` then `zstd`; and `bytes` then `blosc` with `cname` `zstd`. It also
 admits a sharded pipeline whose shard holds one of those sequences, under the rules below. A
@@ -2636,15 +2645,40 @@ configuration of a codec the validator implements, is upstream invalidity rather
 observation. A validator MUST treat a codec name it does not recognize as valid metadata outside
 the floor, because Zarr v3 admits extension codecs.
 
-The v2 reader floor is exactly `filters: null` with compressor null, compressor `id: zstd`, or
-compressor `id: blosc` and `cname: zstd`. In a v2 pattern, JSON null matches only null, every stated
-member compares equal, and unmentioned configuration members do not participate. A conforming
-reader MUST expose the logical values of every valid v2 array that the v2 reader floor admits. The descriptor
-declares the Zarr interface `materialized`, `logical_values`, and `prefix`, with floor role
-`reader_only`; v3 permits packet and external ownership, while v2 permits external ownership only.
-It does not enumerate optional codecs.
+A **type string** of a Zarr v2 array is its `dtype` where that is a string. Where `dtype` is a
+structured type, the array's type strings are those of each field's data type, taken recursively
+where a field's data type is itself structured. The Zarr v2 storage specification makes the first
+character of a type string its byte order: `<` for little-endian, `>` for big-endian, and `|` for a
+type that has none.
 
-The physical-profile schema declares the v3 floor with these definitions:
+A valid v2 array is inside the v2 reader floor when both of the following hold:
+
+- its `filters` and `compressor` match one of the floor's `metadata_patterns`; and
+- the first character of every one of its type strings is a member of the floor's
+  `dtype_byte_orders`.
+
+Any other valid v2 array is outside the floor. In a v2 pattern, JSON null matches only null, every
+stated member compares equal, and unmentioned configuration members do not participate. The
+descriptor's `interfaces.zarr.variants.v2.reader_floor` is exactly:
+
+```json
+{
+  "metadata_patterns": [
+    {"filters": null, "compressor": null},
+    {"filters": null, "compressor": {"id": "zstd"}},
+    {"filters": null, "compressor": {"id": "blosc", "cname": "zstd"}}
+  ],
+  "dtype_byte_orders": ["<", "|"]
+}
+```
+
+A reader or validator comparing a v2 array's metadata with the floor MUST apply these rules. A
+conforming reader MUST expose the logical values of every valid v2 array that the v2 reader floor
+admits. The descriptor declares the Zarr interface `materialized`, `logical_values`, and `prefix`,
+with floor role `reader_only`; v3 permits packet and external ownership, while v2 permits external
+ownership only. It does not enumerate optional codecs.
+
+The physical-profile schema declares the Zarr floors with these definitions:
 
 | definition | shape |
 |---|---|
@@ -2652,6 +2686,7 @@ The physical-profile schema declares the v3 floor with these definitions:
 | `codec_sequence` | array of one or more `codec_pattern` |
 | `sharding_floor` | closed object; requires `index_codec_sequences`, an array of one or more distinct `codec_sequence`, and `index_location`, `start` or `end` |
 | `zarr_v3_floor` | closed object; requires `codec_sequences`, an array of one or more distinct `codec_sequence`; admits `sharding`, a `sharding_floor` |
+| `zarr_v2_floor` | closed object; requires `metadata_patterns`, an array of one or more distinct closed objects, each requiring `filters`, null, and `compressor`, null or a closed object requiring `id`, a string, and admitting `cname`, a string; requires `dtype_byte_orders`, an array of one or more distinct byte-order characters, each one of the three a type string may begin with |
 
 <a id="ew-array-metadata-placement" data-spec-anchor="canonical"></a>
 ### 6.5 What the array declares, and what the tables declare
@@ -3710,8 +3745,13 @@ using a feature outside its floor, it MUST report one finding under the check ID
 
 - the resource;
 - its interface and, for Zarr, its variant; and
-- the observed features that matched no floor entry: each outside compression or encoding for
-  Parquet, the whole observed pipeline for Zarr v3, and `filters` and `compressor` for Zarr v2.
+- the observed features that place it outside its floor: each outside compression or encoding for
+  Parquet; the whole observed pipeline for Zarr v3; and for Zarr v2, `filters` and `compressor`
+  where they match no metadata pattern, and `dtype` where the first character of one of its type
+  strings is not a member of the floor's `dtype_byte_orders`.
+
+Where a Zarr v2 array is outside its floor on both counts, a validator MUST name `filters`,
+`compressor`, and `dtype` in the one finding it reports for the resource.
 
 The finding's level is `warning` for a packet-owned resource whose interface's floor role is
 `reader_and_packet_writer`, and `info` for every other resource. A validator MUST NOT report it at
@@ -5131,11 +5171,17 @@ member. No session has yet had a second sorting.
 
 Measured by the Zarr conformance probe against **zarr-python 3.4.0 with numcodecs 0.17.0, Zarr.jl
 0.10.2 on Julia 1.12.7, TensorStore 0.1.85, zarrs-python 0.2.3 and zarrita 0.7.5 on Node 22.22.2**
-(2026-09-24) — the one measurement here whose toolchain was kept, and the one that shows why the
-others should be. Each reader checks the int64 element sum of arrays zarr-python and the reference
-writer wrote; zarrs reads through a strict codec pipeline, so no read falls back to Python.
+(2026-09-24, and the big-endian arrays on 2026-10-01 with the same versions) — the one measurement
+here whose toolchain was kept, and the one that shows why the others should be. Each reader checks
+the int64 element sum of arrays zarr-python and the reference writer wrote; zarrs reads through a
+strict codec pipeline, so no read falls back to Python. The bytes of a big-endian array, read
+without swapping, sum to another number than its values do, so a reader that ignores the declared
+byte order reports a wrong sum.
 
-| stored v3 pipeline | zarr-python | Zarr.jl | TensorStore | zarrs | zarrita |
+A row names a Zarr v3 array by its pipeline, whose `bytes` codec is little-endian unless the row
+says otherwise. The last row is a Zarr v2 array.
+
+| stored array | zarr-python | Zarr.jl | TensorStore | zarrs | zarrita |
 |---|---|---|---|---|---|
 | `bytes`; `bytes`, `gzip`; `bytes`, `zstd` | reads | reads | reads | reads | reads |
 | `bytes`, `blosc` (`zstd`), each of `noshuffle`, `shuffle`, `bitshuffle` | reads | reads | reads | reads | reads |
@@ -5144,11 +5190,18 @@ writer wrote; zarrs reads through a strict codec pipeline, so no read falls back
 | `sharding_indexed` with index at `start` | reads | reads | reads | reads | fails |
 | `bytes`, `blosc` (`lz4`) | reads | reads | reads | reads | reads |
 | the reference writer's `numcodecs.delta`, `bytes`, `blosc` (`zstd`) | reads | fails | fails | fails | reads |
+| `bytes` big-endian, `int16` | reads | reads | reads | reads | reads |
+| `bytes` big-endian, `zstd`, `int16` | reads | reads | reads | reads | reads |
+| `sharding_indexed` around `bytes` big-endian, `zstd`, `int16` | reads | reads | reads | reads | reads |
+| `bytes` big-endian, `float32` | reads | reads | reads | reads | reads |
+| v2, `dtype` `>i2`, compressor `zstd` | reads | wrong values | reads | fails | reads |
 
-All five also read Zarr v2 zstd and Blosc-Zstd. zarrita fails an index at `start` with
-`RangeError [ERR_OUT_OF_RANGE]`; on the delta pipeline Zarr.jl reports that it does not support the
-delta codec, TensorStore that `numcodecs.delta` is not registered, and zarrs that the metadata is
-unsupported.
+All five also read little-endian Zarr v2 arrays, of `dtype` `<i2`, compressed with zstd and with
+Blosc-Zstd. zarrita fails an index at `start` with `RangeError [ERR_OUT_OF_RANGE]`; on the delta
+pipeline Zarr.jl reports that it does not support the delta codec, TensorStore that
+`numcodecs.delta` is not registered, and zarrs that the metadata is unsupported. On the big-endian
+v2 array zarrs reports "Non-native byte order not supported", and Zarr.jl raises no error and
+returns values summing to -2,964,480 where the array's sum to -365,664.
 
 A reading of this kind stops being true the moment a library moves, with nothing in the prose
 changing to show it. That is what Part 03 §6.4's per-version reader floor exists to state as a rule,

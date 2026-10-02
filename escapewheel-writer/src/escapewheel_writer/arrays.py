@@ -1,10 +1,11 @@
 """Write a dense array into a packet as Zarr v3.
 
-Part 03 §6.1 requires a packet-owned array to be v3; v2 is permitted only for one the packet
-references. Part 03 §6.1 pins the rest of the shape: a regular chunk grid, little-endian, an
-explicit `fill_value`, and no `transpose` codec -- axes are stored in the order the packet
-declares them, and a column-major binding enumerates them in reverse rather than the format
-rearranging itself.
+Part 03 §6.1 requires a packet-owned array to be v3, with a regular chunk grid; v2 is permitted
+only for one the packet references. Part 03 §6.2 forbids the `transpose` codec -- axes are stored
+in the order the packet declares them, and a column-major binding enumerates them in reverse
+rather than the format rearranging itself. Zarr v3 requires the `fill_value` every array is
+written with, and Part 03 §6.4 leaves the byte order to the writer, which takes zarr-python's
+default.
 
 - :func:`write_zarr` -- write one staged array and return its size on disk in bytes.
 - :func:`declared_codecs` -- the codec names an array will be written with, outermost first.

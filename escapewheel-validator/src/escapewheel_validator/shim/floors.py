@@ -18,7 +18,7 @@ from collections.abc import Collection, Mapping
 from typing import Any
 
 from escapewheel_reader import Packet
-from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_floor_admits
+from escapewheel_reader.profile import parquet_floor, physical_profile, zarr_floor_outside
 
 from .. import check_table
 from ..report import Report
@@ -32,10 +32,12 @@ def _floor_level(resource: Any) -> Level:
 
 
 def check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report) -> None:
-    """Report an array whose own metadata matches no entry of its variant's reader floor (Part 03 §6.4).
+    """Report an array whose own metadata places it outside its variant's reader floor (Part 03 §6.4).
 
-    An unrecognized codec is valid metadata outside the floor, so it draws this finding and nothing else;
-    metadata too malformed to compare is upstream invalidity, not a floor observation.
+    One finding names every member that does so (Part 05 §5.3): the pipeline of a v3 array, and of a
+    v2 array `filters` and `compressor`, `dtype`, or all three. An unrecognized codec is valid metadata
+    outside the floor, so it draws this finding and nothing else; metadata too malformed to compare is
+    upstream invalidity, not a floor observation.
     """
     variants = physical_profile()["interfaces"]["zarr"]["variants"]
     zarr_format = metadata.get("zarr_format")
@@ -44,11 +46,11 @@ def check_zarr_floor(resource: Any, metadata: Mapping[str, Any], report: Report)
         return
     variant, entry = selected
     try:
-        if zarr_floor_admits(metadata, entry["reader_floor"]):
-            return
+        members = zarr_floor_outside(metadata, entry["reader_floor"])
     except (AttributeError, KeyError, TypeError):
         return
-    members = ("codecs",) if zarr_format == 3 else ("filters", "compressor")
+    if not members:
+        return
     observed = [(member, json.dumps(metadata.get(member), separators=(",", ":"))) for member in members]
     report.add_about(
         resource.resource_id,
