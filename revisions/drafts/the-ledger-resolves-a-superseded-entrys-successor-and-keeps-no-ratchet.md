@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `0d35f40200b28fa0c0a746054c1620f93fd200f2` |
+| **Based on** | `e60b54e064d98c4479cf58dc18ba831fdfa75ea4` |
 | **Decision domain** | process |
 | **Change form** | ordinary |
 | **Amends** | `revisions/CONTRIBUTING.md#ew-current-owner-ledger` |
@@ -38,8 +38,8 @@ The counts below come from reading the ledger as TOML at the baseline commit.
 
 ### 2.1 No tool reads a superseded entry's successor
 
-The ledger holds 830 clauses: 501 applied, 177 rationale, 109 registry and 43 superseded. Of the 43
-superseded entries, 42 carry a field `by`, and each of the 42 values names one accepted revision
+The ledger holds 830 clauses: 490 applied, 177 rationale, 114 registry and 49 superseded. Of the 49
+superseded entries, 48 carry a field `by`, and each of the 48 values names one accepted revision
 numbered later than the clause's own. The guide names no field for the successor, and a search of
 `revisions/`, `spec/tools/` and `tools/` finds no Python source that reads `by`. A missing or
 misspelled successor passes the check.
@@ -56,8 +56,8 @@ null declares that the table admits duplicate rows. Part 02 §9.4 states that a 
 duplicate rows.
 
 R7 §2, the clause that lost a sentence, is recorded `applied` at Part 02 §2 with no note. Two other
-entries record a clause that a later revision replaced in part, and each is `applied` with a note
-that names the later clause.
+entries, R79 §2.1 and R93 §3.5, record a clause that a later revision replaced in part, and each is
+`applied` with a note that names the later clause.
 
 ### 2.3 The ratchet cannot fire
 
@@ -80,11 +80,11 @@ Checking only that `by` is present would catch the missing successor of §2.2 an
 or earlier revision.
 
 Requiring `by` to name the superseding clause, and not only the revision, would give the most exact
-record. It would need a clause chosen for each of the 42 entries, and a clause is often replaced by
+record. It would need a clause chosen for each of the 48 entries, and a clause is often replaced by
 several clauses of the later revision. An entry's note already carries that detail where someone
 recorded it.
 
-Admitting a list of revisions in `by` would describe a shape no entry has: all 42 values name one
+Admitting a list of revisions in `by` would describe a shape no entry has: all 48 values name one
 revision.
 
 ## 3. Decision
@@ -136,7 +136,7 @@ of the root contribution guide.
 Two ledger entries change so that the ledger satisfies §3.1 and §3.2. R107 §3.5 becomes `applied`
 at the Part 02 anchor `ew-registry-conformance`, the section that states its rule about a null
 key, and loses its string `where`. R7 §2 gains a note that R107 §3.5 struck its sentence about a
-stated reason. The other 42 `superseded` entries already satisfy §3.1.
+stated reason. The other 48 `superseded` entries already satisfy §3.1.
 
 The guide's failure-handling rule is outside the amended anchor and loses only its mention of a
 ledger ratchet. Its prohibition on weakening a check to make a candidate pass is unchanged and
@@ -161,7 +161,7 @@ The decision is checked by process tests and by no packet fixture.
 
 Positive cases:
 
-- the ledger as incorporated passes, with its 42 `superseded` entries resolved; and
+- the ledger as incorporated passes, with its 48 `superseded` entries resolved; and
 - the ledger file's bytes are the same before and after the check, on a passing run and on a failing
   one.
 
