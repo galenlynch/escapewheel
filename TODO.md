@@ -304,7 +304,8 @@ The audit's critical reading found six implementation defects, and
 `revisions/audit/applied-targets.md` lists them with the text findings beside them. Three are
 fixed: the writer checks an extension registry registered as a file path from its bytes,
 `escapewheel import` writes the result of the registry it rejects, and the validator interpolates
-`PERCENTILE_CONT` in binary64. Three remain.
+`PERCENTILE_CONT` in binary64. Three remain, with a fourth found while the sidecar draft was
+appraised.
 
 - **The validator's `DECIMAL` to `DOUBLE PRECISION` conversion is the engine's.** It is not always
   rounded to nearest, ties to even, as Part 11 §4 requires of an explicit cast. Decision 8 of
@@ -314,6 +315,10 @@ fixed: the writer checks an extension registry registered as a file path from it
   The rule itself waits on a revision.
 - **`spec/tools/check.py` prints outcome lines for a non-valid core registry** and offers no
   output of the complete result.
+- **The validator's forward check admits a core table the packet does not carry.** Part 02 §8.3
+  has it return each row whose value names no resource the manifest declares; the check compares
+  against every table the core registry declares. Whether an existing packet would draw a new
+  finding is not measured. The sidecar draft's inventory names the alignment.
 
 The same reading found four defects in the specification and the registry. Part 05 §1 and Part 11
 §3 are repaired. Two wait on a proposal in `revisions/proposals/`.

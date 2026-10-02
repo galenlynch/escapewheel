@@ -3,10 +3,10 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `ba589b18678a7a35f3b5192b9b3f9f420734e0b5` |
+| **Based on** | `53ef6d389eb6055983575b2d20b0d5c11cf0c37e` |
 | **Decision domain** | specification |
 | **Change form** | structural |
-| **Amends** | Part 02 §§2.2, 2.6, 4, 9.2, 11, 12 and 13; Part 03 §§3.1 and 7; Part 05 §4.3; Part 08 §§2 and 3; Part 09 §§2 and 3; the core registry |
+| **Amends** | Part 02 §§2.2, 2.6, 4, 5.3, 9.2, 11, 12 and 13; Part 03 §§3.1 and 7; Part 05 §4.3; Part 08 §§2 and 3; Part 09 §§2 and 3; the core registry |
 | **Depends on** | R128 §3.2 (the content classes, whose `documentation` row this restates); R128 §3.6 (the three catalog tables and the `resource_id` naming exception, both of which this extends); R140 §3.3 (Part 02's normative references, which gain an entry); R150 §3.6 (an amending build's settlement of a delivered row, to which this adds a case); R152 §3.4 (the core registry version at the baseline) |
 | **Profile** | all |
 | **Decision clauses** | §3.1; §3.2; §3.3; §3.4; §3.5; §3.6; §3.7; §3.8 |
@@ -35,25 +35,31 @@ that place a value in a sidecar, lets an amending build add a sidecar to a packe
 some, and advances the core registry's version. It changes no rule of delivery, storage or
 validation, since those already serve an opaque catalog and a documentation resource.
 
-The change is structural because the rules it restates sit in the middle of Part 02 §§2 and 4, Part
-03 §§3 and 7, Part 05 §4.3 and Part 09 §§2 and 3, and an appended section would leave each of them
-contradicting it.
+The change is structural because the rules it restates sit in the middle of Part 02 §§2, 4 and 5,
+Part 03 §§3 and 7, Part 05 §4.3 and Part 09 §§2 and 3, and an appended section would leave each of
+them contradicting it.
 
-`a-delivery-carries-the-compensations-its-adapter-applied.md` also amends Part 05 §4.3, in its
-sentence on a compensation. §3.7 touches that section's settlement list alone, so the two apply in
-either order. No other open draft touches a section this one amends.
+The other open draft, `a-build-records-a-recipe-without-its-credentials.md`, amends Part 05 §§3.2,
+3.5 and 7 and touches no section this one amends. Three open proposals change the core registry
+and so advance the same `registry_version`: one removes a column of `core.clocks`, one rewords the
+description of `processing_run_id` on the array tables, and one makes name columns required and
+revises Part 02 §§12.1 and 12.9. None touches a declaration or a section this draft amends, and
+§3.8 names no target version, so this draft and those apply in any order.
 
 ### 1.1 Structural crosswalk
 
-Every amended section carries a canonical anchor at the baseline, so no anchor bootstrap is needed.
-No section moves, splits, merges or retires. The two new subsections take their anchors when they
-are created.
+The `Based on` commit is a metadata-only bootstrap adding `ew-fixed-representations` before Part 02
+§5.3's heading and `ew-particular-resource-rules` before Part 02 §12's, and changes nothing else.
+The commit after it regenerated the heading index and the combined rendering. Every other amended
+section already carried a canonical anchor. No section moves, splits, merges or retires. The two
+new subsections take their anchors when they are created.
 
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | Part 02 §2.2, `documentation` means human-readable sidecars that assert no fact | revise in place | same section | a sidecar is an opaque resource the packet lists and asserts nothing through, whoever reads it; the class covers the tables that list sidecars | §3.1 |
 | Part 02 §2.6, three catalog tables carry `resource_id` beside an assigned key | revise in place | same section | `core.sidecars` is a fourth, keyed on `resource_id` | §3.4 |
 | Part 02 §4, the integer `_id` rule excepts the exact catalog field `resource_id` | revise in place | same section | the exception covers every column named `resource_id` | §3.4 |
+| Part 02 §5.3, an identifier column is an integer except the catalog `resource_id` | revise in place | same section | the exception covers every column named `resource_id` | §3.4 |
 | Part 02 §9.2, the core registry version | revise in place | same section | the version advances | §3.8 |
 | Part 02 §11, the core resource index | extend with a subsection | a new subsection at the end of Part 02 §11, anchored `ew-core-sidecar-resource-index` | the index lists the three declarations | §§3.2, 3.3, 3.4 |
 | Part 02 §12, rules for particular resources | extend with a subsection | a new subsection at the end of Part 02 §12, anchored `ew-sidecar-rules` | who chooses a sidecar's resource ID, what a scope row states, and what a consumer may conclude from one | §§3.2, 3.3 |
@@ -75,10 +81,12 @@ registry documents, the manifest schema, or a search of `spec/parts/`.
 The core registry holds 48 declarations, 43 of class `core` and 5 of class `analysis`. The four
 extension registries in the repository hold 11, all of class `extension`. No declaration has the
 class `documentation`. A search of `spec/parts/` for `docs/` and `sidecar` finds six statements: one
-in Part 02 §2.2, one in Part 03 §3.1, two in Part 03 §7, and one each in Part 09 §§2 and 3.
+in Part 02 §2.2, one in Part 03 §3.1, two in Part 03 §7, and one each in Part 09 §§2 and 3. The
+search also matches a URL in Part 12's references, which is not a statement about a sidecar.
 
-Part 03 §9 defines a stray as a file under the packet root that no manifest ever named, and Part 05
-§15.5 lets a packet carry one. Part 04 §4.3 records a digest for a manifest entry only.
+A file under the packet root that no manifest ever named, and that neither the staging area nor an
+unpublished promotion record accounts for, is a stray under Part 03 §9, and Part 05 §15.5 lets a
+packet carry one. Part 04 §4.3 records a digest for a manifest entry only.
 
 Two of the six statements treat a sidecar as a place for values: Part 03 §7 places lab-specific
 values in a `json_string` column or a sidecar, and Part 09 §3 says a lab-specific or free-form field
@@ -110,9 +118,10 @@ resource is described.
 - **Amendment.** Part 05 §15.2 lets a writer performing an amendment add a resource other than a
   canonical table, and remove or replace a documentation resource. Part 05 §4.3, which an amending
   build follows, adds a row of a non-canonical table only where the packet's manifest does not name
-  the table. Every other delivered row has to form a group the packet lacks, and Part 02 §2.8 has a
-  non-canonical table declare no group list. An amending build can therefore list a packet's first
-  sidecars and refuses every later one.
+  the table. Of the rows of a table the manifest names, it drops one equal to a held row and adds
+  one that forms a group the packet lacks, and Part 02 §2.8 has a non-canonical table declare no
+  group list. An amending build can therefore list a packet's first sidecars and refuses every
+  new one after them.
 
 ### 2.4 Core states a scope as a discriminator and a paired value
 
@@ -125,8 +134,8 @@ the dotted ID of a table, and `scope`, the key or name of a row of that table. P
 the pair:
 
 - The two columns share one presence, and a row holding neither is undeterminable, which a consumer
-  reports as a defect of the row. A null pair therefore cannot state that a sidecar is about the
-  packet.
+  reports apart from a value that resolves to nothing. A null pair therefore cannot state that a
+  sidecar is about the packet.
 - The named table's primary key is one column. 17 of the core registry's 45 tables have such a key:
   16 of class `core` and `analysis.array_assets`. `core.coordinate_frames` is keyed on two columns.
 - A discriminator resolving `required` draws the forward, key-form and paired-value checks at
@@ -143,8 +152,10 @@ key, the `*_name` Part 02 §8.2 requires beside it, and `resource_id`. A sidecar
 other than its resource ID, so the integer and the name would restate it. Part 02 §2.6 requires only
 that the catalog column be a required string identifier with carried identity and free vocabulary,
 and Part 02 §8.2 gives a carried identifier no name column. The registry meta-schema holds every
-column named `resource_id` to that declaration, whatever its table, while Part 02 §4 words the
-exception for the exact catalog field.
+column named `resource_id` to that declaration, whatever its table. Part 02 §4 words its exception
+to the integer `_id` rule for the exact catalog field, and Part 02 §5.3 words its exception to the
+integer type of an identifier for the catalog `resource_id` alone, so neither covers a column that
+references the catalog field.
 
 ### 2.6 The declarations pass the registry checks
 
@@ -167,9 +178,11 @@ registry was assembled and checked.
   `core.coordinate_frames`, and one naming a subject the packet lacks, and the reference check
   reported a scope for an unlisted sidecar. Rows scoping one sidecar to a subject and two sessions
   passed.
-- The reference validator generates no paired-value check for a named core table the packet does
-  not carry, so a scope naming a row of one draws no finding. Part 02 §8.3 has a validator generate
-  that check for each kind a packet's rows name, so §5 lists the gap against the validator.
+- A scope naming a row of a core table the packet does not carry draws no finding from the
+  reference validator. Part 02 §8.3 has the forward check return each row whose value names no
+  resource the manifest declares. The validator's forward check admits every table the core
+  registry declares, carried or not, and it generates no paired-value check for a table the packet
+  does not carry. §5 lists the gap against the validator.
 - The one check that failed is an authoring convention of the registry tooling, that an `_id` column
   is an integer, once for each of the two `resource_id` columns. The three existing catalog tables
   carry declared exceptions to it.
@@ -236,7 +249,8 @@ singleton of `optional` presence, `requires` empty, `lineage` `forbidden`, prima
 | `metadata` | `json_string` | optional | data | the description Part 02 §8.6 fixes | as Part 02 §8.6 states |
 
 The table carries no `session_id` and assigns no identifier, so it has no `*_name` column. It
-declares `metadata` because its key holds an identifier that no reference carries (Part 02 §8.6).
+declares `metadata` because its primary key holds an identifier that is part of no reference the
+table declares (Part 02 §8.6).
 
 The author of a recipe chooses each sidecar's resource ID, and the adapter that delivers the row
 hands the ID over as chosen. The ID matches the pattern Part 04 §4.1 gives a resource ID and is
@@ -293,7 +307,8 @@ integer remains the primary key and its `*_name` the source-label bridge. In `co
 
 A registry MUST declare every column named `resource_id` as a required `string` identifier with
 carried identity and free vocabulary, whether the column is a catalog table's field or references
-one. Part 02 §4's integer `_id` rule does not apply to a column of that name.
+one. Neither Part 02 §4's integer `_id` rule nor the integer type Part 02 §5.3 gives an identifier
+applies to a column of that name.
 
 Part 02 §11 lists the three declarations in a subsection of their own.
 
@@ -313,7 +328,7 @@ there under Part 00 §9.
 
 ### 3.6 Context is placed in a listed sidecar and a value is not
 
-Part 03 §3.1's recommended layout MUST NOT name a `docs/` directory. A packet-owned sidecar is a
+The recommended layout of Part 03 §3.1 names no `docs/` directory. A packet-owned sidecar is a
 payload, which that layout already places at `opaque/<resource_id>/<name>` (Part 03 §11), so a
 README listed as `core.readme` lies at `opaque/core.readme/README.md`.
 
@@ -329,16 +344,17 @@ Part 03 §7 places metadata by kind:
 Part 09 §2's tier 4 holds context the packet asserts nothing through, located in the sidecars that
 `core.sidecars` lists. Under Part 09 §3, a field SHOULD be in an extension when it is institutional,
 administrative, lab-specific, rarely queried, free-form, procedural but not required for analysis,
-or biologically rich but not required to interpret the recording. That section no longer places a
-field in a sidecar.
+or biologically rich but not required to interpret the recording. A sidecar is not a place for a
+field.
 
 ### 3.7 An amending build adds a sidecar to a packet that lists some
 
 An amending build settling a delivered row against the packet (Part 05 §4.3) MUST add a row of a
 table of class `documentation` that the packet's manifest names and that declares a primary key,
 where no row the packet holds has the delivered row's primary key. A row equal to one the packet
-holds is still dropped, together with any catalog instance it catalogues, and the build still
-refuses a delivered row that shares a held row's primary key and differs from it.
+holds, as that section compares them, is still dropped, together with any catalog instance it
+catalogues, and the build still refuses a delivered row that shares a held row's primary key and
+is not equal to it.
 
 The table the amendment writes holds the packet's rows and the added ones, and replaces the
 documentation resource as Part 05 §15.2 permits. An amending build thereby adds sidecars and scope
@@ -354,8 +370,8 @@ meta-schema, the registry-contract descriptor and the rule language are unchange
 
 ## 4. What this does not change
 
-A file under the packet root that no manifest names, including one in `docs/`, remains a stray that
-Part 05 §15.5 protects.
+A file in `docs/` that no manifest ever named remains a stray wherever Part 03 §9 makes it one, and
+Part 05 §15.5 still protects it.
 
 No part of a build or a validator interprets a sidecar's contents, so an absolute URL inside one,
 as a viewer's saved state carries, is not kept current when what it names moves, and nothing
@@ -390,8 +406,12 @@ rows are the same either way, and the existing parts make these differences:
 |---|---|---|
 | delivery (Part 12 §5) | a payload, one file or one directory, in the resource directory its resource ID names | an entry of a resource document, recorded `external: true` |
 | location | `opaque/<resource_id>/<name>` under the recommended layout (Part 03 §11) | the entry's `uri` |
-| `digest` and `size_bytes` | recorded from the staged bytes (Part 03 §10) | recorded only where the writer reached the resource (Part 04 §5.2) |
+| `digest` and `size_bytes` | recorded from the staged bytes (Part 12 §5), covering the payload (Part 03 §10) | recorded only where the writer reached the resource (Part 04 §5.2) |
 | what the packet promises | bytes no writer modifies once committed (Part 03 §8.1) | nothing (Part 03 §8.2) |
+
+Under the recommended layout a packet-owned README lies at `opaque/<resource_id>/README.md`, not at
+the packet root or in `docs/`. A person browsing the directory finds it through `core.sidecars`,
+which is the only index of a packet's sidecars.
 
 Part 05 §15.2 lets a writer replace or remove a documentation resource, so a packet promises a
 sidecar for one version only. A scope naming a row of an analysis table resolves only while the
@@ -408,12 +428,12 @@ note naming the clause above that restates or extends part of them.
 | surface | required change or reason unchanged | evidence after incorporation |
 |---|---|---|
 | semantic prose | Unchanged: a sidecar asserts no semantic fact, so Part 01 gains no concept. | Part 01 is byte-identical. |
-| logical prose and registry | Part 02 §§2.2, 2.6, 4, 9.2 and 13 as §3 states, and a new subsection in each of Part 02 §§11 and 12. The registry source gains the three declarations and the new version. The meta-schema, the registry-contract descriptor and the rule language are unchanged. `spec/tools/conventions.py` gains a declared exception for `core.sidecars.resource_id` and one for `core.sidecar_scopes.resource_id`, without which the registry check fails (§2.6). | `spec/tools/check.py` passes over 51 declarations and 47 tables, and `spec/tools/framework.py`'s comparison of Part 02 §13 passes with the fifth entry. |
+| logical prose and registry | Part 02 §§2.2, 2.6, 4, 5.3, 9.2 and 13 as §3 states, and a new subsection in each of Part 02 §§11 and 12. The registry source gains the three declarations and the new version. The meta-schema, the registry-contract descriptor and the rule language are unchanged. `spec/tools/conventions.py` gains a declared exception for `core.sidecars.resource_id` and one for `core.sidecar_scopes.resource_id`, without which the registry check fails (§2.6), and the registry version `spec/tools/check.py` expects advances. | `spec/tools/check.py` passes over 51 declarations and 47 tables, and `spec/tools/framework.py`'s comparison of Part 02 §13 passes with the fifth entry. |
 | physical profiles | Part 03 §§3.1 and 7 as §3.6 states. Part 03 §11 and the profile descriptor are unchanged. | The descriptor is byte-identical. |
 | packet manifest and JSON Schemas | Unchanged: a sidecar's entry uses the existing eleven members. | The schemas are byte-identical. |
 | validation and import | Part 05 §4.3 gains §3.7's case, and Part 09 §§2 and 3 read as §3.6 states. The catalog-binding checks, the amendment table and the delivery rules already cover a documentation catalog (§2.3), and Part 02 §8.3 already generates the checks of §3.3. | The corpus cases of §6 produce their expected findings with no check declared for them. |
 | extensions | Unchanged: no extension registry is edited. A scope names an extension's table through the discriminator, with no declaration in the extension. | The extension registry checks pass. |
-| reader, writer, validator, adapters | Each package's registry copy regenerates. The reader lists both tables and resolves a sidecar as it does any catalogued resource, which no test has exercised with a catalog keyed on `resource_id`. The writer gains an adapter that delivers the catalog rows, scope rows and payloads a recipe names. Its referenced-resource delivery, which binds the array and media catalogs by their assigned identifiers, extends to a catalog keyed on `resource_id`, and its amending build takes §3.7's case where it refuses the row today. The validator generates the paired-value check for a named table the packet does not carry, which it skips today (§2.6). | The package suites pass, with the tests of §6. |
+| reader, writer, validator, adapters | No package carries a copy of the core registry, so none regenerates. The reader lists both tables and resolves a sidecar as it does any catalogued resource, which no test has exercised with a catalog keyed on `resource_id`. The writer gains an adapter that delivers the catalog rows, scope rows and payloads a recipe names. Its referenced-resource delivery, which binds the array and media catalogs by their assigned identifiers, extends to a catalog keyed on `resource_id`, and its amending build takes §3.7's case where it refuses the row today. The validator's forward check reports a value naming a table the manifest does not declare, as Part 02 §8.3 words it, where it admits every table the core registry declares today (§2.6). | The package suites pass, with the tests of §6. |
 | conformance fixtures and tests | The corpus regenerates under the new registry version and gains the packets of §6. The registry-conformance vectors gain the registry variants of §6. | `fixtures/corpus.py` runs them, and the registry-conformance suite runs the variants. |
 | revision process and tooling | Four ledger notes. The heading record gains the two new subsections, and `spec/tools/framework_data.py` gains the reference entry and the expected registry version. No process rule changes. | `ledger.py`, `headings.py --check` and `verify.py` pass. |
 | generated publications and developer documentation | The generated table listing, the combined rendering and the specification README's identifier table follow, and Part 08 §§2 and 3 carry the new version. The writer's guide documents the adapter, both ownerships and the `contributes` case. | The generators leave the candidate state unchanged. |
@@ -421,10 +441,10 @@ note naming the clause above that restates or extends part of them.
 ## 6. Conformance and implementation evidence
 
 §3.1 is `applied` at Part 02 §2.2. §§3.2 and 3.3 are `applied` at the new subsections of Part 02
-§§11 and 12, and §3.4 at Part 02 §§2.6, 4 and 11. §3.5 is `applied` at Part 02 §13, §3.6 at Part 03
-§§3.1 and 7 and Part 09 §§2 and 3, §3.7 at Part 05 §4.3, and §3.8 at Part 02 §9.2 and Part 08 §§2
-and 3. Each is placed by its canonical anchor. The registry carries the declarations of §§3.2 to
-3.5.
+§§11 and 12, and §3.4 at Part 02 §§2.6, 4, 5.3 and 11. §3.5 is `applied` at Part 02 §13, §3.6 at
+Part 03 §§3.1 and 7 and Part 09 §§2 and 3, §3.7 at Part 05 §4.3, and §3.8 at Part 02 §9.2 and
+Part 08 §§2 and 3. Each is placed by its canonical anchor. The registry carries the declarations
+of §§3.2 to 3.5.
 
 Positive packets:
 

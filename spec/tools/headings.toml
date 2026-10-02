@@ -756,6 +756,12 @@ section = "5.4"
 title = "Finite values"
 aliases = []
 
+[anchor.ew-fixed-representations]
+part = "02"
+section = "5.3"
+title = "Fixed representations"
+aliases = []
+
 [anchor.ew-frame-axes]
 part = "02"
 section = "12.7"
@@ -1054,6 +1060,12 @@ aliases = []
 part = "03"
 section = "5.5"
 title = "The Parquet floor"
+aliases = []
+
+[anchor.ew-particular-resource-rules]
+part = "02"
+section = "12"
+title = "Rules for particular resources"
 aliases = []
 
 [anchor.ew-performance-scope]
