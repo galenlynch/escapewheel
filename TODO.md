@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R159 accepted. R42 and R73 withdrawn. 1 proposal and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R159 accepted. R42 and R73 withdrawn. 0 proposals and 5 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -135,10 +135,10 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Four drafts await acceptance
+## 3a. Five drafts await acceptance
 
 The drafts are under `revisions/drafts/`, and `revisions/drafts/README.md` gives their order and
-each one's appraisal. One proposal is open, on a unit's name as its identity outside a packet.
+each one's appraisal. No proposal is open.
 
 - **Core declares a catalog of sidecars.** §3b describes it. A sidecar is a file the packet
   asserts nothing through; `core.sidecars` is keyed on `resource_id`, a separate table states what
@@ -150,6 +150,10 @@ each one's appraisal. One proposal is open, on a unit's name as its identity out
   release nothing.
 - **Core declares a clock's transform in typed columns alone.** `core.clocks` drops
   `transform_to_parent`, and Part 02 §5.2 stops counting core's `json_string` columns.
+- **A unit is identified outside its packet by its name.** The name of every owned assigned
+  identifier is `required` and a generated check reports one two rows share; Part 02 §12.1 and
+  Part 02 §12.9 name `unit_name` and `interval_name`. The meta-schema `$id`, the descriptor and
+  the core version advance, and every repository extension migrates.
 
 ## 3b. A file the packet only indexes has no declaration
 

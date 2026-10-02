@@ -42,14 +42,13 @@ same day once its entry stated the options again with what was measured.
 | 14 | Part 02 §9.2 recommends that a registry document carry `$schema` first | `b5696685` |
 | 15 | the reading of a null changes what a consumer concludes, so it is proposed as a revision | draft `a-null-producing-run-on-an-array-says-the-packet-names-none.md` |
 | 16 | nothing is owed: the ledger note on R53 §2.3.1 already records it | — |
-| 17 | proposed | proposal `a-unit-is-identified-outside-its-packet-by-its-name.md` |
+| 17 | proposed | draft `a-unit-is-identified-outside-its-packet-by-its-name.md` |
 | 18 | proposed | draft `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` |
 | 19 | proposed | draft `core-declares-a-clocks-transform-in-typed-columns-alone.md` |
 | 20 | the draft was accepted as R157 | `bb3cae24` |
 | 21 | the guide states both sentences | `5f558363` |
 
-Three of the four were promoted and are drafts in `revisions/drafts/`; the unit-name proposal is in
-`revisions/proposals/`. `e60b54e0` added the ledger notes for the rules the commits above entered,
+All four were promoted and are drafts in `revisions/drafts/`. `e60b54e0` added the ledger notes for the rules the commits above entered,
 and `8e85aced` carries its own.
 
 ## Applied on 2026-10-02 without a decision
