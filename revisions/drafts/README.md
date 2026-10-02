@@ -19,5 +19,8 @@ A draft cites another draft by its file name in backticks. At acceptance those c
 
 ## Application order
 
-No draft is open. When one is written, it goes here with the reason it sits where it does, and the
-order is dependency first and readiness second.
+Dependencies run downward, so a draft may depend on the ones above it and on nothing below.
+
+| order | draft | words | appraisal | placement |
+|---:|---|---:|---|---|
+| 1 | [An amendment drops a held column only where its recipe names it](an-amendment-drops-a-held-column-only-where-its-recipe-names-it.md) | 4744 | Promoted 2026-10-02, not yet appraised. | structural: a new subsection at the end of Part 02 §6; in place at Part 05 §§3.1, 3.5, 4.3, 5.3 and 15.2; no existing ledger entry changes |
