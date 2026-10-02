@@ -4,12 +4,14 @@
 current owner. An `applied` target may identify an untouched numbered section, an anchored numbered
 section, or an anchored process section. A current owner need not cite the accepted revision back;
 target existence is mechanically checkable, while semantic fidelity remains a review judgment.
+A `superseded` entry names the later accepted revision that replaced its clause, as
+`revisions/CONTRIBUTING.md#ew-current-owner-ledger` requires. The check reads and never writes.
 
 Registry dispositions resolve through exact JSON locations in `registry-targets.toml`. Older
 revisions retain their historical clause inference; current revisions enumerate `Decision clauses`.
 
     python revisions/ledger.py            # report
-    python revisions/ledger.py --summary  # counts only
+    python revisions/ledger.py --summary  # the same, without each undisposed clause's title
 """
 
 from __future__ import annotations
@@ -41,6 +43,8 @@ REGISTRY_TARGETS = HERE / "registry-targets.toml"
 REGISTRY_ROOTS = ("spec/artifacts", "extensions", "escapewheel-aind/extensions")
 
 DISPOSITIONS = {"applied", "registry", "superseded", "rationale"}
+#: The one form a `superseded` entry's `by` takes.
+SUCCESSOR = re.compile(r"R(\d+)")
 
 
 class LedgerError(Exception):
@@ -199,6 +203,40 @@ def unresolved(  # noqa: C901
     return dangling, unparsed
 
 
+def accepted_revisions() -> frozenset[int]:
+    """The number of every revision an accepted record states."""
+    return frozenset(
+        int(re.match(r"R(\d+)", path.name).group(1))
+        for path in REVISIONS.glob("R[0-9]*.md")
+        if "**Accepted**" in path.read_text()[:400]
+    )
+
+
+def successor_defects(ledger: dict[str, dict], accepted: frozenset[int]) -> list[tuple[str, str]]:
+    """Return each `superseded` entry that carries `where` or names no later accepted revision.
+
+    A `by` that resolves shows that the revision exists and is later, and not that it replaced
+    the clause.
+    """
+    defects = []
+    for key, entry in sorted(ledger.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
+        if entry.get("disposition") != "superseded":
+            continue
+        by = entry.get("by")
+        named = SUCCESSOR.fullmatch(by) if isinstance(by, str) else None
+        if "by" not in entry:
+            defects.append((key, "superseded, but carries no `by`"))
+        elif named is None:
+            defects.append((key, f"`by` holds {by!r}, which is not one string of the form R<N>"))
+        elif int(named.group(1)) not in accepted:
+            defects.append((key, f"`by` names {by}, which no accepted record states"))
+        elif int(named.group(1)) <= int(key[1:].split()[0]):
+            defects.append((key, f"`by` names {by}, which is numbered no later than the clause's own revision"))
+        if "where" in entry:
+            defects.append((key, "superseded, but carries `where`"))
+    return defects
+
+
 def clauses() -> dict[str, str]:
     """Every Decision clause of every accepted revision, as `R<n> §<sec>` to its title.
 
@@ -272,17 +310,13 @@ def recorded() -> dict[str, dict[str, str]]:
         raise LedgerError(f"{LEDGER.name}: {exc}") from None
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Report every clause with no disposition, and every disposition naming no clause."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--summary", action="store_true", help="counts only")
-    args = parser.parse_args()
+    parser.add_argument("--summary", action="store_true", help="leave out each undisposed clause's title")
+    args = parser.parse_args(argv)
 
     binding, ledger = clauses(), recorded()
-    # The ratchet's high-water mark lives beside the data it describes, not as a number in
-    # another file that someone has to remember to lower. Falling below it rewrites it, so
-    # disposing a clause shows up as a diff and `verify.py`'s candidate-state comparison sees it.
-    baseline = tomllib.loads(LEDGER.read_text()).get("baseline", {}).get("undisposed", 0) if LEDGER.exists() else 0
     undisposed = {k: v for k, v in binding.items() if k not in ledger}
     # A disposition for a clause that no longer exists is as wrong as a missing one: the revision
     # was edited, or the clause was renumbered, and the ledger now vouches for nothing.
@@ -292,6 +326,7 @@ def main() -> int:
     # the state the withdrawn `implementation` disposition made permanent for 23 clauses.
     placeless = sorted(k for k, d in ledger.items() if d.get("disposition") == "applied" and not d.get("where"))
     dangling, unparsed = unresolved(ledger)
+    unsucceeded = successor_defects(ledger, accepted_revisions())
     registry_defects = registry_target_defects(ledger)
     counts: dict[str, int] = {}
     for entry in ledger.values():
@@ -301,12 +336,8 @@ def main() -> int:
         print(f"  {counts[name]:>4}  {name}")
     print(f"  {len(undisposed):>4}  undisposed")
 
-    # Undisposed clauses are a backlog and can run to hundreds, so `--summary` holds them back.
-    # The rest are defects in what the ledger already claims, and there is nothing to read
-    # instead of them.
-    if not args.summary:
-        for key, title in sorted(undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
-            print(f"    UNDISPOSED  {key:<12} {title[:62]}")
+    for key, title in sorted(undisposed.items(), key=lambda kv: (int(kv[0][1:].split()[0]), kv[0])):
+        print(f"    UNDISPOSED  {key:<12} {'' if args.summary else title[:62]}".rstrip())
     for key in stale:
         print(f"    STALE       {key:<12} the ledger disposes a clause no revision states")
     for key, value in sorted(bad.items()):
@@ -317,24 +348,26 @@ def main() -> int:
         print(f"    DANGLING    {key:<12} {target}")
     for key, piece in unparsed:
         print(f"    MALFORMED   {key:<12} `where` holds {piece}")
+    for key, defect in unsucceeded:
+        print(f"    SUCCESSOR   {key:<12} {defect}")
     for defect in registry_defects:
         print(f"    REGISTRY    {defect}")
-    over = max(0, len(undisposed) - baseline)
-    failures = over + len(stale) + len(bad) + len(placeless) + len(dangling) + len(unparsed) + len(registry_defects)
-    if len(undisposed) < baseline:
-        text = LEDGER.read_text()
-        text = re.sub(r"(?m)^undisposed = \d+$", f"undisposed = {len(undisposed)}", text)
-        print(f"ratchet lowered: undisposed {baseline} -> {len(undisposed)}")
-        LEDGER.write_text(text)
-        print("commit applied.toml")
-        return 0
-    if not failures:
-        print(f"\nok — {len(undisposed)} undisposed, at the recorded high-water mark")
-    elif over:
-        print(f"\n{over} clause(s) need a disposition; the mark is {baseline}")
-    else:
-        print(f"\n{failures} disposition(s) vouch for something that is not there")
-    return 1 if failures else 0
+    vouching = (
+        len(stale)
+        + len(bad)
+        + len(placeless)
+        + len(dangling)
+        + len(unparsed)
+        + len(unsucceeded)
+        + len(registry_defects)
+    )
+    if undisposed:
+        print(f"\n{len(undisposed)} clause(s) need a disposition")
+    if vouching:
+        print(f"\n{vouching} disposition(s) vouch for something that is not there")
+    if not undisposed and not vouching:
+        print("\nok — every clause has a disposition")
+    return 1 if undisposed or vouching else 0
 
 
 if __name__ == "__main__":

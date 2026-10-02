@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "revision": "R158",
+  "based_on": "e60b54e064d98c4479cf58dc18ba831fdfa75ea4",
+  "clauses": {
+    "R158 §3.1": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-current-owner-ledger"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "superseded_by_later_accepted_revision_passes"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "superseded_without_by_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "superseded_by_not_one_revision_string_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "superseded_by_unaccepted_revision_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "superseded_by_own_or_earlier_revision_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "superseded_carrying_where_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "incorporated_ledger_resolves_every_superseded_entry"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/ledger.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the guide section that owns the rule is the only document that describes a `superseded` entry's fields"
+      }
+    },
+    "R158 §3.2": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-current-owner-ledger"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "not_applicable": "the clause binds whoever records an entry and no tool checks it; the entries of R7 §2, R79 §2.1, R93 §3.5 and R107 §3.5 follow it"
+      },
+      "implementations": {
+        "paths": [
+          "revisions/applied.toml"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the guide section that owns the rule is the only document that describes how an entry is recorded"
+      }
+    },
+    "R158 §3.3": {
+      "owners": [
+        {
+          "path": "revisions/CONTRIBUTING.md",
+          "anchor": "ew-current-owner-ledger"
+        }
+      ],
+      "projections": {
+        "unchanged": "the process owner is authored directly and has no generated projection"
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "clause_without_entry_fails"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "ledger_keeps_no_undisposed_count"
+          },
+          {
+            "kind": "check",
+            "stage": "revisions: process semantics tests",
+            "id": "check_writes_no_file"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "revisions/ledger.py",
+          "revisions/applied.toml",
+          "verify.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "CONTRIBUTING.md"
+        ]
+      }
+    }
+  }
+}

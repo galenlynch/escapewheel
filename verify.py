@@ -135,7 +135,7 @@ STAGES: list[Stage] = [
     # nothing else can see it.
     _python("citations: a requirement names its part", ROOT / "revisions", WRITER, "repoint.py", "--quiet"),
     _python("citations: every exemption is still needed", ROOT / "revisions", WRITER, "repoint.py", "--exempt"),
-    # A ratchet for undisposed clauses and exact current-owner and JSON targets.
+    # Every accepted clause has an entry, whose current owner, JSON target or successor resolves.
     _python("spec: every revision clause has a disposition", ROOT / "revisions", WRITER, "ledger.py", "--summary"),
     # The other half of what a citation needs. `check_citations.py` resolves a number and this
     # records what the number is about, so a section that keeps one and changes the other cannot

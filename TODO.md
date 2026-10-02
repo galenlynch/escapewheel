@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R157 accepted. R42 and R73 withdrawn. 0 proposals and 3 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R158 accepted. R42 and R73 withdrawn. 0 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -124,18 +124,18 @@ warrants. Nothing needs it while every recipe runs sync in process.
 
 ## 3. The pre-release refactor
 
-**Done apart from one defect that waits on a decision.** The audit asked for on 2026-09-06 ran on
+**Done.** The audit asked for on 2026-09-06 ran on
 2026-10-01 over the four packages, the repository scripts and the specification tooling.
 [REFACTOR.md](REFACTOR.md) records what it found, the decisions taken and the work as five stages
 of checklists, and its section 11 records each choice made on the way. Every stage and the
-specification tooling work have landed. One defect of its section 4 stays open, since it cannot
-be fixed without a revision: the ledger's two weak checks. The ledger draft of §3a covers a
-superseded entry's successor, and an audit covers what a target states (§6).
+specification tooling work have landed. The last defect of its section 4, the ledger's two weak
+checks, is closed: R158 has the check resolve a superseded entry's successor, and a one-time audit
+read what each target states (§6).
 
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Three drafts await acceptance
+## 3a. Two drafts await acceptance
 
 The drafts are under `revisions/drafts/`. No proposal is open.
 
@@ -148,10 +148,6 @@ The drafts are under `revisions/drafts/`. No proposal is open.
   describes it. A sidecar is a file the packet asserts nothing through, its row states what it is
   about in a nullable scope pair, a file a result was computed from is recorded as a source file,
   and one file may be both. Its media type is an open column naming the IANA registry.
-- **The ledger resolves a superseded entry's successor and keeps no ratchet.** A process-domain
-  draft, promoted 2026-10-01 and not accepted: `by` becomes a
-  required field naming one later accepted revision, R107 §3.5's entry is corrected, and the
-  ratchet that rewrites `applied.toml` is removed.
 
 ## 3b. A file the packet only indexes has no declaration
 

@@ -112,8 +112,9 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
 - [x] The validator's test registry declares `core.trials`, which the core registry does not
       have. Stage 5.
 - [x] `BATCH_ROWS` has three definitions and two values in the writer. Stage 2.
-- [ ] The ledger checks that an applied clause's target exists and never that its text is there,
-      and nothing reads a superseded entry's `by`. §9.
+- [x] The ledger checks that an applied clause's target exists and never that its text is there,
+      and nothing reads a superseded entry's `by`. §9. Closed: R158 has the check resolve `by`,
+      and a one-time audit read every applied target in place of a check of its text.
 
 ## 5. Stage 1: errors
 
@@ -359,7 +360,8 @@ The proposal was then revised and split, on 2026-10-01, into two files under
   `by` and the removal of the ratchet. It records R107 §3.5 as `applied` at Part 02 §9.4, where
   its own rule is stated, and no longer at the section a requirement was struck from.
 
-Writing either tool change waits on that proposal's promotion and acceptance.
+The first was withdrawn for a one-time audit of every applied target, and the second was accepted
+as R158.
 
 ### 11.3 Validator errors
 

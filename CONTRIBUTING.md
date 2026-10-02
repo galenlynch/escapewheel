@@ -246,11 +246,11 @@ dropped during compilation of the v0.2 prose — `R53 §2.4`'s `int64` escape, `
 `R36 §2.2`'s prefix digest reversed into "undefined". A citation sweep cannot see these, because
 the revision is cited for its *other* clauses. `revisions/ledger.py` is what sees them:
 `revisions/applied.toml` records each clause's disposition and exact current owner, while
-`revisions/registry-targets.toml` resolves exact JSON locations. The undisposed-clause backlog may
-fall and must not rise. Current owners need not cite their accepted revisions back.
+`revisions/registry-targets.toml` resolves exact JSON locations. The check fails while any
+accepted clause has no entry. Current owners need not cite their accepted revisions back.
 
 <!-- BEGIN facts: clauses -->
-`ledger.py` enumerates 838 Decision clauses across the accepted revisions.
+`ledger.py` enumerates 841 Decision clauses across the accepted revisions.
 <!-- END facts: clauses -->
 
 ## 8. What each check is for
@@ -294,10 +294,10 @@ and those checks:
 ## 9. Reading the result
 
 No derived count in this repository should be typed by hand. `spec/source/README.md`'s are filled
-by `render.py`, the root documents' by `tools/facts.py`, and the clause ledger's undisposed high-water
-mark lowers itself. Provenance exceptions are exact identities, not a count. If you find yourself
-editing a number, check whether something can compute it instead: every number that was
-hand-maintained here went stale, several of them twice in one day.
+by `render.py` and the root documents' by `tools/facts.py`. Provenance exceptions are exact
+identities, not a count. If you find yourself editing a number, check whether something can compute
+it instead: every number that was hand-maintained here went stale, several of them twice in one
+day.
 
 `spec/informative/tables.md` is the readable registry: every table, every column, its type,
 presence, what it declares about its values, and its description. Read Part 02 and the registry to

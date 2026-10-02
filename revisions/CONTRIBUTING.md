@@ -418,7 +418,7 @@ Add one `applied.toml` entry for every enumerated Decision clause. `ledger.py` r
 
 - `applied`: the rule is stated in one or more numbered part sections;
 - `registry`: the exact declaration or predicate is carried by the incorporated registry;
-- `superseded`: a later accepted revision replaced the clause; and
+- `superseded`: a later accepted revision replaced the clause whole; and
 - `rationale`: the clause makes no current normative decision.
 
 The ledger lives at `revisions/applied.toml`. An `applied` destination has exactly one of these
@@ -441,6 +441,32 @@ clause governs the whole declaration or records a removal that has no child to p
 resolves every pointer and requires an equality guard when the path traverses an array, so a reorder
 cannot silently retarget it. It does not prove the declaration is semantically faithful, so the
 incorporation review still reads both.
+
+A `superseded` entry must carry `by`, one string naming an accepted revision as `R<N>`, and that
+revision must be numbered later than the revision of the entry's own clause. The entry must not
+carry `where`. Its `note` may name the replacing clause or a further revision:
+
+```toml
+[clause."R29 §2.1"]
+disposition = "superseded"
+by = "R77"
+```
+
+`ledger.py` fails, naming the clause, where a `superseded` entry:
+
+- carries no `by`;
+- carries a `by` that is not one string of the form `R<N>`;
+- names a revision that no accepted record states;
+- names a revision numbered no later than the clause's own; or
+- carries `where`.
+
+A clause that a later revision replaced only in part is not `superseded`. Whoever records its
+entry must give the entry the disposition of the part that remains and must name the later clause
+in the entry's `note`. No tool checks this rule; it binds the person or agent recording the entry
+and no other actor.
+
+The ledger must not record a count of undisposed clauses. `ledger.py` fails where any Decision
+clause of an accepted revision has no entry, and it writes neither the ledger nor any other file.
 
 ### 8.2 Update each authoritative owner
 
@@ -606,7 +632,7 @@ earliest affected phase:
 - an environment-specific test failure is isolated and reported with the exact command and stack,
   never relabeled as a pass.
 
-Do not weaken a check, raise a ledger ratchet, or add an exception solely to make a candidate pass.
+Do not weaken a check or add an exception solely to make a candidate pass.
 An exception records why the general rule does not apply and is checked to remain necessary.
 
 ## 14. Length and focus
