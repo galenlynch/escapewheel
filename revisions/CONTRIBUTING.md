@@ -422,7 +422,7 @@ Add one `applied.toml` entry for every enumerated Decision clause. `ledger.py` r
 - `rationale`: the clause makes no current normative decision.
 
 The ledger lives at `revisions/applied.toml`. An `applied` destination has exactly one of these
-forms, with `note` as its only optional additional field:
+forms:
 
 ```toml
 { part = "02", section = "7.1" }
@@ -444,7 +444,7 @@ incorporation review still reads both.
 
 A `superseded` entry must carry `by`, one string naming an accepted revision as `R<N>`, and that
 revision must be numbered later than the revision of the entry's own clause. The entry must not
-carry `where`. Its `note` may name the replacing clause or a further revision:
+carry `where`:
 
 ```toml
 [clause."R29 §2.1"]
@@ -460,10 +460,13 @@ by = "R77"
 - names a revision numbered no later than the clause's own; or
 - carries `where`.
 
-A clause that a later revision replaced only in part is not `superseded`. Whoever records its
-entry must give the entry the disposition of the part that remains and must name the later clause
-in the entry's `note`. No tool checks this rule; it binds the person or agent recording the entry
-and no other actor.
+A clause that a later revision replaced only in part is not `superseded`; its entry keeps the
+disposition of the part that remains. The part's current text and its history say what changed it.
+
+A new entry and a new destination carry no `note`. A later revision leaves an existing entry
+unchanged unless it supersedes that entry's clause whole or moves the rule to a destination the
+entry does not name. The notes earlier entries carry are not maintained, so a stale note is left
+as it stands.
 
 The ledger must not record a count of undisposed clauses. `ledger.py` fails where any Decision
 clause of an accepted revision has no entry, and it writes neither the ledger nor any other file.
