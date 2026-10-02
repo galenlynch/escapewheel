@@ -3063,7 +3063,7 @@ where = [
   { part = "11", anchor = "ew-tier-2-query-profile" },
   { part = "11", anchor = "ew-tier-2-language-selection" },
 ]
-note = "logical-to-SQL type binding and common-type semantics. restored 2026-10-02; that an exact-decimal literal compares with an exact numeric without rounding was absent. Part 11 §1 gives every statement of §§2-8 its force on a validator claiming support. The general rule that an exact-to-approximate conversion rounds to nearest, ties to even, is stated only for an explicit cast"
+note = "logical-to-SQL type binding and common-type semantics. restored 2026-10-02; that an exact-decimal literal compares with an exact numeric without rounding, and that every exact-to-approximate conversion rounds to nearest, ties to even, were absent. Part 11 §1 gives every statement of §§2-8 its force on a validator claiming support"
 
 [clause."R125 §3.5"]
 disposition = "applied"

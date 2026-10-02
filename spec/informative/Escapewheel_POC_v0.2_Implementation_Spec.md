@@ -5390,9 +5390,9 @@ domains retain that domain. `INTEGER` with `BIGINT` yields `BIGINT`; an integer 
 `DECIMAL(38,0)` yields `DECIMAL(38,0)`; `REAL` with `DOUBLE PRECISION` yields
 `DOUBLE PRECISION`; and an exact with an approximate numeric yields the approximate domain,
 widened to `DOUBLE PRECISION` if either operand has it. No other pair has an implicit common type.
-These rules govern comparisons, `CASE`, `COALESCE`, set operations, and routine arguments. An
-exact-decimal literal instead compares with an exact numeric by mathematical value, without
-rounding.
+These rules govern comparisons, `CASE`, `COALESCE`, set operations, and routine arguments. Every
+exact-to-approximate conversion rounds to nearest, ties to even. An exact-decimal literal instead
+compares with an exact numeric by mathematical value, without rounding.
 
 <a id="ew-tier-2-deterministic-semantics" data-spec-anchor="canonical"></a>
 ## 5. Numeric, timestamp, and character semantics
