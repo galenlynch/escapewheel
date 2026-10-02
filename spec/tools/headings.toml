@@ -618,6 +618,12 @@ section = "6.1"
 title = "Core does not reference an extension"
 aliases = []
 
+[anchor.ew-core-inclusion-rule]
+part = "09"
+section = "3"
+title = "Core inclusion rule"
+aliases = []
+
 [anchor.ew-core-logical-schema-scope]
 part = "02"
 section = "1"
@@ -898,6 +904,18 @@ aliases = []
 part = "01"
 section = "3.18"
 title = "Media asset"
+aliases = []
+
+[anchor.ew-metadata-placement]
+part = "03"
+section = "7"
+title = "Metadata placement"
+aliases = []
+
+[anchor.ew-metadata-tiers]
+part = "09"
+section = "2"
+title = "Tiers"
 aliases = []
 
 [anchor.ew-normative-language]
