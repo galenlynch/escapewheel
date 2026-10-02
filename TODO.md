@@ -225,9 +225,6 @@ natural.
   table rows the registry's rules expect of one — a larger change to the shared fixture than the
   checks it would cover. The validator's own tests cover every path. Worth revisiting when the
   fixture next needs an array for another reason.
-- **A second trials table from another paradigm** would settle whether an interval's task columns
-  belong in core. R54 struck the four Part 02 defined and nothing wrote, so the question is now about
-  what an extension carries rather than what core does.
 - **A nullable identifier's null has no stated meaning.** Nothing obliges an adapter to report a
   value it could not fill, since Part 12 §9's report is a MAY. So a consumer cannot tell
   `core.array_channels.electrode_id` null meaning *this channel maps to no contact* from null
