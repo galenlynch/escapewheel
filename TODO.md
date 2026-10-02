@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R158 accepted. R42 and R73 withdrawn. 2 proposals and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R158 accepted. R42 and R73 withdrawn. 1 proposal and 5 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -135,19 +135,25 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Two drafts await acceptance
+## 3a. Five drafts await acceptance
 
-The drafts are under `revisions/drafts/`. No proposal is open.
+The drafts are under `revisions/drafts/`, and `revisions/drafts/README.md` gives their order and
+each one's appraisal. One proposal is open, on a unit's name as its identity outside a packet.
 
-- **A build records a recipe without its credentials.** A draft, promoted 2026-10-01 and not
-  accepted. A build writes no credential it recognizes, records `[redacted]` in its place in the
-  recorded recipe, and may refuse the recipe instead. It also covers a credential inside a source
-  root wherever the build writes that root, which is wider than the request that prompted it. The
-  writer waits on it for root recognition and for the docstring of `recipe._storage_problems`.
-- **Core declares a catalog of sidecars.** A draft, promoted 2026-10-01 and not accepted; §3b
-  describes it. A sidecar is a file the packet asserts nothing through, its row states what it is
-  about in a nullable scope pair, a file a result was computed from is recorded as a source file,
-  and one file may be both. Its media type is an open column naming the IANA registry.
+- **A build records a recipe without its credentials.** A build writes no credential it
+  recognizes, records `[redacted]` in place of a member's value and a URI without the component,
+  and may refuse the recipe instead. The writer's changes are prepared on a branch and wait on
+  acceptance.
+- **Core declares a catalog of sidecars.** §3b describes it. A sidecar is a file the packet
+  asserts nothing through; `core.sidecars` is keyed on `resource_id`, a separate table states what
+  a sidecar is about, and its media type is an open column naming the IANA registry.
+- **A null producing run says the packet names none.** An array or event stream naming no
+  producing run says only that the packet names none, and three descriptions are reworded.
+- **A recipe accepts a discarded value by naming its column.** An `[overrides]` entry naming a
+  column releases a null column of a corresponding row, and a build refuses an entry that can
+  release nothing.
+- **Core declares a clock's transform in typed columns alone.** `core.clocks` drops
+  `transform_to_parent`, and Part 02 §5.2 stops counting core's `json_string` columns.
 
 ## 3b. A file the packet only indexes has no declaration
 
