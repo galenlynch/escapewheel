@@ -33,7 +33,7 @@ packet_root/
     aind_opto/        0.13.0.json.gz
     aind_unit_qc/     0.14.0.json.gz
     dynamic_foraging/ 0.16.0.json.gz
-    vr_foraging/      0.14.0.json.gz
+    vr_foraging/      0.15.0.json.gz
   tables/
     core/             sessions, subjects, session_experimenters, devices, probes, electrodes,
                       sorting_run_channels, unit_electrodes, coordinate_frames,
@@ -72,7 +72,7 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
     "aind_opto": {"role": "extension", "version": "0.13.0", "path": "registries/aind_opto/0.13.0.json.gz", "sha256": "…"},
     "aind_unit_qc": {"role": "extension", "version": "0.14.0", "path": "registries/aind_unit_qc/0.14.0.json.gz", "sha256": "…"},
     "dynamic_foraging": {"role": "extension", "version": "0.16.0", "path": "registries/dynamic_foraging/0.16.0.json.gz", "sha256": "…"},
-    "vr_foraging": {"role": "extension", "version": "0.14.0", "path": "registries/vr_foraging/0.14.0.json.gz", "sha256": "…"}
+    "vr_foraging": {"role": "extension", "version": "0.15.0", "path": "registries/vr_foraging/0.15.0.json.gz", "sha256": "…"}
   },
   "created_at": "…",
   "sessions": ["s001"],

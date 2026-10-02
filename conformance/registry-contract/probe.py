@@ -196,12 +196,12 @@ def _assert_ucum(documents: list[dict[str, Any]]) -> None:
         for column in table["columns"]
         if "unit" in column
     ]
-    assert len(units) == 65
+    assert len(units) == 66
     with patch("socket.socket", side_effect=AssertionError("network access is forbidden")):
         parser = get_ucum_parser()
         for unit in units:
             parse_ucum(unit, parser=parser)
-    print("ok    R126 parses 65 literal UCUM units offline")
+    print("ok    R126 parses 66 literal UCUM units offline")
 
     distribution = importlib.metadata.distribution("ucumvert")
     assert distribution.version == "0.3.2"

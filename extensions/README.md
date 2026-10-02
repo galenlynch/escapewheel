@@ -157,9 +157,10 @@ the source builds `[0.0] * n_channels` and fills the channels an odor is on. So 
 dense, and its zeros are load-bearing — a missing row means a channel the rig does not have, not a
 channel that was off.
 
-One unit is deliberately absent. `reward_probability` is declared `percentage` on a field named
-*probability*, and which of 0–1 or 0–100 is stored has not been checked against data. A wrong
-`unit` is worse than none, so it carries none until a real session settles it.
+`reward_probability` is declared `percentage` on a field named *probability*, so its unit was
+settled from data rather than the model. The raw `PatchStateAtReward.Probability` the column is
+taken from ranges from 0.099 to 1.0 over the latest sessions of five subjects, so it is a fraction
+and carries `unit = "1"`.
 
 ## Contract checks
 

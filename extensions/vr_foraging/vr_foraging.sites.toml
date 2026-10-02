@@ -114,7 +114,8 @@ type = "float64"
 presence = "nullable"
 role = "data"
 finite = true
-description = "Reward probability at delivery. Null where the reward was not sampled. No unit is declared: the model says percentage for a field named probability, and which of 0-1 or 0-100 is stored has not been checked against data."
+unit = "1"
+description = "Reward probability at delivery, a fraction from 0 to 1. Null where the reward was not sampled."
 
 [[columns]]
 name = "reward_available"
