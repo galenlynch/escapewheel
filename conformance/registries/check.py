@@ -3,6 +3,13 @@
 The tree's `check.py` decides everything the tree alone can. These need something it does not
 hold: the frozen v0.1 Part 02, and an engine to execute the Tier 2 rules of the core registry and
 every extension in the repository.
+
+    python conformance/registries/check.py [EXTENSION.json ...]
+
+An extension document named on the command line is checked in place of the repository's document
+with its `extension_id`, or beside them where none has it. A rule the reference validator cannot
+lower is reported apart from one that is invalid or does not execute: the rule is valid, and every
+packet binding it reports that rule incomplete (Part 11 §8).
 """
 
 import json
@@ -30,6 +37,12 @@ DDL = {
     "timestamp": "TIMESTAMPTZ",
     "json_string": "VARCHAR",
 }
+#: A valid rule the lowering cannot place a conversion in: a `USING` join of a `DECIMAL` with a
+#: `DOUBLE PRECISION` column, whose join condition is made by qualification and not authored.
+UNLOWERABLE = (
+    "SELECT x.k FROM (SELECT CAST(tick_rate_num AS DECIMAL(38,0)) AS k FROM core.clocks) AS x "
+    "INNER JOIN (SELECT transform_slope AS k FROM core.clocks) AS y USING (k)"
+)
 fail = []
 
 
@@ -46,9 +59,26 @@ def tables(document):
     return {name: entry["table"] for name, entry in document["resources"].items() if entry["kind"] == "table"}
 
 
+def evaluate(sql, document):
+    """Return None for a rule the engine runs as lowered, or the kind of failure and its message."""
+    try:
+        check_rule(sql, document, core_resources=CORE)
+        try:
+            lowered, unlowered = lower(sql, ALL), None
+        except LoweringFailed as failure:
+            # The authored text still shows whether the rule binds and executes.
+            lowered, unlowered = sql, ("unevaluable", str(failure))
+        connection.sql(lowered).fetchall()
+    except (RuleProfileError, duckdb.Error) as error:
+        return "broken", str(error).splitlines()[0][:70]
+    return unlowered
+
+
 CORE = json.loads((ARTIFACTS / "logical_schemas.json").read_text())
-EXTENSION_PATHS = [path for directory in EXTENSIONS for path in sorted(directory.glob("*.json"))]
-DOCUMENTS = [CORE, *(json.loads(path.read_text()) for path in EXTENSION_PATHS)]
+named = [json.loads(Path(argument).read_bytes()) for argument in sys.argv[1:]]
+replaced = {document["extension_id"] for document in named}
+shipped = [json.loads(path.read_text()) for directory in EXTENSIONS for path in sorted(directory.glob("*.json"))]
+DOCUMENTS = [CORE, *(d for d in shipped if d["extension_id"] not in replaced), *named]
 ALL = {name: table for document in DOCUMENTS for name, table in tables(document).items()}
 
 # The frozen v0.1 Part 02 and the accepted revisions derive the core table set independently.
@@ -68,15 +98,19 @@ for namespace in sorted({name.split(".", 1)[0] for name in ALL}):
 for name, table in ALL.items():
     columns = ", ".join(f'"{c["name"]}" {DDL[c["type"]]}' for c in table["columns"])
     connection.sql(f"CREATE TABLE {name} ({columns})")
-broken = []
+outcomes = {"broken": [], "unevaluable": []}
 for document in DOCUMENTS:
     for table in tables(document).values():
         for rule in table["rules"]:
-            try:
-                check_rule(rule["sql"], document, core_resources=CORE)
-                connection.sql(lower(rule["sql"], ALL)).fetchall()
-            except (RuleProfileError, LoweringFailed, duckdb.Error) as error:
-                broken.append((rule["id"], str(error).splitlines()[0][:70]))
-check("every Tier 2 rule conforms and executes against empty tables", broken)
+            outcome = evaluate(rule["sql"], document)
+            if outcome is not None:
+                outcomes[outcome[0]].append((rule["id"], outcome[1]))
+check("every Tier 2 rule conforms and executes against empty tables", outcomes["broken"])
+check("the reference validator can evaluate every Tier 2 rule as Part 11 defines it", outcomes["unevaluable"])
+outcome = evaluate(UNLOWERABLE, CORE)
+check(
+    "a valid rule the lowering refuses is reported as one the validator cannot evaluate",
+    [] if outcome is not None and outcome[0] == "unevaluable" else [outcome],
+)
 print(f"      {sum(len(t['rules']) for t in ALL.values())} rules checked against {len(ALL)} empty tables")
 raise SystemExit(1 if fail else 0)

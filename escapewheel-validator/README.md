@@ -158,6 +158,9 @@ value, a decimal literal, or an integer literal beyond `BIGINT` that converts to
 `DOUBLE PRECISION` is converted through its text, since DuckDB's own conversion does not always
 round to nearest, ties to even (Part 11 §4). Where the validator cannot place such a conversion
 in a rule's text, it reports the rule's evaluation as incomplete and does not run it (Part 11 §8).
+A `USING` join whose columns convert reaches it, as does a set operation whose exact result
+converts where a `UNION` sits under a `UNION ALL` or a member selects `*`. A registry's author
+learns of such a rule from `conformance/registries/check.py`, before any packet binds it.
 
 The two halves cooperate: the ordering scan compares neighbours, so where a table's sort begins
 with its primary key, duplicates must be adjacent and the same pass settles uniqueness. On 287

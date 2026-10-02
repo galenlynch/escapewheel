@@ -280,7 +280,7 @@ and those checks:
 | `tools/tree.py` | a tree that cannot regenerate itself alone, or a tree tool importing what the tree does not declare |
 | `tools/copies.py --check` | a package copy differing from the tree, or a package not admitting the tree's locked library |
 | `extensions/registries.py check` | an extension registry failing the contract or the conventions where it sits |
-| `conformance/registries/check.py` | a core table set departing from the Part 02 ledger, or a Tier 2 rule that does not execute |
+| `conformance/registries/check.py` | a core table set departing from the Part 02 ledger, a Tier 2 rule that does not execute, or a valid rule the reference validator cannot evaluate |
 | `fixtures/corpus.py` | a validator that stopped catching what it used to, or started catching what it should not |
 | `revisions/ledger.py` | an accepted clause with no disposition or an unresolved current-owner or registry target |
 | `spec/tools/build.py --check` | a file `build.py` writes that no longer reproduces its source; `check.py` makes the same comparison of each |

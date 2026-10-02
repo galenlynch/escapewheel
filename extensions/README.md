@@ -170,3 +170,8 @@ authoring conventions, with each directory's `conventions.toml` declaring its ex
 three inherited sorter names that intentionally depart from the integer naming convention
 (`rp_violations`, `num_negative_peaks`, and `num_positive_peaks`) are explicit checked exceptions
 rather than silent omissions.
+
+`conformance/registries/check.py` runs every rule against empty tables with the reference
+validator's engine, and takes an extension document as an argument to check it in place of the
+repository's. It reports apart a valid rule that validator cannot evaluate as Part 11 defines it:
+every packet binding the registry would report that rule incomplete (Part 11 §8).
