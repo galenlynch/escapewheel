@@ -93,7 +93,7 @@ def suspect_terminals(
     *,
     neighbours: int = NEIGHBOURS,
     interior: int = INTERIOR,
-) -> tuple[bool, bool, dict[str, float]]:
+) -> tuple[bool, bool, dict[str, float]] | None:
     """Apply R37 §3.2's test to a clock's first and last anchor.
 
     Each terminal anchor is predicted from the `neighbours` anchors on its inward side and
@@ -107,13 +107,15 @@ def suspect_terminals(
 
     Returns
     -------
-    tuple
+    tuple or None
         Whether to drop the first anchor, whether to drop the last, and the residuals in
-        parent ticks -- `first`, `last` and the `threshold` they were judged against.
+        parent ticks -- `first`, `last` and the `threshold` they were judged against. None
+        where the clock has too few anchors to give an interior distribution, so the test did
+        not run: a caller recording `False` for it would claim a comparison nobody made.
     """
     room = neighbours + 2
     if ticks.size < room + 2:
-        return False, False, {}
+        return None
     control = np.abs(
         [
             _predict(ticks[i], ticks[i + 1 : i + 1 + neighbours], parents[i + 1 : i + 1 + neighbours], 0) - parents[i]

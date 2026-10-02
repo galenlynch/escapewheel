@@ -279,7 +279,14 @@ def test_a_displaced_first_anchor_is_withheld():
 def test_too_short_a_train_is_not_judged():
     """Two anchors define no interior, so there is no distribution to be an outlier of."""
     ticks, parents = _train()
-    assert suspect_terminals(ticks[:5], parents[:5]) == (False, False, {})
+    assert suspect_terminals(ticks[:5], parents[:5]) is None
+
+
+def test_a_clock_too_short_to_test_is_left_out_of_the_record(source):
+    """Part 02 §12.6: null is a clock the test did not run on, so nothing may record `false` for it."""
+    anchors_of(source)
+    assert source.withheld == {}
+    assert len(coded(source.notes, NoteCode.ANCHOR_TEST_SKIPPED)) == len(coded(source.notes, NoteCode.ANCHORS_WRITTEN))
 
 
 # -- the reference clock's window ------------------------------------------------------

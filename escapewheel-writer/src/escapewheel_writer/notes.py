@@ -107,6 +107,8 @@ class NoteCode(StrEnum):
     NO_CLOCK_DECLARED = "no_clock_declared"
     #: A terminal anchor was withheld.
     ANCHOR_WITHHELD = "anchor_withheld"
+    #: A clock has too few anchors for the terminal-anchor test.
+    ANCHOR_TEST_SKIPPED = "anchor_test_skipped"
     #: The anchors a stream was given.
     ANCHORS_WRITTEN = "anchors_written"
     #: The reference alignment steps in phase.

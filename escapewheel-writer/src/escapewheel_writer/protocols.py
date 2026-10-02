@@ -110,7 +110,7 @@ class DeclaresCompensations(Protocol):
 class WithholdsAnchors(Protocol):
     """An adapter that tests each clock's terminal anchors (Part 02 §12.6)."""
 
-    #: Each clock the test examined, to an entry whose `anchors` lists `first`, `last` or neither and
+    #: Each clock the test ran on, to an entry whose `anchors` lists `first`, `last` or neither and
     #: whose `n_withheld` counts them.
     withheld: Mapping[str, Mapping[str, Any]]
 

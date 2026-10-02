@@ -244,7 +244,8 @@ class SyncSource:
         #: said once.
         self._epoch: datetime | None = None
         #: Clock ID to what the terminal-anchor test withheld from it, for the run's parameters. Every
-        #: clock aligned appears here, dropping nothing included (Part 02 §12.6).
+        #: clock the test ran on appears here, dropping nothing included; one with too few anchors to
+        #: test is absent, which is what leaves its two columns null (Part 02 §12.6).
         self.withheld: dict[str, dict[str, Any]] = {}
         #: Clock ID to phase steps found in the parent's alignment, for the run's parameters.
         #: Reported, never corrected: whether a step also moved the devices timestamped on the
@@ -589,12 +590,22 @@ class SyncSource:
         # below removes anchors: withholding one is a statement about how well its parent tick
         # is placed, not about whether the rig was running then.
         self._observed.append((int(parents[0]), int(parents[-1])))
-        drop_first, drop_last, residuals = suspect_terminals(ticks, parents)
+        tested = suspect_terminals(ticks, parents)
+        if tested is None:
+            self.notes.append(
+                Note(
+                    f"{stream.key}: {ticks.size} anchors are too few for the terminal-anchor test, "
+                    "so neither terminal was tested",
+                    NoteCode.ANCHOR_TEST_SKIPPED,
+                )
+            )
+        drop_first, drop_last, residuals = tested or (False, False, {})
         withheld = ["first"] * drop_first + ["last"] * drop_last
-        # Recorded for every clock, including the ones that dropped nothing (Part 02 §12.6): a count
-        # of zero is the evidence that the bound was sufficient, and a packet that says nothing
-        # is indistinguishable from one that never looked.
-        self.withheld[clock] = {"anchors": withheld, "n_withheld": len(withheld), **residuals}
+        if tested is not None:
+            # Recorded for every clock the test ran on, including the ones that dropped nothing
+            # (Part 02 §12.6): a count of zero is the evidence that the bound was sufficient, and
+            # a packet that says nothing is indistinguishable from one that never looked.
+            self.withheld[clock] = {"anchors": withheld, "n_withheld": len(withheld), **residuals}
         if drop_first or drop_last:
             kept = slice(1 if drop_first else None, -1 if drop_last else None)
             ticks, parents = ticks[kept], parents[kept]
