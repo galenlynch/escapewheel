@@ -1149,6 +1149,7 @@ note = "separate verdicts for core and each extension; moved from Part 05 §5.4 
 [clause."R57 §2.1"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description" }]
+note = "restored 2026-10-02; the recommendation that `$schema` come first was absent; R126 §3.2 requires the member, replacing the MAY and the SHOULD to emit it"
 
 [clause."R57 §2.3"]
 disposition = "rationale"
@@ -2127,7 +2128,7 @@ note = "restored 2026-10-02; the writer's obligation to name the run that produc
 [clause."R102 §3.2"]
 disposition = "applied"
 where = [{ part = "01", section = "3.18" }]
-note = "device_id on core.media_assets, int32 nullable, referencing core.devices; null where the source states none, and a consumer reports the instrument unrecorded rather than parsing the asset's name"
+note = "device_id on core.media_assets, int32 nullable, referencing core.devices; null where the source states none, and a consumer reports the instrument unrecorded rather than parsing the asset's name. restored 2026-10-02; the part said SHOULD of naming the device and did not state the prohibition on inferring it from a file name"
 
 [clause."R102 §3.3"]
 disposition = "applied"
@@ -2493,7 +2494,7 @@ note = "45 clauses named neither an actor nor the part they constrain: 8 whose s
 [clause."R111 §3.3"]
 disposition = "applied"
 where = [{ part = "00", anchor = "ew-specification-actors" }]
-note = "the roster itself -- writer, reader, checker, validator, consumer, and build/adapter/implementation resolving to them -- lands here as definitions carrying no modal, which is why only the rules that bind it are disposed. Every requirement binds an actor or states a property of an artifact, and an artifact predicate MUST name the part it constrains and put the constraint in an active verb -- a wall-clock column MUST NOT use INT96, over INT96 MUST NOT be used. Binds whoever writes this specification; a clause failing it is corrected rather than reported. Part 00 §2.4 states the rule in the indicative, and spec/CONTRIBUTING.md §4 and §10 carry the editor's duty"
+note = "the roster itself -- writer, reader, checker, validator, consumer, and build/adapter/implementation resolving to them -- lands here as definitions carrying no modal, which is why only the rules that bind it are disposed. Every requirement binds an actor or states a property of an artifact, and an artifact predicate MUST name the part it constrains and put the constraint in an active verb -- a wall-clock column MUST NOT use INT96, over INT96 MUST NOT be used. Binds whoever writes this specification; a clause failing it is corrected rather than reported. Part 00 §2.4 states the rule in the indicative, and spec/CONTRIBUTING.md §4 and §10 carry the editor's duty. The two drafting rules for an artifact predicate, naming the part constrained and using an active verb, are carried by spec/CONTRIBUTING.md §4 as editorial guidance and stated in no part"
 
 [clause."R111 §3.5"]
 disposition = "applied"
@@ -2887,7 +2888,7 @@ note = "decision domains and the revision process as the current owner of reposi
 [clause."R120 §3.2"]
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-decision-domains" }]
-note = "prospective domain and change-form metadata, process metadata, and exact legacy defaults. restored 2026-10-02; that withdrawn records remain unedited was absent"
+note = "prospective domain and change-form metadata, process metadata, and exact legacy defaults. restored 2026-10-02; that withdrawn records remain unedited was absent. The guide now also says what `stages.py` rejects and where it accepts the legacy default"
 
 [clause."R120 §3.3"]
 disposition = "applied"
@@ -2897,7 +2898,7 @@ note = "ordinary append-only amendments and reviewed structural revisions with a
 [clause."R120 §3.4"]
 disposition = "applied"
 where = [{ path = "revisions/CONTRIBUTING.md", anchor = "ew-stable-section-anchors" }]
-note = "canonical stable anchors and honest aliases for structurally affected sections. the guide's 'one honest primary successor' of a replaced or split section says what an alias marks, and `ledger.py`, `evidence.py`, `check_citations.py` and `impact.py` accept only canonical anchors"
+note = "canonical stable anchors and honest aliases for structurally affected sections. the guide's 'one honest primary successor' of a replaced or split section says what an alias marks, and `ledger.py`, `evidence.py`, `check_citations.py` and `impact.py` accept only canonical anchors. The guide now also says that a guide section named as a target carries a canonical anchor"
 
 [clause."R120 §3.5"]
 disposition = "applied"
@@ -3047,17 +3048,25 @@ note = "Part 11 owns the selected language, Part 02 owns its registry-level sele
 [clause."R125 §3.2"]
 disposition = "applied"
 where = [{ part = "11", anchor = "ew-tier-2-query-profile" }, { part = "11", anchor = "ew-tier-2-language-selection" }]
-note = "closed hybrid descriptor and admitted SQL query surface; R149 §3.3 renames the descriptor escapewheel-rule-sql-v0.2 and adds E021-04, and its exact data carries to the new identifier. restored 2026-10-02; what `iso_feature_dependencies` and `contract_clauses` mean was absent"
+note = "closed hybrid descriptor and admitted SQL query surface; R149 §3.3 renames the descriptor escapewheel-rule-sql-v0.2 and adds E021-04, and its exact data carries to the new identifier. restored 2026-10-02; what `iso_feature_dependencies` and `contract_clauses` mean was absent. Part 11 §1 gives every statement of §§2-8 its force on a validator claiming support, so the admitted surface is stated without a keyword of its own"
 
 [clause."R125 §3.3"]
 disposition = "applied"
-where = [{ part = "11", anchor = "ew-tier-2-relation-environment" }, { part = "11", anchor = "ew-tier-2-query-profile" }]
-note = "qualified registry relations, exact names, visibility, typed absence, and parsed dependencies"
+where = [
+  { part = "11", anchor = "ew-tier-2-relation-environment" },
+  { part = "11", anchor = "ew-tier-2-query-profile" },
+  { part = "11", anchor = "ew-tier-2-language-selection" },
+]
+note = "qualified registry relations, exact names, visibility, typed absence, and parsed dependencies. Part 11 §1 gives every statement of §§2-8 its force on a validator claiming support. A table exposes its declared columns and no others; an `optional` column a packet's table omits is not exposed, as Part 02 §10.2 has it"
 
 [clause."R125 §3.4"]
 disposition = "applied"
-where = [{ part = "11", anchor = "ew-tier-2-type-binding" }, { part = "11", anchor = "ew-tier-2-query-profile" }]
-note = "logical-to-SQL type binding and common-type semantics. restored 2026-10-02; that an exact-decimal literal compares with an exact numeric without rounding was absent"
+where = [
+  { part = "11", anchor = "ew-tier-2-type-binding" },
+  { part = "11", anchor = "ew-tier-2-query-profile" },
+  { part = "11", anchor = "ew-tier-2-language-selection" },
+]
+note = "logical-to-SQL type binding and common-type semantics. restored 2026-10-02; that an exact-decimal literal compares with an exact numeric without rounding was absent. Part 11 §1 gives every statement of §§2-8 its force on a validator claiming support. The general rule that an exact-to-approximate conversion rounds to nearest, ties to even, is stated only for an explicit cast"
 
 [clause."R125 §3.5"]
 disposition = "applied"
@@ -3205,32 +3214,38 @@ note = "portable result structure is incorporated as registry_result.schema.json
 [clause."R127 §3.2"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-checked-registry-context" }]
-note = "immutable in-process association binds exact input, result, capabilities, and extension core context"
+note = "immutable in-process association binds exact input, result, capabilities, and extension core context. restored 2026-10-02; the keywords on what a context retains, on using the decoded document of the same context, on reuse, and on what proves identity were absent"
 
 [clause."R127 §3.3"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-registry-conformance-boundary" }]
-note = "publication, production, validation, authoring, and check generation invoke the complete contract"
+note = "publication, production, validation, authoring, and check generation invoke the complete contract. restored 2026-10-02; the keywords on the byte-oriented and mapping-oriented entry points and on an implementation handed a registry document directly were absent"
 
 [clause."R127 §3.4"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-reader-registry-independence" }]
-note = "ordinary reader analysis remains independent of results, contexts, receipts, and the validator package"
+note = "ordinary reader analysis remains independent of results, contexts, receipts, and the validator package. restored 2026-10-02; the two permissions carried a lowercase 'may'. The clause's rule on the reference reader's dependencies is stated of that reader in the indicative"
 
 [clause."R127 §3.5"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-registry-producer-boundary" }]
-note = "producer and authoring boundaries proceed only from valid contexts and expose complete rejection results"
+where = [
+  { part = "05", anchor = "ew-registry-producer-boundary" },
+  { part = "05", anchor = "ew-validation-import-scope", note = "who the first paragraph binds" },
+]
+note = "producer and authoring boundaries proceed only from valid contexts and expose complete rejection results. restored 2026-10-02; every keyword of the clause was absent. Part 05 §1 now lists the first paragraph of §14.4 as binding every implementation. The permission to render a result for a person is carried by §14.6"
 
 [clause."R127 §3.6"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-validator-registry-boundary" }]
-note = "validators preserve all registry states and run derived checks only from valid contexts"
+note = "validators preserve all registry states and run derived checks only from valid contexts. restored 2026-10-02; the keywords on obtaining a result, on the core context supplied to an extension, on evaluating an extension under a non-valid core, and on a non-valid result were absent. 'MUST identify' the directing core context is not restated, since R130 leaves one bound core"
 
 [clause."R127 §3.7"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-registry-result-reporting" }]
-note = "reports pair each complete portable result with an external subject label"
+where = [
+  { part = "05", anchor = "ew-registry-result-reporting" },
+  { part = "02", anchor = "ew-registry-result-serialization", note = "diagnostic `detail`" },
+]
+note = "reports pair each complete portable result with an external subject label. restored 2026-10-02; every keyword of the clause was absent. The label rule binds a validator's report. Part 02 §9.5 states the rule on `detail`. The clause's last paragraph recorded the decision's effect when made and is stated in no part"
 
 [clause."R128 §3.1"]
 disposition = "applied"
@@ -3296,7 +3311,7 @@ where = [
   { part = "04", anchor = "ew-packet-manifest-conformance" },
   { part = "06", anchor = "ew-analysis-materialization-provenance" },
 ]
-note = "lineage policy applies by declaration to every resource kind; R130 §3.7 removed the producing-run policy"
+note = "lineage policy applies by declaration to every resource kind; R130 §3.7 removed the producing-run policy. restored 2026-10-02; the reader's duty to expose a resolved declaration's content class and lineage policy was a lowercase 'may' in Part 02 §2.7; Part 04 §10 now states it"
 
 [clause."R128 §3.8"]
 disposition = "applied"
@@ -3449,8 +3464,13 @@ note = "a reader checks decoding, repetition, member types, and the digest of a 
 
 [clause."R130 §3.9"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-validator-registry-boundary" }, { part = "05", anchor = "ew-registry-result-reporting" }, { part = "04", anchor = "ew-packet-manifest-conformance" }, { part = "09", anchor = "ew-extension-registration" }]
-note = "only bound registries that pass binding direct packet checks"
+where = [
+  { part = "05", anchor = "ew-validator-registry-boundary" },
+  { part = "05", anchor = "ew-registry-result-reporting" },
+  { part = "04", anchor = "ew-packet-manifest-conformance" },
+  { part = "09", anchor = "ew-extension-registration" },
+]
+note = "only bound registries that pass binding direct packet checks. restored 2026-10-02; the keywords on obtaining each bound registry's result and on a bound registry's label were absent"
 
 [clause."R130 §3.10"]
 disposition = "applied"
@@ -3933,7 +3953,7 @@ where = [{ part = "05", anchor = "ew-validation-shim" }]
 [clause."R146 §3.1"]
 disposition = "applied"
 where = [
-  { part = "05", anchor = "ew-validation-import-scope", note = "the four actors and the sections binding each" },
+  { part = "05", anchor = "ew-validation-import-scope", note = "the four actors and the sections binding each; the closing sentence also lists the first paragraph of §14.4 as binding every implementation, which R127 §3.5 decided" },
   { part = "05", anchor = "ew-conformance-classes", note = "a writer's obligations only" },
   { part = "05", anchor = "ew-writer-acceptance-criteria", note = "the criteria are necessary" },
   { part = "00", anchor = "ew-specification-actors" },
@@ -4058,6 +4078,7 @@ where = [
   { part = "11", anchor = "ew-tier-2-query-profile", note = "the routine, its spelling and its result domain" },
   { part = "11", anchor = "ew-tier-2-deterministic-semantics", note = "what it counts" },
 ]
+note = "Part 11 §1 gives the statements their force on a validator claiming support"
 
 [clause."R149 §3.3"]
 disposition = "applied"
