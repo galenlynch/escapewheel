@@ -234,9 +234,9 @@ natural.
   refuses rather than writing such a null, and the column is null in **0 of 1,152 and 0 of 960**
   rows of the two packets, so there is no instance to write a rule against. Worth a revision when
   something produces one.
-- **`core.media_frames.frame_index` order is unstated.** Presentation order is the near-certain
-  intent, but nothing says so, and a convention read two ways misaligns media against neural data
-  silently. `pts` and `dropped` need a real media import before they can be settled.
+- **`core.media_frames.dropped` has no stated meaning, and `pts` depends on an edit list.** Part 01
+  §3.18 makes `frame_index` presentation order, but no part says what `dropped` marks, and an MP4
+  whose edit list offsets its timeline gives a different `pts` to a reader that ignores the list.
 - **ADC-count amplitudes cannot be converted.** `core.units.amplitude_unit` may say ADC counts, and
   no gain is carried, so a packet alone cannot put them in physical units. Add a conversion when an
   importer needs one.
@@ -274,10 +274,10 @@ natural.
   in `revisions/audit/repairs/decisions.md`, which records each answer and the commit that entered
   it. Every choice took its preferred option on 2026-10-02 and the thirteen are entered.
   Decision 8, answered last, restored to Part 11 §4 the rule that every exact-to-approximate
-  conversion rounds to nearest, ties to even. Four choices became proposals, in
-  `revisions/proposals/`: the relation a consumer uses for a unit outside its packet, whether
-  `[overrides]` resolves a discarded fact, removing `core.clocks.transform_to_parent`, and what a
-  null `processing_run_id` on an array states.
+  conversion rounds to nearest, ties to even. Four choices became revisions: R161 (what a null
+  `processing_run_id` states), R162 (`[overrides]` resolves a discarded fact), R163 (removing
+  `core.clocks.transform_to_parent`) and R164 (the relation a consumer uses for a unit outside its
+  packet).
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
