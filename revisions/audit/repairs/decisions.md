@@ -20,9 +20,9 @@ through the revision process and needs its own acceptance.
 
 ## Answered on 2026-10-02
 
-Every decision but the eighth took its preferred option. Decision 8 is open: the rounding rule is
-the correct one and the reference engine does not meet it, so its entry below states the options
-again with what was measured.
+Every decision took its preferred option. The eighth was left open on a first pass, since the
+reference engine does not meet the rounding rule it restores, and took its preferred option the
+same day once its entry stated the options again with what was measured.
 
 | decision | answer | entered by |
 |---:|---|---|
@@ -33,23 +33,24 @@ again with what was measured.
 | 5 | the eleven further §14 sentences are repaired with the entries | `b5696685` |
 | 6 | one unchecked label under the §14 heading | `b5696685` |
 | 7 | one §1 sentence gives Part 11 §§2 to 8 their force | `b5696685` |
-| 8 | open | — |
+| 8 | Part 11 §4 states the rounding rule, and the validator converts a decimal to an approximate domain through its text | `8e85aced`, `f3891eb1` |
 | 9 | the validator interpolates `PERCENTILE_CONT` in binary64 | `0e0256b4` |
 | 10 | Part 11 §3 is reworded | `b5696685` |
 | 11 | the style guide states both drafting rules | `5f558363` |
 | 12 | a writer MUST name a media asset's device where its source states one | `b5696685` |
 | 13 | a reader exposes a resource's content class and lineage policy | `b5696685` |
 | 14 | Part 02 §9.2 recommends that a registry document carry `$schema` first | `b5696685` |
-| 15 | the reading of a null changes what a consumer concludes, so it is proposed as a revision | proposal `a-null-producing-run-on-an-array-says-the-packet-names-none.md` |
+| 15 | the reading of a null changes what a consumer concludes, so it is proposed as a revision | draft `a-null-producing-run-on-an-array-says-the-packet-names-none.md` |
 | 16 | nothing is owed: the ledger note on R53 §2.3.1 already records it | — |
 | 17 | proposed | proposal `a-unit-is-identified-outside-its-packet-by-its-name.md` |
-| 18 | proposed | proposal `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` |
-| 19 | proposed | proposal `core-declares-a-clocks-transform-in-typed-columns-alone.md` |
+| 18 | proposed | draft `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` |
+| 19 | proposed | draft `core-declares-a-clocks-transform-in-typed-columns-alone.md` |
 | 20 | the draft was accepted as R157 | `bb3cae24` |
 | 21 | the guide states both sentences | `5f558363` |
 
-The four proposals are in `revisions/proposals/` and none is promoted. `e60b54e0` added the ledger
-notes for the rules the commits above entered.
+Three of the four were promoted and are drafts in `revisions/drafts/`; the unit-name proposal is in
+`revisions/proposals/`. `e60b54e0` added the ledger notes for the rules the commits above entered,
+and `8e85aced` carries its own.
 
 ## Applied on 2026-10-02 without a decision
 
@@ -187,7 +188,7 @@ entries alone would add actorless requirements and weaken 31 neighbouring senten
 ### 8. Restore the rounding rule the reference engine does not meet
 
 - **Entry:** C21 (R125 §3.4).
-- **Status:** open. The preferred option was not taken on 2026-10-02.
+- **Status:** answered with option 1 on 2026-10-02, after a first pass that day left it open.
 - **Context:** "every exact-to-approximate conversion MUST use round-to-nearest, ties-to-even" is
   missing from Part 11 §4, not merely unkeyworded. §4 states that rounding for an explicit cast to
   `DOUBLE PRECISION`, so the missing sentence adds only the implicit conversion of §5, where an
@@ -196,17 +197,56 @@ entries alone would add actorless requirements and weaken 31 neighbouring senten
   rounded conversion and the only rule that gives one result for each value; ISO SQL leaves the
   rounding implementation-defined. DuckDB 1.5.5 departs from it by rounding twice, which is an
   accuracy defect of one unit in the last place and no rule a part could state instead.
-- **Where DuckDB 1.5.5 departs:**
-  - `INTEGER` and `BIGINT` values convert correctly, as do `DECIMAL(38,0)` values up to 2^64.
+- **Where DuckDB 1.5.5 departs,** as measured before the answer, converting to
+  `DOUBLE PRECISION`:
+  - `INTEGER` and `BIGINT` values convert correctly, as do `DECIMAL(38,0)` values from 0 to 2^64.
   - Above 2^64 the errors cluster by magnitude: 245 of 1,500 values of 65 bits, 6 of 1,500 of 70
     bits, 77 of 1,500 of 120 bits, and none from 80 to 110 bits. Mixed widths gave the 72 of
     3,000 first recorded.
   - A decimal literal of 15 or fewer significant digits converts correctly. Of 1,000 literals
-    each, 52 of 16 digits, 271 of 17, 260 of 18 and 248 of 19 were wrong, each by one unit in the
-    last place; some 25-digit literals were wrong by two.
+    each with every significant digit after the point, 52 of 16 digits, 271 of 17, 260 of 18 and
+    248 of 19 were wrong, each by one unit in the last place; some 25-digit literals were wrong
+    by two.
   - A conversion through text, `CAST(CAST(x AS VARCHAR) AS DOUBLE)`, was correct in every case
     tried, so a lowering can meet the rule.
   - No shipped rule converts a `DECIMAL` above 2^64 or writes a literal of 16 or more digits.
+- **As entered.** Part 11 §4 states the rule after its common-type rules. The validator converts
+  through its text every `DECIMAL` value, decimal literal and integer literal beyond `BIGINT`
+  that a rule converts to `REAL` or `DOUBLE PRECISION`, whether by an explicit cast, a
+  comparison, an arithmetic operator, `BETWEEN`, `IN`, `COALESCE`, `CASE`, a set operation or
+  the ordering value of `PERCENTILE_CONT`. It leaves `INTEGER` and `BIGINT` values to the engine.
+  A rule in which it cannot place a conversion is reported incomplete under Part 11 §8 and is not
+  run. Eight vectors in `conformance/rule-language/vectors.json` fail on the engine's own
+  conversion and pass on the query the validator gives it.
+- **Remeasured on the query the validator gives the engine,** DuckDB 1.5.5, each value added to
+  a zero of the target domain and compared with the correctly rounded value. No result was wrong
+  in any population below; the counts are the engine's own conversion of the same values.
+  - `INTEGER` and `BIGINT` to either domain: none of 1,500 each.
+  - `DECIMAL(38,0)` to `DOUBLE PRECISION`, 1,500 values of each bit length: none of 53, 60 or 64
+    bits, 220 of 65, 8 of 70, none of 80, 90, 100 or 110, 92 of 120 and 1 of 126. Of 3,000 values
+    with a bit length drawn uniformly from 1 to 126, 22.
+  - Negative `DECIMAL(38,0)` to `DOUBLE PRECISION`, 1,500 each: none of 40 or 53 bits, 373 of 54,
+    383 of 55, 183 of 56, 57 of 58, 8 of 60, 3 of 62, 1 of 63, none of 64, 238 of 65, 9 of 70,
+    none of 100 and 102 of 120. The engine's conversion is therefore correct from -2^53 to 2^64
+    and not from 0 alone.
+  - `DECIMAL(38,0)` to `REAL`, the non-negative values of the eleven bit lengths above: none.
+  - An integer literal beyond `BIGINT`, which the engine holds in a 128-bit integer domain, to
+    `DOUBLE PRECISION`, 1,500 each: 263 of 65 bits, 1 of 70, none of 100, 83 of 120 and 3 of 126.
+  - A decimal literal to `DOUBLE PRECISION`, 1,000 of each digit count. With every digit after
+    the point: none of 15 digits, 57 of 16, 286 of 17, 250 of 18, 287 of 19, 584 of 25, where
+    the largest error was two units in the last place, 305 of 30 and none of 38. With one digit
+    before the point: none of 15, 3 of 16, 63 of 17, 67 of 18, 48 of 19, 71 of 25, 88 of 30 and
+    56 of 38. With the point placed uniformly: none of 16, 8 of 17, 16 of 18, 11 of 19, 15 of
+    25, 5 of 30 and 6 of 38.
+  - A decimal literal to `REAL`, 1,000 of each digit count with one digit before the point: none
+    of 5 digits, 43 of 8, 52 of 10, 52 of 15, 60 of 16 and 55 to 78 from 17 to 38. A literal of
+    15 or fewer digits therefore converts correctly to `DOUBLE PRECISION` only.
+- **Shipped rules.** The validator changes the query of three of the 139: the ordering value and
+  the compared gap of `core.clock_anchors.gap_within_bound`, and the literals `1.0` and `0.5` of
+  `core.sessions.alignment_bound_at_least_default` and
+  `aind_unit_qc.metrics.amplitude_cutoff_is_bounded`. The engine converts those literals
+  correctly, so an outcome can differ only for a gap between two anchors below -2^53 or above
+  2^64 ticks.
 - **The defect exists either way.** The explicit-cast sentence already requires the rounding, and
   `TODO.md` records that the reference validator does not meet it.
 - **Options:**

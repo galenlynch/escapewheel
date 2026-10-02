@@ -291,9 +291,9 @@ natural.
   not owed. On 2026-10-02 twelve of the 25 were entered, with the confirmed ledger targets,
   dispositions and notes. The other thirteen, twelve of them in Part 05 §14, waited on the choices
   in `revisions/audit/repairs/decisions.md`, which records each answer and the commit that entered
-  it. Every choice but one took its preferred option on 2026-10-02 and the thirteen are entered.
-  Decision 8 is open: whether Part 11 §4 restores the rounding rule for an implicit conversion,
-  which the reference engine does not meet. Four choices became proposals, in
+  it. Every choice took its preferred option on 2026-10-02 and the thirteen are entered.
+  Decision 8, answered last, restored to Part 11 §4 the rule that every exact-to-approximate
+  conversion rounds to nearest, ties to even. Four choices became proposals, in
   `revisions/proposals/`: the relation a consumer uses for a unit outside its packet, whether
   `[overrides]` resolves a discarded fact, removing `core.clocks.transform_to_parent`, and what a
   null `processing_run_id` on an array states.
@@ -307,11 +307,13 @@ every name-minting adapter accepts `prefix`, and every store-reading adapter acc
 and keeps store objects as Part 12 §10 requires.
 
 The audit's critical reading found six implementation defects, and
-`revisions/audit/applied-targets.md` lists them with the text findings beside them. Three are
+`revisions/audit/applied-targets.md` lists them with the text findings beside them. Four are
 fixed: the writer checks an extension registry registered as a file path from its bytes,
-`escapewheel import` writes the result of the registry it rejects, and the validator interpolates
-`PERCENTILE_CONT` in binary64. Three remain, with a fourth found while the sidecar draft was
-appraised and a fifth while the credential draft was.
+`escapewheel import` writes the result of the registry it rejects, the validator interpolates
+`PERCENTILE_CONT` in binary64, and it converts a `DECIMAL` value or literal to an approximate
+domain through its text, which rounds to nearest, ties to even, as Part 11 §4 requires. Two
+remain, with a third found while the sidecar draft was appraised and a fourth while the credential
+draft was.
 
 - **A sampled run's `code_uri` is not the recipe file's digest.** `Recipe.with_sample` recomputes
   the digest over a serialization of the decoded recipe with the cap added, so a sampled run and a
@@ -319,10 +321,6 @@ appraised and a fifth while the credential draft was.
   says nothing of a sampled run. Where the recorded recipe withholds a value, that digest also
   covers a form a reader can nearly rebuild from `parameters`. Whether a sampled run should digest
   the file is undecided.
-- **The validator's `DECIMAL` to `DOUBLE PRECISION` conversion is the engine's.** It is not always
-  rounded to nearest, ties to even, as Part 11 §4 requires of an explicit cast. Decision 8 of
-  `revisions/audit/repairs/decisions.md` records where the engine departs and that a conversion
-  through text meets the rule.
 - **`refuse_a_discarded_fact` never reads `[overrides]`,** and its message names that resolution.
   The rule itself waits on a revision.
 - **`spec/tools/check.py` prints outcome lines for a non-valid core registry** and offers no
