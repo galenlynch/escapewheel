@@ -62,18 +62,28 @@ R100 to R124, 42 from R125 to R129, and 1 from R130 onward.
 Each row is one rule of an accepted revision that no part states with the revision's force. The
 class says what kind of repair the rule needs.
 
-The `repairs/` directory beside this file holds one file per class, with each rule's current
-text, proposed text, placement and risk, and a fifth file for the disputed rules.
-
 | class | rules | meaning |
 |---|---:|---|
-| A | 35 | The sentence is absent. Restoring it contradicts nothing a part or a later revision says. |
-| B | 37 | The sentence is present with a weaker keyword, no keyword, or a narrower scope, in a section whose other rules carry keywords. |
+| A | 27 | The sentence is absent, and restoring it survived a third reading. |
+| B | 29 | The sentence is present with a weaker keyword, no keyword, or a narrower scope, and restoring its force survived a third reading. |
 | C | 22 | The sentence is present in the indicative, in a section that states every rule in the indicative: Part 05 §14.1 to Part 05 §14.6 (17 rules) and Part 11 §2 to Part 11 §4 (5 rules). |
-| D | 17 | Restoring the revision's words would meet a later text, an unanswered question, or a rule no named actor can follow. The table after this one says which. |
+| D | 31 | Restoring the revision's words would meet a later text, an unanswered question, a rule no named actor can follow, or behaviour the reference implementation does not have. |
+| F | 2 | Other sentences already carry the rule with force, so the part should not state it again. |
 
-The second reading notes of thirteen class A and B rules that no check would observe the restored
-requirement; each binds a named actor who can comply.
+The 72 rules first classed A or B had a third reading, which tried to show each restoration to be a
+mistake. It tested whether a later revision changed the rule, whether the text contradicts or
+exceeds anything, whether it names an actor who can comply, whether a check observes it, whether it
+sits in the part that owns it, and whether the reference implementation and the corpus comply. Ten
+restorations passed as first worded and 46 passed with different wording, actor, scope or placement.
+Fourteen were referred to class D and two to class F. Classes C and D have had no third reading.
+
+Of the 56 class A and B rules, 32 would be requirements no check observes, 28 of them a MUST or
+MUST NOT; each binds a named actor who can comply and is to be labelled as unchecked.
+
+The `repairs/` directory beside this file holds one file per class, with each rule's current text,
+the text to enter, its placement and the evaluation, and a file for the disputed rules. The class D
+table below covers the 17 rules first classed D; `repairs/D2-referred-from-A-and-B.md` states the
+choice for each of the 14 referred later.
 
 ### What each class D rule meets
 
@@ -99,7 +109,7 @@ requirement; each binds a named actor who can comply.
 
 | clause | section | found | class | rule as the revision states it |
 |---|---|---|---|---|
-| R2 §5 | Part 02 §6 (Presence), directly after the presence table | weakened | B | a reader MUST tolerate an absent `optional` column |
+| R2 §5 | the core registry | weakened | D | a reader MUST tolerate an absent `optional` column |
 | R3 §3.0 | Part 02 §5.2 | weakened | D | multiplicity rule: a field that is zero or more X MUST be a child table keyed on the parent's primary key plus the value; never a list, a delimited string or JSON |
 | R3 §3.4 | the core registry | missing | D | `core.clocks.transform_to_parent` is replaced by the typed columns |
 | R3 §5.1 | Part 03 §6.2 | weakened | B | readers MUST NOT assume their language presents axes in declared order; a column-major binding enumerates them in reverse |
@@ -112,16 +122,16 @@ requirement; each binds a named actor who can comply.
 | R27 §5.3 | Part 01 §3.9 | missing | A | between two anchors separated by at most 2m (m the clock's median anchor interval) the mapping is linear interpolation on the bracketing pair |
 | R27 §5.3 | Part 01 §3.9 | missing | A | beyond the terminal anchors a consumer MUST use the rate fitted over the clock's full anchor sequence and MUST NOT extend the terminal segment's slope |
 | R27 §5.3 | Part 01 §3.9 | missing | A | the bound applies per edge of the parent chain, each edge against its own m |
-| R30 §4 | Part 06 §4 (ew-analysis-spike-events), in the paragraph 'Rows are not preserved' | weakened | B | a consumer MUST NOT assume the two tables are row-aligned or that a count from one applies to the other |
-| R32 §4 | Part 05 §15.1 | weakened | B | the amended manifest MUST be derived from the superseded one: every packet-level field the amendment does not change MUST carry over unchanged |
+| R30 §4 | the core registry | weakened | B | a consumer MUST NOT assume the two tables are row-aligned or that a count from one applies to the other |
+| R32 §4 | Part 05 §15.1 | weakened | D | the amended manifest MUST be derived from the superseded one: every packet-level field the amendment does not change MUST carry over unchanged |
 | R32 §4 | Part 05 §15.1 | missing | A | `created_at` is the packet's creation and MUST be preserved by an amendment; `validation.validated_at` is replaced |
-| R35 §5 | Part 05 §15.4 | weakened | B | a check meeting neither condition MAY be skipped |
+| R35 §5 | Part 05 §15.4 | weakened | D | a check meeting neither condition MAY be skipped |
 | R36 §2.3 | Part 04 §5.3 | weakened | B | level 3a establishes that the URI resolves, that `size_bytes` holds, and that the declared `codecs` match the metadata document |
 | R36 §2.3 | Part 04 §5.3 | missing | A | a validator offering level 3 MUST offer 3a and MAY offer 3b |
 | R36 §2.3 | Part 04 §5.3 | weakened | B | a validator MUST NOT run the digest level unless separately asked |
 | R37 §3.1 | Part 01 §3.9 | missing | A | beyond the terminal anchors a consumer MUST compute parent(t) = parent(a) + rate * (t - a), with `a` the nearest terminal anchor and `rate` fitted over that clock's anchors |
 | R37 §3.1 | Part 01 §3.9 | missing | A | a consumer MUST NOT use the intercept of a fit over the whole anchor sequence |
-| R37 §3.2 | Part 02 §12.6 | missing | A | a writer MUST NOT emit an anchor whose parent tick it has reason to believe is misplaced |
+| R37 §3.2 | Part 02 §12.6 | missing | D | a writer MUST NOT emit an anchor whose parent tick it has reason to believe is misplaced |
 | R37 §3.2 | Part 02 §12.6 | missing | A | a writer SHOULD test each terminal anchor by predicting it from a fit over its neighbours and comparing the residual with the distribution of the same residual over that clock's interior anchors |
 | R38 §2.3 | Part 01 §2.3 | missing | A | a clock's own interval is not derived from what it recorded either: it is the extent of the acquisition |
 | R45 §2.1 | Part 01 §2.3 | weakened | B | a consumer MUST NOT treat a stop_tick as excluded |
@@ -133,7 +143,7 @@ requirement; each binds a named actor who can comply.
 | R68 §2.5 | Part 01 §3.18 | weakened | B | A consumer MUST NOT use pts to measure elapsed time or to align a frame to anything else in the packet |
 | R69 §2.2 | Part 01 §3.18 | weakened | B | a consumer MUST NOT read frame_index as a count of exposures, a camera's own frame counter, or an offset into anything but this asset |
 | R70 §2.2 | Part 01 §3.18 | missing | A | a writer MUST declare neither rate column where it wrote no pts |
-| R80 §2.1 | Part 04 §5.5 | weakened | B | an external resource entry SHOULD carry source, naming the body of data it belongs to, where its bytes belong to a nameable one |
+| R80 §2.1 | Part 04 §5.5 | weakened | D | an external resource entry SHOULD carry source, naming the body of data it belongs to, where its bytes belong to a nameable one |
 | R80 §2.1 | Part 04 §5.5 | weakened | B | where source is present the entry's uri MUST be a path relative to the source and MUST NOT be absolute |
 | R80 §2.1 | Part 04 §5.5 | missing | A | a source name SHOULD be unique beyond the packet, so one resolution document serves many packets |
 | R80 §2.2 | Part 04 §5.5 | missing | A | a reader MUST NOT dereference the document's $schema |
@@ -144,10 +154,10 @@ requirement; each binds a named actor who can comply.
 | R82 §2.3 | Part 05 §12 | weakened | B | a consumer that meets an unresolved alternative is holding a packet that failed validation and MUST report that |
 | R85 §2.3 | Part 01 §3.5 | weakened | B | a consumer MUST NOT read two rows sharing a parent and a port as one device |
 | R87 §2.3 | Part 05 §3.5 | missing | A | a field an override covers is reported as information, so the log lists every place the recipe corrects a source |
-| R88 §2.4 | Part 02 §7.1 | missing | A | every dependent row (a sorting run, a curation version, a coordinate, a run input) references the copy of the run for its own session |
+| R88 §2.4 | Part 02 §7.1 | missing | D | every dependent row (a sorting run, a curation version, a coordinate, a run input) references the copy of the run for its own session |
 | R91 §3.3 | Part 01 §3.12 | weakened | D | a stream whose events carry marks MUST name the table holding them through detail_kind |
 | R91 §3.3 | Part 02 §8.6 | missing | A | a writer MUST NOT put a mark in core.events.metadata |
-| R101 §3.9 | Part 02 §9.3 | missing | A | a writer MUST map the source's spelling onto one of the four values |
+| R101 §3.9 | Part 02 §9.3 | missing | D | a writer MUST map the source's spelling onto one of the four values |
 | R102 §3.1 | Part 01 §3.17 | missing | D | an array a run produced MUST name that run; an acquired array declares none |
 | R102 §3.2 | Part 01 §3.18 | weakened | D | a writer MUST name the device where its source states one |
 | R105 §3.4 | Part 01 §3.24 | missing | A | an axis's `unit` MUST be declared |
@@ -155,23 +165,23 @@ requirement; each binds a named actor who can comply.
 | R108 §3.3 | Part 05 §3.4 | weakened | D | an `[overrides]` entry naming a fact MUST silence the discarded-fact refusal for that fact |
 | R111 §3.3 | Part 00 §2.4 | missing | D | a clause stating a property of an artifact MUST name the part of the artifact it constrains |
 | R111 §3.3 | Part 00 §2.4 | missing | D | a clause stating a property of an artifact MUST put the constraint in an active verb |
-| R115 §3.1 | Part 12 §7 (ew-adapter-declaration-document), with the other member meanings; Part 05 §3.4 keeps the ordering sentence | weakened | B | an adapter MUST declare the kinds whose output it reads, which orders a build |
-| R115 §3.10 | Part 05 §4.4 | weakened | B | a build MUST refuse where a resource of the set did not arrive or the process did not exit clean |
-| R115 §3.11 | Part 12 §9 (ew-adapter-run-report), after the paragraph on which channel carries a report | missing | A | an adapter MAY attach one `problems` entry to a failing `flight-v0.1` call in the error's `extra_info` |
-| R115 §3.11 | Part 12 §9 (ew-adapter-run-report), with finding 96's sentence | missing | A | a build MUST NOT refuse a failure whose `extra_info` it cannot parse, and reports the message alone |
-| R115 §3.11 | Part 12 §9 (ew-adapter-run-report), with findings 96 and 97; or Part 12 §3's `flight-v0.1` row | missing | A | a build MUST ignore `app_metadata` on `FlightInfo`, which carries no finding |
-| R115 §3.3 | Part 12 §3 (ew-protocol-groups), ahead of the sentence on an adapter released independently of a build | missing | A | a writer MUST NOT require any adapter to be importable in its own environment |
+| R115 §3.1 | the core registry | weakened | B | an adapter MUST declare the kinds whose output it reads, which orders a build |
+| R115 §3.10 | Part 05 §4.4 | weakened | D | a build MUST refuse where a resource of the set did not arrive or the process did not exit clean |
+| R115 §3.11 | the core registry | missing | D | an adapter MAY attach one `problems` entry to a failing `flight-v0.1` call in the error's `extra_info` |
+| R115 §3.11 | the core registry | missing | D | a build MUST NOT refuse a failure whose `extra_info` it cannot parse, and reports the message alone |
+| R115 §3.11 | the core registry | missing | A | a build MUST ignore `app_metadata` on `FlightInfo`, which carries no finding |
+| R115 §3.3 | the core registry | missing | A | a writer MUST NOT require any adapter to be importable in its own environment |
 | R115 §3.4 | Part 05 §3.7 | weakened | B | a build MUST consume standard output and standard error concurrently |
-| R115 §3.7 | Part 12 §5 (ew-referenced-resource-delivery), after the sentence on identifiers crossing as names | missing | A | a writer SHOULD report what resolving those names cost, as a figure of its own rather than as a comparison |
-| R115 §3.9 | Part 12 §3 (ew-protocol-groups), as a closing paragraph; the ledger targets Part 12 §8 (ew-reaching-a-running-adapter), whose subject is the rendezvous | missing | A | a writer SHOULD ship an implementation of each protocol its profile names, covering both ends, and whoever speaks one MAY use it rather than write their own |
-| R115 §3.9 | Part 12 §3 (ew-protocol-groups), with finding 103's sentence | missing | A | a profile MUST NOT make using that implementation a condition of conformance, and a build MUST NOT refuse an adapter that speaks a protocol without it |
+| R115 §3.7 | the core registry | missing | D | a writer SHOULD report what resolving those names cost, as a figure of its own rather than as a comparison |
+| R115 §3.9 | the core registry | missing | D | a writer SHOULD ship an implementation of each protocol its profile names, covering both ends, and whoever speaks one MAY use it rather than write their own |
+| R115 §3.9 | the core registry | missing | A | a profile MUST NOT make using that implementation a condition of conformance, and a build MUST NOT refuse an adapter that speaks a protocol without it |
 | R122 §3.8 | Part 00 §2.1 | weakened | B | the numbered part set MUST remain intelligible without repository-specific developer documentation |
 | R123 §3.1 | Part 02 §12.1 | weakened | D | outside the packet, a consumer MUST use the source-facing relation Part 02 §12.1 defines rather than treating the packet-assigned number as globally stable |
-| R125 §3.2 | Part 11 §2 (ew-tier-2-query-profile) | weakened | C | `ABS`, `MIN`, `MAX`, and `LAG` MUST return their argument's domain; `COALESCE` its arguments' common domain; `CAST` its target domain; `COUNT`, `ROW_NUMBER`, and `DENSE_RANK` `BIGINT`; `PERCENTILE_CONT` `DOUBLE PRECISION`; a comparison, predicate, Boolean operator, `isnan`, or `isfinite` `BOOLEAN` |
-| R125 §3.3 | Part 11 §3 (ew-tier-2-relation-environment) | weakened | C | each visible registry table MUST expose exactly its declared columns under the type mapping |
-| R125 §3.3 | Part 11 §3 (ew-tier-2-relation-environment) | weakened | C | a resource absent from the packet MUST bind as an empty relation with that declared shape |
-| R125 §3.4 | Part 11 §4 (ew-tier-2-type-binding) | weakened | C | every exact-to-approximate conversion MUST use round-to-nearest, ties-to-even |
-| R125 §3.4 | Part 11 §4 (ew-tier-2-type-binding) | weakened | C | an integer, scale-zero decimal or other exact-decimal literal MUST compare with an exact-decimal literal by mathematical value without rounding |
+| R125 §3.2 | the core registry | weakened | C | `ABS`, `MIN`, `MAX`, and `LAG` MUST return their argument's domain; `COALESCE` its arguments' common domain; `CAST` its target domain; `COUNT`, `ROW_NUMBER`, and `DENSE_RANK` `BIGINT`; `PERCENTILE_CONT` `DOUBLE PRECISION`; a comparison, predicate, Boolean operator, `isnan`, or `isfinite` `BOOLEAN` |
+| R125 §3.3 | the core registry | weakened | C | each visible registry table MUST expose exactly its declared columns under the type mapping |
+| R125 §3.3 | the core registry | weakened | C | a resource absent from the packet MUST bind as an empty relation with that declared shape |
+| R125 §3.4 | the core registry | weakened | C | every exact-to-approximate conversion MUST use round-to-nearest, ties-to-even |
+| R125 §3.4 | the core registry | weakened | C | an integer, scale-zero decimal or other exact-decimal literal MUST compare with an exact-decimal literal by mathematical value without rounding |
 | R126 §3.3 | Part 02 §9.4 | weakened | B | the same precedence MUST determine a partially evaluated phase's state from its outcome records |
 | R126 §3.9 | Part 02 §9.4 | missing | D | a checker without the exact required domain MUST report the external-domain phase as unsupported rather than accept a printable approximation |
 | R127 §3.2 | Part 05 §14.1 | weakened | C | an implementation authorized by a valid result to produce packet bytes or registry-derived checks MUST use the decoded document in the same checked context, not reread the source or use the caller's mapping |
@@ -196,19 +206,19 @@ requirement; each binds a named actor who can comply.
 | R128 §3.4 | Part 02 §2.6 | weakened | B | `resource_id_column` MUST name a required string column with role `identifier`, identity `carried`, and free vocabulary |
 | R128 §3.5 | Part 02 §2.5 | weakened | B | `analysis`, `compatibility_projection`, and `documentation` declarations MUST be optional |
 | R128 §3.7 | Part 02 §2.7 | weakened | D | a reader MUST expose the resolved policy and content class without requiring a validation receipt for ordinary access |
-| R128 §3.8 | Part 12 §5 (ew-referenced-resource-delivery) | weakened | B | a writer MUST preserve the delivered declaration binding when it creates the packet entry and MUST reject a document whose binding does not resolve or does not admit the resource ID |
-| R128 §3.8 | Part 04 §9 (ew-packet-validation-block); the ledger target Part 04 §4.1 does not hold the sentence | weakened | B | a packet resource's validation state MUST NOT change its declaration-derived content class or canonicality |
-| R129 §3.1 | Part 03 §1 (ew-portable-profile-scope) | weakened | D | a generic profile checker MUST enforce those invariants without embedding this profile's identifiers or assignments |
-| R129 §3.1 | Part 03 §1 (ew-portable-profile-scope) | missing | A | the generic checker MUST require every listed anchor to resolve uniquely in Part 03 to the clause that defines the entry's meaning |
-| R129 §3.11 | Part 03 §6.5 | weakened | B | those physical facts MUST NOT be duplicated merely to make physical validation possible |
-| R129 §3.3 | Part 03 §5.1 | weakened | B | a writer MUST NOT emit such a table, and a validator that can inspect the resource MUST reject one |
-| R129 §3.4 | Part 03 §6.1 | weakened | B | a reader or validator MUST determine the variant from the Zarr metadata's `zarr_format` when it accesses or physically assesses the resource |
+| R128 §3.8 | the core registry | weakened | B | a writer MUST preserve the delivered declaration binding when it creates the packet entry and MUST reject a document whose binding does not resolve or does not admit the resource ID |
+| R128 §3.8 | the core registry | weakened | B | a packet resource's validation state MUST NOT change its declaration-derived content class or canonicality |
+| R129 §3.1 | the core registry | weakened | D | a generic profile checker MUST enforce those invariants without embedding this profile's identifiers or assignments |
+| R129 §3.1 | the core registry | missing | A | the generic checker MUST require every listed anchor to resolve uniquely in Part 03 to the clause that defines the entry's meaning |
+| R129 §3.11 | Part 03 §6.5 | weakened | F | those physical facts MUST NOT be duplicated merely to make physical validation possible |
+| R129 §3.3 | Part 03 §5.1 | weakened | D | a writer MUST NOT emit such a table, and a validator that can inspect the resource MUST reject one |
+| R129 §3.4 | Part 03 §6.1 | weakened | D | a reader or validator MUST determine the variant from the Zarr metadata's `zarr_format` when it accesses or physically assesses the resource |
 | R129 §3.4 | Part 03 §6.4 | weakened | B | a conforming reader MUST expose logical dense-array values for every valid v2 resource whose metadata matches a floor pattern |
-| R129 §3.5 | Part 03 §2 (ew-portable-profile-technologies), last paragraph | missing | A | an implementation MAY support additional upstream features without changing the descriptor or packet |
+| R129 §3.5 | the core registry | missing | A | an implementation MAY support additional upstream features without changing the descriptor or packet |
 | R129 §3.7 | Part 05 §14.3 | missing | A | the failing reader MUST identify the missing support |
-| R129 §3.9 | Part 03 §2 (ew-portable-profile-technologies) | weakened | B | lack of a recognized payload format or specialized decoder MUST NOT by itself invalidate the resource |
-| R129 §3.9 | Part 03 §2 (ew-portable-profile-technologies) | weakened | B | a generic reader MUST resolve and list an opaque resource and expose its catalog identity and location |
-| R129 §3.9 | Part 03 §2 (ew-portable-profile-technologies), after the generic-reader sentence | missing | A | a specialized implementation MAY expose members, objects, bytes, parsing, rendering, or other representation-aware operations without changing the resource's logical kind or the reader floor |
+| R129 §3.9 | the core registry | weakened | B | lack of a recognized payload format or specialized decoder MUST NOT by itself invalidate the resource |
+| R129 §3.9 | the core registry | weakened | B | a generic reader MUST resolve and list an opaque resource and expose its catalog identity and location |
+| R129 §3.9 | the core registry | missing | F | a specialized implementation MAY expose members, objects, bytes, parsing, rendering, or other representation-aware operations without changing the resource's logical kind or the reader floor |
 | R147 §3.3 | Part 02 §8.3 | weakened | D | where `resolves` is `required`, a validator MUST generate for a paired-value discriminator, beside the forward anti-join, three checks at error over the kinds the packet's rows name: a key-form check built from the registry's key declarations as literals, a per-kind anti-join on non-null paired values, and, where the paired value is on the specialised table, a check returning every specialised row whose discriminator is null |
 
 ## Disputed rules
