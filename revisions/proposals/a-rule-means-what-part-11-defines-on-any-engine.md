@@ -115,8 +115,22 @@ contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt) states the rules this proposal r
 - Subclause 9.3, Syntax Rule 3d: where any type is approximate numeric, the result is approximate numeric
   "with implementation-defined precision".
 
-These were read in the 1992 draft, not in ISO/IEC 9075-2:2023, the edition Part 11 §9 selects.
-Confirming them there is a promotion criterion (§7).
+The 1999 edition, ISO/IEC 9075-2:1999 (a copy is hosted at
+web.cecs.pdx.edu/~len/sql1999.pdf), states the same rules with the keyword forms added:
+
+- Subclause 8.3, Syntax Rule 1: where neither `SYMMETRIC` nor `ASYMMETRIC` is specified,
+  `ASYMMETRIC` is implicit; Syntax Rule 6: "X BETWEEN ASYMMETRIC Y AND Z" is equivalent to
+  "X>=Y AND X<=Z"; Syntax Rule 5 makes the negated form its negation; Conformance Rule 1: without
+  Feature T461, conforming SQL language does not specify `SYMMETRIC` or `ASYMMETRIC`;
+- Subclause 8.4, Syntax Rules 1, 3 and 4, worded as in 1992;
+- Subclause 7.3, Syntax Rule 4: a table value constructor's row type is that Subclause 9.3 gives
+  its rows, directly rather than through `UNION ALL`;
+- Subclause 9.3, Syntax Rule 3e: where any type is approximate numeric, the result is approximate
+  numeric "with implementation-defined precision".
+
+Neither text is ISO/IEC 9075-2:2023, the edition Part 11 §9 selects. No later edition or public
+working draft of 2003, 2011, 2016 or 2023 was reachable on 2026-10-02, and no vendor document found
+quotes these Syntax Rules from one. Confirming them in 2023 is a promotion criterion (§7).
 
 The ISO precision is implementation-defined, so ISO alone does not fix an `IN` list's type. Part
 11 §4 does: its rules govern set operations, and "an exact with an approximate numeric yields the
@@ -307,9 +321,14 @@ obligations (§6, question 3).
 3. **Does Part 05 §9.4 keep its list?** **Answered 2026-10-02: it refers to Part 11 §8,** which owns
    the causes.
 
-No question that would change the decision is open. The reconciliation of Part 11 §1 (§4.3) and
-the absence of a §2 sentence on the keyword forms (§4.1) are preferred directions the reviewer has
-not yet confirmed.
+4. **How does Part 11 §1 agree with an incomplete evaluation?** **Answered 2026-10-02: §1's
+   requirement applies to the evaluations a validator completes,** and points to §8 for when an
+   evaluation may end incomplete (§4.3).
+5. **Does Part 11 §2 name the bare `BETWEEN` form?** **Answered 2026-10-02: no.** The static check
+   enforces §2's closed operator list, which already puts the keyword forms outside the profile
+   (§4.1).
+
+No question that would change the decision is open.
 
 ## 7. Promotion criteria
 
@@ -321,6 +340,9 @@ not yet confirmed.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
 - [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [ ] The ISO rules §2.4 cites are confirmed in ISO/IEC 9075-2:2023, the edition Part 11 §9 selects.
-- [ ] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The exact proposal and its final appraisal state are tracked in the current commit.
-- [ ] The proposal has explicit approval to advance to a revision draft.
+  Not met: they are confirmed in the 1992 draft and the 1999 edition only. The reviewer authorized
+  promotion with this criterion open on 2026-10-02, and the draft states the 2023 reading as an
+  unverified basis.
+- [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
+- [x] The exact proposal and its final appraisal state are tracked in the current commit.
+- [x] The proposal has explicit approval to advance to a revision draft.
