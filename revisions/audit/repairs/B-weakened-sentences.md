@@ -4,7 +4,7 @@ Each rule below is in a part with a weaker keyword, no keyword, or a narrower sc
 
 29 rules, ordered by part and section: Part 00 (1), Part 01 (4), Part 02 (8), Part 03 (4), Part 04 (6), Part 05 (3), Part 06 (1), Part 12 (2).
 
-Nothing here has been applied. The audit record is [applied-targets.md](../applied-targets.md).
+All of these were entered on 2026-10-01, one commit per part from `96c0bbcd` to `ef5190df`, and each clause's ledger entry carries a `restored 2026-10-01` note. The audit record, [applied-targets.md](../applied-targets.md), lists where the entered text departs from "Text to enter".
 
 ## Part 00
 

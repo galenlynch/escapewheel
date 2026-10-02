@@ -4,7 +4,7 @@ Each rule below was first classed as a plain restoration. A third reading found 
 
 2 rules, ordered by part and section: Part 03 (2).
 
-Nothing here has been applied. The audit record is [applied-targets.md](../applied-targets.md).
+Neither rule was restored. On 2026-10-01 each clause's ledger entry gained a note saying where the rule is carried. The audit record is [applied-targets.md](../applied-targets.md).
 
 ## Part 03
 

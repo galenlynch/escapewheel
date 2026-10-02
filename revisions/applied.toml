@@ -3285,7 +3285,7 @@ note = "physical assessment uses available resource metadata and leaves unreacha
 [clause."R129 §3.9"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-portable-profile-technologies" }]
-note = "opaque resources have no closed representation vocabulary or generic value interface. restored 2026-10-01; the reader obligation to list an opaque resource and the validator prohibition on failing an unrecognized one were indicative"
+note = "opaque resources have no closed representation vocabulary or generic value interface. restored 2026-10-01; the reader obligation to list an opaque resource and the validator prohibition on failing an unrecognized one were indicative. the permission for a specialized implementation to expose representation-aware operations is not restated: Part 03 §2 and Part 02 §2.3 already say a reader need not parse, decode or render the payload"
 
 [clause."R129 §3.10"]
 disposition = "applied"
@@ -3295,7 +3295,7 @@ note = "current interfaces are materialized; ownership is not a realization kind
 [clause."R129 §3.11"]
 disposition = "applied"
 where = [{ part = "03", anchor = "ew-array-metadata-placement" }, { part = "12", anchor = "ew-referenced-resource-delivery" }]
-note = "logical facts and self-describing physical metadata retain separate owners"
+note = "logical facts and self-describing physical metadata retain separate owners; the general prohibition on duplicating physical facts is carried by the specific prohibitions of Part 03 §§2, 6.1 and 6.5, Part 04 §§5.3 and 6 and Part 12 §5, and is not restated"
 
 [clause."R130 §3.1"]
 disposition = "applied"

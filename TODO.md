@@ -300,8 +300,9 @@ natural.
   no part states with the revision's force, and dispute 21 more; 140 clauses are recorded at
   targets that differ from the sections stating them. `revisions/audit/applied-targets.md` lists
   the findings by repair class. A third reading of the 72 plain restorations passed 56, most with
-  new wording, referred 14 for a choice and rejected 2. None is repaired: which classes to restore
-  is undecided.
+  new wording, referred 14 for a choice and rejected 2. The 56 were restored on 2026-10-01, one
+  commit per part, and the 2 are noted in the ledger. The other classes are unrepaired and
+  undecided.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 

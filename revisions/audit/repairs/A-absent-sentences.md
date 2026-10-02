@@ -4,7 +4,7 @@ Each rule below is decided by an accepted revision and stated by no part. A thir
 
 27 rules, ordered by part and section: Part 01 (9), Part 02 (3), Part 03 (2), Part 04 (6), Part 05 (4), Part 12 (3).
 
-Nothing here has been applied. The audit record is [applied-targets.md](../applied-targets.md).
+All of these were entered on 2026-10-01, one commit per part from `96c0bbcd` to `ef5190df`, and each clause's ledger entry carries a `restored 2026-10-01` note. The audit record, [applied-targets.md](../applied-targets.md), lists where the entered text departs from "Text to enter".
 
 ## Part 01
 

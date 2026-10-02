@@ -6,7 +6,9 @@ so a clause can be recorded at a section that does not state it. This audit read
 target against its section once. It adds no field to the ledger and no check to the tools: a finding
 is repaired where it lies, in the part or in the ledger entry.
 
-Nothing below has been repaired. Each table lists what the audit found at commit `072f3d8b`.
+Each table lists what the audit found at commit `072f3d8b`. The 56 class A and B rules were restored
+on 2026-10-01 and the two class F rules were noted in the ledger; nothing else below has been
+repaired.
 
 ## Method
 
@@ -77,8 +79,44 @@ sits in the part that owns it, and whether the reference implementation and the 
 restorations passed as first worded and 46 passed with different wording, actor, scope or placement.
 Fourteen were referred to class D and two to class F. Classes C and D have had no third reading.
 
-Of the 56 class A and B rules, 32 would be requirements no check observes, 28 of them a MUST or
-MUST NOT; each binds a named actor who can comply and is to be labelled as unchecked.
+Of the 56 class A and B rules, 32 are requirements no check observes, 28 of them a MUST or
+MUST NOT; each binds a named actor who can comply.
+
+### The class A and B restorations
+
+The 56 rules were entered one commit per part, `96c0bbcd` (Parts 00 and 01), `09f65ce4` (Part 02),
+`f2362e21` (Parts 03 and 06), `5ee501c1` (Part 04), `da6d491d` (Part 05) and `ef5190df` (Part 12),
+with `bccc6b75` adding one label. Each clause's ledger entry carries a `restored 2026-10-01` note,
+and eight entries gained or changed a target for the section the sentence landed in: R38 §2.3,
+R91 §3.3, R128 §3.4, R14 §2.3.2, R128 §3.8, R32 §4, R115 §3.1 and R115 §3.9.
+
+The entered text is the third reading's, with these departures:
+
+- R37 §3.1 and R27 §5.3: the extrapolation formula and the two prohibitions form one paragraph of
+  Part 01 §3.9.
+- R70 §2.2: the sentence closes the rate paragraph of Part 01 §3.18, so the consumer permission
+  before it keeps its antecedent.
+- R22 §3: the two label obligations share one closing sentence saying no checker verifies either.
+- R37 §3.2: the recommendation to run the terminal-anchor test states the clause's reason.
+- R80 §2.1: the source-name recommendation is the clause's own words, without the added gloss.
+- R128 §3.8 in Part 12 §5: the sentence after it names the document as what the schema shapes.
+- R115 §3.11 and R80 §2.2: each carries an unchecked label the third reading's text lacked.
+
+A requirement a writer, a build or a reader cannot be observed to meet says that no checker
+verifies it. Ten restored requirements no check observes carry no such sentence, as the third
+reading advised: seven consumer prohibitions in Part 01 (R45 §2.1, R85 §2.3, R27 §5.3, R37 §3.1
+twice, R68 §2.5, R69 §2.2), where no consumer rule of the part is labelled; R122 §3.8 in Part 00
+§2.1, a property of the specification; and the two validator rules of R36 §2.3 in Part 04 §5.3,
+which a validator's own suite can test. Four more are recommendations (R37 §3.2, R14 §2.3.2,
+R80 §2.1 and R61 §2.1), which take no label.
+
+The third reading named work the restorations leave open: a writer test that a build ignores a
+listing's `app_metadata` (R115 §3.11) and a reader test that a failure names the unsupported
+version or feature (R129 §3.7); the writer recording `false` on a clock too short for the
+terminal-anchor test, where null is called for (R37 §3.2); and whether Part 02 §9.4's
+document-level precedence sentence takes a keyword beside the restored phase rule (R126 §3.3).
+Each open draft's freshness gate reads sections these commits changed and is rerun before
+acceptance.
 
 The `repairs/` directory beside this file holds one file per class, with each rule's current text,
 the text to enter, its placement and the evaluation, and a file for the disputed rules. The class D
