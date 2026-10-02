@@ -105,9 +105,9 @@ These are wrong today whatever the shape of the code. Each is fixed in the stage
       adapter catch it, so the sorter, waveform and LFP adapters fail with a traceback. Stage 1.
 - [x] The validator builds the check ID `packet.registry.<reason>` from the free-text `reason` of
       the reader's `RegistryUnavailable`. Stage 1.
-- [ ] An adapter served out of process loses its compensations. The build reads `compensations`
+- [x] An adapter served out of process loses its compensations. The build reads `compensations`
       from the source object, and the delivery module never carries the attribute across.
-      Stage 2; if the delivery report needs a new key, that part is a specification change.
+      Fixed under R156: a delivery carries them in a reserved `compensations` table.
 - [x] Three fixture builders write `validator_name` as `escapewheel_validate`. Stage 2.
 - [x] The validator's test registry declares `core.trials`, which the core registry does not
       have. Stage 5.
@@ -747,10 +747,10 @@ Found and left as they were:
 - `encoding.STREAMED_BATCH_ROWS` (1,000,000) and `encoding.MATERIALIZED_BATCH_ROWS` (131,072) are
   both deliberate and each is defined once. aind's `video.BATCH_ROWS` stays as the default of
   that adapter's own option.
-- Compensations are not carried across a delivery, and §4's item stays open. The run report of
-  Part 12 §9 has no member for them and a delivery reserves no resource for them, so either
-  route is a specification change and waits for a decision. A draft now covers it, with a reserved
-  delivery table in place of a member of the run report, which a build may not depend on.
+- Compensations were not carried across a delivery. The run report of Part 12 §9 has no member
+  for them and a delivery reserved no resource for them, so either route was a specification
+  change. R156 reserves a delivery table for them in place of a member of the run report, which a
+  build may not depend on, and §4's item is closed.
 - Found and left as behaviour §4 does not list: `facts.refuse_a_discarded_fact` skips a
   resource fewer than two source kinds stated, so a preferred in-process source that omits an
   empty table is not refused where the same source delivered out of process is.

@@ -124,22 +124,18 @@ warrants. Nothing needs it while every recipe runs sync in process.
 
 ## 3. The pre-release refactor
 
-**Done apart from two defects that wait on a decision.** The audit asked for on 2026-09-06 ran on
+**Done apart from one defect that waits on a decision.** The audit asked for on 2026-09-06 ran on
 2026-10-01 over the four packages, the repository scripts and the specification tooling.
 [REFACTOR.md](REFACTOR.md) records what it found, the decisions taken and the work as five stages
 of checklists, and its section 11 records each choice made on the way. Every stage and the
-specification tooling work have landed. Two defects of its section 4 stay open, since neither can
-be fixed without a revision:
-
-- a delivered adapter's compensations are dropped, and either way of carrying them changes
-  Part 12, which a draft of §3a covers; and
-- the ledger's two weak checks: the ledger draft of §3a covers a superseded entry's successor,
-  and an audit covers what a target states (§6).
+specification tooling work have landed. One defect of its section 4 stays open, since it cannot
+be fixed without a revision: the ledger's two weak checks. The ledger draft of §3a covers a
+superseded entry's successor, and an audit covers what a target states (§6).
 
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Five drafts await acceptance
+## 3a. Four drafts await acceptance
 
 The drafts are under `revisions/drafts/`. No proposal is open.
 
@@ -162,12 +158,6 @@ The drafts are under `revisions/drafts/`. No proposal is open.
   draft, promoted 2026-10-01 and not accepted: `by` becomes a
   required field naming one later accepted revision, R107 §3.5's entry is corrected, and the
   ratchet that rewrites `applied.toml` is removed.
-- **A delivery carries the compensations its adapter applied.** A draft, promoted 2026-10-01 and
-  not accepted, for the defect REFACTOR.md §4 lists. A delivery may carry a table under the
-  reserved resource identifier `compensations`, whose rows state an identifier, a defect, an action
-  and optionally the evidence; a build records them and refuses a table it cannot read. An adapter
-  that applied none delivers nothing, and the three protocols keep their names. The writer's
-  serving and reading code wait on it.
 
 ## 3b. A file the packet only indexes has no declaration
 
@@ -278,8 +268,6 @@ natural.
   `schema.column_absent` and `schema.column_type` are the reference validator's spellings, so those
   packets test this validator and not the specification. It matters only if the corpus is to judge
   a second validator.
-- **A delivered adapter's compensations are dropped.** Section 4 of REFACTOR.md lists the defect,
-  and the third draft of §3a covers it.
 - **An in-process source that omits an empty table escapes a refusal a delivered one draws.**
   `facts.refuse_a_discarded_fact` skips a resource fewer than two source kinds stated.
   REFACTOR.md §11.15 records it; changing it is behaviour the refactor does not list.
