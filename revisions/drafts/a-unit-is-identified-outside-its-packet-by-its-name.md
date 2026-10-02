@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `7201b2d2ba8d81af41272fae41cfdc26b0d79a15` |
+| **Based on** | `cf9e816a13575a419d6917d8285992d7cb09f2f3` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 02 §§1, 8.2, 9.2, 9.4, 10.1, 12.1 and 12.9; Part 05 §5.1; Part 08 §§2 and 3; the registry meta-schema; the registry-contract descriptor; the core registry |
@@ -40,7 +40,7 @@ a new version.
 
 The change is structural because it revises in place the pairing statement and the uniqueness
 paragraph of Part 02 §8.2, one sentence each of Part 02 §12.1 and Part 02 §12.9, and the
-identifier statements of Part 02 §§1, 9.2 and 9.4 and Part 08 §§2 and 3. An appended section would
+identifier statements of Part 02 §§1, 9.2 and 9.4. An appended section would
 leave §8.2 saying that no rule can check uniqueness and §12.1 naming a relation four passing
 packets contradict.
 
@@ -59,8 +59,9 @@ needed.
 | Part 05 §5.1, the list of generated kinds | extend in place | same section | the list names the new kind | §3.3 |
 | Part 02 §12.1, the relation a consumer uses outside the packet | revise in place | same section | the relation is `unit_name` | §3.4 |
 | Part 02 §12.9, the relation a consumer uses outside the packet | revise in place | same section | the relation is `interval_name` | §3.4 |
+| Part 02 §12.9, the sentence that `core.intervals.label_unique_within_kind` draws a shared label | keep, as a sentence of its own | same section | none: it states what the rule checks of a label | none |
 | Part 02 §§1, 9.2 and 9.4, the incorporated identifiers | revise in place | same sections | the meta-schema, descriptor and core registry identifiers advance, and §9.2 states the migration of an extension | §3.5 |
-| Part 08 §§2 and 3, the example packet's core registry version | revise in place | same sections | the version advances | §3.5 |
+| Part 08 §§2 and 3, the generated layout and manifest excerpt | regenerate the informative example | same sections | none: they show the core version and the four extension versions the example binds | none |
 
 ## 2. Background
 
@@ -245,9 +246,11 @@ A validator MUST generate, from the declaration alone, for the name of every own
 identifier, a check that reports each row whose name another row of the same table holds, at level
 `error`, under the check ID `<declaration_id>.<column>.unique`, such as `core.units.unit_name.unique`.
 The check groups a table's rows on the name alone, whatever other columns the table's primary key
-holds, and counts no null name. A validator generates it wherever a valid registry context directs
-packet checks, whichever registry-contract descriptor that registry was checked under. The finding
-belongs to the registry holding the declaration under Part 05 §9.5, and Part 05 §5.4 applies the
+holds, and counts no null name. Two names are equal where their sequences of Unicode scalar values
+are equal, compared as Part 11 §5 compares characters, without case folding or normalization.
+Where the name is `optional` and a table omits it, the check reports nothing. A validator generates
+the check wherever a valid registry context directs packet checks, whichever registry-contract
+descriptor that registry was checked under. The finding belongs to the registry holding the declaration under Part 05 §9.5, and Part 05 §5.4 applies the
 check to the names an extension declares.
 
 The check reports two rows of one table that carry one name. No check reports two things a writer
@@ -269,8 +272,7 @@ build, uses `unit_name`. A consumer MUST NOT identify a unit by its `unit_id` ou
 that assigned it, where the number means nothing. No checker verifies this.
 
 A consumer relating an interval to anything outside the packet that holds a name uses
-`interval_name`. `core.intervals.label_unique_within_kind` draws each label two intervals of one
-session and kind share.
+`interval_name`.
 
 ### 3.5 The registry identifiers advance
 
@@ -317,15 +319,33 @@ check once it binds the new registry, and one holding a shared name fails the ne
 records or corrects the name and rebuilds.
 
 Each of the four extension registries in the repository names meta-schema 0.11.0 and migrates, each
-taking a version of its own choosing. `dynamic_foraging` is invalid under the new contract until its
-owner declares `block_name` `required` (§2.3); whoever produces that table then delivers a name for
-every block, and in a packet of two sessions names that distinguish the sessions. The other three
-need only the new `$id` and version.
+taking a version of its own choosing. `dynamic_foraging` is invalid under the new contract, on
+`dynamic_foraging.blocks`, until its owner changes that declaration (§2.3); the core specification
+does not say how. The other three need only the new `$id` and version, and the repository's copy of
+each of the four is made valid at incorporation.
 
 A validator holding only the new contract reports a packet bound under meta-schema 0.11.0
 `incomplete` until it is rebuilt (§2.3). A validator holding an earlier descriptor beside the new
 one reports, under the new check, a shared name in such a packet that passed before; Part 02 §8.2
-already forbade it.
+already forbade it. Two conforming validators can therefore disagree on such a packet: one holding
+only v0.10 reports it `incomplete`, and one also holding v0.9 reports it `failed` where it holds a
+shared name. The reference validator holds one descriptor and exhibits only the first.
+
+The check has these limits:
+
+- a duplicated row of a table that owns an assigned identifier draws both
+  `<declaration_id>.primary_key_unique` and the new check, and a validator reports both;
+- a table has one instance (Part 02 §2.4), so the check groups all of a table's rows in the packet
+  and no grouping by instance arises;
+- a name an adapter delivers as null in a `required` column fails the generated non-null check, so
+  a build does not promote the packet (Part 05 §6), and no part states more of that case; and
+- a name is unique among the names of one identifier, and two names of different identifiers, such
+  as a probe's and a device's, may be equal.
+
+R160, which declares the sidecar catalog, is being incorporated at the baseline. It advances the
+core registry to 0.15.0 and adds three tables, none of which owns an assigned identifier, so §2.2's
+count of 45 tables becomes 48 and the 17 owners and nine names are unaffected. §3.5 names no core
+target, so it takes the version after whichever advance lands before it.
 
 These accepted clauses change:
 
@@ -350,11 +370,11 @@ These accepted clauses change:
 | physical profiles | Unchanged. The check is a query over one table and asks nothing of a profile; Part 03 §5.3 cites Part 02 §12.1 for the numbering of units, which is unchanged. | None required. |
 | packet manifest and JSON Schemas | The registry meta-schema `$id`. The manifest, descriptor and registry-result schemas keep their shape. | The packages' copies regenerate from their sources. |
 | validation and import | Part 05 §5.1 lists the new kind. Part 05 §§5.4, 9.5 and 15.4 cover it as they stand; Part 05 §3.5 and §14.5 are unchanged. | The validator suite. |
-| extensions | Each repository extension registry migrates to the new `$id` and takes its own version; `dynamic_foraging` declares `block_name` `required`. The core specification chooses neither. | The registry check over every extension registry. |
+| extensions | Each repository extension registry migrates to the new `$id` and takes its own version, and the repository's copy of `dynamic_foraging` changes its declaration of `dynamic_foraging.blocks` so that it is valid under v0.10. The core specification chooses neither the versions nor that declaration. | The registry check over every extension registry finds each valid under v0.10. |
 | reader, writer, validator, adapters | Both registry-document checkers implement §3.1's presence requirement and the new identifiers; the validator generates §3.3's check, adds its ID family to its table of check IDs, and follows the new descriptor. The reader is unchanged: it reads neither the label nor the unit's name. The writer already fills every name in every row it writes; no adapter changes. | The validator, reader and writer suites; both session packets rebuilt and validated with no error. |
 | conformance fixtures and tests | §6's packets and registry documents join the corpus and the registry-conformance vectors; `dup_pk`'s record is unchanged. | `fixtures/corpus.py`; the registry-conformance vectors. |
 | revision process and tooling | The ordinary ledger and evidence records and the notes above. The specification tree's checker and the fact generator follow the three identifiers. | `ledger.py`, `evidence.py` and `verify.py`. |
-| generated publications and developer documentation | The combined specification, the registry's table listing and Part 08's example regenerate; the specification README's identifier table follows the version. The validator's README and design document and the registry source's guide name the new kind and its counts; the specification tools' conventions module stops saying that no rule can enforce uniqueness. | `verify.py`. |
+| generated publications and developer documentation | The combined specification, the registry's table listing and Part 08 §§2 and 3 regenerate, with the new core version and each extension's new version; the specification README's identifier table follows the version. The validator's README and design document and the registry source's guide name the new kind and its counts; the specification tools' conventions module stops saying that no rule can enforce uniqueness. | `verify.py`. |
 
 ## 6. Conformance and implementation evidence
 
@@ -363,20 +383,26 @@ to each of the nine columns. §3.3 is `applied` at Part 02 §8.2, Part 02 §10.1
 and Part 05 §5.1 (`ew-tier-1-validation`). §3.4 is `applied` at Part 02 §12.1 (`ew-unit-identity`)
 and Part 02 §12.9 (`ew-interval-identity`). §3.5 is `applied` at Part 02 §1
 (`ew-core-logical-schema-scope`), §9.2 (`ew-registry-self-description`) and §9.4
-(`ew-registry-conformance`), and at Part 08 §2 (`ew-example-packet-layout`) and §3
-(`ew-example-packet-catalog`).
+(`ew-registry-conformance`), as R152 §3.4 was. Part 08 §§2 and 3 are a projection of the example
+packet and carry no clause.
 
 These cases distinguish the new rules from the current ones:
 
 - the core registry, with 17 `required` names, is valid under the v0.10 descriptor;
 - a core-class and an extension-class registry document each declaring a nullable name for an
   owned assigned identifier draw `registry.identity.name`, where under v0.9 both are valid;
+- a core-class registry document declaring a name for an owned assigned identifier `optional`
+  draws `registry.identity.name` under v0.10;
 - a registry document naming meta-schema 0.11.0 is `unsupported` to a checker holding only the new
   meta-schema and descriptor;
 - a packet with a null name in a table that owns an assigned identifier draws that column's
   generated non-null check at `error`;
 - a packet with two rows of such a table that carry one name and different keys draws the new check
   and no key check, which no existing packet isolates, since `dup_pk` draws both;
+- a packet bound to a registry checked under v0.9 whose fixture-local extension table declares an
+  owned name `optional` and whose file omits that column draws no finding from the new check;
+- two rows of such a table whose names differ only in case or in Unicode normalization draw no
+  finding from the new check;
 - a packet whose fixture-local extension table, keyed by a session and an assigned identifier, holds
   one name in two rows that differ in session draws the new check, and the finding belongs to the
   extension, with a `failed` verdict for it and `passed` for core;
