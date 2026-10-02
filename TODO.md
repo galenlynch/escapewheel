@@ -138,9 +138,7 @@ already solves that this code solves again.
 
 No draft is open. One proposal is: a rule means what Part 11 defines, not what its engine does.
 `BETWEEN` compares its operand with each bound as ISO SQL defines, and Part 11 §8 makes a valid rule
-that a validator cannot evaluate with Part 11's semantics incomplete. **Accepted as R164, 2026-10-02:** the name of every owned assigned
-identifier is `required` and a generated check reports one two rows share; Part 02 §12.1 and
-Part 02 §12.9 name `unit_name` and `interval_name`.
+that a validator cannot evaluate with Part 11's semantics incomplete.
 
 ## 3b. Sidecars are declared, and video is not yet packet-owned
 
