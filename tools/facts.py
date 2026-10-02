@@ -177,7 +177,7 @@ def facts() -> dict[str, str]:
             + (
                 f"{len(proposals)} proposal{'s' if len(proposals) != 1 else ''} and "
                 f"{len(drafts)} draft{'s' if len(drafts) != 1 else ''} are open. "
-                "Neither is binding; a draft takes no number until it is accepted."
+                "None of them is binding; a draft takes no number until it is accepted."
                 if proposals or drafts
                 else "No proposal or draft is open."
             )
