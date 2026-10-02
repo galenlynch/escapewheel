@@ -295,9 +295,11 @@ natural.
 - **The ledger cannot see whether a section states an applied clause.** Two clauses were recorded
   at sections that never stated them and were found by hand, and a pilot reading of 40 of the 770
   applied targets found 9 that do not fully state their clause. The proposal to record a quoted
-  passage for each target was withdrawn on 2026-10-01 as too heavy to maintain. Every target is
-  being read once instead, and `revisions/audit/applied-targets.md` holds the method and the
-  pilot's findings.
+  passage for each target was withdrawn on 2026-10-01 as too heavy to maintain. Every target was
+  read once instead. Of the 2,634 rules in the 501 applied clauses, two readings confirm 111 that
+  no part states with the revision's force, and dispute 21 more; 140 clauses are recorded at
+  targets that differ from the sections stating them. `revisions/audit/applied-targets.md` lists
+  the findings by repair class. None is repaired: which classes to restore is undecided.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
