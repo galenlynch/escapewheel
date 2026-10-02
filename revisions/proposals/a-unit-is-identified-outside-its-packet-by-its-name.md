@@ -838,21 +838,21 @@ no check sees two things merged under one name (§4).
     which is built to fail, holds one.
     The validator in the tree holds one descriptor, so under every option it reports a packet bound
     to an earlier registry `incomplete` (§2.13).
-11. Over which rows a name is unique where its table's key has several columns. The options are the
+11. Over which rows a name is unique where its table's key has several columns. **Answered
+    2026-10-02: the whole table, on the name alone.** The options are the
     whole table, on the name alone, as Part 02 §8.2 states the requirement (preferred direction);
     and the rows that share the key's other members. The first changes no requirement. It matches
     Part 05 §4.3, which assigns identifiers packet-wide, and Part 01 §2.1, which pairs a name with
     an identifier so that a process outside the packet needs no number the packet assigned. It
-    gives the check one shape for every table. Under it a packet of two sessions that names a block of each `block_01` draws
-    the check (§2.7), and whatever composes those names distinguishes the sessions. The second
+    gives the check one shape for every table. Under it a packet of two sessions that names a
+    block of each `block_01` draws the check (§2.7), and whatever composes those names distinguishes the sessions. The second
     relaxes Part 02 §8.2 for such a table, makes a name identify a row only together with the
     key's other members, one of which is an assigned number in the measured case, and gives the
     check a shape that depends on the key. No core table is affected under either, and no measured
     packet holds two sessions.
 
-Questions 1 to 10 are answered: 3 and 4 as the structural form, and each of the other eight as its
-preferred direction. Question 11 remains. It fixes what the generated check of Part 02 §10.1
-groups on, so it is needed before a draft is appraised.
+Every question is answered: 3 and 4 as the structural form, and each of the other nine as its
+preferred direction.
 
 ## 7. Promotion criteria
 
@@ -862,7 +862,7 @@ groups on, so it is needed before a draft is appraised.
 - [x] Overlapping proposals, drafts, accepted revisions, and changed-section citers have been examined.
 - [x] Material alternatives, compatibility effects, migration costs, and the option to keep the current rule have been considered.
 - [x] The evidence needed to distinguish conforming from non-conforming behavior is identified.
-- [ ] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
+- [x] Questions that would change the decision are resolved, or the proposal is split so they no longer block it.
 - [x] The intended direction is clear enough to express as testable normative clauses and exact registry or schema declarations where applicable.
-- [ ] The exact proposal and its final appraisal state are tracked in the current commit.
-- [ ] The proposal has explicit approval to advance to a revision draft.
+- [x] The exact proposal and its final appraisal state are tracked in the current commit.
+- [x] The proposal has explicit approval to advance to a revision draft.
