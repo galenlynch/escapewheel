@@ -63,7 +63,7 @@ def arms(con: duckdb.DuckDBPyConnection, blocks: pa.Table, trials: pa.Table) -> 
     keys, ticks = blocks["block_key"].to_numpy(), trials["start_tick"].to_numpy()
 
     def keys_of(query: str) -> np.ndarray:
-        return con.sql(query).fetch_arrow_table()["block_key"].to_numpy()
+        return con.sql(query).to_arrow_table()["block_key"].to_numpy()
 
     def searchsorted() -> np.ndarray:
         index = np.searchsorted(starts, ticks, side="right") - 1
