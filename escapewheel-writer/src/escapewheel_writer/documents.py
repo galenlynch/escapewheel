@@ -185,9 +185,12 @@ def with_lineage(entries: list[dict[str, Any]], derived: Mapping[str, Sequence[s
 def sources_document(
     packet_id: str,
     sources: Mapping[str, str],
-    referenced: Iterable[ExternalArray | ExternalMedia | ExternalResource],
+    named: Iterable[str | None],
 ) -> dict[str, Any] | None:
-    """Return Part 04 §5.5's default resolution document, or None where no resource names a source.
+    """Return Part 04 §5.5's default resolution document, or None where it would locate nothing.
+
+    `sources` maps each source name to where the writer read it, and `named` holds the `source`
+    of each resource entry; a named source the writer did not read is left out.
 
     None rather than an empty document, since a document locating nothing is worse than
     none -- it would answer a lookup the caller meant to answer itself. Written before the
@@ -199,11 +202,7 @@ def sources_document(
         If the document would not satisfy its schema, which a writer MUST NOT write (Part 04
         §5.5). Raised before anything is promoted.
     """
-    located = {
-        entry.source: {"uri": sources[entry.source]}
-        for entry in referenced
-        if entry.source is not None and entry.source in sources
-    }
+    located = {name: {"uri": sources[name]} for name in named if name is not None and name in sources}
     if not located:
         return None
     document = {

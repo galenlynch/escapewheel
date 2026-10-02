@@ -45,7 +45,8 @@ class NewPacket:
         Builds the manifest from the resource entries, the registry descriptors and the validation
         report, the report being None before validation.
     sources : callable
-        Returns the resolution document for the sources the references name, or None for none.
+        Given the `source` of each resource entry, returns the resolution document locating them,
+        or None where it would locate nothing.
 
     Attributes
     ----------
@@ -62,7 +63,7 @@ class NewPacket:
         manifest: Callable[
             [Sequence[Mapping[str, Any]], Mapping[str, Mapping[str, str]], Report | None], dict[str, Any]
         ],
-        sources: Callable[[], dict[str, Any] | None],
+        sources: Callable[[Iterable[str | None]], dict[str, Any] | None],
     ) -> None:
         self.root = root
         self.held = None
@@ -105,7 +106,7 @@ class NewPacket:
 
     def creates(self) -> Collection[str]:
         """Return every path promotion creates under the root."""
-        self._located = self._sources()
+        self._located = self._sources(e.get("source") for e in self._entries)
         self._promoted = [name for name in PROMOTED if (self._staging / name).exists()]
         return [*self._promoted, *([SOURCES_FILENAME] if self._located is not None else []), CANDIDATE]
 
@@ -142,10 +143,19 @@ class Amendment:
         The new packet version.
     description : str, optional
         A description replacing the packet's.
+    sources : callable
+        As for :class:`NewPacket`.
     """
 
     def __init__(
-        self, root: Path, held: Held, superseded: Mapping[str, Any], version: str, *, description: str | None
+        self,
+        root: Path,
+        held: Held,
+        superseded: Mapping[str, Any],
+        version: str,
+        *,
+        description: str | None,
+        sources: Callable[[Iterable[str | None]], dict[str, Any] | None],
     ) -> None:
         self.root = root
         self.held = held
@@ -158,6 +168,8 @@ class Amendment:
         self._added: list[str] = []
         self._amended: dict[str, Any] = {}
         self._moved: list[str] = []
+        self._sources = sources
+        self._located: dict[str, Any] | None = None
 
     def place(self, folder: str, resource_id: str, suffix: str) -> str:
         """Return where a resource is written, apart from any file the packet holds (Part 03 §9)."""
@@ -231,10 +243,19 @@ class Amendment:
             if not (self.root / MANIFESTS_DIRNAME / retained(manifest)).exists()
         ]
         creates = {created(self.root, relative) for relative in (*self._moved, *self._added, *copies)}
-        return creates | {CANDIDATE}
+        # Part 05 §6 refuses a promotion onto a path that exists, so a resolution document the root
+        # already holds is left as it is.
+        self._located = (
+            None
+            if (self.root / SOURCES_FILENAME).exists()
+            else self._sources(e.get("source") for e in self._amended["resources"])
+        )
+        return creates | {CANDIDATE} | ({SOURCES_FILENAME} if self._located is not None else set())
 
     def promote(self, report: Report) -> None:
         """Move what was staged into its final paths, retain both manifests and write the candidate."""
+        if self._located is not None:
+            (self.root / SOURCES_FILENAME).write_text(json.dumps(self._located, indent=2) + "\n")
         for relative in (*self._moved, *self._added):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)

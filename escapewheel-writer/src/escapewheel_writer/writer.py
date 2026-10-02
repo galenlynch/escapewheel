@@ -868,14 +868,16 @@ class PacketWriter:
                 code=UsageFault.VERSION_MAJOR_CHANGED,
             )
         try:
-            target = Amendment(root, held, superseded, version, description=self._description)
+            target = Amendment(
+                root, held, superseded, version, description=self._description, sources=self._sources_document
+            )
             return self._publish(target, limits, say, materialize)
         finally:
             held.close()
 
-    def _sources_document(self) -> dict[str, Any] | None:
-        """Return the resolution document for the sources this packet's references name, or None."""
-        return sources_document(self._packet_id, self._sources, self._attachments.referenced)
+    def _sources_document(self, named: Iterable[str | None]) -> dict[str, Any] | None:
+        """Return the resolution document locating each source in `named` this writer read, or None."""
+        return sources_document(self._packet_id, self._sources, named)
 
     def _publish(
         self,

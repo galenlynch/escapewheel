@@ -97,3 +97,51 @@ def test_no_source_means_no_document(tmp_path, registry, minimal):
     root = tmp_path / "s001"
     commit_tables(root, registry, minimal)
     assert not (root / "sources.json").exists()
+
+
+def _referencing(writer, array_asset_id, source, uri):
+    """Reference `array_asset_id`'s data within `source`, read at `uri`, with the rows it needs."""
+    from escapewheel_writer.bindings import ExternalArray
+
+    tables = array_asset_tables(array_asset_id)
+    tables["core.array_assets"][0]["array_asset_name"] = array_asset_id
+    for resource_id, records in tables.items():
+        writer.add(resource_id, [{"session_id": "s001", **record} for record in records])
+    writer.declare_source(source, uri)
+    writer.reference_array(
+        f"core.{array_asset_id}.lfp",
+        ExternalArray(
+            array_asset_id=array_asset_id,
+            declaration_id="core.array_asset_instances",
+            uri="processing/ecephys/LFP/data",
+            source=source,
+            physical_profile="zarr_v2",
+        ),
+    )
+
+
+def test_an_amendment_writes_the_default_document(tmp_path, registry, minimal):
+    """Part 04 §5.5: an amendment that first references a source locates it as a build would."""
+    root = tmp_path / "s001"
+    commit_tables(root, registry, minimal)
+    writer = PacketWriter(registry, packet_id=root.name)
+    _referencing(writer, "lfp0", "raw_nwb", "file:///mnt/Data/ephys/session.nwb")
+    assert writer.amend(root).passed
+    document = json.loads((root / "sources.json").read_text())
+    assert not check_sources(document)
+    assert document["sources"] == {"raw_nwb": {"uri": "file:///mnt/Data/ephys/session.nwb"}}
+
+
+def test_an_amendment_leaves_the_document_the_root_holds(tmp_path, registry, minimal):
+    """Part 05 §6 refuses a promotion onto a path that exists, so the document is not rewritten."""
+    root = tmp_path / "s001"
+    writer = PacketWriter(registry, packet_id=root.name)
+    for resource_id, records in minimal.items():
+        writer.add(resource_id, records)
+    _referencing(writer, "lfp0", "raw_nwb", "file:///mnt/Data/ephys/session.nwb")
+    writer.commit(root)
+    before = (root / "sources.json").read_bytes()
+    amending = PacketWriter(registry, packet_id=root.name)
+    _referencing(amending, "lfp1", "other_nwb", "file:///mnt/Data/ephys/other.nwb")
+    assert amending.amend(root).passed
+    assert (root / "sources.json").read_bytes() == before
