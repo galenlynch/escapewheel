@@ -262,8 +262,10 @@ note = "R150 §3.3 lets an amendment add a canonical table's rows in groups the 
 disposition = "applied"
 where = [
   { part = "05", anchor = "ew-superseded-manifest-retention" },
+  { part = "05", anchor = "ew-amendment-definition" },
   { part = "03", anchor = "ew-portable-amendment", note = "retained under manifests/" },
 ]
+note = "restored 2026-10-01; that an amended manifest carries created_at unchanged was absent, and no rule checks it"
 
 [clause."R32 §4.1"]
 disposition = "applied"
@@ -588,7 +590,7 @@ where = [
   { part = "05", anchor = "ew-packet-cleanup", note = "the order and the protection of strays" },
   { part = "03", anchor = "ew-portable-amendment", note = "what a stray is" },
 ]
-note = "a stray, narrowed by R135 §3.5 to lie outside the staging area and every path an unpublished promotion record lists"
+note = "a stray, narrowed by R135 §3.5 to lie outside the staging area and every path an unpublished promotion record lists. restored 2026-10-01; the recommendation to offer cleanup was absent and the report-unless-asked rule was indicative; no check observes a writer's cleanup"
 
 [clause."R61 §2.3"]
 disposition = "rationale"
@@ -1470,7 +1472,7 @@ note = "also stated in 05_validation_and_import.md §11"
 [clause."R82 §2.3"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-alternatives-resolved" }]
-note = "R150 §3.7 exempts import runs, which are never alternatives"
+note = "R150 §3.7 exempts import runs, which are never alternatives. restored 2026-10-01; the consumer obligation to report an unresolved alternative was indicative, and no check observes it"
 
 [clause."R82 §2.4"]
 disposition = "applied"
@@ -1583,6 +1585,7 @@ note = "the spelling is 07 §4's; 05 requires only what a build can determine"
 [clause."R87 §2.3"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-recipe-check" }]
+note = "restored 2026-10-01; the report at information of a declared field an override covers was absent, and no check observes it"
 
 [clause."R87 §2.4"]
 disposition = "applied"
@@ -2607,6 +2610,7 @@ note = "R134 §3.5 adds the build's choice among the protocols an adapter declar
 [clause."R115 §3.4"]
 disposition = "applied"
 where = [{ part = "05", section = "3.7", note = "a command is carried as a list and never split from a string" }]
+note = "restored 2026-10-01; that a build consumes a command's two output streams concurrently was stated only for the source it supplies, and no check observes it"
 
 [clause."R115 §3.5"]
 disposition = "applied"
@@ -3267,7 +3271,7 @@ note = "packet and delivery documents omit redundant physical selectors and summ
 [clause."R129 §3.7"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-reader-registry-independence" }]
-note = "ordinary packet access is lazy and requires neither validation receipt nor whole-packet inspection"
+note = "ordinary packet access is lazy and requires neither validation receipt nor whole-packet inspection. restored 2026-10-01; that a reader names the unsupported version or feature in its failure was absent, and no check observes it"
 
 [clause."R129 §3.8"]
 disposition = "applied"

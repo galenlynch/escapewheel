@@ -3487,6 +3487,8 @@ A build MUST report as a **warning**:
 
 A warning is not an error because narrowing is legitimate, and only the recipe's author knows whether this one was meant.
 
+A build MUST report as **information**, before it opens any source, a field the recipe declares that some listed source states and an override covers, so that its reports list every field in which the recipe supersedes a source. No checker verifies this.
+
 <a id="ew-declared-fact-authority" data-spec-anchor="canonical"></a>
 ### 3.6 Authority for a declared fact
 
@@ -3514,7 +3516,7 @@ A recipe MUST carry a command as an argument list, and a build MUST NOT derive o
 
 Where the command is one a build reaches a source through, the build supplies that source on its standard input as Part 12 §4 requires, without waiting for the command to exit, and MUST read what the command produces while it writes. A command that converts a raw source before it is read is not one of these and is supplied nothing. A pipe holds tens of kilobytes and a supplied object may be far larger, so a build that wrote one whole before reading rows would wait on an adapter that was waiting on it.
 
-A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards. Where the recipe puts rows on standard output (Part 12 §3), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one. Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines.
+A build MUST capture a command's standard output and standard error, and MUST report them with a failure of that command. Where the command succeeds, a build SHOULD keep them readable afterwards. Where the recipe puts rows on standard output (Part 12 §3), a build MUST NOT report standard output as a diagnosis, and standard error is where a command that also emits data prints one. Holding them in memory is not what this asks: a command may run for minutes and its progress is worth watching while it does, so a build writes the streams to a file and reports that file and its last lines. A build MUST consume a command's standard output and standard error concurrently: one that read either to its end first would wait on a command that had filled the other's pipe. No checker verifies this.
 
 ### 3.8 A recipe declares an encoding
 
@@ -3962,7 +3964,7 @@ produce. Two conforming builds of one dataset may record different digests for t
 
 Where two or more `core.processing_runs` rows whose `activity_type` is not `import` share `(session_id, activity_type, scope_kind, scope)`, the packet **MUST** carry a `core.preferred_runs` row naming one of them, and a writer **MUST** refuse to commit one that does not. Runs whose `activity_type` is `import` are not alternatives to one another: two imports into one packet supply disjoint groups (§15.2). Where an activity has more than one run in a session, every one of those runs **MUST** declare `scope` and `scope_kind` — without a scope the runs cannot be grouped, so an ambiguity cannot be found rather than not existing.
 
-Both are checked at `error` level. A consumer MUST NOT silently choose; on a conforming packet that case is unreachable. A consumer that meets an unresolved alternative is holding a packet that failed validation and reports that. Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting; what it requires is that the packet says which is current.
+Both are checked at `error` level. A consumer MUST NOT silently choose; on a conforming packet that case is unreachable. A consumer that meets an unresolved alternative is holding a packet that does not conform, and MUST report that, which no checker verifies. Nothing here forbids a packet holding two sortings of one probe or two curations of one sorting; what it requires is that the packet says which is current.
 
 A build MUST write one `core.preferred_runs` row per `preferred_run` entry of its recipe (§3.1), in
 the recipe's session, carrying the entry's `activity_type`, `scope_kind`, `scope`, `reason` and
@@ -4105,7 +4107,9 @@ validation-receipt prerequisite.
 A reader MUST NOT require a validation receipt or physical inspection of every resource to open a
 packet's manifest, resolve its declarations, list its resources or select a session. Before exposing
 a resource's logical values it inspects only the metadata that resource needs, and fails that
-resource alone where it lacks support.
+resource alone where it lacks support. Where the resource uses a format version or feature the
+reader does not support, the reader MUST identify that version or feature in the failure. No
+checker verifies this.
 
 <a id="ew-registry-producer-boundary" data-spec-anchor="canonical"></a>
 
@@ -4176,7 +4180,10 @@ An **amendment** produces a new version of an existing packet. A writer performi
 modify the bytes of any resource a superseded manifest names, and MUST set a `packet_version` that
 sorts strictly after the superseded one, compared as a semantic version, and has the superseded
 one's major version ([Part 04 §3](../parts/04_packet_catalog.md#ew-packet-identifiers)). The amended manifest MUST carry
-`replaces` exactly as the superseded manifest does, or omit it where that manifest omits it.
+`replaces` exactly as the superseded manifest does, or omit it where that manifest omits it. It MUST
+carry `created_at` exactly as the superseded manifest does, so that the member records when the
+amended packet was first built and its validation block records when it was last validated; no
+checker verifies this.
 
 `packet_version` versions the bundle. A writer MUST NOT increment it for a rewrite of a table's
 rows.
@@ -4278,13 +4285,16 @@ check: skipping a check whose inputs *could* have changed stays forbidden.
 <a id="ew-packet-cleanup" data-spec-anchor="canonical"></a>
 ### 15.5 Cleanup
 
-Cleanup is a separate operation. A writer performing cleanup MUST remove orphans before superseded
+Cleanup is a separate operation. A writer SHOULD offer it over a committed packet, since nothing
+else removes what an amendment leaves behind; a writer that performs no amendment leaves nothing
+for it to remove. A writer performing cleanup MUST remove orphans before superseded
 manifests: expiring a manifest first would make an orphan indistinguishable from a stray,
 permanently.
 
 A writer MUST NOT remove a stray, which the packet's profile defines. A packet may carry files this
 specification does not govern, and cleanup that deletes the ungoverned is a data-loss bug wearing an
-operation's name. The operation reports by default and acts only when asked.
+operation's name. A writer performing cleanup MUST NOT remove anything unless it was asked to
+remove, and MUST otherwise report what it would remove. No checker verifies a writer's cleanup.
 
 A writer performing an amendment **MUST NOT** delete anything as part of amending, other than a
 staging area as §2 permits and the paths §6 lets it remove when it acts on a promotion record. A
