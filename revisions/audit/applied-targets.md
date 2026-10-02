@@ -428,8 +428,9 @@ process rules and the dispositions, and
 ## What was applied on 2026-10-02
 
 Everything the critical reading left without a choice was entered, and
-[repairs/decisions.md](repairs/decisions.md) lists every choice that remains, numbered, with its
-options and what each changes.
+[repairs/decisions.md](repairs/decisions.md) lists every choice, numbered, with its options and
+what each changes. Each but the eighth was answered the same day, and that file records the
+answer and the commit or proposal that carries it.
 
 - **Parts.** Eleven reworded restorations in Parts 01, 02, 03, 04 and 11 (D4, D7, D8, D10, D11,
   D13, D15, E4, E6, E16, C22), and ten labels on requirements restored the day before that no check
@@ -442,11 +443,12 @@ options and what each changes.
 - **Notes.** One on each restored clause, on the fifteen disputed clauses not owed, and on the
   four tool-enforced rules not owed.
 
-Thirteen of the 25 reworded restorations are held. Twelve are sentences of Part 05 §14 (C1, C3,
-C4, C8, C9, C10, C11, C13, C14, C16, C17, E18): the section is repaired in one change, since a
-keyworded sentence beside an indicative one reads as making the second optional, and four of its
-rules need a choice first. The thirteenth, D9, is the rule on `$schema` coming first, where the
-reading of the clause and the reading of its disposition disagree.
+Thirteen of the 25 reworded restorations were held for a choice and entered once it was made.
+Twelve are sentences of Part 05 §14 (C1, C3, C4, C8, C9, C10, C11, C13, C14, C16, C17, E18): the
+section was repaired in one change, since a keyworded sentence beside an indicative one reads as
+making the second optional, and four of its rules needed a choice first. The thirteenth, D9, is
+the rule on `$schema` coming first, where the reading of the clause and the reading of its
+disposition disagreed.
 
 ## Pilot reading of 2026-10-01
 

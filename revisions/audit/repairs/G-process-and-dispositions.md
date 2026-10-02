@@ -4,7 +4,7 @@ The audit set two lists apart from the confirmed rules: six rules of R120 that a
 
 Its verdicts on the six tool-enforced rules: not owed (4), owed, reworded (2). On the twelve dispositions: confirmed (9), needs a decision (1), corrected (1), keep as applied (1). The reading of the ledger targets found a thirteenth clause of the second kind, R112 §3.1, listed in [applied-target-pointers.md](../applied-target-pointers.md).
 
-Applied on 2026-10-02: the ledger notes for the four tool-enforced rules not owed, the nine confirmed dispositions, R102 §3.1 as corrected and restored, and R112 §3.1 as `superseded` by R120. R57 §2.1 and the two guide sentences wait on decisions 14 and 21 of [decisions.md](decisions.md). The audit record is [applied-targets.md](../applied-targets.md).
+Applied on 2026-10-02: the ledger notes for the four tool-enforced rules not owed, the nine confirmed dispositions, R102 §3.1 as corrected and restored, and R112 §3.1 as `superseded` by R120. R57 §2.1 and the two guide sentences waited on decisions 14 and 21 of [decisions.md](decisions.md), and both are entered. The audit record is [applied-targets.md](../applied-targets.md).
 
 ## Rules a process tool enforces
 

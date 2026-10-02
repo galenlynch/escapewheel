@@ -18,6 +18,39 @@ implementation that conformed to the decision behaves differently. "Revision" me
 alters what a conforming implementation does or what an incorporated artifact carries, so it goes
 through the revision process and needs its own acceptance.
 
+## Answered on 2026-10-02
+
+Every decision but the eighth took its preferred option. Decision 8 is open: the rounding rule is
+the correct one and the reference engine does not meet it, so its entry below states the options
+again with what was measured.
+
+| decision | answer | entered by |
+|---:|---|---|
+| 1 | §1 lists the first paragraph of §14.4 as binding every implementation | `b5696685` |
+| 2 | the keyword is restored and the loader checks a path-valued registry from its bytes | `b5696685`, `6dc476a9` |
+| 3 | every writer command that rejects a registry offers that registry's result | `ba589b18` |
+| 4 | the label rule binds a validator's report | `b5696685` |
+| 5 | the eleven further §14 sentences are repaired with the entries | `b5696685` |
+| 6 | one unchecked label under the §14 heading | `b5696685` |
+| 7 | one §1 sentence gives Part 11 §§2 to 8 their force | `b5696685` |
+| 8 | open | — |
+| 9 | the validator interpolates `PERCENTILE_CONT` in binary64 | `0e0256b4` |
+| 10 | Part 11 §3 is reworded | `b5696685` |
+| 11 | the style guide states both drafting rules | `5f558363` |
+| 12 | a writer MUST name a media asset's device where its source states one | `b5696685` |
+| 13 | a reader exposes a resource's content class and lineage policy | `b5696685` |
+| 14 | Part 02 §9.2 recommends that a registry document carry `$schema` first | `b5696685` |
+| 15 | the reading of a null changes what a consumer concludes, so it is proposed as a revision | proposal `a-null-producing-run-on-an-array-says-the-packet-names-none.md` |
+| 16 | nothing is owed: the ledger note on R53 §2.3.1 already records it | — |
+| 17 | proposed | proposal `a-unit-is-identified-outside-its-packet-by-its-name.md` |
+| 18 | proposed | proposal `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` |
+| 19 | proposed | proposal `core-declares-a-clocks-transform-in-typed-columns-alone.md` |
+| 20 | the draft was accepted as R157 | `bb3cae24` |
+| 21 | the guide states both sentences | `5f558363` |
+
+The four proposals are in `revisions/proposals/` and none is promoted. `e60b54e0` added the ledger
+notes for the rules the commits above entered.
+
 ## Applied on 2026-10-02 without a decision
 
 - **Twelve reworded restorations**: D4, D7, D8, D10, D11, D13, D15, E4, E6, E16 and C22 in Parts
@@ -154,10 +187,28 @@ entries alone would add actorless requirements and weaken 31 neighbouring senten
 ### 8. Restore the rounding rule the reference engine does not meet
 
 - **Entry:** C21 (R125 §3.4).
+- **Status:** open. The preferred option was not taken on 2026-10-02.
 - **Context:** "every exact-to-approximate conversion MUST use round-to-nearest, ties-to-even" is
-  missing from Part 11 §4, not merely unkeyworded. DuckDB 1.5.5 converted 72 of 3,000 random
-  `DECIMAL(38,0)` values and 700 of 3,000 long decimal literals to a neighbouring binary64 value.
-  §4's explicit-cast sentence already requires the rounding, so the defect exists today.
+  missing from Part 11 §4, not merely unkeyworded. §4 states that rounding for an explicit cast to
+  `DOUBLE PRECISION`, so the missing sentence adds only the implicit conversion of §5, where an
+  exact value combined with an approximate one converts with no rounding named.
+- **The rule is the correct one.** Round to nearest, ties to even, is the IEEE 754 correctly
+  rounded conversion and the only rule that gives one result for each value; ISO SQL leaves the
+  rounding implementation-defined. DuckDB 1.5.5 departs from it by rounding twice, which is an
+  accuracy defect of one unit in the last place and no rule a part could state instead.
+- **Where DuckDB 1.5.5 departs:**
+  - `INTEGER` and `BIGINT` values convert correctly, as do `DECIMAL(38,0)` values up to 2^64.
+  - Above 2^64 the errors cluster by magnitude: 245 of 1,500 values of 65 bits, 6 of 1,500 of 70
+    bits, 77 of 1,500 of 120 bits, and none from 80 to 110 bits. Mixed widths gave the 72 of
+    3,000 first recorded.
+  - A decimal literal of 15 or fewer significant digits converts correctly. Of 1,000 literals
+    each, 52 of 16 digits, 271 of 17, 260 of 18 and 248 of 19 were wrong, each by one unit in the
+    last place; some 25-digit literals were wrong by two.
+  - A conversion through text, `CAST(CAST(x AS VARCHAR) AS DOUBLE)`, was correct in every case
+    tried, so a lowering can meet the rule.
+  - No shipped rule converts a `DECIMAL` above 2^64 or writes a literal of 16 or more digits.
+- **The defect exists either way.** The explicit-cast sentence already requires the rounding, and
+  `TODO.md` records that the reference validator does not meet it.
 - **Options:**
   1. Preferred. Restore "Every exact-to-approximate conversion rounds to nearest, ties to even.",
      add a conformance vector, and fix the validator by lowering. A fix plus an implementation
@@ -280,7 +331,7 @@ entries alone would add actorless requirements and weaken 31 neighbouring senten
 
 ## Changes that need a revision
 
-Each needs a proposal prepared; none is started.
+Each has a proposal in `revisions/proposals/`, named in the table above; decision 20 closed with R157.
 
 ### 17. The relation a consumer uses for a unit outside its packet
 

@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R158 accepted. R42 and R73 withdrawn. 0 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R158 accepted. R42 and R73 withdrawn. 4 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
@@ -283,10 +283,14 @@ natural.
   reading, recorded per entry under `revisions/audit/repairs/`: of the 22 class C, 17 class D and
   21 disputed rules, 25 can be entered as that reading words them, 18 need a decision and 17 are
   not owed. On 2026-10-02 twelve of the 25 were entered, with the confirmed ledger targets,
-  dispositions and notes. The other thirteen, twelve of them in Part 05 §14, wait on the choices
-  in `revisions/audit/repairs/decisions.md`. Three of those need a revision: the relation a
-  consumer uses for a unit outside its packet, whether `[overrides]` resolves a discarded fact,
-  and removing `core.clocks.transform_to_parent`.
+  dispositions and notes. The other thirteen, twelve of them in Part 05 §14, waited on the choices
+  in `revisions/audit/repairs/decisions.md`, which records each answer and the commit that entered
+  it. Every choice but one took its preferred option on 2026-10-02 and the thirteen are entered.
+  Decision 8 is open: whether Part 11 §4 restores the rounding rule for an implicit conversion,
+  which the reference engine does not meet. Four choices became proposals, in
+  `revisions/proposals/`: the relation a consumer uses for a unit outside its packet, whether
+  `[overrides]` resolves a discarded fact, removing `core.clocks.transform_to_parent`, and what a
+  null `processing_run_id` on an array states.
 - **A source without `root` records no source file.** R135 §3.4 counts only the roots a recipe
   writes, so a source whose recipe entry omits `root` gets no `core.source_files` row. Undecided.
 
@@ -296,33 +300,26 @@ natural.
 every name-minting adapter accepts `prefix`, and every store-reading adapter accepts `source_cache`
 and keeps store objects as Part 12 §10 requires.
 
-The audit's critical reading found these, none fixed. `revisions/audit/applied-targets.md` lists
-them with the text findings beside them.
+The audit's critical reading found six implementation defects, and
+`revisions/audit/applied-targets.md` lists them with the text findings beside them. Three are
+fixed: the writer checks an extension registry registered as a file path from its bytes,
+`escapewheel import` writes the result of the registry it rejects, and the validator interpolates
+`PERCENTILE_CONT` in binary64. Three remain.
 
-- **An extension registry registered as a file path is checked as a mapping.** `load_checked` in
-  `escapewheel_writer/extensions.py` decodes the file and calls the mapping entry point, where
-  Part 05 §14.2 has an implementation that owns the bytes use the byte entry point.
-- **`escapewheel import` gives no machine-readable result for a rejected extension registry.** It
-  prints the state, and `--registry-result` writes the core registry's result alone.
-- **The validator's `PERCENTILE_CONT` keeps a decimal or `REAL` ordering domain.** Part 11 §2 gives
-  `DOUBLE PRECISION`, and `core.clock_anchors.gap_within_bound` takes the median of
-  `DECIMAL(38,0)` gaps, so its findings can differ from the part's.
 - **The validator's `DECIMAL` to `DOUBLE PRECISION` conversion is the engine's.** It is not always
-  rounded to nearest, ties to even, as Part 11 §4 requires of an explicit cast.
+  rounded to nearest, ties to even, as Part 11 §4 requires of an explicit cast. Decision 8 of
+  `revisions/audit/repairs/decisions.md` records where the engine departs and that a conversion
+  through text meets the rule.
 - **`refuse_a_discarded_fact` never reads `[overrides]`,** and its message names that resolution.
   The rule itself waits on a revision.
 - **`spec/tools/check.py` prints outcome lines for a non-valid core registry** and offers no
   output of the complete result.
 
-The same reading found four defects in the specification and the registry. Each waits on a
-decision in `revisions/audit/repairs/decisions.md`.
+The same reading found four defects in the specification and the registry. Part 05 §1 and Part 11
+§3 are repaired. Two wait on a proposal in `revisions/proposals/`.
 
 - **The description of `processing_run_id` on both array-asset tables is false.** It says a null
   means the array was acquired, and a computed array whose run the packet does not record also
-  carries null (decision 15).
-- **Part 05 §1 says the part binds no checker and that §14.4 binds a writer.** §14.2 and §14.4
-  bind an implementation that checks a registry for an extension author (decision 1).
-- **Part 11 §3 says a table exposes exactly its registry-declared columns.** Part 02 §10.2 and the
-  validator do not expose an `optional` column a packet's table omits (decision 10).
+  carries null.
 - **`core.clocks.transform_to_parent` is still declared.** R3 §3.4 replaced it with the two typed
-  columns; removing it needs a revision (decision 19).
+  columns.
