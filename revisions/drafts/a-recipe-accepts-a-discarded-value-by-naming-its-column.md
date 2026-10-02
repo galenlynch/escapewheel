@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Status** | **Draft** |
-| **Based on** | `9c180d6c919ce2942271a92f9df28f3bb230c185` |
+| **Based on** | `cf9e816a13575a419d6917d8285992d7cb09f2f3` |
 | **Decision domain** | specification |
 | **Change form** | structural |
 | **Amends** | Part 05 §§3.1, 3.4, 3.5 and 3.6; the recipe schema |
@@ -50,17 +50,20 @@ in that order. No section moves, splits, merges or retires.
 | old location or statement | disposition | current or new owner | semantic effect | Decision clause |
 |---|---|---|---|---|
 | Part 05 §3.1, the `overrides` row and the recipe schema's identifier | revise in place | same section | the table holds two kinds of entry; the schema admits both keys under an advanced identifier | §3.1; §3.6 |
-| Part 05 §3.4, the refusal of a discarded value and the sentence on resolving it | revise and extend in place | same section | rows correspond by primary key as delivered; a column override releases a null column of a corresponding row and nothing else | §3.2 |
+| Part 05 §3.4, the refusal of a discarded value and the sentence on resolving it | revise and extend in place | same section | rows are compared once a build fills the columns it fills, and correspond by primary key; a row with a null key column corresponds to none; a column override releases a null column of a corresponding row and nothing else | §3.2 |
 | Part 05 §3.5, the refusals made before a source is opened | extend in place | same section | a column override that can release nothing is refused | §3.3 |
-| Part 05 §3.5, the amending build's refusal of an `[overrides]` member | revise in place | same section | an amending build refuses a field override and admits a column override | §3.5 |
+| Part 05 §3.5, the amending build's refusal of an `[overrides]` member | revise in place | same section | the item refusing an `[overrides]` member refuses a field override instead, and no item is added; an amending build admits a column override | §3.5 |
 | Part 05 §3.5, the two reports of a declared field | revise in place | same section | each concerns a field override | §3.4 |
-| Part 05 §3.6, the definition of an override and the report of an idle one | revise and extend in place | same section | the definition is a field override's; a build reports a release and an idle column override | §3.1; §3.4 |
+| Part 05 §3.6, the definition of an override and the report of an idle one | revise and extend in place | same section | the definition is a field override's, whose block is `session` or `subject`; a build reports a release as information and an idle column override as a warning | §3.1; §3.4 |
 
 ## 2. Background
 
 The facts below were observed in the tracked files at the `Based on` commit, where
 `verify.py --quick` passes all 37 of its stages. Three probes ran the incorporated recipe schema
-and the reference build's refusal over hand-written recipes and rows, and changed no tracked file.
+and the reference build's refusal over hand-written recipes and rows at `9c180d6`, the draft's
+first baseline; since then the recipe schema and the code that refuses are unchanged, and Part 05
+§§3.2, 3.5 and 7 have gained only R159's text. A fourth probe ran a JSON Schema engine over the
+revised key pattern of §3.6. None changed a tracked file.
 
 ### 2.1 Part 05 §3.4 names the override resolution and binds no build to it
 
@@ -118,8 +121,11 @@ which row of the preferred source a passed-over row is compared with.
 The reference build pairs rows by the table's declared primary key, on the values the adapters
 delivered. Each of the 45 tables declares a primary key, and every key column is `required`.
 Part 12 §5 has an adapter hand over an identifier as the name its source used, so an identifier in
-a delivered key is a name, and two rows pair only where both sources use the same name. The build
-reports three shapes of loss:
+a delivered key is a name, and two rows pair only where both sources use the same name. Two edges
+are settled by the code and by no sentence: rows whose key columns are both null pair with each
+other, and where the preferred source delivers two rows with one key, a passed-over row is compared
+with the last of them. The build compares the rows before it fills any column. The build reports
+three shapes of loss:
 
 | shape | what the reference build reports |
 |---|---|
@@ -181,18 +187,31 @@ The same list refuses every `[subject]` member and every `[session]` member but 
 amending recipe declares no field that a field override could supersede a source with. A column
 override names no recipe field.
 
-### 2.9 A source may omit a required column that a writer fills
+### 2.9 A source may omit a column that a writer fills
 
 Of the 245 columns the core registry declares outside a primary key and `metadata`, 78 are
-`required`, and 27 of those are a table's `session_id`. Part 02 §7.1 has a writer fill that column
-"from the parent row it already read, or from the session it was constructed with", so a source's
-row may leave it null and the packet still holds a value.
+`required`. Two kinds of them are columns a build fills:
+
+- 27 are a table's `session_id`. Part 02 §7.1 has a writer fill that column "from the parent row it
+  already read, or from the session it was constructed with", so a source's row may leave it null
+  and the packet still holds a value. `session_id` is also in the primary key of 16 tables.
+- 8 are the name of an owned assigned identifier (Part 02 §8.2), and the names of the other 9 of
+  the 17 owning tables are `nullable`. Part 12 §5 has an adapter hand over an identifier as the name
+  its source used, and the reference writer fills the name from that text where the adapter
+  delivers no name of its own. No part has a writer fill a name.
+
+At least 35 of the 78 are therefore columns a build fills. The open draft
+`a-unit-is-identified-outside-its-packet-by-its-name.md` makes the nine `nullable` names
+`required`, which makes 87 of 245 `required` and 44 of those columns a build fills.
 
 The comparison of Part 05 §3.4 is over the rows as the sources state them. In a third probe the
 preferred source delivers a `core.probes` row without `session_id` and the passed-over source
 delivers the same probe with it, and the reference build refuses over `core.probes.session_id`.
-A `required` column is therefore one a refusal can name in a build that ends in a conforming
-packet.
+A probe made while this draft was appraised found the same for `core.probes.probe_name`, where the
+passed-over source states the name the writer would fill. Each refusal is over a value nothing
+loses. Where `session_id` is in the key and one source omits it, the two rows do not pair, and the
+build refuses as over a row the preferred source does not produce, which no override of any kind
+releases.
 
 Where a preferred source's row leaves null a `required` column that no writer fills, the packet
 fails the generated non-null check (Part 05 §5.1), and Part 05 §2 forbids the build to promote it.
@@ -225,13 +244,12 @@ check that record against the recipe schema, and the reference validator and rea
 
 ### 2.12 Other open work
 
-One accepted revision, R159, amends a section this revision amends. It amends Part 05 §3.2, Part 05 §3.5 and
-Part 05 §7. To Part 05 §3.5 it adds one permission, that a build may refuse a recipe carrying a
-value it recognizes as a credential, and it changes no item the section already lists. This
-revision changes other items of that section. Neither edits a sentence the other edits or depends
-on the other's text, so either order incorporates, and the second is applied to the section as the
-first left it. That draft keeps the recipe schema unchanged, and its recorded recipe differs from
-the recipe only where a build recognizes a credential.
+R159, accepted and incorporated at the baseline, amended Part 05 §3.2, Part 05 §3.5 and
+Part 05 §7. Part 05 §3.5 now holds its paragraph permitting a build to refuse a recipe carrying a
+value it recognizes as a credential. This revision changes other items of that section and no
+sentence R159 added. R159 left the recipe schema unchanged, and its recorded recipe differs from
+the recipe only where a build recognizes a credential, so a column override and its reason are
+recorded as stated.
 
 `core-declares-a-catalog-of-sidecars.md` amends Part 05 §4.3, sections of four other parts and the
 core registry, and changes no recipe rule. It has two sources that each deliver sidecars name
@@ -241,7 +259,8 @@ for a resource an entry declares under `contributes`, and a column override need
 
 Other open work concerns a clock's transform, a null producing run on an array, and a unit's name.
 None amends Part 05 §3.1, Part 05 §3.4, Part 05 §3.5 or Part 05 §3.6, and none changes the recipe
-schema.
+schema. The unit-name draft changes the count of §2.9, as that section says, and makes every owned
+name a column a source may omit and a build fills under the reference writer's practice.
 
 `revisions/impact.py` lists 288 citations of the four amended sections outside this document. Those
 that concern an override lie in the reference build and its tests, which §5 has change, and in the
@@ -256,8 +275,9 @@ overrides a build refuses, what a build reports, the amending recipe, and the re
 ### 3.1 An `[overrides]` entry is a field override or a column override
 
 A recipe's `[overrides]` table holds two kinds of entry, and an entry's key says which it is. A
-**field override** has a key of two segments, `block.field`, and declares that the recipe's own
-value for that field supersedes a source's, as Part 05 §3.6 defines an override. A **column
+**field override** has a key of two segments, `block.field`, whose block is `session` or
+`subject`, and declares that the recipe's own value for that field supersedes a source's, as
+Part 05 §3.6 defines an override. A **column
 override** has a key of three segments, a resource's dotted identifier followed by one of its
 column names, and §3.2 says what it declares.
 
@@ -270,16 +290,24 @@ names a `[subject]` field in a field override where it declares its own value fo
 
 ### 3.2 A column override releases a null column of a corresponding row
 
-For the refusal of Part 05 §3.4, a row of a passed-over source **corresponds** to a row of the
-preferred source where the two hold equal values in every column of the table's primary key, as
-their sources delivered them. A passed-over source's row to which no row of the preferred source
+For the refusal of Part 05 §3.4, a build MUST compare each source's row with the columns it fills
+when it stages a row already filled: the `session_id` Part 02 §7.1 has a writer fill, and any name
+of an owned assigned identifier (Part 02 §8.2) the build fills from the name its source delivered
+as the identifier (Part 12 §5). Every other value is compared as its source delivered it.
+
+A row of a passed-over source **corresponds** to a row of the preferred source where, so filled,
+the two hold equal non-null values in every column of the table's primary key. A row holding a null
+in a key column corresponds to no row. Where the preferred source delivers several rows with one
+key, each of them corresponds. A passed-over source's row to which no row of the preferred source
 corresponds is a row the preferred source does not produce.
 
 A column override names one column of a resource the recipe declares a preference for. Where a
 recipe carries one, a build MUST NOT refuse under Part 05 §3.4 over a value that a passed-over
-source's row holds in the named column and that the corresponding row of the preferred source
-leaves null, whether that row states a null or omits the column. The release reaches every such
-row and every passed-over source, and it reaches no other column.
+source's row holds in the named column and that every corresponding row of the preferred source
+leaves null, whether a row states a null or omits the column. The release reaches every such row
+and every passed-over source, and it reaches no other column. Where some corresponding rows state a
+value in the column and others leave it null, the build MUST refuse as Part 05 §3.4 has it, and the
+column override releases nothing.
 
 A build MUST still refuse over a row the preferred source does not produce, and over a preferred
 source that produces no rows while another source produces some. No column override releases
@@ -312,7 +340,7 @@ A build MUST report as information each column override that released a value, n
 each passed-over source whose value it released, and the entry's reason.
 
 A column override is **idle** in a build where it released no value. A build MUST report an idle
-column override and MUST NOT refuse on it.
+column override as a warning and MUST NOT refuse on it.
 
 No checker verifies either report.
 
@@ -329,10 +357,10 @@ only (Part 05 §3.3).
 
 ### 3.6 The recipe schema admits both keys and its identifier advances
 
-The recipe schema's `overrides` member admits a key of either form and no other: a `block.field`
-key as it admits one at the baseline, or a resource identifier and a column name joined by a dot,
-each spelled as the registry meta-schema spells it. The constraint on an entry's value is
-unchanged.
+The recipe schema's `overrides` member admits a key of either form and no other: `session` or
+`subject`, a dot and a field spelled as the baseline schema spells one; or a resource identifier and
+a column name joined by a dot, each spelled as the registry meta-schema spells it. The constraint
+on an entry's value is unchanged.
 
 The schema's `$id` advances one minor version from the identifier Part 05 §3.1 incorporates when
 this revision is incorporated. At the baseline that identifier is
@@ -348,15 +376,23 @@ A build records nothing beyond the recipe. Part 05 §3.2 has the writer record t
 import run's parameters, so a column override and its reason reach the packet there, and the packet
 does not say whether the build released a value.
 
-A `required` column is not among the refusals of §3.3. An entry naming one releases the refusal of
-Part 05 §3.4 and no other check: where the preferred source's row leaves the column null and no
-writer fills it, the build fails validation as it would with no entry (§2.9).
+A `required` column is not among the refusals of §3.3, and an entry naming one gives up no
+protection the column had. Without the entry, a passed-over value in the column makes the build
+refuse under Part 05 §3.4 before it stages anything. With the entry, where the preferred source's
+row leaves the column null and no writer fills it, the packet fails the non-null check of
+Part 05 §5.1 and Part 05 §2 forbids the build to promote it (§2.9). Where a writer fills the
+column, §3.2 compares the filled value and the entry is idle.
 
 ## 5. Consequence
 
-Every recipe the baseline schema admits stays admitted, and none changes meaning: a two-segment key
-is a field override as before. A build written to the baseline schema refuses a recipe carrying a
-column override and names the key. No packet changes and none is rebuilt. A packet built from a
+The revised schema refuses one kind of key the baseline schema admits: two segments whose first is
+neither `session` nor `subject`, such as `core.probes` or `probes.probe_type`. Such a key names no
+block a recipe declares, so it superseded nothing and drew the idle report of Part 05 §3.6 on every
+build. The tracked recipes, the informative example and the writer's tests carry `subject.` keys
+alone. Every other recipe the baseline schema admits stays admitted and none changes meaning: a key
+of `session` or `subject` and a field is a field override as before. A build written to the
+baseline schema refuses a recipe carrying a column override and names the key. No packet changes
+and none is rebuilt. A packet built from a
 recipe carrying a column override records that recipe in the import run's parameters, which no
 validator check reads (§2.10), so it conforms as any other packet does.
 
@@ -365,10 +401,23 @@ them (Part 05 §3.4), so releasing a value needs no input the build lacks. The f
 are decided from the recipe and the registries it binds, which Part 05 §3.5 already has a build
 check the recipe against before it opens any source.
 
-Rows correspond only where two sources deliver equal key values. Two sources that name one probe
-differently deliver rows that do not correspond, and so do two sources of which one omits a key
-column a writer fills. Each such loss is a row the preferred source does not produce, which no
-column override releases.
+Comparing filled rows removes two refusals of the baseline. A refusal over a `session_id` or a name
+that a passed-over source states and the writer fills is gone, since the filled value is compared
+and nothing is lost. So is the refusal over a row whose key holds `session_id` where one source
+omits it, which no entry could release. A build already holds the session and each delivered
+identifier when it compares, so filling needs no new input; the reference build fills these
+columns only after it compares, and moves the fill before the comparison.
+
+Rows correspond only where two sources deliver equal key values once filled. Two sources that name
+one probe differently deliver rows that do not correspond. Each such loss is a row the preferred
+source does not produce, which no column override releases.
+
+A row holding a null in a key column corresponds to no row, so a passed-over row with a null key is
+refused as a row the preferred source does not produce, and a preferred row with one releases
+nothing. Either would fail the non-null check of a key column (Part 05 §5.1). A repeated key in the
+preferred source fails the primary-key check of Part 05 §5.1 as well; until then a column override
+releases a value only where every row of that key leaves it null, so the build never chooses among
+them.
 
 A refusal of §3.3 also stops a recipe whose preference was removed while its column override
 stayed, where a stale field override is only reported.
@@ -386,10 +435,10 @@ narrows; and R153 §3.7, whose recipe identifier §3.6 replaces.
 | semantic prose | Unchanged. An override is a fact about a build and no concept of Part 01. | None required. |
 | logical prose and registry | Unchanged. No resource, column or rule changes, and the meta-schema's spelling of a column of a resource is reused and not altered. | None required. |
 | physical profiles | Unchanged. No storage property and no delivery changes. | None required. |
-| packet manifest and JSON Schemas | The recipe schema's `overrides` key pattern, its descriptions and its `$id` change (§3.6). No other incorporated schema changes. | The schema artifact; schema tests admitting a three-segment key and refusing a four-segment one. |
+| packet manifest and JSON Schemas | The recipe schema's `overrides` key pattern, its descriptions and its `$id` change (§3.6). No other incorporated schema changes. | The schema artifact; schema tests admitting a three-segment key and refusing a four-segment one and a two-segment key whose block is neither `session` nor `subject`. |
 | validation and import | Part 05 §3.1 takes §§3.1 and 3.6; Part 05 §3.4 takes §3.2; Part 05 §3.5 takes §§3.3, 3.4 and 3.5; Part 05 §3.6 takes §§3.1 and 3.4. No validator check is added, since a packet does not show whether a build refused. | `evidence/R<N>.json` names the four anchors. |
 | extensions | Unchanged. A column override names an extension table's column as it names a core one, where a recipe prefers a source for that table. | None required. |
-| reader, writer, validator, adapters | The reference build honours a column override, refuses the four cases of §3.3, admits a column override in an amending recipe, reports a release and an idle entry, and names the column override in its refusal message. Its packaged copy of the schema regenerates. An adapter is unchanged: its `states` (Part 12 §7) names recipe fields, which a field override still answers. The reader and the validator are unchanged, since neither reads a recipe. | The writer suite's cases of §6; the copies check of `verify.py`. |
+| reader, writer, validator, adapters | The reference build compares rows after filling each `session_id` and owned name it fills, which moves that fill before the comparison of Part 05 §3.4; pairs no row holding a null key column and compares a passed-over row with every preferred row of its key; honours a column override; refuses the four cases of §3.3; admits a column override in an amending recipe; reports a release as information and an idle entry as a warning; and names the column override in its refusal message. Its packaged copy of the schema regenerates. An adapter is unchanged: its `states` (Part 12 §7) names recipe fields, which a field override still answers. The reader and the validator are unchanged, since neither reads a recipe. | The writer suite's cases of §6; the copies check of `verify.py`. |
 | conformance fixtures and tests | No packet fixture, since a packet does not show whether a build refused. Build and schema tests cover §6's cases. The informative example recipe, which declares a preference for `core.probes`, gains a column override. | The writer suite; the example recipe validated against the schema. |
 | revision process and tooling | The ledger changes above and the ordinary evidence record. No tool changes. | `ledger.py`, `evidence.py` and `verify.py`. |
 | generated publications and developer documentation | The combined specification regenerates. The writer's guide documents both kinds of entry; no package document mentions `overrides` at the baseline. | `verify.py`. |
@@ -411,16 +460,25 @@ No validator finding distinguishes the rule. These build cases do:
 - the recipe of §2.6 builds under either preference with one column override;
 - a column override for a resource with no preference, for an undeclared column, for `metadata`
   and for a primary-key column is each refused before any source opens, naming the key;
-- a column override for `core.probes.session_id` builds where the preferred source omits the
-  column and the writer fills it (§2.9);
-- a column override that released nothing is reported and the build proceeds; and
+- with no entry, a preferred source omitting `core.probes.session_id` or `core.probes.probe_name`
+  where the passed-over source states the value the writer fills builds without a refusal, and a
+  column override naming that column is idle;
+- a table whose key holds `session_id`, where one source omits it, builds without a refusal over
+  a row the preferred source does not produce;
+- a passed-over row holding a null in a key column is refused as a row the preferred source does
+  not produce, with or without a column override;
+- where the preferred source delivers two rows with one key and both leave the column null, a
+  column override releases the passed-over value; where one of them states it, the build refuses;
+- a column override that released nothing is reported as a warning and the build proceeds; and
 - an amending recipe carrying a column override is not refused for it, and one carrying a field
   override is.
 
-These schema cases distinguish §3.6: the schema admits `subject.strain`, `core.probes.probe_type`
-and `aind_unit_qc.metrics.num_spikes_used`, and refuses a key of four segments and a key with an
-empty segment.
+These schema cases distinguish §3.6: the schema admits `subject.strain`,
+`session.session_start_time`, `core.probes.probe_type` and `aind_unit_qc.metrics.num_spikes_used`,
+and refuses `core.probes`, `probes.probe_type`, a key of four segments and a key with an empty
+segment.
 
-The three probes of §2 establish feasibility: the comparison already names the column in the
-spelling a column override uses, a JSON Schema pattern expresses both key forms, and the build
-holds every row the release reads.
+The probes of §2 establish feasibility: the comparison already names the column in the spelling a
+column override uses, a JSON Schema pattern expresses both key forms and the restricted block (the
+fourth probe admits and refuses exactly the keys above), and the build holds every row the release
+reads and the session and identifiers it fills from.
