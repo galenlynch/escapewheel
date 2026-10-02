@@ -533,6 +533,8 @@ class SourceFault(StrEnum):
     ENTRY_URI = "entry_uri"
     #: The resource document does not satisfy its schema.
     DOCUMENT_SHAPE = "document_shape"
+    #: A delivery's compensations table lacks required text.
+    COMPENSATIONS_SHAPE = "compensations_shape"
     #: A resource the build asked for never arrived.
     NEVER_ARRIVED = "never_arrived"
     #: A referenced resource binds no delivered catalog row.

@@ -2536,7 +2536,7 @@ where = [
   { part = "05", anchor = "ew-verdict-composition" },
   { part = "05", anchor = "ew-error-policy" },
 ]
-note = "33 clauses gain an actor -- 13 a writer, 6 a validator, 4 a consumer, 3 a build, 1 a reader, and the 8 abstract-subject ones -- and 12 name the part of the artifact they constrain, actively. Three judgement calls settled in the revision: 00 §4.1 binds a writer, 03 §7's stray binds a writer, and 04 §5's unresolved source splits between a reader and a validator. the clause fixed the form of each sentence and decided no rule of its own: the carried-identifier name sentence in Part 02 §8.2 is R53 §2.3.1's, as R126 §3.6 restated it"
+note = "33 clauses gain an actor -- 13 a writer, 6 a validator, 4 a consumer, 3 a build, 1 a reader, and the 8 abstract-subject ones -- and 12 name the part of the artifact they constrain, actively. Three judgement calls settled in the revision: 00 §4.1 binds a writer, 03 §7's stray binds a writer, and 04 §5's unresolved source splits between a reader and a validator. the clause fixed the form of each sentence and decided no rule of its own: the carried-identifier name sentence in Part 02 §8.2 is R53 §2.3.1's, as R126 §3.6 restated it. R156 §§3.1 and 3.2 restate in Part 05 §4.3 its sentence on a compensation: what a compensation states, that an adapter states each one it applies, and that a writer records each one stated to it"
 
 
 [clause."R112 §2.1"]
@@ -2758,7 +2758,7 @@ where = [
   { part = "12", anchor = "ew-referenced-resource-delivery", note = "the resource document, what a build requires of an entry, and why it is a delivery rather than a report" },
   { part = "12", anchor = "ew-arrow-ipc-floor", note = "`resources` as the second reserved resource identifier, and the single-row table it travels as" },
 ]
-note = "R143 §3.7 restates in Part 03 §11.3 that a build records every entry as external, and adds the refusals of an entry declaring `external: false` and, under R143 §3.4, of a malformed relative `uri`"
+note = "R143 §3.7 restates in Part 03 §11.3 that a build records every entry as external, and adds the refusals of an entry declaring `external: false` and, under R143 §3.4, of a malformed relative `uri`. R156 §3.4 reserves `compensations` in Part 12 §6 as a third resource identifier beside `end` and `resources`"
 
 [clause."R117 §3.3"]
 disposition = "applied"
@@ -4293,3 +4293,19 @@ where = [
   { part = "02", anchor = "ew-logical-column-naming", note = "the registry checker is a checker" },
   { part = "03", anchor = "ew-array-metadata-placement", note = "the physical checker is a validator" },
 ]
+
+[clause."R156 §3.1"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-import-normalization", note = "what a compensation is and states" }]
+
+[clause."R156 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-import-normalization", note = "an adapter states each compensation it applies, and a writer records each one stated to it" }]
+
+[clause."R156 §3.3"]
+disposition = "applied"
+where = [{ part = "12", anchor = "ew-referenced-resource-delivery", note = "the `compensations` table of a delivery, its refusal, and that it is no resource of the packet" }]
+
+[clause."R156 §3.4"]
+disposition = "applied"
+where = [{ part = "12", anchor = "ew-arrow-ipc-floor", note = "`compensations` as the third reserved resource identifier" }]

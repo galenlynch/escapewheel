@@ -53,6 +53,11 @@ import applied lands in `core.processing_runs.parameters`. **A knowing pass-thro
 too**: choosing not to correct something is as much an assumption as choosing to. The tests refuse
 a compensation with no citation into `../inventory/`.
 
+An adapter the build runs in its own process names the identifiers it applied, and the build states
+each in full from the registry. An adapter reached by a protocol states them itself, in a table of
+its delivery under the reserved name `compensations` (Part 12 §5), which `escapewheel deliver`
+writes for a registered adapter. The packet records the same text by either route.
+
 `--strict` fails a build on any adapter note. A note marks a place the packet says less than the
 source could have; working around them is the job, so it is off by default and on in CI, where a
 new one is news.
@@ -181,6 +186,13 @@ Under `files-v0.1` the command reads the build's terms as one JSON object on sta
 12 §4) and writes `<resource_id>.parquet` for each resource into the `delivery_root` that
 object names. The declaration document satisfies `spec/artifacts/adapter.schema.json`, and a build reads
 it before it launches anything, so a term the script needs is one it declares.
+
+A script that works around a fault in its source says so in the same delivery, in one more table
+named `compensations`, which under `files-v0.1` is `compensations.parquet` (Part 12 §5). Its string
+columns are `id`, `defect` and `action`, none null or empty, and optionally `evidence`. The
+identifier is the author's own and needs no registration. The build records each row in
+`core.processing_runs.parameters`, stages no such table, and fails where one of the three columns
+is missing or holds a null or empty value. A script that worked around nothing writes none.
 
 `command` is an argument list — **not a shell**, and with no opinion about how the environment is
 arranged. It does not run in `root`, so a script it names is an absolute path.

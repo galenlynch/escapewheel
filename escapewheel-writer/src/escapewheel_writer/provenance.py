@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -19,7 +20,7 @@ from .amending import Held
 from .errors import RecipeFault
 from .recipe import Problem, Recipe, normalized_chosen_at, refusal
 from .secrets import redacted
-from .sources.compensations import describe
+from .sources.compensations import recordable
 from .writer import PacketWriter
 
 if TYPE_CHECKING:
@@ -94,7 +95,7 @@ def source_roots(recipe: Recipe) -> list[str]:
 
 
 def import_run(
-    recipe: Recipe, compensations: list[str] | None = None, context: Context | None = None
+    recipe: Recipe, compensations: Sequence[Mapping[str, str | None]] = (), context: Context | None = None
 ) -> dict[str, Any]:
     """Build the `core.processing_runs` row for this import, carrying the recipe as its parameters.
 
@@ -124,7 +125,7 @@ def import_run(
                 # Redacted, because this lands in the packet: a recipe written before the
                 # refusal existed carries a credential into every copy of it otherwise.
                 "recipe": redacted(recipe.document),
-                "compensations": describe(compensations or []),
+                "compensations": recordable(compensations),
                 # Part 02 §12.6: what the terminal-anchor test withheld, and the measurement
                 # that justifies mapping further than Part 01 §3.9's default.
                 **alignment_parameters(context),

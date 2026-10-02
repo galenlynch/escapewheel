@@ -9,7 +9,8 @@
   writes.
 - :func:`report_of` -- an adapter's report on its run.
 - :func:`as_table` -- records as a table with every column that any row carries.
-- :data:`SENTINEL`, :data:`RESOURCES` -- the two reserved `resource_id` values of a delivery.
+- :data:`SENTINEL`, :data:`RESOURCES`, :data:`COMPENSATIONS` -- the three reserved `resource_id`
+  values of a delivery.
 
 Arrays and opaque payloads cross as bytes in a location a build supplies (Part 12 §5), not as rows.
 """
@@ -18,7 +19,7 @@ from __future__ import annotations
 
 import json
 import sys
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -30,16 +31,31 @@ from .bindings import ExternalArray, ExternalMedia
 from .declaration import FILES, FLIGHT, REPORT_AS_FILE, SOURCE_CACHE, STREAM
 from .errors import SourceDefect, SourceFault, UnknownSourceKind
 from .kinds import required_adapter
-from .protocols import ReferencesArrays, ReferencesMedia, SourceAdapter, StagesArrays, StagesPayloads, Streams
+from .protocols import (
+    DeclaresCompensations,
+    ReferencesArrays,
+    ReferencesMedia,
+    SourceAdapter,
+    StagesArrays,
+    StagesPayloads,
+    Streams,
+)
+from .sources.compensations import describe
 
 #: The reserved `resource_id` ending a `stream-v0.1` delivery (Part 12 §6). A resource
 #: identifier is dotted, so no undotted token can collide with it.
 SENTINEL = "end"
 
-#: The other reserved one: what a delivery says about the resources it references rather than
+#: The second: what a delivery says about the resources it references rather than
 #: writes (Part 12 §5). Carried as text in a single-row table where a protocol carries Arrow,
 #: so the manifest's schema stays the one description of an entry.
 RESOURCES = "resources"
+
+#: The third: the table a delivery states its adapter's compensations in (Part 12 §5).
+COMPENSATIONS = "compensations"
+
+#: One resource of a delivery: a held table, or the batches of one too large to hold.
+Rows = pa.Table | Iterator[pa.RecordBatch]
 
 
 def as_table(rows: Sequence[Mapping[str, Any]]) -> pa.Table:
@@ -209,18 +225,31 @@ def serve(source: SourceAdapter, supplied: Mapping[str, Any], protocol: str, *, 
     tables = {name: delivering.get(name, as_table([])) for name in wanted}
     if (document := referenced(source)) is not None:
         tables[RESOURCES] = as_table([{"document": json.dumps(document, default=str)}])
+    delivery = _with_compensations(tables, source)
     if protocol == STREAM:
-        _serve_stream(tables, out if out is not None else sys.stdout.buffer)
+        _serve_stream(delivery, out if out is not None else sys.stdout.buffer)
     elif protocol == FILES:
-        _serve_files(tables, Path(supplied["delivery_root"]))
+        _serve_files(delivery, Path(supplied["delivery_root"]))
     elif protocol == FLIGHT:
-        _serve_flight(tables, str(supplied["socket"]))
+        _serve_flight(delivery, str(supplied["socket"]))
     else:
         raise SourceDefect(
             f"{protocol} is in no group this profile names", code=SourceFault.PROTOCOL_UNKNOWN, where=protocol
         )
     if (path := supplied.get("report_path")) and protocol in REPORT_AS_FILE:
         Path(path).write_text(json.dumps(report_of(source), indent=2, default=str) + "\n")
+
+
+def _with_compensations(tables: Mapping[str, Rows], source: SourceAdapter) -> Iterator[tuple[str, Rows]]:
+    """Each resource of a delivery, then the compensations its adapter applied (Part 12 §5).
+
+    Stated last, since an adapter may apply one while a table before it streams. One that applied
+    none delivers no such table.
+    """
+    yield from tables.items()
+    applied = list(source.compensations) if isinstance(source, DeclaresCompensations) else []
+    if stated := describe(applied):
+        yield COMPENSATIONS, as_table(stated)
 
 
 def report_of(source: SourceAdapter) -> dict[str, Any]:
@@ -251,19 +280,19 @@ def _write(out: Any, resource: str, table: pa.Table | Iterator[pa.RecordBatch]) 
             writer.write_batch(batch.replace_schema_metadata({"resource_id": resource}))
 
 
-def _serve_stream(tables: Mapping[str, Any], out: Any) -> None:
+def _serve_stream(tables: Iterable[tuple[str, Rows]], out: Any) -> None:
     """`stream-v0.1`: concatenated Arrow IPC streams, ended by the sentinel."""
-    for resource, table in tables.items():
+    for resource, table in tables:
         _write(out, resource, table)
     _write(out, SENTINEL, pa.table({}))
     out.flush()
 
 
-def _serve_files(tables: Mapping[str, Any], root: Path) -> None:
+def _serve_files(tables: Iterable[tuple[str, Rows]], root: Path) -> None:
     """`files-v0.1`: one Parquet file per resource, under the root a build named."""
     root.mkdir(parents=True, exist_ok=True)
-    for resource, table in tables.items():
-        if resource == RESOURCES:
+    for resource, table in tables:
+        if resource == RESOURCES and isinstance(table, pa.Table):
             # A file is a file: the document goes down as JSON rather than as text in a table,
             # which is the envelope only a protocol carrying Arrow needs.
             (root / f"{RESOURCES}.json").write_text(table.column("document")[0].as_py())
@@ -284,11 +313,11 @@ def _serve_files(tables: Mapping[str, Any], root: Path) -> None:
             pq.write_table(as_table([]), root / f"{resource}.parquet")
 
 
-def _serve_flight(tables: Mapping[str, Any], socket: str) -> None:
+def _serve_flight(tables: Iterable[tuple[str, Rows]], socket: str) -> None:
     """`flight-v0.1`: one descriptor per resource, served until the build terminates this process."""
     import pyarrow.flight as fl
 
-    held = {name: t if isinstance(t, pa.Table) else pa.Table.from_batches(list(t)) for name, t in tables.items()}
+    held = {name: t if isinstance(t, pa.Table) else pa.Table.from_batches(list(t)) for name, t in tables}
 
     class Served(fl.FlightServerBase):
         """One adapter's resources, each a Flight descriptor."""
@@ -310,6 +339,7 @@ def _serve_flight(tables: Mapping[str, Any], socket: str) -> None:
 
 
 __all__ = [
+    "COMPENSATIONS",
     "RESOURCES",
     "SENTINEL",
     "as_table",

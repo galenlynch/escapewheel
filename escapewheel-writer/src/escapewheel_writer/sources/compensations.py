@@ -4,7 +4,8 @@
 - :class:`Compensates` -- the mixin through which an adapter declares a compensation it applied.
 - :func:`registered` -- every compensation an adapter may declare, built in or registered by a
   distribution.
-- :func:`describe` -- applied compensations rendered for `core.processing_runs.parameters`.
+- :func:`describe` -- the compensations an adapter applied, stated in full from their identifiers.
+- :func:`recordable` -- stated compensations rendered for `core.processing_runs.parameters`.
 - :data:`COMPENSATIONS` -- the compensations this package declares.
 - :data:`COMPENSATION_GROUP` -- the entry-point group under which a distribution registers its
   own compensations.
@@ -17,6 +18,7 @@ same way.
 from __future__ import annotations
 
 import warnings
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from importlib.metadata import entry_points
 from typing import Any
@@ -154,7 +156,7 @@ class Compensates:
 
 
 def describe(applied: list[str]) -> list[dict[str, str]]:
-    """Render applied compensations for `core.processing_runs.parameters`."""
+    """State in full each registered compensation an adapter applied, from its identifier."""
     known = registered()
     return [
         {"id": identifier, "defect": c.defect, "action": c.action, "evidence": c.evidence}
@@ -163,4 +165,27 @@ def describe(applied: list[str]) -> list[dict[str, str]]:
     ]
 
 
-__all__ = ["COMPENSATIONS", "COMPENSATION_GROUP", "Compensates", "Compensation", "describe", "registered"]
+def recordable(stated: Iterable[Mapping[str, str | None]]) -> list[dict[str, str]]:
+    """Render stated compensations for `core.processing_runs.parameters` (Part 05 §4.3).
+
+    Two agreeing in every text are one, and two sharing an identifier and differing in any other
+    text are both kept. `evidence` is left out where none was stated.
+    """
+    distinct = {(str(c["id"]), str(c["defect"]), str(c["action"]), c.get("evidence")) for c in stated}
+    return [
+        {"id": identifier, "defect": defect, "action": action, **({} if evidence is None else {"evidence": evidence})}
+        for identifier, defect, action, evidence in sorted(
+            distinct, key=lambda c: (*c[:3], c[3] is not None, c[3] or "")
+        )
+    ]
+
+
+__all__ = [
+    "COMPENSATIONS",
+    "COMPENSATION_GROUP",
+    "Compensates",
+    "Compensation",
+    "describe",
+    "recordable",
+    "registered",
+]

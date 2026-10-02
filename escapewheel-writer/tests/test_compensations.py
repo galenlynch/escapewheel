@@ -3,7 +3,7 @@
 import pytest
 
 from escapewheel_writer.errors import UnknownCompensation
-from escapewheel_writer.sources.compensations import COMPENSATIONS, Compensates, describe
+from escapewheel_writer.sources.compensations import COMPENSATIONS, Compensates, describe, recordable
 
 
 def test_every_registered_compensation_carries_its_evidence():
@@ -37,6 +37,29 @@ def test_describe_renders_what_a_packet_carries():
     rendered = describe(["lfp.timestamps_distrusted", "lfp.timestamps_distrusted"])
     assert [e["id"] for e in rendered] == ["lfp.timestamps_distrusted"]
     assert "268 days" in rendered[0]["defect"]
+
+
+def test_two_stated_alike_are_recorded_once_and_two_differing_in_any_text_twice():
+    """Part 05 §4.3: an identifier is the author's own, so two adapters may spend one on two things."""
+    kept = {"id": "x.kept", "defect": "d", "action": "kept", "evidence": "one file"}
+    differing = [{**kept, text: "another"} for text in ("defect", "action", "evidence")]
+    assert recordable([kept, dict(kept)]) == [kept]
+    assert len(recordable([kept, *differing])) == 4
+
+
+def test_a_compensation_is_recorded_with_its_evidence_only_where_one_was_stated():
+    """An empty evidence was stated and a null one was not, so the two are recorded apart."""
+    stated = {"id": "x.kept", "defect": "d", "action": "kept"}
+    assert recordable([{**stated, "evidence": None}, stated, {**stated, "evidence": ""}]) == [
+        stated,
+        {**stated, "evidence": ""},
+    ]
+
+
+def test_what_is_recorded_does_not_depend_on_the_order_sources_ran_in():
+    first = {"id": "b.kept", "defect": "d", "action": "kept"}
+    second = {"id": "a.kept", "defect": "d", "action": "kept"}
+    assert recordable([first, second]) == recordable([second, first]) == [second, first]
 
 
 def test_a_knowing_pass_through_is_registered_too():

@@ -442,3 +442,9 @@ An adapter therefore declares each compensation it applies, and the build record
 `core.processing_runs.parameters`. A packet then states what its importer assumed, and the packets
 that assumed a since-fixed fault can be found. A deliberate pass-through is declared too, because
 choosing not to correct is also an assumption.
+
+An adapter served out of process cannot hand the build a list, and one written in another language
+cannot add to the build's registry. Its delivery therefore carries a `compensations` table stating
+each one in full: `id`, `defect`, `action` and optionally `evidence` (Part 12 §5). The table goes
+last, because an adapter may apply a compensation while an earlier table streams. The build takes
+it out before it counts or stages what arrived, and records two rows that agree in every text once.

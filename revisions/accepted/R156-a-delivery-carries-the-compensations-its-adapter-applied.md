@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-10-02 |
 | **Based on** | `9bcc3efe83da05c7ab192d1a16b56191dfe0c9a7` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -223,7 +223,7 @@ that §§3.1 and 3.2 restate its sentence on a compensation; and R117 §3.2, pla
 | logical prose and registry | Unchanged. `core.processing_runs.parameters` keeps its declaration, and no rule reads it for a compensation. | None required. |
 | physical profiles | Unchanged. No storage property is involved. | None required. |
 | packet manifest and JSON Schemas | Unchanged. The table's columns are stated in Part 12 §5's prose, and no schema describes a delivery's tables. The adapter declaration schema and the delivery schema are untouched. | None required. |
-| validation and import | Part 05 §4.3 takes §§3.1 and 3.2, Part 12 §5 takes §3.3, and Part 12 §6 takes §3.4. No validator check is added, since a packet does not show which compensations a run applied. | `evidence/R<N>.json` names the three anchors. |
+| validation and import | Part 05 §4.3 takes §§3.1 and 3.2, Part 12 §5 takes §3.3, and Part 12 §6 takes §3.4. No validator check is added, since a packet does not show which compensations a run applied. | `evidence/R156.json` names the three anchors. |
 | extensions | Unchanged. An extension declares no compensation. | None required. |
 | reader, writer, validator, adapters | The reference build delivers the table when it serves an adapter out of process and records the rows it receives. An adapter it runs in process is unchanged. An adapter released apart delivers the table where it applies a compensation. The reader and validator are unchanged. | The writer suite's cases of §6, under each protocol. |
 | conformance fixtures and tests | No packet fixture distinguishes the rule, since a validator cannot decide it. Build tests cover §6's cases. | The writer suite. |

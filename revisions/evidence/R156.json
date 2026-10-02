@@ -1,0 +1,414 @@
+{
+  "version": 1,
+  "revision": "R156",
+  "based_on": "9bcc3efe83da05c7ab192d1a16b56191dfe0c9a7",
+  "clauses": {
+    "R156 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-import-normalization"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_compensations.py::test_two_stated_alike_are_recorded_once_and_two_differing_in_any_text_twice"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_compensations.py::test_a_compensation_is_recorded_with_its_evidence_only_where_one_was_stated"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_compensation_stating_no_evidence_is_recorded_without_one[no evidence column-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_compensation_stating_no_evidence_is_recorded_without_one[no evidence column-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_compensation_stating_no_evidence_is_recorded_without_one[no evidence column-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_compensation_stating_no_evidence_is_recorded_without_one[a null evidence-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_compensation_stating_no_evidence_is_recorded_without_one[a null evidence-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_compensation_stating_no_evidence_is_recorded_without_one[a null evidence-flight-v0.1]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/sources/compensations.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/CONTRIBUTING.md",
+          "escapewheel-writer/docs/source/design.md"
+        ]
+      }
+    },
+    "R156 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-import-normalization"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_delivered_adapter_states_what_it_states_in_process[files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_delivered_adapter_states_what_it_states_in_process[stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_delivered_adapter_states_what_it_states_in_process[flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_import_run_records_a_compensation_whatever_the_route[in-process]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_import_run_records_a_compensation_whatever_the_route[files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_import_run_records_a_compensation_whatever_the_route[stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_import_run_records_a_compensation_whatever_the_route[flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_two_sources_stating_one_identifier_are_one_only_where_every_text_agrees[files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_two_sources_stating_one_identifier_are_one_only_where_every_text_agrees[stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_two_sources_stating_one_identifier_are_one_only_where_every_text_agrees[flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_compensations.py::test_what_is_recorded_does_not_depend_on_the_order_sources_ran_in"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/serving.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/provenance.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/compensations.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/CONTRIBUTING.md",
+          "escapewheel-writer/docs/source/design.md"
+        ]
+      }
+    },
+    "R156 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/12_adapter_interface.md",
+          "anchor": "ew-referenced-resource-delivery"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_an_absent_table_and_an_empty_one_each_state_none[no table-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_an_absent_table_and_an_empty_one_each_state_none[no table-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_an_absent_table_and_an_empty_one_each_state_none[no table-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_an_absent_table_and_an_empty_one_each_state_none[an empty table-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_an_absent_table_and_an_empty_one_each_state_none[an empty table-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_an_absent_table_and_an_empty_one_each_state_none[an empty table-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no id column-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no id column-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no id column-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no defect column-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no defect column-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no defect column-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no action column-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no action column-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[no action column-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[a null id-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[a null id-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[a null id-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[an empty defect-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[an empty defect-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[an empty defect-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[a null action-files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[a null action-stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_table_lacking_required_text_is_refused_naming_the_source[a null action-flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_column_the_table_is_not_given_is_ignored[files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_column_the_table_is_not_given_is_ignored[stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_column_the_table_is_not_given_is_ignored[flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_is_no_resource_the_source_was_left_owning[files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_is_no_resource_the_source_was_left_owning[stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_is_no_resource_the_source_was_left_owning[flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_reaches_neither_the_packet_nor_its_manifest[files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_reaches_neither_the_packet_nor_its_manifest[stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_reaches_neither_the_packet_nor_its_manifest[flight-v0.1]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/reading.py",
+          "escapewheel-writer/src/escapewheel_writer/errors.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/CONTRIBUTING.md",
+          "escapewheel-writer/docs/source/design.md"
+        ]
+      }
+    },
+    "R156 §3.4": {
+      "owners": [
+        {
+          "path": "spec/parts/12_adapter_interface.md",
+          "anchor": "ew-arrow-ipc-floor"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_delivered_adapter_states_what_it_states_in_process[files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_delivered_adapter_states_what_it_states_in_process[stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_a_delivered_adapter_states_what_it_states_in_process[flight-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_is_no_resource_the_source_was_left_owning[files-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_is_no_resource_the_source_was_left_owning[stream-v0.1]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_delivered_compensations.py::test_the_table_is_no_resource_the_source_was_left_owning[flight-v0.1]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/serving.py",
+          "escapewheel-writer/src/escapewheel_writer/reading.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/CONTRIBUTING.md",
+          "escapewheel-writer/docs/source/design.md"
+        ]
+      }
+    }
+  }
+}

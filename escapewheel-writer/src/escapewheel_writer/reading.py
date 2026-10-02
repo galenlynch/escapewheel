@@ -32,6 +32,7 @@ from .encoding import STREAMED_BATCH_ROWS
 from .errors import DeliveryFailed, SourceDefect, SourceFault
 from .notes import Note, NoteCode
 from .serving import (
+    COMPENSATIONS,
     RESOURCES,
     SENTINEL,
 )
@@ -69,10 +70,14 @@ class Delivered:
         states: Sequence[str] = (),
         merged: Collection[str] = (),
         referenced: Sequence[Mapping[str, Any]] = (),
+        compensated: Sequence[Mapping[str, str | None]] = (),
         arrays: Path | None = None,
     ) -> None:
         self.kind = kind
         self.tables = dict(tables)
+        #: Each compensation the delivery stated (Part 12 §5): its `id`, `defect` and `action`,
+        #: and its `evidence` or None.
+        self.compensated = list(compensated)
         #: What the delivery said about the resources it references rather than writes, as
         #: manifest entries (Part 12 §5).
         self.referenced = list(referenced)
@@ -303,6 +308,9 @@ def fetch(
 
     document, malformed = _document(kind, tables.pop(RESOURCES, None))
     failures += malformed
+    # Taken out before anything counts or stages the tables: it is no resource of the packet.
+    compensated, misstated = _compensations(tables.pop(COMPENSATIONS, None))
+    failures += misstated
     notes, stated = _from_report(kind, protocol, report_path, tables)
     missing = [resource for resource in wanted if resource not in tables]
     if missing:
@@ -327,6 +335,7 @@ def fetch(
         states=states,
         merged=merged,
         referenced=document,
+        compensated=compensated,
         arrays=Path(supplied["array_location"]) if supplied.get("array_location") else None,
     )
     if unresolved := delivered.unresolved():
@@ -363,6 +372,51 @@ def _document(kind: str, delivered: Any) -> tuple[list[dict[str, Any]], list[Sou
     if problem := _refuses(document):
         return [], [SourceDefect(f"the resource document {problem}", code=SourceFault.DOCUMENT_SHAPE)]
     return [_as_recorded(entry) for entry in document.get("resources", ())], []
+
+
+def _compensations(delivered: pa.Table | Path | None) -> tuple[list[dict[str, str | None]], list[SourceDefect]]:
+    """Read the compensations a delivery stated, refusing a table that lacks required text (Part 12 §5).
+
+    An absent table and an empty one both state none, and a column the protocol does not name is
+    not read.
+    """
+    if delivered is None:
+        return [], []
+    table = pq.read_table(delivered) if isinstance(delivered, Path) else delivered
+    problems = []
+    for name in ("id", "defect", "action", "evidence"):
+        required = name != "evidence"
+        if name not in table.column_names:
+            if required:
+                problems.append(f"lacks the required column {name}")
+            continue
+        if not _is_text(table.schema.field(name).type):
+            problems.append(f"holds {name} as {table.schema.field(name).type}, which is not a string type")
+        elif required and (unstated := [at for at, value in enumerate(table.column(name).to_pylist(), 1) if not value]):
+            problems.append(f"is null or empty in {name} at row {', '.join(map(str, unstated))}")
+    if problems:
+        return [], [
+            SourceDefect(
+                f"the compensations table {problem} (Part 12 §5)",
+                code=SourceFault.COMPENSATIONS_SHAPE,
+                where=COMPENSATIONS,
+            )
+            for problem in problems
+        ]
+    stated = table.select([name for name in ("id", "defect", "action", "evidence") if name in table.column_names])
+    return [{"evidence": None, **row} for row in stated.to_pylist()], []
+
+
+def _is_text(kind: pa.DataType) -> bool:
+    """Whether a column's type holds text or nothing: a string type, a dictionary of one, or null."""
+    if pa.types.is_dictionary(kind):
+        kind = kind.value_type
+    return (
+        pa.types.is_string(kind)
+        or pa.types.is_large_string(kind)
+        or pa.types.is_string_view(kind)
+        or pa.types.is_null(kind)
+    )
 
 
 def _entry_refusals(document: Any) -> list[SourceDefect]:

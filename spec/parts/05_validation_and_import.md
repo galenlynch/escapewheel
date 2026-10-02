@@ -358,7 +358,27 @@ which it adds no row keeps its resource entry, so the amendment does not write i
 
 An interval is closed (01 §2.3). A writer MUST convert a source whose intervals are half-open — `[start, stop)` — which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
 
-An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
+A **compensation** is what an adapter does about a known defect in its source. Leaving a known
+defect uncorrected on purpose is a compensation. A compensation states:
+
+- an identifier, which is non-empty text that the adapter's author chooses;
+- the defect, as non-empty text saying what is wrong at the source; and
+- the action, as non-empty text saying what the adapter does about it.
+
+A compensation MAY also state the evidence for the defect, as text. Two compensations with one
+identifier and the same defect, action and evidence are one compensation.
+
+An adapter MUST state to the build every compensation it applies in a run. An adapter that a build
+runs in the writer's process states them by the means that build provides. An adapter reached by a
+protocol (Part 12 §3) MUST state them in the table
+[Part 12 §5](12_adapter_interface.md#ew-referenced-resource-delivery) gives a delivery for them. No
+build or validator can check that an adapter stated every compensation it applied, so this rule
+binds the adapter alone.
+
+A writer MUST record every compensation stated to it in the import run's `parameters`, each with
+its identifier, its defect, its action, and its evidence where one is stated. Where two
+compensations stated to it share an identifier and differ in any other text, a writer MUST record
+both.
 
 A writer MUST examine a source in acquisition order and MUST NOT assume monotonicity. A reset is visible only in the order the samples arrived; sorting first hides it.
 

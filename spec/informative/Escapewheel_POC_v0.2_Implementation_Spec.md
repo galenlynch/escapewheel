@@ -3616,7 +3616,27 @@ which it adds no row keeps its resource entry, so the amendment does not write i
 
 An interval is closed (01 §2.3). A writer MUST convert a source whose intervals are half-open — `[start, stop)` — which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
 
-An adapter compensating for a known defect in its source MUST declare the compensation, and a writer MUST record every compensation applied in the import run's parameters. Choosing not to correct a known defect is equally a compensation and is declared as a pass-through.
+A **compensation** is what an adapter does about a known defect in its source. Leaving a known
+defect uncorrected on purpose is a compensation. A compensation states:
+
+- an identifier, which is non-empty text that the adapter's author chooses;
+- the defect, as non-empty text saying what is wrong at the source; and
+- the action, as non-empty text saying what the adapter does about it.
+
+A compensation MAY also state the evidence for the defect, as text. Two compensations with one
+identifier and the same defect, action and evidence are one compensation.
+
+An adapter MUST state to the build every compensation it applies in a run. An adapter that a build
+runs in the writer's process states them by the means that build provides. An adapter reached by a
+protocol (Part 12 §3) MUST state them in the table
+[Part 12 §5](../parts/12_adapter_interface.md#ew-referenced-resource-delivery) gives a delivery for them. No
+build or validator can check that an adapter stated every compensation it applied, so this rule
+binds the adapter alone.
+
+A writer MUST record every compensation stated to it in the import run's `parameters`, each with
+its identifier, its defect, its action, and its evidence where one is stated. Where two
+compensations stated to it share an identifier and differ in any other text, a writer MUST record
+both.
 
 A writer MUST examine a source in acquisition order and MUST NOT assume monotonicity. A reset is visible only in the order the samples arrived; sorting first hides it.
 
@@ -5628,10 +5648,33 @@ accepts with its `uri` rewritten in Part 03 §4's one form.
 
 The document is part of the delivery and not a report. A build MUST NOT require a report and MUST NOT fail on one's contents (§9), so a fact a manifest cannot be written without does not travel in one; a resource that does not arrive is already a failed run (Part 05 §4.4), which is the rule this needs and does not restate. A build MUST NOT count the document among the resources the recipe left the source owning.
 
+**An adapter's compensations cross as a table.** A delivery MAY carry one table under the reserved
+resource identifier `compensations` (§6), with one row for each compensation the adapter applied
+([Part 05 §4.3](../parts/05_validation_and_import.md#ew-import-normalization)). The table crosses as a table
+of the delivery crosses under the protocol in use (§3). It has these columns, each of a string type:
+
+| column | presence | holds |
+|---|---|---|
+| `id` | required, and no row is null or empty | the compensation's identifier |
+| `defect` | required, and no row is null or empty | the defect |
+| `action` | required, and no row is null or empty | the action |
+| `evidence` | the column may be absent, and a row may be null | the evidence for the defect |
+
+An adapter that applied no compensation MAY deliver no such table, or an empty one. A build MUST
+read an absent table, and an empty one, as a run that applied none.
+
+A build MUST refuse a delivery, naming the source, whose `compensations` table lacks a required
+column or holds a row that is null or empty in one. A build MUST NOT refuse the table for carrying
+a column this section does not name.
+
+The table is no resource of the packet. A build MUST NOT stage it, MUST NOT resolve a declaration
+for it, and MUST NOT count it among the resources the recipe left the source owning
+(Part 05 §4.4).
+
 <a id="ew-arrow-ipc-floor" data-spec-anchor="canonical"></a>
 ## 6. The Arrow IPC floor
 
-An Arrow IPC stream carries one schema and an adapter returns many resources, so under `stream-v0.1` the streams concatenate: each ends with the format's own end-of-stream marker, and the resource identifier rides in the schema's key-value metadata under the key `resource_id`. That key and two reserved values of it — `end`, and `resources` for the document §5 requires of an adapter delivering a referenced resource — are the whole of what this protocol adds to Arrow. A resource identifier is dotted, so no undotted token collides with either. A document carried this way travels as text in a single-row table rather than as a column per field, so the manifest's schema stays the one description of an entry.
+An Arrow IPC stream carries one schema and an adapter returns many resources, so under `stream-v0.1` the streams concatenate: each ends with the format's own end-of-stream marker, and the resource identifier rides in the schema's key-value metadata under the key `resource_id`. That key and three reserved values of it — `end`, `resources` for the document §5 requires of an adapter delivering a referenced resource, and `compensations` for the table §5 carries an adapter's compensations in — are the whole of what this protocol adds to Arrow. A resource identifier is dotted, so no undotted token collides with any of them, and a reserved value names no resource of a registry. An adapter MUST NOT deliver anything but that table under `compensations`. A document carried this way travels as text in a single-row table rather than as a column per field, so the manifest's schema stays the one description of an entry.
 
 "Arrow IPC" names a family, so this profile pins one member of it, as Part 03 §5.5 pins Parquet's compressions. An adapter MUST write uncompressed record-batch bodies at metadata version V5, and MUST send each dictionary whole rather than as a delta against one already sent. Compressing buys nothing on a pipe and costs an adapter author a codec in a language whose Arrow binding may not carry one; V5 has been the default since Arrow 1.0, and a delta dictionary is the least evenly implemented part of the format.
 

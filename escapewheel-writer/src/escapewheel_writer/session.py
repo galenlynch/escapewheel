@@ -78,9 +78,10 @@ from .protocols import (
     Streams,
 )
 from .provenance import import_run, preferred_runs, source_roots
+from .reading import Delivered
 from .recipe import RECIPE_SUPPLIES, Problem, Recipe, SourceSpec, payloads, refusal
 from .replacing import Replaced, read_replaced
-from .sources.compensations import describe
+from .sources.compensations import describe, recordable
 from .sourcing import build_source, harvest, order, reference_clock, resolved_source_cache, rows_reader
 from .writer import PacketWriter
 
@@ -489,7 +490,8 @@ def build(  # noqa: C901
         writer.add(CORE_SUBJECTS, [dict(recipe.subject)])
 
     counts: dict[str, int] = {}
-    applied: list[str] = []
+    #: Every compensation a source stated, in full (Part 05 §4.3).
+    compensated: list[Mapping[str, str | None]] = []
     #: Notes each source had said by the time it was run, so a later one can be told apart.
     drained: dict[str, int] = {}
     for spec in order(recipe):
@@ -533,8 +535,10 @@ def build(  # noqa: C901
                 say(f"  payload {payload.resource_id}: {opaque.shown(Path(payload.path.name))}")
 
         drained[spec.kind] = _say_notes(spec.kind, source, 0, say, strict)
-        if isinstance(source, DeclaresCompensations):
-            applied.extend(source.compensations)
+        if isinstance(source, Delivered):
+            compensated.extend(source.compensated)
+        elif isinstance(source, DeclaresCompensations):
+            compensated.extend(describe(source.compensations))
 
     refuse_a_discarded_fact(writer, context, recipe)
     declare_withheld(context, writer, say)
@@ -554,7 +558,7 @@ def build(  # noqa: C901
                 }
             ],
         )
-    run = import_run(recipe, applied, context)
+    run = import_run(recipe, compensated, context)
     run["processing_run_id"] = writer.name_apart("processing_run_id", run["processing_run_id"])
     writer.add(CORE_PROCESSING_RUNS, [run])
     if roots := source_roots(recipe):
@@ -575,7 +579,7 @@ def build(  # noqa: C901
         )
     if recipe.preferred_runs:
         writer.add(CORE_PREFERRED_RUNS, preferred_runs(recipe, writer, held, session_id))
-    for entry in describe(applied):
+    for entry in recordable(compensated):
         say(f"  compensated: {entry['id']}")
 
     def written(say: Callable[[str], None]) -> None:
