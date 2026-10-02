@@ -574,7 +574,7 @@ def _named(extension_id):
     return document
 
 
-def _extensions_recipe(tmp_path, entries, documents, source=""):
+def extensions_recipe(tmp_path, entries, documents, source=""):
     """A recipe listing `entries` under `[packet].extensions`, with `documents` written beside it."""
     for name, document in documents.items():
         (tmp_path / name).write_text(json.dumps(document))
@@ -632,7 +632,7 @@ def test_a_recipe_listing_one_extension_twice_is_refused(
 
     registered = [_EntryPoint(name, document) for name, document in installed.items()]
     monkeypatch.setattr(ext, "entry_points", lambda group: registered)
-    recipe = Recipe.load(_extensions_recipe(tmp_path, entries, documents, SORTER))
+    recipe = Recipe.load(extensions_recipe(tmp_path, entries, documents, SORTER))
     refusal = _build_refuses(recipe, registry, monkeypatch)
     named = ", ".join(repr(entry) for entry in entries)
     (problem,) = refusal.problems
@@ -645,7 +645,7 @@ def test_the_check_command_refuses_one_extension_listed_twice(tmp_path, capsys):
     from escapewheel_reader.scripts.cli import main
 
     registry = Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json"
-    path = _extensions_recipe(
+    path = extensions_recipe(
         tmp_path,
         ["task-0.1.0.json", "task-0.2.0.json"],
         {"task-0.1.0.json": EXTENSION, "task-0.2.0.json": _task_version("0.2.0")},
@@ -660,7 +660,7 @@ def test_a_recipe_listing_two_extensions_builds_and_binds_both(tmp_path, registr
     from escapewheel_writer.session import build
 
     recipe = Recipe.load(
-        _extensions_recipe(tmp_path, ["task.json", "cue.json"], {"task.json": EXTENSION, "cue.json": _named("cue")})
+        extensions_recipe(tmp_path, ["task.json", "cue.json"], {"task.json": EXTENSION, "cue.json": _named("cue")})
     )
     problems = recipe.check(registry.document, [EXTENSION, _named("cue")])
     assert not [p for p in problems if p.code is RecipeFault.REPEATED_EXTENSION]

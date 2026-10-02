@@ -73,7 +73,8 @@ naming the candidates, so its draft is refused until one is chosen.
 Before recipe checking or source I/O, the importer checks the exact core registry bytes and binds
 the complete result to an in-process checked context. Extension registries are checked against
 that same core context. A non-valid result stops the build before an adapter opens or staging
-begins; `--registry-result PATH` writes the portable core result for automation. The public
+begins; `--registry-result PATH` writes for automation the complete portable result of the registry
+that stopped it, core or extension, and the core registry's result where none did. The public
 `PacketWriter` constructor provides the same boundary for callers supplying mappings.
 
 ## An importer is not one step

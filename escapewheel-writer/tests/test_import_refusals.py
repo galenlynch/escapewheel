@@ -1,9 +1,12 @@
 """`escapewheel import` prints a refusal and exits with a status; it raises none."""
 
+import json
 from pathlib import Path
 
 import pytest
 from escapewheel_reader.scripts.cli import main
+from escapewheel_validator import RegistryRejected, check_registry_context_bytes
+from jsonschema import Draft202012Validator
 
 from escapewheel_writer.errors import (
     NotCommitted,
@@ -18,8 +21,18 @@ from escapewheel_writer.errors import (
 from escapewheel_writer.scripts import cli
 from escapewheel_writer.writer import PacketWriter
 from tests.builders import amending_recipe, session_recipe, session_sources
+from tests.test_extensions import EXTENSION, extensions_recipe
 
-CORE = Path(__file__).resolve().parents[2] / "spec" / "artifacts" / "logical_schemas.json"
+ARTIFACTS = Path(__file__).resolve().parents[2] / "spec" / "artifacts"
+CORE = ARTIFACTS / "logical_schemas.json"
+RESULT_SCHEMA = Draft202012Validator(json.loads((ARTIFACTS / "registry_result.schema.json").read_text()))
+
+_VERSION = '"registry_version": "0.1.0"'
+#: The task extension with `registry_version` repeated, which only a check of the bytes sees
+#: (Part 02 §9.4).
+REPEATED_MEMBER = json.dumps(EXTENSION).replace(_VERSION, f"{_VERSION}, {_VERSION}")
+#: The task extension without a member its meta-schema requires, so it decodes and is not valid.
+MISSING_MEMBER = json.dumps({member: value for member, value in EXTENSION.items() if member != "rule_language"})
 
 BEFORE_THE_COMMIT = [
     RecipeUnsound("session.toml: refused, 1 error(s)", path=Path("session.toml"), problems=[]),
@@ -61,6 +74,51 @@ def test_an_unreadable_recipe_exits_2(tmp_path, capsys):
     assert main(["import", str(path)]) == 2
     printed = capsys.readouterr().err
     assert printed.startswith("error: ") and "Traceback" not in printed
+
+
+@pytest.mark.parametrize(
+    ("core", "extension", "printed", "failing_phase", "outcome"),
+    [
+        (b"{", json.dumps(EXTENSION), "core registry", "json", "registry.json.invalid_syntax"),
+        (CORE.read_bytes(), "{", "extension registry", "json", "registry.json.invalid_syntax"),
+        (CORE.read_bytes(), REPEATED_MEMBER, "extension registry task", "json", "registry.json.duplicate_member"),
+        (CORE.read_bytes(), MISSING_MEMBER, "extension registry task", "shape", None),
+    ],
+    ids=["core", "undecodable-extension", "repeated-member", "missing-member"],
+)
+def test_a_rejected_registry_writes_its_complete_result(
+    tmp_path, capsys, core, extension, printed, failing_phase, outcome
+):
+    """Part 05 §14.4: `--registry-result` holds the Part 02 §9.5 result of the registry that stopped
+    the build, where the phase that fails says whose result it is. The line printed names an
+    extension whose document decodes."""
+    (tmp_path / "core.json").write_bytes(core)
+    (tmp_path / "task.json").write_text(extension)
+    recipe = extensions_recipe(tmp_path, ["task.json"], {})
+    result = tmp_path / "result.json"
+
+    status = main(["import", str(recipe), "--registry", str(tmp_path / "core.json"), "--registry-result", str(result)])
+
+    assert status == 2
+    assert capsys.readouterr().err == f"error: {printed} is invalid\n"
+    written = json.loads(result.read_text())
+    RESULT_SCHEMA.validate(written)
+    assert written["state"] == "invalid"
+    (failed,) = [phase for phase in written["phases"] if phase["state"] == "invalid"]
+    assert failed["phase"] == failing_phase
+    if outcome is not None:
+        assert [found["id"] for found in failed["outcomes"]] == [outcome]
+
+
+def test_a_registry_the_build_rejects_writes_its_result(recipe, monkeypatch):
+    """Part 05 §14.4: a rejection raised by the build reaches `--registry-result` as the same result."""
+    rejected = check_registry_context_bytes(b"{")
+    monkeypatch.setattr(cli, "build", _raising(RegistryRejected("task", rejected)))
+    result = recipe.parent / "result.json"
+
+    assert main(["import", str(recipe), "--registry", str(CORE), "--registry-result", str(result)]) == 2
+
+    assert json.loads(result.read_text()) == rejected.result.to_dict()
 
 
 @pytest.mark.parametrize("refusal", BEFORE_THE_COMMIT, ids=lambda refusal: type(refusal).__name__)

@@ -26,6 +26,7 @@ from escapewheel_validator import (
     EvaluationStatus,
     Level,
     RegistryRejected,
+    RegistryResult,
     RegistryState,
     check_registry_context_bytes,
 )
@@ -230,8 +231,9 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
     core_context = check_registry_context_bytes(
         Path(registry_path).read_bytes() if registry_path is not None else bound["core"]
     )
-    if args.registry_result is not None:
-        args.registry_result.write_text(json.dumps(core_context.result.to_dict(), indent=2) + "\n")
+    # Part 05 §14.4: the path holds the result of the registry that stops the build, and core's
+    # where none does.
+    _write_result(args.registry_result, core_context.result)
     if core_context.result.state != RegistryState.VALID:
         print(f"error: core registry is {core_context.result.state}", file=sys.stderr)
         return 2
@@ -253,7 +255,9 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
     try:
         prepared = prepare(recipe, core_context, extension_contexts=extension_contexts)
     except RegistryRejected as exc:
-        print(f"error: extension registry is {exc.result.state}", file=sys.stderr)
+        _write_result(args.registry_result, exc.result)
+        named = "" if exc.subject == "extension" else f" {exc.subject}"
+        print(f"error: extension registry{named} is {exc.result.state}", file=sys.stderr)
         return 2
     for problem in prepared.problems:
         print(f"  {problem}", file=sys.stderr)
@@ -295,6 +299,7 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
             prepared=prepared,
         )
     except RegistryRejected as exc:
+        _write_result(args.registry_result, exc.result)
         print(json.dumps(exc.result.to_dict(), indent=2), file=sys.stderr)
         return 2
     committing = commit_arguments(recipe, budget)
@@ -325,6 +330,12 @@ def _build_and_commit(args: argparse.Namespace) -> int:  # noqa: C901
                 print(f"  lost  {resource_id}", file=sys.stderr)
     print(f"committed {out} — {report.warnings} warning(s)")
     return 0
+
+
+def _write_result(path: Path | None, result: RegistryResult) -> None:
+    """Write a registry's complete portable result (Part 02 §9.5) to `path`, where one is given."""
+    if path is not None:
+        path.write_text(json.dumps(result.to_dict(), indent=2) + "\n")
 
 
 def _bound_registries(root: Path) -> dict[str, bytes]:
@@ -479,8 +490,7 @@ def _extension_check(args: argparse.Namespace) -> int:
         core_context = check_registry_context_bytes(args.registry.read_bytes())
 
     context = check_registry_context_bytes(args.document.read_bytes(), core=core_context)
-    if args.result is not None:
-        args.result.write_text(json.dumps(context.result.to_dict(), indent=2) + "\n")
+    _write_result(args.result, context.result)
     for phase in context.result.phases:
         for outcome in phase.outcomes:
             print(f"{outcome.state.upper():11s} {phase.phase}: {outcome.id} at {outcome.instance or '<root>'}")
@@ -655,7 +665,12 @@ def _import_parser(subcommands: argparse._SubParsersAction[argparse.ArgumentPars
         ),
     )
     importer.add_argument("--registry", type=Path, help="registry, overriding [packet].registry")
-    importer.add_argument("--registry-result", type=Path, help="write the complete core-registry result as JSON")
+    importer.add_argument(
+        "--registry-result",
+        type=Path,
+        help="write as JSON the complete portable result of the registry that stops the build, core or "
+        "extension, or of the core registry where none does",
+    )
     importer.add_argument("--check", action="store_true", help="check the recipe and stop")
     importer.add_argument(
         "--strict",
