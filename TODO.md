@@ -331,10 +331,17 @@ draft was.
   finding is not measured. The sidecar draft's inventory names the alignment.
 
 The same reading found four defects in the specification and the registry. Part 05 §1 and Part 11
-§3 are repaired. Two wait on a proposal in `revisions/proposals/`.
+§3 are repaired. Two wait on a draft in `revisions/drafts/`. A fifth, found while the clock-transform
+draft was appraised, wants a proposal of its own.
 
 - **The description of `processing_run_id` on both array-asset tables is false.** It says a null
   means the array was acquired, and a computed array whose run the packet does not record also
   carries null.
 - **`core.clocks.transform_to_parent` is still declared.** R3 §3.4 replaced it with the two typed
   columns.
+- **A held file's undeclared column is invisible to an amendment.** Part 05 §15.6 compares rows
+  over the columns the amended manifest's registry declares, and no validator check reports a file
+  column the bound registry does not declare. An amendment binding a registry that stopped declaring
+  a column therefore drops the column's values from a table it rewrites, and keeps them unreported
+  in one it does not. Whether an amending build refuses, preserves or reports such a column is
+  undecided.
