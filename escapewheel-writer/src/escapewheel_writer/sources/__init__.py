@@ -18,6 +18,7 @@ from .harp import HarpSource
 from .lfp import LFPSource
 from .nwb.source import NWBSource
 from .openephys import OpenEphysSource
+from .sidecars import SidecarSource
 from .sorter import SorterSource
 from .sync import SyncSource
 from .waveforms import WaveformSource
@@ -44,6 +45,7 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     "nwb": NWBSource,
     "waveforms": WaveformSource,
     "lfp": LFPSource,
+    "sidecars": SidecarSource,
 }
 
 

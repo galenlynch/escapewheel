@@ -251,8 +251,8 @@ sentence R159 added. R159 left the recipe schema unchanged, and its recorded rec
 the recipe only where a build recognizes a credential, so a column override and its reason are
 recorded as stated.
 
-`core-declares-a-catalog-of-sidecars.md` amends Part 05 §4.3, sections of four other parts and the
-core registry, and changes no recipe rule. It has two sources that each deliver sidecars name
+R160 amends Part 05 §4.3 by R160 §3.7, sections of four other parts and the core registry, and
+changes no recipe rule. It has two sources that each deliver sidecars name
 `core.sidecars` and `core.sidecar_scopes` under `contributes`. Part 05 §3.5 refuses a preference
 for a resource an entry declares under `contributes`, and a column override needs a preference
 (§3.3), so no column override names either table in such a recipe.

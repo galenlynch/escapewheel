@@ -61,15 +61,25 @@ The `content_class` vocabulary and its consequences are:
 | `extension` | typed facts owned by a domain | yes | no |
 | `analysis` | products reproducible from canonical resources | no | no |
 | `compatibility_projection` | a projection into another representation | no | no |
-| `documentation` | human-readable sidecars that assert no semantic or conformance fact | no | no |
+| `documentation` | sidecars, which a packet lists and asserts no semantic or conformance fact through, and the tables that list them | no | no |
 
 Canonicality is derived from this table and MUST NOT be independently declared. Promoting a
 resource into the canonical set changes its declaration's content class through a specification
 or extension-registry change; an implementation MUST NOT promote it with a Boolean.
 
-A documentation resource MAY describe another resource without creating a dependency or
-supplying conformance evidence. A machine-interpreted control artifact does not acquire
-documentation semantics merely because its serialization is a document.
+A **sidecar** is an opaque resource of class `documentation`: one that a packet lists and through
+which it asserts no semantic or conformance fact. The class also covers the tables that list
+sidecars (§12.10). A sidecar MAY be read by a person or by a program. This specification defines no
+behavior of a reader, a writer or a validator that interprets a sidecar's contents.
+
+Listing a resource as a sidecar records no dependence on it: the rule below forbids a canonical
+declaration a reference, a `requires` entry or a catalog binding that targets a documentation
+declaration, and §2.7 permits no lineage from one. A registry's author who needs a table to
+reference a payload, or a rule or a reader to interpret one, therefore declares it as a canonical
+resource. A machine-interpreted control artifact does not acquire documentation semantics merely
+because its serialization is a document. A payload that a result in the packet was computed from is
+recorded by the provenance tables ([Part 04 §7](04_packet_catalog.md#ew-resource-lineage)), and the
+same payload MAY also be listed as a sidecar.
 
 The core registry MUST NOT declare `extension`. An extension registry MAY declare `extension`,
 `analysis`, `compatibility_projection`, or `documentation` in its own namespace and MUST NOT
@@ -173,11 +183,17 @@ the row's catalog resource-ID value and whose `declaration_id` names that catalo
 entry in the family matches exactly one row. Catalog resource-ID values and packet resource IDs are
 unique.
 
-`core.array_assets`, `analysis.array_assets`, and `core.media_assets` each carry the required
-string identifier `resource_id`, with carried identity and free vocabulary. For this exact field,
-§4's general integer `_id` rule does not apply. The assigned `array_asset_id` and `media_asset_id`
-remain row identity, and the corresponding names remain source-label bridges. These three tables
-carry neither `uri` nor `format`; location belongs to Part 04 and physical encoding to Part 03.
+Four catalog tables carry `resource_id`: `core.array_assets`, `analysis.array_assets`,
+`core.media_assets` and `core.sidecars`. In the first three an assigned integer, `array_asset_id`
+or `media_asset_id`, remains the primary key and row identity, and its `*_name` the source-label
+bridge. In `core.sidecars`, `resource_id` is the primary key and the table has neither. None of the
+four carries `uri` or `format`: location belongs to Part 04 and physical encoding to Part 03, and
+`core.sidecars.media_type` states no physical encoding that Part 03 defines.
+
+A registry MUST declare every column named `resource_id` as a required `string` identifier with
+carried identity and free vocabulary, whether the column is a catalog table's field or references
+one. Neither §4's integer `_id` rule nor the integer type §5.3 gives an identifier applies to a
+column of that name.
 
 <a id="ew-resource-provenance-policy" data-spec-anchor="canonical"></a>
 ### 2.7 Lineage policy
@@ -261,7 +277,7 @@ Resource names and column names MUST be lowercase snake case. Registry conforman
 relations in both directions where stated:
 
 - an identifier has an `_id` name, and an `_id` name declares an integer identifier, except that
-  the exact catalog field `resource_id` is a string identifier with carried identity;
+  a column named `resource_id` is a string identifier with carried identity (§2.6);
 - a coordinate has a `_tick` name, and a `_tick` name declares a coordinate;
 - a structural index has an `_index` name, and an `_index` name declares a structural index or
   sequence position;
@@ -301,7 +317,7 @@ A writer MUST NOT use wraparound, truncating or saturating semantics for a value
 
 Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in
 UTC. Identifier columns MUST be `int32`, except where the number of distinct values may exceed
-`int32`, where the column MUST be `int64`, and except the catalog `resource_id` defined by §2.6.
+`int32`, where the column MUST be `int64`, and except a column named `resource_id` (§2.6).
 No core table is near the integer bound; an extension declaring an integer identifier over more
 than 2^31 rows declares `int64` for it.
 
@@ -638,7 +654,7 @@ The incorporated registry meta-schema has `$id`
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.14.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.15.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -1064,6 +1080,15 @@ Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared re
 | `core.coordinate_frames` | the spaces coordinates are positions in, and which published atlas each one is |
 | `core.coordinate_frame_axes` | one row per axis of a frame, with its name, direction, and unit |
 
+<a id="ew-core-sidecar-resource-index" data-spec-anchor="canonical"></a>
+### 11.10 Sidecars
+
+| resource | contents |
+|---|---|
+| `core.sidecars` | the packet's sidecars, each with its type, media type and description |
+| `core.sidecar_scopes` | the rows each sidecar is about |
+| `core.sidecar_instances` | opaque resources catalogued by `core.sidecars.resource_id` |
+
 <a id="ew-particular-resource-rules" data-spec-anchor="canonical"></a>
 ## 12. Rules for particular resources
 
@@ -1206,6 +1231,44 @@ intervals are in tick order. `core.intervals.numbered_in_order` checks that iden
 from 0 and that each session's intervals of one kind are numbered consecutively in order; the order
 of sessions and kinds binds the writer alone, and no rule checks it.
 
+<a id="ew-sidecar-rules" data-spec-anchor="canonical"></a>
+### 12.10 Sidecars
+
+`core.sidecars` lists a packet's sidecars (§2.2), one row each, keyed on the sidecar's packet
+resource ID. The table carries no `session_id` and assigns no identifier, so it has no `*_name`
+column. It declares `metadata` because its primary key holds an identifier that is part of no
+reference the table declares (§8.6).
+
+The author of a recipe ([Part 05 §3.1](05_validation_and_import.md#ew-recipe-purpose)) chooses each
+sidecar's resource ID, and the adapter that delivers the row hands the ID over as chosen. The ID
+matches the pattern [Part 04 §4.1](04_packet_catalog.md#ew-packet-resource-entry-fields) gives a
+resource ID and is unique among the packet's resource IDs, as §2.6 requires of every catalog value.
+No part derives it from the sidecar's name, type or contents.
+
+A null `sidecar_type` states that the source named no type, and a null `media_type` that it named
+none. `sidecar_type` names no authority, since no external nomenclature registers kinds of sidecar,
+so every value conforms (§9.3). The column is named `_type` because the registry's naming
+conventions keep `_kind` for a discriminator. `media_type` holds a media type as `type/subtype`
+without parameters and names IANA Media Types as its authority (§13).
+
+A row of `core.sidecar_scopes` states that one sidecar is about one row of one table: `scope_kind`
+names the table, and `scope`, its paired value (§8.3), names the row. The named table has a primary
+key of one column, as §8.3 requires of a paired value's target, so a scope names neither a whole
+table nor a row of a table keyed on several columns, such as a coordinate frame. Several rows state
+several scopes for one sidecar. A sidecar with no row is about the packet as a whole or states no
+scope, and the table does not tell the two apart.
+
+Because `scope_kind` resolves `required`, the checks of §8.3 report at `error` a scope that names a
+table the packet does not declare, a table whose key is not one column, or a row the named table
+does not hold. A sidecar about something the packet holds no row for, such as a surgery or a
+scanning session, takes no scope row for it, and `description` MAY say so in prose. A scope MAY
+name an extension's table, which §8.3 lets core name and not reference.
+
+A scope row states only that the sidecar is about the named row. A consumer MUST NOT conclude from
+a scope row any other relation between the two, such as that a session followed a protocol, that a
+coordinate was derived from an image, or that the named row depends on the sidecar. No checker
+verifies this, since what a consumer concludes leaves no trace in a packet.
+
 <a id="ew-logical-schema-normative-references" data-spec-anchor="canonical"></a>
 ## 13. Normative references
 
@@ -1217,6 +1280,7 @@ The application column states the extent to which this part invokes each externa
 | [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
 | [Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
 | [Rat Genome Database (RGD)](https://rgd.mcw.edu/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
+| [IANA Media Types](https://www.iana.org/assignments/media-types/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
 
 This section MUST carry an entry whose link is the `uri` of each `authority` entry declared on an
 open column of the incorporated core registry, in its `core` or `analysis` namespace. A core

@@ -106,6 +106,7 @@ tier, so an adapter imports from one module.
    adapter.StagesArrays
    adapter.ReferencesArrays
    adapter.ReferencesMedia
+   adapter.ReferencesResources
    adapter.StagesPayloads
    adapter.DeclaresCompensations
    adapter.WithholdsAnchors
@@ -120,6 +121,7 @@ What an adapter returns
    adapter.StagedArray
    adapter.ExternalArray
    adapter.ExternalMedia
+   adapter.ExternalResource
    adapter.Payload
    adapter.coded
    adapter.codes

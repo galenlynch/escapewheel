@@ -33,7 +33,7 @@ from . import opaque
 from .amending import Held
 from .arrow import build_table, number_batch, sort_key
 from .attachments import Attachments
-from .bindings import ExternalArray, ExternalMedia, StagedArray
+from .bindings import ExternalArray, ExternalMedia, ExternalResource, StagedArray
 from .documents import (
     bump,
     manifest,
@@ -466,6 +466,27 @@ class PacketWriter:
         """
         self._attachments.reference_media(resource_id, media)
 
+    def reference_resource(self, resource_id: str, resource: ExternalResource) -> None:
+        """Record an opaque resource the packet references, of a catalog keyed on `resource_id`.
+
+        No bytes are copied and none are read, exactly as `reference_media`. The catalog row whose
+        `resource_id` is `resource_id` is the one it binds (Part 04 §5.1).
+
+        Parameters
+        ----------
+        resource_id : str
+            Dotted resource ID, which a catalog row of `resource.declaration_id`'s catalog carries.
+        resource : ExternalResource
+            The declaration it instantiates, the URI, and whatever was verified.
+
+        Raises
+        ------
+        UsageError
+            If this resource is already referenced, if no one catalog row carries its ID, or if the
+            URI does not match how it resolves (Part 04 §5.5).
+        """
+        self._attachments.reference_resource(resource_id, resource)
+
     def add_payloads(
         self, source: str, location: str | Path, *, owned: Collection[str] | None = None
     ) -> list[opaque.StagedPayload]:
@@ -864,6 +885,7 @@ class PacketWriter:
                 *self._attachments.stage_payloads(staging, payloads),
                 *self._attachments.array_entries(),
                 *self._attachments.media_entries(),
+                *self._attachments.resource_entries(),
             ],
             self._derived,
         )

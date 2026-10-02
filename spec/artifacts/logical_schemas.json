@@ -1,7 +1,7 @@
 {
   "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
   "registry_id": "core",
-  "registry_version": "0.14.0",
+  "registry_version": "0.15.0",
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "rule_language": "escapewheel-rule-sql-v0.2",
@@ -4493,6 +4493,141 @@
             "sql": "SELECT session_id, alignment_bound\nFROM core.sessions\nWHERE alignment_bound < 1.0"
           }
         ],
+        "amendment_groups": []
+      }
+    },
+    "core.sidecar_instances": {
+      "content_class": "documentation",
+      "kind": "opaque",
+      "instances": {
+        "mode": "catalog",
+        "catalog_resource": "core.sidecars",
+        "resource_id_column": "resource_id"
+      },
+      "requires": [],
+      "lineage": "forbidden"
+    },
+    "core.sidecar_scopes": {
+      "content_class": "documentation",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "forbidden",
+      "table": {
+        "columns": [
+          {
+            "name": "resource_id",
+            "type": "string",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "carried",
+            "description": "The sidecar.",
+            "vocabulary": "free"
+          },
+          {
+            "name": "scope_kind",
+            "type": "string",
+            "presence": "required",
+            "role": "discriminator",
+            "resolves": "required",
+            "discriminates": "scope",
+            "description": "The table holding the row the sidecar is about, as a dotted resource ID."
+          },
+          {
+            "name": "scope",
+            "type": "string",
+            "presence": "required",
+            "role": "data",
+            "description": "The row the sidecar is about: its key where that key is carried, and its `*_name` where it is assigned. States no relation other than that the sidecar is about the row (Part 02 \u00a712.10).",
+            "vocabulary": "free"
+          }
+        ],
+        "primary_key": [
+          "resource_id",
+          "scope_kind",
+          "scope"
+        ],
+        "references": [
+          {
+            "columns": [
+              "resource_id"
+            ],
+            "resource": "core.sidecars",
+            "resource_columns": [
+              "resource_id"
+            ]
+          }
+        ],
+        "rules": [],
+        "amendment_groups": []
+      }
+    },
+    "core.sidecars": {
+      "content_class": "documentation",
+      "kind": "table",
+      "instances": {
+        "mode": "singleton",
+        "presence": "optional"
+      },
+      "requires": [],
+      "lineage": "forbidden",
+      "table": {
+        "columns": [
+          {
+            "name": "resource_id",
+            "type": "string",
+            "presence": "required",
+            "role": "identifier",
+            "identity": "carried",
+            "description": "The sidecar's packet resource ID, which the recipe's author chose (Part 02 \u00a712.10).",
+            "vocabulary": "free"
+          },
+          {
+            "name": "sidecar_type",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "What kind of thing the sidecar is, as a lowercase snake-case name such as `readme`, `protocol`, `anatomical_image` or `neuroglancer_state`. Null where the source named none.",
+            "vocabulary": "open"
+          },
+          {
+            "name": "media_type",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "The sidecar's media type as `type/subtype` without parameters, such as `application/pdf`, spelled as IANA Media Types registers it. Null where the source named none.",
+            "vocabulary": "open",
+            "authority": [
+              {
+                "name": "IANA Media Types",
+                "uri": "https://www.iana.org/assignments/media-types/"
+              }
+            ]
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "presence": "nullable",
+            "role": "data",
+            "description": "What the sidecar is, in prose.",
+            "vocabulary": "free"
+          },
+          {
+            "name": "metadata",
+            "type": "json_string",
+            "presence": "optional",
+            "role": "data",
+            "description": "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."
+          }
+        ],
+        "primary_key": [
+          "resource_id"
+        ],
+        "references": [],
+        "rules": [],
         "amendment_groups": []
       }
     },

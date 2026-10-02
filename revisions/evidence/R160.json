@@ -1,0 +1,468 @@
+{
+  "version": 1,
+  "revision": "R160",
+  "based_on": "53ef6d389eb6055983575b2d20b0d5c11cf0c37e",
+  "clauses": {
+    "R160 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-resource-content-class"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "sidecar_with_lineage",
+            "finding": "packet.resource.derived_from_forbidden"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_the_sidecar_tables_are_held_to_the_documentation_rules[sidecars_with_lineage]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/sources/sidecars.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "escapewheel-writer/CONTRIBUTING.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R160 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-core-sidecar-resource-index"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-sidecar-rules"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.sidecars"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/informative/tables.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/source/README.md",
+          "STATUS.md",
+          "escapewheel-validator/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "sidecar_listed_twice",
+            "finding": "core.sidecars.primary_key_unique"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_the_sidecar_tables_are_held_to_the_documentation_rules[sidecars_without_metadata]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_the_sidecar_tables_are_held_to_the_documentation_rules[sidecars_grouped]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_a_core_declaration_depends_only_on_canonical_ones[reference_to_sidecars]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_a_core_declaration_depends_only_on_canonical_ones[requires_sidecars]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_a_file_a_directory_and_a_reference_are_each_bound_to_their_row"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_a_copy_of_a_recorded_source_file_is_listed_and_its_row_kept"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_two_sources_each_contribute_sidecars"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_two_sources_left_owning_the_sidecars_are_refused"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sidecars.py::test_the_reader_lists_both_tables_and_resolves_each_sidecar"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.sidecars.toml",
+          "spec/tools/conventions.py",
+          "conformance/spec-sweep/tables.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/sidecars.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/__init__.py",
+          "escapewheel-reader/src/escapewheel_reader/resource_ids.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "escapewheel-writer/CONTRIBUTING.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R160 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-core-sidecar-resource-index"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-sidecar-rules"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.sidecar_scopes"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/informative/tables.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/source/README.md",
+          "STATUS.md",
+          "escapewheel-validator/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "sidecar_scope_unlisted",
+            "finding": "core.sidecar_scopes.resource_id_resolves"
+          },
+          {
+            "kind": "fixture",
+            "packet": "sidecar_scope_undeclared_table",
+            "finding": "core.sidecar_scopes.scope_kind.kind_declared"
+          },
+          {
+            "kind": "fixture",
+            "packet": "sidecar_scope_uncarried_table",
+            "finding": "core.sidecar_scopes.scope_kind.kind_declared"
+          },
+          {
+            "kind": "fixture",
+            "packet": "sidecar_scope_composite_key",
+            "finding": "core.sidecar_scopes.scope_kind.key_fits_paired_value"
+          },
+          {
+            "kind": "fixture",
+            "packet": "sidecar_scope_absent_row",
+            "finding": "core.sidecar_scopes.scope_kind.core_subjects_resolves"
+          },
+          {
+            "kind": "fixture",
+            "packet": "sidecar_scope_null",
+            "finding": "core.sidecar_scopes.scope.not_null"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_the_sidecar_tables_are_held_to_the_documentation_rules[scopes_grouped]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_the_sidecar_scopes_may_declare_metadata_or_not"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_generate.py::test_the_forward_check_admits_only_what_the_manifest_declares"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sidecars.py::test_the_reader_lists_both_tables_and_resolves_each_sidecar"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.sidecar_scopes.toml",
+          "spec/tools/conventions.py",
+          "escapewheel-validator/src/escapewheel_validator/generate.py",
+          "escapewheel-validator/src/escapewheel_validator/rules.py",
+          "escapewheel-writer/src/escapewheel_writer/sources/sidecars.py",
+          "escapewheel-reader/src/escapewheel_reader/resource_ids.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "escapewheel-writer/CONTRIBUTING.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R160 §3.4": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-resource-catalog-binding"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-logical-column-naming"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-fixed-representations"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-core-sidecar-resource-index"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.sidecar_instances"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/informative/tables.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/source/README.md",
+          "STATUS.md",
+          "escapewheel-validator/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "sidecar_row_unbound",
+            "finding": "packet.resource.catalog_row_binding"
+          },
+          {
+            "kind": "fixture",
+            "packet": "sidecar_entry_unbound",
+            "finding": "packet.resource.catalog_row_binding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_a_file_a_directory_and_a_reference_are_each_bound_to_their_row"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_a_delivered_reference_binds_the_row_carrying_its_resource_id"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-reader",
+            "nodeid": "tests/test_sidecars.py::test_the_reader_lists_both_tables_and_resolves_each_sidecar"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.sidecar_instances.toml",
+          "escapewheel-writer/src/escapewheel_writer/bindings.py",
+          "escapewheel-writer/src/escapewheel_writer/protocols.py",
+          "escapewheel-writer/src/escapewheel_writer/adapter.py",
+          "escapewheel-writer/src/escapewheel_writer/attachments.py",
+          "escapewheel-writer/src/escapewheel_writer/documents.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/session.py",
+          "escapewheel-writer/src/escapewheel_writer/serving.py",
+          "escapewheel-writer/src/escapewheel_writer/reading.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "escapewheel-writer/CONTRIBUTING.md",
+          "fixtures/README.md",
+          "escapewheel-writer/docs/source/api.rst"
+        ]
+      }
+    },
+    "R160 §3.5": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-logical-schema-normative-references"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: framework declarations agree",
+            "id": "normative-reference rows disagree with the approved allocation"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/tools/framework_data.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the authority names a spelling a writer copies; no document outside the specification lists authorities"
+      }
+    },
+    "R160 §3.6": {
+      "owners": [
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-portable-packet-layout"
+        },
+        {
+          "path": "spec/parts/03_portable_physical_profile.md",
+          "anchor": "ew-metadata-placement"
+        },
+        {
+          "path": "spec/parts/09_metadata_and_extensions.md",
+          "anchor": "ew-metadata-tiers"
+        },
+        {
+          "path": "spec/parts/09_metadata_and_extensions.md",
+          "anchor": "ew-core-inclusion-rule"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "the clause places content by what it is; no packet observation decides whether a value belongs in a column or a sidecar"
+      },
+      "implementations": {
+        "unchanged": "no implementation wrote a docs/ directory or reads one"
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md",
+          "extensions/README.md"
+        ]
+      }
+    },
+    "R160 §3.7": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-import-normalization"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_an_amending_build_adds_sidecars_to_a_packet_bound_to_the_earlier_registry"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_sidecars.py::test_an_amending_build_refuses_a_held_sidecar_described_otherwise"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/amending.py",
+          "escapewheel-writer/src/escapewheel_writer/errors.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R160 §3.8": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/parts/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "core registry version is 0.15.0"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/registry.toml",
+          "spec/tools/check.py",
+          "spec/tools/framework_data.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification names the core registry version"
+      }
+    }
+  }
+}

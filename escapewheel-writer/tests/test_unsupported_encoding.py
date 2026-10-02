@@ -29,6 +29,7 @@ NEEDED: dict[str, tuple[str, ...]] = {
     "nwb": ("mini.nwb/acquisition/sniff/timestamps",),
     "waveforms": (f"postprocessed/{STREAM}/sorting/unit_ids", f"postprocessed/{STREAM}/extensions/templates/average"),
     "lfp": ("s.nwb/processing/ecephys/LFP/ElectricalSeries45883-1-LFP/electrodes",),
+    "sidecars": (),
 }
 
 #: What a module binds if it decodes Zarr.

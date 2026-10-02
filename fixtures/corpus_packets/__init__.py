@@ -12,6 +12,7 @@ from .replacements import REPLACEMENT_PACKETS
 from .rows import ROW_PACKETS
 from .schema import SCHEMA_PACKETS
 from .session import VALID
+from .sidecars import SIDECAR_PACKETS
 from .spikes import SPIKE_PACKETS
 from .subsets import SUBSET_PACKETS
 from .units import UNIT_PACKETS
@@ -32,6 +33,7 @@ PACKETS: tuple[Packet, ...] = (
     *AMENDMENT_PACKETS,
     *REPLACEMENT_PACKETS,
     *SPIKE_PACKETS,
+    *SIDECAR_PACKETS,
 )
 if len({packet.name for packet in PACKETS}) != len(PACKETS):
     raise SystemExit("two packets of the corpus share a name")

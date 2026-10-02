@@ -141,6 +141,38 @@ it to the opaque catalog row carrying that `resource_id`, or to the opaque singl
 the payload is published at `opaque/<resource_id>/<name>` with nothing read from its name or
 contents (Part 12 §5 and Part 03 §11).
 
+A recipe lists a packet's sidecars, a README, a protocol or a viewer's saved state that the packet
+asserts nothing through (Part 02 §12.10), under the built-in `sidecars` kind:
+
+```toml
+[[source]]
+kind = "sidecars"
+root = "/data/session_docs"
+
+[[source.sidecars]]
+resource_id = "core.readme"
+path = "README.md"
+media_type = "text/markdown"
+
+[[source.sidecars]]
+resource_id = "core.surgery_protocol"
+uri = "https://protocols.example.org/surgery.pdf"
+description = "Surgery protocol"
+
+[[source.sidecars.scopes]]
+scope_kind = "core.subjects"
+scope = "m001"
+```
+
+Each entry gives the `core.sidecars` row, under the resource ID the recipe chooses, and its scopes
+the `core.sidecar_scopes` rows. A `path` under `root`, a file or a directory, is a payload the
+packet owns, published at `opaque/<resource_id>/<name>` and digested; a `uri` is a resource the
+packet references, recorded `external` with nothing read. Neither form reads a sidecar's contents.
+The adapter owns both tables, so a recipe whose other source also delivers sidecars names
+`core.sidecars` and `core.sidecar_scopes` under each entry's `contributes` (Part 05 §3.3). An
+adapter of its own references such a resource by returning `adapter.ExternalResource` from
+`external_resources()`, bound to the catalog row carrying its resource ID.
+
 Ordering comes from the adapters, not the registry: a foreign key constrains validity, not
 write order, and what actually sequences a build is data-flow — the NWB source needs the
 sorter's units before it can attach a unit to an electrode.
@@ -195,6 +227,9 @@ Delivered rows are settled against the packet (Part 05 §4.3):
 - A row equal to a held row, ignoring `metadata`, is dropped.
 - A row forming a group the packet lacks (Part 02 §2.8) is added, numbered after every identifier
   the packet holds.
+- A row of a documentation table, such as `core.sidecars` or `core.sidecar_scopes`, whose primary
+  key no held row has is added, so an amendment adds sidecars and scopes and never removes or
+  replaces one.
 - Any other row refuses the build.
 
 So re-running a source the packet already imported adds nothing but a second `import` run. The

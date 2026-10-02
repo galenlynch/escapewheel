@@ -195,6 +195,7 @@ def _discriminator(
     specialises: Mapping[str, Collection[Specialisation]] | None = None,
     specs: Mapping[str, Any] | None = None,
     keys: Mapping[str, Mapping[str, Any] | None] | None = None,
+    named: Collection[str] | None = None,
 ) -> list[Check]:
     """Build the checks one discriminator column implies (Part 02 §8.3).
 
@@ -217,7 +218,7 @@ def _discriminator(
     if not kinds:
         return checks
 
-    declared = ", ".join(f"'{k}'" for k in sorted(kinds))
+    declared = ", ".join(f"'{k}'" for k in sorted(kinds if named is None else named))
     checks.append(
         Check(
             # Part 02 §8.3. Where an unresolvable kind is a fact rather than a defect it is still
@@ -436,6 +437,7 @@ def _generate(  # noqa: C901
     specialises: Mapping[str, Collection[Specialisation]] | None = None,
     declared: bool = True,
     keys: Mapping[str, Mapping[str, Any] | None] | None = None,
+    named: Collection[str] | None = None,
 ) -> list[Check]:
     """Build every check a registry implies.
 
@@ -464,6 +466,10 @@ def _generate(  # noqa: C901
         Every resource a discriminator may name, mapped to its one key column's declaration, or
         None where its key is not one column. An identifier paired value must share that
         column's type and identity (Part 02 §8.3). Absent, this registry's own tables supply it.
+    named : Collection of str, optional
+        The resources the packet's manifest declares, which alone a discriminator's value may name
+        (Part 02 §8.3); `kinds` also holds core's absent tables, so they can be joined. Absent,
+        `kinds` stands in.
 
     Returns
     -------
@@ -525,7 +531,9 @@ def _generate(  # noqa: C901
         for column in table["columns"]:
             if column.get("role") != "discriminator":
                 continue
-            checks.extend(_discriminator(resource, name, table, column, kinds, included, specialises, tables, keys))
+            checks.extend(
+                _discriminator(resource, name, table, column, kinds, included, specialises, tables, keys, named)
+            )
 
         by_scan = adjacency_settles_uniqueness(resource, table) and resource not in (aggregate or set())
         if (key := table.get("primary_key")) and not by_scan:
@@ -588,6 +596,7 @@ def generate(
     specialises: Mapping[str, Collection[Specialisation]] | None = None,
     declared: bool = True,
     keys: Mapping[str, Mapping[str, Any] | None] | None = None,
+    named: Collection[str] | None = None,
 ) -> list[Check]:
     """Build checks only from a valid context bound to the registry it checked."""
     if not isinstance(registry, CheckedRegistryContext):
@@ -607,6 +616,7 @@ def generate(
         specialises=specialises,
         declared=declared,
         keys=keys,
+        named=named,
     )
 
 

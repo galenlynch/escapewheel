@@ -24,6 +24,7 @@ from escapewheel_writer.sources.harp import HarpSource
 from escapewheel_writer.sources.lfp import LFPSource
 from escapewheel_writer.sources.nwb.source import NWBSource
 from escapewheel_writer.sources.openephys import OpenEphysSource
+from escapewheel_writer.sources.sidecars import SidecarSource
 from escapewheel_writer.sources.sorter import SorterSource
 from escapewheel_writer.sources.sync import SyncSource
 from escapewheel_writer.sources.waveforms import WaveformSource
@@ -82,6 +83,19 @@ def _lfp(root: Path) -> Any:
     return LFPSource(nwb, session_id=SESSION, clocks=[lfpfixture.CLOCK_ROW])
 
 
+def _sidecars(root: Path) -> Any:
+    (root / "README.md").write_text("# s001\n")
+    listed = [
+        {
+            "resource_id": "core.readme",
+            "path": "README.md",
+            "media_type": "text/markdown",
+            "scopes": [{"scope_kind": "core.sessions", "scope": SESSION}],
+        }
+    ]
+    return SidecarSource(root, sidecars=listed)
+
+
 BUILDERS: dict[str, Callable[[Path], Any]] = {
     "harp": _harp,
     "openephys": _openephys,
@@ -90,6 +104,7 @@ BUILDERS: dict[str, Callable[[Path], Any]] = {
     "nwb": _nwb,
     "waveforms": _waveforms,
     "lfp": _lfp,
+    "sidecars": _sidecars,
 }
 
 

@@ -81,11 +81,11 @@ candidate is versioned independently of the identifiers a packet records.
 | `semantic_standard_version` | `escapewheel-semantic-v0.1` | [Part 01 §1](../parts/01_semantic_standard.md#ew-semantic-standard-scope) |
 | `logical_standard_version` | `escapewheel-logical-v0.1` | [Part 02 §1](../parts/02_core_logical_schemas.md#ew-core-logical-schema-scope) |
 | `registry_id` | `core` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
-| `registry_version` | `0.14.0` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
+| `registry_version` | `0.15.0` | [Part 02 §9.2](../parts/02_core_logical_schemas.md#ew-registry-self-description), core registry only |
 
 Part 02 §9.2 defines registry self-description and compatibility. A manifest records the core
 registry's `registry_id` and `registry_version` as the member name and `version` of its descriptor
-in `registries` (Part 04 §8). Current development packets use core registry `0.14.0` and are
+in `registries` (Part 04 §8). Current development packets use core registry `0.15.0` and are
 regenerated rather than treated as compatible with the earlier development shape. Each extension registry carries and advances its own `registry_version` under
 the generic mechanism in Part 09; the core specification does not assign extension versions.
 Part 04 §§3 and 8 define the manifest fields that record these identifiers.
@@ -1033,15 +1033,25 @@ The `content_class` vocabulary and its consequences are:
 | `extension` | typed facts owned by a domain | yes | no |
 | `analysis` | products reproducible from canonical resources | no | no |
 | `compatibility_projection` | a projection into another representation | no | no |
-| `documentation` | human-readable sidecars that assert no semantic or conformance fact | no | no |
+| `documentation` | sidecars, which a packet lists and asserts no semantic or conformance fact through, and the tables that list them | no | no |
 
 Canonicality is derived from this table and MUST NOT be independently declared. Promoting a
 resource into the canonical set changes its declaration's content class through a specification
 or extension-registry change; an implementation MUST NOT promote it with a Boolean.
 
-A documentation resource MAY describe another resource without creating a dependency or
-supplying conformance evidence. A machine-interpreted control artifact does not acquire
-documentation semantics merely because its serialization is a document.
+A **sidecar** is an opaque resource of class `documentation`: one that a packet lists and through
+which it asserts no semantic or conformance fact. The class also covers the tables that list
+sidecars (§12.10). A sidecar MAY be read by a person or by a program. This specification defines no
+behavior of a reader, a writer or a validator that interprets a sidecar's contents.
+
+Listing a resource as a sidecar records no dependence on it: the rule below forbids a canonical
+declaration a reference, a `requires` entry or a catalog binding that targets a documentation
+declaration, and §2.7 permits no lineage from one. A registry's author who needs a table to
+reference a payload, or a rule or a reader to interpret one, therefore declares it as a canonical
+resource. A machine-interpreted control artifact does not acquire documentation semantics merely
+because its serialization is a document. A payload that a result in the packet was computed from is
+recorded by the provenance tables ([Part 04 §7](../parts/04_packet_catalog.md#ew-resource-lineage)), and the
+same payload MAY also be listed as a sidecar.
 
 The core registry MUST NOT declare `extension`. An extension registry MAY declare `extension`,
 `analysis`, `compatibility_projection`, or `documentation` in its own namespace and MUST NOT
@@ -1145,11 +1155,17 @@ the row's catalog resource-ID value and whose `declaration_id` names that catalo
 entry in the family matches exactly one row. Catalog resource-ID values and packet resource IDs are
 unique.
 
-`core.array_assets`, `analysis.array_assets`, and `core.media_assets` each carry the required
-string identifier `resource_id`, with carried identity and free vocabulary. For this exact field,
-§4's general integer `_id` rule does not apply. The assigned `array_asset_id` and `media_asset_id`
-remain row identity, and the corresponding names remain source-label bridges. These three tables
-carry neither `uri` nor `format`; location belongs to Part 04 and physical encoding to Part 03.
+Four catalog tables carry `resource_id`: `core.array_assets`, `analysis.array_assets`,
+`core.media_assets` and `core.sidecars`. In the first three an assigned integer, `array_asset_id`
+or `media_asset_id`, remains the primary key and row identity, and its `*_name` the source-label
+bridge. In `core.sidecars`, `resource_id` is the primary key and the table has neither. None of the
+four carries `uri` or `format`: location belongs to Part 04 and physical encoding to Part 03, and
+`core.sidecars.media_type` states no physical encoding that Part 03 defines.
+
+A registry MUST declare every column named `resource_id` as a required `string` identifier with
+carried identity and free vocabulary, whether the column is a catalog table's field or references
+one. Neither §4's integer `_id` rule nor the integer type §5.3 gives an identifier applies to a
+column of that name.
 
 <a id="ew-resource-provenance-policy" data-spec-anchor="canonical"></a>
 ### 2.7 Lineage policy
@@ -1233,7 +1249,7 @@ Resource names and column names MUST be lowercase snake case. Registry conforman
 relations in both directions where stated:
 
 - an identifier has an `_id` name, and an `_id` name declares an integer identifier, except that
-  the exact catalog field `resource_id` is a string identifier with carried identity;
+  a column named `resource_id` is a string identifier with carried identity (§2.6);
 - a coordinate has a `_tick` name, and a `_tick` name declares a coordinate;
 - a structural index has an `_index` name, and an `_index` name declares a structural index or
   sequence position;
@@ -1273,7 +1289,7 @@ A writer MUST NOT use wraparound, truncating or saturating semantics for a value
 
 Tick columns MUST be `int64`. Wall-clock columns MUST be `timestamp` with microsecond precision in
 UTC. Identifier columns MUST be `int32`, except where the number of distinct values may exceed
-`int32`, where the column MUST be `int64`, and except the catalog `resource_id` defined by §2.6.
+`int32`, where the column MUST be `int64`, and except a column named `resource_id` (§2.6).
 No core table is near the integer bound; an extension declaring an integer identifier over more
 than 2^31 rows declares `int64` for it.
 
@@ -1610,7 +1626,7 @@ The incorporated registry meta-schema has `$id`
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.14.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.15.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -2036,6 +2052,15 @@ Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared re
 | `core.coordinate_frames` | the spaces coordinates are positions in, and which published atlas each one is |
 | `core.coordinate_frame_axes` | one row per axis of a frame, with its name, direction, and unit |
 
+<a id="ew-core-sidecar-resource-index" data-spec-anchor="canonical"></a>
+### 11.10 Sidecars
+
+| resource | contents |
+|---|---|
+| `core.sidecars` | the packet's sidecars, each with its type, media type and description |
+| `core.sidecar_scopes` | the rows each sidecar is about |
+| `core.sidecar_instances` | opaque resources catalogued by `core.sidecars.resource_id` |
+
 <a id="ew-particular-resource-rules" data-spec-anchor="canonical"></a>
 ## 12. Rules for particular resources
 
@@ -2178,6 +2203,44 @@ intervals are in tick order. `core.intervals.numbered_in_order` checks that iden
 from 0 and that each session's intervals of one kind are numbered consecutively in order; the order
 of sessions and kinds binds the writer alone, and no rule checks it.
 
+<a id="ew-sidecar-rules" data-spec-anchor="canonical"></a>
+### 12.10 Sidecars
+
+`core.sidecars` lists a packet's sidecars (§2.2), one row each, keyed on the sidecar's packet
+resource ID. The table carries no `session_id` and assigns no identifier, so it has no `*_name`
+column. It declares `metadata` because its primary key holds an identifier that is part of no
+reference the table declares (§8.6).
+
+The author of a recipe ([Part 05 §3.1](../parts/05_validation_and_import.md#ew-recipe-purpose)) chooses each
+sidecar's resource ID, and the adapter that delivers the row hands the ID over as chosen. The ID
+matches the pattern [Part 04 §4.1](../parts/04_packet_catalog.md#ew-packet-resource-entry-fields) gives a
+resource ID and is unique among the packet's resource IDs, as §2.6 requires of every catalog value.
+No part derives it from the sidecar's name, type or contents.
+
+A null `sidecar_type` states that the source named no type, and a null `media_type` that it named
+none. `sidecar_type` names no authority, since no external nomenclature registers kinds of sidecar,
+so every value conforms (§9.3). The column is named `_type` because the registry's naming
+conventions keep `_kind` for a discriminator. `media_type` holds a media type as `type/subtype`
+without parameters and names IANA Media Types as its authority (§13).
+
+A row of `core.sidecar_scopes` states that one sidecar is about one row of one table: `scope_kind`
+names the table, and `scope`, its paired value (§8.3), names the row. The named table has a primary
+key of one column, as §8.3 requires of a paired value's target, so a scope names neither a whole
+table nor a row of a table keyed on several columns, such as a coordinate frame. Several rows state
+several scopes for one sidecar. A sidecar with no row is about the packet as a whole or states no
+scope, and the table does not tell the two apart.
+
+Because `scope_kind` resolves `required`, the checks of §8.3 report at `error` a scope that names a
+table the packet does not declare, a table whose key is not one column, or a row the named table
+does not hold. A sidecar about something the packet holds no row for, such as a surgery or a
+scanning session, takes no scope row for it, and `description` MAY say so in prose. A scope MAY
+name an extension's table, which §8.3 lets core name and not reference.
+
+A scope row states only that the sidecar is about the named row. A consumer MUST NOT conclude from
+a scope row any other relation between the two, such as that a session followed a protocol, that a
+coordinate was derived from an image, or that the named row depends on the sidecar. No checker
+verifies this, since what a consumer concludes leaves no trace in a packet.
+
 <a id="ew-logical-schema-normative-references" data-spec-anchor="canonical"></a>
 ## 13. Normative references
 
@@ -2189,6 +2252,7 @@ The application column states the extent to which this part invokes each externa
 | [NCBI Taxonomy](https://www.ncbi.nlm.nih.gov/taxonomy) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
 | [Mouse Genome Informatics (MGI)](https://www.informatics.jax.org/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
 | [Rat Genome Database (RGD)](https://rgd.mcw.edu/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
+| [IANA Media Types](https://www.iana.org/assignments/media-types/) | living registry | the spelling of the names it registers, in open columns naming it (§9.3) |
 
 This section MUST carry an entry whose link is the `uri` of each `authority` entry declared on an
 open column of the incorporated core registry, in its `core` or `analysis` namespace. A core
@@ -2312,8 +2376,6 @@ packet_root/
     <registry_id>/  <version>.json.gz       bound registries (§3.3)
 
   manifests/        <packet_version>.json   superseded manifests
-
-  docs/                                     human-readable sidecars
 
   validation/       validation_report.json
 ```
@@ -2715,8 +2777,8 @@ resource and need not be copied into a table or the manifest.
 |---|---|
 | packet-level facts | the manifest |
 | queryable scientific facts | tables |
-| semi-structured, lab-specific values | a `json_string` column, or a sidecar |
-| human-readable context | `docs/` |
+| semi-structured, lab-specific values | a `json_string` column, or an extension's table |
+| context the packet asserts nothing through | a sidecar that `core.sidecars` lists |
 
 A value used for filtering, grouping, joining, or validation MUST be a first-class typed column.
 
@@ -3679,12 +3741,18 @@ It then settles against the packet each delivered row that ownership keeps (§3.
 - a row of `core.sessions` or `core.subjects` is dropped, the packet's row prevailing (§3.6);
 - a row equal to one the packet holds, compared as §15.6 compares rows but for `metadata`, is
   dropped, together with any catalog instance the row catalogues;
+- any other row of a table of class `documentation` that the packet's manifest names and that
+  declares a primary key is added where no row the packet holds has its primary key;
 - any other row is added where it forms, under at least one group list of its table (§15.2), a
   group the packet does not hold
   ([Part 02 §2.8](../parts/02_core_logical_schemas.md#ew-amendment-groups)).
 
-An amending build MUST refuse every other delivered row, naming the table and the row. A table to
-which it adds no row keeps its resource entry, so the amendment does not write it.
+An amending build MUST refuse every other delivered row, naming the table and the row, so it
+refuses a delivered row of a documentation table that shares a held row's primary key and is not
+equal to it. A table to which it adds no row keeps its resource entry, so the amendment does not
+write it. A documentation table to which it adds rows holds the packet's rows and the added ones,
+and the amendment replaces that resource as §15.2 permits. An amending build thereby adds sidecars
+and scope rows to those a packet lists, and neither removes nor replaces one.
 
 An interval is closed (01 §2.3). A writer MUST convert a source whose intervals are half-open — `[start, stop)` — which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
 
@@ -4725,7 +4793,7 @@ Two files are 97.6% of what the packet owns: `core.spike_events` at 345 MB and `
 packet_root/
   packet.json
   registries/
-    core/             0.14.0.json.gz
+    core/             0.15.0.json.gz
     aind_opto/        0.12.0.json.gz
     aind_unit_qc/     0.13.0.json.gz
     dynamic_foraging/ 0.14.0.json.gz
@@ -4764,7 +4832,7 @@ The packet carries 41 resources, 40 of them packet-owned; the excerpt shows one 
   "semantic_standard_version": "escapewheel-semantic-v0.1",
   "logical_standard_version": "escapewheel-logical-v0.1",
   "registries": {
-    "core": {"role": "core", "version": "0.14.0", "path": "registries/core/0.14.0.json.gz", "sha256": "…"},
+    "core": {"role": "core", "version": "0.15.0", "path": "registries/core/0.15.0.json.gz", "sha256": "…"},
     "aind_opto": {"role": "extension", "version": "0.12.0", "path": "registries/aind_opto/0.12.0.json.gz", "sha256": "…"},
     "aind_unit_qc": {"role": "extension", "version": "0.13.0", "path": "registries/aind_unit_qc/0.13.0.json.gz", "sha256": "…"},
     "dynamic_foraging": {"role": "extension", "version": "0.14.0", "path": "registries/dynamic_foraging/0.14.0.json.gz", "sha256": "…"},
@@ -4872,7 +4940,7 @@ This part defines how much metadata core requires, where richer metadata belongs
 | 1 | packet-level facts | the manifest |
 | 2 | facts needed to interpret, validate, join, or reproduce | core tables |
 | 3 | domain-rich, lab-specific facts | an extension's tables |
-| 4 | human-readable context | `docs/` sidecars |
+| 4 | context the packet asserts nothing through | the sidecars `core.sidecars` lists |
 | 3-4 | such facts stated about one row, in the source's own vocabulary | that table's `metadata` column |
 
 <a id="ew-core-inclusion-rule" data-spec-anchor="canonical"></a>
@@ -4882,7 +4950,7 @@ A field belongs in core only if common interpretation, validation, joining, or a
 
 A field SHOULD be in core when it is needed to interpret units, clocks, channels, arrays, or spike times; to validate a required relationship; to join tables; to filter or group a common analysis; to reproduce processing or curation; or to trace provenance.
 
-A field SHOULD be in an extension or a sidecar when it is institutional, administrative, lab-specific, rarely queried, free-form, procedural but not required for analysis, or biologically rich but not required to interpret the recording.
+A field SHOULD be in an extension when it is institutional, administrative, lab-specific, rarely queried, free-form, procedural but not required for analysis, or biologically rich but not required to interpret the recording. A sidecar is not a place for a field.
 
 ## 4. Required minimum
 

@@ -40,6 +40,9 @@ PREVAILING = frozenset({CORE_SESSIONS, CORE_SUBJECTS})
 #: Rows a refusal shows, so a message names the offending rows without printing a table.
 SHOWN = 3
 
+#: The content class whose tables an amending build adds rows to by primary key (Part 05 §4.3).
+DOCUMENTATION = "documentation"
+
 
 def owned(spec: Mapping[str, Any]) -> list[tuple[str, str]]:
     """Return each assigned identifier a table's rows own, with the `*_name` column naming it.
@@ -145,12 +148,15 @@ class Held:
         return self.classes.get(resource_id) in {"core", "extension"}
 
     def holds(self, resource_id: str, declaration_id: str) -> bool:
-        """Whether a canonical catalog instance is one this packet already names.
+        """Whether a canonical or documentation catalog instance is one this packet already names.
 
         Its catalog row then equals the held one or is refused as it settles, so the held instance
-        stands and the delivered copy is dropped with its row (Part 05 §4.3).
+        stands and the delivered copy is dropped with its row (Part 05 §4.3). A documentation
+        catalog settles row by row, by key, where an analysis one is replaced whole.
         """
-        return resource_id in self.entries and self.canonical(declaration_id)
+        return resource_id in self.entries and (
+            self.canonical(declaration_id) or self.classes.get(declaration_id) == DOCUMENTATION
+        )
 
     def without_stale(
         self, resources: Sequence[Mapping[str, Any]], written: Sequence[Mapping[str, Any]]
@@ -306,10 +312,11 @@ class Held:
         return not self.canonical(resource_id) and (resource_id not in self.entries or resource_id in derived)
 
     def _verdicts(self, resource_id: str, delivered: pa.Table) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Return, per delivered row, whether it equals a held row, forms a new group, or replaces one.
+        """Return, per delivered row, whether it equals a held row, is new, or replaces one.
 
-        Equality is over every declared column but `metadata` (Part 05 §4.3); a group is new where,
-        under at least one group list, the packet does not hold it (Part 02 §2.8).
+        Equality is over every declared column but `metadata` (Part 05 §4.3). A row is new where,
+        under at least one group list, the packet does not hold its group (Part 02 §2.8), or, in a
+        documentation table, where no held row has its primary key.
         """
         spec = self.tables[resource_id]
         version = self._held_version()
@@ -324,17 +331,19 @@ class Held:
         compared = [c for c in columns if c != "metadata"]
         equal = " AND ".join(f"h.{quote(c)} IS NOT DISTINCT FROM d.{quote(c)}" for c in compared)
         key = list(spec.get("primary_key") or ())
-        replaces = (
-            "EXISTS (SELECT 1 FROM "
-            + held
-            + " AS h WHERE "
+        same_key = (
+            f"EXISTS (SELECT 1 FROM {held} AS h WHERE "
             + " AND ".join(f"h.{quote(k)} IS NOT DISTINCT FROM d.{quote(k)}" for k in key)
             + ")"
-            if resource_id == PREFERENCES and key
-            else "false"
+        )
+        replaces = same_key if resource_id == PREFERENCES and key else "false"
+        fresh = (
+            f"NOT {same_key}"
+            if self.classes.get(resource_id) == DOCUMENTATION and key
+            else f"NOT {version.grows(resource_id, 'd')}"
         )
         result = connection.execute(
-            f"SELECT EXISTS (SELECT 1 FROM {held} AS h WHERE {equal}) AS equal, NOT {version.grows(resource_id, 'd')} "
+            f"SELECT EXISTS (SELECT 1 FROM {held} AS h WHERE {equal}) AS equal, {fresh} "
             f"AS fresh, {replaces} AS replaces FROM delivered AS d ORDER BY __row"
         ).to_arrow_table()
         connection.unregister("delivered_rows")
@@ -347,6 +356,14 @@ class Held:
     def _refuse(self, resource_id: str, delivered: pa.Table, refused: np.ndarray) -> None:
         """Refuse delivered rows that would change or grow a group the packet holds (Part 05 §4.3)."""
         rows = delivered.filter(pa.array(refused)).slice(0, SHOWN).to_pylist()
+        if self.classes.get(resource_id) == DOCUMENTATION:
+            raise AmendmentRefused(
+                f"{resource_id}: {int(refused.sum()):,} delivered row(s) share a primary key with a row the packet "
+                f"holds and differ from it, and an amending build neither removes nor replaces one (Part 05 §4.3). "
+                f"First: {rows}",
+                code=AmendmentFault.CHANGES_HELD,
+                resource_id=resource_id,
+            )
         raise AmendmentRefused(
             f"{resource_id}: {int(refused.sum()):,} delivered row(s) neither equal a row the packet holds nor form a "
             f"group it lacks, so amending would change or grow what it holds (Part 05 §15.2); a packet whose "

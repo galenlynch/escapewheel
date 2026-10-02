@@ -72,6 +72,7 @@ from .protocols import (
     DeclaresCompensations,
     ReferencesArrays,
     ReferencesMedia,
+    ReferencesResources,
     SourceAdapter,
     StagesArrays,
     StagesPayloads,
@@ -529,6 +530,11 @@ def build(  # noqa: C901
             writer.reference_media(resource_id, replace(media, uri=as_returned(media.uri, withheld)))
             size = f", {media.size_bytes / 1e9:.2f} GB" if media.size_bytes else ""
             say(f"  referenced {resource_id}{size}")
+        for resource_id, resource in (
+            source.external_resources() if isinstance(source, ReferencesResources) else {}
+        ).items():
+            writer.reference_resource(resource_id, resource)
+            say(f"  referenced {resource_id}")
         # An adapter in this process may hand its payloads over as bytes, which the build writes where
         # a protocol adapter would have, so both are read back and refused the same way.
         location = context.opaque_locations.get(spec.kind)

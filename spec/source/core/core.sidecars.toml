@@ -1,0 +1,48 @@
+content_class = "documentation"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "forbidden"
+primary_key = ["resource_id"]
+amendment_groups = []
+
+[[columns]]
+name = "resource_id"
+type = "string"
+presence = "required"
+role = "identifier"
+identity = "carried"
+vocabulary = "free"
+description = "The sidecar's packet resource ID, which the recipe's author chose (Part 02 §12.10)."
+
+[[columns]]
+name = "sidecar_type"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+description = "What kind of thing the sidecar is, as a lowercase snake-case name such as `readme`, `protocol`, `anatomical_image` or `neuroglancer_state`. Null where the source named none."
+
+[[columns]]
+name = "media_type"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "open"
+authority = [{ name = "IANA Media Types", uri = "https://www.iana.org/assignments/media-types/" }]
+description = "The sidecar's media type as `type/subtype` without parameters, such as `application/pdf`, spelled as IANA Media Types registers it. Null where the source named none."
+
+[[columns]]
+name = "description"
+type = "string"
+presence = "nullable"
+role = "data"
+vocabulary = "free"
+description = "What the sidecar is, in prose."
+
+[[columns]]
+name = "metadata"
+type = "json_string"
+presence = "optional"
+role = "data"
+description = "What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule."

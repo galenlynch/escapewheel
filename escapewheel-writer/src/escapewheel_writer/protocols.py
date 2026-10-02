@@ -3,7 +3,8 @@
 - :class:`SourceAdapter` -- what every adapter has.
 - :class:`Streams` -- tables too large to hold as records, as batches.
 - :class:`StagesArrays` -- dense arrays the packet will own.
-- :class:`ReferencesArrays`, :class:`ReferencesMedia` -- arrays and media the packet references.
+- :class:`ReferencesArrays`, :class:`ReferencesMedia`, :class:`ReferencesResources` -- arrays, media
+  and other opaque resources the packet references.
 - :class:`StagesPayloads` -- opaque payloads the packet will own.
 - :class:`DeclaresCompensations` -- the source defects the adapter worked around.
 - :class:`WithholdsAnchors` -- the terminal anchors a clock's fit left out.
@@ -20,7 +21,7 @@ from typing import Any, Protocol, runtime_checkable
 
 import pyarrow as pa
 
-from .bindings import ExternalArray, ExternalMedia, StagedArray
+from .bindings import ExternalArray, ExternalMedia, ExternalResource, StagedArray
 from .opaque import Payload
 
 
@@ -91,6 +92,14 @@ class ReferencesMedia(Protocol):
 
 
 @runtime_checkable
+class ReferencesResources(Protocol):
+    """An adapter with opaque resources of a catalog keyed on `resource_id` the packet references."""
+
+    def external_resources(self) -> Mapping[str, ExternalResource]:
+        """Return each referenced resource, by resource ID."""
+
+
+@runtime_checkable
 class StagesPayloads(Protocol):
     """An adapter with opaque payloads the packet will own (Part 12 §5)."""
 
@@ -127,6 +136,7 @@ __all__ = [
     "Located",
     "ReferencesArrays",
     "ReferencesMedia",
+    "ReferencesResources",
     "SourceAdapter",
     "StagesArrays",
     "StagesPayloads",

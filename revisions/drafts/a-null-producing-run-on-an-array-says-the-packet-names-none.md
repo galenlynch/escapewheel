@@ -152,10 +152,9 @@ layout. One moves the file.
 ### 2.6 Other open work advances the same version
 
 At the baseline R159 is accepted, four other drafts are open and no proposal is. R159 amends only
-Part 05. Three of the four drafts change the core registry:
+Part 05. R160, accepted after this draft was revised, adds three declarations to the core registry
+and takes the next core version, `0.15.0`. Two of the three other drafts change the core registry:
 
-- `core-declares-a-catalog-of-sidecars.md`, being incorporated as this draft is revised, adds three
-  declarations and takes the next core version, `0.15.0`;
 - `core-declares-a-clocks-transform-in-typed-columns-alone.md` removes one column of `core.clocks`;
   and
 - `a-unit-is-identified-outside-its-packet-by-its-name.md` makes nine name columns `required` and
@@ -301,8 +300,7 @@ The four other descriptions state what their declaring clauses already meant, so
 gains a note for §3.4.
 
 §3.5 replaces the version that the clause assigning the incorporated registry's version states. Where
-that clause assigns only the version, as the version clause of
-`core-declares-a-catalog-of-sidecars.md` does, its entry becomes `superseded` by this revision, as
+that clause assigns only the version, as R160 §3.8 does, its entry becomes `superseded` by this revision, as
 R151 §3.2's did. Where it also assigns other identifiers, as R152 §3.4 assigns the meta-schema and
 the descriptor, its entry keeps its disposition and gains a note.
 

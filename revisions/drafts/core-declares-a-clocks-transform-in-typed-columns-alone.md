@@ -36,10 +36,9 @@ The change is structural because the two sentences it restates sit inside Part 0
 Part 02 §9.2. An appended section would leave the first miscounting and the second naming a version
 the registry no longer carries.
 
-R159 amends only sections of Part 05. Of the four other open drafts, three advance the same
-`registry_version`. `core-declares-a-catalog-of-sidecars.md`, whose acceptance is authorized and
-whose incorporation is under way, adds three declarations to the core registry and takes `0.15.0`
-where it is incorporated first.
+R159 amends only sections of Part 05. R160, accepted after this draft was revised, adds three
+declarations to the core registry and takes `0.15.0`. Of the three other open drafts, two advance
+the same `registry_version`.
 `a-null-producing-run-on-an-array-says-the-packet-names-none.md` rewords the description of
 `processing_run_id` on the core tables that declare it nullable.
 `a-unit-is-identified-outside-its-packet-by-its-name.md` makes the name of every owned assigned

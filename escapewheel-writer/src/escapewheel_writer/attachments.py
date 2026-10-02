@@ -15,7 +15,7 @@ from typing import Any
 from escapewheel_reader.uri import encode
 
 from . import opaque
-from .bindings import ExternalArray, ExternalMedia, StagedArray, check_reference
+from .bindings import ExternalArray, ExternalMedia, ExternalResource, StagedArray, check_reference
 from .documents import resource_entry
 from .errors import PayloadFault, PayloadProblem, PayloadRefused, UsageError, UsageFault
 from .registries import Declarations
@@ -41,14 +41,16 @@ class Attachments:
         #: Arrays and media the packet references, by resource ID.
         self.arrays: dict[str, ExternalArray] = {}
         self.media: dict[str, ExternalMedia] = {}
+        #: Other opaque resources the packet references, each bound by its own resource ID.
+        self.resources: dict[str, ExternalResource] = {}
         #: Packet-owned opaque resources as each source delivered them, bound at commit, once every
         #: source's catalog rows are in (Part 12 §5).
         self.payloads: list[opaque.StagedPayload] = []
 
     @property
-    def referenced(self) -> tuple[ExternalArray | ExternalMedia, ...]:
-        """Every referenced array, then every referenced media asset."""
-        return (*self.arrays.values(), *self.media.values())
+    def referenced(self) -> tuple[ExternalArray | ExternalMedia | ExternalResource, ...]:
+        """Every referenced array, then every referenced media asset, then every other resource."""
+        return (*self.arrays.values(), *self.media.values(), *self.resources.values())
 
     def add_array(self, resource_id: str, array: StagedArray) -> None:
         """Take a dense array to write into the packet, bound to its catalog row."""
@@ -85,6 +87,16 @@ class Attachments:
         declaration = self._declarations.family(media.declaration_id, resource_id, "opaque")
         self._bind_catalog_row(declaration, resource_id, "media_asset_id", media.media_asset_id)
         self.media[resource_id] = media
+
+    def reference_resource(self, resource_id: str, resource: ExternalResource) -> None:
+        """Take an opaque resource the packet references, bound to the catalog row carrying its ID."""
+        if resource_id in self.media or resource_id in self.resources:
+            raise UsageError(f"{resource_id} is already referenced", code=UsageFault.STAGED_TWICE, where=resource_id)
+        resource = replace(resource, uri=check_reference(resource_id, resource.uri, resource.source))
+        declaration = self._declarations.family(resource.declaration_id, resource_id, "opaque")
+        column = str(declaration["instances"]["resource_id_column"])
+        self._bind_catalog_row(declaration, resource_id, column, resource_id)
+        self.resources[resource_id] = resource
 
     def add_payloads(
         self, source: str, location: str | Path, *, owned: Collection[str] | None = None
@@ -128,7 +140,7 @@ class Attachments:
                     )
                     continue
                 rows.setdefault(str(value), []).append(declaration_id)
-        referenced = {*self.media, *self.arrays}
+        referenced = {*self.media, *self.arrays, *self.resources}
         problems: list[PayloadProblem] = []
         bound: list[tuple[opaque.StagedPayload, str]] = []
         by_id: dict[str, list[opaque.StagedPayload]] = {}
@@ -262,6 +274,13 @@ class Attachments:
         return [
             resource_entry(resource_id, media.declaration_id, media.uri, referenced=media)
             for resource_id, media in self.media.items()
+        ]
+
+    def resource_entries(self) -> list[dict[str, Any]]:
+        """Return a manifest entry per other referenced resource. Copies nothing and reads nothing."""
+        return [
+            resource_entry(resource_id, resource.declaration_id, resource.uri, referenced=resource)
+            for resource_id, resource in self.resources.items()
         ]
 
     def _bind_catalog_row(

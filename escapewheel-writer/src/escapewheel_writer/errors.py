@@ -479,6 +479,10 @@ class SourceFault(StrEnum):
     NO_TEMPLATE_WINDOW = "no_template_window"
     #: No unit the analyzer holds is in the packet's sorting.
     NO_UNIT_MATCHES = "no_unit_matches"
+    #: A listed sidecar states no resource ID, not exactly one of a path and a URI, or an unknown key.
+    SIDECAR_UNSTATED = "sidecar_unstated"
+    #: A listed sidecar's path holds no file or directory.
+    SIDECAR_ABSENT = "sidecar_absent"
     #: The streams' templates span different windows.
     TEMPLATE_WINDOWS_DIFFER = "template_windows_differ"
     #: The streams' templates are in different units.

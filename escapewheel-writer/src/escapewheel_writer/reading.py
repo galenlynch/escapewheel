@@ -23,10 +23,10 @@ from typing import Any, cast
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-from escapewheel_reader.resource_ids import CORE_ARRAY_ASSETS, CORE_MEDIA_ASSETS
+from escapewheel_reader.resource_ids import CORE_ARRAY_ASSETS, CORE_MEDIA_ASSETS, CORE_SIDECARS
 from escapewheel_reader.uri import canonical, is_absolute
 
-from .bindings import ExternalArray, ExternalMedia
+from .bindings import ExternalArray, ExternalMedia, ExternalResource
 from .declaration import FILES, FLIGHT, PROTOCOL_TERMS, REPORT_AS_FILE, STREAM
 from .encoding import STREAMED_BATCH_ROWS
 from .errors import DeliveryFailed, SourceDefect, SourceFault
@@ -145,6 +145,18 @@ class Delivered:
         """Every referenced media asset the delivery described."""
         return self._referenced(ExternalMedia, "media_asset_id", CORE_MEDIA_ASSETS)
 
+    def external_resources(self) -> dict[str, Any]:
+        """Every referenced resource whose own ID a delivered `core.sidecars` row carries."""
+        from dataclasses import fields
+
+        taken = {f.name for f in fields(ExternalResource)}
+        listed = self._listed()
+        return {
+            str(entry["resource_id"]): ExternalResource(**{n: v for n, v in entry.items() if n in taken})
+            for entry in self.referenced
+            if str(entry["resource_id"]) in listed
+        }
+
     def unresolved(self) -> list[str]:
         """Return the referenced entries no delivered catalog row declares, which a build rejects."""
         declared = {
@@ -153,11 +165,16 @@ class Delivered:
             for row in self.rows(resource)
             if row.get(identity)
         }
+        listed = self._listed()
         return [
             str(entry["resource_id"])
             for entry in self.referenced
-            if str(entry["resource_id"]).split(".", 1)[-1] not in declared
+            if str(entry["resource_id"]).split(".", 1)[-1] not in declared and str(entry["resource_id"]) not in listed
         ]
+
+    def _listed(self) -> set[str]:
+        """Return the resource IDs the delivered rows of a catalog keyed on `resource_id` carry."""
+        return {str(row["resource_id"]) for row in self.rows(CORE_SIDECARS) if row.get("resource_id")}
 
     def _referenced(self, kind: Any, identity: str, resource: str) -> dict[str, Any]:
         """Build one kind of reference from the entries whose asset the delivery's rows declare.

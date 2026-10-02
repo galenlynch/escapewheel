@@ -165,6 +165,18 @@ EXPECTED: dict[str, tuple[str, str] | None] = {
     "spikes_on_reference_clock": None,
     "spikes_off_reference_clock": ("error", "analysis.spike_events.on_reference_clock"),
     "spikes_without_reference_clock": ("error", "analysis.spike_events.on_reference_clock"),
+    "sidecars": None,
+    "sidecars_without_scopes": None,
+    "sidecar_row_unbound": ("error", "packet.resource.catalog_row_binding"),
+    "sidecar_entry_unbound": ("error", "packet.resource.catalog_row_binding"),
+    "sidecar_listed_twice": ("error", "core.sidecars.primary_key_unique"),
+    "sidecar_scope_unlisted": ("error", "core.sidecar_scopes.resource_id_resolves"),
+    "sidecar_scope_undeclared_table": ("error", "core.sidecar_scopes.scope_kind.kind_declared"),
+    "sidecar_scope_uncarried_table": ("error", "core.sidecar_scopes.scope_kind.kind_declared"),
+    "sidecar_scope_composite_key": ("error", "core.sidecar_scopes.scope_kind.key_fits_paired_value"),
+    "sidecar_scope_absent_row": ("error", "core.sidecar_scopes.scope_kind.core_subjects_resolves"),
+    "sidecar_scope_null": ("error", "core.sidecar_scopes.scope.not_null"),
+    "sidecar_with_lineage": ("error", "packet.resource.derived_from_forbidden"),
 }
 
 _BY_NAME = {packet.name: packet for packet in PACKETS}

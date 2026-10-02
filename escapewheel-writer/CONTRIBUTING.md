@@ -87,7 +87,10 @@ array is handed over as values by `staged_arrays` and written by the build; run 
 `escapewheel deliver` writes it into the `array_location` the build supplies under staging, in a
 directory named by its `core.array_assets` row's `resource_id`, which is all the build binds it by
 — so that row must carry the `resource_id`. A referenced array is not copied; the adapter returns
-its resource declaration. An adapter never chooses final packet paths or commits resources.
+its resource declaration. A referenced media asset binds its row by `media_asset_id`; a resource of
+a catalog keyed on `resource_id` itself, such as a sidecar, has no assigned identifier, so its
+`ExternalResource` binds the row carrying its resource ID. An adapter never chooses final packet
+paths or commits resources.
 
 `escapewheel_writer.adapter` holds every name an adapter in another distribution imports from this
 package, and nothing else here is its to import. Its protocols state what a build asks of an
@@ -95,7 +98,7 @@ adapter. Every adapter satisfies
 `SourceAdapter`: `records`, `offers`, `notes` and the class's declaration. Each thing only some
 adapters have is one capability protocol, which a build tests for and an adapter satisfies by
 having its members: `Streams`, `StagesArrays`, `ReferencesArrays`, `ReferencesMedia`,
-`StagesPayloads`, `DeclaresCompensations`, `WithholdsAnchors` and `Located`. A table with no rows
+`ReferencesResources`, `StagesPayloads`, `DeclaresCompensations`, `WithholdsAnchors` and `Located`. A table with no rows
 is omitted from `records`, `batches` and `offers` alike, and `offers` is the row counts of the
 first two; an adapter whose rows need what only a build supplies counts them from the source
 instead, as `LFPSource` does.

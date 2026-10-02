@@ -24,7 +24,7 @@ IDENTIFIERS = {
         "ew-core-logical-schema-scope",
     ),
     "registry_id": ("core", "02", "ew-registry-self-description"),
-    "registry_version": ("0.14.0", "02", "ew-registry-self-description"),
+    "registry_version": ("0.15.0", "02", "ew-registry-self-description"),
 }
 
 #: Text found in the normative-reference entry of each external authority.
@@ -68,6 +68,7 @@ REFERENCE_MARKERS = {
     "NCBI Taxonomy": "https://www.ncbi.nlm.nih.gov/taxonomy",
     "MGI": "https://www.informatics.jax.org/",
     "RGD": "https://rgd.mcw.edu/",
+    "IANA Media Types": "https://www.iana.org/assignments/media-types/",
 }
 
 #: The one part whose normative-reference section holds each authority.
@@ -111,6 +112,7 @@ REFERENCE_OWNERS = {
     "NCBI Taxonomy": "02",
     "MGI": "02",
     "RGD": "02",
+    "IANA Media Types": "02",
 }
 
 #: The anchor of each part's normative-reference section that has approved rows.
@@ -175,6 +177,11 @@ REFERENCE_ROWS = {
         ),
         (
             "[Rat Genome Database (RGD)](https://rgd.mcw.edu/)",
+            "living registry",
+            "the spelling of the names it registers, in open columns naming it (§9.3)",
+        ),
+        (
+            "[IANA Media Types](https://www.iana.org/assignments/media-types/)",
             "living registry",
             "the spelling of the names it registers, in open columns naming it (§9.3)",
         ),

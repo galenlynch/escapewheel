@@ -14,7 +14,7 @@ This part defines how much metadata core requires, where richer metadata belongs
 | 1 | packet-level facts | the manifest |
 | 2 | facts needed to interpret, validate, join, or reproduce | core tables |
 | 3 | domain-rich, lab-specific facts | an extension's tables |
-| 4 | human-readable context | `docs/` sidecars |
+| 4 | context the packet asserts nothing through | the sidecars `core.sidecars` lists |
 | 3-4 | such facts stated about one row, in the source's own vocabulary | that table's `metadata` column |
 
 <a id="ew-core-inclusion-rule" data-spec-anchor="canonical"></a>
@@ -24,7 +24,7 @@ A field belongs in core only if common interpretation, validation, joining, or a
 
 A field SHOULD be in core when it is needed to interpret units, clocks, channels, arrays, or spike times; to validate a required relationship; to join tables; to filter or group a common analysis; to reproduce processing or curation; or to trace provenance.
 
-A field SHOULD be in an extension or a sidecar when it is institutional, administrative, lab-specific, rarely queried, free-form, procedural but not required for analysis, or biologically rich but not required to interpret the recording.
+A field SHOULD be in an extension when it is institutional, administrative, lab-specific, rarely queried, free-form, procedural but not required for analysis, or biologically rich but not required to interpret the recording. A sidecar is not a place for a field.
 
 ## 4. Required minimum
 

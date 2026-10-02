@@ -42,6 +42,9 @@ CORE_PROBES = "core.probes"
 CORE_PROCESSING_RUN_INPUTS = "core.processing_run_inputs"
 CORE_PROCESSING_RUNS = "core.processing_runs"
 CORE_SESSIONS = "core.sessions"
+CORE_SIDECAR_INSTANCES = "core.sidecar_instances"
+CORE_SIDECAR_SCOPES = "core.sidecar_scopes"
+CORE_SIDECARS = "core.sidecars"
 CORE_SORTING_RUN_CHANNELS = "core.sorting_run_channels"
 CORE_SORTING_RUNS = "core.sorting_runs"
 CORE_SOURCE_FILES = "core.source_files"
@@ -87,6 +90,9 @@ __all__ = [
     "CORE_PROCESSING_RUNS",
     "CORE_PROCESSING_RUN_INPUTS",
     "CORE_SESSIONS",
+    "CORE_SIDECARS",
+    "CORE_SIDECAR_INSTANCES",
+    "CORE_SIDECAR_SCOPES",
     "CORE_SORTING_RUNS",
     "CORE_SORTING_RUN_CHANNELS",
     "CORE_SOURCE_FILES",

@@ -27,7 +27,7 @@ from escapewheel_reader.profile import PROFILE_ID
 from escapewheel_reader.registries import gunzip_member as gzip_member
 from escapewheel_validator import Report
 
-from .bindings import ExternalArray, ExternalMedia
+from .bindings import ExternalArray, ExternalMedia, ExternalResource
 from .errors import UsageError, UsageFault
 from .layout import REGISTRIES, retained
 
@@ -131,7 +131,7 @@ def resource_entry(
     *,
     owned: Path | None = None,
     size_bytes: int | None = None,
-    referenced: ExternalArray | ExternalMedia | None = None,
+    referenced: ExternalArray | ExternalMedia | ExternalResource | None = None,
 ) -> dict[str, Any]:
     """Return a staged resource's manifest entry (Part 04 §4.1).
 
@@ -143,7 +143,7 @@ def resource_entry(
         Where a packet-owned resource is staged, whose digest the entry records.
     size_bytes : int, optional
         A packet-owned resource's size, where its entry states one.
-    referenced : ExternalArray or ExternalMedia, optional
+    referenced : ExternalArray, ExternalMedia or ExternalResource, optional
         An external resource, whose entry records what the binding says was true of it (Part 04
         §5.2). Given in place of `owned`.
     """
@@ -183,7 +183,9 @@ def with_lineage(entries: list[dict[str, Any]], derived: Mapping[str, Sequence[s
 
 
 def sources_document(
-    packet_id: str, sources: Mapping[str, str], referenced: Iterable[ExternalArray | ExternalMedia]
+    packet_id: str,
+    sources: Mapping[str, str],
+    referenced: Iterable[ExternalArray | ExternalMedia | ExternalResource],
 ) -> dict[str, Any] | None:
     """Return Part 04 §5.5's default resolution document, or None where no resource names a source.
 

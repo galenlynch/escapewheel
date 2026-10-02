@@ -1,0 +1,34 @@
+content_class = "documentation"
+kind = "table"
+instances = { mode = "singleton", presence = "optional" }
+requires = []
+lineage = "forbidden"
+primary_key = ["resource_id", "scope_kind", "scope"]
+amendment_groups = []
+
+[[columns]]
+name = "resource_id"
+type = "string"
+presence = "required"
+role = "identifier"
+identity = "carried"
+vocabulary = "free"
+references = "core.sidecars"
+description = "The sidecar."
+
+[[columns]]
+name = "scope_kind"
+type = "string"
+presence = "required"
+role = "discriminator"
+resolves = "required"
+discriminates = "scope"
+description = "The table holding the row the sidecar is about, as a dotted resource ID."
+
+[[columns]]
+name = "scope"
+type = "string"
+presence = "required"
+role = "data"
+vocabulary = "free"
+description = "The row the sidecar is about: its key where that key is carried, and its `*_name` where it is assigned. States no relation other than that the sidecar is about the row (Part 02 §12.10)."

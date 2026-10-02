@@ -7,7 +7,7 @@ registry `core`, stored at `registries/core/<version>.json.gz` (Part 04 §8, Par
 
 <!-- BEGIN generated: counts -->
 ```
-48 resources, 45 tables, 360 columns, 116 references, 91 Tier 2 rules
+51 resources, 47 tables, 368 columns, 117 references, 91 Tier 2 rules
 ```
 <!-- END generated: counts -->
 
@@ -93,12 +93,12 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-175 required column, not null
-116 reference, resolves
-45  primary key, unique
+179 required column, not null
+117 reference, resolves
+47  primary key, unique
 4   closed vocabulary, member of
 26  finite column, no NaN or infinity
-8   discriminator, resolvable
+9   discriminator, resolvable
 ```
 <!-- END generated: structure -->
 

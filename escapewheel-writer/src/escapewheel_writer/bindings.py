@@ -101,6 +101,24 @@ class ExternalMedia:
     verified_at: str | None = None
 
 
+@dataclass(frozen=True)
+class ExternalResource:
+    """An opaque resource the packet references, of a catalog keyed on `resource_id` (Part 04 §5.1).
+
+    No assigned identifier stands between such a catalog's row and its resource, so the resource ID
+    a recipe chose binds the row carrying it, as it does a sidecar's (Part 02 §12.10). `digest`,
+    `size_bytes` and `verified_at` record what was true when someone looked (Part 04 §5.2).
+    """
+
+    declaration_id: str
+    uri: str
+    #: Part 04 §5.5, as on `ExternalArray`.
+    source: str | None = None
+    digest: Mapping[str, str] | None = None
+    size_bytes: int | None = None
+    verified_at: str | None = None
+
+
 def check_reference(resource_id: str, uri: str, source: str | None) -> str:
     """Return a referenced URI as the manifest records it, refusing one no reader could resolve.
 
@@ -127,4 +145,4 @@ def check_reference(resource_id: str, uri: str, source: str | None) -> str:
         ) from None
 
 
-__all__ = ["ExternalArray", "ExternalMedia", "StagedArray", "check_reference"]
+__all__ = ["ExternalArray", "ExternalMedia", "ExternalResource", "StagedArray", "check_reference"]

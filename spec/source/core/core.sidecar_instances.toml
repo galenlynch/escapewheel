@@ -1,0 +1,5 @@
+content_class = "documentation"
+kind = "opaque"
+instances = { mode = "catalog", catalog_resource = "core.sidecars", resource_id_column = "resource_id" }
+requires = []
+lineage = "forbidden"

@@ -27,7 +27,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from . import opaque
-from .bindings import ExternalArray, ExternalMedia
+from .bindings import ExternalArray, ExternalMedia, ExternalResource
 from .declaration import FILES, FLIGHT, REPORT_AS_FILE, SOURCE_CACHE, STREAM
 from .errors import SourceDefect, SourceFault, UnknownSourceKind
 from .kinds import required_adapter
@@ -35,6 +35,7 @@ from .protocols import (
     DeclaresCompensations,
     ReferencesArrays,
     ReferencesMedia,
+    ReferencesResources,
     SourceAdapter,
     StagesArrays,
     StagesPayloads,
@@ -130,11 +131,13 @@ def referenced(source: SourceAdapter) -> dict[str, Any] | None:
     """
     from dataclasses import fields
 
-    declared: dict[str, ExternalArray | ExternalMedia] = {}
+    declared: dict[str, ExternalArray | ExternalMedia | ExternalResource] = {}
     if isinstance(source, ReferencesArrays):
         declared.update(source.external_arrays())
     if isinstance(source, ReferencesMedia):
         declared.update(source.external_media())
+    if isinstance(source, ReferencesResources):
+        declared.update(source.external_resources())
     entries = []
     for resource_id, resource in declared.items():
         entry = {"resource_id": resource_id, "external": True}

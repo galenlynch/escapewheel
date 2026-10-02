@@ -4,13 +4,14 @@ The contract a build holds an adapter to (Part 05 §3.4):
 
 - :class:`SourceAdapter` -- what every adapter has.
 - :class:`Streams`, :class:`StagesArrays`, :class:`ReferencesArrays`, :class:`ReferencesMedia`,
-  :class:`StagesPayloads`, :class:`DeclaresCompensations`, :class:`WithholdsAnchors`,
+  :class:`ReferencesResources`, :class:`StagesPayloads`, :class:`DeclaresCompensations`, :class:`WithholdsAnchors`,
   :class:`Located` -- one capability each, which a build tests for.
 
 What an adapter returns and raises:
 
-- :class:`StagedArray`, :class:`ExternalArray`, :class:`ExternalMedia`, :class:`Payload` -- an
-  array the packet will own, an array or media it references, and an opaque payload.
+- :class:`StagedArray`, :class:`ExternalArray`, :class:`ExternalMedia`, :class:`ExternalResource`,
+  :class:`Payload` -- an array the packet will own, an array, media or other opaque resource it
+  references, and an opaque payload.
 - :class:`SourceDefect`, :class:`SourceFault`, :class:`UnsupportedEncoding` -- a source the
   adapter cannot read, its code, and a source stored in an encoding the adapter does not read.
 - :class:`Note`, :class:`NoteCode`, :func:`coded`, :func:`codes` -- what an adapter worked around.
@@ -50,7 +51,7 @@ reads the file through `attrs` and `table`.
 
 from .arrays import write_zarr
 from .arrow import build_table
-from .bindings import ExternalArray, ExternalMedia, StagedArray
+from .bindings import ExternalArray, ExternalMedia, ExternalResource, StagedArray
 from .clock import HARP_TICK_RATE_HZ, TICK_MAX, TICK_MIN, Clock, epoch_from, zone_of
 from .declaration import FILES, FLIGHT, PROTOCOLS, STREAM, document_of, shape_problems
 from .errors import SourceDefect, SourceFault, UnsupportedEncoding
@@ -61,6 +62,7 @@ from .protocols import (
     Located,
     ReferencesArrays,
     ReferencesMedia,
+    ReferencesResources,
     SourceAdapter,
     StagesArrays,
     StagesPayloads,
@@ -99,6 +101,7 @@ __all__ = [
     "DeclaresCompensations",
     "ExternalArray",
     "ExternalMedia",
+    "ExternalResource",
     "Located",
     "NWBSource",
     "Note",
@@ -106,6 +109,7 @@ __all__ = [
     "Payload",
     "ReferencesArrays",
     "ReferencesMedia",
+    "ReferencesResources",
     "SortedStream",
     "SourceAdapter",
     "SourceDefect",

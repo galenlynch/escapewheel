@@ -125,6 +125,7 @@
 "11.7" = "Provenance"
 "11.8" = "Analysis"
 "11.9" = "Space"
+"11.10" = "Sidecars"
 "12" = "Rules for particular resources"
 "12.1" = "Unit identity"
 "12.2" = "Channel indices in a sorting run"
@@ -135,6 +136,7 @@
 "12.7" = "A frame's axes"
 "12.8" = "A coordinate's atlas annotation"
 "12.9" = "Interval identity"
+"12.10" = "Sidecars"
 "13" = "Normative references"
 
 ["03"]
@@ -634,6 +636,12 @@ aliases = []
 part = "02"
 section = "11"
 title = "Core resource index"
+aliases = []
+
+[anchor.ew-core-sidecar-resource-index]
+part = "02"
+section = "11.10"
+title = "Sidecars"
 aliases = []
 
 [anchor.ew-declared-fact-authority]
@@ -1396,6 +1404,12 @@ aliases = []
 part = "02"
 section = "7.1"
 title = "Session scope"
+aliases = []
+
+[anchor.ew-sidecar-rules]
+part = "02"
+section = "12.10"
+title = "Sidecars"
 aliases = []
 
 [anchor.ew-source-cache]

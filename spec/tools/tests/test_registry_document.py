@@ -411,8 +411,17 @@ REQUIRES_SITE = "/resources/core.sessions/requires/0"
         ("analysis.array_assets", None, REQUIRES_SITE),
         ("core.legacy_rows", "compatibility_projection", REFERENCE_SITE),
         ("core.notes", "documentation", REQUIRES_SITE),
+        ("core.sidecars", None, REFERENCE_SITE),
+        ("core.sidecars", None, REQUIRES_SITE),
     ],
-    ids=["reference_to_analysis", "requires_analysis", "reference_to_projection", "requires_documentation"],
+    ids=[
+        "reference_to_analysis",
+        "requires_analysis",
+        "reference_to_projection",
+        "requires_documentation",
+        "reference_to_sidecars",
+        "requires_sidecars",
+    ],
 )
 def test_a_core_declaration_depends_only_on_canonical_ones(target, content_class, site):
     document = copy.deepcopy(CORE)
@@ -465,6 +474,41 @@ def test_an_extension_declaration_depends_only_on_canonical_ones():
             "/resources/demo.rows/table/references/1/resource",
             "/resources/demo.items/instances/catalog_resource",
         }
+
+
+def _without_metadata(declaration):
+    declaration["table"]["columns"] = [c for c in declaration["table"]["columns"] if c["name"] != "metadata"]
+
+
+def _grouped(declaration):
+    declaration["table"]["amendment_groups"] = [declaration["table"]["primary_key"]]
+
+
+@pytest.mark.parametrize(
+    ("resource", "mutate", "invariant"),
+    [
+        ("core.sidecars", _without_metadata, "registry.metadata.eligibility"),
+        ("core.sidecars", _grouped, "registry.amendment_groups.resolves"),
+        ("core.sidecar_scopes", _grouped, "registry.amendment_groups.resolves"),
+        ("core.sidecars", lambda declaration: declaration.update(lineage="optional"), "registry.resource.instance"),
+    ],
+    ids=["sidecars_without_metadata", "sidecars_grouped", "scopes_grouped", "sidecars_with_lineage"],
+)
+def test_the_sidecar_tables_are_held_to_the_documentation_rules(resource, mutate, invariant):
+    document = copy.deepcopy(CORE)
+    mutate(document["resources"][resource])
+    result = check_registry(document)
+    assert result.state == "invalid"
+    assert invariant in _ids(result)
+
+
+def test_the_sidecar_scopes_may_declare_metadata_or_not():
+    document = copy.deepcopy(CORE)
+    assert check_registry(document).state == "valid"
+    document["resources"]["core.sidecar_scopes"]["table"]["columns"].append(
+        _column("metadata", type="json_string", presence="optional", role="data", description=METADATA_DESCRIPTION)
+    )
+    assert check_registry(document).state == "valid"
 
 
 def test_a_core_non_canonical_target_needs_the_core_context():

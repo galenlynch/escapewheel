@@ -9,13 +9,13 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R159 accepted. R42 and R73 withdrawn. 0 proposals and 5 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R160 accepted. R42 and R73 withdrawn. 0 proposals and 4 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
-45 tables, 360 columns, 116 references, 91 Tier 2 rules (2 advisory)
+47 tables, 368 columns, 117 references, 91 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
-120 conformance packets
+132 conformance packets
 <!-- END facts: corpus -->
 
 <!-- BEGIN facts: extensions -->
@@ -135,16 +135,13 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Five drafts await acceptance
+## 3a. Four drafts await acceptance
 
 The drafts are under `revisions/drafts/`, and `revisions/drafts/README.md` gives their order and
 each one's appraisal. No proposal is open.
 
-- **Core declares a catalog of sidecars.** §3b describes it. A sidecar is a file the packet
-  asserts nothing through; `core.sidecars` is keyed on `resource_id`, a separate table states what
-  a sidecar is about, and its media type is an open column naming the IANA registry.
 - **A null producing run says the packet names none.** An array or event stream naming no
-  producing run says only that the packet names none, and three descriptions are reworded.
+  producing run says only that the packet names none, and seven descriptions are reworded.
 - **A recipe accepts a discarded value by naming its column.** An `[overrides]` entry naming a
   column releases a null column of a corresponding row, and a build refuses an entry that can
   release nothing.
@@ -155,23 +152,19 @@ each one's appraisal. No proposal is open.
   Part 02 §12.9 name `unit_name` and `interval_name`. The meta-schema `$id`, the descriptor and
   the core version advance, and every repository extension migrates.
 
-## 3b. A file the packet only indexes has no declaration
+## 3b. Sidecars are declared, and video is not yet packet-owned
 
-**Drafted, 2026-10-01**, as `revisions/drafts/core-declares-a-catalog-of-sidecars.md`. A PDF, a
-README, a viewer's saved state or an image in an unmodelled format has a class in Part 02 §2.2
-(`documentation`) and a directory in Part 03 §3.1 (`docs/`), and no declaration, so a manifest
-cannot list one. Listing one today takes an extension registry and an adapter. The draft has
-core declare a catalog table and an opaque catalog of that class; Part 12 §5 already delivers an
-opaque catalog, packet-owned or referenced.
+**Accepted as R160, 2026-10-02.** Core declares `core.sidecars`, `core.sidecar_scopes` and the
+opaque catalog `core.sidecar_instances`, so a manifest lists a PDF, a README or a viewer's saved
+state without an extension. The writer's `sidecars` adapter delivers the files a recipe names,
+each as a packet-owned payload or as a referenced resource.
 
 Implementation that follows it, none of it a specification change:
 
-- **An adapter that delivers the files a recipe names**, each as a packet-owned payload or as a
-  referenced resource. No shipped adapter delivers a payload today.
 - **A packet-owned option for video.** The specification and the writer already admit a
   packet-owned media payload; the aind video adapter only references external files.
 
-Left open and outside the draft:
+Left open and outside R160:
 
 - Part 12 §5 binds a payload to a catalog row or a singleton and gives a family-mode payload no
   rule. No declaration uses family mode. Whether it gains a rule or is removed is undecided.
@@ -312,8 +305,7 @@ fixed: the writer checks an extension registry registered as a file path from it
 `escapewheel import` writes the result of the registry it rejects, the validator interpolates
 `PERCENTILE_CONT` in binary64, and it converts a `DECIMAL` value or literal to an approximate
 domain through its text, which rounds to nearest, ties to even, as Part 11 §4 requires. Two
-remain, with a third found while the sidecar draft was appraised and a fourth while the credential
-draft was.
+remain, with a third found while the credential draft was appraised.
 
 - **A sampled run's `code_uri` is not the recipe file's digest.** `Recipe.with_sample` recomputes
   the digest over a serialization of the decoded recipe with the cap added, so a sampled run and a
@@ -325,10 +317,6 @@ draft was.
   The rule itself waits on a revision.
 - **`spec/tools/check.py` prints outcome lines for a non-valid core registry** and offers no
   output of the complete result.
-- **The validator's forward check admits a core table the packet does not carry.** Part 02 §8.3
-  has it return each row whose value names no resource the manifest declares; the check compares
-  against every table the core registry declares. Whether an existing packet would draw a new
-  finding is not measured. The sidecar draft's inventory names the alignment.
 
 The same reading found four defects in the specification and the registry. Part 05 §1 and Part 11
 §3 are repaired. Two wait on drafts in `revisions/drafts/`. Two more were found while the drafts

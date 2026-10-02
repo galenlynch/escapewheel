@@ -103,8 +103,6 @@ packet_root/
 
   manifests/        <packet_version>.json   superseded manifests
 
-  docs/                                     human-readable sidecars
-
   validation/       validation_report.json
 ```
 
@@ -505,8 +503,8 @@ resource and need not be copied into a table or the manifest.
 |---|---|
 | packet-level facts | the manifest |
 | queryable scientific facts | tables |
-| semi-structured, lab-specific values | a `json_string` column, or a sidecar |
-| human-readable context | `docs/` |
+| semi-structured, lab-specific values | a `json_string` column, or an extension's table |
+| context the packet asserts nothing through | a sidecar that `core.sidecars` lists |
 
 A value used for filtering, grouping, joining, or validation MUST be a first-class typed column.
 

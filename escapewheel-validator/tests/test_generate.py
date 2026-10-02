@@ -149,6 +149,17 @@ def test_resolves_decides_the_level_not_whether_the_check_exists():
     assert {c.level for c in required if c.id.endswith("kind_declared")} == {"error"}
 
 
+def test_the_forward_check_admits_only_what_the_manifest_declares():
+    """Part 02 §8.3: a value naming a core table the packet does not carry names no declared resource."""
+    kinds = {"core.sessions": "session_id", "core.probes": None}
+    checks = generate(
+        _discriminated(resolves="required", discriminates="k"), kinds=kinds, named={"core.runs", "core.sessions"}
+    )
+    (forward,) = [c for c in checks if c.id == "core.runs.k_kind.kind_declared"]
+    assert "'core.sessions'" in forward.sql
+    assert "core.probes" not in forward.sql
+
+
 def test_a_shared_key_discriminator_generates_no_value_resolution():
     """Part 02 §8.3: the named table's own reference carries that integrity, pointing the other way."""
     checks = generate(_discriminated(resolves="required"), kinds={"core.sessions": "session_id"})

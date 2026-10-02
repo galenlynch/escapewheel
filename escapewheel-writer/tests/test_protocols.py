@@ -2,7 +2,7 @@
 
 import pytest
 
-from escapewheel_writer.protocols import ReferencesArrays, ReferencesMedia, StagesArrays, Streams
+from escapewheel_writer.protocols import ReferencesArrays, ReferencesMedia, ReferencesResources, StagesArrays, Streams
 from escapewheel_writer.reading import Delivered
 from escapewheel_writer.sources import ADAPTERS
 
@@ -11,6 +11,7 @@ CAPABLE = {
     StagesArrays: {"nwb", "waveforms"},
     ReferencesArrays: {"lfp"},
     ReferencesMedia: set(),
+    ReferencesResources: {"sidecars"},
 }
 
 

@@ -64,6 +64,8 @@ NAMING_EXCEPTIONS = {
     "core.array_assets.resource_id": "Part 02 §2.6: packet identity is a carried string before row numbering",
     "analysis.array_assets.resource_id": "as core.array_assets.resource_id",
     "core.media_assets.resource_id": "as core.array_assets.resource_id",
+    "core.sidecars.resource_id": "as core.array_assets.resource_id, and the table's whole key (Part 02 §12.10)",
+    "core.sidecar_scopes.resource_id": "references core.sidecars.resource_id, which Part 02 §2.6 makes a string",
     "core.array_assets.offset": "NWB-standard name; the reserved word is handled by unconditional quoting",
     "analysis.array_assets.offset": "as core.array_assets.offset",
     "core.array_channels.offset": "as core.array_assets.offset, per channel",

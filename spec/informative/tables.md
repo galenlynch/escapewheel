@@ -7,15 +7,15 @@ This generated rendering is not a standalone specification. See
 [Part 00 §2](../parts/00_architecture.md#ew-specification-authority) for the sources that bind.
 
 ```text
-48 resources, 45 tables, 360 columns, 116 references, 91 Tier 2 rules
-registry 0.14.0   logical standard escapewheel-logical-v0.1
+51 resources, 47 tables, 368 columns, 117 references, 91 Tier 2 rules
+registry 0.15.0   logical standard escapewheel-logical-v0.1
 ```
 
 ## Contents
 
 **analysis** (4) — [`analysis.array_assets`](#analysisarray_assets) · [`analysis.array_dimensions`](#analysisarray_dimensions) · [`analysis.array_labels`](#analysisarray_labels) · [`analysis.spike_events`](#analysisspike_events)
 
-**core** (41) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.array_labels`](#corearray_labels) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clock_phase_steps`](#coreclock_phase_steps) · [`core.clocks`](#coreclocks) · [`core.coordinate_frame_axes`](#corecoordinate_frame_axes) · [`core.coordinate_frames`](#corecoordinate_frames) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinate_values`](#coreelectrode_coordinate_values) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinate_values`](#coreunit_coordinate_values) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
+**core** (43) — [`core.array_assets`](#corearray_assets) · [`core.array_channels`](#corearray_channels) · [`core.array_dimensions`](#corearray_dimensions) · [`core.array_labels`](#corearray_labels) · [`core.calibration_devices`](#corecalibration_devices) · [`core.calibration_points`](#corecalibration_points) · [`core.calibrations`](#corecalibrations) · [`core.clock_anchors`](#coreclock_anchors) · [`core.clock_observation_intervals`](#coreclock_observation_intervals) · [`core.clock_phase_steps`](#coreclock_phase_steps) · [`core.clocks`](#coreclocks) · [`core.coordinate_frame_axes`](#corecoordinate_frame_axes) · [`core.coordinate_frames`](#corecoordinate_frames) · [`core.curation_versions`](#corecuration_versions) · [`core.devices`](#coredevices) · [`core.electrode_coordinate_values`](#coreelectrode_coordinate_values) · [`core.electrode_coordinates`](#coreelectrode_coordinates) · [`core.electrodes`](#coreelectrodes) · [`core.event_stream_observation_intervals`](#coreevent_stream_observation_intervals) · [`core.event_streams`](#coreevent_streams) · [`core.events`](#coreevents) · [`core.intervals`](#coreintervals) · [`core.media_assets`](#coremedia_assets) · [`core.media_frames`](#coremedia_frames) · [`core.preferred_runs`](#corepreferred_runs) · [`core.probes`](#coreprobes) · [`core.processing_run_inputs`](#coreprocessing_run_inputs) · [`core.processing_runs`](#coreprocessing_runs) · [`core.session_experimenters`](#coresession_experimenters) · [`core.sessions`](#coresessions) · [`core.sidecar_scopes`](#coresidecar_scopes) · [`core.sidecars`](#coresidecars) · [`core.sorting_run_channels`](#coresorting_run_channels) · [`core.sorting_runs`](#coresorting_runs) · [`core.source_files`](#coresource_files) · [`core.spike_events`](#corespike_events) · [`core.subjects`](#coresubjects) · [`core.unit_coordinate_values`](#coreunit_coordinate_values) · [`core.unit_coordinates`](#coreunit_coordinates) · [`core.unit_electrodes`](#coreunit_electrodes) · [`core.unit_observation_intervals`](#coreunit_observation_intervals) · [`core.unit_quality_labels`](#coreunit_quality_labels) · [`core.units`](#coreunits)
 
 ## `analysis`
 
@@ -942,6 +942,36 @@ registry 0.14.0   logical standard escapewheel-logical-v0.1
 - `core.sessions.reference_clock_declared` — error: a session declaring more than one clock names no reference clock
 - `core.sessions.every_clock_reaches_the_reference` — error: a clock does not reach the session's reference clock, so it cannot be converted to it
 - `core.sessions.alignment_bound_at_least_default` — error: a session declares an alignment bound below the default of one median anchor interval, which reaches no further than declaring nothing
+
+### `core.sidecar_scopes`
+
+| Column | Type | Presence | Declares | Description |
+|---|---|:---:|---|---|
+| `resource_id` | string | **required** | free | The sidecar. |
+| `scope_kind` | string | **required** | resolves required | The table holding the row the sidecar is about, as a dotted resource ID. |
+| `scope` | string | **required** | free | The row the sidecar is about: its key where that key is carried, and its `*_name` where it is assigned. States no relation other than that the sidecar is about the row (Part 02 §12.10). |
+
+**Primary key** — `resource_id`, `scope_kind`, `scope`  
+
+**References**
+
+- `resource_id` → `core.sidecars` (`resource_id`)
+
+**Amendment groups** — none  
+
+### `core.sidecars`
+
+| Column | Type | Presence | Declares | Description |
+|---|---|:---:|---|---|
+| `resource_id` | string | **required** | free | The sidecar's packet resource ID, which the recipe's author chose (Part 02 §12.10). |
+| `sidecar_type` | string | nullable | open | What kind of thing the sidecar is, as a lowercase snake-case name such as `readme`, `protocol`, `anatomical_image` or `neuroglancer_state`. Null where the source named none. |
+| `media_type` | string | nullable | open; [IANA Media Types](https://www.iana.org/assignments/media-types/) | The sidecar's media type as `type/subtype` without parameters, such as `application/pdf`, spelled as IANA Media Types registers it. Null where the source named none. |
+| `description` | string | nullable | free | What the sidecar is, in prose. |
+| `metadata` | json_string | optional | — | What the source stated about this row that the standard does not model, carried in the source's own vocabulary and read by no rule. |
+
+**Primary key** — `resource_id`  
+
+**Amendment groups** — none  
 
 ### `core.sorting_run_channels`
 

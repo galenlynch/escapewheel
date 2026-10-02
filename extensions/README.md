@@ -139,8 +139,8 @@ duplication buy otherwise-unavailable access — removes seven of `Site`'s field
 | `last_stop_duration` | `choice_cue_tick - last_stop_tick` |
 
 The four `Json[Any]` fields on `SessionMetadata` — `session`, `rig`, `task_logic`, `trainer_state`
-— are not dropped but *rehomed*: they are the rig and task configuration, which Part 03 places in
-`docs/` and Part 04 binds as sidecar documents. R3 §2.1 confines JSON to optional columns and these
+— are not dropped but *rehomed*: they are the rig and task configuration, which a packet carries
+as sidecars that `core.sidecars` lists (Part 02 §12.10). R3 §2.1 confines JSON to optional columns and these
 are required, so a column was never available to them.
 
 ## A denormalization is kept only if it is checked

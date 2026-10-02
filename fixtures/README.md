@@ -209,6 +209,28 @@ two and three times, which `corpus.py` counts (Part 05 §5.3). `build.py` checks
 listing against its bytes written out by hand, so its digest holds only for a validator writing
 keys as Part 04 §4.3's raw UTF-8, and `corpus.py` requires that it draw no `owned.digest`.
 
+Twelve packets list sidecars (Part 02 §12.10), each an instance of `core.sidecar_instances` bound to
+its `core.sidecars` row by `resource_id`. `sidecars` lists three: `core.readme`, a packet-owned
+file with a null type and media type and no scope; `core.viewer_state`, a packet-owned directory
+of media type `application/json`, scoped to the subject; and `core.surgery_protocol`, a referenced
+resource whose type and media type no list holds, scoped to two sessions and to a row of the
+fixture-local extension `lab_records`, whose `lab_records.surgeries` is keyed by one string column.
+It adds a second session, `s002`, for that scope. `sidecars_without_scopes` carries no
+`core.sidecar_scopes`. Both are clean with checksums. Ten variants each draw one error:
+
+| Packet | Violates | Caught by |
+|---|---|---|
+| `sidecar_row_unbound` | a `core.sidecars` row no entry binds | `packet.resource.catalog_row_binding` |
+| `sidecar_entry_unbound` | a sidecar entry no row binds | `packet.resource.catalog_row_binding` |
+| `sidecar_listed_twice` | two rows of one `resource_id` | `core.sidecars.primary_key_unique` |
+| `sidecar_scope_unlisted` | a scope of a `resource_id` no sidecar row holds | `core.sidecar_scopes.resource_id_resolves` |
+| `sidecar_scope_undeclared_table` | a scope naming a table no bound registry declares | `core.sidecar_scopes.scope_kind.kind_declared` |
+| `sidecar_scope_uncarried_table` | a scope naming `core.probes` in `no_extracellular` | `core.sidecar_scopes.scope_kind.kind_declared` |
+| `sidecar_scope_composite_key` | a scope naming `core.coordinate_frames`, keyed by two columns | `core.sidecar_scopes.scope_kind.key_fits_paired_value` |
+| `sidecar_scope_absent_row` | a scope naming subject `m999` | `core.sidecar_scopes.scope_kind.core_subjects_resolves` |
+| `sidecar_scope_null` | a null `scope` | `core.sidecar_scopes.scope.not_null` |
+| `sidecar_with_lineage` | a sidecar entry carrying `derived_from` | `packet.resource.derived_from_forbidden` |
+
 `no_extracellular` is `valid` without its fourteen core tables specific to extracellular
 electrophysiology, and `sessions_only` keeps only `core.sessions` and `core.subjects`, its session
 naming no reference clock. Both are clean, since the packet mechanism confines no packet to a

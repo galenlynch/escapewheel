@@ -120,6 +120,7 @@ def run_rules(
             unreadable = _install_rule_relations(packet, connection, [registry, *extension_documents])
 
             kinds = _declared_kinds(packet, registry, extension_documents)
+            named = {resource.resource_id for resource in packet.resources()}
             keys = _declared_keys(packet, registry, extension_documents)
             specialises = _specialisations(packet, registry, extension_documents)
             tier1 = generate(
@@ -131,6 +132,7 @@ def run_rules(
                 specialises=specialises,
                 declared=False,
                 keys=keys,
+                named=named,
             )
             tier2 = _tier2_checks(core_context, core_context, report, "core", advisory)
             checks = [*tier1, *tier2]
@@ -152,6 +154,7 @@ def run_rules(
                 unsound,
                 keys,
                 specialises,
+                named,
             )
         finally:
             with contextlib.suppress(Exception):
@@ -454,6 +457,7 @@ def _check_extensions(
     unsound: set[str] | None = None,
     keys: Mapping[str, Any] | None = None,
     specialises: Mapping[str, Collection[Specialisation]] | None = None,
+    named: Collection[str] | None = None,
 ) -> None:
     """Run each directing extension registry's generated and declared checks (Part 05 §5.4).
 
@@ -493,6 +497,7 @@ def _check_extensions(
             specialises=specialises,
             declared=False,
             keys=keys,
+            named=named,
         )
         tier2 = _tier2_checks(extension_context, core_context, report, extension_id, advisory)
         checks = [*tier1, *tier2]

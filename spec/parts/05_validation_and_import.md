@@ -382,12 +382,18 @@ It then settles against the packet each delivered row that ownership keeps (§3.
 - a row of `core.sessions` or `core.subjects` is dropped, the packet's row prevailing (§3.6);
 - a row equal to one the packet holds, compared as §15.6 compares rows but for `metadata`, is
   dropped, together with any catalog instance the row catalogues;
+- any other row of a table of class `documentation` that the packet's manifest names and that
+  declares a primary key is added where no row the packet holds has its primary key;
 - any other row is added where it forms, under at least one group list of its table (§15.2), a
   group the packet does not hold
   ([Part 02 §2.8](02_core_logical_schemas.md#ew-amendment-groups)).
 
-An amending build MUST refuse every other delivered row, naming the table and the row. A table to
-which it adds no row keeps its resource entry, so the amendment does not write it.
+An amending build MUST refuse every other delivered row, naming the table and the row, so it
+refuses a delivered row of a documentation table that shares a held row's primary key and is not
+equal to it. A table to which it adds no row keeps its resource entry, so the amendment does not
+write it. A documentation table to which it adds rows holds the packet's rows and the added ones,
+and the amendment replaces that resource as §15.2 permits. An amending build thereby adds sidecars
+and scope rows to those a packet lists, and neither removes nor replaces one.
 
 An interval is closed (01 §2.3). A writer MUST convert a source whose intervals are half-open — `[start, stop)` — which is a subtraction on the stop bound. A writer MUST NOT carry a half-open bound through unchanged.
 
