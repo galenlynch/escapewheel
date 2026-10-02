@@ -21,6 +21,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 try:
@@ -222,23 +223,27 @@ def collected(project: str) -> tuple[set[str], str | None]:
     """Return every node ID the package suite collects, or a collection defect."""
     env = dict(os.environ)
     env.setdefault("UV_CACHE_DIR", "/tmp/escapewheel-uv-cache")
-    done = subprocess.run(
-        [
-            "uv",
-            "run",
-            "--project",
-            str(ROOT / project),
-            "pytest",
-            "--collect-only",
-            "-q",
-        ],
-        cwd=ROOT / project,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=env,
-        timeout=60,
-    )
+    # A suite measuring coverage combines every data file beside its own, so a collection sharing
+    # the package's directory with a running suite would read that suite's half-written one.
+    with tempfile.TemporaryDirectory() as private:
+        env["COVERAGE_FILE"] = str(Path(private) / ".coverage")
+        done = subprocess.run(
+            [
+                "uv",
+                "run",
+                "--project",
+                str(ROOT / project),
+                "pytest",
+                "--collect-only",
+                "-q",
+            ],
+            cwd=ROOT / project,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=env,
+            timeout=60,
+        )
     if done.returncode:
         tail = (done.stdout or done.stderr).strip().splitlines()
         return set(), f"{project} test collection failed" + (f": {tail[-1]}" if tail else "")
