@@ -924,6 +924,12 @@ section = "2"
 title = "Tiers"
 aliases = []
 
+[anchor.ew-no-nested-types]
+part = "02"
+section = "5.2"
+title = "No nested types"
+aliases = []
+
 [anchor.ew-normative-language]
 part = "00"
 section = "2.5"
