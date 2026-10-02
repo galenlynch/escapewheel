@@ -1072,7 +1072,7 @@ instances. Its `table` object contains an ordered column list (§3), a primary k
 references (§7), Tier 2 rules (§10.2), and amendment groups (§2.8).
 
 A dense-array declaration MUST contain `array`, MUST NOT contain `table`, and MUST use catalog
-instances. Its `axes_resource` names a visible singleton table declaration. The axes table MUST
+instances. Its `axes_resource` MUST name a visible singleton table declaration. The axes table MUST
 have exactly one binding reference to the array declaration's catalog table: the reference targets
 the complete catalog primary key, its local columns lead the axes table's primary key, and that
 primary key adds exactly one required structural-index column. Presence of a dense-array instance
@@ -1107,7 +1107,9 @@ owns. A catalog resource and column satisfy §2.6.
 `core.sessions` is a required singleton. Every other currently incorporated table is an optional
 singleton. An extension selects required or optional for each singleton; binding that extension
 registry in a packet under [Part 04 §8](../parts/04_packet_catalog.md#ew-packet-registry-bindings)
-activates its required declarations. Merely installing a registry does not.
+activates its required declarations. Merely installing a registry does not. A singleton
+declaration whose content class is `analysis`, `compatibility_projection` or `documentation` MUST
+declare `presence` `optional`.
 
 A packet contains an instance when any of these conditions applies:
 
@@ -1127,8 +1129,9 @@ requires the entire cycle.
 <a id="ew-resource-catalog-binding" data-spec-anchor="canonical"></a>
 ### 2.6 Catalog binding
 
-A catalog declaration names a visible singleton table declaration and one column. That column is a
-required string identifier with carried identity and free vocabulary. An extension catalog may
+A catalog declaration's `catalog_resource` MUST name a visible singleton table declaration, and its
+`resource_id_column` names one column of that table. That column MUST be a required string
+identifier with carried identity and free vocabulary. An extension catalog may
 name a core table or one in the same extension; a core catalog MUST NOT name an extension table.
 Within one visible core-and-extension context, no two catalog declarations may name the same
 table-and-column pair.
@@ -1551,6 +1554,8 @@ A writer MUST NOT emit a `metadata` key holding a fact that a column of the logi
 
 No rule checks either half and none is added. The content is schemaless by design, so a constraint on it is unenforceable in principle rather than merely in practice, and an adapter names a key in the source's vocabulary where core names a column in its own. The obligation binds the writer, which is the only party that knows what it put in the bag.
 
+A writer MUST NOT put a mark, a value an event carries beyond its tick (Part 01 §3.12), in `core.events.metadata`. No checker verifies this.
+
 A writer SHOULD put prose in a prose column where the table has one, and not in `metadata`. A human-readable string has no structure to preserve, so a JSON envelope costs a serialisation, puts the value where no rule reads it and no filter uses it, and buys none of the otherwise-unavailable access the exception above requires.
 
 ### 8.7 Coded values
@@ -1636,7 +1641,9 @@ Four columns are closed:
 | `core.unit_quality_labels.normalized_label` | `sua`, `mua`, `noise` |
 | `core.subjects.sex` | `male`, `female`, `hermaphrodite`, `other` |
 
-A scorer's own `label` is open, because aggregating over scorers is incompatible with one closed set.
+A scorer's own `label` is open, because aggregating over scorers is incompatible with one closed set. A writer MUST record `core.unit_quality_labels.label` as the source emitted it and MUST NOT replace it with the value it projects onto, which belongs in `normalized_label`. Where a source's label has no honest projection onto `sua`, `mua` or `noise`, a writer MUST leave `normalized_label` null and MUST NOT force a value. No checker verifies either obligation: a packet does not hold what the source emitted, and no rule can tell a forced projection from an honest one.
+
+`core.processing_runs.status` says whether the run completed: `succeeded`, it completed and its outputs are usable; `failed`, it did not complete; `partial`, it completed for some inputs only, so its committed outputs are incomplete.
 
 A value MAY be reserved only where it is read **whole**: where a consumer comparing two packets learns something from the value alone, without knowing what either packet was doing. Where an external nomenclature defines the values instead, the registry names it rather than copying a set the standard does not itself define. A validator SHOULD report a value outside a reserved set at `info`, and MUST NOT fail on one. A writer MUST NOT write a value outside a column's reserved set for data that a reserved value describes. No validator checks this obligation: whether a value is a synonym of a reserved one cannot be decided from the packet, so it binds the writer, which alone knows what its data is.
 
@@ -1761,7 +1768,8 @@ empty pointer. A duplicate-member outcome points to its containing object.
 Within a phase, outcomes are ordered by instance pointer, outcome ID, then owner, comparing code
 point for code point. A definitive violation dominates an independent unsupported or incomplete
 phase; otherwise precedence is `invalid`, `unsupported`, `incomplete`, then `valid`. Only completed
-passing phases produce `valid`. A dependent skipped phase records its reason.
+passing phases produce `valid`. A checker MUST determine a partially evaluated phase's state from
+its outcome records by the same precedence. A dependent skipped phase records its reason.
 
 The descriptor assigns these invariants in this exact order:
 
@@ -1902,9 +1910,9 @@ The language contract determines the result relation. A completed empty result p
 non-empty result produces the declared finding. Invalid, unsupported, and incomplete evaluation
 are not findings and cannot establish a pass (Part 11 §8).
 
-A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`, in which case
-it is off by default and MUST NOT be `error`, so that enabling it cannot change whether a packet
-previously passed. Stated as the guarantee it is: **running with advisory rules enabled MUST NOT
+A rule declares a level of `error`, `warning`, or `info`. A rule MAY be `advisory`. A validator MUST
+NOT run an advisory rule unless its invocation asks for advisory rules, and an advisory rule MUST
+NOT be `error`, so that enabling it cannot change whether a packet previously passed. Stated as the guarantee it is: **running with advisory rules enabled MUST NOT
 change whether a packet passed**. A validator MUST expose the choice, and a report MUST state whether
 advisory rules were run: two reports over one packet may legitimately differ, and one that does
 not say which mode produced it cannot be compared with the other.
@@ -2112,7 +2120,7 @@ Three facts about how a packet's clocks were aligned are columns, because a cons
 
 `core.sessions.alignment_bound` holds how far past its anchors the writer mapped, in median anchor intervals. A writer establishing a bound wider than the default of one median anchor interval MUST record it; a consumer reading a null MUST map at that default, which is a fact and not a defect. It is on the session because the bound is a property of the times the packet states, as `t_zero_tick` is, so one session declares one bound and no rule is needed to say which run wins. A value below one is refused.
 
-`core.clocks.withheld_first_anchor` and `withheld_last_anchor` record the terminal-anchor test on that clock, and a writer running it MUST record both. Three states distinguish the outcomes: null is a clock the test did not run on, false is a terminal it kept, true is one it withheld — so a silent zero and an untested clock differ structurally rather than by a rule nothing can observe. A clock with no anchors MUST NOT declare either.
+The **terminal-anchor test** predicts a clock's first and its last anchor from a fit over that anchor's neighbours and compares the residual with the distribution of the same residual over the clock's interior anchors. A writer SHOULD run it on each clock whose anchors it writes, because anchor quality is a property of a rig and a session and no fixed tolerance stands in for it; a clock with too few anchors to give that distribution cannot be tested. `core.clocks.withheld_first_anchor` and `withheld_last_anchor` record the test on that clock, and a writer running it MUST record both. Three states distinguish the outcomes: null is a clock the test did not run on, false is a terminal it kept, true is one it withheld — so a silent zero and an untested clock differ structurally rather than by a rule nothing can observe. A clock with no anchors MUST NOT declare either.
 
 `core.clock_phase_steps` holds one row per step in a clock's alignment to its parent, a clock having possibly several (§5.2). A writer detecting a step MUST record it, and a step is reported and never corrected: the map is exact at every anchor, so it carries the step faithfully, and subtracting it would need to know whether the step also moved the devices timestamped on that parent, which the packet does not record. A clock whose `parent_clock_id` is null MUST NOT have rows here.
 

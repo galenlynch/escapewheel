@@ -503,6 +503,7 @@ note = "transcoding is left to the writer; states no obligation"
 [clause."R26 §3"]
 disposition = "applied"
 where = [{ part = "02", section = "10.2" }]
+note = "restored 2026-10-01; the validator prohibition on running an advisory rule unasked had become a description of the rule"
 
 [clause."R26 §4"]
 disposition = "applied"
@@ -649,6 +650,7 @@ note = "restored 2026-10-01; the extrapolation from the nearest terminal anchor 
 [clause."R37 §3.2"]
 disposition = "applied"
 where = [{ part = "02", section = "12.6" }]
+note = "restored 2026-10-01; the terminal-anchor test's definition and the recommendation to run it were absent"
 
 [clause."R37 §3.3"]
 disposition = "superseded"
@@ -1167,6 +1169,7 @@ note = "local_*_label columns become string"
 [clause."R8 §3"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
+note = "restored 2026-10-01; what each status value means was absent"
 
 [clause."R8 §4"]
 disposition = "applied"
@@ -1217,6 +1220,7 @@ disposition = "rationale"
 [clause."R22 §3"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-vocabularies" }]
+note = "restored 2026-10-01; the writer obligations to keep the source's label verbatim and to leave an unprojectable label null were permissions, and no rule checks either"
 
 [clause."R22 §4"]
 disposition = "applied"
@@ -1727,8 +1731,8 @@ note = "also stated in 01_semantic_standard.md §3.11; the override rows go from
 
 [clause."R91 §3.3"]
 disposition = "applied"
-where = [{ part = "01", section = "3.12" }]
-note = "core adds no mark column; a stream names the table declaring its marks"
+where = [{ part = "01", section = "3.12" }, { part = "02", anchor = "ew-free-form-metadata" }]
+note = "core adds no mark column; a stream names the table declaring its marks. restored 2026-10-01; the prohibition on a mark in an event's metadata was absent, and no rule checks it"
 
 [clause."R91 §3.4"]
 disposition = "registry"
@@ -3062,7 +3066,7 @@ where = [
   { part = "02", anchor = "ew-registry-self-description" },
   { part = "02", anchor = "ew-registry-conformance" },
 ]
-note = "ordered phases, abstract result, stable outcomes, skip reasons, and precedence"
+note = "ordered phases, abstract result, stable outcomes, skip reasons, and precedence. restored 2026-10-01; that a partially evaluated phase takes its state from its outcome records by the same precedence was absent"
 
 [clause."R126 §3.4"]
 disposition = "applied"
@@ -3177,12 +3181,15 @@ where = [
   { part = "01", anchor = "ew-media-asset-concept" },
   { part = "02", anchor = "ew-resource-kind" },
 ]
-note = "table, dense-array, and opaque select the generic logical payload contract"
+note = "table, dense-array, and opaque select the generic logical payload contract. restored 2026-10-01; what a dense-array declaration's axes_resource names had lost its keyword"
 
 [clause."R128 §3.4"]
 disposition = "applied"
-where = [{ part = "02", anchor = "ew-resource-instance-model" }]
-note = "singleton, catalog, and family declarations define packet-instance binding"
+where = [
+  { part = "02", anchor = "ew-resource-instance-model" },
+  { part = "02", anchor = "ew-resource-catalog-binding" },
+]
+note = "singleton, catalog, and family declarations define packet-instance binding. restored 2026-10-01; what a catalog declaration names and what its identifier column is had lost their keywords"
 
 [clause."R128 §3.5"]
 disposition = "applied"
@@ -3191,7 +3198,7 @@ where = [
   { part = "02", anchor = "ew-resource-presence" },
   { part = "02", anchor = "ew-logical-references" },
 ]
-note = "declaration presence, dependencies, foreign keys, catalogs, and runs determine required instances"
+note = "declaration presence, dependencies, foreign keys, catalogs, and runs determine required instances. restored 2026-10-01; that an analysis, compatibility-projection or documentation singleton declares optional presence had become a pointer"
 
 [clause."R128 §3.6"]
 disposition = "applied"
