@@ -46,8 +46,8 @@ process-domain draft uses `Profile: not applicable`, `Change form: ordinary`, an
 repository-relative Markdown `path#anchor` values in `Amends`. A specification-domain artifact
 uses the existing profile and part-or-artifact forms. Accepted revisions below R120 that lack a
 domain are interpreted as `specification`, need no change form, and remain unedited; withdrawn
-records have no inferred domain. Every open artifact and every artifact created or promoted from
-R120 onward declares its applicable fields.
+records have no inferred domain and likewise remain unedited. Every open artifact and every
+artifact created or promoted from R120 onward declares its applicable fields.
 
 The lifecycle has three authored artifacts and three separate gates:
 
