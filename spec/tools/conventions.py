@@ -129,8 +129,8 @@ def naming(tables: Tables) -> dict[str, list[str]]:
 def name_columns(tables: Tables) -> dict[str, bool]:
     """Return each `*_name` column and whether it names an assigned identifier of its own table.
 
-    Part 02 §8.2 puts the uniqueness obligation on the columns that do. No rule can enforce it,
-    since a writer numbering per distinct name has already merged two things into one row.
+    Part 02 §8.2 puts the uniqueness obligation on the columns that do, and a generated check reports
+    two rows sharing one; none sees two things a writer numbering per distinct name merged into one row.
     """
     named = {}
     for resource, table in tables.items():

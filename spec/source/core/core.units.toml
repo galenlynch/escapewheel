@@ -26,7 +26,7 @@ description = "Stable unit ID."
 [[columns]]
 name = "unit_name"
 type = "string"
-presence = "nullable"
+presence = "required"
 role = "data"
 vocabulary = "free"
 description = "What `unit_id` stands for: the identifier a source or an earlier packet used for this unit. The only bridge between two packets that numbered it differently (Part 05 §4.3)."

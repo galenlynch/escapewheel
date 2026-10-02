@@ -17,7 +17,7 @@ description = "Stable source file ID."
 [[columns]]
 name = "source_file_name"
 type = "string"
-presence = "nullable"
+presence = "required"
 role = "data"
 vocabulary = "free"
 description = "What `source_file_id` stands for: the identifier a source or an earlier packet used for this source file. The only bridge between two packets that numbered it differently (Part 05 §4.3)."

@@ -647,6 +647,7 @@ def _identity_names(scope: Scope) -> list[Defect]:
                     len(matches) == 1
                     and matches[0][1]["type"] == "string"
                     and matches[0][1]["role"] == "data"
+                    and matches[0][1]["presence"] == "required"
                     and "identity" not in matches[0][1]
                 )
                 if not correct:
@@ -654,7 +655,8 @@ def _identity_names(scope: Scope) -> list[Defect]:
                         Defect(
                             json_pointer(("tables", resource, "columns")),
                             resource,
-                            f"owned assigned identifier {name!r} needs exactly one string data column {expected!r}",
+                            f"owned assigned identifier {name!r} needs exactly one required string data "
+                            f"column {expected!r}",
                         )
                     )
             elif matches:

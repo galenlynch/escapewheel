@@ -638,3 +638,16 @@ locations = [
 
 [target."R163 §3.1"]
 locations = [{ path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.clocks/table/columns/11/name", equals = "withheld_first_anchor" }]
+
+[target."R164 §3.2"]
+locations = [
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.curation_versions/table/columns/2/name", equals = "curation_name" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.electrodes/table/columns/2/name", equals = "electrode_name" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.probes/table/columns/2/name", equals = "probe_name" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.processing_runs/table/columns/2/name", equals = "processing_run_name" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.sessions/table/columns/1/name", equals = "session_name" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.sorting_runs/table/columns/2/name", equals = "sorting_run_name" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.source_files/table/columns/1/name", equals = "source_file_name" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.subjects/table/columns/1/name", equals = "subject_name" },
+  { path = "spec/artifacts/logical_schemas.json", pointer = "/resources/core.units/table/columns/2/name", equals = "unit_name" },
+]

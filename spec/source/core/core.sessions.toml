@@ -17,7 +17,7 @@ description = "Stable session ID."
 [[columns]]
 name = "session_name"
 type = "string"
-presence = "nullable"
+presence = "required"
 role = "data"
 vocabulary = "free"
 description = "What `session_id` stands for: the identifier a source or an earlier packet used for this session. The only bridge between two packets that numbered it differently (Part 05 §4.3)."

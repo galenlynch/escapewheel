@@ -29,6 +29,9 @@ WORKERS = 8
 EXPECTED: dict[str, tuple[str, str] | None] = {
     "valid": None,
     "dup_pk": ("error", "core.intervals.primary_key_unique"),
+    "shared_name": ("error", "core.intervals.interval_name.unique"),
+    "names_differ_in_case": None,
+    "names_differ_in_form": None,
     "orphan_fk": ("error", "core.intervals.clock_id_resolves"),
     "null_required": ("error", "core.event_streams.event_type.not_null"),
     "bad_vocabulary": ("error", "core.units.quality_label.in_vocabulary"),

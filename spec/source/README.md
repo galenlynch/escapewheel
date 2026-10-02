@@ -24,7 +24,7 @@ the tools validate against them lie in `../informative/`:
 | `registry.schema.json` | Incorporated local-shape schema for core and extension registry documents. |
 | `registry_result.schema.json` | Closed portable representation of a complete registry-document result. |
 | `registry_contract.schema.json` | Incorporated closed shape of a registry-contract descriptor. |
-| `registry_contracts/escapewheel-registry-contract-v0.9.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
+| `registry_contracts/escapewheel-registry-contract-v0.10.json` | Incorporated phase, invariant, applicability, and prose-owner index. |
 | `rule_language.schema.json` | Closed schema for a rule-language profile. |
 | `rule_languages/escapewheel-rule-sql-v0.2.json` | Exact incorporated portable Tier 2 language profile. |
 | `manifest.schema.json` | Incorporated closed schema for `packet.json` (Part 04). |
@@ -93,11 +93,12 @@ declares, and therefore what a generator has to work with:
 
 <!-- BEGIN generated: structure -->
 ```
-179 required column, not null
+188 required column, not null
 117 reference, resolves
 47  primary key, unique
 4   closed vocabulary, member of
 26  finite column, no NaN or infinity
+17  owned identifier's name, unique
 9   discriminator, resolvable
 ```
 <!-- END generated: structure -->

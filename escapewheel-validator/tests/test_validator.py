@@ -227,7 +227,7 @@ def _required_extension(root, extension_id):
     install_registry(
         root,
         {
-            "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
+            "$schema": "https://escapewheel.org/schemas/registry/0.12.0",
             "registry_id": extension_id,
             "registry_version": "0.1.0",
             "logical_standard_version": "escapewheel-logical-v0.1",

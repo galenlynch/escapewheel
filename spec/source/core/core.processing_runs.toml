@@ -26,7 +26,7 @@ description = "Stable processing run ID."
 [[columns]]
 name = "processing_run_name"
 type = "string"
-presence = "nullable"
+presence = "required"
 role = "data"
 vocabulary = "free"
 description = "What `processing_run_id` stands for: the identifier a source or an earlier packet used for this processing run. The only bridge between two packets that numbered it differently (Part 05 §4.3)."

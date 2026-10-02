@@ -1,8 +1,9 @@
 # Phase 0 fixtures
 
 A conforming single-session packet per [R1 §6](../revisions/accepted/R1-single-session-primary.md),
-four more conforming packets that record Part 04 §4.3's other digests, fifty-seven variants
-each violating exactly one rule, two conforming packets that each draw a per-resource `info`
+four more conforming packets that record Part 04 §4.3's other digests, fifty-eight variants
+each violating exactly one rule, two conforming packets whose names differ only in case or
+normalization form, two conforming packets that each draw a per-resource `info`
 finding, two conforming packets that carry no extracellular data, four conforming packets that
 each own an opaque payload, two conforming packets whose payload names draw warnings, one conforming
 packet whose origin is the earliest start only once a transform carries it, one conforming
@@ -62,6 +63,9 @@ prose description, and is not all of them.
 | Packet | Violates | Caught by |
 |---|---|---|
 | `dup_pk` | duplicate interval key | `core.intervals.primary_key_unique` |
+| `shared_name` | two intervals under different keys carry one `interval_name` | `core.intervals.interval_name.unique`, and not `primary_key_unique` |
+| `names_differ_in_case` | two `interval_name`s differ only in case | nothing: names compare as scalar sequences, unfolded |
+| `names_differ_in_form` | two `interval_name`s differ only in Unicode normalization form | nothing, for the same reason |
 | `orphan_fk` | an interval names an absent clock | `core.intervals.clock_id_resolves` |
 | `null_required` | null in a required column | `core.events.event_type.not_null` |
 | `bad_vocabulary` | `quality_label` is `good` | `core.units.quality_label.in_vocabulary` |

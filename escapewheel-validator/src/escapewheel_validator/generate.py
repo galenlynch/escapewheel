@@ -8,7 +8,8 @@
   keys next to each other, so the ordering scan decides uniqueness.
 
 No check is written by hand for a table. The checks for required columns, primary keys, foreign
-keys, closed vocabularies and finite values follow from a registry's structure, and its Tier 2
+keys, closed vocabularies, finite values and the names of owned assigned identifiers follow from a
+registry's structure, and its Tier 2
 rules pass through as :func:`.lowering.lower` gives them to the engine.
 """
 
@@ -528,6 +529,22 @@ def _generate(  # noqa: C901
                     )
                 )
 
+        for column in _owned_names(table):
+            # DuckDB compares VARCHAR bytewise, so equal UTF-8 is equal scalar sequences and no
+            # collation folds case or normalises (Part 11 §5).
+            col = quote(column)
+            checks.append(
+                Check(
+                    check_table.name_unique(resource, column),
+                    f"{column} is carried by more than one row",
+                    f"SELECT * FROM {name} WHERE {col} IN "
+                    f"(SELECT {col} FROM {name} WHERE {col} IS NOT NULL GROUP BY {col} HAVING COUNT(*) > 1)",
+                    resource,
+                    optional_columns=frozenset({column}) & optional,
+                    column=column,
+                )
+            )
+
         for column in table["columns"]:
             if column.get("role") != "discriminator":
                 continue
@@ -583,6 +600,29 @@ def _generate(  # noqa: C901
             checks.append(rule_check(entry, rule["message"], rule["sql"], resource, tables))
 
     return checks
+
+
+def _owned_names(table: Mapping[str, Any]) -> list[str]:
+    """Return the declared `*_name` of each assigned identifier the table owns (Part 02 §8.2).
+
+    The key may hold other columns, as a block keyed by its session does; the name is grouped alone.
+    """
+    columns = {column["name"]: column for column in table["columns"]}
+    referenced = {name for reference in table.get("references", []) for name in reference["columns"]}
+    names = []
+    for key in table.get("primary_key") or []:
+        column = columns.get(key)
+        if (
+            key in referenced
+            or column is None
+            or column.get("role") != "identifier"
+            or column.get("identity") != "assigned"
+        ):
+            continue
+        name = f"{key[:-3]}_name"
+        if name in columns and columns[name].get("role") == "data" and columns[name]["type"] == "string":
+            names.append(name)
+    return names
 
 
 def generate(

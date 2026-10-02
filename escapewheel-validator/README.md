@@ -112,7 +112,7 @@ gets its own.
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: tier1 -->
-179 not-null, 117 foreign-key, 4 closed-vocabulary, 26 finite-value and 18 discriminator checks, plus one uniqueness check per table whose sort does not begin with its primary key
+188 not-null, 117 foreign-key, 4 closed-vocabulary, 26 finite-value, 17 name-uniqueness and 18 discriminator checks, plus one uniqueness check per table whose sort does not begin with its primary key
 <!-- END facts: tier1 -->
 
 | | Comes from |
@@ -122,6 +122,7 @@ gets its own.
 | primary-key uniqueness | `primary_key`, and only where a streaming scan does not already settle it |
 | closed vocabulary | `enum` |
 | finite value | `finite: true` |
+| name uniqueness | the `*_name` of each assigned identifier a table owns (Part 02 §8.2) |
 | discriminator | `role: discriminator`, two checks each (R55 §2.4) |
 | Tier 2 | statically checked `escapewheel-rule-sql-v0.2` queries the structure cannot imply, authored as `[[rules]]` in the registry's TOML source |
 

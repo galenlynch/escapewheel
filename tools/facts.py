@@ -46,7 +46,7 @@ def documents() -> list[Path]:
 #: The incorporated descriptor is the enumerable invariant inventory. Part 02 and Part 09 own
 #: their algorithms; the tree's checker implements them and `spec/tools/check.py` consumes one
 #: complete result.
-REGISTRY_CONTRACT = "spec/artifacts/registry_contracts/escapewheel-registry-contract-v0.9.json"
+REGISTRY_CONTRACT = "spec/artifacts/registry_contracts/escapewheel-registry-contract-v0.10.json"
 
 
 def _check_counts() -> tuple[int, int]:
@@ -120,6 +120,20 @@ def _revision_span(numbers: set[int]) -> str:
     return " and ".join([", ".join(runs[:-1]), runs[-1]] if len(runs) > 1 else runs)
 
 
+def _owned_names(table: dict) -> list[str]:
+    """The `*_name` of each assigned identifier a table owns, each of which draws a check (Part 02 §10.1)."""
+    columns = {c["name"]: c for c in table["columns"]}
+    referenced = {name for reference in table["references"] for name in reference["columns"]}
+    return [
+        f"{key[:-3]}_name"
+        for key in table["primary_key"] or []
+        if key not in referenced
+        and columns[key]["role"] == "identifier"
+        and columns[key].get("identity") == "assigned"
+        and f"{key[:-3]}_name" in columns
+    ]
+
+
 def facts() -> dict[str, str]:
     """Every count the root documents state, computed from what states it."""
     registry = json.loads(REGISTRY.read_text())
@@ -134,6 +148,7 @@ def facts() -> dict[str, str]:
     vocabulary = sum(1 for c in columns if c.get("enum"))
     finite = sum(1 for c in columns if c.get("finite") is True)
     discriminators = sum(1 for c in columns if c.get("role") == "discriminator")
+    names = sum(len(_owned_names(t)) for t in tables.values())
 
     accepted, withdrawn, proposed = set(), set(), set()
     for path in (ROOT / "revisions/accepted").glob("R[0-9]*.md"):
@@ -169,7 +184,8 @@ def facts() -> dict[str, str]:
         ),
         "tier1": (
             f"{not_null} not-null, {references} foreign-key, {vocabulary} closed-vocabulary, "
-            f"{finite} finite-value and {2 * discriminators} discriminator checks, plus one uniqueness check per "
+            f"{finite} finite-value, {names} name-uniqueness and {2 * discriminators} discriminator checks, plus "
+            f"one uniqueness check per "
             f"table whose sort does not begin with its primary key"
         ),
         "extensions": f"{len(extensions)} extension registries: {', '.join(extensions)}",

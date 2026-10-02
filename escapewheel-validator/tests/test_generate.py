@@ -229,3 +229,31 @@ def test_a_key_an_identifier_value_cannot_hold_is_reported():
     assert shape.level == "error" and "'core.intervals'" in shape.sql and "'core.runs'" not in shape.sql
     optional = generate(_identifier_paired("optional"), only={"core.runs"}, kinds={"core.intervals": None}, keys=keys)
     assert "core.runs.k_kind.key_fits_paired_value" not in {c.id for c in optional}
+
+
+def test_an_optional_name_a_table_omits_draws_nothing():
+    """A registry checked under an earlier contract may declare the name optional (Part 02 §10.1)."""
+    registry = {
+        "resources": {
+            "task.blocks": {
+                "kind": "table",
+                "table": {
+                    "columns": [
+                        {
+                            "name": "block_id",
+                            "type": "int32",
+                            "presence": "required",
+                            "role": "identifier",
+                            "identity": "assigned",
+                        },
+                        {"name": "block_name", "type": "string", "presence": "optional", "role": "data"},
+                    ],
+                    "primary_key": ["block_id"],
+                    "references": [],
+                    "rules": [],
+                },
+            }
+        }
+    }
+    check = next(c for c in generate(registry) if c.id == "task.blocks.block_name.unique")
+    assert check.optional_columns == frozenset({"block_name"})

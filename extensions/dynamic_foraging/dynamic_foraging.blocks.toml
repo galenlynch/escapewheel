@@ -26,10 +26,10 @@ description = "The block."
 [[columns]]
 name = "block_name"
 type = "string"
-presence = "nullable"
+presence = "required"
 role = "data"
 vocabulary = "free"
-description = "The block's own name, where the source has one."
+description = "What `block_id` stands for: the identifier a source or an earlier packet used for this block."
 
 [[columns]]
 name = "clock_id"

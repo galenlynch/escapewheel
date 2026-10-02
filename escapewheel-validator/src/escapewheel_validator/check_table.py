@@ -219,6 +219,7 @@ AMENDMENT_GROUP_GROWN = _named("amendment.group_grown", _ERROR, _RESOURCE)
 # written as an underscore, and `<columns>` a reference's columns joined by underscores.
 _NOT_NULL = _unnamed("<declaration_id>.<column>.not_null", _ERROR, _COLUMN)
 _FINITE = _named("<declaration_id>.<column>.finite", _ERROR, _COLUMN)
+_NAME_UNIQUE = _named("<declaration_id>.<column>.unique", _ERROR, _COLUMN)
 _IN_VOCABULARY = _unnamed("<declaration_id>.<column>.in_vocabulary", _ERROR, _COLUMN)
 _IS_A_RESOURCE_ID = _unnamed("<declaration_id>.<column>.is_a_resource_id", _ERROR, _COLUMN)
 _KIND_DECLARED = _unnamed("<declaration_id>.<column>.kind_declared", _ERROR, _COLUMN)
@@ -250,6 +251,11 @@ def not_null(declaration_id: str, column: str) -> CheckEntry:
 def finite(declaration_id: str, column: str) -> CheckEntry:
     """``<declaration_id>.<column>.finite``: a column declared finite holds NaN or an infinity."""
     return _FINITE.of(declaration_id=declaration_id, column=column)
+
+
+def name_unique(declaration_id: str, column: str) -> CheckEntry:
+    """``<declaration_id>.<column>.unique``: two rows of one table carry one owned identifier's name."""
+    return _NAME_UNIQUE.of(declaration_id=declaration_id, column=column)
 
 
 def in_vocabulary(declaration_id: str, column: str) -> CheckEntry:
@@ -441,6 +447,7 @@ __all__ = [
     "key_fits_paired_value",
     "kind_declared",
     "metadata_unfilled",
+    "name_unique",
     "names_a_row_of_its_kind",
     "not_null",
     "outside_reserved_set",

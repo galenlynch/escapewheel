@@ -1,0 +1,315 @@
+{
+  "version": 1,
+  "revision": "R164",
+  "based_on": "0815350e32f1a583964d51d7ec01d211de337747",
+  "clauses": {
+    "R164 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-identifier-semantics"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_an_owned_assigned_identifiers_required_name_is_valid"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_an_owned_assigned_identifiers_name_must_be_required[nullable]"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_an_owned_assigned_identifiers_name_must_be_required[optional]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/tools/checkers/registry_invariants.py",
+          "escapewheel-validator/src/escapewheel_validator/registry_invariants.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification states what registry.identity.name reads"
+      }
+    },
+    "R164 §3.2": {
+      "owners": [
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.curation_versions/table/columns/2"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.electrodes/table/columns/2"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.probes/table/columns/2"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.processing_runs/table/columns/2"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.sessions/table/columns/1"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.sorting_runs/table/columns/2"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.source_files/table/columns/1"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.subjects/table/columns/1"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/resources/core.units/table/columns/2"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/tables.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_core_declares_every_owned_identifiers_name_required"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_name_unique.py::test_a_null_name_draws_the_non_null_check_and_not_the_name_check"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/core.curation_versions.toml",
+          "spec/source/core/core.electrodes.toml",
+          "spec/source/core/core.probes.toml",
+          "spec/source/core/core.processing_runs.toml",
+          "spec/source/core/core.sessions.toml",
+          "spec/source/core/core.sorting_runs.toml",
+          "spec/source/core/core.source_files.toml",
+          "spec/source/core/core.subjects.toml",
+          "spec/source/core/core.units.toml"
+        ]
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification states a name's presence"
+      }
+    },
+    "R164 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-identifier-semantics"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-tier-1-rules"
+        },
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-tier-1-validation"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/source/README.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "fixture",
+            "packet": "shared_name",
+            "finding": "core.intervals.interval_name.unique"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_name_unique.py::test_the_check_is_a_named_family_at_error"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_name_unique.py::test_two_rows_sharing_a_name_under_different_keys_draw_the_check_and_no_key_check"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_name_unique.py::test_names_differing_only_in_case_or_normalization_are_distinct[case]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_name_unique.py::test_names_differing_only_in_case_or_normalization_are_distinct[normalization]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_name_unique.py::test_an_extension_name_shared_under_its_own_key_is_the_extensions_finding"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_name_unique.py::test_a_name_shared_by_rows_of_two_sessions_is_reported"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-validator",
+            "nodeid": "tests/test_generate.py::test_an_optional_name_a_table_omits_draws_nothing"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-validator/src/escapewheel_validator/generate.py",
+          "escapewheel-validator/src/escapewheel_validator/check_table.py",
+          "spec/tools/render.py",
+          "spec/tools/conventions.py",
+          "tools/facts.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-validator/README.md",
+          "escapewheel-validator/docs/source/design.md",
+          "fixtures/README.md"
+        ]
+      }
+    },
+    "R164 §3.4": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-unit-identity"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-interval-identity"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "not_applicable": "the clause names the relation a consumer uses outside the packet, which no tool observes"
+      },
+      "implementations": {
+        "unchanged": "no reader or validator source relates a unit or an interval outside its packet"
+      },
+      "documentation": {
+        "unchanged": "no document outside the specification names the relation"
+      }
+    },
+    "R164 §3.5": {
+      "owners": [
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-core-logical-schema-scope"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-registry-self-description"
+        },
+        {
+          "path": "spec/parts/02_core_logical_schemas.md",
+          "anchor": "ew-registry-conformance"
+        },
+        {
+          "path": "spec/artifacts/registry.schema.json",
+          "pointer": "/$id"
+        },
+        {
+          "path": "spec/artifacts/registry_contracts/escapewheel-registry-contract-v0.10.json",
+          "pointer": "/id"
+        },
+        {
+          "path": "spec/artifacts/logical_schemas.json",
+          "pointer": "/registry_version"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "spec/artifacts/logical_schemas.json",
+          "spec/parts/08_example_packet.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "registry meta-schema identity is 0.12.0"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "core registry version is 0.18.0"
+          },
+          {
+            "kind": "check",
+            "stage": "spec: structural checks",
+            "id": "the incorporated registry contract validates against its schema"
+          },
+          {
+            "kind": "pytest",
+            "project": "spec/tools",
+            "nodeid": "tests/test_registry_document.py::test_a_registry_naming_the_superseded_meta_schema_is_unsupported[0.11.0]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_writer.py::test_the_registry_travels_with_the_packet"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "spec/source/core/registry.toml",
+          "spec/tools/check.py",
+          "spec/tools/framework_data.py",
+          "spec/tools/checkers/registry_document.py",
+          "escapewheel-validator/pyproject.toml",
+          "extensions/dynamic_foraging/registry.toml",
+          "extensions/vr_foraging/registry.toml",
+          "escapewheel-aind/extensions/aind_opto/registry.toml",
+          "escapewheel-aind/extensions/aind_unit_qc/registry.toml",
+          "extensions/dynamic_foraging/dynamic_foraging.blocks.toml"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "spec/README.md",
+          "spec/source/README.md"
+        ]
+      }
+    }
+  }
+}

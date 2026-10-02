@@ -94,7 +94,7 @@ def _ids(result):
 def test_reference_registry_has_one_complete_valid_result():
     result = check_registry(CORE)
     assert result.state == "valid"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.9"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.10"
     assert tuple(phase.phase for phase in result.phases) == PHASES
     assert result.phases[0].state == "skipped"
     assert result.phases[0].reason == "registry.phase.mapping_input"
@@ -152,7 +152,7 @@ def test_descriptor_and_semantic_implementation_have_no_hidden_checks():
 
 def test_byte_entry_rejects_a_nested_duplicate_at_its_containing_object():
     result = check_registry_bytes(
-        b'{"$schema":"https://escapewheel.org/schemas/registry/0.11.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
+        b'{"$schema":"https://escapewheel.org/schemas/registry/0.12.0","resources":{"demo.rows":{"table":{"rules":[],"rules":[]}}}}'
     )
     outcome = result.findings[0]
     assert result.state == "invalid"
@@ -185,9 +185,10 @@ def test_schema_selection_distinguishes_invalid_and_unsupported():
     assert "registry.schema.selector_type" in _ids(wrong_type)
 
 
-def test_a_registry_naming_the_superseded_meta_schema_is_unsupported():
+@pytest.mark.parametrize("version", ["0.6.0", "0.11.0"])
+def test_a_registry_naming_the_superseded_meta_schema_is_unsupported(version):
     document = _document()
-    document["$schema"] = "https://escapewheel.org/schemas/registry/0.6.0"
+    document["$schema"] = f"https://escapewheel.org/schemas/registry/{version}"
     result = check_registry(document, CORE)
     assert result.state == "unsupported"
     assert "registry.schema.selector_unsupported" in _ids(result)
@@ -199,7 +200,7 @@ def test_shape_failure_uses_schema_identity_and_location():
     result = check_registry(document, CORE)
     outcome = result.findings[0]
     assert result.state == "invalid"
-    assert outcome.id == "https://escapewheel.org/schemas/registry/0.11.0"
+    assert outcome.id == "https://escapewheel.org/schemas/registry/0.12.0"
     assert outcome.instance == "/resources/demo.rows/table/columns/1/type"
     assert outcome.schema_location
 
@@ -289,7 +290,7 @@ def test_meta_schema_owns_each_local_conditional(case):  # noqa: C901
     result = check_registry(document, CORE)
     shape = next(phase for phase in result.phases if phase.phase == "shape")
     assert shape.state == "invalid"
-    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.11.0"}
+    assert {outcome.id for outcome in shape.outcomes} == {"https://escapewheel.org/schemas/registry/0.12.0"}
 
 
 def test_unknown_contract_tuple_is_unsupported():
@@ -324,7 +325,7 @@ def test_two_local_contracts_for_one_tuple_are_ambiguous():
 def test_extension_without_core_runs_local_checks_and_is_incomplete():
     result = check_registry(_document())
     assert result.state == "incomplete"
-    assert result.descriptor_id == "escapewheel-registry-contract-v0.9"
+    assert result.descriptor_id == "escapewheel-registry-contract-v0.10"
     assert "registry.contract.core_context_unusable" in _ids(result)
 
     broken = _document()
@@ -692,6 +693,41 @@ def test_owned_assigned_identifier_requires_its_name():
     document = _document()
     _table(document)["columns"][1]["identity"] = "assigned"
     assert "registry.identity.name" in _ids(check_registry(document, CORE))
+
+
+def _owning_document(presence):
+    document = _document()
+    table = _table(document)
+    table["columns"][1]["identity"] = "assigned"
+    table["columns"].insert(2, _column("demo_name", type="string", presence=presence, role="data", vocabulary="free"))
+    return document
+
+
+def test_an_owned_assigned_identifiers_required_name_is_valid():
+    assert check_registry(_owning_document("required"), CORE).state == "valid"
+
+
+@pytest.mark.parametrize("presence", ["nullable", "optional"])
+def test_an_owned_assigned_identifiers_name_must_be_required(presence):
+    """Part 02 §8.2: `registry.identity.name` reads the name's presence, in either class."""
+    assert "registry.identity.name" in _ids(check_registry(_owning_document(presence), CORE))
+    core = copy.deepcopy(CORE)
+    unit_name = next(c for c in core["resources"]["core.units"]["table"]["columns"] if c["name"] == "unit_name")
+    unit_name["presence"] = presence
+    result = check_registry(core)
+    assert result.state == "invalid"
+    assert "registry.identity.name" in _ids(result)
+
+
+def test_core_declares_every_owned_identifiers_name_required():
+    for resource, declaration in CORE["resources"].items():
+        table = declaration.get("table") or {}
+        for column in table.get("columns", []):
+            if column["name"].endswith("_name") and any(
+                c["name"] == f"{column['name'][:-5]}_id" and c.get("identity") == "assigned"
+                for c in table["columns"]
+            ):
+                assert column["presence"] == "required", (resource, column["name"])
 
 
 def test_determinants_resolve_locally():

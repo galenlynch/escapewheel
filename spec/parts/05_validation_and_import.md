@@ -482,7 +482,7 @@ A build MUST report everything the protocol it used carries about a failure, on 
 <a id="ew-tier-1-validation" data-spec-anchor="canonical"></a>
 ### 5.1 Tier 1
 
-Generated from structure (Part 02 §10.1): required-column non-null, primary-key uniqueness, foreign-key anti-joins, closed-vocabulary membership, and the finiteness of every column declaring `finite: true`.
+Generated from structure (Part 02 §10.1): required-column non-null, primary-key uniqueness, foreign-key anti-joins, closed-vocabulary membership, the finiteness of every column declaring `finite: true`, and the uniqueness of the name of every owned assigned identifier.
 
 <a id="ew-tier-2-validation" data-spec-anchor="canonical"></a>
 ### 5.2 Tier 2

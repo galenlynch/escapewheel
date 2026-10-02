@@ -42,7 +42,7 @@ same day once its entry stated the options again with what was measured.
 | 14 | Part 02 §9.2 recommends that a registry document carry `$schema` first | `b5696685` |
 | 15 | the reading of a null changes what a consumer concludes, so it is proposed as a revision | R161 |
 | 16 | nothing is owed: the ledger note on R53 §2.3.1 already records it | — |
-| 17 | proposed | draft `a-unit-is-identified-outside-its-packet-by-its-name.md` |
+| 17 | the name of every owned assigned identifier is required and checked, and the relation a consumer uses is the name, so it is proposed as a revision | R164 |
 | 18 | proposed | draft `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` |
 | 19 | the replaced column is removed and the core version advances, so it is proposed as a revision | R163 |
 | 20 | the draft was accepted as R157 | `bb3cae24` |

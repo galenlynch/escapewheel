@@ -18,7 +18,7 @@ This part expressly incorporates the following artifacts:
 |---|---|
 | `artifacts/registry.schema.json` | exact local JSON structure and conditional shape constraints |
 | `artifacts/registry_contract.schema.json` | exact structure of a registry-contract descriptor |
-| `artifacts/registry_contracts/escapewheel-registry-contract-v0.9.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
+| `artifacts/registry_contracts/escapewheel-registry-contract-v0.10.json` | exact contract selectors, phase order, invariant IDs, applicability, and owning anchors |
 | `artifacts/logical_schemas.json` | exact current core and analysis resource declarations, including table columns, keys, references, vocabularies, and rules |
 
 The generated core registry is what a packet embeds. `informative/tables.md` is a generated,
@@ -433,13 +433,15 @@ An `identifier` column MUST declare `carried` or `assigned`. A table owns an ass
 exactly where the identifier is in its primary key and is not a source member of a reference the
 table declares. For every owned assigned identifier, the table MUST declare exactly one
 corresponding name formed by replacing `_id` with `_name`. The name MUST be a string data column
-and MUST NOT declare `identity`.
+whose presence is `required`, and MUST NOT declare `identity`.
 
 A table that merely carries or references an assigned identifier MUST NOT declare that same-base
 `*_name` column. A carried identifier likewise gets no corresponding name column: its value is
 already the source's own identity.
 
-An assigned identifier's `*_name` MUST be unique within its packet. A name column pairing with no assigned identifier names a kind of thing, such as `core.sorting_runs.sorter_name`, and is expected to repeat. The registry-document contract checks the pairing as `registry.identity.name`. No rule can check uniqueness: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing one are already merged by the time the packet exists — and that merge is indistinguishable from the correct case where four streams naming one serial become one device. The obligation falls on whatever composes the name.
+An assigned identifier's `*_name` MUST be unique within its packet. A name column pairing with no assigned identifier names a kind of thing, such as `core.sorting_runs.sorter_name`, and is expected to repeat. The registry-document contract checks, as `registry.identity.name`, the pairing and the name's presence together. A checker reports that invariant for an owned assigned identifier whose name is absent, declared twice, not a `string` `data` column, declaring `identity`, or of a presence other than `required`, and for a table that carries or references an assigned identifier and declares the same-base name.
+
+A generated check (§10.1) reports two rows of one table that carry one name. No check reports two things a writer merged under one name: a writer numbering an assigned identifier per distinct name emits one row per name, so two things wrongly sharing a name are already one row by the time the packet exists, and that row is indistinguishable from the correct case where four streams naming one serial become one device. The obligation not to merge falls on whatever composes the name.
 
 <a id="ew-discriminator-semantics" data-spec-anchor="canonical"></a>
 ### 8.3 Discriminator
@@ -650,11 +652,11 @@ A packet binds each registry that declares its resources under
 profile stores a bound registry.
 
 The incorporated registry meta-schema has `$id`
-`https://escapewheel.org/schemas/registry/0.11.0`. Every registry document conforming to that
+`https://escapewheel.org/schemas/registry/0.12.0`. Every registry document conforming to that
 schema MUST carry that value in `$schema`. A registry document SHOULD carry `$schema` as its first
 member, so that the head of the file shows which meta-schema governs it; member order carries no
 other meaning, and no checker verifies it. The incorporated core registry has `registry_id: core`,
-`registry_version: 0.17.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
+`registry_version: 0.18.0`, `semantic_standard_version: escapewheel-semantic-v0.1`,
 `logical_standard_version: escapewheel-logical-v0.1`, and
 `rule_language: escapewheel-rule-sql-v0.2`.
 
@@ -665,9 +667,11 @@ The core specification does not assign an extension's version. An extension regi
 meta-schema 0.9.0 MUST carry a `registry_version` different from the one it carried under 0.8.0,
 one migrated to `escapewheel-rule-sql-v0.2` a `registry_version` different from the one it carried
 under `escapewheel-rule-sql-v0.1`, one migrated to meta-schema 0.10.0 a `registry_version`
-different from the one it carried under 0.9.0, and one migrated to meta-schema 0.11.0 a
-`registry_version` different from the one it carried under 0.10.0. No checker verifies any of these, since a checker reads only
-the document before it and not the version that document replaced.
+different from the one it carried under 0.9.0, one migrated to meta-schema 0.11.0 a
+`registry_version` different from the one it carried under 0.10.0, and one migrated to meta-schema
+0.12.0 a `registry_version` different from the one it carried under 0.11.0. No checker verifies
+any of these, since a checker reads only the document before it and not the version that document
+replaced.
 
 A checker selects schemas and contracts only from local artifacts and MUST NOT dereference an
 identifier. An old registry document MUST NOT be silently interpreted under the new meta-schema
@@ -736,7 +740,7 @@ identities and applicability only; it MUST NOT contain algorithms, executable ex
 messages, exception lists, or implementation selectors. The prose in this part and Part 09 owns
 the algorithms and meanings.
 
-The incorporated descriptor has ID `escapewheel-registry-contract-v0.9`, selects the 0.11.0
+The incorporated descriptor has ID `escapewheel-registry-contract-v0.10`, selects the 0.12.0
 meta-schema, and lists `escapewheel-rule-sql-v0.2` alone in `rule_languages`. That meta-schema MUST
 declare `finite` as a boolean member of a column, require it where `type` is `float32` or
 `float64`, and forbid it otherwise; the `shape` phase therefore decides §5.4's declaration rule, and
@@ -944,6 +948,21 @@ reports nothing. The finding belongs to the registry holding the declaration und
 [Part 05 §5.4](05_validation_and_import.md#ew-validation-extensions) applies the check to the columns
 an extension declares.
 
+A validator MUST also generate, from the declaration alone, for the name of every owned assigned
+identifier (§8.2), a check that reports each row whose name another row of the same table holds, at
+level `error`, under the check ID `<declaration_id>.<column>.unique`, such as
+`core.units.unit_name.unique`. The check groups a table's rows on the name alone, whatever other
+columns the table's primary key holds, and counts no null name. Two names are equal where their
+sequences of Unicode scalar values are equal, compared as
+[Part 11 §5](11_tier_2_rule_language.md#ew-tier-2-deterministic-semantics) compares characters,
+without case folding or normalization. Where the name is `optional` and a table omits it, the check
+reports nothing. A validator generates the check wherever a valid registry context directs packet
+checks, whichever registry-contract descriptor that registry was checked under. The finding belongs
+to the registry holding the declaration under
+[Part 05 §9.5](05_validation_and_import.md#ew-verdict-composition), and
+[Part 05 §5.4](05_validation_and_import.md#ew-validation-extensions) applies the check to the names
+an extension declares.
+
 A validator MUST establish that a table's primary key is unique, by query or by any means a physical profile defines as establishing it. That a key is unique holds under any profile and is this part's; how a validator may establish it depends on how rows are stored, and is the profile's.
 
 <a id="ew-tier-2-rules" data-spec-anchor="canonical"></a>
@@ -1116,8 +1135,9 @@ binds the writer alone, and no rule checks it.
 
 A packet carrying `core.units` MUST carry `core.sorting_runs` and `core.curation_versions`.
 
-A table keyed on a unit carries `unit_id` and not the run or the curation, and a
-consumer relating a unit to anything outside the packet uses `(sorting_run_id, local_unit_label)`.
+A table keyed on a unit carries `unit_id` and not the run or the curation. A consumer relating a
+unit to anything outside the packet that holds a name, such as another packet, a recipe or a later
+build, uses `unit_name`.
 A consumer MUST NOT identify a unit by its `unit_id` outside the packet that assigned it, where the
 number means nothing. No checker verifies this.
 
@@ -1217,9 +1237,9 @@ ancestry path: both derive from the structure's identifier, and an ancestry path
 
 `interval_id` identifies an interval on its own. A writer assigns it, and records the number or
 name its source gave the interval in `local_interval_label`, null where the source gave none. A
-consumer relating an interval to anything outside the packet uses `(session_id, interval_kind,
-local_interval_label)`, and `core.intervals.label_unique_within_kind` draws each label two
-intervals of one session and kind share.
+consumer relating an interval to anything outside the packet that holds a name uses
+`interval_name`. `core.intervals.label_unique_within_kind` draws each label two intervals of one
+session and kind share.
 
 A writer MUST number a packet's intervals densely from 0. It MUST number each session's intervals
 of one kind consecutively, in ascending order of `clock_id`, `start_tick` and `stop_tick`, and MUST

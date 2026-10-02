@@ -16,7 +16,8 @@ column types in Python, in what Part 05 §5.3 calls the shim.
 ## Checks are generated from the registry
 
 No check is written by hand for a table. A registry's structure yields the checks for required
-columns, primary keys, foreign keys, closed vocabularies and finite values (Part 02 §10.1), and
+columns, primary keys, foreign keys, closed vocabularies, finite values and the names of owned
+assigned identifiers (Part 02 §10.1), and
 the registry's Tier 2 rules pass through unchanged (Part 02 §10.2).
 
 The generator checks a discriminator's value for the form of a resource ID as well as for

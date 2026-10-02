@@ -17,6 +17,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from conventions import name_columns
 from specdoc import GenerationError, fill_regions, named_regions, region_names, registry_tables
 
 HERE = Path(__file__).resolve().parent
@@ -176,6 +177,7 @@ def regions(registry: dict[str, Any]) -> dict[str, str]:
         (sum(1 for t in tables.values() if t["primary_key"]), "primary key, unique"),
         (sum(1 for c in columns if c.get("enum")), "closed vocabulary, member of"),
         (sum(1 for c in columns if c.get("finite") is True), "finite column, no NaN or infinity"),
+        (sum(name_columns(tables).values()), "owned identifier's name, unique"),
         (
             sum(1 for c in columns if c.get("role") == "discriminator"),
             "discriminator, resolvable",

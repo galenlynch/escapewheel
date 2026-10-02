@@ -64,12 +64,12 @@ def identity_checks(check: Reporter, registry_bytes: bytes, registry: dict) -> N
         [] if registry.get("$schema") == meta_id else [registry.get("$schema", "declares none")],
     )
     check(
-        "registry meta-schema identity is 0.11.0",
-        [] if meta_id == "https://escapewheel.org/schemas/registry/0.11.0" else [meta_id],
+        "registry meta-schema identity is 0.12.0",
+        [] if meta_id == "https://escapewheel.org/schemas/registry/0.12.0" else [meta_id],
     )
     check(
-        "core registry version is 0.17.0",
-        [] if registry.get("registry_version") == "0.17.0" else [registry.get("registry_version")],
+        "core registry version is 0.18.0",
+        [] if registry.get("registry_version") == "0.18.0" else [registry.get("registry_version")],
     )
     check(
         "the core registry selects the incorporated rule language",
@@ -260,7 +260,7 @@ def schema_checks(check: Reporter, registry: dict) -> None:
 
     contract_schema = _json(ARTIFACTS / "registry_contract.schema.json")
     jsonschema.Draft202012Validator.check_schema(contract_schema)
-    contract = _json(ARTIFACTS / "registry_contracts/escapewheel-registry-contract-v0.9.json")
+    contract = _json(ARTIFACTS / "registry_contracts/escapewheel-registry-contract-v0.10.json")
     check(
         "the incorporated registry contract validates against its schema",
         _schema_errors(contract_schema, contract, formats),

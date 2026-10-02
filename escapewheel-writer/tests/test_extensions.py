@@ -21,7 +21,7 @@ from escapewheel_writer.errors import (
 )
 
 EXTENSION = {
-    "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
+    "$schema": "https://escapewheel.org/schemas/registry/0.12.0",
     "registry_id": "task",
     "registry_version": "0.1.0",
     "logical_standard_version": "escapewheel-logical-v0.1",
@@ -687,7 +687,7 @@ def test_two_registries_for_one_extension_are_refused_given_directly(registry):
 
 def _vrf_registry():
     return {
-        "$schema": "https://escapewheel.org/schemas/registry/0.11.0",
+        "$schema": "https://escapewheel.org/schemas/registry/0.12.0",
         "registry_id": "vrf",
         "registry_version": "0.1.0",
         "logical_standard_version": "escapewheel-logical-v0.1",

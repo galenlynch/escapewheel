@@ -1475,7 +1475,7 @@ note = "an amended packet is run-major within each build, so under R150 §3.6 it
 [clause."R81 §2.5"]
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-unit-identity" }]
-note = "restored 2026-10-02; the prohibition on identifying a unit by its `unit_id` outside the packet that assigned it was absent. The relation a consumer uses outside the packet is stated without a keyword, since the pair it names no longer identifies a unit"
+note = "restored 2026-10-02; the prohibition on identifying a unit by its `unit_id` outside the packet that assigned it was absent. The relation a consumer uses outside the packet is stated without a keyword, since the pair it names no longer identifies a unit. R164 §3.4 replaces that pair with `unit_name` and keeps the label's column and the prohibition on `unit_id`"
 
 [clause."R81 §2.6"]
 disposition = "rationale"
@@ -1572,6 +1572,7 @@ where = [
     { part = "02", section = "8.2", note = "a name is unique within its packet" },
     { part = "01", section = "3.5", note = "a port establishes no identity" },
 ]
+note = "R164 §3.3 restates what a check can report of a name's uniqueness: a generated check reports a name two rows share, and none reports a merge"
 
 [clause."R85 §2.3"]
 disposition = "applied"
@@ -2977,7 +2978,7 @@ where = [
   { part = "01", anchor = "ew-unit-concept" },
   { part = "02", anchor = "ew-unit-identity" },
 ]
-note = "Unit meaning remains semantic, while packet-local identity and reader unit selection have separate current owners. Under R149 §3.1 two writers may number units tying on their label differently. restored 2026-10-02; the prohibition on identifying a unit by its `unit_id` outside the packet that assigned it was absent, and the relation a consumer uses there is stated without a keyword"
+note = "Unit meaning remains semantic, while packet-local identity and reader unit selection have separate current owners. Under R149 §3.1 two writers may number units tying on their label differently. restored 2026-10-02; the prohibition on identifying a unit by its `unit_id` outside the packet that assigned it was absent, and the relation a consumer uses there is stated without a keyword. Under R164 §3.4 the relation Part 02 §12.1 defines is `unit_name`"
 
 [clause."R123 §3.2"]
 disposition = "applied"
@@ -4053,7 +4054,7 @@ where = [
   { part = "02", anchor = "ew-interval-identity", note = "the assigned identifier, the label and what a consumer relates outside the packet" },
   { part = "02", anchor = "ew-logical-column-naming", note = "local_interval_label is a source-provenance label" },
 ]
-note = "the registry's core.intervals declares the key, interval_name, local_interval_label and core.intervals.label_unique_within_kind"
+note = "the registry's core.intervals declares the key, interval_name, local_interval_label and core.intervals.label_unique_within_kind; R164 §3.4 replaces the triple a consumer related outside the packet with `interval_name`"
 
 [clause."R148 §3.2"]
 disposition = "applied"
@@ -4208,7 +4209,7 @@ where = [
   { part = "02", anchor = "ew-registry-self-description", note = "meta-schema 0.11.0 and core 0.14.0" },
   { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.9" },
 ]
-note = "R160 §3.8 advances the core `registry_version` from 0.14.0 to 0.15.0; the descriptor path and meta-schema remain this clause's"
+note = "R160 §3.8 advances the core `registry_version` from 0.14.0 to 0.15.0, and R164 §3.5 advances the meta-schema to 0.12.0 and the descriptor to v0.10; the sentence on migrating to meta-schema 0.11.0 remains this clause's"
 
 [clause."R153 §3.1"]
 disposition = "applied"
@@ -4445,9 +4446,9 @@ disposition = "applied"
 where = [{ part = "02", anchor = "ew-no-nested-types", note = "names each section stating a core json_string column's content and the two no part describes, and counts no columns" }]
 
 [clause."R163 §3.3"]
-disposition = "applied"
-where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.17.0" }]
-note = "the registry source carries the value; Part 08 §§2 and 3 project it and are checked against the built example"
+disposition = "superseded"
+by = "R164"
+note = "R164 §3.5 advances the core `registry_version` from 0.17.0 to 0.18.0; was Part 02 ew-registry-self-description"
 
 [clause."R162 §3.1"]
 disposition = "applied"
@@ -4479,3 +4480,36 @@ where = [{ part = "05", anchor = "ew-recipe-check", note = "an amending build re
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-recipe-purpose", note = "recipe 0.4.0" }]
 note = "spec/artifacts/recipe.schema.json carries the key pattern and the `$id`"
+
+[clause."R164 §3.1"]
+disposition = "applied"
+where = [{ part = "02", anchor = "ew-identifier-semantics", note = "the name of an owned assigned identifier is required, and registry.identity.name checks its presence" }]
+note = "both registry-document checkers read the name's presence"
+
+[clause."R164 §3.2"]
+disposition = "registry"
+note = "nine core names declare presence required"
+
+[clause."R164 §3.3"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-identifier-semantics", note = "a generated check reports a shared name; none reports a merge" },
+  { part = "02", anchor = "ew-tier-1-rules", note = "<declaration_id>.<column>.unique" },
+  { part = "05", anchor = "ew-tier-1-validation", note = "the uniqueness of an owned assigned identifier's name" },
+]
+
+[clause."R164 §3.4"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-unit-identity", note = "unit_name" },
+  { part = "02", anchor = "ew-interval-identity", note = "interval_name" },
+]
+
+[clause."R164 §3.5"]
+disposition = "applied"
+where = [
+  { part = "02", anchor = "ew-core-logical-schema-scope", note = "the descriptor's path" },
+  { part = "02", anchor = "ew-registry-self-description", note = "meta-schema 0.12.0, core 0.18.0 and the migrated extension's version" },
+  { part = "02", anchor = "ew-registry-conformance", note = "descriptor v0.10" },
+]
+note = "the registry source carries the core version; Part 08 §§2 and 3 project it and are checked against the built example"

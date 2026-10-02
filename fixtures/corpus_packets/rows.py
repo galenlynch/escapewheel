@@ -1,10 +1,11 @@
 """Packets that edit the valid session's rows."""
 
+import unicodedata
 from datetime import timedelta
 
 from .record import Expected, Packet
 from .registry import KIND
-from .session import START, variant
+from .session import START, trial, variant
 
 
 def child(tables):
@@ -14,6 +15,21 @@ def child(tables):
 
 def dup_pk(c):
     c["core.intervals"].append(dict(c["core.intervals"][0]))
+
+
+def shared_name(c):
+    # The writer fills a name only where the row has none, so two keys can carry one name.
+    c["core.intervals"][1]["interval_name"] = trial(1)
+
+
+def names_differ_in_case(c):
+    c["core.intervals"][1]["interval_name"] = trial(1).upper()
+
+
+def names_differ_in_form(c):
+    # One name precomposed, the other decomposed: canonically equivalent, distinct scalar sequences.
+    c["core.intervals"][0]["interval_name"] = unicodedata.normalize("NFC", "café")
+    c["core.intervals"][1]["interval_name"] = unicodedata.normalize("NFD", "café")
 
 
 def orphan_fk(c):
@@ -275,6 +291,22 @@ def manifest_keeps_s001(manifest):
 #: rule might be thought to apply, so the corpus demonstrates that each check fires.
 ROW_PACKETS = (
     Packet("dup_pk", variant(dup_pk), Expected("error", "core.intervals.primary_key_unique")),
+    Packet(
+        "shared_name",
+        variant(shared_name),
+        Expected("error", "core.intervals.interval_name.unique"),
+        absent=frozenset({"core.intervals.primary_key_unique"}),
+    ),
+    Packet(
+        "names_differ_in_case",
+        variant(names_differ_in_case),
+        absent=frozenset({"core.intervals.interval_name.unique"}),
+    ),
+    Packet(
+        "names_differ_in_form",
+        variant(names_differ_in_form),
+        absent=frozenset({"core.intervals.interval_name.unique"}),
+    ),
     Packet("orphan_fk", variant(orphan_fk), Expected("error", "core.intervals.clock_id_resolves")),
     Packet("null_required", variant(null_required), Expected("error", "core.event_streams.event_type.not_null")),
     Packet("bad_vocabulary", variant(bad_vocabulary), Expected("error", "core.units.quality_label.in_vocabulary")),

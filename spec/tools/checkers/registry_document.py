@@ -33,7 +33,7 @@ from .registry_result import (
 
 SCHEMA = ARTIFACTS / "registry.schema.json"
 CONTRACT_SCHEMA = ARTIFACTS / "registry_contract.schema.json"
-CONTRACT = ARTIFACTS / "registry_contracts" / "escapewheel-registry-contract-v0.9.json"
+CONTRACT = ARTIFACTS / "registry_contracts" / "escapewheel-registry-contract-v0.10.json"
 RESULT_SCHEMA = ARTIFACTS / "registry_result.schema.json"
 _PRECEDENCE = {"passed": 0, "skipped": 0, "incomplete": 1, "unsupported": 2, "invalid": 3}
 

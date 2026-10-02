@@ -9,13 +9,13 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R163 accepted. R42 and R73 withdrawn. 0 proposals and 1 draft are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R164 accepted. R42 and R73 withdrawn. No proposal or draft is open.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
 <!-- END facts: registry -->
 <!-- BEGIN facts: corpus -->
-132 conformance packets
+135 conformance packets
 <!-- END facts: corpus -->
 
 <!-- BEGIN facts: extensions -->
@@ -135,15 +135,11 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. One draft awaits acceptance
+## 3a. No draft awaits acceptance
 
-The drafts are under `revisions/drafts/`, and `revisions/drafts/README.md` gives their order and
-each one's appraisal. No proposal is open.
-
-- **A unit is identified outside its packet by its name.** The name of every owned assigned
-  identifier is `required` and a generated check reports one two rows share; Part 02 §12.1 and
-  Part 02 §12.9 name `unit_name` and `interval_name`. The meta-schema `$id`, the descriptor and
-  the core version advance, and every repository extension migrates.
+No draft or proposal is open. **Accepted as R164, 2026-10-02:** the name of every owned assigned
+identifier is `required` and a generated check reports one two rows share; Part 02 §12.1 and
+Part 02 §12.9 name `unit_name` and `interval_name`.
 
 ## 3b. Sidecars are declared, and video is not yet packet-owned
 
