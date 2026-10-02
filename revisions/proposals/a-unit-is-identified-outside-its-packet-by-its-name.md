@@ -334,25 +334,25 @@ declare a nullable name. A scope whose value two rows share matches both and pas
 and no check reports the shared name. Under the structural form each of the 17 names is `required`
 and each is checked for a value two rows share.
 
-Three other proposals are open.
+Three further drafts are open, each promoted after the `Based on` commit.
 
-| proposal | core registry | `core.units`, `core.intervals` | Part 02 §8.2, Part 02 §10.1, Part 02 §12.1, Part 02 §12.9, Part 05 §5.1 | meta-schema `$id`, descriptor ID | `registry_version` |
+| draft | core registry | `core.units`, `core.intervals` | Part 02 §8.2, Part 02 §10.1, Part 02 §12.1, Part 02 §12.9, Part 05 §5.1 | meta-schema `$id`, descriptor ID | `registry_version` |
 |---|---|---|---|---|---|
 | "Core declares a clock's transform in typed columns alone" | removes one column of `core.clocks` | no | no | no | advances |
 | "A null producing run on an array says the packet names none" | rewords the description of `processing_run_id` in the two array-asset tables | no | no | no | advances |
 | "A recipe accepts a discarded value by naming its column" | no | no | no | no | no |
 
-This change, the sidecar draft and the first two proposals in the table each advance the core
+This change, the sidecar draft and the first two drafts in the table each advance the core
 `registry_version` and restate it in Part 02 §9.2. This change alone also advances the meta-schema
 `$id` and the descriptor ID (§2.13), which Part 02 §1, Part 02 §9.2 and Part 02 §9.4 state. Apart
 from those statements, no one of the four changes text or a declaration another changes, so they
 can be incorporated in any order, and each takes the core version after the one the registry
 carries when it is incorporated. None of the other three declares a table that owns an assigned
 identifier, so each meets the new contract whether it is incorporated before this change or after
-it. The clock-transform proposal says that the ledger entry for R152 §3.4 stays `applied` because
+it. The clock-transform draft says that the ledger entry for R152 §3.4 stays `applied` because
 its meta-schema and descriptor rows remain. Under this change those two identifiers advance as
 well, so whichever of the two is incorporated second restates what that entry holds (§4). The credential draft and the recipe
-proposal change no registry and are independent of all four. Whatever is incorporated after the
+draft change no registry and are independent of all four. Whatever is incorporated after the
 sidecar draft counts 47 tables where §2.7 counts 45.
 
 ### 2.13 The registry-document contract checks the pairing, and a changed contract takes a new descriptor
