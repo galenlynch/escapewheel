@@ -293,6 +293,7 @@ This keeps a conforming reader able to satisfy every required column without a J
 
 A value that varies per row and is queried belongs in a typed column of a specialising resource; a value constant across the table belongs once, on the table that owns the whole. What may go in the two `json_string` columns core declares is §8.6 for `metadata` and §12.6 for `core.processing_runs.parameters`.
 
+<a id="ew-fixed-representations" data-spec-anchor="canonical"></a>
 ### 5.3 Fixed representations
 
 A writer MUST NOT use wraparound, truncating or saturating semantics for a value whose role is `identifier`, `coordinate`, `structural_index` or `sequence_position`, nor for arithmetic over interval bounds. Where a conversion's result would fall outside the declared type, it MUST fail before the value is written, naming the column and the value. A validator is not required to re-derive this: a wrapped value is a valid value of its type and the evidence is gone by the time rules run.
@@ -1062,6 +1063,7 @@ Frames stand to a coordinate as §11.3's clocks stand to a tick: the declared re
 | `core.coordinate_frames` | the spaces coordinates are positions in, and which published atlas each one is |
 | `core.coordinate_frame_axes` | one row per axis of a frame, with its name, direction, and unit |
 
+<a id="ew-particular-resource-rules" data-spec-anchor="canonical"></a>
 ## 12. Rules for particular resources
 
 Sections 2 through 10 bind every declaration and table payload. What follows binds particular
