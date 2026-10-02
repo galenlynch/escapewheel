@@ -347,8 +347,7 @@ R159 and R160 are accepted and incorporated at the baseline. R160 advanced the c
 0.15.0 and added two tables and a catalog, none of which owns an assigned identifier, so the 17
 owners and nine names of §2.2 are unaffected. R161 §3.5, accepted after the baseline, and the open
 draft `core-declares-a-clocks-transform-in-typed-columns-alone.md` advance the same core version,
-and the open draft `a-recipe-accepts-a-discarded-value-by-naming-its-column.md` changes no registry
-declaration. §3.5
+and R162 changes no registry declaration. §3.5
 names no core target, so it takes the version after whichever advance lands before it.
 
 These accepted clauses change:

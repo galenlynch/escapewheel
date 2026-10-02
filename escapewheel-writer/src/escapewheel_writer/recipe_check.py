@@ -98,6 +98,7 @@ def check(
     errors.extend(_declaration_problems(recipe, tables, singletons))
     errors.extend(_states_problems(recipe))
     errors.extend(_Found(RecipeFault.ENCODING_UNDECLARED, message) for message in recipe.encoding_problems(tables))
+    errors.extend(_column_override_problems(recipe, tables))
     fact_errors, fact_warnings, notes = _declared_fact_problems(recipe)
     errors.extend(fact_errors)
     warnings.extend(fact_warnings)
@@ -246,7 +247,7 @@ def _declared_fact_problems(recipe: Recipe) -> tuple[list[_Found], list[_Found],
     errors: list[_Found] = []
     warnings: list[_Found] = []
     notes: list[_Found] = []
-    for fact, reason in sorted(recipe.overrides.items()):
+    for fact in sorted(recipe.field_overrides):
         if fact not in stated:
             warnings.append(
                 _Found(
@@ -265,13 +266,36 @@ def _declared_fact_problems(recipe: Recipe) -> tuple[list[_Found], list[_Found],
         if fact not in declared:
             continue
         who = ", ".join(kinds)
-        if fact in recipe.overrides:
+        if fact in recipe.field_overrides:
             notes.append(_Found(RecipeFault.OVERRIDE_APPLIED, f"{fact} is declared and overrides {who}"))
         else:
             warnings.append(
                 _Found(RecipeFault.FACT_COMPARED, f"{fact} is declared and {who} states it; the build compares them")
             )
     return errors, warnings, notes
+
+
+def _column_override_problems(recipe: Recipe, tables: Mapping[str, Any]) -> list[_Found]:
+    """Column overrides that can release nothing, each refused before a source opens (Part 05 §3.5).
+
+    A release is of a null column in a row corresponding by primary key under a preference
+    (Part 05 §3.4), so an entry without a preference, naming no column of a table, naming the
+    schemaless `metadata`, or naming a key column the correspondence is decided by, has nothing to
+    release, and its reason would read as a decision the build never made.
+    """
+    found: list[str] = []
+    for name in sorted(recipe.column_overrides):
+        resource, _, column = name.rpartition(".")
+        table = tables.get(resource)
+        if resource not in recipe.preferred:
+            found.append(f"[overrides] {name} names {resource}, which the recipe declares no preference for")
+        elif table is None or not any(c["name"] == column for c in table["columns"]):
+            found.append(f"[overrides] {name} names no column of a table {resource}")
+        elif column == "metadata":
+            found.append(f"[overrides] {name} names metadata, which no preference compares")
+        elif column in (table.get("primary_key") or ()):
+            found.append(f"[overrides] {name} names a column of the primary key rows correspond by")
+    return [_Found(RecipeFault.COLUMN_OVERRIDE_UNSOUND, message) for message in found]
 
 
 def _dangling_references(
@@ -381,7 +405,8 @@ def _amending_problems(recipe: Recipe) -> list[_Found]:
         f"[subject] {name} is declared, and an amending recipe declares none" for name in sorted(recipe.subject)
     ]
     declares += [
-        f"[overrides] {name} is declared, and an amending recipe declares none" for name in sorted(recipe.overrides)
+        f"[overrides] {name} is a field override, and an amending recipe declares none"
+        for name in sorted(recipe.field_overrides)
     ]
     return problems + [_Found(RecipeFault.AMENDING_DECLARES, message) for message in declares]
 

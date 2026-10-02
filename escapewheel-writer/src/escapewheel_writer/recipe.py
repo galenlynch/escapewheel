@@ -457,7 +457,8 @@ class Recipe:
     description: str | None
     session: Mapping[str, Any]
     subject: Mapping[str, Any]
-    #: Part 05 §3.6: `block.field` to the reason the recipe's value supersedes the source's.
+    #: Every `[overrides]` entry, key to reason: field overrides (Part 05 §3.6) and column overrides
+    #: (Part 05 §3.4), told apart by the key's segments.
     overrides: Mapping[str, str]
     #: Parquet encodings this build forces, `resource.column` to `{encoding, reason}`. Declared
     #: here because an extension reaches the writer across a file or a subprocess and cannot hand
@@ -731,6 +732,16 @@ class Recipe:
         """`block.field` to the value the recipe declares for it (Part 05 §3.4)."""
         blocks = {"session": self.session, "subject": self.subject}
         return {f"{block}.{k}": v for block, fields in blocks.items() for k, v in fields.items()}
+
+    @property
+    def field_overrides(self) -> dict[str, str]:
+        """`block.field` to the reason the recipe's value for that field supersedes a source's (Part 05 §3.6)."""
+        return {key: reason for key, reason in self.overrides.items() if key.count(".") == 1}
+
+    @property
+    def column_overrides(self) -> dict[str, str]:
+        """`resource.column` to the reason the recipe gives up a passed-over source's value (Part 05 §3.4)."""
+        return {key: reason for key, reason in self.overrides.items() if key.count(".") == 2}
 
     def stated_by(self) -> dict[str, list[str]]:
         """`block.field` to the source kinds in this recipe that state it (Part 05 §3.4)."""

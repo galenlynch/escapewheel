@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R161 accepted. R42 and R73 withdrawn. 0 proposals and 3 drafts are open. Neither is binding; a draft takes no number until it is accepted.
+R1–R41, R43–R72 and R74–R162 accepted. R42 and R73 withdrawn. 0 proposals and 2 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 368 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -135,14 +135,11 @@ read what each target states (§6).
 One question from the 2026-09-06 request is not answered by it: which problems a dependency
 already solves that this code solves again.
 
-## 3a. Three drafts await acceptance
+## 3a. Two drafts await acceptance
 
 The drafts are under `revisions/drafts/`, and `revisions/drafts/README.md` gives their order and
 each one's appraisal. No proposal is open.
 
-- **A recipe accepts a discarded value by naming its column.** An `[overrides]` entry naming a
-  column releases a null column of a corresponding row, and a build refuses an entry that can
-  release nothing.
 - **Core declares a clock's transform in typed columns alone.** `core.clocks` drops
   `transform_to_parent`, and Part 02 §5.2 stops counting core's `json_string` columns.
 - **A unit is identified outside its packet by its name.** The name of every owned assigned
@@ -302,8 +299,8 @@ The audit's critical reading found six implementation defects, and
 fixed: the writer checks an extension registry registered as a file path from its bytes,
 `escapewheel import` writes the result of the registry it rejects, the validator interpolates
 `PERCENTILE_CONT` in binary64, and it converts a `DECIMAL` value or literal to an approximate
-domain through its text, which rounds to nearest, ties to even, as Part 11 §4 requires. Two
-remain, with a third found while the credential draft was appraised.
+domain through its text, which rounds to nearest, ties to even, as Part 11 §4 requires. One
+remains, with a second found while the credential draft was appraised.
 
 - **A sampled run's `code_uri` is not the recipe file's digest.** `Recipe.with_sample` recomputes
   the digest over a serialization of the decoded recipe with the cap added, so a sampled run and a
@@ -311,8 +308,6 @@ remain, with a third found while the credential draft was appraised.
   says nothing of a sampled run. Where the recorded recipe withholds a value, that digest also
   covers a form a reader can nearly rebuild from `parameters`. Whether a sampled run should digest
   the file is undecided.
-- **`refuse_a_discarded_fact` never reads `[overrides]`,** and its message names that resolution.
-  The rule itself waits on a revision.
 - **`spec/tools/check.py` prints outcome lines for a non-valid core registry** and offers no
   output of the complete result.
 

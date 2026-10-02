@@ -31,7 +31,7 @@ from escapewheel_validator.errors import OrderViolation
 
 from . import opaque
 from .amending import Held
-from .arrow import build_table, number_batch, sort_key
+from .arrow import build_table, number_batch, owned_names, sort_key
 from .attachments import Attachments
 from .bindings import ExternalArray, ExternalMedia, ExternalResource, StagedArray
 from .documents import (
@@ -228,6 +228,21 @@ class PacketWriter:
                 where=resource_id,
             )
         self._tables.setdefault(resource_id, []).extend(self._with_session(resource_id, records))
+
+    def filled(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+        """Return copies of delivered rows with the columns staging fills, before any is numbered.
+
+        The `session_id` `_with_session` fills (Part 02 §7.1), and each owned name `arrow.number` fills
+        from the name delivered as the identifier (Part 02 §8.2), which is what Part 05 §3.4 compares
+        two sources' rows over: a value a source omits and staging fills is not one a preference loses.
+        """
+        names = owned_names(self.spec(resource_id) or {"columns": ()})
+        rows = [dict(row) for row in self._with_session(resource_id, records)]
+        for row in rows:
+            for identifier, named in names.items():
+                if row.get(named) is None and row.get(identifier) is not None:
+                    row[named] = str(row[identifier])
+        return rows
 
     def _with_session(self, resource_id: str, records: Sequence[Mapping[str, Any]]) -> Sequence[Mapping[str, Any]]:
         """Fill `session_id` on a session-scoped table's rows that omit it (Part 02 §7.1).

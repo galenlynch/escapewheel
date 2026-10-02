@@ -240,6 +240,25 @@ def _is_string_carried_identifier(column: Mapping[str, Any]) -> bool:
 Paired = Mapping[str, Callable[[Mapping[str, Any]], str | None]]
 
 
+def owned_names(spec: Mapping[str, Any]) -> dict[str, str]:
+    """Return each assigned identifier a table owns with the declared `*_name` column `number` fills.
+
+    Owned means in the primary key and exported through no reference (Part 02 §8.2).
+    """
+    exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
+    primary = set(spec.get("primary_key") or [])
+    declared = {c["name"] for c in spec["columns"]}
+    return {
+        c["name"]: named
+        for c in spec["columns"]
+        if c.get("role") == "identifier"
+        and c.get("identity") == "assigned"
+        and c["name"] in primary
+        and c["name"] not in exported
+        and (named := f"{c['name'].removesuffix('_id')}_name") in declared
+    }
+
+
 def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paired: Paired | None = None) -> None:
     """Normalize identifier values as their declarations require, in place.
 
@@ -256,9 +275,7 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paire
     An identifier paired value in `paired` is numbered in the map its row's kind names, since it
     holds the key of whichever resource that is.
     """
-    exported = {c for ref in spec.get("references", []) for c in ref["columns"]}
-    primary = set(spec.get("primary_key") or [])
-    declared = {c["name"]: c for c in spec["columns"]}
+    names = owned_names(spec)
     # A foreign key is numbered in the map of the column it points at, not its own. Otherwise
     # `parent_clock_id` and `clock_id` -- both clocks -- get separate numbering and the parent
     # chain names a clock that does not exist, which `core.clocks.parent_chain_well_founded`
@@ -281,15 +298,14 @@ def number(spec: Mapping[str, Any], rows: list[dict[str, Any]], keys: Any, paire
     for column in identifiers:
         name = column["name"]
         assigned = column.get("identity") == "assigned"
-        owns = assigned and name in primary and name not in exported
-        named: str | None = f"{name.removesuffix('_id')}_name" if owns else None
+        named = names.get(name)
         for index, row in enumerate(rows):
             value = row.get(name)
             if value is None:
                 continue
             if assigned:
                 row[name] = keys.of(kind_of(name, index), str(value))
-                if named is not None and named in declared and row.get(named) is None:
+                if named is not None and row.get(named) is None:
                     row[named] = str(value)
             elif _is_string_carried_identifier(column):
                 row[name] = str(value)
@@ -448,6 +464,7 @@ __all__ = [
     "localize",
     "number",
     "number_batch",
+    "owned_names",
     "schema",
     "sort_key",
 ]

@@ -1,0 +1,351 @@
+{
+  "version": 1,
+  "revision": "R162",
+  "based_on": "0815350e32f1a583964d51d7ec01d211de337747",
+  "clauses": {
+    "R162 §3.1": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        },
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-declared-fact-authority"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_either_form_loads[core.probes.probe_type]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_an_override_of_anything_but_the_column_still_refuses[a-field-override]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe.py",
+          "escapewheel-writer/src/escapewheel_writer/facts.py",
+          "escapewheel-writer/src/escapewheel_writer/recipe_check.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R162 §3.2": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-source-declarations"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_column_override_releases_the_null_column_and_reports_it"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_an_override_of_anything_but_the_column_still_refuses[another-column]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_column_override_releases_no_row[a-row-not-produced]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_column_override_releases_no_row[no-preferred-rows]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_column_override_releases_no_row[a-null-key]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_passed_over_row_with_a_null_key_is_refused_without_an_override"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_each_source_holding_a_column_the_other_lacks_builds_under_either_preference[prefer-nwb]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_each_source_holding_a_column_the_other_lacks_builds_under_either_preference[prefer-sorter]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_column_staging_fills_is_compared_filled"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_key_holding_session_id_corresponds_once_filled"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_repeated_preferred_key_releases_only_where_every_row_leaves_it_null[both-null]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_repeated_preferred_key_releases_only_where_every_row_leaves_it_null[one-states-it]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/facts.py",
+          "escapewheel-writer/src/escapewheel_writer/writer.py",
+          "escapewheel-writer/src/escapewheel_writer/arrow.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R162 §3.3": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_a_column_override_that_can_release_nothing_is_refused[no-preference]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_a_column_override_that_can_release_nothing_is_refused[undeclared-column]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_a_column_override_that_can_release_nothing_is_refused[metadata]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_a_column_override_that_can_release_nothing_is_refused[key-column]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_a_column_override_of_a_required_column_is_admitted"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe_check.py",
+          "escapewheel-writer/src/escapewheel_writer/errors.py"
+        ]
+      },
+      "documentation": {
+        "unchanged": "the writer's guide names what a column override releases; the four refusals are its messages"
+      }
+    },
+    "R162 §3.4": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        },
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-declared-fact-authority"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_column_override_releases_the_null_column_and_reports_it"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_facts.py::test_a_column_staging_fills_is_compared_filled"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_a_column_override_draws_no_report_of_a_declared_field"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/facts.py",
+          "escapewheel-writer/src/escapewheel_writer/notes.py",
+          "escapewheel-writer/src/escapewheel_writer/recipe_check.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R162 §3.5": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-check"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe_check.py::test_an_amending_recipe_admits_a_column_override_and_refuses_a_field_override"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/recipe_check.py"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "escapewheel-writer/README.md"
+        ]
+      }
+    },
+    "R162 §3.6": {
+      "owners": [
+        {
+          "path": "spec/parts/05_validation_and_import.md",
+          "anchor": "ew-recipe-purpose"
+        },
+        {
+          "path": "spec/artifacts/recipe.schema.json",
+          "pointer": "/properties/overrides/propertyNames/pattern"
+        },
+        {
+          "path": "spec/artifacts/recipe.schema.json",
+          "pointer": "/$id"
+        }
+      ],
+      "projections": {
+        "paths": [
+          "spec/informative/Escapewheel_POC_v0.2_Implementation_Spec.md",
+          "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json"
+        ]
+      },
+      "conformance": {
+        "evidence": [
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_either_form_loads[subject.strain]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_either_form_loads[session.session_start_time]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_either_form_loads[core.probes.probe_type]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_either_form_loads[aind_unit_qc.metrics.num_spikes_used]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_neither_form_is_refused_on_load[a-resource]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_neither_form_is_refused_on_load[no-block]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_neither_form_is_refused_on_load[four-segments]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_neither_form_is_refused_on_load[empty-segment]"
+          },
+          {
+            "kind": "pytest",
+            "project": "escapewheel-writer",
+            "nodeid": "tests/test_recipe.py::test_an_override_key_of_neither_form_is_refused_on_load[empty-field]"
+          }
+        ]
+      },
+      "implementations": {
+        "paths": [
+          "escapewheel-writer/src/escapewheel_writer/schemas/recipe.schema.json"
+        ]
+      },
+      "documentation": {
+        "paths": [
+          "spec/informative/recipe.example.toml"
+        ]
+      }
+    }
+  }
+}

@@ -49,7 +49,7 @@ def _recipe(session=None, subject=None, overrides=None):
     return SimpleNamespace(
         session=session,
         subject=subject,
-        overrides=overrides or {},
+        field_overrides=overrides or {},
         declared_facts={f"session.{k}": v for k, v in session.items()}
         | {f"subject.{k}": v for k, v in subject.items()},
     )

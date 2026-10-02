@@ -96,13 +96,13 @@ A recipe declares, for one packet:
 
 A recipe MAY declare a fact a source it reads also states; §3.6 says which of the two the packet gets. `core.subjects` is not a resource the recipe supplies unconditionally: a source that states a subject MAY own it, arbitrated as any other resource two sources can produce, and the recipe's `[subject]` block supplies the table only where no source owns it.
 
-A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `artifacts/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.3.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` and a preferred run's `chosen_at` untyped. §3.6 types a fact when it normalizes it, and a build normalizes `chosen_at` to the type of `core.preferred_runs.chosen_at`. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
+A recipe is a [TOML 1.0](#ew-validation-normative-references) document. This part incorporates `artifacts/recipe.schema.json`, whose `$id` is `https://escapewheel.org/schemas/recipe/0.4.0`, as the shape of a recipe's decoded form. The schema owns the member names, types, required members, closure and patterns; this prose owns what each member means and every refusal of §3.5. TOML dates and times decode to values JSON Schema has no type for, so the schema leaves the facts under `[session]` and `[subject]` and a preferred run's `chosen_at` untyped. §3.6 types a fact when it normalizes it, and a build normalizes `chosen_at` to the type of `core.preferred_runs.chosen_at`. An omitted member keeps the meaning this part gives its absence. The table is an informative projection of the schema.
 
 | member | form | constraint |
 |---|---|---|
 | `packet` | table | requires `id`; admits `amends`, a version matching `^\d+\.\d+\.\d+$`, `replaces`, a non-empty array of distinct non-empty strings, and `out`, `registry`, `extensions`, `description`, and `in_process` |
 | `session`, `subject` | table | keys are field names; values are untyped |
-| `overrides` | table | keys are `block.field` names; each value a non-empty string (§3.6) |
+| `overrides` | table | keys are field overrides, `session.field` or `subject.field`, and column overrides, `resource.column`; each value a non-empty string (§§3.4 and 3.6) |
 | `encoding` | table | keys are `resource.column` names; each entry carries exactly `encoding`, one of `delta`, `plain`, or `dictionary`, and a non-empty `reason` (§3.8) |
 | `clock` | array of tables | each requires `clock_id`, `name`, `tick_rate_num`, and `origin`, and admits `tick_rate_den` and `parent_clock_id` |
 | `source` | array of tables | each requires `kind`; `owns` and `contributes` are arrays of dotted resource identifiers, `storage_options` a table, `in_process` a boolean (§3.9), and `delivery` a table admitting `command`, an array of strings (§3.7), and `protocol`, `declaration`, and `report_path`; every other key is an option |
@@ -209,9 +209,21 @@ A build MUST refuse a recipe in which two entries without `owns` are left owning
 
 A build MUST report rows a source produced for a resource another source owns, except where the recipe declares a preference between them. That another source claims it is not the exemption: a preference says two sources offer the same rows and names the one that knows more, and without one they are producing different rows. The neighbouring case, a resource *no* source claims, is reported as a warning before a byte is read.
 
-A build MUST refuse where a preference discards a value another source stated: where a passed-over source's row holds a non-null value in a column the preferred source's row leaves null, or does not produce at all. Where a preferred source produces no rows for the resource and another does, that is the rule's limiting case. The comparison is over declared columns and not over `metadata`, which §8 of Part 02 makes schemaless by design, so two sources filling it differently is not a difference a build can weigh. That refusal is what makes the exemption above sound: the exemption rests on the loser's copy being redundant, and a preference is declared before either source is opened.
+A build MUST refuse where a preference discards a value another source stated: where a passed-over source's row holds a non-null value in a column a corresponding row of the preferred source leaves null, or is a row the preferred source does not produce. Where a preferred source produces no rows for the resource and another does, that is the rule's limiting case. The comparison is over declared columns and not over `metadata`, which §8 of Part 02 makes schemaless by design, so two sources filling it differently is not a difference a build can weigh. That refusal is what makes the exemption above sound: the exemption rests on the loser's copy being redundant, and a preference is declared before either source is opened.
 
-A build MUST NOT compose a row from more than one source. The merged row would be a fact no source stated. A recipe resolves the refusal by naming the fact in `[overrides]` with its reason, by preferring the other source, or by correcting the source that states less.
+For that refusal, a build MUST compare each source's row with the columns it fills when it stages a row already filled: the `session_id` [Part 02 §7.1](02_core_logical_schemas.md#ew-session-scope) has a writer fill, and any name of an owned assigned identifier ([Part 02 §8.2](02_core_logical_schemas.md#ew-identifier-semantics)) the build fills from the name its source delivered as the identifier ([Part 12 §5](12_adapter_interface.md#ew-referenced-resource-delivery)). Every other value is compared as its source delivered it.
+
+A row of a passed-over source **corresponds** to a row of the preferred source where, so filled, the two hold equal non-null values in every column of the table's primary key. A row holding a null in a key column corresponds to no row. Where the preferred source delivers several rows with one key, each of them corresponds. A passed-over source's row to which no row of the preferred source corresponds is a row the preferred source does not produce.
+
+A build MUST NOT compose a row from more than one source. The merged row would be a fact no source stated.
+
+A column override (§3.6) names one column of a resource the recipe declares a preference for. Where a recipe carries one, a build MUST NOT refuse under this section over a value that a passed-over source's row holds in the named column and that every corresponding row of the preferred source leaves null, whether a row states a null or omits the column. The release reaches every such row and every passed-over source, and it reaches no other column. Where some corresponding rows state a value in the column and others leave it null, the build MUST refuse, and the column override releases nothing.
+
+A build MUST still refuse over a row the preferred source does not produce, and over a preferred source that produces no rows while another source produces some. No column override releases either refusal.
+
+A build that releases a value stages the preferred source's row as that source delivered it and discards the passed-over value, so the prohibition on composing a row from more than one source stands.
+
+A recipe resolves a refusal over a null column by a column override, by preferring the other source, or by correcting the source that states less. It resolves each of the other two refusals by preferring the other source or by correcting a source.
 
 A build MUST also be able to determine, for each source a recipe names and without opening it, which recipe fields that source can **state**, and MUST refuse a recipe naming a source it cannot determine that for. What an implementation calls that declaration in code is Part 07 §4's, and the key it takes in a declaration document is Part 12 §7's.
 
@@ -243,6 +255,17 @@ A build MUST also refuse, on the same terms and before any source is opened:
 - a preference whose `source` names a kind whose adapter does not declare that it can supply the resource, naming the resource;
 - a preference for a resource another entry declares under `owns` or `contributes`, naming the resource and that entry's kind, since the recipe then says both that one source knows more and that the other supplies the resource.
 
+A build MUST refuse, before it opens any source and naming the entry's key, a column override (§3.6):
+
+- whose resource the recipe declares no preference for;
+- whose column the resource does not declare, which includes every column named for a resource
+  that is not a table;
+- whose column is `metadata`; or
+- whose column belongs to the resource's primary key.
+
+A build admits a column override naming any other declared column of a preferred table, a
+`required` column included.
+
 A build MUST refuse a recipe that is not TOML 1.0 or whose decoded form fails the schema §3.1 incorporates, naming where it fails, before it opens any source.
 
 A build MUST refuse, before it opens any source:
@@ -268,12 +291,15 @@ An amending build (§15.1) MUST also refuse, before it opens any source:
   or whose `packet_version` differs from `[packet].amends`;
 - a `[session]` member other than `session_id`, or a `session_id` the manifest's `sessions` does not
   list;
-- a `[subject]` member, or an `[overrides]` member;
+- a `[subject]` member, or a field override (§3.6);
 - a `clock` entry whose `clock_id` equals the `clock_name` of a `core.clocks` row the packet holds;
 - a registry it binds whose `logical_standard_version`, or for the core registry whose
   `semantic_standard_version`, differs from the manifest's, or that declares a table without
   `amendment_groups`; and
 - a packet holding a null `*_name` for an assigned identifier a row owns.
+
+An amending build MUST NOT refuse a column override on the ground that the build amends. A column
+override in an amending recipe releases as §3.4 has it, among the recipe's sources only (§3.3).
 
 For every other refusal of this section, the tables and clocks the packet holds count as supplied
 and declared, so a required reference or a clock parent the packet satisfies draws no refusal.
@@ -282,11 +308,14 @@ A build MUST report as a **warning**:
 
 - an owned table whose **nullable** foreign key targets a table nothing supplies;
 - a resource some listed source declares in `PRODUCES` that no source claims;
-- a field the recipe declares that some listed source states and no override covers.
+- a field the recipe declares that some listed source states and no field override covers.
 
 A warning is not an error because narrowing is legitimate, and only the recipe's author knows whether this one was meant.
 
-A build MUST report as **information**, before it opens any source, a field the recipe declares that some listed source states and an override covers, so that its reports list every field in which the recipe supersedes a source. No checker verifies this.
+A build MUST report as **information**, before it opens any source, a field the recipe declares that some listed source states and a field override covers, so that its reports list every field in which the recipe supersedes a source. No checker verifies this.
+
+A column override covers no declared field, and draws neither report of a declared field nor the
+report §3.6 makes of an override for a field.
 
 <a id="ew-declared-fact-authority" data-spec-anchor="canonical"></a>
 ### 3.6 Authority for a declared fact
@@ -295,7 +324,20 @@ Where a recipe declares a fact and a source the same recipe reads states that fa
 
 Two values are compared at the type the packet will store, both normalized to it first. A source stating no value for a declared fact is not a disagreement: the declaration stands, a writer MUST NOT report it as a mismatch, and SHOULD note that it went unchecked.
 
-A recipe MAY declare that its own value supersedes the source's, by naming the field in a top-level `[overrides]` table keyed `block.field`. The value MUST be a non-empty reason. Declaring an override is never required: it records a decision and silences the report, and a recipe declaring none is conforming. A build MUST report an override for a field the source agrees with, or that no source states, and MUST NOT refuse on either.
+A recipe's top-level `[overrides]` table holds two kinds of entry, and an entry's key says which it is. A **field override** has a key of two segments, `block.field`, whose block is `session` or `subject`, and declares that the recipe's own value for that field supersedes the source's. The value MUST be a non-empty reason. Declaring a field override is never required: it records a decision and silences the report, and a recipe declaring none is conforming. A build MUST report a field override for a field the source agrees with, or that no source states, and MUST NOT refuse on either.
+
+A **column override** has a key of three segments, a resource's dotted identifier followed by one of
+its column names, and §3.4 says what it releases. A recipe MUST give a column override a non-empty
+string as its value, saying why the recipe gives up the value a passed-over source states.
+
+A field override releases no refusal of §3.4, a field of `[subject]` included. A recipe that prefers
+a source for `core.subjects` names a column of that table in a column override, and names a
+`[subject]` field in a field override where it declares its own value for the field.
+
+A build MUST report as information each column override that released a value, naming the column,
+each passed-over source whose value it released, and the entry's reason. A column override is
+**idle** in a build where it released no value. A build MUST report an idle column override as a
+warning and MUST NOT refuse on it. No checker verifies either report.
 
 The comparison needs the source read, so it happens as each source is built, and a build MUST refuse before any resource is staged. A source's statement of a fact is whatever its adapter exposes for that fact; which of several values inside a file it stands behind is the adapter's judgement and not the recipe's.
 

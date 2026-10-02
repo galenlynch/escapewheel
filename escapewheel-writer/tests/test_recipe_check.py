@@ -16,6 +16,7 @@ from tests.builders import (
     PREFER_NWB,
     RECIPE_BASE,
     TWO_DEFAULTED,
+    contested_recipe,
     declaration_for,
     prefixed,
     problems_coded,
@@ -653,3 +654,49 @@ def test_an_amended_packet_supplies_what_it_holds(tmp_path, registry):
         registry, held_tables=["core.sorting_runs", "core.curation_versions", "core.probes", "core.clocks"]
     )
     assert not problems_coded(held, RecipeFault.DANGLING_REFERENCE, "error")
+
+
+@pytest.mark.parametrize(
+    ("key", "said"),
+    [
+        ("core.units.unit_name", "no preference"),
+        ("core.probes.nonexistent", "no column"),
+        ("core.probes.metadata", "metadata"),
+        ("core.probes.probe_id", "primary key"),
+    ],
+    ids=["no-preference", "undeclared-column", "metadata", "key-column"],
+)
+def test_a_column_override_that_can_release_nothing_is_refused(tmp_path, registry, key, said):
+    """Part 05 §3.5: each is decided from the recipe and its registries, before any source opens."""
+    recipe = contested_recipe(tmp_path, f'\n[overrides]\n"{key}" = "why"\n')
+    (refused,) = problems_coded(recipe.check(registry), RecipeFault.COLUMN_OVERRIDE_UNSOUND, "error")
+    assert key in refused.message and said in refused.message
+
+
+def test_a_column_override_of_a_required_column_is_admitted(tmp_path, registry):
+    """Part 05 §3.5: only the four refusals; the non-null check guards a required column (Part 05 §5.1)."""
+    recipe = contested_recipe(tmp_path, '\n[overrides]\n"core.probes.session_id" = "why"\n')
+    assert not problems_coded(recipe.check(registry), RecipeFault.COLUMN_OVERRIDE_UNSOUND)
+
+
+def test_a_column_override_draws_no_report_of_a_declared_field(tmp_path, registry):
+    """Part 05 §3.5: a column override covers no declared field, so it is neither idle nor applied there."""
+    recipe = contested_recipe(tmp_path, '\n[overrides]\n"core.probes.probe_type" = "why"\n')
+    assert not any("core.probes.probe_type" in p.message for p in recipe.check(registry))
+
+
+def test_an_amending_recipe_admits_a_column_override_and_refuses_a_field_override(tmp_path, registry):
+    """Part 05 §3.5: the packet's rows prevail over a declared field, and a preference still arbitrates."""
+    body = RECIPE_BASE.replace('registry = "reg.json"', 'registry = "reg.json"\namends = "0.1.0"')
+    path = tmp_path / "amend.toml"
+    path.write_text(
+        body
+        + '\n[overrides]\n"subject.subject_id" = "because"\n"core.probes.probe_type" = "because"\n'
+        + '\n[[source]]\nkind = "nwb"\nroot = "n"\nowns = ["core.probes"]\n'
+        + '\n[[source]]\nkind = "sorter"\nroot = "s"\nowns = ["core.units"]\n'
+        + PREFER_NWB
+    )
+    declared = problems_coded(Recipe.load(path).check(registry), RecipeFault.AMENDING_DECLARES, "error")
+    stated = " ".join(p.message for p in declared)
+    assert "[overrides] subject.subject_id" in stated
+    assert "core.probes.probe_type" not in stated

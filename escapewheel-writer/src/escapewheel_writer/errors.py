@@ -109,6 +109,9 @@ class RecipeFault(StrEnum):
     OVERRIDE_IDLE = "override_idle"
     #: A declared field overrides the sources that state it.
     OVERRIDE_APPLIED = "override_applied"
+    #: A column override names a resource with no preference, an undeclared column, `metadata`, or a
+    #: key column, so it can release nothing.
+    COLUMN_OVERRIDE_UNSOUND = "column_override_unsound"
     #: A declared field is also stated by a source, so the build compares the two.
     FACT_COMPARED = "fact_compared"
     #: A foreign key of a supplied table targets a table nothing supplies.

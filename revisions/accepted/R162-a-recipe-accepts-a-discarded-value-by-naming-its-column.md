@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **Draft** |
+| **Status** | **Accepted** 2026-10-02 |
 | **Based on** | `0815350e32f1a583964d51d7ec01d211de337747` |
 | **Decision domain** | specification |
 | **Change form** | structural |
@@ -202,7 +202,7 @@ Of the 248 columns the core registry declares outside a primary key and `metadat
 
 At least 35 of the 78 are therefore columns a build fills. R160's two tables contribute three of the
 248, all `nullable`; their `resource_id` is in each table's key and `carried`, so a build fills
-none of their columns. The open draft `a-unit-is-identified-outside-its-packet-by-its-name.md`
+none of their columns. The open draft that identifies a unit outside its packet by its name
 makes the nine `nullable` names `required`, which makes 87 of 248 `required` and 44 of those
 columns a build fills.
 
@@ -261,9 +261,8 @@ for a resource an entry declares under `contributes`, and a column override need
 (§3.3), so no column override names either table in such a recipe.
 
 R161, accepted after the baseline, rewords seven registry descriptions and amends Part 01 and
-Part 02 §9.2. The two other open drafts are
-`core-declares-a-clocks-transform-in-typed-columns-alone.md` and
-`a-unit-is-identified-outside-its-packet-by-its-name.md`. None of the three amends Part 05 §3.1, Part 05 §3.4,
+Part 02 §9.2. The two other open drafts remove `core.clocks.transform_to_parent` and identify a
+unit outside its packet by its name. None of the three amends Part 05 §3.1, Part 05 §3.4,
 Part 05 §3.5 or Part 05 §3.6, and none changes the recipe schema. The unit-name draft changes the count of §2.9, as that section says, and makes every owned
 name a column a source may omit and a build fills under the reference writer's practice.
 

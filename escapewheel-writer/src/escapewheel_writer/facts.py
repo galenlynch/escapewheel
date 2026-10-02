@@ -117,7 +117,7 @@ def compare_declared_facts(spec: SourceSpec, source: SourceAdapter, context: Con
         if fact not in declared:
             continue
         want = declared[fact]
-        reason = recipe.overrides.get(fact)
+        reason = recipe.field_overrides.get(fact)
         if stated is None:
             # Silence is a fact about the source, not a disagreement -- but it is
             # reported, so a build log tells a verified fact from an asserted one.
@@ -193,15 +193,20 @@ def refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Reci
     the same silence and loses the difference. A preferred source producing no rows while another
     does is the limiting case, every value being discarded.
 
-    Compared over declared columns. `metadata` is schemaless by design (Part 02 §8.6), so two sources
-    filling it differently is not a difference this can weigh, and that section already binds it.
+    Rows are compared as staging fills them, so a `session_id` or owned name one source omits is
+    not a loss, and correspond on equal non-null primary keys; a passed-over row with a null in its
+    key corresponds to no row. Compared over declared columns. `metadata` is schemaless by design
+    (Part 02 §8.6), so two sources filling it differently is not a difference this can weigh.
 
-    A build refuses rather than composing the row from both, which would be a fact no source stated.
-    The recipe resolves it: name the fact in `[overrides]` with its reason (Part 05 §3.6),
-    prefer the other source, or fix the one that states less.
+    A column override releases a null column that every corresponding preferred row leaves null,
+    and nothing else: where some of a repeated key's rows state the value, keeping the preferred
+    source's rows would be choosing among them. The preferred rows are staged as delivered either
+    way, since a row composed from both would be a fact no source stated.
     """
     kinds = {spec.kind for spec in recipe.sources}
+    overrides = recipe.column_overrides
     lost: list[str] = []
+    released: dict[str, set[str]] = {}
     preferred = recipe.preferred
     for resource, by_kind in sorted(context.stated.items()):
         table = writer.spec(resource)
@@ -212,33 +217,77 @@ def refuse_a_discarded_fact(writer: PacketWriter, context: Context, recipe: Reci
         winner = preferred.get(resource)
         if winner not in kinds:
             continue
-        kept = by_kind.get(winner, [])
+        kept = writer.filled(resource, by_kind.get(winner, []))
         key = list(table.get("primary_key") or [])
         columns = [c["name"] for c in table["columns"] if c["name"] != "metadata"]
+        held = _by_key(kept, key)
         for kind, rows in sorted(by_kind.items()):
             if kind == winner or not rows:
                 continue
             if not kept:
                 lost.append(f"{resource}: {kind} stated {len(rows):,} row(s) and {winner or 'no source'} staged none")
                 continue
-            held = {tuple(r.get(k) for k in key): r for r in kept} if key else {}
-            for row in rows:
-                match = held.get(tuple(row.get(k) for k in key)) if key else None
-                if match is None:
+            for row in writer.filled(resource, rows):
+                matches = held.get(tuple(row.get(k) for k in key)) if key else None
+                if not matches:
                     lost.append(f"{resource}: {kind} stated a row {winner} did not")
                     continue
-                lost.extend(
-                    f"{resource}.{column}: {kind} stated {row[column]!r} and {winner} left it null"
-                    for column in columns
-                    if row.get(column) is not None and match.get(column) is None
-                )
+                for name, stated, left in _left_null(resource, row, matches, columns):
+                    if left == len(matches) and name in overrides:
+                        released.setdefault(name, set()).add(kind)
+                    elif left == len(matches):
+                        lost.append(f"{name}: {kind} stated {stated!r} and {winner} left it null")
+                    else:
+                        lost.append(
+                            f"{name}: {kind} stated {stated!r} and {winner} left it null in {left} of "
+                            f"{len(matches)} rows with that key, which no column override releases"
+                        )
+    _report_releases(context, overrides, released)
     if lost:
         raise SourceDefect(
-            "preferring a source discarded a fact another stated (Part 05 §3.4). Declare it in "
-            "[overrides] with a reason, prefer the other source, or fix the one that states less:"
-            "\n  " + "\n  ".join(sorted(set(lost))),
+            "preferring a source discarded a fact another stated (Part 05 §3.4). Name a null column in "
+            "[overrides] as resource.column with a reason, prefer the other source, or fix the one that "
+            "states less:\n  " + "\n  ".join(sorted(set(lost))),
             code=SourceFault.FACT_DISCARDED,
         )
+
+
+def _by_key(rows: list[dict[str, Any]], key: list[str]) -> dict[tuple[Any, ...], list[dict[str, Any]]]:
+    """Group preferred rows by primary key, leaving out a row with a null in its key, which matches none."""
+    grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for row in rows:
+        if key and all(row.get(k) is not None for k in key):
+            grouped.setdefault(tuple(row[k] for k in key), []).append(row)
+    return grouped
+
+
+def _left_null(
+    resource: str, row: Mapping[str, Any], matches: list[dict[str, Any]], columns: list[str]
+) -> list[tuple[str, Any, int]]:
+    """Each `resource.column` a passed-over row states, its value, and how many matches leave it null."""
+    found = []
+    for column in columns:
+        if row.get(column) is None:
+            continue
+        if left := sum(match.get(column) is None for match in matches):
+            found.append((f"{resource}.{column}", row[column], left))
+    return found
+
+
+def _report_releases(context: Context, overrides: Mapping[str, str], released: Mapping[str, set[str]]) -> None:
+    """Report each column override's release as information, and an idle one as a warning (Part 05 §3.6)."""
+    for name, reason in sorted(overrides.items()):
+        if name in released:
+            context.notes.append(
+                Note(
+                    f"[overrides] {name} released the value {', '.join(sorted(released[name]))} stated: {reason}",
+                    NoteCode.VALUE_RELEASED,
+                )
+            )
+        else:
+            context.notes.append(
+                Note(f"warning: [overrides] {name} released no value in this build", NoteCode.COLUMN_OVERRIDE_IDLE)
+            )
 
 
 __all__ = ["as_stored", "compare_declared_facts", "compare_held_facts", "refuse_a_discarded_fact", "stored_types"]

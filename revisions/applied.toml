@@ -1620,6 +1620,7 @@ where = [{ part = "05", section = "3.6" }]
 [clause."R87 §2.5"]
 disposition = "applied"
 where = [{ part = "05", section = "3.6" }]
+note = "R162 §3.1 gives the table a second kind of entry, the column override, and R162 §3.4 confines the idle report to a field override"
 
 [clause."R87 §2.6"]
 disposition = "applied"
@@ -2347,7 +2348,7 @@ note = "the NWB and subject.json agree on every declared column for both animals
 [clause."R108 §3.1"]
 disposition = "applied"
 where = [{ part = "05", anchor = "ew-source-declarations" }]
-note = "a build refuses where a passed-over row holds a non-null value in a column the preferred row leaves null, or the preferred source stages nothing; over declared columns only, metadata being schemaless. Bounded by §3.4: every preferred resource is metadata-scale, and core.clock_anchors at 754,222 rows carries no preference"
+note = "a build refuses where a passed-over row holds a non-null value in a column the preferred row leaves null, or the preferred source stages nothing; over declared columns only, metadata being schemaless. Bounded by §3.4: every preferred resource is metadata-scale, and core.clock_anchors at 754,222 rows carries no preference. R162 §3.2 says which rows correspond, compares them once a build fills `session_id` and owned names, and has a column override release a null column"
 
 [clause."R108 §3.2"]
 disposition = "applied"
@@ -2355,9 +2356,9 @@ where = [{ part = "05", anchor = "ew-source-declarations" }]
 note = "a build MUST NOT compose a row from more than one source; the merged row would be a fact no source stated, which is the inference R83 §2.2, R67 §2.4 and R105 §3.4 each refuse"
 
 [clause."R108 §3.3"]
-disposition = "applied"
-where = [{ part = "05", anchor = "ew-source-declarations" }]
-note = "an [overrides] entry silences §3.1's refusal for the fact it names, a second use of R87 §2.5's table: there the recipe is authoritative over a source, here the preferred source over the one it displaced. Per fact, which is the granularity §3.1's refusal names"
+disposition = "superseded"
+by = "R162"
+note = "R162 §§3.1 and 3.2 restate it whole: a column override keyed `resource.column` releases a null column of a corresponding row, and nothing else"
 
 [clause."R108 §3.4"]
 disposition = "applied"
@@ -3541,8 +3542,12 @@ note = "an entry without owns contributes what its adapter supplies in part and 
 
 [clause."R133 §3.4"]
 disposition = "applied"
-where = [{ part = "05", anchor = "ew-recipe-purpose" }, { part = "05", anchor = "ew-recipe-check" }, { part = "05", anchor = "ew-validation-normative-references" }]
-note = "a recipe is TOML 1.0 whose decoded form satisfies spec/artifacts/recipe.schema.json, refused before any source opens where it fails"
+where = [
+  { part = "05", anchor = "ew-recipe-purpose" },
+  { part = "05", anchor = "ew-recipe-check" },
+  { part = "05", anchor = "ew-validation-normative-references" },
+]
+note = "a recipe is TOML 1.0 whose decoded form satisfies spec/artifacts/recipe.schema.json, refused before any source opens where it fails. R162 §3.1 restates the `overrides` row: keys are field overrides and column overrides"
 
 [clause."R133 §3.5"]
 disposition = "applied"
@@ -4130,7 +4135,7 @@ where = [
   { part = "05", anchor = "ew-import-materialization", note = "a stale derived resource" },
   { part = "05", anchor = "ew-amendment-definition", note = "an amending build" },
 ]
-note = "R153 §3.4 refuses a recipe giving replaces beside amends"
+note = "R153 §3.4 refuses a recipe giving replaces beside amends. R162 §3.5 narrows the refusal of an `[overrides]` member to a field override; an amending build admits a column override"
 
 [clause."R150 §3.6"]
 disposition = "applied"
@@ -4250,6 +4255,7 @@ where = [
   { part = "04", anchor = "ew-packet-catalog-scope", note = "manifest 0.6.0" },
   { part = "05", anchor = "ew-recipe-purpose", note = "recipe 0.3.0" },
 ]
+note = "R162 §3.6 replaces the recipe schema identifier, now recipe 0.4.0"
 
 [clause."R154 §3.1"]
 disposition = "applied"
@@ -4429,3 +4435,34 @@ note = "the processing_run_id descriptions of seven core tables"
 disposition = "applied"
 where = [{ part = "02", anchor = "ew-registry-self-description", note = "core 0.16.0" }]
 note = "the registry source carries the value; Part 08 §§2 and 3 project it and are checked against the built example"
+
+[clause."R162 §3.1"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-recipe-purpose", note = "the `overrides` row names both key forms" },
+  { part = "05", anchor = "ew-declared-fact-authority", note = "a field override, a column override and its reason; a field override releases no refusal" },
+]
+
+[clause."R162 §3.2"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-source-declarations", note = "rows compared filled and corresponding by primary key; a column override releases a null column of every corresponding row" }]
+
+[clause."R162 §3.3"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-check", note = "four column overrides refused before any source opens" }]
+
+[clause."R162 §3.4"]
+disposition = "applied"
+where = [
+  { part = "05", anchor = "ew-recipe-check", note = "the reports of a declared field concern a field override" },
+  { part = "05", anchor = "ew-declared-fact-authority", note = "a release as information and an idle column override as a warning" },
+]
+
+[clause."R162 §3.5"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-check", note = "an amending build refuses a field override and admits a column override" }]
+
+[clause."R162 §3.6"]
+disposition = "applied"
+where = [{ part = "05", anchor = "ew-recipe-purpose", note = "recipe 0.4.0" }]
+note = "spec/artifacts/recipe.schema.json carries the key pattern and the `$id`"

@@ -63,6 +63,14 @@ its own devices and arrays — which it contributes. Where two such entries woul
 resource, the recipe names the winner in `[preference]`, with the reason it knows more; the
 writer holds no winner of its own (Part 05 §3.3).
 
+A build refuses where the preferred source leaves null a column the passed-over source states,
+compared after the writer fills `session_id` and each owned name. `[overrides]` holds two kinds
+of entry. A field override, `"subject.strain"`, makes the recipe's value for a declared field
+supersede a source's (Part 05 §3.6). A column override, `"core.probes.probe_type"`, accepts that
+loss for one column of a preferred table, and the build reports what it released or warns that
+the entry released nothing (Part 05 §3.4). An amending recipe may carry a column override and no
+field override.
+
 `escapewheel import --check` refuses a recipe where two sources own one resource, where a
 preference names a source that is not listed, cannot supply the resource or contradicts another
 entry's `owns`, or where an owned table's required foreign key points at a table nothing

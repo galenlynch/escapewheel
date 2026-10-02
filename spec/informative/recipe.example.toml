@@ -17,6 +17,7 @@ date_of_birth = 2025-06-01
 
 [overrides]
 "subject.date_of_birth" = "the colony record corrects the date the acquisition metadata states"
+"core.probes.serial_number" = "the sorter's serial is the headstage's, not the probe's, and the NWB omits it"
 
 [encoding]
 "core.spike_events.t_tick" = { encoding = "delta", reason = "ascending within a unit" }

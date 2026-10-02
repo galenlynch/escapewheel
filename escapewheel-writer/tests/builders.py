@@ -108,15 +108,15 @@ reason = "the NWB states a probe's type and manufacturer; the sorter knows only 
 """
 
 
-def contested_recipe(tmp_path):
-    """A recipe preferring the NWB for `core.probes`, which the sorter also produces."""
+def contested_recipe(tmp_path, extra="", prefer=None):
+    """A recipe preferring the NWB for `core.probes`, which the sorter also produces, plus `extra`."""
     return Recipe.load(
         write_recipe(
             tmp_path,
             '\n[[source]]\nkind = "nwb"\nroot = "n"\n'
             'owns = ["core.probes"]\n'
             '\n[[source]]\nkind = "sorter"\nroot = "s"\n'
-            'owns = ["core.units"]\n' + PREFER_NWB,
+            'owns = ["core.units"]\n' + (PREFER_NWB if prefer is None else prefer) + extra,
         )
     )
 

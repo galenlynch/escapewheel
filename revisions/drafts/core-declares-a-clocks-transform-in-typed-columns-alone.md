@@ -43,7 +43,7 @@ R161 §3.4 rewords the description of `processing_run_id` on the core tables tha
 nullable. `a-unit-is-identified-outside-its-packet-by-its-name.md` makes the name of every owned assigned
 identifier `required` and has a validator report a name two rows of a table share; it also advances
 the registry meta-schema and the registry-contract descriptor. The fourth,
-`a-recipe-accepts-a-discarded-value-by-naming-its-column.md`, changes no registry declaration.
+R162, changes no registry declaration.
 None of them changes a declaration of `core.clocks` or Part 02 §5.2, and §3.3 names no target
 version, so this draft and those apply in any order.
 

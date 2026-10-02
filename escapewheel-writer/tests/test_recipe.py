@@ -198,6 +198,28 @@ def test_an_override_with_no_reason_is_refused(tmp_path):
     assert problem.message.startswith("overrides/subject.subject_id")
 
 
+@pytest.mark.parametrize(
+    "key",
+    ["subject.strain", "session.session_start_time", "core.probes.probe_type", "aind_unit_qc.metrics.num_spikes_used"],
+)
+def test_an_override_key_of_either_form_loads(tmp_path, key):
+    """Part 05 §3.6: a field override's `block.field` and a column override's `resource.column`."""
+    recipe = Recipe.load(write_recipe(tmp_path, f'\n[overrides]\n"{key}" = "why"\n' + NWB_OWNING_PROBES))
+    assert key in {**recipe.field_overrides, **recipe.column_overrides}
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["core.probes", "probes.probe_type", "core.probes.probe_type.extra", "core..probe_type", "subject."],
+    ids=["a-resource", "no-block", "four-segments", "empty-segment", "empty-field"],
+)
+def test_an_override_key_of_neither_form_is_refused_on_load(tmp_path, key):
+    """Part 05 §3.1: a two-segment key names `session` or `subject`, and no other key shape is an override."""
+    with pytest.raises(RecipeUnreadable) as refused:
+        Recipe.load(write_recipe(tmp_path, f'\n[overrides]\n"{key}" = "why"\n' + NWB_OWNING_PROBES))
+    assert {p.code for p in refused.value.problems} == {RecipeFault.RECIPE_SHAPE}
+
+
 # -- an extension declares an encoding where the writer can read it without importing it ------
 
 

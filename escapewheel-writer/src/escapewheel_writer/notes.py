@@ -128,6 +128,10 @@ class NoteCode(StrEnum):
     OVERRIDE_UNNEEDED = "override_unneeded"
     #: A declared fact overrides what the source states.
     FACT_OVERRIDDEN = "fact_overridden"
+    #: Information: a column override released a value a passed-over source stated.
+    VALUE_RELEASED = "value_released"
+    #: A warning: a column override released no value.
+    COLUMN_OVERRIDE_IDLE = "column_override_idle"
     #: A declared fact differs from what the source derives, and the source's is used.
     SOURCE_VALUE_USED = "source_value_used"
     #: A declared fact differs from what the source states, and the recipe's is used.
