@@ -71,6 +71,14 @@ def test_undeclared_column_is_rejected_during_static_binding():
         check_rule("SELECT missing FROM core.rows", document)
 
 
+@pytest.mark.parametrize("keyword", ["SYMMETRIC", "ASYMMETRIC"])
+def test_between_is_admitted_only_in_its_bare_form(keyword):
+    bare = "SELECT unit_id FROM core.units WHERE unit_id BETWEEN 1 AND 2"
+    check_rule(bare, CORE)
+    with pytest.raises(RuleProfileError, match="outside the profile"):
+        check_rule(bare.replace("BETWEEN", f"BETWEEN {keyword}"), CORE)
+
+
 @pytest.mark.parametrize(
     ("sql", "message"),
     [

@@ -248,6 +248,9 @@ def _check_surface(expression: exp.Expression, sql: str) -> None:  # noqa: C901
             raise RuleProfileError(f"{(side or kind).lower()} join is outside the profile")
         if join.args.get("on") is None and join.args.get("using") is None:
             raise RuleProfileError("a join needs ON or USING")
+    for between in expression.find_all(exp.Between):
+        if between.args.get("symmetric") is not None:
+            raise RuleProfileError("BETWEEN SYMMETRIC and BETWEEN ASYMMETRIC are outside the profile")
     spelled = sum(
         token.token_type == TokenType.VAR
         and token.text.lower() == _LENGTH_SPELLING

@@ -355,6 +355,26 @@
       "row_order_ignored": true
     },
     {
+      "id": "between-symmetric-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.units": {"primary_key": ["unit_id"], "columns": [{"name": "unit_id", "type": "int64"}], "rows": []}
+      },
+      "query": "SELECT unit_id FROM core.units WHERE unit_id BETWEEN SYMMETRIC 2 AND 1",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
+      "id": "between-asymmetric-is-rejected",
+      "mode": "reject",
+      "inputs": {
+        "core.units": {"primary_key": ["unit_id"], "columns": [{"name": "unit_id", "type": "int64"}], "rows": []}
+      },
+      "query": "SELECT unit_id FROM core.units WHERE unit_id BETWEEN ASYMMETRIC 1 AND 2",
+      "expected_failure": "invalid",
+      "row_order_ignored": true
+    },
+    {
       "id": "multiple-statements-are-rejected",
       "mode": "reject",
       "inputs": {},
