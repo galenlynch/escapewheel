@@ -9,7 +9,7 @@ The generated state below is checked by `uv run --project escapewheel-writer pyt
 which is the way to check it rather than by reading this block.
 
 <!-- BEGIN facts: revisions -->
-R1–R41, R43–R72 and R74–R164 accepted. R42 and R73 withdrawn. No proposal or draft is open.
+R1–R41, R43–R72 and R74–R164 accepted. R42 and R73 withdrawn. 1 proposal and 0 drafts are open. Neither is binding; a draft takes no number until it is accepted.
 <!-- END facts: revisions -->
 <!-- BEGIN facts: registry -->
 47 tables, 367 columns, 117 references, 91 Tier 2 rules (2 advisory)
@@ -136,7 +136,9 @@ already solves that this code solves again.
 
 ## 3a. No draft awaits acceptance
 
-No draft or proposal is open. **Accepted as R164, 2026-10-02:** the name of every owned assigned
+No draft is open. One proposal is: a rule means what Part 11 defines, not what its engine does.
+`BETWEEN` compares its operand with each bound as ISO SQL defines, and Part 11 §8 makes a valid rule
+that a validator cannot evaluate with Part 11's semantics incomplete. **Accepted as R164, 2026-10-02:** the name of every owned assigned
 identifier is `required` and a generated check reports one two rows share; Part 02 §12.1 and
 Part 02 §12.9 name `unit_name` and `interval_name`.
 
